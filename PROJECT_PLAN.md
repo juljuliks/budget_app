@@ -31,7 +31,7 @@ This document outlines the remaining work to finish the privacy-first SMS transa
 
 - Parser coverage (needs real TBC SMS samples, masked)
   - [ ] Declined / refund / cash withdrawal / transfer to a person / purchase in USD — current keywords for these are a best guess
-  - [ ] Confirm TBC sender IDs (`SmsReceiver.BANK_SENDERS` accepts `TBC`, `TBC SMS`, `TBC BANK`)
+  - [x] Confirm TBC sender IDs: real sender is `TBC SMS` (`SmsReceiver.BANK_SENDERS` also accepts `TBC`, `TBC BANK`)
 
 ## Medium Priority (UX & data)
 - [x] Transactions UI (React Navigation 6 native-stack)
