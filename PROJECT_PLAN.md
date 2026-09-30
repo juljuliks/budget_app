@@ -89,8 +89,7 @@ and in the Telegram chat (not E2E-encrypted) — a conscious exception to the "n
 
 ## Low Priority / Optional
 - CI: GitHub Actions for JS tests and Android assemble
-- Signing config + release build
-- Play Store: likely blocked — Google allows `RECEIVE_SMS` only for approved use cases (default SMS app etc.); plan on sideloaded APK distribution
+- Release APK for personal install (own signing key, JS bundled — works without Metro)
 - Crash reporting / opt-in analytics
 - Desktop import/export improvements (CSV/Google Sheets)
 
