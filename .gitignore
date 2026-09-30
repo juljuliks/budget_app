@@ -1,0 +1,28 @@
+# deps / build
+node_modules/
+dist/
+*.log
+
+# Android / Gradle
+.gradle/
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/.idea/
+*.iml
+.cxx/
+android/app/.cxx/
+
+# local data (may contain real SMS)
+data/
+
+# env / secrets (future Telegram bot)
+.env
+*.keystore
+!android/app/debug.keystore
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/

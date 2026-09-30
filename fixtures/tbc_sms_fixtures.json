@@ -1,0 +1,132 @@
+[
+  {
+    "id": "tbc-001",
+    "sender": "TBC SMS",
+    "raw_sms": "Balance: 281.00GEL\n28/09/26 13:47",
+    "masked": true,
+    "expected_parsed": null,
+    "notes": "Balance-only message — parser should return null (not a transaction)"
+  },
+  {
+    "id": "tbc-002",
+    "sender": "TBC SMS",
+    "raw_sms": "44.00GEL\n(*XXXX)\nAdamDent LLC\nBalance: 237.00GEL\n28/09/26 13:49",
+    "masked": true,
+    "expected_parsed": {
+      "bank": "tbc",
+      "kind": "purchase",
+      "amount_minor": 4400,
+      "currency": "GEL",
+      "raw_merchant": "AdamDent LLC",
+      "merchant_key": "ADAMDENT LLC",
+      "occurred_at": "2026-09-28T13:49:00"
+    }
+  },
+  {
+    "id": "tbc-003",
+    "sender": "TBC SMS",
+    "raw_sms": "1.00 GEL\n(*XXXX)\nTBCTPBUS 28/09/26 14:08\nhttps://link.tbc.ge/tr",
+    "masked": true,
+    "expected_parsed": {
+      "bank": "tbc",
+      "kind": "purchase",
+      "amount_minor": 100,
+      "currency": "GEL",
+      "raw_merchant": "TBCTPBUS",
+      "merchant_key": "TBCTPBUS",
+      "occurred_at": "2026-09-28T14:08:00"
+    }
+  },
+  {
+    "id": "tbc-004",
+    "sender": "TBC SMS",
+    "raw_sms": "Money Transfer: 80.00 GEL\nMC GOLD\n28/09/2026",
+    "masked": true,
+    "expected_parsed": {
+      "bank": "tbc",
+      "kind": "transfer",
+      "amount_minor": 8000,
+      "currency": "GEL",
+      "raw_merchant": "MC GOLD",
+      "merchant_key": "MC GOLD",
+      "counterparty": "MC GOLD",
+      "occurred_at": "2026-09-28T00:00:00"
+    }
+  },
+  {
+    "id": "tbc-005",
+    "sender": "TBC SMS",
+    "raw_sms": "6.30GEL\n(*XXXX)\nLTD KEEPZ.ME*YANDEX GO\nBalance: 217.02GEL\n27/09/26 21:47",
+    "masked": true,
+    "expected_parsed": {
+      "bank": "tbc",
+      "kind": "purchase",
+      "amount_minor": 630,
+      "currency": "GEL",
+      "raw_merchant": "YANDEX GO",
+      "merchant_key": "YANDEX GO",
+      "occurred_at": "2026-09-27T21:47:00"
+    }
+  },
+  {
+    "id": "tbc-006",
+    "sender": "TBC SMS",
+    "raw_sms": "Deposit Money: 280.00 GEL\nMC GOLD\n28/09/2026",
+    "masked": true,
+    "expected_parsed": {
+      "bank": "tbc",
+      "kind": "deposit",
+      "amount_minor": 28000,
+      "currency": "GEL",
+      "raw_merchant": "MC GOLD",
+      "merchant_key": "MC GOLD",
+      "occurred_at": "2026-09-28T00:00:00"
+    }
+  },
+  {
+    "id": "tbc-007",
+    "sender": "TBC SMS",
+    "raw_sms": "10.34GEL\n(*XXXX)\nSPAR\nBalance: 159.64GEL\n28/09/26 20:56",
+    "masked": true,
+    "expected_parsed": {
+      "bank": "tbc",
+      "kind": "purchase",
+      "amount_minor": 1034,
+      "currency": "GEL",
+      "raw_merchant": "SPAR",
+      "merchant_key": "SPAR",
+      "occurred_at": "2026-09-28T20:56:00"
+    }
+  },
+  {
+    "id": "tbc-008",
+    "sender": "TBC SMS",
+    "raw_sms": "Deposit Money: 102.99 GEL\nMC GOLD\n28/09/2026\n[REDACTED_NAME]",
+    "masked": true,
+    "expected_parsed": {
+      "bank": "tbc",
+      "kind": "deposit",
+      "amount_minor": 10299,
+      "currency": "GEL",
+      "raw_merchant": "MC GOLD",
+      "merchant_key": "MC GOLD",
+      "occurred_at": "2026-09-28T00:00:00"
+    }
+  },
+  {
+    "id": "tbc-009",
+    "sender": "TBC SMS",
+    "raw_sms": "Money Transfer: 30.00 GEL\nMC GOLD\n28/09/2026",
+    "masked": true,
+    "expected_parsed": {
+      "bank": "tbc",
+      "kind": "transfer",
+      "amount_minor": 3000,
+      "currency": "GEL",
+      "raw_merchant": "MC GOLD",
+      "merchant_key": "MC GOLD",
+      "counterparty": "MC GOLD",
+      "occurred_at": "2026-09-28T00:00:00"
+    }
+  }
+]
