@@ -1,4 +1,5 @@
 import parseTbc from './parsers/tbc';
+import type { ParsedTx } from './types';
 import { sha256Hex } from './hash';
 import { getDb } from './db';
 import { findCategoryForMerchant } from './categorize';
@@ -21,6 +22,26 @@ export type IngestResult =
 // matches hashes already stored by the old importer.
 export function smsHash(sms: IncomingSms): string {
   return sha256Hex(sms.body + sms.sender + (sms.timestamp ?? ''));
+}
+
+const sameLocalDay = (a: Date, b: Date) =>
+  a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+
+/**
+ * Unix seconds for the transaction. The SMS text wins when it has a time. Date-only SMS
+ * (transfers, deposits) and SMS without a date use the SMS receive time when it's on the
+ * same day / available, so they don't all pile up at 00:00 or at "now" during an import.
+ */
+export function resolveOccurredAt(parsed: Pick<ParsedTx, 'occurred_at' | 'has_time'>, smsTimestampMs?: number, nowMs = Date.now()): number {
+  const received = smsTimestampMs ? new Date(smsTimestampMs) : null;
+  if (parsed.occurred_at) {
+    const fromText = new Date(parsed.occurred_at); // no zone -> local time
+    if (!parsed.has_time && received && sameLocalDay(fromText, received)) {
+      return Math.floor(received.getTime() / 1000);
+    }
+    return Math.floor(fromText.getTime() / 1000);
+  }
+  return Math.floor((received ? received.getTime() : nowMs) / 1000);
 }
 
 /** Parses one SMS, stores it and applies merchant rules. Shared by the headless task and importer. */
@@ -49,7 +70,7 @@ export async function ingestSms(sms: IncomingSms): Promise<IngestResult> {
       parsed.merchant_key || null,
       categoryId,
       categoryId ? 'rule' : null,
-      Math.floor(new Date(parsed.occurred_at).getTime() / 1000),
+      resolveOccurredAt(parsed, sms.timestamp),
       sms.body,
       hash,
     ]

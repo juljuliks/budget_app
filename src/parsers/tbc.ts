@@ -1,110 +1,137 @@
-import { ParsedTx } from '../types';
+import { Kind, ParsedTx } from '../types';
 import { normalizeMerchant } from '../normalize';
 
-const amountRe = /([0-9]+[.,][0-9]{1,2})\s*(GEL|USD|EUR|₾|\$|€)?/i;
-const dateTimeRe = /(\d{2}\/\d{2}\/\d{2,4})(?:\s+(\d{2}:\d{2}))?/;
+// Amount + currency, either "44.00GEL" / "1,234.56 GEL" or "GEL 44.00" / "$9.99".
+// Thousands separators: comma or (narrow) no-break space, always followed by exactly 3 digits,
+// so "1,5 GEL" is still read as 1.50. A plain space is NOT a thousands separator: it would glue
+// unrelated numbers together.
+const NUM = '(\\d{1,3}(?:[,\\u00a0\\u202f]\\d{3})+|\\d+)(?:[.,](\\d{1,2}))?';
+const CUR = '(GEL|USD|EUR|₾|\\$|€)';
+const AMOUNT_AFTER = new RegExp(`${NUM}\\s*${CUR}`, 'i');
+const AMOUNT_BEFORE = new RegExp(`${CUR}\\s*${NUM}`, 'i');
+const CURRENCY_CODES: Record<string, string> = { '₾': 'GEL', '$': 'USD', '€': 'EUR' };
 
-export function parseTbc(raw_sms: string): ParsedTx | null {
-  const text = raw_sms.replace(/\r/g, '\n').trim();
-  if (!text) return null;
+const DATE_TIME = /(\d{1,2})\/(\d{1,2})\/(\d{4}|\d{2})(?:\s+(\d{1,2}):(\d{2}))?/;
+const CARD_MASK = /\(\*[^)]+\)/;
+const BALANCE_LINE = /^(balance|available)\b/i;
 
-  // ignore balance-only
-  if (/^balance:/i.test(text)) return null;
+// Wording of non-purchase SMS is a best guess (no real samples in fixtures yet) — extend with real SMS.
+const DECLINED = /declin|reject|insufficient|unsuccessful|not enough|\bfailed\b|отклон|отказ|недостаточно/i;
+const REFUND = /refund|reversal|\breturn(ed)?\b|возврат/i;
+const DEPOSIT = /deposit money|deposit:|credited|зачислен/i;
+const TRANSFER = /money transfer|money transferred|transfer:/i;
+const WITHDRAWAL = /cash withdrawal|withdrawal|\bATM\b|снятие наличных/i;
 
-  // deposit
-  const depositMatch = /deposit money|deposit:|credited/i;
-  if (depositMatch.test(text)) {
-    const a = amountRe.exec(text);
-    const dateM = dateTimeRe.exec(text);
-    return {
-      bank: 'tbc',
-      kind: 'deposit',
-      amount_minor: a ? Math.round(parseFloat(a[1].replace(',', '.')) * 100) : 0,
-      currency: (a && a[2]) ? a[2].toUpperCase() : 'GEL',
-      raw_merchant: extractMerchant(text),
-      merchant_key: normalizeMerchant(extractMerchant(text)),
-      occurred_at: dateM ? toIso(dateM[1], dateM[2]) : new Date().toISOString(),
-      raw_sms
-    };
+type Amount = { minor: number; currency: string };
+
+function parseAmountLine(line: string): Amount | null {
+  const after = AMOUNT_AFTER.exec(line);
+  const before = AMOUNT_BEFORE.exec(line);
+  // pick whichever occurs first in the line
+  let intPart: string, frac: string | undefined, cur: string;
+  if (after && (!before || after.index <= before.index)) {
+    [, intPart, frac, cur] = after;
+  } else if (before) {
+    [, cur, intPart, frac] = before;
+  } else {
+    return null;
   }
+  const units = Number(intPart.replace(/[^\d]/g, ''));
+  const cents = frac ? Number(frac.padEnd(2, '0')) : 0;
+  const code = CURRENCY_CODES[cur] ?? cur.toUpperCase();
+  return { minor: units * 100 + cents, currency: code };
+}
 
-  // money transfer
-  if (/money transfer|money transferred|transfer:/i.test(text)) {
-    const a = amountRe.exec(text);
-    const dateM = dateTimeRe.exec(text);
-    const counterparty = extractMerchant(text);
-    return {
-      bank: 'tbc',
-      kind: 'transfer',
-      amount_minor: a ? Math.round(parseFloat(a[1].replace(',', '.')) * 100) : 0,
-      currency: (a && a[2]) ? a[2].toUpperCase() : 'GEL',
-      raw_merchant: counterparty,
-      merchant_key: normalizeMerchant(counterparty),
-      counterparty,
-      occurred_at: dateM ? toIso(dateM[1], dateM[2]) : new Date().toISOString(),
-      raw_sms
-    };
+/** First amount that is not on a "Balance: ..." line. */
+function findAmount(lines: string[]): Amount | null {
+  for (const line of lines) {
+    if (BALANCE_LINE.test(line)) continue;
+    const a = parseAmountLine(line);
+    if (a) return a;
   }
-
-  // purchase (default if amount and merchant present)
-  const a = amountRe.exec(text);
-  if (a) {
-    const dateM = dateTimeRe.exec(text);
-    const merchant = extractMerchant(text);
-    return {
-      bank: 'tbc',
-      kind: 'purchase',
-      amount_minor: Math.round(parseFloat(a[1].replace(',', '.')) * 100),
-      currency: (a && a[2]) ? a[2].toUpperCase() : 'GEL',
-      raw_merchant: merchant,
-      merchant_key: normalizeMerchant(merchant),
-      occurred_at: dateM ? toIso(dateM[1], dateM[2]) : new Date().toISOString(),
-      raw_sms
-    };
-  }
-
   return null;
 }
 
-function extractMerchant(text: string): string {
-  // heuristic: merchant often on its own line after amount or before Balance
-  const lines = text.split(/\n+/).map(l => l.trim()).filter(Boolean);
-  if (lines.length >= 2) {
-    // try last 3 lines
-    for (let i = 1; i <= Math.min(3, lines.length - 1); i++) {
-      const cand = lines[i];
-      // skip masked card markers and balance lines and urls
-      if (/^\(\*[^)]+\)$/.test(cand)) continue;
-      if (/^balance:/i.test(cand)) continue;
-      if (/^https?:/i.test(cand)) continue;
-      // if line contains a currency only, skip
-      if (/^[0-9.,]+\s*(GEL|USD|EUR|₾|\$|€)?$/i.test(cand)) continue;
-      // if contains gateway pattern like KEEPZ.ME*YANDEX GO, take part after '*'
-      if (cand.includes('*')) {
-        const parts = cand.split('*').map(p => p.trim()).filter(Boolean);
-        if (parts.length >= 2) return parts[parts.length - 1].replace(dateTimeRe, '').trim();
-      }
-      // strip trailing date/time if present
-      return cand.replace(dateTimeRe, '').trim();
-    }
+/** Validated local date-time; null for impossible dates like 31/02. */
+function findDate(text: string): { iso: string; hasTime: boolean } | null {
+  const m = DATE_TIME.exec(text);
+  if (!m) return null;
+  const day = Number(m[1]);
+  const month = Number(m[2]);
+  const year = m[3].length === 2 ? 2000 + Number(m[3]) : Number(m[3]);
+  const hasTime = m[4] !== undefined;
+  const hour = hasTime ? Number(m[4]) : 0;
+  const minute = hasTime ? Number(m[5]) : 0;
+
+  const d = new Date(year, month - 1, day, hour, minute);
+  if (d.getFullYear() !== year || d.getMonth() !== month - 1 || d.getDate() !== day || hour > 23 || minute > 59) {
+    return null;
   }
-  const first = lines[0] || '';
-  if (first.includes('*')) {
-    const parts = first.split('*').map(p => p.trim()).filter(Boolean);
-    if (parts.length >= 2) return parts[parts.length - 1].replace(dateTimeRe, '').trim();
-  }
-  return first.replace(dateTimeRe, '').trim();
+  const p = (n: number) => String(n).padStart(2, '0');
+  return { iso: `${year}-${p(month)}-${p(day)}T${p(hour)}:${p(minute)}:00`, hasTime };
 }
 
-function toIso(datePart: string, timePart?: string) {
-  // datePart like DD/MM/YY or DD/MM/YYYY
-  const parts = datePart.split('/');
-  let day = parts[0];
-  let month = parts[1];
-  let year = parts[2];
-  if (year.length === 2) year = '20' + year;
-  const iso = `${year}-${month.padStart(2,'0')}-${day.padStart(2,'0')}T${(timePart||'00:00')}:00`;
-  return iso;
+function classify(text: string): Kind | null {
+  if (REFUND.test(text)) return 'refund';
+  if (DEPOSIT.test(text)) return 'deposit';
+  if (TRANSFER.test(text)) return 'transfer';
+  if (WITHDRAWAL.test(text)) return 'withdrawal';
+  // A plain card purchase always carries the masked card "(*XXXX)"; without it this is
+  // not a transaction SMS we understand (promo, OTP, personal message).
+  if (CARD_MASK.test(text)) return 'purchase';
+  return null;
+}
+
+export function parseTbc(raw_sms: string): ParsedTx | null {
+  const text = raw_sms.replace(/\r\n?/g, '\n').trim();
+  if (!text) return null;
+  if (DECLINED.test(text)) return null;
+
+  const lines = text.split(/\n+/).map((l) => l.trim()).filter(Boolean);
+  // balance-only SMS end up here too: amounts on "Balance:" lines are skipped
+  const amount = findAmount(lines);
+  if (!amount || amount.minor === 0) return null;
+
+  const kind = classify(text);
+  if (!kind) return null;
+
+  const merchant = extractMerchant(lines);
+  const date = findDate(text);
+  return {
+    bank: 'tbc',
+    kind,
+    amount_minor: amount.minor,
+    currency: amount.currency,
+    raw_merchant: merchant,
+    merchant_key: normalizeMerchant(merchant),
+    ...(kind === 'transfer' ? { counterparty: merchant } : {}),
+    occurred_at: date?.iso,
+    has_time: date?.hasTime ?? false,
+    raw_sms,
+  };
+}
+
+// Payment gateways prefix the merchant: "LTD KEEPZ.ME*YANDEX GO" -> "YANDEX GO".
+// But some merchants append an order id instead: "AMZN Mktp US*2K3AB" -> "AMZN Mktp US".
+function stripGateway(line: string): string {
+  const parts = line.split('*').map((p) => p.trim()).filter(Boolean);
+  if (parts.length < 2) return line;
+  const last = parts[parts.length - 1];
+  const looksLikeId = /^[A-Z0-9]{3,12}$/i.test(last) && /\d/.test(last);
+  return looksLikeId ? parts[parts.length - 2] : last;
+}
+
+/** Merchant is the first "free text" line after the amount line (TBC puts it after the card mask). */
+function extractMerchant(lines: string[]): string {
+  for (let i = 1; i < Math.min(lines.length, 5); i++) {
+    const line = lines[i];
+    if (BALANCE_LINE.test(line)) continue;
+    if (/^https?:/i.test(line)) continue;
+    if (parseAmountLine(line) && line.replace(AMOUNT_AFTER, '').replace(AMOUNT_BEFORE, '').trim() === '') continue;
+    const candidate = stripGateway(line.replace(CARD_MASK, '').replace(DATE_TIME, '').trim());
+    if (candidate) return candidate;
+  }
+  return '';
 }
 
 export default parseTbc;

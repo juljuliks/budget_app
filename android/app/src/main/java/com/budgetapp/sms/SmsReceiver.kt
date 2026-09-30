@@ -50,12 +50,13 @@ class SmsReceiver : BroadcastReceiver() {
     companion object {
         private const val TAG = "SmsReceiver"
 
-        private val BANK_SENDER_PATTERNS = listOf(
-            Regex("TBC", RegexOption.IGNORE_CASE),
-            Regex("""^\+?995\d+$"""),
+        // Alphanumeric sender IDs of supported banks ("TBC SMS" in real SMS).
+        // Deliberately no phone-number patterns: personal SMS must never reach the parser.
+        private val BANK_SENDERS = listOf(
+            Regex("""^TBC ?(SMS|BANK)?$""", RegexOption.IGNORE_CASE),
         )
 
         fun isBankSender(sender: String): Boolean =
-            BANK_SENDER_PATTERNS.any { it.containsMatchIn(sender) }
+            BANK_SENDERS.any { it.matches(sender.trim()) }
     }
 }

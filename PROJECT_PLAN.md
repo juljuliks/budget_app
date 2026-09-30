@@ -26,8 +26,12 @@ This document outlines the remaining work to finish the privacy-first SMS transa
   - [x] "Create new category" action opens the app on the CreateCategory screen; tapping the body opens the transaction
   - [x] Handle action presses in JS and persist assignments (+ exact rule + backfill that keeps manual choices)
 - Permissions & device testing
-  - [x] Runtime permissions (`RECEIVE_SMS`, `READ_SMS`, `POST_NOTIFICATIONS`) requested on app start (`src/permissions.ts`)
+  - [x] Runtime permissions (`RECEIVE_SMS`, `POST_NOTIFICATIONS`) requested on app start (`src/permissions.ts`); `READ_SMS` removed as unused
   - Background/boot behavior and battery optimizations
+
+- Parser coverage (needs real TBC SMS samples, masked)
+  - [ ] Declined / refund / cash withdrawal / transfer to a person / purchase in USD — current keywords for these are a best guess
+  - [ ] Confirm TBC sender IDs (`SmsReceiver.BANK_SENDERS` accepts `TBC`, `TBC SMS`, `TBC BANK`)
 
 ## Medium Priority (UX & data)
 - [x] Transactions UI (React Navigation 6 native-stack)
@@ -85,7 +89,8 @@ and in the Telegram chat (not E2E-encrypted) — a conscious exception to the "n
 
 ## Low Priority / Optional
 - CI: GitHub Actions for JS tests and Android assemble
-- Signing config + Play Store release prep
+- Signing config + release build
+- Play Store: likely blocked — Google allows `RECEIVE_SMS` only for approved use cases (default SMS app etc.); plan on sideloaded APK distribution
 - Crash reporting / opt-in analytics
 - Desktop import/export improvements (CSV/Google Sheets)
 
@@ -107,5 +112,5 @@ and in the Telegram chat (not E2E-encrypted) — a conscious exception to the "n
 - Sprint 1: RN Android integration, fix Kotlin implementation, and ensure `assembleDebug` and `installDebug` work on-device.
 - Sprint 2: Notifee actions, headless JS robustness, and UX for assigning categories.
 - Sprint 3: Budget planning tab (limits per category, monthly progress, over-limit view), transaction filters.
-- Sprint 4: Backup/export, localization, and Play Store prep.
+- Sprint 4: Backup/export, localization, and release APK (signing).
 - Later: Telegram bot on the home server (see "Telegram Bot" section) — when the laptop is set up.

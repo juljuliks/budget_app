@@ -46,7 +46,6 @@ adb install -r "$APK_PATH"
 
 echo "Granting runtime permissions (may fail on old Android versions)..."
 adb shell pm grant com.budgetapp android.permission.RECEIVE_SMS || true
-adb shell pm grant com.budgetapp android.permission.READ_SMS || true
 adb shell pm grant com.budgetapp android.permission.POST_NOTIFICATIONS || true
 
 echo "Done. To watch logs run: adb logcat | grep SmsBackgroundTask"
