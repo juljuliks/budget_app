@@ -285,7 +285,7 @@ export default function TransactionsList() {
               style={styles.searchInput}
               value={query}
               onChangeText={setQuery}
-              placeholder="Поиск по SMS и категориям"
+              placeholder="Поиск по тексту"
               placeholderTextColor={colors.muted}
               returnKeyType="search"
               autoCorrect={false}
