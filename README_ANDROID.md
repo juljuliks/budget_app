@@ -70,3 +70,25 @@ adb reverse tcp:8081 tcp:8081     # если устройство подключ
 - эмулятор: `adb emu sms send TBC "<текст SMS>"` — отправитель должен быть `TBC`, `TBC SMS` или `TBC BANK`
 
 Чек-лист разрешений: `RECEIVE_SMS`, `POST_NOTIFICATIONS` (Android 13+) — запрашиваются при старте приложения (`src/permissions.ts`). На Xiaomi/Huawei/Samsung дополнительно отключите оптимизацию батареи для приложения.
+
+Релизный APK (для установки на свой телефон)
+---------------------------------
+```bash
+cd android && ./gradlew assembleRelease
+# -> android/app/build/outputs/apk/release/app-release.apk (JS встроен, Metro не нужен)
+```
+
+Подпись: ключ `~/.android-keys/budgetapp-release.keystore`, пароли — в `~/.gradle/gradle.properties`
+(`BUDGETAPP_RELEASE_*`). Оба файла вне репозитория.
+
+**Сохраните резервную копию ключа и пароля.** Обновление ставится только поверх APK с той же подписью.
+С другим ключом придётся удалить приложение, а вместе с ним и базу транзакций.
+
+Debug и release подписаны разными ключами: при переходе между ними приложение тоже нужно переустановить (данные удалятся).
+
+Эмулятор
+---------------------------------
+```bash
+./scripts/emulator.sh            # создать/запустить Android 13, поставить release-сборку
+./scripts/emulator.sh debug      # то же с debug-сборкой (нужен `npx react-native start`)
+```

@@ -37,6 +37,17 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        // Credentials come from ~/.gradle/gradle.properties so the key never enters the repo.
+        // Keep the keystore backed up: an APK signed with another key can't update the installed
+        // app, it must be uninstalled first — which deletes the transaction database.
+        if (project.hasProperty('BUDGETAPP_RELEASE_STORE_FILE')) {
+            release {
+                storeFile file(BUDGETAPP_RELEASE_STORE_FILE)
+                storePassword BUDGETAPP_RELEASE_STORE_PASSWORD
+                keyAlias BUDGETAPP_RELEASE_KEY_ALIAS
+                keyPassword BUDGETAPP_RELEASE_KEY_PASSWORD
+            }
+        }
     }
 
     buildTypes {
@@ -44,8 +55,8 @@ android {
             signingConfig signingConfigs.debug
         }
         release {
-            // TODO: replace with a real release keystore before publishing
-            signingConfig signingConfigs.debug
+            // Without the release key configured, fall back to debug signing so the build still works
+            signingConfig signingConfigs.findByName('release') ?: signingConfigs.debug
             minifyEnabled false
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
