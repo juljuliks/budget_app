@@ -63,12 +63,11 @@ export default function CategoryTypes() {
             )}
           </View>
         )}
-        ListFooterComponent={
-          <TouchableOpacity style={styles.add} onPress={() => setDialog({ name: '' })} accessibilityLabel="Новый тип">
-            <Text style={styles.addText}>＋</Text>
-          </TouchableOpacity>
-        }
       />
+      {/* pinned to the bottom like the "+" on the transactions screen */}
+      <TouchableOpacity style={styles.add} onPress={() => setDialog({ name: '' })} accessibilityLabel="Новый тип">
+        <Text style={styles.addText}>＋</Text>
+      </TouchableOpacity>
       <NameInputModal
         visible={dialog !== null}
         title={dialog?.id === undefined ? 'Новый тип' : 'Переименовать тип'}
@@ -84,7 +83,7 @@ export default function CategoryTypes() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: 16, paddingBottom: 32 },
+  content: { padding: 16, paddingBottom: 96 },
   row: {
     flexDirection: 'row', alignItems: 'center', paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
@@ -95,8 +94,8 @@ const styles = StyleSheet.create({
   action: { padding: 8, marginLeft: 4 },
   actionPlaceholder: { width: 36, marginLeft: 4 },
   add: {
-    alignSelf: 'center', marginTop: 20, width: 48, height: 48, borderRadius: 24,
-    backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center',
+    position: 'absolute', right: 16, bottom: 16, width: 56, height: 56, borderRadius: 28,
+    backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', elevation: 4,
   },
-  addText: { color: '#FFFFFF', fontSize: 26, lineHeight: 30 },
+  addText: { color: '#FFFFFF', fontSize: 28, lineHeight: 32 },
 });
