@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, KeyboardTypeOptions, Modal, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { formStyles } from './formStyles';
 import { colors } from './theme';
 
 type Props = {
@@ -20,7 +21,7 @@ type Props = {
 };
 
 /** Small dialog with one text field (create / rename, plan amounts). */
-export default function NameInputModal({
+export default function TextInputModal({
   visible, title, initialValue = '', placeholder, submitLabel = 'Сохранить', hint, keyboardType, maxLength = 30, allowEmpty,
   onSubmit, onClose,
 }: Props) {
@@ -48,7 +49,7 @@ export default function NameInputModal({
           <Text style={styles.title}>{title}</Text>
           {hint ? <Text style={styles.hint}>{hint}</Text> : null}
           <TextInput
-            style={styles.input}
+            style={formStyles.input}
             value={value}
             onChangeText={(v) => { setValue(v); setError(null); }}
             placeholder={placeholder}
@@ -59,7 +60,7 @@ export default function NameInputModal({
             returnKeyType="done"
             onSubmitEditing={submit}
           />
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+          {error ? <Text style={formStyles.error}>{error}</Text> : null}
           <View style={styles.buttons}>
             <TouchableOpacity style={styles.button} onPress={onClose}>
               <Text style={styles.cancel}>Отмена</Text>
@@ -79,11 +80,6 @@ const styles = StyleSheet.create({
   dialog: { backgroundColor: colors.bg, borderRadius: 12, padding: 20 },
   title: { fontSize: 18, fontWeight: '600', color: colors.text, marginBottom: 12 },
   hint: { fontSize: 14, color: colors.muted, marginTop: -6, marginBottom: 12 },
-  input: {
-    fontSize: 16, color: colors.text, borderWidth: 1, borderColor: colors.border,
-    borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10,
-  },
-  error: { color: colors.danger, marginTop: 8 },
   buttons: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 16 },
   button: { paddingHorizontal: 12, paddingVertical: 8 },
   cancel: { fontSize: 16, color: colors.muted },

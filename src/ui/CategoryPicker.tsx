@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Category, categoryLabel, listCategories } from '../db/categories';
+import { Category, categoryLabel, isTransferCategory, listCategories } from '../db/categories';
 import { getTransferTypeId } from '../db/categoryTypes';
 import { onTransactionsChanged } from '../events';
 import { RootStackParamList, useRootNavigation } from '../navigation';
+import Chip from './Chip';
 import SectionHeading from './SectionHeading';
-import { colors } from './theme';
 
 type Props = {
   selectedId?: number | null;
@@ -26,8 +26,6 @@ type Props = {
   /** called before leaving to the category screens (e.g. to close a modal) */
   onNavigateAway?: () => void;
   disabled?: boolean;
-  /** extra chips after the categories, e.g. "Оставить без категории" */
-  children?: React.ReactNode;
 };
 
 /**
@@ -36,7 +34,7 @@ type Props = {
  * focus / changes, so a category created or edited elsewhere shows up immediately.
  */
 export default function CategoryPicker({
-  selectedId, onSelect, allowNone = false, title = 'Категория', showSettings = true, transferFirst = false, excludeIds, newCategory, onNavigateAway, disabled, children,
+  selectedId, onSelect, allowNone = false, title = 'Категория', showSettings = true, transferFirst = false, excludeIds, newCategory, onNavigateAway, disabled,
 }: Props) {
   const navigation = useRootNavigation();
   const [categories, setCategories] = useState<Category[]>([]);
@@ -47,7 +45,7 @@ export default function CategoryPicker({
       .then(([cats, transferType]) => {
         // always all categories; for transfers the transfer-type ones go first
         setCategories(transferFirst
-          ? [...cats.filter((c) => c.type_is_transfer === 1), ...cats.filter((c) => c.type_is_transfer !== 1)]
+          ? [...cats.filter(isTransferCategory), ...cats.filter((c) => !isTransferCategory(c))]
           : cats);
         setTransferTypeId(transferType);
       })
@@ -74,56 +72,26 @@ export default function CategoryPicker({
         settingsLabel="Управление категориями"
       />
       <View style={styles.chips}>
-        {shown.map((c) => {
-          const selected = c.id === selectedId;
-          return (
-            <TouchableOpacity
-              key={c.id}
-              style={[styles.chip, selected && styles.chipSelected]}
-              disabled={disabled}
-              onPress={() => onSelect(c.id)}
-            >
-              <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{categoryLabel(c)}</Text>
-            </TouchableOpacity>
-          );
-        })}
+        {shown.map((c) => (
+          <Chip key={c.id} label={categoryLabel(c)} selected={c.id === selectedId} disabled={disabled} onPress={() => onSelect(c.id)} />
+        ))}
         {allowNone ? (
-          <PickerChip label="Без категории" selected={selectedId === null} onPress={() => onSelect(null)} />
+          <Chip label="Без категории" selected={selectedId === null} disabled={disabled} onPress={() => onSelect(null)} />
         ) : null}
-        {children}
-        <TouchableOpacity
-          style={[styles.chip, styles.chipAction]}
+        <Chip
+          label="＋ Новая категория"
+          action
           disabled={disabled}
           onPress={() => go(() => navigation.navigate('CategoryEdit', {
             ...newCategory,
             typeId: newCategory?.typeId ?? (transferFirst ? transferTypeId ?? undefined : undefined),
           }))}
-        >
-          <Text style={styles.chipActionText}>＋ Новая категория</Text>
-        </TouchableOpacity>
+        />
       </View>
     </View>
   );
 }
 
-/** Same look as a category chip, for extra options passed as children. */
-export function PickerChip({ label, selected, onPress }: { label: string; selected?: boolean; onPress: () => void }) {
-  return (
-    <TouchableOpacity style={[styles.chip, selected && styles.chipSelected]} onPress={onPress}>
-      <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{label}</Text>
-    </TouchableOpacity>
-  );
-}
-
 const styles = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: {
-    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16,
-    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.surface,
-  },
-  chipSelected: { backgroundColor: colors.accent, borderColor: colors.accent },
-  chipText: { fontSize: 15, color: colors.text },
-  chipTextSelected: { color: '#FFFFFF' },
-  chipAction: { backgroundColor: colors.bg, borderColor: colors.border, borderStyle: 'dashed' },
-  chipActionText: { fontSize: 15, color: colors.accent },
 });

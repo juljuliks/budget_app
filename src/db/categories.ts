@@ -1,5 +1,5 @@
 import { getDb } from './index';
-import { currentYm, monthRange, parseYm } from './plans';
+import { currentYm, monthStart } from './plans';
 
 export type Category = {
   id: number;
@@ -8,14 +8,15 @@ export type Category = {
   sort_order: number;
   type_id: number | null;
   type_name: string | null;
-  /** 1 when the category's type is the transfer type: only these are offered for money transfers */
+  /** 1 when the category's type is the transfer type: offered for money transfers (see isTransferCategory) */
   type_is_transfer: number;
   deleted_at: number | null;
 };
 
-const SELECT = `SELECT c.id, c.name, c.emoji, c.sort_order, c.type_id, c.deleted_at,
-    t.name AS type_name, coalesce(t.is_transfer, 0) AS type_is_transfer
-  FROM categories c LEFT JOIN category_types t ON t.id = c.type_id`;
+const COLUMNS = `c.id, c.name, c.emoji, c.sort_order, c.type_id, c.deleted_at,
+    t.name AS type_name, coalesce(t.is_transfer, 0) AS type_is_transfer`;
+const FROM = 'FROM categories c LEFT JOIN category_types t ON t.id = c.type_id';
+const SELECT = `SELECT ${COLUMNS} ${FROM}`;
 // typed first (in type order), untyped last
 const ORDER = 'ORDER BY t.id IS NULL, t.sort_order, t.name, c.sort_order, c.name';
 
@@ -28,11 +29,16 @@ export function categoryLabel(c: { emoji?: string | null; name: string; type_nam
   return `${c.emoji || ''} ${c.type_name ? `${c.type_name}: ` : ''}${c.name}`.trim();
 }
 
+/** Category label of a transaction row (its joined category_* columns); null when uncategorized. */
+export function txCategoryLabel(tx: { category_id: number | null; category_name: string | null; category_emoji: string | null; category_type_name: string | null }): string | null {
+  if (tx.category_id === null || tx.category_name === null) return null;
+  return categoryLabel({ emoji: tx.category_emoji, name: tx.category_name, type_name: tx.category_type_name });
+}
+
 /** Live (not deleted) categories. */
-export async function listCategories(opts: { transferOnly?: boolean } = {}): Promise<Category[]> {
+export async function listCategories(): Promise<Category[]> {
   const db = await getDb();
-  const extra = opts.transferOnly ? 'AND t.is_transfer = 1' : '';
-  return db.all(`${SELECT} WHERE c.deleted_at IS NULL ${extra} ${ORDER}`);
+  return db.all(`${SELECT} WHERE c.deleted_at IS NULL ${ORDER}`);
 }
 
 export async function getCategory(id: number): Promise<Category | undefined> {
@@ -67,8 +73,7 @@ export async function updateCategory(id: number, fields: { name: string; emoji?:
 /** Transactions of the category from the current month on (those a delete would move). */
 export async function currentTransactionsOfCategory(id: number, nowYm = currentYm()) {
   const db = await getDb();
-  const { year, month } = parseYm(nowYm);
-  const [from] = monthRange(year, month);
+  const from = monthStart(nowYm);
   return db.all<{ id: number; amount_minor: number; currency: string; kind: string; raw_merchant: string | null; occurred_at: number }>(
     `SELECT id, amount_minor, currency, kind, raw_merchant, occurred_at FROM transactions
       WHERE category_id = ? AND occurred_at >= ? ORDER BY occurred_at DESC`, [id, from]);
@@ -76,8 +81,7 @@ export async function currentTransactionsOfCategory(id: number, nowYm = currentY
 
 export async function countPastTransactionsOfCategory(id: number, nowYm = currentYm()): Promise<number> {
   const db = await getDb();
-  const { year, month } = parseYm(nowYm);
-  const [from] = monthRange(year, month);
+  const from = monthStart(nowYm);
   return (await db.get<{ n: number }>(
     'SELECT count(*) AS n FROM transactions WHERE category_id = ? AND occurred_at < ?', [id, from]))!.n;
 }
@@ -89,8 +93,7 @@ export async function countPastTransactionsOfCategory(id: number, nowYm = curren
  */
 export async function deleteCategory(id: number, targetId: number | null, nowYm = currentYm()) {
   const db = await getDb();
-  const { year, month } = parseYm(nowYm);
-  const [from] = monthRange(year, month);
+  const from = monthStart(nowYm);
   await db.transaction(async () => {
     await db.run(
       `UPDATE transactions SET category_id = ?, category_source = ?
@@ -125,10 +128,8 @@ export async function incrementCategoryUsage(categoryId: number, by = 1) {
 /** Most used live categories first. */
 export async function topCategories(limit = 3): Promise<Array<Category & { usage_count: number }>> {
   const db = await getDb();
-  return db.all(`SELECT c.id, c.name, c.emoji, c.sort_order, c.type_id, c.deleted_at,
-      t.name AS type_name, coalesce(t.is_transfer, 0) AS type_is_transfer, coalesce(u.usage_count, 0) AS usage_count
-    FROM categories c
-    LEFT JOIN category_types t ON t.id = c.type_id
+  return db.all(`SELECT ${COLUMNS}, coalesce(u.usage_count, 0) AS usage_count
+    ${FROM}
     LEFT JOIN category_usage u ON u.category_id = c.id
     WHERE c.deleted_at IS NULL
     ORDER BY usage_count DESC, c.sort_order ASC, c.name ASC
@@ -138,5 +139,5 @@ export async function topCategories(limit = 3): Promise<Array<Category & { usage
 export default {
   listCategories, getCategory, findCategoryByName, createCategory, updateCategory, deleteCategory,
   currentTransactionsOfCategory, countPastTransactionsOfCategory, incrementCategoryUsage, topCategories,
-  isTransferCategory, categoryLabel,
+  isTransferCategory, categoryLabel, txCategoryLabel,
 };

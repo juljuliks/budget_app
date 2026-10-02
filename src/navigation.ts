@@ -1,13 +1,14 @@
 import { createNavigationContainerRef, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 
 export type TabParamList = {
   Stats: undefined;
   /**
-   * open with a filter: text query or category ('none' = uncategorized); nonce re-applies the same one.
+   * open filtered by a category ('none' = uncategorized); nonce re-applies the same one.
    * from: the tab we came from (not via the tab bar) -> a back button in the header returns there.
    */
-  Transactions: { query?: string; category?: number | 'none'; nonce?: number; from?: keyof TabParamList } | undefined;
+  Transactions: { category?: number | 'none'; nonce?: number; from?: keyof TabParamList } | undefined;
 };
 
 /** Screens pushed over the tab bar. */
@@ -31,6 +32,13 @@ export const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
 export function useRootNavigation() {
   return useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+}
+
+/** From the stats tab: the Transactions tab filtered by a category (null = uncategorized), with a back button. */
+export function useOpenCategoryTransactions() {
+  const navigation = useNavigation<BottomTabNavigationProp<TabParamList>>();
+  return (categoryId: number | null) =>
+    navigation.navigate('Transactions', { category: categoryId ?? 'none', nonce: Date.now(), from: 'Stats' });
 }
 
 type Route = { [K in keyof RootStackParamList]: { name: K; params: RootStackParamList[K] } }[keyof RootStackParamList];

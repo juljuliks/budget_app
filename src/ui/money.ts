@@ -22,3 +22,13 @@ export function toInputValue(minor: number | null | undefined): string {
   if (!minor) return '';
   return minor % 100 === 0 ? String(minor / 100) : (minor / 100).toFixed(2);
 }
+
+/** Whole amounts without decimals: "1 400", "12.50". */
+export function formatShort(minor: number): string {
+  return formatMoney(minor, { compact: true });
+}
+
+/** "1 400 GEL" with non-breaking spaces, so it never wraps in the middle. */
+export function formatWithCurrency(minor: number, currency = 'GEL'): string {
+  return `${formatShort(minor)} ${currency}`.replace(/ /g, ' ');
+}

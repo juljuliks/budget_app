@@ -1,17 +1,22 @@
 import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { incrementCategoryUsage } from '../db/categories';
 import { addManualTransaction } from '../db/transactions';
 import { emitTransactionsChanged } from '../events';
 import type { RootStackParamList } from '../navigation';
+import Button from './Button';
 import CategoryPicker from './CategoryPicker';
+import { formStyles } from './formStyles';
 import { parseAmountInput } from './money';
+import Segmented from './Segmented';
 import { colors } from './theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddTransaction'>;
-type Kind = 'purchase' | 'deposit';
-type Day = 'today' | 'yesterday';
+const KINDS = [['purchase', 'Расход'], ['deposit', 'Доход']] as const;
+const DAYS = [['today', 'Сегодня'], ['yesterday', 'Вчера']] as const;
+type Kind = typeof KINDS[number][0];
+type Day = typeof DAYS[number][0];
 
 /** Manual entry: cash, or anything the bank didn't send an SMS for. */
 export default function AddTransaction({ route, navigation }: Props) {
@@ -55,15 +60,11 @@ export default function AddTransaction({ route, navigation }: Props) {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      <Segmented
-        options={[['purchase', 'Расход'], ['deposit', 'Доход']]}
-        value={kind}
-        onChange={(v) => setKind(v as Kind)}
-      />
+      <Segmented options={KINDS} value={kind} onChange={setKind} />
 
-      <Text style={styles.label}>Сумма, GEL</Text>
+      <Text style={formStyles.label}>Сумма, GEL</Text>
       <TextInput
-        style={[styles.input, styles.amount]}
+        style={[formStyles.input, styles.amount]}
         value={amount}
         onChangeText={(v) => { setAmount(v); setError(null); }}
         placeholder="0.00"
@@ -73,9 +74,9 @@ export default function AddTransaction({ route, navigation }: Props) {
         maxLength={12}
       />
 
-      <Text style={styles.label}>Описание (необязательно)</Text>
+      <Text style={formStyles.label}>Описание (необязательно)</Text>
       <TextInput
-        style={styles.input}
+        style={formStyles.input}
         value={description}
         onChangeText={setDescription}
         placeholder="Например, рынок"
@@ -83,12 +84,8 @@ export default function AddTransaction({ route, navigation }: Props) {
         maxLength={60}
       />
 
-      <Text style={styles.label}>Дата</Text>
-      <Segmented
-        options={[['today', 'Сегодня'], ['yesterday', 'Вчера']]}
-        value={day}
-        onChange={(v) => setDay(v as Day)}
-      />
+      <Text style={formStyles.label}>Дата</Text>
+      <Segmented options={DAYS} value={day} onChange={setDay} />
 
       <CategoryPicker
         selectedId={categoryId}
@@ -98,42 +95,15 @@ export default function AddTransaction({ route, navigation }: Props) {
         disabled={saving}
       />
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-      <TouchableOpacity style={[styles.button, saving && styles.buttonDisabled]} disabled={saving} onPress={save}>
-        <Text style={styles.buttonText}>Добавить</Text>
-      </TouchableOpacity>
+      {error ? <Text style={formStyles.error}>{error}</Text> : null}
+      <Button title="Добавить" disabled={saving} onPress={save} style={styles.button} />
     </ScrollView>
-  );
-}
-
-function Segmented({ options, value, onChange }: { options: Array<[string, string]>; value: string; onChange: (v: string) => void }) {
-  return (
-    <View style={styles.segmented}>
-      {options.map(([key, label]) => (
-        <TouchableOpacity key={key} style={[styles.segment, value === key && styles.segmentOn]} onPress={() => onChange(key)}>
-          <Text style={[styles.segmentText, value === key && styles.segmentTextOn]}>{label}</Text>
-        </TouchableOpacity>
-      ))}
-    </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { padding: 16, paddingBottom: 32 },
-  label: { fontSize: 13, fontWeight: '600', color: colors.muted, marginTop: 16, marginBottom: 6 },
-  input: {
-    fontSize: 16, color: colors.text, borderWidth: 1, borderColor: colors.border,
-    borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10,
-  },
   amount: { fontSize: 24, fontWeight: '600' },
-  segmented: { flexDirection: 'row', backgroundColor: colors.surface, borderRadius: 8, padding: 2 },
-  segment: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 6 },
-  segmentOn: { backgroundColor: colors.bg },
-  segmentText: { fontSize: 15, color: colors.muted },
-  segmentTextOn: { color: colors.text, fontWeight: '600' },
-  error: { color: colors.danger, marginTop: 12 },
-  button: { marginTop: 24, backgroundColor: colors.accent, borderRadius: 8, paddingVertical: 12, alignItems: 'center' },
-  buttonDisabled: { opacity: 0.5 },
-  buttonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
+  button: { marginTop: 24 },
 });

@@ -32,7 +32,7 @@ describe('types', () => {
   test('fresh DB has the transfer type with the seeded category renamed to avoid "Переводы: Переводы"', async () => {
     const transfer = await getTransferTypeId();
     expect(await listCategoryTypes()).toEqual([{ id: transfer, name: 'Переводы', is_transfer: 1, sort_order: 100 }]);
-    const cats = await listCategories({ transferOnly: true });
+    const cats = (await listCategories()).filter(isTransferCategory);
     expect(cats.map(categoryLabel)).toEqual(['🔁 Переводы: Прочие']);
     expect(isTransferCategory(cats[0])).toBe(true);
   });
@@ -140,7 +140,7 @@ describe('deleteCategory', () => {
 test('stats are grouped by type: types first, then untyped, then uncategorized', async () => {
   const hobby = await createCategoryType('Хобби');
   const guitar = await createCategory('Гитара', null, hobby);
-  const transfer = (await listCategories({ transferOnly: true }))[0].id;
+  const transfer = (await listCategories()).filter(isTransferCategory)[0].id;
   await tx(guitar, at(2026, 9), 300);
   await tx(transfer, at(2026, 9), 500);
   await tx(1, at(2026, 9), 200);

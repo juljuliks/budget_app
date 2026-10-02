@@ -44,11 +44,12 @@ export async function countCategoriesOfType(id: number): Promise<number> {
   return (await db.get<{ n: number }>('SELECT count(*) AS n FROM categories WHERE type_id = ? AND deleted_at IS NULL', [id]))!.n;
 }
 
-export default {
-  listCategoryTypes, findCategoryTypeByName, createCategoryType, renameCategoryType, deleteCategoryType, countCategoriesOfType,
-};
-
 export async function getTransferTypeId(): Promise<number | null> {
   const db = await getDb();
   return (await db.get<{ id: number }>('SELECT id FROM category_types WHERE is_transfer = 1 LIMIT 1'))?.id ?? null;
 }
+
+export default {
+  listCategoryTypes, findCategoryTypeByName, createCategoryType, renameCategoryType, deleteCategoryType, countCategoriesOfType,
+  getTransferTypeId,
+};

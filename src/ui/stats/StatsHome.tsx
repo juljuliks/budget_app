@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { currentYm, ymOf } from '../../db/plans';
+import Segmented from '../Segmented';
 import { colors } from '../theme';
 import HistoryView from './HistoryView';
 import { monthTitle } from './months';
 import PlanView from './PlanView';
 import StatsView from './StatsView';
 
-type Section = 'stats' | 'plan' | 'history';
-const SECTIONS: Array<[Section, string]> = [['stats', 'Статистика'], ['plan', 'План'], ['history', 'История']];
+const SECTIONS = [['stats', 'Статистика'], ['plan', 'План'], ['history', 'История']] as const;
+type Section = typeof SECTIONS[number][0];
 
 /** "Статистика" tab: month stats, the month's plan and plan-vs-actual history. */
 export default function StatsHome() {
@@ -31,13 +32,7 @@ export default function StatsHome() {
 
   return (
     <View style={styles.screen}>
-      <View style={styles.segmented}>
-        {SECTIONS.map(([key, label]) => (
-          <TouchableOpacity key={key} style={[styles.segment, section === key && styles.segmentOn]} onPress={() => setSection(key)}>
-            <Text style={[styles.segmentText, section === key && styles.segmentTextOn]}>{label}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <Segmented options={SECTIONS} value={section} onChange={setSection} style={styles.segmented} />
 
       {section !== 'history' ? (
         <View style={styles.monthRow}>
@@ -60,11 +55,7 @@ export default function StatsHome() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  segmented: { flexDirection: 'row', backgroundColor: colors.surface, borderRadius: 8, padding: 2, margin: 16, marginBottom: 8 },
-  segment: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 6 },
-  segmentOn: { backgroundColor: colors.bg },
-  segmentText: { fontSize: 14, color: colors.muted },
-  segmentTextOn: { color: colors.text, fontWeight: '600' },
+  segmented: { margin: 16, marginBottom: 8 },
   monthRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, marginBottom: 8 },
   arrow: { fontSize: 28, color: colors.accent, paddingHorizontal: 8 },
   arrowDisabled: { color: colors.border },

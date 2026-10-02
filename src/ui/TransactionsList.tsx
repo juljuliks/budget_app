@@ -1,27 +1,34 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, BackHandler, ScrollView, SectionList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, BackHandler, ScrollView, SectionList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { RouteProp, useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { HeaderBackButton } from '@react-navigation/elements';
 import {
-  categoriesWithTransactions, CategoryFilter, CategoryWithCount, deleteTransaction, isUnread, listTransactionsFiltered,
+  categoriesWithTransactions, CategoryFilter, CategoryWithCount, listTransactionsFiltered,
   listTransactionsPage, PageCursor, searchTransactions, TransactionRow,
 } from '../db/transactions';
-import { emitTransactionsChanged, onTransactionsChanged } from '../events';
+import { onTransactionsChanged } from '../events';
 import { categoryLabel } from '../db/categories';
 import { assignCategoryToMany } from '../assign';
 import { TabParamList, useRootNavigation } from '../navigation';
+import Button from './Button';
 import CategoryPickerModal from './CategoryPickerModal';
 import Checkbox from './Checkbox';
-import { dayKey, formatAmount, formatDay, formatTime, isIncome } from './format';
-import { PencilIcon, SearchIcon, TrashIcon } from './icons';
+import Chip from './Chip';
+import Fab from './Fab';
+import { dayKey, formatDay } from './format';
+import { formStyles } from './formStyles';
+import { PencilIcon, SearchIcon } from './icons';
 import RangeCalendar, { DayRange, formatRange, rangeToUnix } from './RangeCalendar';
+import Segmented from './Segmented';
 import { colors } from './theme';
+import { confirmDeleteTransaction } from './transactionActions';
+import TransactionItem from './TransactionItem';
 
 const PAGE_SIZE = 50;
 
 type FilterMode = 'text' | 'category' | 'date';
-const MODES: Array<[FilterMode, string]> = [['text', 'По тексту'], ['category', 'По категории'], ['date', 'По дате']];
+const MODES = [['text', 'По тексту'], ['category', 'По категории'], ['date', 'По дате']] as const;
 type Filter = { mode: FilterMode; query: string; category: CategoryFilter | null; range: DayRange | null };
 
 /** Only the filter of the selected mode applies. */
@@ -37,6 +44,7 @@ async function runFilterQuery(f: Filter): Promise<TransactionRow[] | null> {
   if (f.mode === 'category') return listTransactionsFiltered({ category: f.category! });
   return listTransactionsFiltered(rangeToUnix(f.range!));
 }
+
 const SEARCH_DEBOUNCE_MS = 200;
 
 export default function TransactionsList() {
@@ -57,24 +65,22 @@ export default function TransactionsList() {
   const [calendarOpen, setCalendarOpen] = useState(true);
   const [categoryOptions, setCategoryOptions] = useState<CategoryWithCount[]>([]);
   const filter: Filter = { mode, query, category, range };
-  const filterActive = isFilterActive(filter);
   // read by refreshAll without making it change (and re-run focus effects) on every keystroke
   const filterRef = useRef(filter);
   filterRef.current = filter;
   const [results, setResults] = useState<TransactionRow[] | null>(null); // null = no filter, normal feed
   const searchId = useRef(0);
 
-  // opened from the stats screen: filter by that category (or text)
+  // opened from the stats screen: filter by that category
   const route = useRoute<RouteProp<TabParamList, 'Transactions'>>();
-  const { query: incomingQuery, category: incomingCategory, nonce, from } = route.params ?? {};
+  const { category: incomingCategory, nonce, from } = route.params ?? {};
   useEffect(() => {
     if (incomingCategory !== undefined) { setMode('category'); setCategory(incomingCategory); }
-    else if (incomingQuery !== undefined) { setMode('text'); setQuery(incomingQuery); }
-  }, [incomingQuery, incomingCategory, nonce]);
+  }, [incomingCategory, nonce]);
 
-  const [selectMode, setSelectMode] = useState(false);
-  // shows edit / delete icons on every row; exclusive with selectMode
+  // edit mode: ✎ / 🗑 on every row and the selection toolbar; selectMode (inside edit mode) replaces the icons with checkboxes
   const [editMode, setEditMode] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [bulkOpen, setBulkOpen] = useState(false);
 
@@ -202,7 +208,7 @@ export default function TransactionsList() {
   // came here from another screen (not the tab bar): back returns there with the filter cleared
   function goBack() {
     const target = from;
-    tabNavigation.setParams({ from: undefined, category: undefined, query: undefined });
+    tabNavigation.setParams({ from: undefined, category: undefined });
     resetFilters();
     if (target) tabNavigation.navigate(target);
   }
@@ -249,18 +255,6 @@ export default function TransactionsList() {
     });
   }
 
-  function confirmDelete(tx: TransactionRow) {
-    Alert.alert('Удалить транзакцию?', `${tx.raw_merchant || 'Без мерчанта'}, ${formatAmount(tx.amount_minor, tx.currency, tx.kind)}`, [
-      { text: 'Отмена', style: 'cancel' },
-      {
-        text: 'Удалить', style: 'destructive', onPress: async () => {
-          await deleteTransaction(tx.id);
-          emitTransactionsChanged();
-        },
-      },
-    ]);
-  }
-
   async function applyBulk(categoryId: number | null) {
     setBulkOpen(false);
     try {
@@ -282,13 +276,7 @@ export default function TransactionsList() {
   return (
     <View style={styles.list}>
       <View style={styles.header}>
-        <View style={styles.modes}>
-          {MODES.map(([key, label]) => (
-            <TouchableOpacity key={key} style={[styles.mode, mode === key && styles.modeOn]} onPress={() => setMode(key)}>
-              <Text style={[styles.modeText, mode === key && styles.modeTextOn]}>{label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <Segmented options={MODES} value={mode} onChange={setMode} style={styles.modes} />
 
         {mode === 'text' ? (
           <View style={styles.search}>
@@ -315,16 +303,14 @@ export default function TransactionsList() {
             {categoryOptions.map((c) => {
               const on = category === c.category;
               return (
-                <TouchableOpacity
+                <Chip
                   key={String(c.category)}
-                  style={[styles.catChip, on && styles.catChipOn]}
+                  label={`${categoryLabel(c)}${c.deleted ? ' (удалена)' : ''} · ${c.count}`}
+                  selected={on}
+                  muted={c.deleted}
                   // tap the selected one again to clear
                   onPress={() => setCategory(on ? null : c.category)}
-                >
-                  <Text style={[styles.catChipText, on && styles.catChipTextOn, c.deleted && !on && styles.catChipDeleted]}>
-                    {categoryLabel(c)}{c.deleted ? ' (удалена)' : ''} · {c.count}
-                  </Text>
-                </TouchableOpacity>
+                />
               );
             })}
             {categoryOptions.length === 0 ? <Text style={styles.filterHint}>Транзакций пока нет</Text> : null}
@@ -369,52 +355,18 @@ export default function TransactionsList() {
         keyExtractor={(i) => String(i.id)}
         stickySectionHeadersEnabled
         keyboardShouldPersistTaps="handled"
-        renderSectionHeader={({ section }) => <Text style={styles.sectionHeader}>{section.title}</Text>}
+        renderSectionHeader={({ section }) => <Text style={formStyles.sectionHeader}>{section.title}</Text>}
         renderItem={({ item }) => {
-          const isSelected = selected.has(item.id);
+          const open = () => navigation.navigate('TransactionDetail', { txId: item.id });
           return (
-            <TouchableOpacity
-              style={[styles.row, isSelected && styles.rowSelected]}
-              onPress={() => (selectMode ? toggle(item.id) : navigation.navigate('TransactionDetail', { txId: item.id }))}
-            >
-              {selectMode ? <View style={styles.checkbox}><Checkbox checked={isSelected} /></View> : null}
-              <View style={styles.rowMain}>
-                <View style={styles.titleRow}>
-                  {isUnread(item) ? <View style={styles.unreadDot} accessibilityLabel="Не просмотрена" /> : null}
-                  <Text style={[styles.merchant, isUnread(item) && styles.merchantUnread]} numberOfLines={1}>
-                    {item.raw_merchant || 'Без мерчанта'}
-                  </Text>
-                </View>
-                {item.category_id ? (
-                  <Text style={styles.category} numberOfLines={1}>
-                    {categoryLabel({ emoji: item.category_emoji, name: item.category_name!, type_name: item.category_type_name })} · {formatTime(item.occurred_at)}
-                  </Text>
-                ) : (
-                  <View style={styles.inline}>
-                    <Text style={styles.badge}>Без категории</Text>
-                    <Text style={styles.category}> · {formatTime(item.occurred_at)}</Text>
-                  </View>
-                )}
-              </View>
-              <Text style={[styles.amount, isIncome(item.kind) && styles.income]}>
-                {formatAmount(item.amount_minor, item.currency, item.kind)}
-              </Text>
-              {showRowActions ? (
-                <>
-                  <TouchableOpacity
-                    style={styles.rowAction}
-                    hitSlop={6}
-                    onPress={() => navigation.navigate('TransactionDetail', { txId: item.id })}
-                    accessibilityLabel="Редактировать"
-                  >
-                    <PencilIcon color={colors.muted} size={18} />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.rowAction} hitSlop={6} onPress={() => confirmDelete(item)} accessibilityLabel="Удалить">
-                    <TrashIcon color={colors.danger} size={18} />
-                  </TouchableOpacity>
-                </>
-              ) : null}
-            </TouchableOpacity>
+            <TransactionItem
+              tx={item}
+              onPress={selectMode ? () => toggle(item.id) : open}
+              selectable={selectMode}
+              selected={selected.has(item.id)}
+              onEdit={showRowActions ? open : undefined}
+              onDelete={showRowActions ? () => confirmDeleteTransaction(item) : undefined}
+            />
           );
         }}
         onEndReached={() => { loadMore().catch((e) => console.error('load more failed', e)); }}
@@ -429,23 +381,13 @@ export default function TransactionsList() {
         }
       />
 
-      {selectMode ? (
-        selected.size > 0 ? (
-          <View style={styles.bottomBar}>
-            <TouchableOpacity style={styles.bulkButton} onPress={() => setBulkOpen(true)}>
-              <Text style={styles.bulkText}>Изменить категорию ({selected.size})</Text>
-            </TouchableOpacity>
-          </View>
-        ) : null
-      ) : filterActive || editMode ? null : (
-        <TouchableOpacity
-          style={styles.fab}
-          onPress={() => navigation.navigate('AddTransaction')}
-          accessibilityLabel="Добавить транзакцию"
-        >
-          <Text style={styles.fabText}>＋</Text>
-        </TouchableOpacity>
-      )}
+      {selectMode && selected.size > 0 ? (
+        <View style={styles.bottomBar}>
+          <Button title={`Изменить категорию (${selected.size})`} onPress={() => setBulkOpen(true)} />
+        </View>
+      ) : null}
+      {/* hidden in edit mode: it would cover the ✎ / 🗑 of the last row */}
+      {editMode ? null : <Fab onPress={() => navigation.navigate('AddTransaction')} accessibilityLabel="Добавить транзакцию" />}
 
       <CategoryPickerModal
         visible={bulkOpen}
@@ -465,17 +407,8 @@ const styles = StyleSheet.create({
   list: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
   header: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4, backgroundColor: colors.bg },
-  modes: { flexDirection: 'row', backgroundColor: colors.surface, borderRadius: 8, padding: 2, marginBottom: 8 },
-  mode: { flex: 1, paddingVertical: 6, alignItems: 'center', borderRadius: 6 },
-  modeOn: { backgroundColor: colors.bg },
-  modeText: { fontSize: 13, color: colors.muted },
-  modeTextOn: { color: colors.text, fontWeight: '600' },
+  modes: { marginBottom: 8 },
   catChips: { gap: 8, paddingVertical: 2 },
-  catChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16, backgroundColor: colors.surface },
-  catChipOn: { backgroundColor: colors.accent },
-  catChipText: { fontSize: 14, color: colors.text },
-  catChipTextOn: { color: '#FFFFFF' },
-  catChipDeleted: { color: colors.muted },
   filterHint: { fontSize: 14, color: colors.muted, paddingVertical: 8 },
   rangeRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 4 },
   rangeText: { fontSize: 15, color: colors.text, fontWeight: '600' },
@@ -499,41 +432,10 @@ const styles = StyleSheet.create({
   editToggleOn: { backgroundColor: colors.accent },
   editToggleText: { fontSize: 14, color: colors.accent },
   editToggleTextOn: { color: '#FFFFFF' },
-  sectionHeader: {
-    paddingHorizontal: 16, paddingVertical: 6, backgroundColor: colors.surface,
-    color: colors.muted, fontSize: 13, fontWeight: '600',
-  },
-  row: {
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
-  },
-  rowSelected: { backgroundColor: '#EFF6FF' },
-  checkbox: { marginRight: 12 },
-  rowMain: { flex: 1, marginRight: 12 },
-  titleRow: { flexDirection: 'row', alignItems: 'center' },
-  unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accent, marginRight: 8 },
-  merchant: { flexShrink: 1, fontSize: 16, color: colors.text },
-  merchantUnread: { fontWeight: '600' },
-  category: { fontSize: 13, color: colors.muted, marginTop: 2 },
-  inline: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
-  badge: {
-    fontSize: 12, color: colors.warn, backgroundColor: colors.warnBg,
-    paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4, overflow: 'hidden',
-  },
-  amount: { fontSize: 16, color: colors.text, fontVariant: ['tabular-nums'] },
-  income: { color: colors.income },
-  rowAction: { padding: 6, marginLeft: 6 },
   footer: { paddingVertical: 16, marginBottom: 72 },
-  fab: {
-    position: 'absolute', right: 16, bottom: 16, width: 56, height: 56, borderRadius: 28,
-    backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', elevation: 4,
-  },
-  fabText: { color: '#FFFFFF', fontSize: 28, lineHeight: 32 },
   bottomBar: {
     position: 'absolute', left: 0, right: 0, bottom: 0, padding: 12, backgroundColor: colors.bg,
     borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
   },
-  bulkButton: { backgroundColor: colors.accent, borderRadius: 8, paddingVertical: 12, alignItems: 'center' },
-  bulkText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
   empty: { padding: 32, textAlign: 'center', color: colors.muted },
 });

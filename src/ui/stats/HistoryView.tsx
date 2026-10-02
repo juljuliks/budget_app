@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import type { TabParamList } from '../../navigation';
+import { useFocusEffect } from '@react-navigation/native';
+import { useOpenCategoryTransactions } from '../../navigation';
 import { HistoryMonth, monthStats, MonthStats, parseYm, planHistory } from '../../db/plans';
 import { onTransactionsChanged } from '../../events';
-import { formatMoney } from '../money';
-import { chart, colors } from '../theme';
+import Meter from '../Meter';
+import { formatMoney, formatShort } from '../money';
+import { colors } from '../theme';
 import { monthTitle } from './months';
 
 /** Planned vs actually spent, per month and (expanded) per category. */
@@ -55,23 +55,23 @@ function MonthRow({ month, expanded, onToggle }: { month: HistoryMonth; expanded
           <Text style={styles.chevron}>{expanded ? '⌃' : '⌄'}</Text>
         </View>
         <View style={styles.totals}>
-          <Total label="План" value={planned ? formatMoney(planned, { compact: true }) : '—'} />
-          <Total label="Потрачено" value={formatMoney(spent, { compact: true })} />
+          <Total label="План" value={planned ? formatShort(planned) : '—'} />
+          <Total label="Потрачено" value={formatShort(spent)} />
           <Total
             label={planned ? (diff >= 0 ? 'Осталось' : 'Перерасход') : ''}
-            value={planned ? `${diff < 0 ? '⚠ ' : ''}${formatMoney(Math.abs(diff), { compact: true })}` : ''}
+            value={planned ? `${diff < 0 ? '⚠ ' : ''}${formatShort(Math.abs(diff))}` : ''}
             danger={planned > 0 && diff < 0}
           />
         </View>
-        {planned ? <Meter spent={spent} limit={planned} /> : null}
+        {planned ? <Meter ratio={spent / planned} /> : null}
         {budget !== null ? (
           // the amount to distribute: what was left unplanned, and what was not spent at all
           <View style={styles.totals}>
-            <Total label="Сумма" value={formatMoney(budget, { compact: true })} />
-            <Total label="Не распределено" value={formatMoney(Math.max(budget - planned, 0), { compact: true })} />
+            <Total label="Сумма" value={formatShort(budget)} />
+            <Total label="Не распределено" value={formatShort(Math.max(budget - planned, 0))} />
             <Total
               label={saved >= 0 ? 'Сохранено' : 'Сверх суммы'}
-              value={`${saved < 0 ? '⚠ ' : ''}${formatMoney(Math.abs(saved), { compact: true })}`}
+              value={`${saved < 0 ? '⚠ ' : ''}${formatShort(Math.abs(saved))}`}
               danger={saved < 0}
               good={saved > 0}
             />
@@ -85,7 +85,7 @@ function MonthRow({ month, expanded, onToggle }: { month: HistoryMonth; expanded
 
 function MonthDetails({ ym }: { ym: string }) {
   // tap a category: its transactions (category filter), same as on the stats screen
-  const navigation = useNavigation<BottomTabNavigationProp<TabParamList>>();
+  const openTransactions = useOpenCategoryTransactions();
   const [stats, setStats] = useState<MonthStats | null>(null);
   useEffect(() => {
     const { year, month } = parseYm(ym);
@@ -106,8 +106,8 @@ function MonthDetails({ ym }: { ym: string }) {
         <View key={`${g.type_id}-${g.title}`}>
           <View style={[styles.detailRow, styles.groupRow]}>
             <Text style={[styles.detailName, styles.groupTitle]} numberOfLines={1}>{g.title}</Text>
-            <Text style={[styles.detailNum, styles.groupTitle]}>{g.planned_minor ? formatMoney(g.planned_minor, { compact: true }) : '—'}</Text>
-            <Text style={[styles.detailNum, styles.groupTitle]}>{formatMoney(g.spent_minor, { compact: true })}</Text>
+            <Text style={[styles.detailNum, styles.groupTitle]}>{g.planned_minor ? formatShort(g.planned_minor) : '—'}</Text>
+            <Text style={[styles.detailNum, styles.groupTitle]}>{formatShort(g.spent_minor)}</Text>
           </View>
           {g.categories.map((c) => {
             const over = c.limit_minor !== null && c.spent_minor > c.limit_minor;
@@ -115,12 +115,12 @@ function MonthDetails({ ym }: { ym: string }) {
               <TouchableOpacity
                 key={String(c.category_id)}
                 style={styles.detailRow}
-                onPress={() => navigation.navigate('Transactions', { category: c.category_id ?? 'none', nonce: Date.now(), from: 'Stats' })}
+                onPress={() => openTransactions(c.category_id)}
               >
                 <Text style={styles.detailName} numberOfLines={1}>{`${c.emoji || ''} ${c.name}`.trim()}</Text>
-                <Text style={styles.detailNum}>{c.limit_minor ? formatMoney(c.limit_minor, { compact: true }) : '—'}</Text>
+                <Text style={styles.detailNum}>{c.limit_minor ? formatShort(c.limit_minor) : '—'}</Text>
                 <Text style={[styles.detailNum, over && styles.danger]}>
-                  {over ? '⚠ ' : ''}{formatMoney(c.spent_minor, { compact: true })}
+                  {over ? '⚠ ' : ''}{formatShort(c.spent_minor)}
                 </Text>
               </TouchableOpacity>
             );
@@ -145,16 +145,6 @@ function Total({ label, value, danger, good }: { label: string; value: string; d
   );
 }
 
-function Meter({ spent, limit }: { spent: number; limit: number }) {
-  const ratio = spent / limit;
-  const fill = ratio > 1 ? chart.critical : ratio >= 0.8 ? chart.warning : chart.meterFill;
-  return (
-    <View style={styles.track}>
-      <View style={[styles.fill, { width: `${Math.min(Math.max(ratio, 0), 1) * 100}%`, backgroundColor: fill }]} />
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   content: { paddingHorizontal: 16, paddingBottom: 32 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
@@ -169,8 +159,6 @@ const styles = StyleSheet.create({
   totalValue: { fontSize: 15, color: colors.text, marginTop: 2 },
   danger: { color: colors.danger },
   good: { color: colors.income },
-  track: { height: 6, borderRadius: 3, backgroundColor: chart.meterTrack, marginTop: 8, overflow: 'hidden' },
-  fill: { height: 6, borderRadius: 3 },
   details: { marginTop: 10, backgroundColor: colors.surface, borderRadius: 8, padding: 10 },
   detailsLoading: { marginTop: 10 },
   detailRow: { flexDirection: 'row', paddingVertical: 4 },

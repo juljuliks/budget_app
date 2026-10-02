@@ -1,18 +1,21 @@
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { deleteTransaction, getTransaction, markTransactionSeen } from '../db/transactions';
+import { getTransaction, markTransactionSeen } from '../db/transactions';
 import { assignCategory } from '../assign';
 import { emitTransactionsChanged } from '../events';
 import type { RootStackParamList } from '../navigation';
-import { formatAmount, formatDay, formatTime, isIncome } from './format';
+import { formatAmount, formatDay, formatTime, isIncome, merchantLabel } from './format';
+import Button from './Button';
 import CategoryPicker from './CategoryPicker';
 import CategoryPickerModal from './CategoryPickerModal';
+import Chip from './Chip';
 import SectionHeading from './SectionHeading';
 import { PencilIcon } from './icons';
-import { categoryLabel } from '../db/categories';
+import { txCategoryLabel } from '../db/categories';
 import { colors } from './theme';
+import { confirmDeleteTransaction } from './transactionActions';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TransactionDetail'>;
 type Tx = NonNullable<Awaited<ReturnType<typeof getTransaction>>>;
@@ -46,20 +49,8 @@ export default function TransactionDetail({ route, navigation }: Props) {
     }
   }
 
-  function confirmDelete() {
-    Alert.alert('Удалить транзакцию?', 'Она пропадёт из истории и статистики.', [
-      { text: 'Отмена', style: 'cancel' },
-      {
-        text: 'Удалить', style: 'destructive', onPress: async () => {
-          await deleteTransaction(txId);
-          emitTransactionsChanged();
-          navigation.goBack();
-        },
-      },
-    ]);
-  }
-
   if (!tx) return <View style={styles.center}><ActivityIndicator /></View>;
+  const category = txCategoryLabel(tx);
 
   return (
     <View style={styles.screen}>
@@ -67,20 +58,16 @@ export default function TransactionDetail({ route, navigation }: Props) {
       <Text style={[styles.amount, isIncome(tx.kind) && styles.income]}>
         {formatAmount(tx.amount_minor, tx.currency, tx.kind)}
       </Text>
-      <Text style={styles.merchant}>{tx.raw_merchant || 'Без мерчанта'}</Text>
+      <Text style={styles.merchant}>{merchantLabel(tx)}</Text>
       <Text style={styles.meta}>{formatDay(tx.occurred_at)}, {formatTime(tx.occurred_at)}</Text>
 
-      {tx.category_id ? (
-        // categorized: show the category and "Сменить категорию" (the picker opens in a sheet)
+      {category ? (
+        // categorized: the category and "Сменить" (the picker opens in a sheet)
         <>
           {/* no gear here: category management is in the "Сменить категорию" sheet */}
           <SectionHeading title="Категория" />
           <View style={styles.currentRow}>
-            <View style={styles.currentChip}>
-              <Text style={styles.currentText}>
-                {categoryLabel({ emoji: tx.category_emoji, name: tx.category_name!, type_name: tx.category_type_name })}
-              </Text>
-            </View>
+            <Chip label={category} selected />
             <TouchableOpacity
               style={styles.changeButton}
               disabled={saving}
@@ -132,9 +119,7 @@ export default function TransactionDetail({ route, navigation }: Props) {
     </ScrollView>
       {/* pinned to the bottom, outside the scroll */}
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.deleteButton} disabled={saving} onPress={confirmDelete}>
-          <Text style={styles.deleteText}>Удалить транзакцию</Text>
-        </TouchableOpacity>
+        <Button title="Удалить транзакцию" danger disabled={saving} onPress={() => confirmDeleteTransaction(tx, () => navigation.goBack())} />
       </View>
     </View>
   );
@@ -151,8 +136,6 @@ const styles = StyleSheet.create({
   meta: { fontSize: 14, color: colors.muted, marginTop: 2 },
   heading: { fontSize: 13, fontWeight: '600', color: colors.muted, marginTop: 24, marginBottom: 8, textTransform: 'uppercase' },
   currentRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
-  currentChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16, backgroundColor: colors.accent },
-  currentText: { fontSize: 15, color: '#FFFFFF' },
   changeButton: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16,
@@ -165,7 +148,5 @@ const styles = StyleSheet.create({
     padding: 16, backgroundColor: colors.bg,
     borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
   },
-  deleteButton: { backgroundColor: colors.danger, borderRadius: 8, paddingVertical: 14, alignItems: 'center' },
-  deleteText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
   sms: { fontSize: 13, color: colors.muted, backgroundColor: colors.surface, padding: 12, borderRadius: 8 },
 });

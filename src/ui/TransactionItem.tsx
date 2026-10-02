@@ -1,0 +1,70 @@
+import React from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { txCategoryLabel } from '../db/categories';
+import { isUnread, TransactionRow } from '../db/transactions';
+import Checkbox from './Checkbox';
+import { formatAmount, formatTime, isIncome, merchantLabel } from './format';
+import RowActions from './RowActions';
+import { colors } from './theme';
+
+type Props = {
+  tx: TransactionRow;
+  onPress: () => void;
+  /** multi-select: checkbox in front, the row toggles it */
+  selectable?: boolean;
+  selected?: boolean;
+  /** edit mode: ✎ / 🗑 at the end */
+  onEdit?: () => void;
+  onDelete?: () => void;
+};
+
+/** One row of the transactions list: merchant (bold + blue dot when unread), category · time, amount. */
+export default function TransactionItem({ tx, onPress, selectable, selected, onEdit, onDelete }: Props) {
+  const unread = isUnread(tx);
+  const category = txCategoryLabel(tx);
+  return (
+    <TouchableOpacity style={[styles.row, selected && styles.rowSelected]} onPress={onPress}>
+      {selectable ? <View style={styles.checkbox}><Checkbox checked={!!selected} /></View> : null}
+      <View style={styles.main}>
+        <View style={styles.titleRow}>
+          {unread ? <View style={styles.unreadDot} accessibilityLabel="Не просмотрена" /> : null}
+          <Text style={[styles.merchant, unread && styles.merchantUnread]} numberOfLines={1}>{merchantLabel(tx)}</Text>
+        </View>
+        {category ? (
+          <Text style={styles.meta} numberOfLines={1}>{category} · {formatTime(tx.occurred_at)}</Text>
+        ) : (
+          <View style={styles.inline}>
+            <Text style={styles.badge}>Без категории</Text>
+            <Text style={styles.meta}> · {formatTime(tx.occurred_at)}</Text>
+          </View>
+        )}
+      </View>
+      <Text style={[styles.amount, isIncome(tx.kind) && styles.income]}>
+        {formatAmount(tx.amount_minor, tx.currency, tx.kind)}
+      </Text>
+      {onDelete ? <RowActions onEdit={onEdit} onDelete={onDelete} /> : null}
+    </TouchableOpacity>
+  );
+}
+
+const styles = StyleSheet.create({
+  row: {
+    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
+  },
+  rowSelected: { backgroundColor: '#EFF6FF' },
+  checkbox: { marginRight: 12 },
+  main: { flex: 1, marginRight: 12 },
+  titleRow: { flexDirection: 'row', alignItems: 'center' },
+  unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accent, marginRight: 8 },
+  merchant: { flexShrink: 1, fontSize: 16, color: colors.text },
+  merchantUnread: { fontWeight: '600' },
+  meta: { fontSize: 13, color: colors.muted, marginTop: 2 },
+  inline: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
+  badge: {
+    fontSize: 12, color: colors.warn, backgroundColor: colors.warnBg,
+    paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4, overflow: 'hidden',
+  },
+  amount: { fontSize: 16, color: colors.text, fontVariant: ['tabular-nums'] },
+  income: { color: colors.income },
+});

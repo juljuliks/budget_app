@@ -4,7 +4,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Category, listCategories } from '../db/categories';
 import type { RootStackParamList } from '../navigation';
-import { PencilIcon, TrashIcon } from './icons';
+import { formStyles } from './formStyles';
+import RowActions from './RowActions';
 import { colors } from './theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Categories'>;
@@ -40,26 +41,15 @@ export default function CategoriesScreen({ navigation }: Props) {
       style={styles.list}
       sections={sections}
       keyExtractor={(c) => String(c.id)}
-      renderSectionHeader={({ section }) => <Text style={styles.sectionHeader}>{section.title}</Text>}
+      renderSectionHeader={({ section }) => <Text style={formStyles.sectionHeader}>{section.title}</Text>}
       renderItem={({ item }) => (
         <View style={styles.row}>
           <Text style={styles.name} numberOfLines={1}>{`${item.emoji || ''} ${item.name}`.trim()}</Text>
-          <TouchableOpacity
-            style={styles.action}
-            hitSlop={8}
-            onPress={() => navigation.navigate('CategoryEdit', { categoryId: item.id })}
-            accessibilityLabel={`Изменить ${item.name}`}
-          >
-            <PencilIcon color={colors.muted} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.action}
-            hitSlop={8}
-            onPress={() => navigation.navigate('CategoryDelete', { categoryId: item.id })}
-            accessibilityLabel={`Удалить ${item.name}`}
-          >
-            <TrashIcon color={colors.danger} />
-          </TouchableOpacity>
+          <RowActions
+            subject={item.name}
+            onEdit={() => navigation.navigate('CategoryEdit', { categoryId: item.id })}
+            onDelete={() => navigation.navigate('CategoryDelete', { categoryId: item.id })}
+          />
         </View>
       )}
       ListEmptyComponent={<Text style={styles.empty}>Категорий нет. Нажмите ＋, чтобы создать.</Text>}
@@ -70,15 +60,10 @@ export default function CategoriesScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   list: { flex: 1, backgroundColor: colors.bg },
   headerAction: { fontSize: 24, color: colors.accent },
-  sectionHeader: {
-    paddingHorizontal: 16, paddingVertical: 6, backgroundColor: colors.surface,
-    color: colors.muted, fontSize: 13, fontWeight: '600',
-  },
   row: {
     flexDirection: 'row', alignItems: 'center', paddingLeft: 16, paddingRight: 8, paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
   },
   name: { flex: 1, fontSize: 16, color: colors.text },
-  action: { padding: 8, marginLeft: 4 },
   empty: { padding: 32, textAlign: 'center', color: colors.muted },
 });

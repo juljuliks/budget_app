@@ -23,10 +23,14 @@ export type TransactionRow = {
 /** Position of the last row of a page; pass it back to get the next (older) page. */
 export type PageCursor = { occurred_at: number; id: number };
 
-const SELECT_TX = `SELECT t.id, t.bank, t.kind, t.amount_minor, t.currency, t.raw_merchant, t.merchant_key, t.category_id, t.category_source, t.occurred_at, t.seen_at, c.name AS category_name, c.emoji AS category_emoji, ct.name AS category_type_name
-    FROM transactions t
+const CATEGORY_COLUMNS = 'c.name AS category_name, c.emoji AS category_emoji, ct.name AS category_type_name';
+const TX_COLUMNS = `t.id, t.bank, t.kind, t.amount_minor, t.currency, t.raw_merchant, t.merchant_key, t.category_id,
+    t.category_source, t.occurred_at, t.seen_at, ${CATEGORY_COLUMNS}`;
+const FROM_TX = `FROM transactions t
     LEFT JOIN categories c ON c.id = t.category_id
     LEFT JOIN category_types ct ON ct.id = c.type_id`;
+const SELECT_TX = `SELECT ${TX_COLUMNS} ${FROM_TX}`;
+const NEWEST_FIRST = 'ORDER BY t.occurred_at DESC, t.id DESC';
 
 /**
  * Newest first, keyset-paginated: stable even when new SMS arrive while scrolling
@@ -37,9 +41,9 @@ export async function listTransactionsPage(cursor: PageCursor | null, limit = 50
   const rows = cursor
     ? await db.all<TransactionRow>(`${SELECT_TX}
         WHERE t.occurred_at < ? OR (t.occurred_at = ? AND t.id < ?)
-        ORDER BY t.occurred_at DESC, t.id DESC LIMIT ?`,
+        ${NEWEST_FIRST} LIMIT ?`,
         [cursor.occurred_at, cursor.occurred_at, cursor.id, limit])
-    : await db.all<TransactionRow>(`${SELECT_TX} ORDER BY t.occurred_at DESC, t.id DESC LIMIT ?`, [limit]);
+    : await db.all<TransactionRow>(`${SELECT_TX} ${NEWEST_FIRST} LIMIT ?`, [limit]);
   const last = rows[rows.length - 1];
   return {
     rows,
@@ -56,12 +60,6 @@ const SEARCH_LIMIT = 500;
 /** uncategorized transactions match this phrase (what the UI calls them) */
 const UNCATEGORIZED = 'Без категории';
 
-/** Search query that finds a category's transactions (type + name, no ":" so words match). */
-export function categorySearchQuery(c: { name: string; type_name?: string | null; category_id?: number | null }): string {
-  if (c.category_id === null) return UNCATEGORIZED;
-  return [c.type_name, c.name].filter(Boolean).join(' ');
-}
-
 /**
  * Transactions whose SMS text, merchant / description, category or category type contain every
  * word of the query. Newest first, at most SEARCH_LIMIT rows (a few thousand rows a year scan fast).
@@ -71,7 +69,7 @@ export async function searchTransactions(query: string, limit = SEARCH_LIMIT): P
   if (words.length === 0) return [];
   const db = await getDb();
   const rows = await db.all<TransactionRow & { raw_sms: string }>(
-    `${SELECT_TX.replace('SELECT t.id,', 'SELECT t.raw_sms, t.id,')} ORDER BY t.occurred_at DESC, t.id DESC`);
+    `SELECT t.raw_sms, ${TX_COLUMNS} ${FROM_TX} ${NEWEST_FIRST}`);
   const out: TransactionRow[] = [];
   for (const r of rows) {
     const haystack = normalizeForSearch(
@@ -107,7 +105,7 @@ export async function listTransactionsFiltered(f: TxFilter, limit = FILTER_LIMIT
   if (f.to !== undefined) { where.push('t.occurred_at < ?'); params.push(f.to); }
   const db = await getDb();
   return db.all<TransactionRow>(
-    `${SELECT_TX} ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ORDER BY t.occurred_at DESC, t.id DESC LIMIT ?`,
+    `${SELECT_TX} ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ${NEWEST_FIRST} LIMIT ?`,
     [...params, limit]);
 }
 
@@ -151,11 +149,7 @@ export async function setCategoryForTransactions(txIds: number[], categoryId: nu
 
 export async function getTransaction(id: number) {
   const db = await getDb();
-  return db.get<TransactionRow & { raw_sms: string }>(`SELECT t.*, c.name AS category_name, c.emoji AS category_emoji, ct.name AS category_type_name
-    FROM transactions t
-    LEFT JOIN categories c ON c.id = t.category_id
-    LEFT JOIN category_types ct ON ct.id = c.type_id
-    WHERE t.id = ?`, [id]);
+  return db.get<TransactionRow & { raw_sms: string }>(`SELECT t.*, ${CATEGORY_COLUMNS} ${FROM_TX} WHERE t.id = ?`, [id]);
 }
 
 /** Opening a transaction marks it read. Returns true if it was unread. */
@@ -191,7 +185,6 @@ export async function setTransactionCategory(txId: number, categoryId: number | 
   return db.run('UPDATE transactions SET category_id = ?, category_source = ? WHERE id = ?',
     [categoryId, categoryId === null ? null : source, txId]);
 }
-
 
 /** Manually entered transaction (cash etc.). Stored like an SMS one, with a unique synthetic hash. */
 export async function addManualTransaction(tx: {

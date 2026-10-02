@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import {
   Category, categoryLabel, countPastTransactionsOfCategory, currentTransactionsOfCategory, deleteCategory, getCategory,
 } from '../db/categories';
 import { emitTransactionsChanged } from '../events';
 import type { RootStackParamList } from '../navigation';
+import Button from './Button';
 import CategoryPicker from './CategoryPicker';
-import { formatAmount, formatDay } from './format';
+import { formatAmount, formatDay, merchantLabel } from './format';
 import { colors } from './theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CategoryDelete'>;
@@ -65,7 +66,7 @@ export default function CategoryDelete({ route, navigation }: Props) {
           <Text style={styles.heading}>Транзакции этого месяца ({txs.length})</Text>
           {txs.map((t) => (
             <View key={t.id} style={styles.txRow}>
-              <Text style={styles.txName} numberOfLines={1}>{t.raw_merchant || 'Без мерчанта'}</Text>
+              <Text style={styles.txName} numberOfLines={1}>{merchantLabel(t)}</Text>
               <Text style={styles.txMeta}>{formatDay(t.occurred_at)}</Text>
               <Text style={styles.txAmount}>{formatAmount(t.amount_minor, t.currency, t.kind)}</Text>
             </View>
@@ -95,11 +96,13 @@ export default function CategoryDelete({ route, navigation }: Props) {
       ) : null}
       <Text style={styles.hint}>Правила для мерчантов перейдут в выбранную категорию, пункт плана текущего месяца будет удалён.</Text>
 
-      <TouchableOpacity style={[styles.button, saving && styles.buttonDisabled]} disabled={saving} onPress={confirm}>
-        <Text style={styles.buttonText}>
-          {txs.length > 0 && target !== null ? 'Перенести и удалить' : 'Удалить'}
-        </Text>
-      </TouchableOpacity>
+      <Button
+        title={txs.length > 0 && target !== null ? 'Перенести и удалить' : 'Удалить'}
+        danger
+        disabled={saving}
+        onPress={confirm}
+        style={styles.button}
+      />
     </ScrollView>
   );
 }
@@ -115,7 +118,5 @@ const styles = StyleSheet.create({
   txMeta: { fontSize: 13, color: colors.muted, marginRight: 8 },
   txAmount: { fontSize: 15, color: colors.text, fontVariant: ['tabular-nums'] },
   hint: { color: colors.muted, marginTop: 12, fontSize: 13 },
-  button: { marginTop: 24, backgroundColor: colors.danger, borderRadius: 8, paddingVertical: 12, alignItems: 'center' },
-  buttonDisabled: { opacity: 0.5 },
-  buttonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
+  button: { marginTop: 24 },
 });

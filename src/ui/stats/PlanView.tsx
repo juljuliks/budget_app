@@ -7,13 +7,14 @@ import {
   setPlanAmount, setPlanBudget, setPlanPinned,
 } from '../../db/plans';
 import CategoryPicker from '../CategoryPicker';
-import NameInputModal from '../NameInputModal';
-import { PencilIcon, PinIcon, TrashIcon } from '../icons';
-import { formatMoney, parseAmountInput, toInputValue } from '../money';
+import { PencilIcon, PinIcon } from '../icons';
+import Meter from '../Meter';
+import { formatShort, formatWithCurrency, parseAmountInput, toInputValue } from '../money';
+import RowActions, { ROW_ICON_SIZE } from '../RowActions';
+import TextInputModal from '../TextInputModal';
 import { chart, colors } from '../theme';
 
-// non-breaking spaces: "1 400 GEL" never wraps
-const money = (minor: number) => `${formatMoney(minor, { compact: true })} ${BUDGET_CURRENCY}`.replace(/ /g, ' ');
+const money = (minor: number) => formatWithCurrency(minor, BUDGET_CURRENCY);
 
 /** Share of the amount to distribute, "35%"; "<1%" for tiny non-zero amounts. */
 function percentOf(part: number, whole: number): string {
@@ -129,9 +130,8 @@ export default function PlanView({ ym }: { ym: string }) {
           </View>
         </View>
         {budget ? (
-          <View style={styles.track}>
-            <View style={[styles.fill, { width: `${Math.min(total / budget, 1) * 100}%` }]} />
-          </View>
+          // share of the amount already distributed: not a spent/limit meter, so no warning colors
+          <Meter ratio={total / budget} color={chart.meterFill} />
         ) : (
           <Text style={styles.caption}>Укажите сумму (например, зарплату): план не сможет её превысить, а у категорий появятся доли в %</Text>
         )}
@@ -160,24 +160,17 @@ export default function PlanView({ ym }: { ym: string }) {
             accessibilityLabel={`Изменить сумму: ${categoryLabel(item)}`}
           >
             {item.limit_minor ? (
-              <Text style={styles.amount}>{formatMoney(item.limit_minor, { compact: true })}</Text>
+              <Text style={styles.amount}>{formatShort(item.limit_minor)}</Text>
             ) : (
               // carried over without an amount: last month's as a muted hint
               <Text style={[styles.amount, styles.amountEmpty]}>
-                {item.previous_minor ? `было ${formatMoney(item.previous_minor, { compact: true })}` : '0'}
+                {item.previous_minor ? `было ${formatShort(item.previous_minor)}` : '0'}
               </Text>
             )}
-            {/* same row icons as in the transactions list */}
-            <PencilIcon color={colors.muted} size={18} />
+            {/* tapping the amount edits it too, so the pencil sits with it rather than in RowActions */}
+            <PencilIcon color={colors.muted} size={ROW_ICON_SIZE} />
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.remove}
-            onPress={() => run(removePlanItem(ym, item.category_id))}
-            hitSlop={8}
-            accessibilityLabel="Убрать из плана"
-          >
-            <TrashIcon color={colors.danger} size={18} />
-          </TouchableOpacity>
+          <RowActions subject={categoryLabel(item)} onDelete={() => run(removePlanItem(ym, item.category_id))} />
         </View>
       ))}
 
@@ -189,7 +182,7 @@ export default function PlanView({ ym }: { ym: string }) {
         newCategory={{ planYm: ym }}
       />
 
-      <NameInputModal
+      <TextInputModal
         visible={modal !== null}
         title={modal?.title ?? ''}
         hint={modal?.hint}
@@ -217,8 +210,6 @@ const styles = StyleSheet.create({
   summaryItem: { flex: 1, alignItems: 'center' },
   summaryValue: { fontSize: 18, fontWeight: '600', color: colors.text, marginVertical: 2, fontVariant: ['tabular-nums'] },
   freeValue: { color: colors.income },
-  track: { alignSelf: 'stretch', height: 6, borderRadius: 3, backgroundColor: chart.meterTrack, marginTop: 8, overflow: 'hidden' },
-  fill: { height: 6, borderRadius: 3, backgroundColor: chart.meterFill },
   pinNote: { marginTop: 10 },
   caption: { fontSize: 13, color: colors.muted, textAlign: 'center' },
   hint: { color: colors.muted, fontSize: 14, textAlign: 'center', marginVertical: 12 },
@@ -233,5 +224,4 @@ const styles = StyleSheet.create({
   amountButton: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4, paddingLeft: 8 },
   amount: { fontSize: 16, color: colors.text, fontVariant: ['tabular-nums'] },
   amountEmpty: { color: colors.muted, fontSize: 14 },
-  remove: { paddingLeft: 14 },
 });

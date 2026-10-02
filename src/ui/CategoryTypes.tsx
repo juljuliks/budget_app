@@ -1,12 +1,13 @@
 import React, { useCallback, useState } from 'react';
-import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, FlatList, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   CategoryType, countCategoriesOfType, createCategoryType, deleteCategoryType, findCategoryTypeByName, listCategoryTypes, renameCategoryType,
 } from '../db/categoryTypes';
 import { emitTransactionsChanged } from '../events';
-import NameInputModal from './NameInputModal';
-import { PencilIcon, TrashIcon } from './icons';
+import Fab from './Fab';
+import RowActions from './RowActions';
+import TextInputModal from './TextInputModal';
 import { colors } from './theme';
 
 /** Create, rename and delete category types ("Переводы", "Хобби", ...). */
@@ -50,30 +51,23 @@ export default function CategoryTypes() {
           <View style={styles.row}>
             <View style={styles.flex}>
               <Text style={styles.name}>{t.name}</Text>
-              {t.is_transfer ? <Text style={styles.note}>Только эти категории предлагаются для переводов</Text> : null}
+              {t.is_transfer ? <Text style={styles.note}>Эти категории предлагаются для переводов</Text> : null}
             </View>
-            <TouchableOpacity style={styles.action} hitSlop={8} onPress={() => setDialog({ id: t.id, name: t.name })} accessibilityLabel={`Переименовать ${t.name}`}>
-              <PencilIcon color={colors.muted} />
-            </TouchableOpacity>
-            {/* the transfer type drives transfer suggestions: shown greyed out, explains instead of deleting */}
-            <TouchableOpacity
-              style={styles.action}
-              hitSlop={8}
-              onPress={() => (t.is_transfer
+            {/* the transfer type drives transfer suggestions: grey trash that explains instead of deleting */}
+            <RowActions
+              subject={t.name}
+              onEdit={() => setDialog({ id: t.id, name: t.name })}
+              deleteDisabled={!!t.is_transfer}
+              onDelete={() => (t.is_transfer
                 ? Alert.alert('Системный тип', `«${t.name}» нельзя удалить: по нему приложение выбирает категории для переводов. Переименовать можно.`)
                 : remove(t))}
-              accessibilityLabel={`Удалить ${t.name}`}
-            >
-              <TrashIcon color={t.is_transfer ? colors.border : colors.danger} />
-            </TouchableOpacity>
+            />
           </View>
         )}
       />
       {/* pinned to the bottom like the "+" on the transactions screen */}
-      <TouchableOpacity style={styles.add} onPress={() => setDialog({ name: '' })} accessibilityLabel="Новый тип">
-        <Text style={styles.addText}>＋</Text>
-      </TouchableOpacity>
-      <NameInputModal
+      <Fab onPress={() => setDialog({ name: '' })} accessibilityLabel="Новый тип" />
+      <TextInputModal
         visible={dialog !== null}
         title={dialog?.id === undefined ? 'Новый тип' : 'Переименовать тип'}
         initialValue={dialog?.name ?? ''}
@@ -96,10 +90,4 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   name: { fontSize: 16, color: colors.text },
   note: { fontSize: 12, color: colors.muted, marginTop: 2 },
-  action: { padding: 8, marginLeft: 4 },
-  add: {
-    position: 'absolute', right: 16, bottom: 16, width: 56, height: 56, borderRadius: 28,
-    backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', elevation: 4,
-  },
-  addText: { color: '#FFFFFF', fontSize: 28, lineHeight: 32 },
 });

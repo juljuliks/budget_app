@@ -2,7 +2,7 @@ jest.mock('../src/navigation', () => ({ navigateWhenReady: jest.fn() }));
 
 import { getDb } from '../src/db';
 import {
-  addManualTransaction, categorySearchQuery, countUnseenTransactions, deleteTransaction, isUnread, listTransactionsPage, markTransactionSeen,
+  addManualTransaction, countUnseenTransactions, deleteTransaction, isUnread, listTransactionsPage, markTransactionSeen,
   normalizeForSearch, searchTransactions, listTransactionsFiltered, categoriesWithTransactions,
 } from '../src/db/transactions';
 import { rangeToUnix } from '../src/ui/dateRange';
@@ -125,13 +125,9 @@ describe('searchTransactions', () => {
     expect(await searchTransactions('   ')).toEqual([]);
   });
 
-  test('stats -> transactions: the category query finds that category, "Без категории" finds uncategorized', async () => {
+  test('type + name finds that category, "Без категории" finds uncategorized', async () => {
     await seed();
-    const guitar = (await searchTransactions('гитара'))[0];
-    const q = categorySearchQuery({ name: guitar.category_name!, type_name: guitar.category_type_name, category_id: guitar.category_id });
-    expect(q).toBe('Хобби Гитара');
-    expect((await searchTransactions(q)).map((r) => r.raw_merchant)).toEqual(['струны Ёлка']);
-    expect(categorySearchQuery({ name: 'Без категории', category_id: null })).toBe('Без категории');
+    expect((await searchTransactions('Хобби Гитара')).map((r) => r.raw_merchant)).toEqual(['струны Ёлка']);
     expect((await searchTransactions('Без категории')).map((r) => r.raw_merchant)).toEqual(['AdamDent LLC']);
   });
 
