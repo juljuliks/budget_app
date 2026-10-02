@@ -18,6 +18,11 @@ export function formatMoney(minor: number, opts: { compact?: boolean } = {}): st
   return `${sign}${grouped}.${String(cents).padStart(2, '0')}`;
 }
 
+/** Like parseAmountInput, but an empty field means 0. */
+export function parseAmountOrZero(input: string): number | null {
+  return input.trim() === '' ? 0 : parseAmountInput(input);
+}
+
 export function toInputValue(minor: number | null | undefined): string {
   if (!minor) return '';
   return minor % 100 === 0 ? String(minor / 100) : (minor / 100).toFixed(2);

@@ -151,6 +151,8 @@ export async function addPlanItem(ym: string, categoryId: number, limitMinor = 0
 
 /** Refused (OverBudgetError) if the month's plan would exceed its amount to distribute. */
 export async function setPlanAmount(ym: string, categoryId: number, limitMinor: number) {
+  // also adds the item (from the stats screen), so the month must exist with its carried-over items first
+  await ensureMonthPlan(ym);
   limitMinor = Math.max(0, limitMinor);
   const budget = await storedBudget(ym);
   if (budget !== null) {
@@ -188,6 +190,8 @@ export type CategoryStat = {
   limit_minor: number | null;
   /** rank by all-time spend: keeps a category's chart color stable across months */
   color_rank: number;
+  /** deleted category that still has spending in this month: can't be added to a plan */
+  deleted: boolean;
 };
 
 export type StatGroup = {
@@ -245,8 +249,8 @@ export async function monthStats(year: number, month: number): Promise<MonthStat
       GROUP BY t.category_id ORDER BY ${SPEND_EXPR} DESC, t.category_id`, [BUDGET_CURRENCY]);
   const rankOf = new Map(ranks.map((r, i) => [r.category_id, i]));
 
-  const cats = await db.all<{ id: number; name: string; emoji: string | null; type_id: number | null; type_name: string | null; limit_minor: number | null }>(
-    `SELECT c.id, c.name, c.emoji, c.type_id, ct.name AS type_name, p.limit_minor
+  const cats = await db.all<{ id: number; name: string; emoji: string | null; type_id: number | null; type_name: string | null; limit_minor: number | null; deleted_at: number | null }>(
+    `SELECT c.id, c.name, c.emoji, c.type_id, ct.name AS type_name, p.limit_minor, c.deleted_at
       FROM categories c
       LEFT JOIN category_types ct ON ct.id = c.type_id
       LEFT JOIN plan_items p ON p.category_id = c.id AND p.ym = ?`, [ym]);
@@ -258,14 +262,14 @@ export async function monthStats(year: number, month: number): Promise<MonthStat
     if (s === 0 && limit === null) continue;
     categories.push({
       category_id: c.id, name: c.name, emoji: c.emoji, type_id: c.type_id, type_name: c.type_name, spent_minor: s, limit_minor: limit,
-      color_rank: rankOf.get(c.id) ?? Number.MAX_SAFE_INTEGER,
+      color_rank: rankOf.get(c.id) ?? Number.MAX_SAFE_INTEGER, deleted: c.deleted_at !== null,
     });
   }
   const uncategorized = spentBy.get(null) ?? 0;
   if (uncategorized !== 0) {
     categories.push({
       category_id: null, name: 'Без категории', emoji: null, type_id: null, type_name: null,
-      spent_minor: uncategorized, limit_minor: null, color_rank: Number.MAX_SAFE_INTEGER,
+      spent_minor: uncategorized, limit_minor: null, color_rank: Number.MAX_SAFE_INTEGER, deleted: false,
     });
   }
   categories.sort((a, b) => b.spent_minor - a.spent_minor || (b.limit_minor ?? 0) - (a.limit_minor ?? 0));

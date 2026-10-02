@@ -4,14 +4,15 @@ import { useFocusEffect } from '@react-navigation/native';
 import { categoryLabel } from '../../db/categories';
 import {
   addPlanItem, BUDGET_CURRENCY, getPlanBudget, listPlan, monthIncome, OverBudgetError, PlanItem, removePlanItem,
-  setPlanAmount, setPlanBudget, setPlanPinned,
+  setPlanBudget, setPlanPinned,
 } from '../../db/plans';
 import CategoryPicker from '../CategoryPicker';
 import { PencilIcon, PinIcon } from '../icons';
 import Meter from '../Meter';
-import { formatShort, formatWithCurrency, parseAmountInput, toInputValue } from '../money';
+import { formatShort, formatWithCurrency, parseAmountOrZero, toInputValue } from '../money';
 import RowActions, { ROW_ICON_SIZE } from '../RowActions';
 import TextInputModal from '../TextInputModal';
+import PlanAmountModal, { PlanAmountTarget } from './PlanAmountModal';
 import { chart, colors } from '../theme';
 
 const money = (minor: number) => formatWithCurrency(minor, BUDGET_CURRENCY);
@@ -23,14 +24,6 @@ function percentOf(part: number, whole: number): string {
   return p === 0 ? '<1%' : `${p}%`;
 }
 
-/** '' = 0; null = not an amount. */
-function parseOrZero(text: string): number | null {
-  return text.trim() === '' ? 0 : parseAmountInput(text);
-}
-
-/** What the amount modal edits: the month's amount to distribute or one plan item. */
-type Editing = { kind: 'budget' } | { kind: 'item'; item: PlanItem };
-
 /**
  * Plan for one month. A new month starts from the previous month's items:
  * pinned ones keep their amount, the others need a new amount (last month's is shown as a hint).
@@ -41,7 +34,8 @@ export default function PlanView({ ym }: { ym: string }) {
   // amount to distribute (e.g. salary); null = not set (shown as 0, no cap)
   const [budget, setBudget] = useState<number | null>(null);
   const [income, setIncome] = useState(0);
-  const [editing, setEditing] = useState<Editing | null>(null);
+  const [budgetOpen, setBudgetOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<PlanAmountTarget | null>(null);
 
   const load = useCallback(() => {
     Promise.all([listPlan(ym), getPlanBudget(ym), monthIncome(ym)])
@@ -55,23 +49,15 @@ export default function PlanView({ ym }: { ym: string }) {
   const total = useMemo(() => (items ?? []).reduce((sum, i) => sum + i.limit_minor, 0), [items]);
   const free = budget === null ? null : budget - total;
 
-  /** Saves the modal's value; returns an error to show in the modal, or null. */
-  async function save(text: string): Promise<string | null> {
-    if (!editing) return null;
-    const minor = parseOrZero(text);
+  /** Saves the amount to distribute (0 / empty = not set); returns an error to show in the dialog, or null. */
+  async function saveBudget(text: string): Promise<string | null> {
+    const minor = parseAmountOrZero(text);
     if (minor === null) return 'Введите сумму, например 1500 или 12.50';
     try {
-      if (editing.kind === 'budget') {
-        await setPlanBudget(ym, minor === 0 ? null : minor);
-      } else {
-        await setPlanAmount(ym, editing.item.category_id, minor);
-      }
+      await setPlanBudget(ym, minor === 0 ? null : minor);
     } catch (e) {
       if (!(e instanceof OverBudgetError)) throw e;
-      load();
-      return editing.kind === 'budget'
-        ? `По категориям уже запланировано ${money(e.planned_minor)} — сумма не может быть меньше.`
-        : `Больше суммы к планированию. Свободно для этой категории: ${money(Math.max((free ?? 0) + editing.item.limit_minor, 0))}.`;
+      return `По категориям уже запланировано ${money(e.planned_minor)} — сумма не может быть меньше.`;
     }
     load();
     return null;
@@ -84,25 +70,10 @@ export default function PlanView({ ym }: { ym: string }) {
 
   if (!items) return <View style={styles.center}><ActivityIndicator /></View>;
 
-  const modal = editing?.kind === 'budget'
-    ? {
-      title: 'Сумма к планированию',
-      initial: toInputValue(budget),
-      hint: [
-        total > 0 ? `Уже запланировано: ${money(total)}` : '',
-        income > 0 ? `Поступления за месяц: ${money(income)}` : '',
-      ].filter(Boolean).join('\n') || 'Например, зарплата. План не сможет её превысить.',
-    }
-    : editing?.kind === 'item'
-      ? {
-        title: categoryLabel(editing.item),
-        initial: toInputValue(editing.item.limit_minor),
-        hint: [
-          free !== null ? `Свободно: ${money(Math.max(free + editing.item.limit_minor, 0))}` : '',
-          editing.item.previous_minor ? `В прошлом месяце: ${money(editing.item.previous_minor)}` : '',
-        ].filter(Boolean).join('\n'),
-      }
-      : null;
+  const budgetHint = [
+    total > 0 ? `Уже запланировано: ${money(total)}` : '',
+    income > 0 ? `Поступления за месяц: ${money(income)}` : '',
+  ].filter(Boolean).join('\n') || 'Например, зарплата. План не сможет её превысить.';
 
   return (
     <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
@@ -110,7 +81,7 @@ export default function PlanView({ ym }: { ym: string }) {
         <Text style={styles.caption}>Сумма к планированию</Text>
         <TouchableOpacity
           style={styles.budgetRow}
-          onPress={() => setEditing({ kind: 'budget' })}
+          onPress={() => setBudgetOpen(true)}
           accessibilityLabel="Изменить сумму к планированию"
         >
           <Text style={styles.budgetValue}>{money(budget ?? 0)}</Text>
@@ -156,7 +127,7 @@ export default function PlanView({ ym }: { ym: string }) {
           </View>
           <TouchableOpacity
             style={styles.amountButton}
-            onPress={() => setEditing({ kind: 'item', item })}
+            onPress={() => setEditingItem({ ...item, label: categoryLabel(item) })}
             accessibilityLabel={`Изменить сумму: ${categoryLabel(item)}`}
           >
             {item.limit_minor ? (
@@ -183,17 +154,18 @@ export default function PlanView({ ym }: { ym: string }) {
       />
 
       <TextInputModal
-        visible={modal !== null}
-        title={modal?.title ?? ''}
-        hint={modal?.hint}
-        initialValue={modal?.initial ?? ''}
+        visible={budgetOpen}
+        title="Сумма к планированию"
+        hint={budgetHint}
+        initialValue={toInputValue(budget)}
         placeholder="0"
         keyboardType="decimal-pad"
         maxLength={12}
         allowEmpty
-        onSubmit={save}
-        onClose={() => setEditing(null)}
+        onSubmit={saveBudget}
+        onClose={() => setBudgetOpen(false)}
       />
+      <PlanAmountModal ym={ym} target={editingItem} onClose={() => setEditingItem(null)} onSaved={load} />
     </ScrollView>
   );
 }

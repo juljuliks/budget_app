@@ -2,12 +2,14 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useOpenCategoryTransactions } from '../../navigation';
-import { BUDGET_CURRENCY, CategoryStat, monthStats, MonthStats } from '../../db/plans';
+import { categoryLabel } from '../../db/categories';
+import { BUDGET_CURRENCY, CategoryStat, monthStats, MonthStats, ymOf } from '../../db/plans';
 import { onTransactionsChanged } from '../../events';
 import Donut, { DonutSegment } from '../Donut';
 import Meter from '../Meter';
 import { formatMoney, formatShort } from '../money';
 import { chart, colors, seriesColor } from '../theme';
+import PlanAmountModal, { PlanAmountTarget } from './PlanAmountModal';
 
 /** Its own color for the top categories by all-time spend; the rest (and uncategorized) share "other". */
 function hasOwnColor(c: CategoryStat): boolean {
@@ -29,6 +31,8 @@ function donutSegments(cats: CategoryStat[]): DonutSegment[] {
 
 export default function StatsView({ year, month }: { year: number; month: number }) {
   const [stats, setStats] = useState<MonthStats | null>(null);
+  // "＋ В план" on a category without a plan amount
+  const [planTarget, setPlanTarget] = useState<PlanAmountTarget | null>(null);
 
   const load = useCallback(() => {
     monthStats(year, month).then(setStats).catch((e) => console.error('load stats failed', e));
@@ -79,7 +83,15 @@ export default function StatsView({ year, month }: { year: number; month: number
                 {g.planned_minor ? <Text style={styles.rowLimit}> / {formatShort(g.planned_minor)}</Text> : null}
               </Text>
             </View>
-            {g.categories.map((c) => <CategoryRow key={String(c.category_id)} stat={c} />)}
+            {g.categories.map((c) => (
+              <CategoryRow
+                key={String(c.category_id)}
+                stat={c}
+                onAddToPlan={c.category_id !== null && c.limit_minor === null && !c.deleted
+                  ? () => setPlanTarget({ category_id: c.category_id!, label: categoryLabel(c), limit_minor: 0 })
+                  : undefined}
+              />
+            ))}
           </View>
         ))
       )}
@@ -89,6 +101,8 @@ export default function StatsView({ year, month }: { year: number; month: number
           Не учтено (другая валюта): {stats.other_currencies.map((o) => `${formatMoney(o.spent_minor)} ${o.currency}`).join(', ')}
         </Text>
       ) : null}
+
+      <PlanAmountModal ym={ymOf(year, month)} target={planTarget} onClose={() => setPlanTarget(null)} onSaved={load} />
     </ScrollView>
   );
 }
@@ -102,7 +116,7 @@ function SummaryItem({ label, value, danger }: { label: string; value: string; d
   );
 }
 
-function CategoryRow({ stat }: { stat: CategoryStat }) {
+function CategoryRow({ stat, onAddToPlan }: { stat: CategoryStat; onAddToPlan?: () => void }) {
   const openTransactions = useOpenCategoryTransactions();
   const { spent_minor: spent, limit_minor: limit } = stat;
   const dot = hasOwnColor(stat) ? seriesColor(stat.color_rank) : chart.other;
@@ -113,6 +127,11 @@ function CategoryRow({ stat }: { stat: CategoryStat }) {
       <View style={styles.rowTop}>
         <View style={[styles.dot, { backgroundColor: dot }]} />
         <Text style={styles.rowName} numberOfLines={1}>{`${stat.emoji || ''} ${stat.name}`.trim()}</Text>
+        {onAddToPlan ? (
+          <TouchableOpacity style={styles.addToPlan} onPress={onAddToPlan} hitSlop={8} accessibilityLabel={`Добавить в план: ${stat.name}`}>
+            <Text style={styles.addToPlanText}>＋ В план</Text>
+          </TouchableOpacity>
+        ) : null}
         <Text style={styles.rowAmount}>
           {formatShort(spent)}{limit ? <Text style={styles.rowLimit}> / {formatShort(limit)}</Text> : null}
         </Text>
@@ -151,8 +170,13 @@ const styles = StyleSheet.create({
   row: { paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
   rowTop: { flexDirection: 'row', alignItems: 'center' },
   dot: { width: 10, height: 10, borderRadius: 5, marginRight: 8 },
-  rowName: { flex: 1, fontSize: 15, color: colors.text },
-  rowAmount: { fontSize: 15, color: colors.text, fontVariant: ['tabular-nums'] },
+  rowName: { flexShrink: 1, fontSize: 15, color: colors.text },
+  addToPlan: {
+    marginLeft: 8, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10,
+    borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed',
+  },
+  addToPlanText: { fontSize: 12, color: colors.accent },
+  rowAmount: { marginLeft: 'auto', paddingLeft: 8, fontSize: 15, color: colors.text, fontVariant: ['tabular-nums'] },
   rowLimit: { color: colors.muted },
   rowStatus: { fontSize: 13, color: colors.muted, marginTop: 4 },
 });

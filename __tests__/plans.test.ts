@@ -143,6 +143,15 @@ describe('amount to distribute', () => {
     expect(await getPlanBudget(M1)).toBeNull();
   });
 
+  test('stats "＋ В план": setting an amount adds the item; over the free amount nothing is added', async () => {
+    await setPlanBudget(M1, 100000);
+    await addPlanItem(M1, 1); await setPlanAmount(M1, 1, 70000);
+    await expect(setPlanAmount(M1, 2, 40000)).rejects.toHaveProperty('planned_minor', 110000);
+    expect((await listPlan(M1)).map((i) => i.category_id)).toEqual([1]);
+    await setPlanAmount(M1, 2, 30000);
+    expect((await listPlan(M1)).map((i) => [i.category_id, i.limit_minor])).toEqual([[1, 70000], [2, 30000]]);
+  });
+
   test('carries over to the next month', async () => {
     await setPlanBudget(M1, 300000);
     expect(await getPlanBudget(M2)).toBe(300000);
