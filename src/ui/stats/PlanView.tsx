@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Category, categoryLabel, listCategories } from '../../db/categories';
+import { categoryLabel } from '../../db/categories';
 import {
   addPlanItem, BUDGET_CURRENCY, listPlan, PlanItem, removePlanItem, setPlanAmount, setPlanPinned,
 } from '../../db/plans';
+import CategoryPicker from '../CategoryPicker';
 import { PinIcon } from '../icons';
 import { formatMoney, parseAmountInput, toInputValue } from '../money';
 import { colors } from '../theme';
@@ -15,15 +16,12 @@ import { colors } from '../theme';
  */
 export default function PlanView({ ym }: { ym: string }) {
   const [items, setItems] = useState<PlanItem[] | null>(null);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [drafts, setDrafts] = useState<Map<number, string>>(new Map());
-  const [adding, setAdding] = useState(false);
 
   const load = useCallback(() => {
-    Promise.all([listPlan(ym), listCategories()])
-      .then(([plan, cats]) => {
+    listPlan(ym)
+      .then((plan) => {
         setItems(plan);
-        setCategories(cats);
         setDrafts(new Map(plan.map((p) => [p.category_id, toInputValue(p.limit_minor)])));
       })
       .catch((e) => console.error('load plan failed', e));
@@ -33,10 +31,6 @@ export default function PlanView({ ym }: { ym: string }) {
   useEffect(load, [load]);
 
   const total = useMemo(() => (items ?? []).reduce((sum, i) => sum + i.limit_minor, 0), [items]);
-  const available = useMemo(() => {
-    const inPlan = new Set((items ?? []).map((i) => i.category_id));
-    return categories.filter((c) => !inPlan.has(c.id));
-  }, [items, categories]);
 
   async function commitAmount(item: PlanItem) {
     const text = (drafts.get(item.category_id) ?? '').trim();
@@ -98,24 +92,13 @@ export default function PlanView({ ym }: { ym: string }) {
         </View>
       ))}
 
-      {available.length > 0 ? (
-        adding ? (
-          <View style={styles.chips}>
-            {available.map((c) => (
-              <TouchableOpacity key={c.id} style={styles.chip} onPress={() => { setAdding(false); run(addPlanItem(ym, c.id)); }}>
-                <Text style={styles.chipText}>{categoryLabel(c)}</Text>
-              </TouchableOpacity>
-            ))}
-            <TouchableOpacity style={[styles.chip, styles.chipCancel]} onPress={() => setAdding(false)}>
-              <Text style={styles.cancelText}>Отмена</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <TouchableOpacity style={styles.add} onPress={() => setAdding(true)}>
-            <Text style={styles.addText}>＋ Добавить категорию</Text>
-          </TouchableOpacity>
-        )
-      ) : null}
+      <CategoryPicker
+        title="Добавить в план"
+        onSelect={(id) => run(addPlanItem(ym, id))}
+        excludeIds={items.map((i) => i.category_id)}
+        // a category created from here goes straight into this month's plan
+        newCategory={{ planYm: ym }}
+      />
     </ScrollView>
   );
 }
@@ -138,11 +121,4 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6,
   },
   remove: { fontSize: 16, color: colors.muted, paddingLeft: 12 },
-  add: { marginTop: 16, alignSelf: 'flex-start' },
-  addText: { fontSize: 16, color: colors.accent },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 16 },
-  chip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16, backgroundColor: colors.surface },
-  chipText: { fontSize: 15, color: colors.text },
-  chipCancel: { backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border },
-  cancelText: { fontSize: 15, color: colors.muted },
 });

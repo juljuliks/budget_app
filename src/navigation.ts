@@ -10,8 +10,11 @@ export type TabParamList = {
 export type RootStackParamList = {
   Main: undefined;
   TransactionDetail: { txId: number };
-  /** No categoryId = create. txId: assign the new category to this transaction right away. typeId: preselected type. */
-  CategoryEdit: { categoryId?: number; txId?: number; typeId?: number };
+  /**
+   * No categoryId = create. After creating, the new category is: assigned to txId (with a merchant
+   * rule) / to all txIds (bulk, no rules), added to the plan of planYm. typeId: preselected type.
+   */
+  CategoryEdit: { categoryId?: number; txId?: number; txIds?: number[]; planYm?: string; typeId?: number };
   Categories: undefined;
   /** Delete a category, moving its current-month transactions to another one */
   CategoryDelete: { categoryId: number };

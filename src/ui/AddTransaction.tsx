@@ -1,13 +1,11 @@
-import React, { useCallback, useState } from 'react';
+import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Category, incrementCategoryUsage, listCategories } from '../db/categories';
+import { incrementCategoryUsage } from '../db/categories';
 import { addManualTransaction } from '../db/transactions';
 import { emitTransactionsChanged } from '../events';
 import type { RootStackParamList } from '../navigation';
 import CategoryPicker from './CategoryPicker';
-import SectionHeading from './SectionHeading';
 import { parseAmountInput } from './money';
 import { colors } from './theme';
 
@@ -21,15 +19,9 @@ export default function AddTransaction({ navigation }: Props) {
   const [kind, setKind] = useState<Kind>('purchase');
   const [description, setDescription] = useState('');
   const [day, setDay] = useState<Day>('today');
-  const [categories, setCategories] = useState<Category[]>([]);
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-
-  // reload on focus: picks up a category created via "+ Новая категория"
-  useFocusEffect(useCallback(() => {
-    listCategories().then(setCategories).catch((e) => console.error('load categories failed', e));
-  }, []));
 
   async function save() {
     const minor = parseAmountInput(amount);
@@ -92,9 +84,7 @@ export default function AddTransaction({ navigation }: Props) {
         onChange={(v) => setDay(v as Day)}
       />
 
-      <SectionHeading title="Категория" onSettings={() => navigation.navigate('Categories')} settingsLabel="Управление категориями" />
       <CategoryPicker
-        categories={categories}
         selectedId={categoryId}
         onSelect={(id) => setCategoryId((cur) => (cur === id ? null : id))}
         disabled={saving}

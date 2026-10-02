@@ -289,7 +289,7 @@ export default function TransactionsList() {
 
       <BulkCategoryModal
         visible={bulkOpen}
-        count={selected.size}
+        txIds={[...selected]}
         transfersOnly={selectedRows.length > 0 && selectedRows.every((r) => r.kind === 'transfer')}
         onPick={applyBulk}
         onClose={() => setBulkOpen(false)}

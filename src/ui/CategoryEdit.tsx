@@ -4,7 +4,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { categoryLabel, createCategory, findCategoryByName, getCategory, updateCategory } from '../db/categories';
 import { CategoryType, listCategoryTypes } from '../db/categoryTypes';
-import { assignCategory } from '../assign';
+import { assignCategory, assignCategoryToMany } from '../assign';
+import { addPlanItem } from '../db/plans';
 import { emitTransactionsChanged } from '../events';
 import type { RootStackParamList } from '../navigation';
 import SectionHeading from './SectionHeading';
@@ -14,7 +15,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'CategoryEdit'>;
 
 /** Create (no categoryId) or edit a category: name, emoji, optional type. */
 export default function CategoryEdit({ route, navigation }: Props) {
-  const { categoryId, txId, typeId: initialTypeId } = route.params ?? {};
+  const { categoryId, txId, txIds, planYm, typeId: initialTypeId } = route.params ?? {};
   const isNew = categoryId === undefined;
   const [name, setName] = useState('');
   const [emoji, setEmoji] = useState('');
@@ -56,6 +57,9 @@ export default function CategoryEdit({ route, navigation }: Props) {
       if (isNew) {
         const id = await createCategory(trimmed, emoji, typeId);
         if (txId) await assignCategory(txId, id);
+        if (txIds?.length) await assignCategoryToMany(txIds, id);
+        if (planYm) await addPlanItem(planYm, id);
+        emitTransactionsChanged();
       } else {
         await updateCategory(categoryId, { name: trimmed, emoji, typeId });
         emitTransactionsChanged();
@@ -107,6 +111,8 @@ export default function CategoryEdit({ route, navigation }: Props) {
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {isNew && txId ? <Text style={styles.hint}>Категория будет назначена транзакции и запомнена для её мерчанта.</Text> : null}
+      {isNew && txIds?.length ? <Text style={styles.hint}>Категория будет назначена выбранным транзакциям ({txIds.length}).</Text> : null}
+      {isNew && planYm ? <Text style={styles.hint}>Категория будет добавлена в план месяца.</Text> : null}
 
       <TouchableOpacity style={[styles.button, saving && styles.buttonDisabled]} disabled={saving} onPress={save}>
         <Text style={styles.buttonText}>Сохранить</Text>

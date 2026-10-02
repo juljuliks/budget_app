@@ -2,10 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import {
-  Category, categoryLabel, countPastTransactionsOfCategory, currentTransactionsOfCategory, deleteCategory, getCategory, listCategories,
+  Category, categoryLabel, countPastTransactionsOfCategory, currentTransactionsOfCategory, deleteCategory, getCategory,
 } from '../db/categories';
 import { emitTransactionsChanged } from '../events';
 import type { RootStackParamList } from '../navigation';
+import CategoryPicker, { PickerChip } from './CategoryPicker';
 import { formatAmount, formatDay } from './format';
 import { colors } from './theme';
 
@@ -21,7 +22,6 @@ export default function CategoryDelete({ route, navigation }: Props) {
   const [category, setCategory] = useState<Category | null>(null);
   const [txs, setTxs] = useState<Tx[] | null>(null);
   const [pastCount, setPastCount] = useState(0);
-  const [targets, setTargets] = useState<Category[]>([]);
   const [target, setTarget] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -30,15 +30,10 @@ export default function CategoryDelete({ route, navigation }: Props) {
       getCategory(categoryId),
       currentTransactionsOfCategory(categoryId),
       countPastTransactionsOfCategory(categoryId),
-      listCategories(),
-    ]).then(([c, current, past, all]) => {
+    ]).then(([c, current, past]) => {
       setCategory(c ?? null);
       setTxs(current);
       setPastCount(past);
-      // a transfer category's transactions are transfers: offer transfer categories first
-      const others = all.filter((x) => x.id !== categoryId);
-      const sameKind = others.filter((x) => x.type_is_transfer === c?.type_is_transfer);
-      setTargets([...sameKind, ...others.filter((x) => !sameKind.includes(x))]);
     }).catch((e) => console.error('load category delete failed', e));
   }, [categoryId]);
 
@@ -71,17 +66,16 @@ export default function CategoryDelete({ route, navigation }: Props) {
             </View>
           ))}
 
-          <Text style={styles.heading}>Перенести их в категорию</Text>
-          <View style={styles.chips}>
-            {targets.map((c) => (
-              <TouchableOpacity key={c.id} style={[styles.chip, target === c.id && styles.chipOn]} onPress={() => setTarget(c.id)}>
-                <Text style={[styles.chipText, target === c.id && styles.chipTextOn]}>{categoryLabel(c)}</Text>
-              </TouchableOpacity>
-            ))}
-            <TouchableOpacity style={[styles.chip, target === null && styles.chipOn]} onPress={() => setTarget(null)}>
-              <Text style={[styles.chipText, target === null && styles.chipTextOn]}>Оставить без категории</Text>
-            </TouchableOpacity>
-          </View>
+          <CategoryPicker
+            title="Перенести их в категорию"
+            selectedId={target}
+            onSelect={setTarget}
+            excludeIds={[categoryId]}
+            // transactions of a transfer category are transfers
+            transferOnly={category.type_is_transfer === 1}
+          >
+            <PickerChip label="Оставить без категории" selected={target === null} onPress={() => setTarget(null)} />
+          </CategoryPicker>
         </>
       ) : (
         <Text style={styles.hint}>В этом месяце транзакций в этой категории нет.</Text>
@@ -113,11 +107,6 @@ const styles = StyleSheet.create({
   txName: { flex: 1, fontSize: 15, color: colors.text, marginRight: 8 },
   txMeta: { fontSize: 13, color: colors.muted, marginRight: 8 },
   txAmount: { fontSize: 15, color: colors.text, fontVariant: ['tabular-nums'] },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16, backgroundColor: colors.surface },
-  chipOn: { backgroundColor: colors.accent },
-  chipText: { fontSize: 15, color: colors.text },
-  chipTextOn: { color: '#FFFFFF' },
   hint: { color: colors.muted, marginTop: 12, fontSize: 13 },
   button: { marginTop: 24, backgroundColor: colors.danger, borderRadius: 8, paddingVertical: 12, alignItems: 'center' },
   buttonDisabled: { opacity: 0.5 },

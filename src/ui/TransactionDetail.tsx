@@ -3,14 +3,11 @@ import { ActivityIndicator, Alert, ScrollView, StyleSheet, Switch, Text, Touchab
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { deleteTransaction, getTransaction } from '../db/transactions';
-import { Category, listCategories } from '../db/categories';
-import { getTransferTypeId } from '../db/categoryTypes';
 import { assignCategory } from '../assign';
 import { emitTransactionsChanged } from '../events';
 import type { RootStackParamList } from '../navigation';
 import { formatAmount, formatDay, formatTime, isIncome } from './format';
 import CategoryPicker from './CategoryPicker';
-import SectionHeading from './SectionHeading';
 import { TrashIcon } from './icons';
 import { colors } from './theme';
 
@@ -20,21 +17,12 @@ type Tx = NonNullable<Awaited<ReturnType<typeof getTransaction>>>;
 export default function TransactionDetail({ route, navigation }: Props) {
   const { txId } = route.params;
   const [tx, setTx] = useState<Tx | null>(null);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [transferTypeId, setTransferTypeId] = useState<number | null>(null);
   const [applyToMerchant, setApplyToMerchant] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // on focus: also picks up categories created / edited on the category screens
+  // on focus: the category may have been changed on the category screens
   useFocusEffect(useCallback(() => {
-    (async () => {
-      const t = await getTransaction(txId);
-      // money transfers: only categories of the transfer type
-      const [cats, transferType] = await Promise.all([listCategories({ transferOnly: t?.kind === 'transfer' }), getTransferTypeId()]);
-      setTx(t ?? null);
-      setCategories(cats);
-      setTransferTypeId(transferType);
-    })().catch((e) => console.error('load transaction failed', e));
+    getTransaction(txId).then((t) => setTx(t ?? null)).catch((e) => console.error('load transaction failed', e));
   }, [txId]));
 
   async function choose(categoryId: number | null) {
@@ -85,18 +73,14 @@ export default function TransactionDetail({ route, navigation }: Props) {
       <Text style={styles.merchant}>{tx.raw_merchant || 'Без мерчанта'}</Text>
       <Text style={styles.meta}>{formatDay(tx.occurred_at)}, {formatTime(tx.occurred_at)}</Text>
 
-      <SectionHeading title="Категория" onSettings={() => navigation.navigate('Categories')} settingsLabel="Управление категориями" />
       <CategoryPicker
-        categories={categories}
         selectedId={tx.category_id}
         onSelect={choose}
+        // money transfers: only categories of the transfer type
+        transferOnly={tx.kind === 'transfer'}
+        newCategory={{ txId }}
         disabled={saving}
-        txId={txId}
-        newCategoryTypeId={tx.kind === 'transfer' ? transferTypeId : null}
       />
-      {tx.kind === 'transfer' && categories.length === 0 ? (
-        <Text style={styles.hint}>Для переводов нужна категория с типом «Переводы» — создайте её.</Text>
-      ) : null}
 
       {tx.merchant_key ? (
         <View style={styles.switchRow}>
@@ -138,7 +122,6 @@ const styles = StyleSheet.create({
   switchLabel: { flex: 1, fontSize: 14, color: colors.text, marginRight: 12 },
   clear: { marginTop: 16, alignSelf: 'flex-start' },
   clearText: { fontSize: 15, color: colors.warn },
-  hint: { fontSize: 13, color: colors.muted, marginTop: 8 },
   delete: { marginTop: 32, alignSelf: 'flex-start' },
   deleteText: { fontSize: 15, color: colors.danger },
   sms: { fontSize: 13, color: colors.muted, backgroundColor: colors.surface, padding: 12, borderRadius: 8 },
