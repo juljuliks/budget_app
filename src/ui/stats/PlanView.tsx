@@ -8,7 +8,7 @@ import {
 } from '../../db/plans';
 import CategoryPicker from '../CategoryPicker';
 import NameInputModal from '../NameInputModal';
-import { PencilIcon, PinIcon } from '../icons';
+import { PencilIcon, PinIcon, TrashIcon } from '../icons';
 import { formatMoney, parseAmountInput, toInputValue } from '../money';
 import { chart, colors } from '../theme';
 
@@ -167,10 +167,16 @@ export default function PlanView({ ym }: { ym: string }) {
                 {item.previous_minor ? `было ${formatMoney(item.previous_minor, { compact: true })}` : '0'}
               </Text>
             )}
-            <PencilIcon color={colors.accent} size={16} />
+            {/* same row icons as in the transactions list */}
+            <PencilIcon color={colors.muted} size={18} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => run(removePlanItem(ym, item.category_id))} hitSlop={8} accessibilityLabel="Убрать из плана">
-            <Text style={styles.remove}>✕</Text>
+          <TouchableOpacity
+            style={styles.remove}
+            onPress={() => run(removePlanItem(ym, item.category_id))}
+            hitSlop={8}
+            accessibilityLabel="Убрать из плана"
+          >
+            <TrashIcon color={colors.danger} size={18} />
           </TouchableOpacity>
         </View>
       ))}
@@ -227,5 +233,5 @@ const styles = StyleSheet.create({
   amountButton: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4, paddingLeft: 8 },
   amount: { fontSize: 16, color: colors.text, fontVariant: ['tabular-nums'] },
   amountEmpty: { color: colors.muted, fontSize: 14 },
-  remove: { fontSize: 16, color: colors.muted, paddingLeft: 14 },
+  remove: { paddingLeft: 14 },
 });
