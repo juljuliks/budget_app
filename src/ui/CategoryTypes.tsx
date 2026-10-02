@@ -55,12 +55,17 @@ export default function CategoryTypes() {
             <TouchableOpacity style={styles.action} hitSlop={8} onPress={() => setDialog({ id: t.id, name: t.name })} accessibilityLabel={`Переименовать ${t.name}`}>
               <PencilIcon color={colors.muted} />
             </TouchableOpacity>
-            {/* the transfer type drives transfer suggestions, so it can be renamed but not deleted */}
-            {t.is_transfer ? <View style={styles.actionPlaceholder} /> : (
-              <TouchableOpacity style={styles.action} hitSlop={8} onPress={() => remove(t)} accessibilityLabel={`Удалить ${t.name}`}>
-                <TrashIcon color={colors.danger} />
-              </TouchableOpacity>
-            )}
+            {/* the transfer type drives transfer suggestions: shown greyed out, explains instead of deleting */}
+            <TouchableOpacity
+              style={styles.action}
+              hitSlop={8}
+              onPress={() => (t.is_transfer
+                ? Alert.alert('Системный тип', `«${t.name}» нельзя удалить: по нему приложение выбирает категории для переводов. Переименовать можно.`)
+                : remove(t))}
+              accessibilityLabel={`Удалить ${t.name}`}
+            >
+              <TrashIcon color={t.is_transfer ? colors.border : colors.danger} />
+            </TouchableOpacity>
           </View>
         )}
       />
@@ -92,7 +97,6 @@ const styles = StyleSheet.create({
   name: { fontSize: 16, color: colors.text },
   note: { fontSize: 12, color: colors.muted, marginTop: 2 },
   action: { padding: 8, marginLeft: 4 },
-  actionPlaceholder: { width: 36, marginLeft: 4 },
   add: {
     position: 'absolute', right: 16, bottom: 16, width: 56, height: 56, borderRadius: 28,
     backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', elevation: 4,
