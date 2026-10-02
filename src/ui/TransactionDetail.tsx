@@ -1,4 +1,4 @@
-import React, { useCallback, useLayoutEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -11,7 +11,6 @@ import CategoryPicker from './CategoryPicker';
 import CategoryPickerModal from './CategoryPickerModal';
 import SectionHeading from './SectionHeading';
 import { categoryLabel } from '../db/categories';
-import { TrashIcon } from './icons';
 import { colors } from './theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TransactionDetail'>;
@@ -54,23 +53,11 @@ export default function TransactionDetail({ route, navigation }: Props) {
     ]);
   }
 
-  // delete is also in the header, so it's reachable without scrolling to the bottom
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <TouchableOpacity onPress={confirmDelete} hitSlop={12} accessibilityLabel="Удалить транзакцию">
-          <TrashIcon color={colors.danger} />
-        </TouchableOpacity>
-      ),
-    });
-    // confirmDelete only depends on txId and navigation
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [navigation, txId]);
-
   if (!tx) return <View style={styles.center}><ActivityIndicator /></View>;
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <View style={styles.screen}>
+    <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
       <Text style={[styles.amount, isIncome(tx.kind) && styles.income]}>
         {formatAmount(tx.amount_minor, tx.currency, tx.kind)}
       </Text>
@@ -129,15 +116,20 @@ export default function TransactionDetail({ route, navigation }: Props) {
         </>
       ) : null}
 
-      <TouchableOpacity style={styles.delete} disabled={saving} onPress={confirmDelete}>
-        <Text style={styles.deleteText}>Удалить транзакцию</Text>
-      </TouchableOpacity>
     </ScrollView>
+      {/* pinned to the bottom, outside the scroll */}
+      <View style={styles.footer}>
+        <TouchableOpacity style={styles.deleteButton} disabled={saving} onPress={confirmDelete}>
+          <Text style={styles.deleteText}>Удалить транзакцию</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
+  scroll: { flex: 1 },
   content: { padding: 16, paddingBottom: 32 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
   amount: { fontSize: 28, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
@@ -155,7 +147,11 @@ const styles = StyleSheet.create({
   changeText: { fontSize: 15, color: colors.accent },
   switchRow: { flexDirection: 'row', alignItems: 'center', marginTop: 16 },
   switchLabel: { flex: 1, fontSize: 14, color: colors.text, marginRight: 12 },
-  delete: { marginTop: 32, alignSelf: 'flex-start' },
-  deleteText: { fontSize: 15, color: colors.danger },
+  footer: {
+    padding: 16, backgroundColor: colors.bg,
+    borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
+  },
+  deleteButton: { backgroundColor: colors.danger, borderRadius: 8, paddingVertical: 14, alignItems: 'center' },
+  deleteText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
   sms: { fontSize: 13, color: colors.muted, backgroundColor: colors.surface, padding: 12, borderRadius: 8 },
 });
