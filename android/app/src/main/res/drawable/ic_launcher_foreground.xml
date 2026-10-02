@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Launcher icon: a smiley with dollar signs for eyes. 108dp canvas, everything inside the 66dp safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <!-- face -->
+    <path android:fillColor="#FFC93C" android:strokeColor="#E8A317" android:strokeWidth="1.5"
+        android:pathData="M54,24 a30,30 0 1,1 0,60 a30,30 0 1,1 0,-60 Z" />
+    <!-- $ $ eyes -->
+    <path android:strokeColor="#1B7F45" android:strokeWidth="2.6" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M47.1,42.6 C46.3,39.6 39.7,39.6 39.7,43 C39.7,46 47.3,47.6 47.3,50.8 C47.3,54.4 40.5,54.4 39.7,51.4 M43.5,38 L43.5,56 M68.1,42.6 C67.3,39.6 60.7,39.6 60.7,43 C60.7,46 68.3,47.6 68.3,50.8 C68.3,54.4 61.5,54.4 60.7,51.4 M64.5,38 L64.5,56" />
+    <!-- open grin -->
+    <path android:fillColor="#6B3A1E" android:pathData="M39,61 Q54,64.5 69,61 Q66,76 54,76 Q42,76 39,61 Z" />
+    <!-- green tongue -->
+    <path android:fillColor="#2FA866" android:pathData="M45.5,70 Q54,66.5 62.5,70 Q60,76 54,76 Q48,76 45.5,70 Z" />
+</vector>
