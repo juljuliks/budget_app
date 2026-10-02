@@ -95,7 +95,7 @@ export default function TransactionDetail({ route, navigation }: Props) {
             visible={pickerOpen}
             title="Сменить категорию"
             selectedId={tx.category_id}
-            transferOnly={tx.kind === 'transfer'}
+            transferFirst={tx.kind === 'transfer'}
             newCategory={{ txId }}
             allowNone
             onPick={(id) => { setPickerOpen(false); choose(id); }}
@@ -107,8 +107,8 @@ export default function TransactionDetail({ route, navigation }: Props) {
           selectedId={tx.category_id}
           onSelect={choose}
           allowNone
-          // money transfers: only categories of the transfer type
-          transferOnly={tx.kind === 'transfer'}
+          // money transfers: transfer-type categories first
+          transferFirst={tx.kind === 'transfer'}
           newCategory={{ txId }}
           disabled={saving}
         />

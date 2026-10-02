@@ -25,7 +25,7 @@ This document outlines the remaining work to finish the privacy-first SMS transa
   - [x] Show top category suggestions in notification
   - [x] "Create new category" action opens the app on the category editor; tapping the body opens the transaction
   - [x] Android shows max 3 action buttons: 2 suggestions + "➕ Новая категория" (always present)
-  - [x] Money transfers suggest only categories of the transfer type (notification and category picker)
+  - [x] Money transfers: notification suggests only transfer-type categories; the in-app picker shows all, transfer ones first
   - [x] Handle action presses in JS and persist assignments (+ exact rule + backfill that keeps manual choices)
 - Permissions & device testing
   - [x] Runtime permissions (`RECEIVE_SMS`, `POST_NOTIFICATIONS`) requested on app start (`src/permissions.ts`); `READ_SMS` removed as unused

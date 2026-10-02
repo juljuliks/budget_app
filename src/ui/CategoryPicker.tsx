@@ -17,8 +17,8 @@ type Props = {
   title?: string;
   /** gear next to the title (category management); off where we already are in category management */
   showSettings?: boolean;
-  /** money transfers: only categories of the transfer type; a new category gets that type */
-  transferOnly?: boolean;
+  /** money transfers: categories of the transfer type come first; a new category gets that type */
+  transferFirst?: boolean;
   /** categories not to offer (already in the plan, the one being deleted, ...) */
   excludeIds?: number[];
   /** what the category editor should do with a newly created category (assign to a transaction, add to a plan, ...) */
@@ -36,17 +36,23 @@ type Props = {
  * focus / changes, so a category created or edited elsewhere shows up immediately.
  */
 export default function CategoryPicker({
-  selectedId, onSelect, allowNone = false, title = 'Категория', showSettings = true, transferOnly = false, excludeIds, newCategory, onNavigateAway, disabled, children,
+  selectedId, onSelect, allowNone = false, title = 'Категория', showSettings = true, transferFirst = false, excludeIds, newCategory, onNavigateAway, disabled, children,
 }: Props) {
   const navigation = useRootNavigation();
   const [categories, setCategories] = useState<Category[]>([]);
   const [transferTypeId, setTransferTypeId] = useState<number | null>(null);
 
   const load = useCallback(() => {
-    Promise.all([listCategories({ transferOnly }), getTransferTypeId()])
-      .then(([cats, transferType]) => { setCategories(cats); setTransferTypeId(transferType); })
+    Promise.all([listCategories(), getTransferTypeId()])
+      .then(([cats, transferType]) => {
+        // always all categories; for transfers the transfer-type ones go first
+        setCategories(transferFirst
+          ? [...cats.filter((c) => c.type_is_transfer === 1), ...cats.filter((c) => c.type_is_transfer !== 1)]
+          : cats);
+        setTransferTypeId(transferType);
+      })
       .catch((e) => console.error('load categories failed', e));
-  }, [transferOnly]);
+  }, [transferFirst]);
 
   useFocusEffect(load);
   useEffect(load, [load]);
@@ -90,15 +96,12 @@ export default function CategoryPicker({
           disabled={disabled}
           onPress={() => go(() => navigation.navigate('CategoryEdit', {
             ...newCategory,
-            typeId: newCategory?.typeId ?? (transferOnly ? transferTypeId ?? undefined : undefined),
+            typeId: newCategory?.typeId ?? (transferFirst ? transferTypeId ?? undefined : undefined),
           }))}
         >
           <Text style={styles.chipActionText}>＋ Новая категория</Text>
         </TouchableOpacity>
       </View>
-      {transferOnly && shown.length === 0 ? (
-        <Text style={styles.hint}>Для переводов нужна категория с типом «Переводы» — создайте её.</Text>
-      ) : null}
     </View>
   );
 }
@@ -123,5 +126,4 @@ const styles = StyleSheet.create({
   chipTextSelected: { color: '#FFFFFF' },
   chipAction: { backgroundColor: colors.bg, borderColor: colors.border, borderStyle: 'dashed' },
   chipActionText: { fontSize: 15, color: colors.accent },
-  hint: { fontSize: 13, color: colors.muted, marginTop: 8 },
 });

@@ -80,8 +80,8 @@ export default function CategoryDelete({ route, navigation }: Props) {
             onSelect={setTarget}
             allowNone
             excludeIds={[categoryId]}
-            // only when everything being moved is a money transfer (a purchase may sit in a transfer category)
-            transferOnly={txs.every((t) => t.kind === 'transfer')}
+            // transfer-type categories first when everything being moved is a money transfer
+            transferFirst={txs.every((t) => t.kind === 'transfer')}
           />
         </>
       ) : (
