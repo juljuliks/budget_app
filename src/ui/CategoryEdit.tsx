@@ -7,7 +7,7 @@ import { CategoryType, listCategoryTypes } from '../db/categoryTypes';
 import { assignCategory, assignCategoryToMany } from '../assign';
 import { addPlanItem } from '../db/plans';
 import { emitTransactionsChanged } from '../events';
-import type { RootStackParamList } from '../navigation';
+import { returnToPrevious, RootStackParamList } from '../navigation';
 import Button from './Button';
 import Chip from './Chip';
 import { formStyles } from './formStyles';
@@ -18,7 +18,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'CategoryEdit'>;
 
 /** Create (no categoryId) or edit a category: name, emoji, optional type. */
 export default function CategoryEdit({ route, navigation }: Props) {
-  const { categoryId, txId, txIds, planYm, typeId: initialTypeId, returnSelection } = route.params ?? {};
+  const { categoryId, txId, txIds, planYm, typeId: initialTypeId, returnSelection, selectTypeId } = route.params ?? {};
   const isNew = categoryId === undefined;
   const [name, setName] = useState('');
   const [emoji, setEmoji] = useState('');
@@ -37,6 +37,11 @@ export default function CategoryEdit({ route, navigation }: Props) {
       setTypeId(c.type_id);
     }).catch((e) => console.error('load category failed', e));
   }, [categoryId, isNew, navigation]);
+
+  // a type just created on the types screen (gear next to "Тип") comes back selected
+  useEffect(() => {
+    if (selectTypeId !== undefined) setTypeId(selectTypeId);
+  }, [selectTypeId]);
 
   // on focus: types may have been edited on the types screen
   useFocusEffect(useCallback(() => {
@@ -73,10 +78,9 @@ export default function CategoryEdit({ route, navigation }: Props) {
       const { routes } = navigation.getState();
       const prev = routes[routes.length - 2];
       if (isNew && txId && prev?.name === 'TransactionDetail') navigation.pop(2);
-      else if (createdId !== null && returnSelection && prev) {
-        // back to the screen we came from, with the new category selected there
-        navigation.navigate({ name: prev.name, params: { ...prev.params, selectCategoryId: createdId }, merge: true } as never);
-      } else navigation.goBack();
+      // back to the screen we came from, with the new category selected there
+      else if (createdId !== null && returnSelection) returnToPrevious(navigation, { selectCategoryId: createdId });
+      else navigation.goBack();
     } catch (e) {
       console.error('save category failed', e);
       setError('Не удалось сохранить');
@@ -88,7 +92,7 @@ export default function CategoryEdit({ route, navigation }: Props) {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      <SectionHeading title="Тип" onSettings={() => navigation.navigate('CategoryTypes')} settingsLabel="Управление типами" />
+      <SectionHeading title="Тип" onSettings={() => navigation.navigate('CategoryTypes', { returnSelection: true })} settingsLabel="Управление типами" />
       <View style={styles.chips}>
         {typeOptions.map(([id, label]) => (
           <Chip key={String(id)} label={label} selected={typeId === id} onPress={() => setTypeId(id)} />

@@ -1,17 +1,21 @@
 import React, { useCallback, useState } from 'react';
 import { Alert, FlatList, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import {
   CategoryType, countCategoriesOfType, createCategoryType, deleteCategoryType, findCategoryTypeByName, listCategoryTypes, renameCategoryType,
 } from '../db/categoryTypes';
 import { emitTransactionsChanged } from '../events';
+import { returnToPrevious, RootStackParamList } from '../navigation';
 import Fab from './Fab';
 import RowActions from './RowActions';
 import TextInputModal from './TextInputModal';
 import { colors } from './theme';
 
+type Props = NativeStackScreenProps<RootStackParamList, 'CategoryTypes'>;
+
 /** Create, rename and delete category types ("Переводы", "Хобби", ...). */
-export default function CategoryTypes() {
+export default function CategoryTypes({ route, navigation }: Props) {
   const [types, setTypes] = useState<CategoryType[]>([]);
   // null = closed; { id: undefined } = create
   const [dialog, setDialog] = useState<{ id?: number; name: string } | null>(null);
@@ -23,9 +27,19 @@ export default function CategoryTypes() {
 
   async function save(name: string): Promise<string | null> {
     if (await findCategoryTypeByName(name, dialog?.id)) return 'Такой тип уже есть';
-    if (dialog?.id === undefined) await createCategoryType(name);
-    else await renameCategoryType(dialog.id, name);
-    emitTransactionsChanged();
+    if (dialog?.id === undefined) {
+      const id = await createCategoryType(name);
+      emitTransactionsChanged();
+      // opened from the category editor: back there with the new type selected
+      if (route.params?.returnSelection) {
+        setDialog(null);
+        returnToPrevious(navigation, { selectTypeId: id });
+        return null;
+      }
+    } else {
+      await renameCategoryType(dialog.id, name);
+      emitTransactionsChanged();
+    }
     load();
     return null;
   }
