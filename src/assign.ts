@@ -7,6 +7,8 @@ import { emitTransactionsChanged } from './events';
 /**
  * User picked a category for a transaction. Optionally remembers it for the merchant:
  * creates an exact rule and applies it to the merchant's uncategorized / rule-assigned transactions.
+ * Never for money transfers: the "merchant" there is a person, and transfers to the same person
+ * can be for different things.
  */
 export async function assignCategory(txId: number, categoryId: number | null, opts: { applyToMerchant?: boolean } = {}) {
   const { applyToMerchant = true } = opts;
@@ -15,8 +17,8 @@ export async function assignCategory(txId: number, categoryId: number | null, op
   if (categoryId !== null) {
     if (applyToMerchant) {
       const db = await getDb();
-      const tx = await db.get<{ merchant_key: string | null }>('SELECT merchant_key FROM transactions WHERE id = ?', [txId]);
-      if (tx?.merchant_key) {
+      const tx = await db.get<{ kind: string; merchant_key: string | null }>('SELECT kind, merchant_key FROM transactions WHERE id = ?', [txId]);
+      if (tx?.merchant_key && tx.kind !== 'transfer') {
         await createRule('exact', tx.merchant_key, categoryId);
         await backfillRule('exact', tx.merchant_key, categoryId);
       }

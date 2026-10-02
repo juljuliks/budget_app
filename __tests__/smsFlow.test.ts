@@ -134,6 +134,18 @@ test('money transfer offers only categories of the transfer type, plus "new cate
   expect(n.android.actions[2].pressAction.id).toBe('create_new');
 });
 
+test('picking a category for a money transfer creates no merchant rule', async () => {
+  await SmsBackgroundTask({ sender: 'TBC SMS', body: 'Money Transfer:\n1.00 GEL\nMC GOLD\n02/10/2026', timestamp: 1 });
+  await SmsBackgroundTask({ sender: 'TBC SMS', body: 'Money Transfer:\n2.00 GEL\nMC GOLD\n02/10/2026', timestamp: 2 });
+  const [first] = displayNotification.mock.calls.map((c) => c[0]);
+  const transferCat = first.android.actions[0].pressAction.id;
+  await handleNotificationAction({ id: transferCat, notification: { id: first.id, data: first.data } });
+  const db = await getDb();
+  expect(await db.get('SELECT * FROM merchant_rules')).toBeUndefined();
+  // the other transfer to the same person stays uncategorized
+  expect((await db.all('SELECT category_id FROM transactions ORDER BY id')).map((r) => r.category_id === null)).toEqual([false, true]);
+});
+
 test('money transfer with no transfer categories still offers "new category"', async () => {
   const db = await getDb();
   await db.run('UPDATE categories SET type_id = NULL');

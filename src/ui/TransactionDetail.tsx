@@ -10,6 +10,7 @@ import { formatAmount, formatDay, formatTime, isIncome } from './format';
 import CategoryPicker from './CategoryPicker';
 import CategoryPickerModal from './CategoryPickerModal';
 import SectionHeading from './SectionHeading';
+import { PencilIcon } from './icons';
 import { categoryLabel } from '../db/categories';
 import { colors } from './theme';
 
@@ -75,8 +76,14 @@ export default function TransactionDetail({ route, navigation }: Props) {
                 {categoryLabel({ emoji: tx.category_emoji, name: tx.category_name!, type_name: tx.category_type_name })}
               </Text>
             </View>
-            <TouchableOpacity style={styles.changeButton} disabled={saving} onPress={() => setPickerOpen(true)}>
-              <Text style={styles.changeText}>Сменить категорию</Text>
+            <TouchableOpacity
+              style={styles.changeButton}
+              disabled={saving}
+              onPress={() => setPickerOpen(true)}
+              accessibilityLabel="Сменить категорию"
+            >
+              <PencilIcon color={colors.accent} size={16} />
+              <Text style={styles.changeText}>Сменить</Text>
             </TouchableOpacity>
           </View>
           <CategoryPickerModal
@@ -102,7 +109,8 @@ export default function TransactionDetail({ route, navigation }: Props) {
         />
       )}
 
-      {tx.merchant_key ? (
+      {/* transfers never create merchant rules (see assignCategory) */}
+      {tx.merchant_key && tx.kind !== 'transfer' ? (
         <View style={styles.switchRow}>
           <Text style={styles.switchLabel}>Запомнить для «{tx.raw_merchant || tx.merchant_key}» и применить к его транзакциям</Text>
           <Switch value={applyToMerchant} onValueChange={setApplyToMerchant} />
@@ -141,6 +149,7 @@ const styles = StyleSheet.create({
   currentChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16, backgroundColor: colors.accent },
   currentText: { fontSize: 15, color: '#FFFFFF' },
   changeButton: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
     paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16,
     borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed',
   },
