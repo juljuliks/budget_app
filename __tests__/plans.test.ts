@@ -4,8 +4,8 @@ import { getDb } from '../src/db';
 import { openDatabase } from '../src/db/driver';
 import { migrate, MIGRATIONS } from '../src/db/migrations';
 import {
-  addPlanItem, currentYm, ensureMonthPlan, listPlan, monthRange, monthStats, planHistory, removePlanItem,
-  setPlanAmount, setPlanPinned, ymOf,
+  addPlanItem, currentYm, ensureMonthPlan, getPlanBudget, listPlan, monthIncome, monthRange, monthStats, planHistory,
+  removePlanItem, setPlanAmount, setPlanBudget, setPlanPinned, ymOf,
 } from '../src/db/plans';
 import { createCategory, deleteCategory } from '../src/db/categories';
 import { addManualTransaction } from '../src/db/transactions';
@@ -119,6 +119,49 @@ describe('monthStats', () => {
   });
 });
 
+describe('amount to distribute', () => {
+  const M1 = '2099-01', M2 = '2099-02';
+
+  test('caps the plan: an item amount over the free remainder is refused', async () => {
+    await setPlanBudget(M1, 100000);
+    await addPlanItem(M1, 1); await setPlanAmount(M1, 1, 60000);
+    await addPlanItem(M1, 2);
+    await expect(setPlanAmount(M1, 2, 50000)).rejects.toHaveProperty('planned_minor', 110000);
+    await setPlanAmount(M1, 2, 40000); // exactly the rest
+    await setPlanAmount(M1, 1, 50000); // lowering is always fine
+    expect((await listPlan(M1)).map((i) => i.limit_minor)).toEqual([50000, 40000]);
+  });
+
+  test('cannot be set below what is already planned; null removes the cap', async () => {
+    await addPlanItem(M1, 1); await setPlanAmount(M1, 1, 60000);
+    await expect(setPlanBudget(M1, 50000)).rejects.toHaveProperty('budget_minor', 50000);
+    expect(await getPlanBudget(M1)).toBeNull();
+    await setPlanBudget(M1, 60000);
+    expect(await getPlanBudget(M1)).toBe(60000);
+    await setPlanBudget(M1, null);
+    await setPlanAmount(M1, 1, 99999999);
+    expect(await getPlanBudget(M1)).toBeNull();
+  });
+
+  test('carries over to the next month', async () => {
+    await setPlanBudget(M1, 300000);
+    expect(await getPlanBudget(M2)).toBe(300000);
+  });
+
+  test('month income = GEL deposits of the month', async () => {
+    await spend(250000, null, 2099, 0, 'deposit');
+    await spend(1000, null, 2099, 0, 'deposit', 'USD');
+    await spend(500, null, 2099, 0);
+    await spend(7000, null, 2099, 1, 'deposit');
+    expect(await monthIncome(M1)).toBe(250000);
+  });
+
+  test('history carries the amount', async () => {
+    await setPlanBudget(NOW, 200000);
+    expect((await planHistory())[0]).toEqual(expect.objectContaining({ ym: NOW, budget_minor: 200000 }));
+  });
+});
+
 describe('planHistory', () => {
   test('lists every month from the first transaction to now with plan vs spent', async () => {
     const now = new Date();
@@ -133,7 +176,7 @@ describe('planHistory', () => {
       ymOf(now.getFullYear(), now.getMonth() - 1),
       ymOf(back2.getFullYear(), back2.getMonth()),
     ]);
-    expect(h[0]).toEqual({ ym: NOW, planned_minor: 800, spent_minor: 300 });
+    expect(h[0]).toEqual({ ym: NOW, planned_minor: 800, spent_minor: 300, budget_minor: null });
     expect(h[1]).toEqual(expect.objectContaining({ planned_minor: 0, spent_minor: 0 }));
     expect(h[2]).toEqual(expect.objectContaining({ planned_minor: 0, spent_minor: 1000 }));
   });

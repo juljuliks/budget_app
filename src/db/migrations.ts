@@ -122,6 +122,10 @@ export const MIGRATIONS: string[][] = [
     'ALTER TABLE transactions ADD COLUMN seen_at INTEGER',
     "UPDATE transactions SET seen_at = CAST(strftime('%s', 'now') AS INTEGER)",
   ],
+  // 6: the amount a month's plan distributes (e.g. salary). NULL = not set, the plan is unbounded.
+  [
+    'ALTER TABLE plan_months ADD COLUMN budget_minor INTEGER CHECK (budget_minor >= 0)',
+  ],
 ];
 
 export async function getSchemaVersion(db: Db): Promise<number> {

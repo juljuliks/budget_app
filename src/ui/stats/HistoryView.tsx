@@ -43,6 +43,9 @@ function MonthRow({ month, expanded, onToggle }: { month: HistoryMonth; expanded
   const { year, month: m } = parseYm(month.ym);
   const { planned_minor: planned, spent_minor: spent } = month;
   const diff = planned - spent;
+  const budget = month.budget_minor;
+  // not spent out of the amount to distribute (both the unplanned part and underspent categories)
+  const saved = (budget ?? 0) - spent;
 
   return (
     <View style={styles.month}>
@@ -61,6 +64,19 @@ function MonthRow({ month, expanded, onToggle }: { month: HistoryMonth; expanded
           />
         </View>
         {planned ? <Meter spent={spent} limit={planned} /> : null}
+        {budget !== null ? (
+          // the amount to distribute: what was left unplanned, and what was not spent at all
+          <View style={styles.totals}>
+            <Total label="Сумма" value={formatMoney(budget, { compact: true })} />
+            <Total label="Не распределено" value={formatMoney(Math.max(budget - planned, 0), { compact: true })} />
+            <Total
+              label={saved >= 0 ? 'Сохранено' : 'Сверх суммы'}
+              value={`${saved < 0 ? '⚠ ' : ''}${formatMoney(Math.abs(saved), { compact: true })}`}
+              danger={saved < 0}
+              good={saved > 0}
+            />
+          </View>
+        ) : null}
       </TouchableOpacity>
       {expanded ? <MonthDetails ym={month.ym} /> : null}
     </View>
@@ -120,11 +136,11 @@ function MonthDetails({ ym }: { ym: string }) {
   );
 }
 
-function Total({ label, value, danger }: { label: string; value: string; danger?: boolean }) {
+function Total({ label, value, danger, good }: { label: string; value: string; danger?: boolean; good?: boolean }) {
   return (
     <View style={styles.total}>
       <Text style={styles.caption}>{label}</Text>
-      <Text style={[styles.totalValue, danger && styles.danger]}>{value}</Text>
+      <Text style={[styles.totalValue, danger && styles.danger, good && styles.good]}>{value}</Text>
     </View>
   );
 }
@@ -152,6 +168,7 @@ const styles = StyleSheet.create({
   caption: { fontSize: 12, color: colors.muted },
   totalValue: { fontSize: 15, color: colors.text, marginTop: 2 },
   danger: { color: colors.danger },
+  good: { color: colors.income },
   track: { height: 6, borderRadius: 3, backgroundColor: chart.meterTrack, marginTop: 8, overflow: 'hidden' },
   fill: { height: 6, borderRadius: 3 },
   details: { marginTop: 10, backgroundColor: colors.surface, borderRadius: 8, padding: 10 },

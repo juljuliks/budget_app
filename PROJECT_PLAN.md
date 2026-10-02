@@ -69,6 +69,9 @@ Done:
 - Stats: month switcher, donut with total spent in the center, plan / remaining, per-category progress bars,
   grouped by category type with section titles (also in История details)
 - История: every month plan vs spent (+ meter), expand -> per category plan vs fact
+- Amount to distribute per month (`plan_months.budget_minor`, migration 6; carries over): the plan can't exceed it,
+  categories show their share in %, the rest is "Свободно"; amounts are edited via ✎ → input dialog
+- История: "Сумма / Не распределено / Сохранено" (amount − spent) for months with an amount set
 Remaining: tap a category -> its transactions for the month; over-limit notifications; salary-day month start (if needed).
 
 Original spec:

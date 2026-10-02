@@ -56,7 +56,7 @@ export default function StatsView({ year, month }: { year: number; month: number
         <View style={styles.summary}>
           <SummaryItem label="План" value={formatMoney(stats.planned_minor, { compact: true })} />
           <SummaryItem
-            label={remaining >= 0 ? 'Свободно' : 'Сверх плана'}
+            label={remaining >= 0 ? 'Осталось' : 'Сверх плана'}
             value={formatMoney(Math.abs(remaining), { compact: true })}
             danger={remaining < 0}
           />

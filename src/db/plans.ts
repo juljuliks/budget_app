@@ -55,7 +55,10 @@ export async function ensureMonthPlan(ym: string, nowYm = currentYm()): Promise<
           WHERE p.ym = ? AND c.deleted_at IS NULL`,
         [ym, source.ym]);
     }
-    await db.run('INSERT OR IGNORE INTO plan_months (ym) VALUES (?)', [ym]);
+    // the amount to distribute (usually the salary) carries over as well
+    await db.run(
+      'INSERT OR IGNORE INTO plan_months (ym, budget_minor) VALUES (?, (SELECT budget_minor FROM plan_months WHERE ym = ?))',
+      [ym, source?.ym ?? '']);
   });
 }
 
@@ -79,6 +82,48 @@ export async function listPlan(ym: string): Promise<PlanItem[]> {
   return rows.map((r) => ({ ...r, pinned: r.pinned === 1, previous_minor: r.previous_minor || null }));
 }
 
+/** The month's amount to distribute; null = not set (no cap, no percentages). */
+export async function getPlanBudget(ym: string): Promise<number | null> {
+  await ensureMonthPlan(ym);
+  const db = await getDb();
+  const row = await db.get<{ budget_minor: number | null }>('SELECT budget_minor FROM plan_months WHERE ym = ?', [ym]);
+  return row?.budget_minor ?? null;
+}
+
+export async function plannedTotal(ym: string): Promise<number> {
+  const db = await getDb();
+  const row = await db.get<{ s: number | null }>('SELECT sum(limit_minor) AS s FROM plan_items WHERE ym = ?', [ym]);
+  return row?.s ?? 0;
+}
+
+/** Income (deposits in the budget currency) of the month: a hint for the amount to distribute. */
+export async function monthIncome(ym: string): Promise<number> {
+  const { year, month } = parseYm(ym);
+  const [from, to] = monthRange(year, month);
+  const db = await getDb();
+  const row = await db.get<{ s: number | null }>(
+    "SELECT sum(amount_minor) AS s FROM transactions WHERE kind = 'deposit' AND currency = ? AND occurred_at >= ? AND occurred_at < ?",
+    [BUDGET_CURRENCY, from, to]);
+  return row?.s ?? 0;
+}
+
+/** Thrown when a change would plan more than the month's amount to distribute. */
+export class OverBudgetError extends Error {
+  constructor(public budget_minor: number, public planned_minor: number) {
+    super('plan exceeds the amount to distribute');
+  }
+}
+
+/** null clears the amount. Refused (OverBudgetError) if it is less than what is already planned. */
+export async function setPlanBudget(ym: string, budgetMinor: number | null) {
+  await ensureMonthPlan(ym);
+  const planned = await plannedTotal(ym);
+  if (budgetMinor !== null && budgetMinor < planned) throw new OverBudgetError(budgetMinor, planned);
+  const db = await getDb();
+  await db.run('INSERT OR IGNORE INTO plan_months (ym) VALUES (?)', [ym]);
+  await db.run('UPDATE plan_months SET budget_minor = ? WHERE ym = ?', [budgetMinor, ym]);
+}
+
 async function markPlanned(ym: string) {
   // editing a month (also a past one) makes it a planned month that later months carry over from
   const db = await getDb();
@@ -92,12 +137,20 @@ export async function addPlanItem(ym: string, categoryId: number, limitMinor = 0
   await markPlanned(ym);
 }
 
+/** Refused (OverBudgetError) if the month's plan would exceed its amount to distribute. */
 export async function setPlanAmount(ym: string, categoryId: number, limitMinor: number) {
   const db = await getDb();
+  limitMinor = Math.max(0, limitMinor);
+  const budget = (await db.get<{ budget_minor: number | null }>('SELECT budget_minor FROM plan_months WHERE ym = ?', [ym]))?.budget_minor ?? null;
+  if (budget !== null) {
+    const others = (await db.get<{ s: number | null }>(
+      'SELECT sum(limit_minor) AS s FROM plan_items WHERE ym = ? AND category_id != ?', [ym, categoryId]))?.s ?? 0;
+    if (others + limitMinor > budget) throw new OverBudgetError(budget, others + limitMinor);
+  }
   await db.run(
     `INSERT INTO plan_items (ym, category_id, limit_minor) VALUES (?, ?, ?)
       ON CONFLICT(ym, category_id) DO UPDATE SET limit_minor = excluded.limit_minor`,
-    [ym, categoryId, Math.max(0, limitMinor)]);
+    [ym, categoryId, limitMinor]);
   await markPlanned(ym);
 }
 
@@ -223,7 +276,13 @@ export async function monthStats(year: number, month: number): Promise<MonthStat
   };
 }
 
-export type HistoryMonth = { ym: string; planned_minor: number; spent_minor: number };
+export type HistoryMonth = {
+  ym: string;
+  planned_minor: number;
+  spent_minor: number;
+  /** amount to distribute; null = not set */
+  budget_minor: number | null;
+};
 
 /** Every month from the first transaction / plan up to the current month, newest first. */
 export async function planHistory(nowYm = currentYm()): Promise<HistoryMonth[]> {
@@ -239,18 +298,21 @@ export async function planHistory(nowYm = currentYm()): Promise<HistoryMonth[]> 
       FROM transactions t WHERE t.currency = ? GROUP BY ym`, [BUDGET_CURRENCY]);
   const planned = await db.all<{ ym: string; planned_minor: number }>(
     'SELECT ym, sum(limit_minor) AS planned_minor FROM plan_items GROUP BY ym');
+  const budgets = await db.all<{ ym: string; budget_minor: number }>(
+    'SELECT ym, budget_minor FROM plan_months WHERE budget_minor IS NOT NULL');
   const spentBy = new Map(spent.map((r) => [r.ym, r.spent_minor]));
   const plannedBy = new Map(planned.map((r) => [r.ym, r.planned_minor]));
+  const budgetBy = new Map(budgets.map((r) => [r.ym, r.budget_minor]));
 
   const out: HistoryMonth[] = [];
   let { year, month } = parseYm(nowYm);
   for (let ym = nowYm; ym >= first.ym; ym = ymOf(year, --month)) {
-    out.push({ ym, planned_minor: plannedBy.get(ym) ?? 0, spent_minor: spentBy.get(ym) ?? 0 });
+    out.push({ ym, planned_minor: plannedBy.get(ym) ?? 0, spent_minor: spentBy.get(ym) ?? 0, budget_minor: budgetBy.get(ym) ?? null });
   }
   return out;
 }
 
 export default {
   ymOf, parseYm, currentYm, monthRange, ensureMonthPlan, listPlan, addPlanItem, setPlanAmount,
-  setPlanPinned, removePlanItem, monthStats, planHistory,
+  setPlanPinned, removePlanItem, monthStats, planHistory, getPlanBudget, setPlanBudget, plannedTotal, monthIncome,
 };

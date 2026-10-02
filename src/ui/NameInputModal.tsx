@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Modal, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { KeyboardAvoidingView, KeyboardTypeOptions, Modal, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { colors } from './theme';
 
 type Props = {
@@ -8,14 +8,21 @@ type Props = {
   initialValue?: string;
   placeholder?: string;
   submitLabel?: string;
+  /** muted lines under the title (e.g. "Свободно 1 600 GEL") */
+  hint?: string;
+  keyboardType?: KeyboardTypeOptions;
+  maxLength?: number;
+  /** empty input is submitted (as '') instead of "Введите название" */
+  allowEmpty?: boolean;
   /** returns an error message to show, or null when saved */
   onSubmit: (value: string) => Promise<string | null>;
   onClose: () => void;
 };
 
-/** Small dialog with one text field (create / rename). */
+/** Small dialog with one text field (create / rename, plan amounts). */
 export default function NameInputModal({
-  visible, title, initialValue = '', placeholder, submitLabel = 'Сохранить', onSubmit, onClose,
+  visible, title, initialValue = '', placeholder, submitLabel = 'Сохранить', hint, keyboardType, maxLength = 30, allowEmpty,
+  onSubmit, onClose,
 }: Props) {
   const [value, setValue] = useState(initialValue);
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +33,7 @@ export default function NameInputModal({
   }, [visible, initialValue]);
 
   async function submit() {
-    if (!value.trim()) { setError('Введите название'); return; }
+    if (!value.trim() && !allowEmpty) { setError('Введите название'); return; }
     setSaving(true);
     const err = await onSubmit(value.trim());
     setSaving(false);
@@ -39,6 +46,7 @@ export default function NameInputModal({
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Закрыть" />
         <View style={styles.dialog}>
           <Text style={styles.title}>{title}</Text>
+          {hint ? <Text style={styles.hint}>{hint}</Text> : null}
           <TextInput
             style={styles.input}
             value={value}
@@ -46,7 +54,8 @@ export default function NameInputModal({
             placeholder={placeholder}
             placeholderTextColor={colors.muted}
             autoFocus
-            maxLength={30}
+            keyboardType={keyboardType}
+            maxLength={maxLength}
             returnKeyType="done"
             onSubmitEditing={submit}
           />
@@ -69,6 +78,7 @@ const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'center', padding: 24 },
   dialog: { backgroundColor: colors.bg, borderRadius: 12, padding: 20 },
   title: { fontSize: 18, fontWeight: '600', color: colors.text, marginBottom: 12 },
+  hint: { fontSize: 14, color: colors.muted, marginTop: -6, marginBottom: 12 },
   input: {
     fontSize: 16, color: colors.text, borderWidth: 1, borderColor: colors.border,
     borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10,
