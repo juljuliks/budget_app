@@ -94,7 +94,7 @@ export default function PlanView({ ym }: { ym: string }) {
 
       <CategoryPicker
         title="Добавить в план"
-        onSelect={(id) => run(addPlanItem(ym, id))}
+        onSelect={(id) => { if (id !== null) run(addPlanItem(ym, id)); }}
         excludeIds={items.map((i) => i.category_id)}
         // a category created from here goes straight into this month's plan
         newCategory={{ planYm: ym }}

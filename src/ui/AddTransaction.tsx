@@ -92,7 +92,8 @@ export default function AddTransaction({ route, navigation }: Props) {
 
       <CategoryPicker
         selectedId={categoryId}
-        onSelect={(id) => setCategoryId((cur) => (cur === id ? null : id))}
+        onSelect={setCategoryId}
+        allowNone
         newCategory={{ returnSelection: true }}
         disabled={saving}
       />

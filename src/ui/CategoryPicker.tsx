@@ -10,7 +10,10 @@ import { colors } from './theme';
 
 type Props = {
   selectedId?: number | null;
-  onSelect: (id: number) => void;
+  /** null only comes from the "Без категории" chip (allowNone) */
+  onSelect: (id: number | null) => void;
+  /** adds a "Без категории" chip (selected when selectedId is null) */
+  allowNone?: boolean;
   title?: string;
   /** gear next to the title (category management); off where we already are in category management */
   showSettings?: boolean;
@@ -33,7 +36,7 @@ type Props = {
  * focus / changes, so a category created or edited elsewhere shows up immediately.
  */
 export default function CategoryPicker({
-  selectedId, onSelect, title = 'Категория', showSettings = true, transferOnly = false, excludeIds, newCategory, onNavigateAway, disabled, children,
+  selectedId, onSelect, allowNone = false, title = 'Категория', showSettings = true, transferOnly = false, excludeIds, newCategory, onNavigateAway, disabled, children,
 }: Props) {
   const navigation = useRootNavigation();
   const [categories, setCategories] = useState<Category[]>([]);
@@ -78,6 +81,9 @@ export default function CategoryPicker({
             </TouchableOpacity>
           );
         })}
+        {allowNone ? (
+          <PickerChip label="Без категории" selected={selectedId === null} onPress={() => onSelect(null)} />
+        ) : null}
         {children}
         <TouchableOpacity
           style={[styles.chip, styles.chipAction]}

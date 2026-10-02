@@ -152,7 +152,7 @@ export default function TransactionsList() {
     ]);
   }
 
-  async function applyBulk(categoryId: number) {
+  async function applyBulk(categoryId: number | null) {
     setBulkOpen(false);
     try {
       await assignCategoryToMany([...selected], categoryId);
@@ -293,6 +293,7 @@ export default function TransactionsList() {
         // a category created from here is applied to the selection right away
         newCategory={{ txIds: [...selected] }}
         transferOnly={selectedRows.length > 0 && selectedRows.every((r) => r.kind === 'transfer')}
+        allowNone
         onPick={applyBulk}
         onClose={() => setBulkOpen(false)}
       />

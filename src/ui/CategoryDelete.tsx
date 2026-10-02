@@ -6,7 +6,7 @@ import {
 } from '../db/categories';
 import { emitTransactionsChanged } from '../events';
 import type { RootStackParamList } from '../navigation';
-import CategoryPicker, { PickerChip } from './CategoryPicker';
+import CategoryPicker from './CategoryPicker';
 import { formatAmount, formatDay } from './format';
 import { colors } from './theme';
 
@@ -78,12 +78,11 @@ export default function CategoryDelete({ route, navigation }: Props) {
             newCategory={{ returnSelection: true }}
             selectedId={target}
             onSelect={setTarget}
+            allowNone
             excludeIds={[categoryId]}
             // only when everything being moved is a money transfer (a purchase may sit in a transfer category)
             transferOnly={txs.every((t) => t.kind === 'transfer')}
-          >
-            <PickerChip label="Оставить без категории" selected={target === null} onPress={() => setTarget(null)} />
-          </CategoryPicker>
+          />
         </>
       ) : (
         <Text style={styles.hint}>В этом месяце транзакций в этой категории нет.</Text>

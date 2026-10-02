@@ -97,6 +97,7 @@ export default function TransactionDetail({ route, navigation }: Props) {
             selectedId={tx.category_id}
             transferOnly={tx.kind === 'transfer'}
             newCategory={{ txId }}
+            allowNone
             onPick={(id) => { setPickerOpen(false); choose(id); }}
             onClose={() => setPickerOpen(false)}
           />
@@ -105,6 +106,7 @@ export default function TransactionDetail({ route, navigation }: Props) {
         <CategoryPicker
           selectedId={tx.category_id}
           onSelect={choose}
+          allowNone
           // money transfers: only categories of the transfer type
           transferOnly={tx.kind === 'transfer'}
           newCategory={{ txId }}
@@ -117,12 +119,6 @@ export default function TransactionDetail({ route, navigation }: Props) {
           <Text style={styles.switchLabel}>Запомнить для «{tx.raw_merchant || tx.merchant_key}» и применить к его транзакциям</Text>
           <Switch value={applyToMerchant} onValueChange={setApplyToMerchant} />
         </View>
-      ) : null}
-
-      {tx.category_id ? (
-        <TouchableOpacity style={styles.clear} disabled={saving} onPress={() => choose(null)}>
-          <Text style={styles.clearText}>Убрать категорию</Text>
-        </TouchableOpacity>
       ) : null}
 
       {tx.raw_sms ? (
@@ -158,8 +154,6 @@ const styles = StyleSheet.create({
   changeText: { fontSize: 15, color: colors.accent },
   switchRow: { flexDirection: 'row', alignItems: 'center', marginTop: 16 },
   switchLabel: { flex: 1, fontSize: 14, color: colors.text, marginRight: 12 },
-  clear: { marginTop: 16, alignSelf: 'flex-start' },
-  clearText: { fontSize: 15, color: colors.warn },
   delete: { marginTop: 32, alignSelf: 'flex-start' },
   deleteText: { fontSize: 15, color: colors.danger },
   sms: { fontSize: 13, color: colors.muted, backgroundColor: colors.surface, padding: 12, borderRadius: 8 },

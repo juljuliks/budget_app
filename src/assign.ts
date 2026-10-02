@@ -28,10 +28,10 @@ export async function assignCategory(txId: number, categoryId: number | null, op
 
 export default assignCategory;
 
-/** Same category for several transactions (bulk edit from the list). No merchant rules: a one-off manual choice. */
-export async function assignCategoryToMany(txIds: number[], categoryId: number) {
+/** Same category (null = none) for several transactions (bulk edit from the list). No merchant rules: a one-off manual choice. */
+export async function assignCategoryToMany(txIds: number[], categoryId: number | null) {
   if (txIds.length === 0) return;
   await setCategoryForTransactions(txIds, categoryId);
-  await incrementCategoryUsage(categoryId);
+  if (categoryId !== null) await incrementCategoryUsage(categoryId);
   emitTransactionsChanged();
 }
