@@ -57,6 +57,15 @@ export const MIGRATIONS: string[][] = [
       ('Переводы', '🔁', 11),
       ('Другое', '🔖', 99)`,
   ],
+  // 2: monthly spending plan per category. One standing amount, applies to every month.
+  [
+    `CREATE TABLE IF NOT EXISTS budgets (
+      category_id INTEGER PRIMARY KEY,
+      limit_minor INTEGER NOT NULL CHECK (limit_minor > 0),
+      currency TEXT NOT NULL DEFAULT 'GEL',
+      FOREIGN KEY(category_id) REFERENCES categories(id) ON DELETE CASCADE
+    )`,
+  ],
 ];
 
 export async function getSchemaVersion(db: Db): Promise<number> {

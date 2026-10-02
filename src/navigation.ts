@@ -1,13 +1,27 @@
-import { createNavigationContainerRef } from '@react-navigation/native';
+import { createNavigationContainerRef, useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
+export type TabParamList = {
+  History: undefined;
+  Stats: undefined;
+  Planner: undefined;
+};
+
+/** Screens pushed over the tab bar. */
 export type RootStackParamList = {
-  Transactions: undefined;
+  Main: undefined;
   TransactionDetail: { txId: number };
-  /** txId: assign the new category to this transaction right away */
-  CreateCategory: { txId?: number };
+  /** No categoryId = create. txId: assign the new category to this transaction right away. */
+  CategoryEdit: { categoryId?: number; txId?: number };
+  Categories: undefined;
+  AddTransaction: undefined;
 };
 
 export const navigationRef = createNavigationContainerRef<RootStackParamList>();
+
+export function useRootNavigation() {
+  return useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+}
 
 type Route = { [K in keyof RootStackParamList]: { name: K; params: RootStackParamList[K] } }[keyof RootStackParamList];
 

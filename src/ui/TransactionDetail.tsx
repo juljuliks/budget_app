@@ -3,10 +3,11 @@ import { ActivityIndicator, ScrollView, StyleSheet, Switch, Text, TouchableOpaci
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { getTransaction } from '../db/transactions';
-import { Category, listCategories } from '../db/categories';
+import { Category, isTransferCategory, listCategories } from '../db/categories';
 import { assignCategory } from '../assign';
 import type { RootStackParamList } from '../navigation';
 import { formatAmount, formatDay, formatTime, isIncome } from './format';
+import CategoryPicker from './CategoryPicker';
 import { colors } from './theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TransactionDetail'>;
@@ -40,6 +41,11 @@ export default function TransactionDetail({ route, navigation }: Props) {
 
   if (!tx) return <View style={styles.center}><ActivityIndicator /></View>;
 
+  // transfers: "Перевод…" categories first
+  const orderedCategories = tx.kind === 'transfer'
+    ? [...categories.filter(isTransferCategory), ...categories.filter((c) => !isTransferCategory(c))]
+    : categories;
+
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Text style={[styles.amount, isIncome(tx.kind) && styles.income]}>
@@ -49,28 +55,13 @@ export default function TransactionDetail({ route, navigation }: Props) {
       <Text style={styles.meta}>{formatDay(tx.occurred_at)}, {formatTime(tx.occurred_at)}</Text>
 
       <Text style={styles.heading}>Категория</Text>
-      <View style={styles.chips}>
-        {categories.map((c) => {
-          const selected = c.id === tx.category_id;
-          return (
-            <TouchableOpacity
-              key={c.id}
-              style={[styles.chip, selected && styles.chipSelected]}
-              disabled={saving}
-              onPress={() => choose(c.id)}
-            >
-              <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{`${c.emoji || ''} ${c.name}`.trim()}</Text>
-            </TouchableOpacity>
-          );
-        })}
-        <TouchableOpacity
-          style={[styles.chip, styles.chipNew]}
-          disabled={saving}
-          onPress={() => navigation.navigate('CreateCategory', { txId })}
-        >
-          <Text style={styles.chipNewText}>＋ Новая категория</Text>
-        </TouchableOpacity>
-      </View>
+      <CategoryPicker
+        categories={orderedCategories}
+        selectedId={tx.category_id}
+        onSelect={choose}
+        disabled={saving}
+        txId={txId}
+      />
 
       {tx.merchant_key ? (
         <View style={styles.switchRow}>
@@ -85,8 +76,12 @@ export default function TransactionDetail({ route, navigation }: Props) {
         </TouchableOpacity>
       ) : null}
 
-      <Text style={styles.heading}>SMS</Text>
-      <Text style={styles.sms} selectable>{tx.raw_sms}</Text>
+      {tx.raw_sms ? (
+        <>
+          <Text style={styles.heading}>SMS</Text>
+          <Text style={styles.sms} selectable>{tx.raw_sms}</Text>
+        </>
+      ) : null}
     </ScrollView>
   );
 }
@@ -100,16 +95,6 @@ const styles = StyleSheet.create({
   merchant: { fontSize: 18, color: colors.text, marginTop: 4 },
   meta: { fontSize: 14, color: colors.muted, marginTop: 2 },
   heading: { fontSize: 13, fontWeight: '600', color: colors.muted, marginTop: 24, marginBottom: 8, textTransform: 'uppercase' },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: {
-    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16,
-    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.surface,
-  },
-  chipSelected: { backgroundColor: colors.accent, borderColor: colors.accent },
-  chipText: { fontSize: 15, color: colors.text },
-  chipTextSelected: { color: '#FFFFFF' },
-  chipNew: { backgroundColor: colors.bg, borderColor: colors.border, borderStyle: 'dashed' },
-  chipNewText: { fontSize: 15, color: colors.accent },
   switchRow: { flexDirection: 'row', alignItems: 'center', marginTop: 16 },
   switchLabel: { flex: 1, fontSize: 14, color: colors.text, marginRight: 12 },
   clear: { marginTop: 16, alignSelf: 'flex-start' },

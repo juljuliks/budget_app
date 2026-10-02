@@ -1,18 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, SectionList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { listTransactionsPage, PageCursor, TransactionRow } from '../db/transactions';
 import { onTransactionsChanged } from '../events';
-import type { RootStackParamList } from '../navigation';
+import { useRootNavigation } from '../navigation';
 import { dayKey, formatAmount, formatDay, formatTime, isIncome } from './format';
 import { colors } from './theme';
 
 const PAGE_SIZE = 50;
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Transactions'>;
-
-export default function TransactionsList({ navigation }: Props) {
+export default function TransactionsList() {
+  const navigation = useRootNavigation();
   const [rows, setRows] = useState<TransactionRow[]>([]);
   const [cursor, setCursor] = useState<PageCursor | null>(null);
   const [loading, setLoading] = useState(true);
@@ -83,41 +81,50 @@ export default function TransactionsList({ navigation }: Props) {
   }
 
   return (
-    <SectionList
-      style={styles.list}
-      sections={sections}
-      keyExtractor={(i) => String(i.id)}
-      stickySectionHeadersEnabled
-      renderSectionHeader={({ section }) => <Text style={styles.sectionHeader}>{section.title}</Text>}
-      renderItem={({ item }) => (
-        <TouchableOpacity style={styles.row} onPress={() => navigation.navigate('TransactionDetail', { txId: item.id })}>
-          <View style={styles.rowMain}>
-            <Text style={styles.merchant} numberOfLines={1}>{item.raw_merchant || 'Без мерчанта'}</Text>
-            {item.category_id ? (
-              <Text style={styles.category} numberOfLines={1}>
-                {`${item.category_emoji || ''} ${item.category_name}`.trim()} · {formatTime(item.occurred_at)}
-              </Text>
-            ) : (
-              <View style={styles.inline}>
-                <Text style={styles.badge}>Без категории</Text>
-                <Text style={styles.category}> · {formatTime(item.occurred_at)}</Text>
-              </View>
-            )}
-          </View>
-          <Text style={[styles.amount, isIncome(item.kind) && styles.income]}>
-            {formatAmount(item.amount_minor, item.currency, item.kind)}
-          </Text>
-        </TouchableOpacity>
-      )}
-      onEndReached={() => { loadMore().catch((e) => console.error('load more failed', e)); }}
-      onEndReachedThreshold={0.5}
-      refreshing={refreshing}
-      onRefresh={onRefresh}
-      ListFooterComponent={loadingMore ? <ActivityIndicator style={styles.footer} /> : null}
-      ListEmptyComponent={
-        <Text style={styles.empty}>Транзакций пока нет. Они появятся здесь после SMS от банка.</Text>
-      }
-    />
+    <View style={styles.list}>
+      <SectionList
+        style={styles.list}
+        sections={sections}
+        keyExtractor={(i) => String(i.id)}
+        stickySectionHeadersEnabled
+        renderSectionHeader={({ section }) => <Text style={styles.sectionHeader}>{section.title}</Text>}
+        renderItem={({ item }) => (
+          <TouchableOpacity style={styles.row} onPress={() => navigation.navigate('TransactionDetail', { txId: item.id })}>
+            <View style={styles.rowMain}>
+              <Text style={styles.merchant} numberOfLines={1}>{item.raw_merchant || 'Без мерчанта'}</Text>
+              {item.category_id ? (
+                <Text style={styles.category} numberOfLines={1}>
+                  {`${item.category_emoji || ''} ${item.category_name}`.trim()} · {formatTime(item.occurred_at)}
+                </Text>
+              ) : (
+                <View style={styles.inline}>
+                  <Text style={styles.badge}>Без категории</Text>
+                  <Text style={styles.category}> · {formatTime(item.occurred_at)}</Text>
+                </View>
+              )}
+            </View>
+            <Text style={[styles.amount, isIncome(item.kind) && styles.income]}>
+              {formatAmount(item.amount_minor, item.currency, item.kind)}
+            </Text>
+          </TouchableOpacity>
+        )}
+        onEndReached={() => { loadMore().catch((e) => console.error('load more failed', e)); }}
+        onEndReachedThreshold={0.5}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+        ListFooterComponent={loadingMore ? <ActivityIndicator style={styles.footer} /> : null}
+        ListEmptyComponent={
+          <Text style={styles.empty}>Транзакций пока нет. Они появятся здесь после SMS от банка.</Text>
+        }
+      />
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => navigation.navigate('AddTransaction')}
+        accessibilityLabel="Добавить транзакцию"
+      >
+        <Text style={styles.fabText}>＋</Text>
+      </TouchableOpacity>
+    </View>
   );
 }
 
@@ -142,6 +149,11 @@ const styles = StyleSheet.create({
   },
   amount: { fontSize: 16, color: colors.text, fontVariant: ['tabular-nums'] },
   income: { color: colors.income },
-  footer: { paddingVertical: 16 },
+  footer: { paddingVertical: 16, marginBottom: 72 },
+  fab: {
+    position: 'absolute', right: 16, bottom: 16, width: 56, height: 56, borderRadius: 28,
+    backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', elevation: 4,
+  },
+  fabText: { color: '#FFFFFF', fontSize: 28, lineHeight: 32 },
   empty: { padding: 32, textAlign: 'center', color: colors.muted },
 });

@@ -23,7 +23,9 @@ This document outlines the remaining work to finish the privacy-first SMS transa
   - [x] `assembleDebug` with quick-sqlite verified (needs NDK 23.1.7779620 + CMake 3.22.1)
 - Notifee notifications + action buttons
   - [x] Show top category suggestions in notification
-  - [x] "Create new category" action opens the app on the CreateCategory screen; tapping the body opens the transaction
+  - [x] "Create new category" action opens the app on the category editor; tapping the body opens the transaction
+  - [x] Android shows max 3 action buttons: 2 suggestions + "➕ Новая категория" (always present)
+  - [x] Money transfers suggest only categories whose name starts with "Перевод" (revisit: maybe an explicit "transfer" flag on the category)
   - [x] Handle action presses in JS and persist assignments (+ exact rule + backfill that keeps manual choices)
 - Permissions & device testing
   - [x] Runtime permissions (`RECEIVE_SMS`, `POST_NOTIFICATIONS`) requested on app start (`src/permissions.ts`); `READ_SMS` removed as unused
@@ -38,14 +40,23 @@ This document outlines the remaining work to finish the privacy-first SMS transa
   - [x] List: all transactions, keyset pagination by 50, day headers, pull-to-refresh, live refresh on new SMS
   - [x] Detail: category chips, "remember for merchant" toggle (rule + backfill), clear category, raw SMS
   - [x] Create category screen (from detail or notification), assigns it to the transaction
-  - [ ] Filter: uncategorized only / by month
-- Budget planning — separate tab (see section below)
+  - [x] Category management: list (active / archive), rename, emoji, archive, delete
+  - [x] Add transaction manually (amount, income/expense, description, today/yesterday, category)
+  - [ ] Filter: uncategorized only / by month / by category (tap a row on the stats screen)
+  - [ ] Edit / delete a manual transaction; arbitrary date picker
+- [x] Bottom tabs: История / Статистика / План (budget planning, see section below)
 - Merchant rules UI: create/edit/list and backfill
 - Backup/export & import (JSON/CSV via SAF)
 - Locale strings (en/ka/ru)
 - Category usage analytics (local only) and suggestions
 
-## Budget Planning (separate tab)
+## Budget Planning (tabs "Статистика" + "План") — v1 done
+Done: `budgets` table (migration 2), planner tab with a standing monthly amount per category,
+stats tab with month switcher, donut (top-5 categories by all-time spend + "other"), total spent in the center,
+plan / remaining summary, per-category progress bars (warning ≥80%, over-limit with ⚠ label), GEL only + "не учтено" for other currencies.
+Remaining: tap a category -> its transactions for the month; over-limit notifications; salary-day month start (if needed).
+
+Original spec:
 Goal: set a monthly target amount per category and see at a glance which categories are over their limit.
 
 - Navigation: bottom tabs (`@react-navigation/bottom-tabs` 6.x) — "Транзакции" (current stack) and "Бюджет"

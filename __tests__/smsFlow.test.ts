@@ -18,6 +18,7 @@ jest.mock('../src/navigation', () => ({ navigateWhenReady: (...a: any[]) => navi
 import SmsBackgroundTask from '../src/native/SmsBackgroundTask';
 import { handleNotificationAction } from '../src/notifications/notifeeIntegration';
 import { createRule } from '../src/categorize';
+import { createCategory } from '../src/db/categories';
 import { getDb } from '../src/db';
 import { freshDb } from './helpers';
 
@@ -42,8 +43,10 @@ test('new uncategorized transaction is stored and a notification with suggestion
   expect(displayNotification).toHaveBeenCalledTimes(1);
   const n = displayNotification.mock.calls[0][0];
   expect(n.data).toEqual({ txId: String(row.id), merchant_key: 'MC GOLD' });
-  expect(n.android.actions).toHaveLength(4); // 3 suggestions + "create new"
-  expect(n.android.actions[3].pressAction.id).toBe('create_new');
+  // Android shows at most 3 buttons: 2 suggestions + "new category" (always last)
+  expect(n.android.actions).toHaveLength(3);
+  expect(n.android.actions[2].pressAction.id).toBe('create_new');
+  expect(n.android.actions.map((a: any) => a.title)).not.toContainEqual(expect.stringContaining('Переводы'));
 });
 
 test('same SMS delivered twice is stored once and notified once', async () => {
@@ -100,14 +103,14 @@ test('backfill does not overwrite a category the user set manually', async () =>
   expect(rows.map((r) => r.category_id)).toEqual([2, 5]);
 });
 
-test('"create new" action opens the CreateCategory screen for this transaction', async () => {
+test('"create new" action opens the category editor for this transaction', async () => {
   await SmsBackgroundTask(MC_GOLD_1);
   const n = displayNotification.mock.calls[0][0];
   const action = n.android.actions.find((a: any) => a.pressAction.id === 'create_new');
   expect(action.pressAction.launchActivity).toBe('default');
 
   await handleNotificationAction({ id: 'create_new', notification: { id: n.id, data: n.data } });
-  expect(navigateWhenReady).toHaveBeenCalledWith({ name: 'CreateCategory', params: { txId: Number(n.data.txId) } });
+  expect(navigateWhenReady).toHaveBeenCalledWith({ name: 'CategoryEdit', params: { txId: Number(n.data.txId) } });
   expect(cancelNotification).toHaveBeenCalledWith(n.id);
 });
 
@@ -117,6 +120,25 @@ test('tapping the notification body opens the transaction and keeps the notifica
   await handleNotificationAction({ id: 'default', notification: { id: n.id, data: n.data } });
   expect(navigateWhenReady).toHaveBeenCalledWith({ name: 'TransactionDetail', params: { txId: Number(n.data.txId) } });
   expect(cancelNotification).not.toHaveBeenCalled();
+});
+
+test('money transfer offers only "Перевод…" categories, plus "new category"', async () => {
+  await createCategory('Перевод маме', '👩');
+  await SmsBackgroundTask({ sender: 'TBC SMS', body: 'Money Transfer:\n1.00 GEL\nMC GOLD\n02/10/2026', timestamp: 1 });
+  const n = displayNotification.mock.calls[0][0];
+  expect(n.title).toMatch(/^Перевод/);
+  const titles = n.android.actions.map((a: any) => a.title);
+  expect(titles).toHaveLength(3);
+  expect(titles.slice(0, 2).sort()).toEqual(['👩 Перевод маме', '🔁 Переводы']);
+  expect(n.android.actions[2].pressAction.id).toBe('create_new');
+});
+
+test('money transfer with no "Перевод…" categories still offers "new category"', async () => {
+  const db = await getDb();
+  await db.run("UPDATE categories SET is_archived = 1 WHERE name = 'Переводы'");
+  await SmsBackgroundTask({ sender: 'TBC SMS', body: 'Money Transfer:\n1.00 GEL\nMC GOLD\n02/10/2026', timestamp: 1 });
+  const ids = displayNotification.mock.calls[0][0].android.actions.map((a: any) => a.pressAction.id);
+  expect(ids).toEqual(['create_new']);
 });
 
 test('task logs and swallows DB errors instead of throwing', async () => {

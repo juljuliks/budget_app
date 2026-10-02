@@ -56,4 +56,27 @@ export async function setTransactionCategory(txId: number, categoryId: number | 
     [categoryId, categoryId === null ? null : source, txId]);
 }
 
-export default { listTransactionsPage, getTransaction, setTransactionCategory };
+
+/** Manually entered transaction (cash etc.). Stored like an SMS one, with a unique synthetic hash. */
+export async function addManualTransaction(tx: {
+  amount_minor: number;
+  currency?: string;
+  kind?: 'purchase' | 'refund' | 'deposit' | 'transfer' | 'withdrawal';
+  description?: string;
+  category_id: number | null;
+  occurred_at?: number; // unix seconds, default now
+}): Promise<number> {
+  const db = await getDb();
+  const now = Date.now();
+  const occurredAt = tx.occurred_at ?? Math.floor(now / 1000);
+  const description = tx.description?.trim() || null;
+  const { lastInsertRowid } = await db.run(
+    `INSERT INTO transactions
+      (bank, kind, amount_minor, currency, raw_merchant, merchant_key, category_id, category_source, occurred_at, raw_sms, sms_hash)
+      VALUES ('manual', ?, ?, ?, ?, NULL, ?, ?, ?, '', ?)`,
+    [tx.kind ?? 'purchase', tx.amount_minor, tx.currency ?? 'GEL', description, tx.category_id,
+     tx.category_id === null ? null : 'user', occurredAt, `manual:${now}:${Math.random().toString(36).slice(2)}`]);
+  return lastInsertRowid;
+}
+
+export default { listTransactionsPage, getTransaction, setTransactionCategory, addManualTransaction };

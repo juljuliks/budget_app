@@ -2,16 +2,46 @@ import React, { useEffect } from 'react';
 import { AppState } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import notifee, { EventType } from '@notifee/react-native';
 import TransactionsList from './ui/TransactionsList';
 import TransactionDetail from './ui/TransactionDetail';
-import CreateCategory from './ui/CreateCategory';
+import CategoryEdit from './ui/CategoryEdit';
+import CategoriesScreen from './ui/CategoriesScreen';
+import AddTransaction from './ui/AddTransaction';
+import StatsScreen from './ui/StatsScreen';
+import PlannerScreen from './ui/PlannerScreen';
+import { HistoryIcon, PlannerIcon, StatsIcon } from './ui/icons';
+import { colors } from './ui/theme';
 import { createNotificationChannel } from './notifications/notifeeBootstrap';
 import { handleNotificationAction } from './notifications/notifeeIntegration';
 import { requestAppPermissions } from './permissions';
-import { navigationRef, flushPendingNavigation, RootStackParamList } from './navigation';
+import { navigationRef, flushPendingNavigation, RootStackParamList, TabParamList } from './navigation';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+const Tab = createBottomTabNavigator<TabParamList>();
+
+function MainTabs() {
+  return (
+    <Tab.Navigator screenOptions={{ tabBarActiveTintColor: colors.accent, tabBarInactiveTintColor: colors.muted }}>
+      <Tab.Screen
+        name="History"
+        component={TransactionsList}
+        options={{ title: 'История', tabBarIcon: ({ color }) => <HistoryIcon color={color} /> }}
+      />
+      <Tab.Screen
+        name="Stats"
+        component={StatsScreen}
+        options={{ title: 'Статистика', tabBarIcon: ({ color }) => <StatsIcon color={color} /> }}
+      />
+      <Tab.Screen
+        name="Planner"
+        component={PlannerScreen}
+        options={{ title: 'План', tabBarIcon: ({ color }) => <PlannerIcon color={color} /> }}
+      />
+    </Tab.Navigator>
+  );
+}
 
 export default function App() {
   useEffect(() => {
@@ -39,9 +69,11 @@ export default function App() {
   return (
     <NavigationContainer ref={navigationRef} onReady={flushPendingNavigation}>
       <Stack.Navigator>
-        <Stack.Screen name="Transactions" component={TransactionsList} options={{ title: 'Транзакции' }} />
+        <Stack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
         <Stack.Screen name="TransactionDetail" component={TransactionDetail} options={{ title: 'Транзакция' }} />
-        <Stack.Screen name="CreateCategory" component={CreateCategory} options={{ title: 'Новая категория', presentation: 'modal' }} />
+        <Stack.Screen name="CategoryEdit" component={CategoryEdit} options={{ title: 'Категория' }} />
+        <Stack.Screen name="Categories" component={CategoriesScreen} options={{ title: 'Категории' }} />
+        <Stack.Screen name="AddTransaction" component={AddTransaction} options={{ title: 'Новая транзакция' }} />
       </Stack.Navigator>
     </NavigationContainer>
   );
