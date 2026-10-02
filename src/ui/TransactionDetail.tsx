@@ -80,7 +80,8 @@ export default function TransactionDetail({ route, navigation }: Props) {
       {tx.category_id ? (
         // categorized: show the category and "Сменить категорию" (the picker opens in a sheet)
         <>
-          <SectionHeading title="Категория" onSettings={() => navigation.navigate('Categories')} settingsLabel="Управление категориями" />
+          {/* no gear here: category management is in the "Сменить категорию" sheet */}
+          <SectionHeading title="Категория" />
           <View style={styles.currentRow}>
             <View style={styles.currentChip}>
               <Text style={styles.currentText}>
