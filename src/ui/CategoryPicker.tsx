@@ -12,6 +12,8 @@ type Props = {
   selectedId?: number | null;
   onSelect: (id: number) => void;
   title?: string;
+  /** gear next to the title (category management); off where we already are in category management */
+  showSettings?: boolean;
   /** money transfers: only categories of the transfer type; a new category gets that type */
   transferOnly?: boolean;
   /** categories not to offer (already in the plan, the one being deleted, ...) */
@@ -31,7 +33,7 @@ type Props = {
  * focus / changes, so a category created or edited elsewhere shows up immediately.
  */
 export default function CategoryPicker({
-  selectedId, onSelect, title = 'Категория', transferOnly = false, excludeIds, newCategory, onNavigateAway, disabled, children,
+  selectedId, onSelect, title = 'Категория', showSettings = true, transferOnly = false, excludeIds, newCategory, onNavigateAway, disabled, children,
 }: Props) {
   const navigation = useRootNavigation();
   const [categories, setCategories] = useState<Category[]>([]);
@@ -59,7 +61,7 @@ export default function CategoryPicker({
     <View>
       <SectionHeading
         title={title}
-        onSettings={() => go(() => navigation.navigate('Categories'))}
+        onSettings={showSettings ? () => go(() => navigation.navigate('Categories')) : undefined}
         settingsLabel="Управление категориями"
       />
       <View style={styles.chips}>

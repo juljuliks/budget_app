@@ -15,7 +15,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'CategoryEdit'>;
 
 /** Create (no categoryId) or edit a category: name, emoji, optional type. */
 export default function CategoryEdit({ route, navigation }: Props) {
-  const { categoryId, txId, txIds, planYm, typeId: initialTypeId } = route.params ?? {};
+  const { categoryId, txId, txIds, planYm, typeId: initialTypeId, returnSelection } = route.params ?? {};
   const isNew = categoryId === undefined;
   const [name, setName] = useState('');
   const [emoji, setEmoji] = useState('');
@@ -54,8 +54,10 @@ export default function CategoryEdit({ route, navigation }: Props) {
         setSaving(false);
         return;
       }
+      let createdId: number | null = null;
       if (isNew) {
         const id = await createCategory(trimmed, emoji, typeId);
+        createdId = id;
         if (txId) await assignCategory(txId, id);
         if (txIds?.length) await assignCategoryToMany(txIds, id);
         if (planYm) await addPlanItem(planYm, id);
@@ -68,7 +70,10 @@ export default function CategoryEdit({ route, navigation }: Props) {
       const { routes } = navigation.getState();
       const prev = routes[routes.length - 2];
       if (isNew && txId && prev?.name === 'TransactionDetail') navigation.pop(2);
-      else navigation.goBack();
+      else if (createdId !== null && returnSelection && prev) {
+        // back to the screen we came from, with the new category selected there
+        navigation.navigate({ name: prev.name, params: { ...prev.params, selectCategoryId: createdId }, merge: true } as never);
+      } else navigation.goBack();
     } catch (e) {
       console.error('save category failed', e);
       setError('Не удалось сохранить');

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { incrementCategoryUsage } from '../db/categories';
@@ -14,7 +14,7 @@ type Kind = 'purchase' | 'deposit';
 type Day = 'today' | 'yesterday';
 
 /** Manual entry: cash, or anything the bank didn't send an SMS for. */
-export default function AddTransaction({ navigation }: Props) {
+export default function AddTransaction({ route, navigation }: Props) {
   const [amount, setAmount] = useState('');
   const [kind, setKind] = useState<Kind>('purchase');
   const [description, setDescription] = useState('');
@@ -22,6 +22,12 @@ export default function AddTransaction({ navigation }: Props) {
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // a category just created via "+ Новая категория" comes back selected
+  const selectCategoryId = route.params?.selectCategoryId;
+  useEffect(() => {
+    if (selectCategoryId !== undefined) setCategoryId(selectCategoryId);
+  }, [selectCategoryId]);
 
   async function save() {
     const minor = parseAmountInput(amount);
@@ -87,6 +93,7 @@ export default function AddTransaction({ navigation }: Props) {
       <CategoryPicker
         selectedId={categoryId}
         onSelect={(id) => setCategoryId((cur) => (cur === id ? null : id))}
+        newCategory={{ returnSelection: true }}
         disabled={saving}
       />
 

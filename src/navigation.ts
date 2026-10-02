@@ -13,13 +13,14 @@ export type RootStackParamList = {
   /**
    * No categoryId = create. After creating, the new category is: assigned to txId (with a merchant
    * rule) / to all txIds (bulk, no rules), added to the plan of planYm. typeId: preselected type.
+   * returnSelection: hand the new id back to the previous screen as `selectCategoryId`.
    */
-  CategoryEdit: { categoryId?: number; txId?: number; txIds?: number[]; planYm?: string; typeId?: number };
+  CategoryEdit: { categoryId?: number; txId?: number; txIds?: number[]; planYm?: string; typeId?: number; returnSelection?: boolean };
   Categories: undefined;
   /** Delete a category, moving its current-month transactions to another one */
-  CategoryDelete: { categoryId: number };
+  CategoryDelete: { categoryId: number; selectCategoryId?: number };
   CategoryTypes: undefined;
-  AddTransaction: undefined;
+  AddTransaction: { selectCategoryId?: number } | undefined;
 };
 
 export const navigationRef = createNavigationContainerRef<RootStackParamList>();

@@ -8,6 +8,9 @@ import { emitTransactionsChanged } from '../events';
 import type { RootStackParamList } from '../navigation';
 import { formatAmount, formatDay, formatTime, isIncome } from './format';
 import CategoryPicker from './CategoryPicker';
+import CategoryPickerModal from './CategoryPickerModal';
+import SectionHeading from './SectionHeading';
+import { categoryLabel } from '../db/categories';
 import { TrashIcon } from './icons';
 import { colors } from './theme';
 
@@ -19,6 +22,7 @@ export default function TransactionDetail({ route, navigation }: Props) {
   const [tx, setTx] = useState<Tx | null>(null);
   const [applyToMerchant, setApplyToMerchant] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   // on focus: the category may have been changed on the category screens
   useFocusEffect(useCallback(() => {
@@ -73,14 +77,40 @@ export default function TransactionDetail({ route, navigation }: Props) {
       <Text style={styles.merchant}>{tx.raw_merchant || 'Без мерчанта'}</Text>
       <Text style={styles.meta}>{formatDay(tx.occurred_at)}, {formatTime(tx.occurred_at)}</Text>
 
-      <CategoryPicker
-        selectedId={tx.category_id}
-        onSelect={choose}
-        // money transfers: only categories of the transfer type
-        transferOnly={tx.kind === 'transfer'}
-        newCategory={{ txId }}
-        disabled={saving}
-      />
+      {tx.category_id ? (
+        // categorized: show the category and "Сменить категорию" (the picker opens in a sheet)
+        <>
+          <SectionHeading title="Категория" onSettings={() => navigation.navigate('Categories')} settingsLabel="Управление категориями" />
+          <View style={styles.currentRow}>
+            <View style={styles.currentChip}>
+              <Text style={styles.currentText}>
+                {categoryLabel({ emoji: tx.category_emoji, name: tx.category_name!, type_name: tx.category_type_name })}
+              </Text>
+            </View>
+            <TouchableOpacity style={styles.changeButton} disabled={saving} onPress={() => setPickerOpen(true)}>
+              <Text style={styles.changeText}>Сменить категорию</Text>
+            </TouchableOpacity>
+          </View>
+          <CategoryPickerModal
+            visible={pickerOpen}
+            title="Сменить категорию"
+            selectedId={tx.category_id}
+            transferOnly={tx.kind === 'transfer'}
+            newCategory={{ txId }}
+            onPick={(id) => { setPickerOpen(false); choose(id); }}
+            onClose={() => setPickerOpen(false)}
+          />
+        </>
+      ) : (
+        <CategoryPicker
+          selectedId={tx.category_id}
+          onSelect={choose}
+          // money transfers: only categories of the transfer type
+          transferOnly={tx.kind === 'transfer'}
+          newCategory={{ txId }}
+          disabled={saving}
+        />
+      )}
 
       {tx.merchant_key ? (
         <View style={styles.switchRow}>
@@ -118,6 +148,14 @@ const styles = StyleSheet.create({
   merchant: { fontSize: 18, color: colors.text, marginTop: 4 },
   meta: { fontSize: 14, color: colors.muted, marginTop: 2 },
   heading: { fontSize: 13, fontWeight: '600', color: colors.muted, marginTop: 24, marginBottom: 8, textTransform: 'uppercase' },
+  currentRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
+  currentChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16, backgroundColor: colors.accent },
+  currentText: { fontSize: 15, color: '#FFFFFF' },
+  changeButton: {
+    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16,
+    borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed',
+  },
+  changeText: { fontSize: 15, color: colors.accent },
   switchRow: { flexDirection: 'row', alignItems: 'center', marginTop: 16 },
   switchLabel: { flex: 1, fontSize: 14, color: colors.text, marginRight: 12 },
   clear: { marginTop: 16, alignSelf: 'flex-start' },

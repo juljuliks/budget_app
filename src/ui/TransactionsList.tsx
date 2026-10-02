@@ -8,7 +8,7 @@ import { emitTransactionsChanged, onTransactionsChanged } from '../events';
 import { categoryLabel } from '../db/categories';
 import { assignCategoryToMany } from '../assign';
 import { useRootNavigation } from '../navigation';
-import BulkCategoryModal from './BulkCategoryModal';
+import CategoryPickerModal from './CategoryPickerModal';
 import Checkbox from './Checkbox';
 import { dayKey, formatAmount, formatDay, formatTime, isIncome } from './format';
 import { PencilIcon, SearchIcon, TrashIcon } from './icons';
@@ -287,10 +287,12 @@ export default function TransactionsList() {
         </TouchableOpacity>
       )}
 
-      <BulkCategoryModal
+      <CategoryPickerModal
         visible={bulkOpen}
-        txIds={[...selected]}
-        transfersOnly={selectedRows.length > 0 && selectedRows.every((r) => r.kind === 'transfer')}
+        title={`Выбрано транзакций: ${selected.size}`}
+        // a category created from here is applied to the selection right away
+        newCategory={{ txIds: [...selected] }}
+        transferOnly={selectedRows.length > 0 && selectedRows.every((r) => r.kind === 'transfer')}
         onPick={applyBulk}
         onClose={() => setBulkOpen(false)}
       />

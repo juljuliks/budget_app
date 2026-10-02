@@ -1,30 +1,34 @@
 import React from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import CategoryPicker from './CategoryPicker';
+import type { RootStackParamList } from '../navigation';
 import { colors } from './theme';
 
 type Props = {
   visible: boolean;
-  txIds: number[];
-  /** all selected transactions are transfers: offer only transfer-type categories */
-  transfersOnly: boolean;
+  title: string;
+  selectedId?: number | null;
+  transferOnly?: boolean;
+  /** what to do with a category created from here (see CategoryEdit params) */
+  newCategory?: Omit<RootStackParamList['CategoryEdit'], 'categoryId'>;
   onPick: (categoryId: number) => void;
   onClose: () => void;
 };
 
-/** Bottom sheet: pick a category for the selected transactions. */
-export default function BulkCategoryModal({ visible, txIds, transfersOnly, onPick, onClose }: Props) {
+/** Bottom sheet with the shared CategoryPicker (gear, categories, "+ Новая категория"). */
+export default function CategoryPickerModal({ visible, title, selectedId, transferOnly, newCategory, onPick, onClose }: Props) {
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Закрыть" />
       <View style={styles.sheet}>
-        <Text style={styles.title}>Выбрано транзакций: {txIds.length}</Text>
+        <Text style={styles.title}>{title}</Text>
         <ScrollView>
           <CategoryPicker
+            selectedId={selectedId}
             onSelect={onPick}
-            transferOnly={transfersOnly}
-            // a category created from here is applied to the selection right away
-            newCategory={{ txIds }}
+            transferOnly={transferOnly}
+            newCategory={newCategory}
+            // the gear / new category leave to other screens: close the sheet first
             onNavigateAway={onClose}
           />
         </ScrollView>
@@ -40,7 +44,7 @@ const styles = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)' },
   sheet: {
     backgroundColor: colors.bg, borderTopLeftRadius: 16, borderTopRightRadius: 16,
-    padding: 16, paddingBottom: 24, maxHeight: '70%',
+    padding: 16, paddingBottom: 24, maxHeight: '75%',
   },
   title: { fontSize: 17, fontWeight: '600', color: colors.text },
   cancel: { marginTop: 16, alignSelf: 'center', padding: 8 },

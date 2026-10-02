@@ -18,7 +18,7 @@ type Tx = Awaited<ReturnType<typeof currentTransactionsOfCategory>>[number];
  * past months keep the deleted one so history doesn't change.
  */
 export default function CategoryDelete({ route, navigation }: Props) {
-  const { categoryId } = route.params;
+  const { categoryId, selectCategoryId } = route.params;
   const [category, setCategory] = useState<Category | null>(null);
   const [txs, setTxs] = useState<Tx[] | null>(null);
   const [pastCount, setPastCount] = useState(0);
@@ -36,6 +36,11 @@ export default function CategoryDelete({ route, navigation }: Props) {
       setPastCount(past);
     }).catch((e) => console.error('load category delete failed', e));
   }, [categoryId]);
+
+  // a category just created via "+ Новая категория" comes back selected
+  useEffect(() => {
+    if (selectCategoryId !== undefined) setTarget(selectCategoryId);
+  }, [selectCategoryId]);
 
   async function confirm() {
     setSaving(true);
@@ -68,11 +73,14 @@ export default function CategoryDelete({ route, navigation }: Props) {
 
           <CategoryPicker
             title="Перенести их в категорию"
+            // already in category management: no gear here
+            showSettings={false}
+            newCategory={{ returnSelection: true }}
             selectedId={target}
             onSelect={setTarget}
             excludeIds={[categoryId]}
-            // transactions of a transfer category are transfers
-            transferOnly={category.type_is_transfer === 1}
+            // only when everything being moved is a money transfer (a purchase may sit in a transfer category)
+            transferOnly={txs.every((t) => t.kind === 'transfer')}
           >
             <PickerChip label="Оставить без категории" selected={target === null} onPress={() => setTarget(null)} />
           </CategoryPicker>
