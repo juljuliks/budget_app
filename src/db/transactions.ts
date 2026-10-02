@@ -85,6 +85,61 @@ export async function searchTransactions(query: string, limit = SEARCH_LIMIT): P
   return out;
 }
 
+/** Category filter: a category id, 'none' = uncategorized. */
+export type CategoryFilter = number | 'none';
+
+export type TxFilter = {
+  category?: CategoryFilter;
+  /** unix seconds, [from, to) */
+  from?: number;
+  to?: number;
+};
+
+const FILTER_LIMIT = 2000;
+
+/** Exact filters (category, date range); newest first, no pagination (capped). */
+export async function listTransactionsFiltered(f: TxFilter, limit = FILTER_LIMIT): Promise<TransactionRow[]> {
+  const where: string[] = [];
+  const params: Array<number> = [];
+  if (f.category === 'none') where.push('t.category_id IS NULL');
+  else if (f.category !== undefined) { where.push('t.category_id = ?'); params.push(f.category); }
+  if (f.from !== undefined) { where.push('t.occurred_at >= ?'); params.push(f.from); }
+  if (f.to !== undefined) { where.push('t.occurred_at < ?'); params.push(f.to); }
+  const db = await getDb();
+  return db.all<TransactionRow>(
+    `${SELECT_TX} ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ORDER BY t.occurred_at DESC, t.id DESC LIMIT ?`,
+    [...params, limit]);
+}
+
+export type CategoryWithCount = {
+  category: CategoryFilter;
+  name: string;
+  emoji: string | null;
+  type_name: string | null;
+  deleted: boolean;
+  count: number;
+};
+
+/** Categories that have at least one transaction (deleted ones too: they keep past transactions), plus "Без категории". */
+export async function categoriesWithTransactions(): Promise<CategoryWithCount[]> {
+  const db = await getDb();
+  const rows = await db.all<{ category_id: number | null; name: string | null; emoji: string | null; type_name: string | null; deleted_at: number | null; n: number }>(
+    `SELECT t.category_id, c.name, c.emoji, ct.name AS type_name, c.deleted_at, count(*) AS n
+      FROM transactions t
+      LEFT JOIN categories c ON c.id = t.category_id
+      LEFT JOIN category_types ct ON ct.id = c.type_id
+      GROUP BY t.category_id
+      ORDER BY t.category_id IS NULL, c.deleted_at IS NOT NULL, ct.id IS NULL, ct.sort_order, c.sort_order, c.name`);
+  return rows.map((r) => ({
+    category: r.category_id ?? 'none',
+    name: r.category_id === null ? UNCATEGORIZED : r.name ?? '?',
+    emoji: r.emoji,
+    type_name: r.type_name,
+    deleted: r.deleted_at !== null,
+    count: r.n,
+  }));
+}
+
 /** Bulk "change category" from the list: a manual choice, so no merchant rules are created. */
 export async function setCategoryForTransactions(txIds: number[], categoryId: number | null) {
   if (txIds.length === 0) return;
@@ -163,6 +218,6 @@ export async function addManualTransaction(tx: {
 }
 
 export default {
-  listTransactionsPage, searchTransactions, getTransaction, setTransactionCategory, setCategoryForTransactions,
+  listTransactionsPage, listTransactionsFiltered, categoriesWithTransactions, searchTransactions, getTransaction, setTransactionCategory, setCategoryForTransactions,
   addManualTransaction, deleteTransaction, markTransactionSeen, countUnseenTransactions,
 };

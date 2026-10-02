@@ -1,8 +1,9 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, SectionList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { RouteProp, useFocusEffect, useRoute } from '@react-navigation/native';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, ScrollView, SectionList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { RouteProp, useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import {
-  deleteTransaction, isUnread, listTransactionsPage, PageCursor, searchTransactions, TransactionRow,
+  categoriesWithTransactions, CategoryFilter, CategoryWithCount, deleteTransaction, isUnread, listTransactionsFiltered,
+  listTransactionsPage, PageCursor, searchTransactions, TransactionRow,
 } from '../db/transactions';
 import { emitTransactionsChanged, onTransactionsChanged } from '../events';
 import { categoryLabel } from '../db/categories';
@@ -12,9 +13,28 @@ import CategoryPickerModal from './CategoryPickerModal';
 import Checkbox from './Checkbox';
 import { dayKey, formatAmount, formatDay, formatTime, isIncome } from './format';
 import { PencilIcon, SearchIcon, TrashIcon } from './icons';
+import RangeCalendar, { DayRange, formatRange, rangeToUnix } from './RangeCalendar';
 import { colors } from './theme';
 
 const PAGE_SIZE = 50;
+
+type FilterMode = 'text' | 'category' | 'date';
+const MODES: Array<[FilterMode, string]> = [['text', 'По тексту'], ['category', 'По категории'], ['date', 'По дате']];
+type Filter = { mode: FilterMode; query: string; category: CategoryFilter | null; range: DayRange | null };
+
+/** Only the filter of the selected mode applies. */
+function isFilterActive(f: Filter): boolean {
+  if (f.mode === 'text') return f.query.trim() !== '';
+  if (f.mode === 'category') return f.category !== null;
+  return f.range !== null;
+}
+
+async function runFilterQuery(f: Filter): Promise<TransactionRow[] | null> {
+  if (!isFilterActive(f)) return null;
+  if (f.mode === 'text') return searchTransactions(f.query);
+  if (f.mode === 'category') return listTransactionsFiltered({ category: f.category! });
+  return listTransactionsFiltered(rangeToUnix(f.range!));
+}
 const SEARCH_DEBOUNCE_MS = 200;
 
 export default function TransactionsList() {
@@ -28,19 +48,27 @@ export default function TransactionsList() {
   const requestId = useRef(0);
   const loadedCount = useRef(0);
 
+  const [mode, setMode] = useState<FilterMode>('text');
   const [query, setQuery] = useState('');
+  const [category, setCategory] = useState<CategoryFilter | null>(null);
+  const [range, setRange] = useState<DayRange | null>(null);
+  const [calendarOpen, setCalendarOpen] = useState(true);
+  const [categoryOptions, setCategoryOptions] = useState<CategoryWithCount[]>([]);
+  const filter: Filter = { mode, query, category, range };
+  const filterActive = isFilterActive(filter);
   // read by refreshAll without making it change (and re-run focus effects) on every keystroke
-  const queryRef = useRef('');
-  queryRef.current = query;
-  const [results, setResults] = useState<TransactionRow[] | null>(null); // null = not searching
+  const filterRef = useRef(filter);
+  filterRef.current = filter;
+  const [results, setResults] = useState<TransactionRow[] | null>(null); // null = no filter, normal feed
   const searchId = useRef(0);
 
-  // opened from the stats screen with a category: prefill the search
+  // opened from the stats screen: filter by that category (or text)
   const route = useRoute<RouteProp<TabParamList, 'Transactions'>>();
-  const { query: incomingQuery, nonce } = route.params ?? {};
+  const { query: incomingQuery, category: incomingCategory, nonce } = route.params ?? {};
   useEffect(() => {
-    if (incomingQuery !== undefined) setQuery(incomingQuery);
-  }, [incomingQuery, nonce]);
+    if (incomingCategory !== undefined) { setMode('category'); setCategory(incomingCategory); }
+    else if (incomingQuery !== undefined) { setMode('text'); setQuery(incomingQuery); }
+  }, [incomingQuery, incomingCategory, nonce]);
 
   const [selectMode, setSelectMode] = useState(false);
   // shows edit / delete icons on every row; exclusive with selectMode
@@ -60,11 +88,14 @@ export default function TransactionsList() {
     setLoading(false);
   }, []);
 
-  const runSearch = useCallback(async (q: string) => {
+  const runFilter = useCallback(async (f: Filter) => {
     const id = ++searchId.current;
-    if (!q.trim()) { setResults(null); return; }
-    const found = await searchTransactions(q);
+    const found = await runFilterQuery(f);
     if (id === searchId.current) setResults(found);
+  }, []);
+
+  const loadCategoryOptions = useCallback(() => {
+    categoriesWithTransactions().then(setCategoryOptions).catch((e) => console.error('load category filter failed', e));
   }, []);
 
   const loadMore = useCallback(async () => {
@@ -87,16 +118,21 @@ export default function TransactionsList() {
 
   const refreshAll = useCallback(() => {
     reload().catch((e) => console.error('reload transactions failed', e));
-    runSearch(queryRef.current).catch((e) => console.error('search failed', e));
-  }, [reload, runSearch]);
+    runFilter(filterRef.current).catch((e) => console.error('filter failed', e));
+    loadCategoryOptions();
+  }, [reload, runFilter, loadCategoryOptions]);
 
   useFocusEffect(refreshAll);
   useEffect(() => onTransactionsChanged(refreshAll), [refreshAll]);
 
+  // text: debounced while typing; category / date / mode switch: immediately
   useEffect(() => {
-    const t = setTimeout(() => { runSearch(query).catch((e) => console.error('search failed', e)); }, SEARCH_DEBOUNCE_MS);
+    const t = setTimeout(() => { runFilter(filterRef.current).catch((e) => console.error('filter failed', e)); }, SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(t);
-  }, [query, runSearch]);
+  }, [query, runFilter]);
+  useEffect(() => {
+    runFilter(filterRef.current).catch((e) => console.error('filter failed', e));
+  }, [mode, category, range, runFilter]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -139,6 +175,38 @@ export default function TransactionsList() {
     setSelected(new Set());
   }
 
+  // everything currently in the list (filtered results, or the loaded part of the feed)
+  const allSelected = selectMode && data.length > 0 && data.every((r) => selected.has(r.id));
+  function toggleSelectAll() {
+    setEditMode(false);
+    if (allSelected) {
+      setSelected(new Set());
+    } else {
+      setSelectMode(true);
+      setSelected(new Set(data.map((r) => r.id)));
+    }
+  }
+
+  // "Редактировать" lives in the tab header, next to the title
+  const tabNavigation = useNavigation();
+  useLayoutEffect(() => {
+    tabNavigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity
+          style={[styles.editToggle, editMode && styles.editToggleOn]}
+          onPress={toggleEditMode}
+          accessibilityRole="button"
+          accessibilityState={{ selected: editMode }}
+        >
+          <PencilIcon color={editMode ? '#FFFFFF' : colors.accent} size={16} />
+          <Text style={[styles.editToggleText, editMode && styles.editToggleTextOn]}>{editMode ? 'Готово' : 'Редактировать'}</Text>
+        </TouchableOpacity>
+      ),
+    });
+    // toggleEditMode only uses state setters
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tabNavigation, editMode]);
+
   function toggle(id: number) {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -180,37 +248,81 @@ export default function TransactionsList() {
   return (
     <View style={styles.list}>
       <View style={styles.header}>
-        <View style={styles.search}>
-          <SearchIcon color={colors.muted} />
-          <TextInput
-            style={styles.searchInput}
-            value={query}
-            onChangeText={setQuery}
-            placeholder="Поиск по SMS и категориям"
-            placeholderTextColor={colors.muted}
-            returnKeyType="search"
-            autoCorrect={false}
-          />
-          {query ? (
-            <TouchableOpacity onPress={() => setQuery('')} hitSlop={10} accessibilityLabel="Очистить поиск">
-              <Text style={styles.clear}>✕</Text>
+        <View style={styles.modes}>
+          {MODES.map(([key, label]) => (
+            <TouchableOpacity key={key} style={[styles.mode, mode === key && styles.modeOn]} onPress={() => setMode(key)}>
+              <Text style={[styles.modeText, mode === key && styles.modeTextOn]}>{label}</Text>
             </TouchableOpacity>
-          ) : null}
+          ))}
         </View>
+
+        {mode === 'text' ? (
+          <View style={styles.search}>
+            <SearchIcon color={colors.muted} />
+            <TextInput
+              style={styles.searchInput}
+              value={query}
+              onChangeText={setQuery}
+              placeholder="Поиск по SMS и категориям"
+              placeholderTextColor={colors.muted}
+              returnKeyType="search"
+              autoCorrect={false}
+            />
+            {query ? (
+              <TouchableOpacity onPress={() => setQuery('')} hitSlop={10} accessibilityLabel="Очистить поиск">
+                <Text style={styles.clear}>✕</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        ) : null}
+
+        {mode === 'category' ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catChips} keyboardShouldPersistTaps="handled">
+            {categoryOptions.map((c) => {
+              const on = category === c.category;
+              return (
+                <TouchableOpacity
+                  key={String(c.category)}
+                  style={[styles.catChip, on && styles.catChipOn]}
+                  // tap the selected one again to clear
+                  onPress={() => setCategory(on ? null : c.category)}
+                >
+                  <Text style={[styles.catChipText, on && styles.catChipTextOn, c.deleted && !on && styles.catChipDeleted]}>
+                    {categoryLabel(c)}{c.deleted ? ' (удалена)' : ''} · {c.count}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+            {categoryOptions.length === 0 ? <Text style={styles.filterHint}>Транзакций пока нет</Text> : null}
+          </ScrollView>
+        ) : null}
+
+        {mode === 'date' ? (
+          <View>
+            <View style={styles.rangeRow}>
+              <Text style={styles.rangeText}>{range ? formatRange(range) : 'Выберите день или период'}</Text>
+              {range ? (
+                <TouchableOpacity onPress={() => setRange(null)} hitSlop={10} accessibilityLabel="Сбросить даты">
+                  <Text style={styles.clear}>✕</Text>
+                </TouchableOpacity>
+              ) : null}
+              <TouchableOpacity onPress={() => setCalendarOpen((o) => !o)} hitSlop={10} style={styles.calendarToggle}>
+                <Text style={styles.link}>{calendarOpen ? 'Скрыть календарь' : 'Календарь'}</Text>
+              </TouchableOpacity>
+            </View>
+            {calendarOpen ? <RangeCalendar value={range} onChange={setRange} /> : null}
+          </View>
+        ) : null}
+
         <View style={styles.toolbar}>
           <TouchableOpacity style={styles.selectToggle} onPress={toggleSelectMode} accessibilityRole="checkbox" accessibilityState={{ checked: selectMode }}>
             <Checkbox checked={selectMode} size={20} />
             <Text style={styles.selectLabel}>Выбрать несколько</Text>
             {selectMode && selected.size > 0 ? <Text style={styles.selectCount}>({selected.size})</Text> : null}
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.editToggle, editMode && styles.editToggleOn]}
-            onPress={toggleEditMode}
-            accessibilityRole="button"
-            accessibilityState={{ selected: editMode }}
-          >
-            <PencilIcon color={editMode ? '#FFFFFF' : colors.accent} size={16} />
-            <Text style={[styles.editToggleText, editMode && styles.editToggleTextOn]}>{editMode ? 'Готово' : 'Редактировать'}</Text>
+          <TouchableOpacity style={styles.selectToggle} onPress={toggleSelectAll} accessibilityRole="checkbox" accessibilityState={{ checked: allSelected }}>
+            <Checkbox checked={allSelected} size={20} />
+            <Text style={styles.selectLabel}>Выбрать все</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -276,7 +388,7 @@ export default function TransactionsList() {
         ListFooterComponent={loadingMore ? <ActivityIndicator style={styles.footer} /> : <View style={styles.footer} />}
         ListEmptyComponent={
           <Text style={styles.empty}>
-            {results ? 'Ничего не найдено.' : 'Транзакций пока нет. Они появятся здесь после SMS от банка.'}
+            {results ? 'Ничего не найдено.' : mode === 'date' && !range ? 'Выберите день или период в календаре.' : 'Транзакций пока нет. Они появятся здесь после SMS от банка.'}
           </Text>
         }
       />
@@ -289,7 +401,7 @@ export default function TransactionsList() {
             </TouchableOpacity>
           </View>
         ) : null
-      ) : (
+      ) : filterActive ? null : (
         <TouchableOpacity
           style={styles.fab}
           onPress={() => navigation.navigate('AddTransaction')}
@@ -317,18 +429,35 @@ const styles = StyleSheet.create({
   list: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
   header: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4, backgroundColor: colors.bg },
+  modes: { flexDirection: 'row', backgroundColor: colors.surface, borderRadius: 8, padding: 2, marginBottom: 8 },
+  mode: { flex: 1, paddingVertical: 6, alignItems: 'center', borderRadius: 6 },
+  modeOn: { backgroundColor: colors.bg },
+  modeText: { fontSize: 13, color: colors.muted },
+  modeTextOn: { color: colors.text, fontWeight: '600' },
+  catChips: { gap: 8, paddingVertical: 2 },
+  catChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16, backgroundColor: colors.surface },
+  catChipOn: { backgroundColor: colors.accent },
+  catChipText: { fontSize: 14, color: colors.text },
+  catChipTextOn: { color: '#FFFFFF' },
+  catChipDeleted: { color: colors.muted },
+  filterHint: { fontSize: 14, color: colors.muted, paddingVertical: 8 },
+  rangeRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 4 },
+  rangeText: { fontSize: 15, color: colors.text, fontWeight: '600' },
+  calendarToggle: { marginLeft: 'auto' },
+  link: { fontSize: 14, color: colors.accent },
   search: {
     flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.surface,
     borderRadius: 10, paddingHorizontal: 12,
   },
   searchInput: { flex: 1, fontSize: 16, color: colors.text, paddingVertical: 8 },
   clear: { fontSize: 16, color: colors.muted },
-  toolbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8 },
+  // wraps to a second line when "Выбрать все" is shown and everything doesn't fit
+  toolbar: { flexDirection: 'row', alignItems: 'center', gap: 20, paddingVertical: 8 },
   selectToggle: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 },
   selectLabel: { fontSize: 15, color: colors.text },
   selectCount: { fontSize: 13, color: colors.muted },
   editToggle: {
-    flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6,
+    flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, marginRight: 16,
     borderRadius: 16, borderWidth: 1, borderColor: colors.accent,
   },
   editToggleOn: { backgroundColor: colors.accent },

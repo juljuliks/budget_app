@@ -3,8 +3,9 @@ jest.mock('../src/navigation', () => ({ navigateWhenReady: jest.fn() }));
 import { getDb } from '../src/db';
 import {
   addManualTransaction, categorySearchQuery, countUnseenTransactions, deleteTransaction, isUnread, listTransactionsPage, markTransactionSeen,
-  normalizeForSearch, searchTransactions,
+  normalizeForSearch, searchTransactions, listTransactionsFiltered, categoriesWithTransactions,
 } from '../src/db/transactions';
+import { rangeToUnix } from '../src/ui/dateRange';
 import { createCategory } from '../src/db/categories';
 import { createCategoryType } from '../src/db/categoryTypes';
 import { assignCategory, assignCategoryToMany } from '../src/assign';
@@ -187,5 +188,39 @@ describe('read state', () => {
       VALUES ('tbc', 'purchase', 1, 'GEL', 1, '', 'x')`);
     await migrate(db);
     expect(await db.get('SELECT count(*) AS n FROM transactions WHERE seen_at IS NULL')).toEqual({ n: 0 });
+  });
+});
+
+describe('exact filters', () => {
+  const day = (d: number, h = 12) => Math.floor(new Date(2026, 9, d, h).getTime() / 1000);
+  async function seedFilter() {
+    const db = await getDb();
+    const rows: Array<[number, number | null, number]> = [[1, 1, day(1)], [2, 1, day(3, 23)], [3, 2, day(4, 0)], [4, null, day(5)]];
+    for (const [i, cat, at] of rows) {
+      await db.run(`INSERT INTO transactions (bank, kind, amount_minor, currency, raw_merchant, category_id, occurred_at, raw_sms, sms_hash)
+        VALUES ('tbc', 'purchase', ?, 'GEL', ?, ?, ?, '', ?)`, [i * 100, `M${i}`, cat, at, `f${i}`]);
+    }
+  }
+  const merchants = (rows: Array<{ raw_merchant: string | null }>) => rows.map((r) => r.raw_merchant);
+
+  test('by category and uncategorized', async () => {
+    await seedFilter();
+    expect(merchants(await listTransactionsFiltered({ category: 1 }))).toEqual(['M2', 'M1']);
+    expect(merchants(await listTransactionsFiltered({ category: 'none' }))).toEqual(['M4']);
+  });
+
+  test('by day range: both ends inclusive, local days', async () => {
+    await seedFilter();
+    const range = rangeToUnix({ from: '2026-10-03', to: '2026-10-04' });
+    expect(merchants(await listTransactionsFiltered(range))).toEqual(['M3', 'M2']); // 3rd 23:00 and 4th 00:00
+    expect(merchants(await listTransactionsFiltered(rangeToUnix({ from: '2026-10-05', to: '2026-10-05' })))).toEqual(['M4']);
+  });
+
+  test('categoriesWithTransactions: counts, deleted ones kept, uncategorized last', async () => {
+    await seedFilter();
+    await getDb().then((db) => db.run('UPDATE categories SET deleted_at = 1 WHERE id = 2'));
+    const opts = await categoriesWithTransactions();
+    expect(opts.map((o) => [o.category, o.count, o.deleted])).toEqual([[1, 2, false], [2, 1, true], ['none', 1, false]]);
+    expect(opts[2].name).toBe('Без категории');
   });
 });

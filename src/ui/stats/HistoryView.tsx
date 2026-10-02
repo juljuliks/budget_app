@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import { categorySearchQuery } from '../../db/transactions';
 import type { TabParamList } from '../../navigation';
 import { HistoryMonth, monthStats, MonthStats, parseYm, planHistory } from '../../db/plans';
 import { onTransactionsChanged } from '../../events';
@@ -69,7 +68,7 @@ function MonthRow({ month, expanded, onToggle }: { month: HistoryMonth; expanded
 }
 
 function MonthDetails({ ym }: { ym: string }) {
-  // tap a category: its transactions (search prefilled), same as on the stats screen
+  // tap a category: its transactions (category filter), same as on the stats screen
   const navigation = useNavigation<BottomTabNavigationProp<TabParamList>>();
   const [stats, setStats] = useState<MonthStats | null>(null);
   useEffect(() => {
@@ -100,7 +99,7 @@ function MonthDetails({ ym }: { ym: string }) {
               <TouchableOpacity
                 key={String(c.category_id)}
                 style={styles.detailRow}
-                onPress={() => navigation.navigate('Transactions', { query: categorySearchQuery(c), nonce: Date.now() })}
+                onPress={() => navigation.navigate('Transactions', { category: c.category_id ?? 'none', nonce: Date.now() })}
               >
                 <Text style={styles.detailName} numberOfLines={1}>{`${c.emoji || ''} ${c.name}`.trim()}</Text>
                 <Text style={styles.detailNum}>{c.limit_minor ? formatMoney(c.limit_minor, { compact: true }) : '—'}</Text>

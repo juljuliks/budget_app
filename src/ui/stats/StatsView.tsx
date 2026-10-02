@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import { categorySearchQuery } from '../../db/transactions';
 import type { TabParamList } from '../../navigation';
 import { BUDGET_CURRENCY, CategoryStat, monthStats, MonthStats } from '../../db/plans';
 import { onTransactionsChanged } from '../../events';
@@ -108,8 +107,8 @@ function CategoryRow({ stat }: { stat: CategoryStat }) {
   const ratio = limit ? spent / limit : 0;
   const fill = ratio > 1 ? chart.critical : ratio >= 0.8 ? chart.warning : chart.meterFill;
 
-  // tap: the category's transactions (search prefilled)
-  const open = () => navigation.navigate('Transactions', { query: categorySearchQuery(stat), nonce: Date.now() });
+  // tap: the category's transactions (category filter)
+  const open = () => navigation.navigate('Transactions', { category: stat.category_id ?? 'none', nonce: Date.now() });
 
   return (
     <TouchableOpacity style={styles.row} onPress={open} accessibilityHint="Показать транзакции категории">
