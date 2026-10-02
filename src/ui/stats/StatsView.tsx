@@ -142,7 +142,7 @@ function CategoryRow({ stat, onAddToPlan }: { stat: CategoryStat; onAddToPlan?: 
       {limit && fixed ? (
         <View style={styles.paidRow}>
           <Text style={[styles.paidMark, paid ? styles.paidOn : styles.paidOff]}>{paid ? '✓' : '○'}</Text>
-          <Text style={[styles.rowStatus, styles.paidText, paid && styles.paidOn]}>{paid ? 'оплачено' : 'не оплачено'}</Text>
+          <Text style={[styles.rowStatus, styles.paidText, paid && styles.paidOn]}>{paid ? 'Оплачено' : 'Не оплачено'}</Text>
         </View>
       ) : limit ? (
         <>
@@ -187,8 +187,9 @@ const styles = StyleSheet.create({
   rowAmount: { marginLeft: 'auto', paddingLeft: 8, fontSize: 15, color: colors.text, fontVariant: ['tabular-nums'] },
   rowLimit: { color: colors.muted },
   rowStatus: { fontSize: 13, color: colors.muted, marginTop: 4 },
-  paidRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
-  paidMark: { fontSize: 16, fontWeight: '700', width: 20 },
+  // under the amount, on the right
+  paidRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 6 },
+  paidMark: { fontSize: 16, fontWeight: '700', marginRight: 4 },
   paidOn: { color: colors.income },
   paidOff: { color: colors.muted },
   paidText: { marginTop: 0 },
