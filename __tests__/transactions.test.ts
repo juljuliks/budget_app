@@ -3,6 +3,9 @@ jest.mock('../src/navigation', () => ({ navigateWhenReady: jest.fn() }));
 import { getDb } from '../src/db';
 import { listTransactionsPage } from '../src/db/transactions';
 import { assignCategory } from '../src/assign';
+import {
+  createCategory, deleteCategory, findCategoryByName, isTransferCategory, listCategories, setCategoryArchived,
+} from '../src/db/categories';
 import { onTransactionsChanged } from '../src/events';
 import { freshDb } from './helpers';
 
@@ -72,5 +75,41 @@ describe('assignCategory', () => {
     off();
     expect(await (await getDb()).get('SELECT category_id, category_source FROM transactions')).toEqual({ category_id: null, category_source: null });
     expect(listener).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('categories', () => {
+  test('transfer categories are those starting with "перевод", any case', () => {
+    expect(isTransferCategory({ name: 'Переводы' })).toBe(true);
+    expect(isTransferCategory({ name: ' перевод маме' })).toBe(true);
+    expect(isTransferCategory({ name: 'Продукты' })).toBe(false);
+  });
+
+  test('duplicate name check is case-insensitive for Cyrillic', async () => {
+    expect(await findCategoryByName('продукты')).toMatchObject({ name: 'Продукты' });
+    const p = await findCategoryByName('Продукты');
+    expect(await findCategoryByName('ПРОДУКТЫ', p!.id)).toBeUndefined();
+  });
+
+  test('new categories go before "Другое"', async () => {
+    await createCategory('Спорт', '🏋️');
+    const names = (await listCategories()).map((c) => c.name);
+    expect(names.slice(-2)).toEqual(['Спорт', 'Другое']);
+  });
+
+  test('delete uncategorizes transactions and removes rules', async () => {
+    const id = await createCategory('Спорт');
+    await insertTx(1, 1000, 'GYM');
+    await assignCategory(1, id);
+    await deleteCategory(id);
+    const db = await getDb();
+    expect(await db.get('SELECT category_id FROM transactions')).toEqual({ category_id: null });
+    expect(await db.get('SELECT * FROM merchant_rules')).toBeUndefined();
+  });
+
+  test('archived categories are hidden from the picker list', async () => {
+    await setCategoryArchived(1, true);
+    expect((await listCategories()).map((c) => c.id)).not.toContain(1);
+    expect((await listCategories(500, { includeArchived: true })).map((c) => c.id)).toContain(1);
   });
 });

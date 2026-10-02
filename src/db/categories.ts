@@ -62,7 +62,7 @@ export async function deleteCategory(id: number) {
   await db.transaction(async () => {
     await db.run('UPDATE transactions SET category_id = NULL, category_source = NULL WHERE category_id = ?', [id]);
     await db.run('DELETE FROM merchant_rules WHERE category_id = ?', [id]);
-    await db.run('DELETE FROM budgets WHERE category_id = ?', [id]);
+    await db.run('DELETE FROM plan_items WHERE category_id = ?', [id]);
     await db.run('DELETE FROM category_usage WHERE category_id = ?', [id]);
     await db.run('DELETE FROM categories WHERE id = ?', [id]);
   });

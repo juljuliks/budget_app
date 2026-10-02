@@ -66,6 +66,24 @@ export const MIGRATIONS: string[][] = [
       FOREIGN KEY(category_id) REFERENCES categories(id) ON DELETE CASCADE
     )`,
   ],
+  // 3: per-month plan replaces the standing one. Standing amounts become pinned items of the
+  // current month, so they keep carrying over.
+  [
+    'CREATE TABLE IF NOT EXISTS plan_months (ym TEXT PRIMARY KEY)',
+    `CREATE TABLE IF NOT EXISTS plan_items (
+      ym TEXT NOT NULL,
+      category_id INTEGER NOT NULL,
+      limit_minor INTEGER NOT NULL DEFAULT 0 CHECK (limit_minor >= 0),
+      pinned INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (ym, category_id),
+      FOREIGN KEY(category_id) REFERENCES categories(id) ON DELETE CASCADE
+    )`,
+    `INSERT OR IGNORE INTO plan_months (ym)
+      SELECT strftime('%Y-%m', 'now', 'localtime') WHERE EXISTS (SELECT 1 FROM budgets)`,
+    `INSERT OR IGNORE INTO plan_items (ym, category_id, limit_minor, pinned)
+      SELECT strftime('%Y-%m', 'now', 'localtime'), category_id, limit_minor, 1 FROM budgets`,
+    'DROP TABLE budgets',
+  ],
 ];
 
 export async function getSchemaVersion(db: Db): Promise<number> {

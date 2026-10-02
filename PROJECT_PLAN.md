@@ -44,16 +44,20 @@ This document outlines the remaining work to finish the privacy-first SMS transa
   - [x] Add transaction manually (amount, income/expense, description, today/yesterday, category)
   - [ ] Filter: uncategorized only / by month / by category (tap a row on the stats screen)
   - [ ] Edit / delete a manual transaction; arbitrary date picker
-- [x] Bottom tabs: История / Статистика / План (budget planning, see section below)
+- [x] Bottom tabs: Статистика / Транзакции; inside Статистика: Статистика | План | История (see section below)
 - Merchant rules UI: create/edit/list and backfill
 - Backup/export & import (JSON/CSV via SAF)
 - Locale strings (en/ka/ru)
 - Category usage analytics (local only) and suggestions
 
-## Budget Planning (tabs "Статистика" + "План") — v1 done
-Done: `budgets` table (migration 2), planner tab with a standing monthly amount per category,
-stats tab with month switcher, donut (top-5 categories by all-time spend + "other"), total spent in the center,
-plan / remaining summary, per-category progress bars (warning ≥80%, over-limit with ⚠ label), GEL only + "не учтено" for other currencies.
+## Budget Planning (Статистика tab: Статистика | План | История) — v2 done
+Done:
+- Per-month plan (`plan_months`, `plan_items`, migration 3; the old standing plan became pinned items of the current month)
+- A new month starts from the latest planned month: 📌 pinned items keep their amount, others come with an empty
+  amount (last month's shown as a hint), removed items don't carry over; past months are never auto-created
+- Plan can be prepared one month ahead
+- Stats: month switcher, donut with total spent in the center, plan / remaining, per-category progress bars
+- История: every month plan vs spent (+ meter), expand -> per category plan vs fact
 Remaining: tap a category -> its transactions for the month; over-limit notifications; salary-day month start (if needed).
 
 Original spec:

@@ -1,5 +1,5 @@
 import React from 'react';
-import Svg, { Circle, Path, Rect } from 'react-native-svg';
+import Svg, { Circle, Path } from 'react-native-svg';
 
 type P = { color: string; size?: number };
 
@@ -19,9 +19,13 @@ export const StatsIcon = ({ color, size = 24 }: P) => (
   </Svg>
 );
 
-export const PlannerIcon = ({ color, size = 24 }: P) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round">
-    <Rect x={4} y={5} width={16} height={15} rx={2} />
-    <Path d="M4 10h16M9 3v4M15 3v4" />
+/** Pushpin (shape after Lucide "pin", ISC license). Filled when pinned. */
+export const PinIcon = ({ color, size = 20, filled = false }: P & { filled?: boolean }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round">
+    <Path d="M12 17v5" />
+    <Path
+      d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"
+      fill={filled ? color : 'none'}
+    />
   </Svg>
 );

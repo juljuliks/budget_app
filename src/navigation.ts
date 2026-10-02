@@ -2,9 +2,8 @@ import { createNavigationContainerRef, useNavigation } from '@react-navigation/n
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 export type TabParamList = {
-  History: undefined;
   Stats: undefined;
-  Planner: undefined;
+  Transactions: undefined;
 };
 
 /** Screens pushed over the tab bar. */

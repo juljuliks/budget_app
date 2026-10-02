@@ -1,13 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { BUDGET_CURRENCY, CategoryStat, monthStats, MonthStats } from '../db/budgets';
-import { onTransactionsChanged } from '../events';
-import Donut, { DonutSegment } from './Donut';
-import { formatMoney } from './money';
-import { chart, colors, seriesColor } from './theme';
-
-const MONTHS = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+import { BUDGET_CURRENCY, CategoryStat, monthStats, MonthStats } from '../../db/plans';
+import { onTransactionsChanged } from '../../events';
+import Donut, { DonutSegment } from '../Donut';
+import { formatMoney } from '../money';
+import { chart, colors, seriesColor } from '../theme';
 
 /** Donut: the top-colored categories (≤5) + one folded "other" segment, so ≤6 segments. */
 function donutSegments(cats: CategoryStat[]): DonutSegment[] {
@@ -25,23 +23,16 @@ function donutSegments(cats: CategoryStat[]): DonutSegment[] {
   return segments;
 }
 
-export default function StatsScreen() {
-  const now = new Date();
-  const [period, setPeriod] = useState({ year: now.getFullYear(), month: now.getMonth() });
+export default function StatsView({ year, month }: { year: number; month: number }) {
   const [stats, setStats] = useState<MonthStats | null>(null);
 
   const load = useCallback(() => {
-    monthStats(period.year, period.month).then(setStats).catch((e) => console.error('load stats failed', e));
-  }, [period]);
+    monthStats(year, month).then(setStats).catch((e) => console.error('load stats failed', e));
+  }, [year, month]);
 
   useFocusEffect(load);
+  useEffect(load, [load]);
   useEffect(() => onTransactionsChanged(load), [load]);
-
-  const shift = (delta: number) => setPeriod((p) => {
-    const d = new Date(p.year, p.month + delta, 1);
-    return { year: d.getFullYear(), month: d.getMonth() };
-  });
-  const isCurrentMonth = period.year === now.getFullYear() && period.month === now.getMonth();
 
   const segments = useMemo(() => (stats ? donutSegments(stats.categories) : []), [stats]);
 
@@ -51,14 +42,6 @@ export default function StatsScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <View style={styles.monthRow}>
-        <TouchableOpacity onPress={() => shift(-1)} hitSlop={12}><Text style={styles.arrow}>‹</Text></TouchableOpacity>
-        <Text style={styles.month}>{MONTHS[period.month]} {period.year}</Text>
-        <TouchableOpacity onPress={() => shift(1)} hitSlop={12} disabled={isCurrentMonth}>
-          <Text style={[styles.arrow, isCurrentMonth && styles.arrowDisabled]}>›</Text>
-        </TouchableOpacity>
-      </View>
-
       <View style={styles.donutWrap}>
         <Donut segments={segments}>
           <Text style={styles.caption}>Потрачено</Text>
@@ -77,7 +60,7 @@ export default function StatsScreen() {
           />
         </View>
       ) : (
-        <Text style={styles.hint}>Задайте суммы во вкладке «План», чтобы видеть остаток по категориям.</Text>
+        <Text style={styles.hint}>Составьте план на месяц во вкладке «План», чтобы видеть остаток по категориям.</Text>
       )}
 
       {stats.categories.length === 0 ? (
@@ -137,13 +120,9 @@ function CategoryRow({ stat }: { stat: CategoryStat }) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: 16, paddingBottom: 32 },
+  content: { paddingHorizontal: 16, paddingBottom: 32 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
-  monthRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 8 },
-  arrow: { fontSize: 28, color: colors.accent, paddingHorizontal: 8 },
-  arrowDisabled: { color: colors.border },
-  month: { fontSize: 17, fontWeight: '600', color: colors.text },
-  donutWrap: { alignItems: 'center', marginVertical: 16 },
+  donutWrap: { alignItems: 'center', marginBottom: 16 },
   caption: { fontSize: 13, color: colors.muted },
   hero: { fontSize: 34, fontWeight: '700', color: colors.text },
   summary: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 16 },

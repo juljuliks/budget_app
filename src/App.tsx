@@ -9,9 +9,8 @@ import TransactionDetail from './ui/TransactionDetail';
 import CategoryEdit from './ui/CategoryEdit';
 import CategoriesScreen from './ui/CategoriesScreen';
 import AddTransaction from './ui/AddTransaction';
-import StatsScreen from './ui/StatsScreen';
-import PlannerScreen from './ui/PlannerScreen';
-import { HistoryIcon, PlannerIcon, StatsIcon } from './ui/icons';
+import StatsHome from './ui/stats/StatsHome';
+import { HistoryIcon, StatsIcon } from './ui/icons';
 import { colors } from './ui/theme';
 import { createNotificationChannel } from './notifications/notifeeBootstrap';
 import { handleNotificationAction } from './notifications/notifeeIntegration';
@@ -25,19 +24,14 @@ function MainTabs() {
   return (
     <Tab.Navigator screenOptions={{ tabBarActiveTintColor: colors.accent, tabBarInactiveTintColor: colors.muted }}>
       <Tab.Screen
-        name="History"
-        component={TransactionsList}
-        options={{ title: 'История', tabBarIcon: ({ color }) => <HistoryIcon color={color} /> }}
-      />
-      <Tab.Screen
         name="Stats"
-        component={StatsScreen}
+        component={StatsHome}
         options={{ title: 'Статистика', tabBarIcon: ({ color }) => <StatsIcon color={color} /> }}
       />
       <Tab.Screen
-        name="Planner"
-        component={PlannerScreen}
-        options={{ title: 'План', tabBarIcon: ({ color }) => <PlannerIcon color={color} /> }}
+        name="Transactions"
+        component={TransactionsList}
+        options={{ title: 'Транзакции', tabBarIcon: ({ color }) => <HistoryIcon color={color} /> }}
       />
     </Tab.Navigator>
   );
