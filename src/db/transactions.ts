@@ -45,6 +45,44 @@ export async function listTransactionsPage(cursor: PageCursor | null, limit = 50
   };
 }
 
+/** Lowercase + ё→е. Done in JS: SQLite LIKE / lower() only fold ASCII, so Cyrillic search would be case-sensitive. */
+export function normalizeForSearch(s: string): string {
+  return s.toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ').trim();
+}
+
+const SEARCH_LIMIT = 500;
+
+/**
+ * Transactions whose SMS text, merchant / description, category or category type contain every
+ * word of the query. Newest first, at most SEARCH_LIMIT rows (a few thousand rows a year scan fast).
+ */
+export async function searchTransactions(query: string, limit = SEARCH_LIMIT): Promise<TransactionRow[]> {
+  const words = normalizeForSearch(query).split(' ').filter(Boolean);
+  if (words.length === 0) return [];
+  const db = await getDb();
+  const rows = await db.all<TransactionRow & { raw_sms: string }>(
+    `${SELECT_TX.replace('SELECT t.id,', 'SELECT t.raw_sms, t.id,')} ORDER BY t.occurred_at DESC, t.id DESC`);
+  const out: TransactionRow[] = [];
+  for (const r of rows) {
+    const haystack = normalizeForSearch(
+      [r.raw_sms, r.raw_merchant, r.category_name, r.category_type_name].filter(Boolean).join(' '));
+    if (words.every((w) => haystack.includes(w))) {
+      out.push(r);
+      if (out.length >= limit) break;
+    }
+  }
+  return out;
+}
+
+/** Bulk "change category" from the list: a manual choice, so no merchant rules are created. */
+export async function setCategoryForTransactions(txIds: number[], categoryId: number | null) {
+  if (txIds.length === 0) return;
+  const db = await getDb();
+  await db.run(
+    `UPDATE transactions SET category_id = ?, category_source = ? WHERE id IN (${txIds.map(() => '?').join(',')})`,
+    [categoryId, categoryId === null ? null : 'user', ...txIds]);
+}
+
 export async function getTransaction(id: number) {
   const db = await getDb();
   return db.get<TransactionRow & { raw_sms: string }>(`SELECT t.*, c.name AS category_name, c.emoji AS category_emoji, ct.name AS category_type_name
@@ -89,4 +127,7 @@ export async function addManualTransaction(tx: {
   return lastInsertRowid;
 }
 
-export default { listTransactionsPage, getTransaction, setTransactionCategory, addManualTransaction, deleteTransaction };
+export default {
+  listTransactionsPage, searchTransactions, getTransaction, setTransactionCategory, setCategoryForTransactions,
+  addManualTransaction, deleteTransaction,
+};

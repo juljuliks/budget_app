@@ -46,6 +46,8 @@ This document outlines the remaining work to finish the privacy-first SMS transa
   - [x] Delete a transaction
   - [ ] Rename applies to all months (ask if past months should keep the old name)
   - [x] Add transaction manually (amount, income/expense, description, today/yesterday, category)
+  - [x] Search by SMS text, merchant / description, category and type (Cyrillic case-insensitive, ё = е); edit / delete icons on results
+  - [x] Multi-select ("Выбрать несколько") -> bulk change category (existing categories, no merchant rules)
   - [ ] Filter: uncategorized only / by month / by category (tap a row on the stats screen)
   - [ ] Edit / delete a manual transaction; arbitrary date picker
 - [x] Bottom tabs: Статистика / Транзакции; inside Статистика: Статистика | План | История (see section below)

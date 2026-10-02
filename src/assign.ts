@@ -1,5 +1,5 @@
 import { getDb } from './db';
-import { setTransactionCategory } from './db/transactions';
+import { setCategoryForTransactions, setTransactionCategory } from './db/transactions';
 import { incrementCategoryUsage } from './db/categories';
 import { createRule, backfillRule } from './categorize';
 import { emitTransactionsChanged } from './events';
@@ -27,3 +27,11 @@ export async function assignCategory(txId: number, categoryId: number | null, op
 }
 
 export default assignCategory;
+
+/** Same category for several transactions (bulk edit from the list). No merchant rules: a one-off manual choice. */
+export async function assignCategoryToMany(txIds: number[], categoryId: number) {
+  if (txIds.length === 0) return;
+  await setCategoryForTransactions(txIds, categoryId);
+  await incrementCategoryUsage(categoryId);
+  emitTransactionsChanged();
+}

@@ -50,3 +50,10 @@ export const TrashIcon = ({ color, size = 20 }: P) => (
     <Path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2M10 11v6M14 11v6" />
   </Svg>
 );
+
+export const SearchIcon = ({ color, size = 18 }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round">
+    <Circle cx={11} cy={11} r={7} />
+    <Path d="m20 20-4-4" />
+  </Svg>
+);
