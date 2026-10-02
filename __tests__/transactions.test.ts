@@ -1,11 +1,17 @@
 jest.mock('../src/navigation', () => ({ navigateWhenReady: jest.fn() }));
 
 import { getDb } from '../src/db';
-import { categorySearchQuery, deleteTransaction, listTransactionsPage, normalizeForSearch, searchTransactions } from '../src/db/transactions';
+import {
+  addManualTransaction, categorySearchQuery, countUnseenTransactions, deleteTransaction, isUnread, listTransactionsPage, markTransactionSeen,
+  normalizeForSearch, searchTransactions,
+} from '../src/db/transactions';
 import { createCategory } from '../src/db/categories';
 import { createCategoryType } from '../src/db/categoryTypes';
 import { assignCategory, assignCategoryToMany } from '../src/assign';
 import { onTransactionsChanged } from '../src/events';
+import { ingestSms } from '../src/ingest';
+import { openDatabase } from '../src/db/driver';
+import { migrate, MIGRATIONS } from '../src/db/migrations';
 import { freshDb } from './helpers';
 
 async function insertTx(i: number, occurredAt: number, merchant = `SHOP ${i}`) {
@@ -148,5 +154,38 @@ describe('assignCategoryToMany', () => {
     ]);
     expect(await db.get('SELECT * FROM merchant_rules')).toBeUndefined();
     expect(listener).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('read state', () => {
+  test('SMS transactions arrive unread, opening marks them read once; manual ones are read', async () => {
+    
+    const r = await ingestSms({ sender: 'TBC SMS', body: '5.00GEL\n(*XXXX)\nSPAR\n03/10/26 12:00', timestamp: 1 });
+    if (r.status !== 'inserted') throw new Error('not inserted');
+    await addManualTransaction({ amount_minor: 100, category_id: null });
+    expect(await countUnseenTransactions()).toBe(1);
+    expect(await markTransactionSeen(r.txId)).toBe(true);
+    expect(await markTransactionSeen(r.txId)).toBe(false); // already read: no change
+    expect(await countUnseenTransactions()).toBe(0);
+  });
+
+  test('a transaction with a category is not unread, even if never opened', async () => {
+    const a = await ingestSms({ sender: 'TBC SMS', body: '5.00GEL\n(*XXXX)\nSPAR\n03/10/26 12:00', timestamp: 1 });
+    const b = await ingestSms({ sender: 'TBC SMS', body: '6.00GEL\n(*XXXX)\nIKEA\n03/10/26 12:00', timestamp: 2 });
+    if (a.status !== 'inserted' || b.status !== 'inserted') throw new Error('not inserted');
+    expect(await countUnseenTransactions()).toBe(2);
+    await assignCategory(a.txId, 3);           // e.g. chosen from the notification
+    expect(await countUnseenTransactions()).toBe(1);
+    const rows = (await listTransactionsPage(null)).rows;
+    expect(rows.filter(isUnread).map((r) => r.id)).toEqual([b.txId]);
+  });
+
+  test('migration 5 marks everything already stored as read', async () => {
+    const db = openDatabase(':memory:');
+    await migrate(db, MIGRATIONS.slice(0, 4));
+    await db.run(`INSERT INTO transactions (bank, kind, amount_minor, currency, occurred_at, raw_sms, sms_hash)
+      VALUES ('tbc', 'purchase', 1, 'GEL', 1, '', 'x')`);
+    await migrate(db);
+    expect(await db.get('SELECT count(*) AS n FROM transactions WHERE seen_at IS NULL')).toEqual({ n: 0 });
   });
 });

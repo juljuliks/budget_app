@@ -13,6 +13,8 @@ export type TransactionRow = {
   category_id: number | null;
   category_source: CategorySource | null;
   occurred_at: number;
+  /** null = not opened yet; unread = not opened AND uncategorized (see isUnread) */
+  seen_at: number | null;
   category_name: string | null;
   category_emoji: string | null;
   category_type_name: string | null;
@@ -21,7 +23,7 @@ export type TransactionRow = {
 /** Position of the last row of a page; pass it back to get the next (older) page. */
 export type PageCursor = { occurred_at: number; id: number };
 
-const SELECT_TX = `SELECT t.id, t.bank, t.kind, t.amount_minor, t.currency, t.raw_merchant, t.merchant_key, t.category_id, t.category_source, t.occurred_at, c.name AS category_name, c.emoji AS category_emoji, ct.name AS category_type_name
+const SELECT_TX = `SELECT t.id, t.bank, t.kind, t.amount_minor, t.currency, t.raw_merchant, t.merchant_key, t.category_id, t.category_source, t.occurred_at, t.seen_at, c.name AS category_name, c.emoji AS category_emoji, ct.name AS category_type_name
     FROM transactions t
     LEFT JOIN categories c ON c.id = t.category_id
     LEFT JOIN category_types ct ON ct.id = c.type_id`;
@@ -101,6 +103,28 @@ export async function getTransaction(id: number) {
     WHERE t.id = ?`, [id]);
 }
 
+/** Opening a transaction marks it read. Returns true if it was unread. */
+export async function markTransactionSeen(id: number): Promise<boolean> {
+  const db = await getDb();
+  const { changes } = await db.run(
+    'UPDATE transactions SET seen_at = ? WHERE id = ? AND seen_at IS NULL', [Math.floor(Date.now() / 1000), id]);
+  return changes > 0;
+}
+
+/**
+ * Unread = still needs attention: never opened and no category yet. A category (from a merchant rule,
+ * a notification button or bulk edit) means it's been dealt with, even if it was never opened.
+ */
+export function isUnread(t: Pick<TransactionRow, 'seen_at' | 'category_id'>): boolean {
+  return t.seen_at === null && t.category_id === null;
+}
+
+export async function countUnseenTransactions(): Promise<number> {
+  const db = await getDb();
+  return (await db.get<{ n: number }>(
+    'SELECT count(*) AS n FROM transactions WHERE seen_at IS NULL AND category_id IS NULL'))!.n;
+}
+
 export async function deleteTransaction(id: number) {
   const db = await getDb();
   await db.run('DELETE FROM transactions WHERE id = ?', [id]);
@@ -129,14 +153,16 @@ export async function addManualTransaction(tx: {
   const description = tx.description?.trim() || null;
   const { lastInsertRowid } = await db.run(
     `INSERT INTO transactions
-      (bank, kind, amount_minor, currency, raw_merchant, merchant_key, category_id, category_source, occurred_at, raw_sms, sms_hash)
-      VALUES ('manual', ?, ?, ?, ?, NULL, ?, ?, ?, '', ?)`,
+      (bank, kind, amount_minor, currency, raw_merchant, merchant_key, category_id, category_source, occurred_at, raw_sms, sms_hash, seen_at)
+      VALUES ('manual', ?, ?, ?, ?, NULL, ?, ?, ?, '', ?, ?)`,
     [tx.kind ?? 'purchase', tx.amount_minor, tx.currency ?? 'GEL', description, tx.category_id,
-     tx.category_id === null ? null : 'user', occurredAt, `manual:${now}:${Math.random().toString(36).slice(2)}`]);
+     tx.category_id === null ? null : 'user', occurredAt, `manual:${now}:${Math.random().toString(36).slice(2)}`,
+     // entered by the user, so already "seen"
+     Math.floor(now / 1000)]);
   return lastInsertRowid;
 }
 
 export default {
   listTransactionsPage, searchTransactions, getTransaction, setTransactionCategory, setCategoryForTransactions,
-  addManualTransaction, deleteTransaction,
+  addManualTransaction, deleteTransaction, markTransactionSeen, countUnseenTransactions,
 };

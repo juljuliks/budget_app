@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -17,12 +17,29 @@ import { colors } from './ui/theme';
 import { createNotificationChannel } from './notifications/notifeeBootstrap';
 import { handleNotificationAction } from './notifications/notifeeIntegration';
 import { requestAppPermissions } from './permissions';
+import { countUnseenTransactions } from './db/transactions';
+import { onTransactionsChanged } from './events';
 import { navigationRef, flushPendingNavigation, RootStackParamList, TabParamList } from './navigation';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<TabParamList>();
 
+/** Unread (not yet opened) transactions for the tab badge; refreshed on any data change. */
+function useUnseenCount(): number {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    const load = () => { countUnseenTransactions().then(setCount).catch((e) => console.error('unseen count failed', e)); };
+    load();
+    const off = onTransactionsChanged(load);
+    // SMS processed while the app was in background
+    const sub = AppState.addEventListener('change', (st) => { if (st === 'active') load(); });
+    return () => { off(); sub.remove(); };
+  }, []);
+  return count;
+}
+
 function MainTabs() {
+  const unseen = useUnseenCount();
   return (
     <Tab.Navigator screenOptions={{ tabBarActiveTintColor: colors.accent, tabBarInactiveTintColor: colors.muted }}>
       <Tab.Screen
@@ -33,7 +50,11 @@ function MainTabs() {
       <Tab.Screen
         name="Transactions"
         component={TransactionsList}
-        options={{ title: 'Транзакции', tabBarIcon: ({ color }) => <HistoryIcon color={color} /> }}
+        options={{
+          title: 'Транзакции',
+          tabBarIcon: ({ color }) => <HistoryIcon color={color} />,
+          tabBarBadge: unseen > 0 ? (unseen > 99 ? '99+' : unseen) : undefined,
+        }}
       />
     </Tab.Navigator>
   );

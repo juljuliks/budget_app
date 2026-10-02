@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, Alert, SectionList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { RouteProp, useFocusEffect, useRoute } from '@react-navigation/native';
 import {
-  deleteTransaction, listTransactionsPage, PageCursor, searchTransactions, TransactionRow,
+  deleteTransaction, isUnread, listTransactionsPage, PageCursor, searchTransactions, TransactionRow,
 } from '../db/transactions';
 import { emitTransactionsChanged, onTransactionsChanged } from '../events';
 import { categoryLabel } from '../db/categories';
@@ -231,7 +231,12 @@ export default function TransactionsList() {
             >
               {selectMode ? <View style={styles.checkbox}><Checkbox checked={isSelected} /></View> : null}
               <View style={styles.rowMain}>
-                <Text style={styles.merchant} numberOfLines={1}>{item.raw_merchant || 'Без мерчанта'}</Text>
+                <View style={styles.titleRow}>
+                  {isUnread(item) ? <View style={styles.unreadDot} accessibilityLabel="Не просмотрена" /> : null}
+                  <Text style={[styles.merchant, isUnread(item) && styles.merchantUnread]} numberOfLines={1}>
+                    {item.raw_merchant || 'Без мерчанта'}
+                  </Text>
+                </View>
                 {item.category_id ? (
                   <Text style={styles.category} numberOfLines={1}>
                     {categoryLabel({ emoji: item.category_emoji, name: item.category_name!, type_name: item.category_type_name })} · {formatTime(item.occurred_at)}
@@ -340,7 +345,10 @@ const styles = StyleSheet.create({
   rowSelected: { backgroundColor: '#EFF6FF' },
   checkbox: { marginRight: 12 },
   rowMain: { flex: 1, marginRight: 12 },
-  merchant: { fontSize: 16, color: colors.text },
+  titleRow: { flexDirection: 'row', alignItems: 'center' },
+  unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accent, marginRight: 8 },
+  merchant: { flexShrink: 1, fontSize: 16, color: colors.text },
+  merchantUnread: { fontWeight: '600' },
   category: { fontSize: 13, color: colors.muted, marginTop: 2 },
   inline: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
   badge: {

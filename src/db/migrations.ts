@@ -116,6 +116,12 @@ export const MIGRATIONS: string[][] = [
     // archive is replaced by soft delete
     "UPDATE categories SET deleted_at = CAST(strftime('%s', 'now') AS INTEGER) WHERE is_archived = 1",
   ],
+  // 5: read state. NULL = not opened yet (blue dot, tab badge). Everything already stored counts as
+  // read, so the badge starts at zero instead of the whole backlog.
+  [
+    'ALTER TABLE transactions ADD COLUMN seen_at INTEGER',
+    "UPDATE transactions SET seen_at = CAST(strftime('%s', 'now') AS INTEGER)",
+  ],
 ];
 
 export async function getSchemaVersion(db: Db): Promise<number> {

@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { deleteTransaction, getTransaction } from '../db/transactions';
+import { deleteTransaction, getTransaction, markTransactionSeen } from '../db/transactions';
 import { assignCategory } from '../assign';
 import { emitTransactionsChanged } from '../events';
 import type { RootStackParamList } from '../navigation';
@@ -26,7 +26,12 @@ export default function TransactionDetail({ route, navigation }: Props) {
 
   // on focus: the category may have been changed on the category screens
   useFocusEffect(useCallback(() => {
-    getTransaction(txId).then((t) => setTx(t ?? null)).catch((e) => console.error('load transaction failed', e));
+    (async () => {
+      const t = await getTransaction(txId);
+      setTx(t ?? null);
+      // opening a transaction marks it read (list dot, tab badge)
+      if (t && t.seen_at === null && await markTransactionSeen(txId)) emitTransactionsChanged();
+    })().catch((e) => console.error('load transaction failed', e));
   }, [txId]));
 
   async function choose(categoryId: number | null) {
