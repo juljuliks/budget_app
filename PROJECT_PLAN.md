@@ -23,8 +23,8 @@ This document outlines the remaining work to finish the privacy-first SMS transa
   - [x] `assembleDebug` with quick-sqlite verified (needs NDK 23.1.7779620 + CMake 3.22.1)
 - Notifee notifications + action buttons
   - [x] Show top category suggestions in notification
-  - [x] "Create new category" action opens the app on the category editor; tapping the body opens the transaction
-  - [x] Android shows max 3 action buttons: 2 suggestions + "➕ Новая категория" (always present)
+  - [x] "➡️ К категориям" action and tapping the body open the transaction with the full category list (create one there)
+  - [x] Android shows max 3 action buttons: 2 suggestions + "➡️ К категориям" (always present)
   - [x] Money transfers: notification suggests only transfer-type categories; the in-app picker shows all, transfer ones first
   - [x] Handle action presses in JS and persist assignments (+ exact rule + backfill that keeps manual choices)
 - Permissions & device testing

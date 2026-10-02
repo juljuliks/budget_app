@@ -7,8 +7,10 @@ import { assignCategory } from '../assign';
 import { navigateWhenReady } from '../navigation';
 
 export const CHANNEL_ID = 'transactions';
-export const CREATE_CATEGORY_ACTION = 'create_new';
-// Android shows at most 3 action buttons; the last one is always "new category"
+export const ALL_CATEGORIES_ACTION = 'all_categories';
+// shown on notifications posted by older versions; handled like ALL_CATEGORIES_ACTION
+const LEGACY_CREATE_CATEGORY_ACTION = 'create_new';
+// Android shows at most 3 action buttons; the last one is always "all categories"
 const MAX_ACTIONS = 3;
 
 export async function showUncategorizedTransactionNotification(txId: number) {
@@ -22,8 +24,8 @@ export async function showUncategorizedTransactionNotification(txId: number) {
     title: categoryLabel(s),
     pressAction: { id: `suggest_${s.id}` },
   }));
-  // opens the app on the category editor
-  actions.push({ title: '➕ Новая категория', pressAction: { id: CREATE_CATEGORY_ACTION, launchActivity: 'default' } });
+  // "➡️ К категориям": the transaction with the full category list (a new category can be created there too)
+  actions.push({ title: '➡️ К категориям', pressAction: { id: ALL_CATEGORIES_ACTION, launchActivity: 'default' } });
 
   await notifee.displayNotification({
     // one notification per transaction; re-showing replaces instead of stacking
@@ -55,9 +57,7 @@ export async function handleNotificationAction(event: ActionEvent) {
 
   if (id.startsWith('suggest_')) {
     await assignCategory(txId, Number(id.slice('suggest_'.length)));
-  } else if (id === CREATE_CATEGORY_ACTION) {
-    navigateWhenReady({ name: 'CategoryEdit', params: { txId } });
-  } else if (id === 'default') {
+  } else if (id === 'default' || id === ALL_CATEGORIES_ACTION || id === LEGACY_CREATE_CATEGORY_ACTION) {
     navigateWhenReady({ name: 'TransactionDetail', params: { txId } });
     return; // keep the notification until a category is chosen
   } else {
