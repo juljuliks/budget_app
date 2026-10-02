@@ -108,7 +108,7 @@ function CategoryRow({ stat }: { stat: CategoryStat }) {
   const fill = ratio > 1 ? chart.critical : ratio >= 0.8 ? chart.warning : chart.meterFill;
 
   // tap: the category's transactions (category filter)
-  const open = () => navigation.navigate('Transactions', { category: stat.category_id ?? 'none', nonce: Date.now() });
+  const open = () => navigation.navigate('Transactions', { category: stat.category_id ?? 'none', nonce: Date.now(), from: 'Stats' });
 
   return (
     <TouchableOpacity style={styles.row} onPress={open} accessibilityHint="Показать транзакции категории">

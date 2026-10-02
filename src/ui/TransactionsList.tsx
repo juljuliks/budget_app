@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, SectionList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, BackHandler, ScrollView, SectionList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { RouteProp, useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { HeaderBackButton } from '@react-navigation/elements';
 import {
   categoriesWithTransactions, CategoryFilter, CategoryWithCount, deleteTransaction, isUnread, listTransactionsFiltered,
   listTransactionsPage, PageCursor, searchTransactions, TransactionRow,
@@ -64,7 +66,7 @@ export default function TransactionsList() {
 
   // opened from the stats screen: filter by that category (or text)
   const route = useRoute<RouteProp<TabParamList, 'Transactions'>>();
-  const { query: incomingQuery, category: incomingCategory, nonce } = route.params ?? {};
+  const { query: incomingQuery, category: incomingCategory, nonce, from } = route.params ?? {};
   useEffect(() => {
     if (incomingCategory !== undefined) { setMode('category'); setCategory(incomingCategory); }
     else if (incomingQuery !== undefined) { setMode('text'); setQuery(incomingQuery); }
@@ -188,9 +190,41 @@ export default function TransactionsList() {
   }
 
   // "Редактировать" lives in the tab header, next to the title
-  const tabNavigation = useNavigation();
+  const tabNavigation = useNavigation<BottomTabNavigationProp<TabParamList, 'Transactions'>>();
+
+  function resetFilters() {
+    setMode('text');
+    setQuery('');
+    setCategory(null);
+    setRange(null);
+  }
+
+  // came here from another screen (not the tab bar): back returns there with the filter cleared
+  function goBack() {
+    const target = from;
+    tabNavigation.setParams({ from: undefined, category: undefined, query: undefined });
+    resetFilters();
+    if (target) tabNavigation.navigate(target);
+  }
+
+  // Android hardware back does the same as the header arrow
+  useFocusEffect(useCallback(() => {
+    if (!from) return undefined;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => { goBack(); return true; });
+    return () => sub.remove();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [from]));
+
+  // opening the tab from the tab bar is a normal visit: no back button
+  useEffect(() => tabNavigation.addListener('tabPress', () => {
+    if (from) tabNavigation.setParams({ from: undefined });
+  }), [tabNavigation, from]);
+
   useLayoutEffect(() => {
     tabNavigation.setOptions({
+      headerLeft: from
+        ? () => <HeaderBackButton onPress={goBack} accessibilityLabel="Назад" />
+        : undefined,
       headerRight: () => (
         <TouchableOpacity
           style={[styles.editToggle, editMode && styles.editToggleOn]}
@@ -203,9 +237,9 @@ export default function TransactionsList() {
         </TouchableOpacity>
       ),
     });
-    // toggleEditMode only uses state setters
+    // toggleEditMode / goBack only use state setters, navigation and `from`
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tabNavigation, editMode]);
+  }, [tabNavigation, editMode, from]);
 
   function toggle(id: number) {
     setSelected((prev) => {

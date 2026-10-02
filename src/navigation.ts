@@ -3,8 +3,11 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 export type TabParamList = {
   Stats: undefined;
-  /** open with a filter: text query or category ('none' = uncategorized); nonce re-applies the same one */
-  Transactions: { query?: string; category?: number | 'none'; nonce?: number } | undefined;
+  /**
+   * open with a filter: text query or category ('none' = uncategorized); nonce re-applies the same one.
+   * from: the tab we came from (not via the tab bar) -> a back button in the header returns there.
+   */
+  Transactions: { query?: string; category?: number | 'none'; nonce?: number; from?: keyof TabParamList } | undefined;
 };
 
 /** Screens pushed over the tab bar. */

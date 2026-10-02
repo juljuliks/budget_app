@@ -99,7 +99,7 @@ function MonthDetails({ ym }: { ym: string }) {
               <TouchableOpacity
                 key={String(c.category_id)}
                 style={styles.detailRow}
-                onPress={() => navigation.navigate('Transactions', { category: c.category_id ?? 'none', nonce: Date.now() })}
+                onPress={() => navigation.navigate('Transactions', { category: c.category_id ?? 'none', nonce: Date.now(), from: 'Stats' })}
               >
                 <Text style={styles.detailName} numberOfLines={1}>{`${c.emoji || ''} ${c.name}`.trim()}</Text>
                 <Text style={styles.detailNum}>{c.limit_minor ? formatMoney(c.limit_minor, { compact: true }) : '—'}</Text>
