@@ -67,7 +67,7 @@ adb reverse tcp:8081 tcp:8081     # если устройство подключ
 
 Отладка SMS-потока:
 - `adb logcat -s SmsReceiver ReactNativeJS` — лог приёмника и headless-задачи
-- эмулятор: `adb emu sms send TBC "<текст SMS>"` — отправитель должен быть `TBC`, `TBC SMS` или `TBC BANK`
+- эмулятор: `./scripts/send_test_sms.sh` (консоль эмулятора не принимает пробел в отправителе, поэтому `TBC`)
 
 Чек-лист разрешений: `RECEIVE_SMS`, `POST_NOTIFICATIONS` (Android 13+) — запрашиваются при старте приложения (`src/permissions.ts`). На Xiaomi/Huawei/Samsung дополнительно отключите оптимизацию батареи для приложения.
 
@@ -91,4 +91,8 @@ Debug и release подписаны разными ключами: при пер
 ```bash
 ./scripts/emulator.sh            # создать/запустить Android 13, поставить release-сборку
 ./scripts/emulator.sh debug      # то же с debug-сборкой (нужен `npx react-native start`)
+./scripts/send_test_sms.sh             # тестовая покупка от "TBC"
+./scripts/send_test_sms.sh transfer    # тестовый перевод
 ```
+
+Скрипты работают только с эмулятором (по его serial), даже если по USB подключён телефон.
