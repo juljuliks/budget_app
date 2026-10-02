@@ -126,7 +126,7 @@ export default function PlanView({ ym }: { ym: string }) {
             {item.kind === 'fixed' || (budget && item.limit_minor) ? (
               <Text style={styles.percent}>
                 {[
-                  item.kind === 'fixed' ? 'статичная трата' : '',
+                  item.kind === 'fixed' ? 'фиксированная трата' : '',
                   budget && item.limit_minor ? `${percentOf(item.limit_minor, budget)} суммы` : '',
                 ].filter(Boolean).join(' · ')}
               </Text>

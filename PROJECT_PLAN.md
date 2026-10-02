@@ -71,8 +71,8 @@ Done:
 - История: every month plan vs spent (+ meter), expand -> per category plan vs fact
 - Amount to distribute per month (`plan_months.budget_minor`, migration 6; carries over): the plan can't exceed it,
   categories show their share in %, the rest is "Свободно"; amounts are edited via ✎ → input dialog
-- Plan item kind (migration 7, carries over): "Лимит" = progress bar that blends green -> amber -> red towards the
-  limit; "Статичная трата" (rent, subscriptions) = ✓ "оплачено" once anything is spent in the month
+- Plan item kind (migration 7, carries over): "Гибкая трата" = progress bar that blends green -> amber -> red towards the
+  limit; "Фиксированная трата" (rent, subscriptions) = ✓ "оплачено" once anything is spent in the month
 - История: "Сумма / Не распределено / Сохранено" (amount − spent) for months with an amount set
 Remaining: tap a category -> its transactions for the month; over-limit notifications; salary-day month start (if needed).
 
