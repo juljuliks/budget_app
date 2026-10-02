@@ -17,7 +17,7 @@ jest.mock('../src/navigation', () => ({ navigateWhenReady: (...a: any[]) => navi
 
 import SmsBackgroundTask from '../src/native/SmsBackgroundTask';
 import { handleNotificationAction } from '../src/notifications/notifeeIntegration';
-import { createRule } from '../src/categorize';
+import { backfillRule, createRule } from '../src/categorize';
 import { createCategory } from '../src/db/categories';
 import { getTransferTypeId } from '../src/db/categoryTypes';
 import { getDb } from '../src/db';
@@ -136,6 +136,17 @@ test('money transfer offers only categories of the transfer type, plus "new cate
   expect(titles).toHaveLength(3);
   expect(titles.slice(0, 2).sort()).toEqual(['👩 Переводы: Маме', '🔁 Переводы: Прочие']);
   expect(n.android.actions[2].pressAction.id).toBe('all_categories');
+});
+
+test('a merchant rule never categorizes a money transfer: every transfer asks for a category', async () => {
+  // a purchase rule for the same line ("MC GOLD" is the card type on transfers)
+  await createRule('exact', 'MC GOLD', 3);
+  await SmsBackgroundTask({ sender: 'TBC SMS', body: 'Money Transfer:\n1.00 GEL\nMC GOLD\n02/10/2026', timestamp: 1 });
+  expect(await tx("SELECT category_id FROM transactions WHERE kind = 'transfer'")).toEqual({ category_id: null });
+  expect(displayNotification).toHaveBeenCalledTimes(1);
+  // remembering a purchase for that merchant doesn't touch the transfer either
+  await backfillRule('exact', 'MC GOLD', 3);
+  expect(await tx("SELECT category_id FROM transactions WHERE kind = 'transfer'")).toEqual({ category_id: null });
 });
 
 test('picking a category for a money transfer creates no merchant rule', async () => {

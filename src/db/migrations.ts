@@ -131,6 +131,11 @@ export const MIGRATIONS: string[][] = [
   [
     "ALTER TABLE plan_items ADD COLUMN kind TEXT NOT NULL DEFAULT 'limit' CHECK (kind IN ('limit', 'fixed'))",
   ],
+  // 8: merchant rules no longer apply to money transfers (their "merchant" is the card type, the same for
+  // every transfer). Transfers a rule put into a category go back to uncategorized; manual choices stay.
+  [
+    "UPDATE transactions SET category_id = NULL, category_source = NULL WHERE kind = 'transfer' AND category_source = 'rule'",
+  ],
 ];
 
 export async function getSchemaVersion(db: Db): Promise<number> {

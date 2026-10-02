@@ -52,7 +52,9 @@ export async function ingestSms(sms: IncomingSms): Promise<IngestResult> {
   const db = await getDb();
   const hash = smsHash(sms);
 
-  const rule = parsed.merchant_key ? await findCategoryForMerchant(parsed.merchant_key) : null;
+  // Never for money transfers: their "merchant" line is the card type ("MC GOLD"), the same for every
+  // transfer, so a rule would put all transfers into one category. A transfer always asks for a category.
+  const rule = parsed.merchant_key && parsed.kind !== 'transfer' ? await findCategoryForMerchant(parsed.merchant_key) : null;
   const categoryId = rule?.category_id ?? null;
 
   // OR IGNORE + changes check instead of SELECT-then-INSERT: the same SMS may be

@@ -30,6 +30,23 @@ describe('migrations', () => {
     expect(await db.get("SELECT name FROM sqlite_master WHERE name = 'category_usage'")).toBeDefined();
   });
 
+  test('migration 8: rule-assigned transfers become uncategorized, manual choices and purchases stay', async () => {
+    const db = openDatabase(':memory:');
+    await migrate(db, MIGRATIONS.slice(0, 7));
+    const add = (kind: string, source: string | null, hash: string) => db.run(
+      `INSERT INTO transactions (bank, kind, amount_minor, currency, merchant_key, category_id, category_source, occurred_at, raw_sms, sms_hash)
+        VALUES ('TBC', ?, 100, 'GEL', 'MC GOLD', ?, ?, 1, '', ?)`, [kind, source ? 1 : null, source, hash]);
+    await add('transfer', 'rule', 'a');
+    await add('transfer', 'user', 'b');
+    await add('purchase', 'rule', 'c');
+    await migrate(db);
+    expect(await db.all('SELECT kind, category_id, category_source FROM transactions ORDER BY sms_hash')).toEqual([
+      { kind: 'transfer', category_id: null, category_source: null },
+      { kind: 'transfer', category_id: 1, category_source: 'user' },
+      { kind: 'purchase', category_id: 1, category_source: 'rule' },
+    ]);
+  });
+
   test('a failing migration is rolled back and version is not bumped', async () => {
     const db = openDatabase(':memory:');
     const broken = [...MIGRATIONS, ['CREATE TABLE extra (id INTEGER)', 'NOT VALID SQL']];
