@@ -121,6 +121,9 @@ function CategoryRow({ stat, onAddToPlan }: { stat: CategoryStat; onAddToPlan?: 
   const { spent_minor: spent, limit_minor: limit } = stat;
   const dot = hasOwnColor(stat) ? seriesColor(stat.color_rank) : chart.other;
   const ratio = limit ? spent / limit : 0;
+  // fixed payment (rent, subscription): any spending this month means it's paid
+  const fixed = stat.plan_kind === 'fixed';
+  const paid = spent > 0;
 
   return (
     <TouchableOpacity style={styles.row} onPress={() => openTransactions(stat.category_id)} accessibilityHint="Показать транзакции категории">
@@ -136,7 +139,12 @@ function CategoryRow({ stat, onAddToPlan }: { stat: CategoryStat; onAddToPlan?: 
           {formatShort(spent)}{limit ? <Text style={styles.rowLimit}> / {formatShort(limit)}</Text> : null}
         </Text>
       </View>
-      {limit ? (
+      {limit && fixed ? (
+        <View style={styles.paidRow}>
+          <Text style={[styles.paidMark, paid ? styles.paidOn : styles.paidOff]}>{paid ? '✓' : '○'}</Text>
+          <Text style={[styles.rowStatus, styles.paidText, paid && styles.paidOn]}>{paid ? 'оплачено' : 'не оплачено'}</Text>
+        </View>
+      ) : limit ? (
         <>
           <Meter ratio={ratio} height={8} />
           <Text style={[styles.rowStatus, ratio > 1 && styles.dangerText]}>
@@ -179,4 +187,9 @@ const styles = StyleSheet.create({
   rowAmount: { marginLeft: 'auto', paddingLeft: 8, fontSize: 15, color: colors.text, fontVariant: ['tabular-nums'] },
   rowLimit: { color: colors.muted },
   rowStatus: { fontSize: 13, color: colors.muted, marginTop: 4 },
+  paidRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
+  paidMark: { fontSize: 16, fontWeight: '700', width: 20 },
+  paidOn: { color: colors.income },
+  paidOff: { color: colors.muted },
+  paidText: { marginTop: 0 },
 });

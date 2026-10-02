@@ -15,6 +15,8 @@ type Props = {
   maxLength?: number;
   /** empty input is submitted (as '') instead of "Введите название" */
   allowEmpty?: boolean;
+  /** extra controls under the field (e.g. the plan item kind) */
+  children?: React.ReactNode;
   /** returns an error message to show, or null when saved */
   onSubmit: (value: string) => Promise<string | null>;
   onClose: () => void;
@@ -23,7 +25,7 @@ type Props = {
 /** Small dialog with one text field (create / rename, plan amounts). */
 export default function TextInputModal({
   visible, title, initialValue = '', placeholder, submitLabel = 'Сохранить', hint, keyboardType, maxLength = 30, allowEmpty,
-  onSubmit, onClose,
+  onSubmit, onClose, children,
 }: Props) {
   const [value, setValue] = useState(initialValue);
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +62,7 @@ export default function TextInputModal({
             returnKeyType="done"
             onSubmitEditing={submit}
           />
+          {children ? <View style={styles.extra}>{children}</View> : null}
           {error ? <Text style={formStyles.error}>{error}</Text> : null}
           <View style={styles.buttons}>
             <TouchableOpacity style={styles.button} onPress={onClose}>
@@ -80,6 +83,7 @@ const styles = StyleSheet.create({
   dialog: { backgroundColor: colors.bg, borderRadius: 12, padding: 20 },
   title: { fontSize: 18, fontWeight: '600', color: colors.text, marginBottom: 12 },
   hint: { fontSize: 14, color: colors.muted, marginTop: -6, marginBottom: 12 },
+  extra: { marginTop: 12 },
   buttons: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 16 },
   button: { paddingHorizontal: 12, paddingVertical: 8 },
   cancel: { fontSize: 16, color: colors.muted },

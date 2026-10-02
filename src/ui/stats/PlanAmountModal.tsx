@@ -1,7 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { BUDGET_CURRENCY, getPlanBudget, OverBudgetError, plannedTotal, setPlanAmount } from '../../db/plans';
+import { BUDGET_CURRENCY, getPlanBudget, OverBudgetError, PlanKind, plannedTotal, setPlanAmount } from '../../db/plans';
 import { formatWithCurrency, parseAmountOrZero, toInputValue } from '../money';
+import RadioGroup from '../RadioGroup';
 import TextInputModal from '../TextInputModal';
+
+const KINDS = [
+  ['limit', 'Лимит', 'Сколько можно потратить — в статистике полоска'],
+  ['fixed', 'Статичная трата', 'Фиксированный платёж (аренда, подписка) — в статистике «оплачено»'],
+] as const;
 
 export type PlanAmountTarget = {
   category_id: number;
@@ -10,6 +16,8 @@ export type PlanAmountTarget = {
   limit_minor: number;
   /** last month's amount, shown as a hint */
   previous_minor?: number | null;
+  /** current kind; a category not in the plan yet starts as a limit */
+  kind?: PlanKind;
 };
 
 type Props = {
@@ -30,9 +38,11 @@ const money = (minor: number) => formatWithCurrency(minor, BUDGET_CURRENCY);
 export default function PlanAmountModal({ ym, target, onClose, onSaved }: Props) {
   // free for this category = amount to distribute − the other categories; null = no amount set
   const [free, setFree] = useState<number | null>(null);
+  const [kind, setKind] = useState<PlanKind>('limit');
 
   useEffect(() => {
     if (!target) return;
+    setKind(target.kind ?? 'limit');
     Promise.all([getPlanBudget(ym), plannedTotal(ym, target.category_id)])
       .then(([budget, others]) => setFree(budget === null ? null : Math.max(budget - others, 0)))
       .catch((e) => console.error('load plan budget failed', e));
@@ -43,7 +53,7 @@ export default function PlanAmountModal({ ym, target, onClose, onSaved }: Props)
     const minor = parseAmountOrZero(text);
     if (minor === null) return 'Введите сумму, например 1500 или 12.50';
     try {
-      await setPlanAmount(ym, target.category_id, minor);
+      await setPlanAmount(ym, target.category_id, minor, kind);
     } catch (e) {
       if (!(e instanceof OverBudgetError)) throw e;
       return `Больше суммы к планированию. Свободно для этой категории: ${money(free ?? 0)}.`;
@@ -69,6 +79,8 @@ export default function PlanAmountModal({ ym, target, onClose, onSaved }: Props)
       allowEmpty
       onSubmit={save}
       onClose={onClose}
-    />
+    >
+      <RadioGroup options={KINDS} value={kind} onChange={setKind} />
+    </TextInputModal>
   );
 }

@@ -29,6 +29,9 @@ export function monthStart(ym: string): number {
   return monthRange(year, month)[0];
 }
 
+/** 'limit' = spending cap (progress bar); 'fixed' = fixed payment like rent (paid / not paid). */
+export type PlanKind = 'limit' | 'fixed';
+
 export type PlanItem = {
   category_id: number;
   name: string;
@@ -37,6 +40,7 @@ export type PlanItem = {
   type_name: string | null;
   /** 0 = amount not set yet this month */
   limit_minor: number;
+  kind: PlanKind;
   pinned: boolean;
   /** amount of the same item in the month this plan was carried over from (placeholder hint) */
   previous_minor: number | null;
@@ -55,8 +59,8 @@ export async function ensureMonthPlan(ym: string, nowYm = currentYm()): Promise<
     const source = await db.get<{ ym: string }>('SELECT ym FROM plan_months WHERE ym < ? ORDER BY ym DESC LIMIT 1', [ym]);
     if (source) {
       await db.run(
-        `INSERT OR IGNORE INTO plan_items (ym, category_id, limit_minor, pinned)
-          SELECT ?, p.category_id, CASE WHEN p.pinned = 1 THEN p.limit_minor ELSE 0 END, p.pinned
+        `INSERT OR IGNORE INTO plan_items (ym, category_id, limit_minor, pinned, kind)
+          SELECT ?, p.category_id, CASE WHEN p.pinned = 1 THEN p.limit_minor ELSE 0 END, p.pinned, p.kind
           FROM plan_items p JOIN categories c ON c.id = p.category_id
           WHERE p.ym = ? AND c.deleted_at IS NULL`,
         [ym, source.ym]);
@@ -77,7 +81,7 @@ export async function listPlan(ym: string): Promise<PlanItem[]> {
   const db = await getDb();
   const prev = await db.get<{ ym: string }>('SELECT ym FROM plan_months WHERE ym < ? ORDER BY ym DESC LIMIT 1', [ym]);
   const rows = await db.all<Omit<PlanItem, 'pinned'> & { pinned: number }>(
-    `SELECT p.category_id, c.name, c.emoji, c.type_id, ct.name AS type_name, p.limit_minor, p.pinned,
+    `SELECT p.category_id, c.name, c.emoji, c.type_id, ct.name AS type_name, p.limit_minor, p.kind, p.pinned,
         (SELECT q.limit_minor FROM plan_items q WHERE q.ym = ? AND q.category_id = p.category_id) AS previous_minor
       FROM plan_items p
       JOIN categories c ON c.id = p.category_id
@@ -149,8 +153,11 @@ export async function addPlanItem(ym: string, categoryId: number, limitMinor = 0
   await markPlanned(ym);
 }
 
-/** Refused (OverBudgetError) if the month's plan would exceed its amount to distribute. */
-export async function setPlanAmount(ym: string, categoryId: number, limitMinor: number) {
+/**
+ * Sets (and adds, if missing) a plan item. `kind` is kept as is when omitted.
+ * Refused (OverBudgetError) if the month's plan would exceed its amount to distribute.
+ */
+export async function setPlanAmount(ym: string, categoryId: number, limitMinor: number, kind?: PlanKind) {
   // also adds the item (from the stats screen), so the month must exist with its carried-over items first
   await ensureMonthPlan(ym);
   limitMinor = Math.max(0, limitMinor);
@@ -161,9 +168,9 @@ export async function setPlanAmount(ym: string, categoryId: number, limitMinor: 
   }
   const db = await getDb();
   await db.run(
-    `INSERT INTO plan_items (ym, category_id, limit_minor) VALUES (?, ?, ?)
-      ON CONFLICT(ym, category_id) DO UPDATE SET limit_minor = excluded.limit_minor`,
-    [ym, categoryId, limitMinor]);
+    `INSERT INTO plan_items (ym, category_id, limit_minor, kind) VALUES (?, ?, ?, coalesce(?, 'limit'))
+      ON CONFLICT(ym, category_id) DO UPDATE SET limit_minor = excluded.limit_minor, kind = coalesce(?, kind)`,
+    [ym, categoryId, limitMinor, kind ?? null, kind ?? null]);
   await markPlanned(ym);
 }
 
@@ -188,6 +195,8 @@ export type CategoryStat = {
   spent_minor: number;
   /** null = no plan (or amount not set) for this category this month */
   limit_minor: number | null;
+  /** how the plan amount is shown: a progress bar (limit) or paid / not paid (fixed); null without a plan */
+  plan_kind: PlanKind | null;
   /** rank by all-time spend: keeps a category's chart color stable across months */
   color_rank: number;
   /** deleted category that still has spending in this month: can't be added to a plan */
@@ -249,8 +258,8 @@ export async function monthStats(year: number, month: number): Promise<MonthStat
       GROUP BY t.category_id ORDER BY ${SPEND_EXPR} DESC, t.category_id`, [BUDGET_CURRENCY]);
   const rankOf = new Map(ranks.map((r, i) => [r.category_id, i]));
 
-  const cats = await db.all<{ id: number; name: string; emoji: string | null; type_id: number | null; type_name: string | null; limit_minor: number | null; deleted_at: number | null }>(
-    `SELECT c.id, c.name, c.emoji, c.type_id, ct.name AS type_name, p.limit_minor, c.deleted_at
+  const cats = await db.all<{ id: number; name: string; emoji: string | null; type_id: number | null; type_name: string | null; limit_minor: number | null; plan_kind: PlanKind | null; deleted_at: number | null }>(
+    `SELECT c.id, c.name, c.emoji, c.type_id, ct.name AS type_name, p.limit_minor, p.kind AS plan_kind, c.deleted_at
       FROM categories c
       LEFT JOIN category_types ct ON ct.id = c.type_id
       LEFT JOIN plan_items p ON p.category_id = c.id AND p.ym = ?`, [ym]);
@@ -262,6 +271,7 @@ export async function monthStats(year: number, month: number): Promise<MonthStat
     if (s === 0 && limit === null) continue;
     categories.push({
       category_id: c.id, name: c.name, emoji: c.emoji, type_id: c.type_id, type_name: c.type_name, spent_minor: s, limit_minor: limit,
+      plan_kind: limit === null ? null : c.plan_kind,
       color_rank: rankOf.get(c.id) ?? Number.MAX_SAFE_INTEGER, deleted: c.deleted_at !== null,
     });
   }
@@ -269,7 +279,7 @@ export async function monthStats(year: number, month: number): Promise<MonthStat
   if (uncategorized !== 0) {
     categories.push({
       category_id: null, name: 'Без категории', emoji: null, type_id: null, type_name: null,
-      spent_minor: uncategorized, limit_minor: null, color_rank: Number.MAX_SAFE_INTEGER, deleted: false,
+      spent_minor: uncategorized, limit_minor: null, plan_kind: null, color_rank: Number.MAX_SAFE_INTEGER, deleted: false,
     });
   }
   categories.sort((a, b) => b.spent_minor - a.spent_minor || (b.limit_minor ?? 0) - (a.limit_minor ?? 0));

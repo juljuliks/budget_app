@@ -119,6 +119,29 @@ describe('monthStats', () => {
   });
 });
 
+describe('plan item kind (limit / fixed payment)', () => {
+  const M1 = '2099-01', M2 = '2099-02';
+
+  test('new items are limits; kind is set with the amount, kept when omitted and carried over', async () => {
+    await addPlanItem(M1, 1);
+    expect((await listPlan(M1))[0].kind).toBe('limit');
+    await setPlanAmount(M1, 1, 50000, 'fixed'); await setPlanPinned(M1, 1, true);
+    await setPlanAmount(M1, 1, 60000);
+    expect((await listPlan(M1))[0]).toEqual(expect.objectContaining({ limit_minor: 60000, kind: 'fixed' }));
+    expect((await listPlan(M2))[0]).toEqual(expect.objectContaining({ limit_minor: 60000, kind: 'fixed' }));
+  });
+
+  test('month stats carry the kind; no plan -> null', async () => {
+    const now = new Date();
+    await setPlanAmount(NOW, 1, 1000, 'fixed');
+    await spend(300, 2, now.getFullYear(), now.getMonth());
+    const s = await monthStats(now.getFullYear(), now.getMonth());
+    const byId = new Map(s.categories.map((c) => [c.category_id, c.plan_kind]));
+    expect(byId.get(1)).toBe('fixed');
+    expect(byId.get(2)).toBeNull();
+  });
+});
+
 describe('amount to distribute', () => {
   const M1 = '2099-01', M2 = '2099-02';
 

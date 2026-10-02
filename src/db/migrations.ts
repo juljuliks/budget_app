@@ -126,6 +126,11 @@ export const MIGRATIONS: string[][] = [
   [
     'ALTER TABLE plan_months ADD COLUMN budget_minor INTEGER CHECK (budget_minor >= 0)',
   ],
+  // 7: plan item kind. 'limit' = a spending cap (progress bar); 'fixed' = a fixed payment such as rent
+  // (paid / not paid). Existing items are limits.
+  [
+    "ALTER TABLE plan_items ADD COLUMN kind TEXT NOT NULL DEFAULT 'limit' CHECK (kind IN ('limit', 'fixed'))",
+  ],
 ];
 
 export async function getSchemaVersion(db: Db): Promise<number> {

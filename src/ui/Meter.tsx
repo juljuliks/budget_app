@@ -1,11 +1,6 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { chart } from './theme';
-
-/** Spent / limit: normal below 80%, warning up to 100%, critical above. */
-export function meterColor(ratio: number): string {
-  return ratio > 1 ? chart.critical : ratio >= 0.8 ? chart.warning : chart.meterFill;
-}
+import { chart, meterColor } from './theme';
 
 type Props = {
   /** filled part, 0..1 (clamped) */

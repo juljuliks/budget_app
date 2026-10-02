@@ -123,7 +123,14 @@ export default function PlanView({ ym }: { ym: string }) {
           </TouchableOpacity>
           <View style={styles.nameBox}>
             <Text style={styles.name} numberOfLines={1}>{categoryLabel(item)}</Text>
-            {budget && item.limit_minor ? <Text style={styles.percent}>{percentOf(item.limit_minor, budget)} суммы</Text> : null}
+            {item.kind === 'fixed' || (budget && item.limit_minor) ? (
+              <Text style={styles.percent}>
+                {[
+                  item.kind === 'fixed' ? 'статичная трата' : '',
+                  budget && item.limit_minor ? `${percentOf(item.limit_minor, budget)} суммы` : '',
+                ].filter(Boolean).join(' · ')}
+              </Text>
+            ) : null}
           </View>
           <TouchableOpacity
             style={styles.amountButton}
