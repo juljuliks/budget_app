@@ -36,6 +36,8 @@ export default function TransactionsList() {
   const searchId = useRef(0);
 
   const [selectMode, setSelectMode] = useState(false);
+  // shows edit / delete icons on every row; exclusive with selectMode
+  const [editMode, setEditMode] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [bulkOpen, setBulkOpen] = useState(false);
 
@@ -120,6 +122,13 @@ export default function TransactionsList() {
 
   function toggleSelectMode() {
     setSelectMode((on) => !on);
+    setEditMode(false);
+    setSelected(new Set());
+  }
+
+  function toggleEditMode() {
+    setEditMode((on) => !on);
+    setSelectMode(false);
     setSelected(new Set());
   }
 
@@ -155,7 +164,7 @@ export default function TransactionsList() {
   }
 
   const selectedRows = data.filter((r) => selected.has(r.id));
-  const showRowActions = results !== null && !selectMode;
+  const showRowActions = editMode && !selectMode;
 
   if (loading) {
     return <View style={styles.center}><ActivityIndicator /></View>;
@@ -181,11 +190,22 @@ export default function TransactionsList() {
             </TouchableOpacity>
           ) : null}
         </View>
-        <TouchableOpacity style={styles.selectToggle} onPress={toggleSelectMode} accessibilityRole="checkbox" accessibilityState={{ checked: selectMode }}>
-          <Checkbox checked={selectMode} size={20} />
-          <Text style={styles.selectLabel}>Выбрать несколько</Text>
-          {selectMode && selected.size > 0 ? <Text style={styles.selectCount}>выбрано: {selected.size}</Text> : null}
-        </TouchableOpacity>
+        <View style={styles.toolbar}>
+          <TouchableOpacity style={styles.selectToggle} onPress={toggleSelectMode} accessibilityRole="checkbox" accessibilityState={{ checked: selectMode }}>
+            <Checkbox checked={selectMode} size={20} />
+            <Text style={styles.selectLabel}>Выбрать несколько</Text>
+            {selectMode && selected.size > 0 ? <Text style={styles.selectCount}>({selected.size})</Text> : null}
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.editToggle, editMode && styles.editToggleOn]}
+            onPress={toggleEditMode}
+            accessibilityRole="button"
+            accessibilityState={{ selected: editMode }}
+          >
+            <PencilIcon color={editMode ? '#FFFFFF' : colors.accent} size={16} />
+            <Text style={[styles.editToggleText, editMode && styles.editToggleTextOn]}>{editMode ? 'Готово' : 'Редактировать'}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <SectionList
@@ -288,9 +308,17 @@ const styles = StyleSheet.create({
   },
   searchInput: { flex: 1, fontSize: 16, color: colors.text, paddingVertical: 8 },
   clear: { fontSize: 16, color: colors.muted },
-  selectToggle: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10 },
+  toolbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8 },
+  selectToggle: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 },
   selectLabel: { fontSize: 15, color: colors.text },
-  selectCount: { fontSize: 13, color: colors.muted, marginLeft: 'auto' },
+  selectCount: { fontSize: 13, color: colors.muted },
+  editToggle: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6,
+    borderRadius: 16, borderWidth: 1, borderColor: colors.accent,
+  },
+  editToggleOn: { backgroundColor: colors.accent },
+  editToggleText: { fontSize: 14, color: colors.accent },
+  editToggleTextOn: { color: '#FFFFFF' },
   sectionHeader: {
     paddingHorizontal: 16, paddingVertical: 6, backgroundColor: colors.surface,
     color: colors.muted, fontSize: 13, fontWeight: '600',

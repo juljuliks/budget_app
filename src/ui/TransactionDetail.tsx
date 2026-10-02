@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -11,6 +11,7 @@ import type { RootStackParamList } from '../navigation';
 import { formatAmount, formatDay, formatTime, isIncome } from './format';
 import CategoryPicker from './CategoryPicker';
 import SectionHeading from './SectionHeading';
+import { TrashIcon } from './icons';
 import { colors } from './theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TransactionDetail'>;
@@ -60,6 +61,19 @@ export default function TransactionDetail({ route, navigation }: Props) {
       },
     ]);
   }
+
+  // delete is also in the header, so it's reachable without scrolling to the bottom
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity onPress={confirmDelete} hitSlop={12} accessibilityLabel="Удалить транзакцию">
+          <TrashIcon color={colors.danger} />
+        </TouchableOpacity>
+      ),
+    });
+    // confirmDelete only depends on txId and navigation
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigation, txId]);
 
   if (!tx) return <View style={styles.center}><ActivityIndicator /></View>;
 
