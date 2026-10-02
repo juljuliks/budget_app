@@ -25,7 +25,7 @@ This document outlines the remaining work to finish the privacy-first SMS transa
   - [x] Show top category suggestions in notification
   - [x] "Create new category" action opens the app on the category editor; tapping the body opens the transaction
   - [x] Android shows max 3 action buttons: 2 suggestions + "➕ Новая категория" (always present)
-  - [x] Money transfers suggest only categories whose name starts with "Перевод" (revisit: maybe an explicit "transfer" flag on the category)
+  - [x] Money transfers suggest only categories of the transfer type (notification and category picker)
   - [x] Handle action presses in JS and persist assignments (+ exact rule + backfill that keeps manual choices)
 - Permissions & device testing
   - [x] Runtime permissions (`RECEIVE_SMS`, `POST_NOTIFICATIONS`) requested on app start (`src/permissions.ts`); `READ_SMS` removed as unused
@@ -40,7 +40,11 @@ This document outlines the remaining work to finish the privacy-first SMS transa
   - [x] List: all transactions, keyset pagination by 50, day headers, pull-to-refresh, live refresh on new SMS
   - [x] Detail: category chips, "remember for merchant" toggle (rule + backfill), clear category, raw SMS
   - [x] Create category screen (from detail or notification), assigns it to the transaction
-  - [x] Category management: list (active / archive), rename, emoji, archive, delete
+  - [x] Category management (gear next to "Категория"): list grouped by type, ✎ edit, 🗑 delete
+  - [x] Delete = soft delete: this month's transactions move to a chosen category (rules follow), past months keep the old one
+  - [x] Category types ("Хобби: Гитара"), optional; types screen (gear next to "Тип"); "Переводы" is the system transfer type
+  - [x] Delete a transaction
+  - [ ] Rename applies to all months (ask if past months should keep the old name)
   - [x] Add transaction manually (amount, income/expense, description, today/yesterday, category)
   - [ ] Filter: uncategorized only / by month / by category (tap a row on the stats screen)
   - [ ] Edit / delete a manual transaction; arbitrary date picker
@@ -56,7 +60,8 @@ Done:
 - A new month starts from the latest planned month: 📌 pinned items keep their amount, others come with an empty
   amount (last month's shown as a hint), removed items don't carry over; past months are never auto-created
 - Plan can be prepared one month ahead
-- Stats: month switcher, donut with total spent in the center, plan / remaining, per-category progress bars
+- Stats: month switcher, donut with total spent in the center, plan / remaining, per-category progress bars,
+  grouped by category type with section titles (also in История details)
 - История: every month plan vs spent (+ meter), expand -> per category plan vs fact
 Remaining: tap a category -> its transactions for the month; over-limit notifications; salary-day month start (if needed).
 

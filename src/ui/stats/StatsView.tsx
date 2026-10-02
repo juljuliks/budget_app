@@ -66,7 +66,18 @@ export default function StatsView({ year, month }: { year: number; month: number
       {stats.categories.length === 0 ? (
         <Text style={styles.hint}>В этом месяце трат нет.</Text>
       ) : (
-        stats.categories.map((c) => <CategoryRow key={String(c.category_id)} stat={c} />)
+        stats.groups.map((g) => (
+          <View key={`${g.type_id}-${g.title}`} style={styles.group}>
+            <View style={styles.groupHeader}>
+              <Text style={styles.groupTitle}>{g.title}</Text>
+              <Text style={styles.groupTotal}>
+                {formatMoney(g.spent_minor, { compact: true })}
+                {g.planned_minor ? <Text style={styles.rowLimit}> / {formatMoney(g.planned_minor, { compact: true })}</Text> : null}
+              </Text>
+            </View>
+            {g.categories.map((c) => <CategoryRow key={String(c.category_id)} stat={c} />)}
+          </View>
+        ))
       )}
 
       {stats.other_currencies.length > 0 ? (
@@ -130,6 +141,13 @@ const styles = StyleSheet.create({
   summaryValue: { fontSize: 18, fontWeight: '600', color: colors.text, marginTop: 2 },
   dangerText: { color: colors.danger },
   hint: { color: colors.muted, fontSize: 14, textAlign: 'center', marginVertical: 12 },
+  group: { marginTop: 16 },
+  groupHeader: {
+    flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between',
+    paddingBottom: 4, borderBottomWidth: 1, borderColor: colors.border,
+  },
+  groupTitle: { fontSize: 13, fontWeight: '600', color: colors.muted, textTransform: 'uppercase' },
+  groupTotal: { fontSize: 13, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
   row: { paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
   rowTop: { flexDirection: 'row', alignItems: 'center' },
   dot: { width: 10, height: 10, borderRadius: 5, marginRight: 8 },

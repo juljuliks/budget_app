@@ -15,14 +15,16 @@ export type TransactionRow = {
   occurred_at: number;
   category_name: string | null;
   category_emoji: string | null;
+  category_type_name: string | null;
 };
 
 /** Position of the last row of a page; pass it back to get the next (older) page. */
 export type PageCursor = { occurred_at: number; id: number };
 
-const SELECT_TX = `SELECT t.id, t.bank, t.kind, t.amount_minor, t.currency, t.raw_merchant, t.merchant_key, t.category_id, t.category_source, t.occurred_at, c.name AS category_name, c.emoji AS category_emoji
+const SELECT_TX = `SELECT t.id, t.bank, t.kind, t.amount_minor, t.currency, t.raw_merchant, t.merchant_key, t.category_id, t.category_source, t.occurred_at, c.name AS category_name, c.emoji AS category_emoji, ct.name AS category_type_name
     FROM transactions t
-    LEFT JOIN categories c ON c.id = t.category_id`;
+    LEFT JOIN categories c ON c.id = t.category_id
+    LEFT JOIN category_types ct ON ct.id = c.type_id`;
 
 /**
  * Newest first, keyset-paginated: stable even when new SMS arrive while scrolling
@@ -45,8 +47,16 @@ export async function listTransactionsPage(cursor: PageCursor | null, limit = 50
 
 export async function getTransaction(id: number) {
   const db = await getDb();
-  return db.get<TransactionRow & { raw_sms: string }>(`SELECT t.*, c.name AS category_name, c.emoji AS category_emoji
-    FROM transactions t LEFT JOIN categories c ON c.id = t.category_id WHERE t.id = ?`, [id]);
+  return db.get<TransactionRow & { raw_sms: string }>(`SELECT t.*, c.name AS category_name, c.emoji AS category_emoji, ct.name AS category_type_name
+    FROM transactions t
+    LEFT JOIN categories c ON c.id = t.category_id
+    LEFT JOIN category_types ct ON ct.id = c.type_id
+    WHERE t.id = ?`, [id]);
+}
+
+export async function deleteTransaction(id: number) {
+  const db = await getDb();
+  await db.run('DELETE FROM transactions WHERE id = ?', [id]);
 }
 
 /** categoryId = null clears the category. */
@@ -79,4 +89,4 @@ export async function addManualTransaction(tx: {
   return lastInsertRowid;
 }
 
-export default { listTransactionsPage, getTransaction, setTransactionCategory, addManualTransaction };
+export default { listTransactionsPage, getTransaction, setTransactionCategory, addManualTransaction, deleteTransaction };

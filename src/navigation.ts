@@ -10,9 +10,12 @@ export type TabParamList = {
 export type RootStackParamList = {
   Main: undefined;
   TransactionDetail: { txId: number };
-  /** No categoryId = create. txId: assign the new category to this transaction right away. */
-  CategoryEdit: { categoryId?: number; txId?: number };
+  /** No categoryId = create. txId: assign the new category to this transaction right away. typeId: preselected type. */
+  CategoryEdit: { categoryId?: number; txId?: number; typeId?: number };
   Categories: undefined;
+  /** Delete a category, moving its current-month transactions to another one */
+  CategoryDelete: { categoryId: number };
+  CategoryTypes: undefined;
   AddTransaction: undefined;
 };
 

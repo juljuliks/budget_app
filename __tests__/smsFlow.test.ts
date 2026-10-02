@@ -19,6 +19,7 @@ import SmsBackgroundTask from '../src/native/SmsBackgroundTask';
 import { handleNotificationAction } from '../src/notifications/notifeeIntegration';
 import { createRule } from '../src/categorize';
 import { createCategory } from '../src/db/categories';
+import { getTransferTypeId } from '../src/db/categoryTypes';
 import { getDb } from '../src/db';
 import { freshDb } from './helpers';
 
@@ -122,20 +123,20 @@ test('tapping the notification body opens the transaction and keeps the notifica
   expect(cancelNotification).not.toHaveBeenCalled();
 });
 
-test('money transfer offers only "Перевод…" categories, plus "new category"', async () => {
-  await createCategory('Перевод маме', '👩');
+test('money transfer offers only categories of the transfer type, plus "new category"', async () => {
+  await createCategory('Маме', '👩', await getTransferTypeId());
   await SmsBackgroundTask({ sender: 'TBC SMS', body: 'Money Transfer:\n1.00 GEL\nMC GOLD\n02/10/2026', timestamp: 1 });
   const n = displayNotification.mock.calls[0][0];
   expect(n.title).toMatch(/^Перевод/);
   const titles = n.android.actions.map((a: any) => a.title);
   expect(titles).toHaveLength(3);
-  expect(titles.slice(0, 2).sort()).toEqual(['👩 Перевод маме', '🔁 Переводы']);
+  expect(titles.slice(0, 2).sort()).toEqual(['👩 Переводы: Маме', '🔁 Переводы: Прочие']);
   expect(n.android.actions[2].pressAction.id).toBe('create_new');
 });
 
-test('money transfer with no "Перевод…" categories still offers "new category"', async () => {
+test('money transfer with no transfer categories still offers "new category"', async () => {
   const db = await getDb();
-  await db.run("UPDATE categories SET is_archived = 1 WHERE name = 'Переводы'");
+  await db.run('UPDATE categories SET type_id = NULL');
   await SmsBackgroundTask({ sender: 'TBC SMS', body: 'Money Transfer:\n1.00 GEL\nMC GOLD\n02/10/2026', timestamp: 1 });
   const ids = displayNotification.mock.calls[0][0].android.actions.map((a: any) => a.pressAction.id);
   expect(ids).toEqual(['create_new']);

@@ -82,18 +82,27 @@ function MonthDetails({ ym }: { ym: string }) {
         <Text style={[styles.detailNum, styles.detailHead]}>План</Text>
         <Text style={[styles.detailNum, styles.detailHead]}>Факт</Text>
       </View>
-      {stats.categories.map((c) => {
-        const over = c.limit_minor !== null && c.spent_minor > c.limit_minor;
-        return (
-          <View key={String(c.category_id)} style={styles.detailRow}>
-            <Text style={styles.detailName} numberOfLines={1}>{`${c.emoji || ''} ${c.name}`.trim()}</Text>
-            <Text style={styles.detailNum}>{c.limit_minor ? formatMoney(c.limit_minor, { compact: true }) : '—'}</Text>
-            <Text style={[styles.detailNum, over && styles.danger]}>
-              {over ? '⚠ ' : ''}{formatMoney(c.spent_minor, { compact: true })}
-            </Text>
+      {stats.groups.map((g) => (
+        <View key={`${g.type_id}-${g.title}`}>
+          <View style={[styles.detailRow, styles.groupRow]}>
+            <Text style={[styles.detailName, styles.groupTitle]} numberOfLines={1}>{g.title}</Text>
+            <Text style={[styles.detailNum, styles.groupTitle]}>{g.planned_minor ? formatMoney(g.planned_minor, { compact: true }) : '—'}</Text>
+            <Text style={[styles.detailNum, styles.groupTitle]}>{formatMoney(g.spent_minor, { compact: true })}</Text>
           </View>
-        );
-      })}
+          {g.categories.map((c) => {
+            const over = c.limit_minor !== null && c.spent_minor > c.limit_minor;
+            return (
+              <View key={String(c.category_id)} style={styles.detailRow}>
+                <Text style={styles.detailName} numberOfLines={1}>{`${c.emoji || ''} ${c.name}`.trim()}</Text>
+                <Text style={styles.detailNum}>{c.limit_minor ? formatMoney(c.limit_minor, { compact: true }) : '—'}</Text>
+                <Text style={[styles.detailNum, over && styles.danger]}>
+                  {over ? '⚠ ' : ''}{formatMoney(c.spent_minor, { compact: true })}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+      ))}
       {stats.other_currencies.length > 0 ? (
         <Text style={styles.note}>
           Не учтено: {stats.other_currencies.map((o) => `${formatMoney(o.spent_minor)} ${o.currency}`).join(', ')}
@@ -144,5 +153,7 @@ const styles = StyleSheet.create({
   detailName: { flex: 1, fontSize: 14, color: colors.text, marginRight: 8 },
   detailNum: { width: 80, textAlign: 'right', fontSize: 14, color: colors.text, fontVariant: ['tabular-nums'] },
   note: { fontSize: 12, color: colors.muted, marginTop: 6 },
+  groupRow: { marginTop: 6, borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border, paddingTop: 6 },
+  groupTitle: { fontSize: 12, fontWeight: '600', color: colors.muted, textTransform: 'uppercase' },
 });
 

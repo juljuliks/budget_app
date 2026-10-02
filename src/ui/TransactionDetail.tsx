@@ -1,13 +1,16 @@
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { getTransaction } from '../db/transactions';
-import { Category, isTransferCategory, listCategories } from '../db/categories';
+import { deleteTransaction, getTransaction } from '../db/transactions';
+import { Category, listCategories } from '../db/categories';
+import { getTransferTypeId } from '../db/categoryTypes';
 import { assignCategory } from '../assign';
+import { emitTransactionsChanged } from '../events';
 import type { RootStackParamList } from '../navigation';
 import { formatAmount, formatDay, formatTime, isIncome } from './format';
 import CategoryPicker from './CategoryPicker';
+import SectionHeading from './SectionHeading';
 import { colors } from './theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TransactionDetail'>;
@@ -17,14 +20,20 @@ export default function TransactionDetail({ route, navigation }: Props) {
   const { txId } = route.params;
   const [tx, setTx] = useState<Tx | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [transferTypeId, setTransferTypeId] = useState<number | null>(null);
   const [applyToMerchant, setApplyToMerchant] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // on focus: also picks up a category just created on the CreateCategory screen
+  // on focus: also picks up categories created / edited on the category screens
   useFocusEffect(useCallback(() => {
-    Promise.all([getTransaction(txId), listCategories(200)])
-      .then(([t, cats]) => { setTx(t ?? null); setCategories(cats); })
-      .catch((e) => console.error('load transaction failed', e));
+    (async () => {
+      const t = await getTransaction(txId);
+      // money transfers: only categories of the transfer type
+      const [cats, transferType] = await Promise.all([listCategories({ transferOnly: t?.kind === 'transfer' }), getTransferTypeId()]);
+      setTx(t ?? null);
+      setCategories(cats);
+      setTransferTypeId(transferType);
+    })().catch((e) => console.error('load transaction failed', e));
   }, [txId]));
 
   async function choose(categoryId: number | null) {
@@ -39,12 +48,20 @@ export default function TransactionDetail({ route, navigation }: Props) {
     }
   }
 
-  if (!tx) return <View style={styles.center}><ActivityIndicator /></View>;
+  function confirmDelete() {
+    Alert.alert('Удалить транзакцию?', 'Она пропадёт из истории и статистики.', [
+      { text: 'Отмена', style: 'cancel' },
+      {
+        text: 'Удалить', style: 'destructive', onPress: async () => {
+          await deleteTransaction(txId);
+          emitTransactionsChanged();
+          navigation.goBack();
+        },
+      },
+    ]);
+  }
 
-  // transfers: "Перевод…" categories first
-  const orderedCategories = tx.kind === 'transfer'
-    ? [...categories.filter(isTransferCategory), ...categories.filter((c) => !isTransferCategory(c))]
-    : categories;
+  if (!tx) return <View style={styles.center}><ActivityIndicator /></View>;
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -54,14 +71,18 @@ export default function TransactionDetail({ route, navigation }: Props) {
       <Text style={styles.merchant}>{tx.raw_merchant || 'Без мерчанта'}</Text>
       <Text style={styles.meta}>{formatDay(tx.occurred_at)}, {formatTime(tx.occurred_at)}</Text>
 
-      <Text style={styles.heading}>Категория</Text>
+      <SectionHeading title="Категория" onSettings={() => navigation.navigate('Categories')} settingsLabel="Управление категориями" />
       <CategoryPicker
-        categories={orderedCategories}
+        categories={categories}
         selectedId={tx.category_id}
         onSelect={choose}
         disabled={saving}
         txId={txId}
+        newCategoryTypeId={tx.kind === 'transfer' ? transferTypeId : null}
       />
+      {tx.kind === 'transfer' && categories.length === 0 ? (
+        <Text style={styles.hint}>Для переводов нужна категория с типом «Переводы» — создайте её.</Text>
+      ) : null}
 
       {tx.merchant_key ? (
         <View style={styles.switchRow}>
@@ -82,6 +103,10 @@ export default function TransactionDetail({ route, navigation }: Props) {
           <Text style={styles.sms} selectable>{tx.raw_sms}</Text>
         </>
       ) : null}
+
+      <TouchableOpacity style={styles.delete} disabled={saving} onPress={confirmDelete}>
+        <Text style={styles.deleteText}>Удалить транзакцию</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -99,5 +124,8 @@ const styles = StyleSheet.create({
   switchLabel: { flex: 1, fontSize: 14, color: colors.text, marginRight: 12 },
   clear: { marginTop: 16, alignSelf: 'flex-start' },
   clearText: { fontSize: 15, color: colors.warn },
+  hint: { fontSize: 13, color: colors.muted, marginTop: 8 },
+  delete: { marginTop: 32, alignSelf: 'flex-start' },
+  deleteText: { fontSize: 15, color: colors.danger },
   sms: { fontSize: 13, color: colors.muted, backgroundColor: colors.surface, padding: 12, borderRadius: 8 },
 });

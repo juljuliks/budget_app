@@ -6,6 +6,8 @@ import { makeTransaction } from './transaction';
 
 export function openDatabase(name = 'app.db'): Db {
   const conn = open({ name });
+  // Explicitly off (SQLite default) to match the Node driver; see driver.ts
+  conn.execute('PRAGMA foreign_keys = OFF');
   const run = async (sql: string, params: SqlParam[] = []) => {
     const res = await conn.executeAsync(sql, params);
     return { changes: res.rowsAffected, lastInsertRowid: res.insertId ?? 0 };

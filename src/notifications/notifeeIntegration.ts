@@ -1,6 +1,7 @@
 // Helper integration points for notifee notifications.
 import notifee, { AndroidImportance } from '@notifee/react-native';
 import { buildCategorySuggestions } from './notifyHelper';
+import { categoryLabel } from '../db/categories';
 import { getDb } from '../db';
 import { assignCategory } from '../assign';
 import { navigateWhenReady } from '../navigation';
@@ -18,7 +19,7 @@ export async function showUncategorizedTransactionNotification(txId: number) {
 
   const suggestions = await buildCategorySuggestions(tx.kind, MAX_ACTIONS - 1);
   const actions: Array<{ title: string; pressAction: { id: string; launchActivity?: string } }> = suggestions.map((s) => ({
-    title: `${s.emoji || ''} ${s.name}`.trim(),
+    title: categoryLabel(s),
     pressAction: { id: `suggest_${s.id}` },
   }));
   // opens the app on the category editor

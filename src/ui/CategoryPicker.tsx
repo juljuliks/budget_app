@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import type { Category } from '../db/categories';
+import { Category, categoryLabel } from '../db/categories';
 import { useRootNavigation } from '../navigation';
 import { colors } from './theme';
 
@@ -11,10 +11,12 @@ type Props = {
   disabled?: boolean;
   /** passed to the category editor so a newly created category is assigned to this transaction */
   txId?: number;
+  /** preselected type for a category created from here (transfer type for transfers) */
+  newCategoryTypeId?: number | null;
 };
 
-/** Category chips + "new category" + "manage categories". */
-export default function CategoryPicker({ categories, selectedId, onSelect, disabled, txId }: Props) {
+/** Category chips + "new category". */
+export default function CategoryPicker({ categories, selectedId, onSelect, disabled, txId, newCategoryTypeId }: Props) {
   const navigation = useRootNavigation();
   return (
     <View style={styles.chips}>
@@ -27,23 +29,16 @@ export default function CategoryPicker({ categories, selectedId, onSelect, disab
             disabled={disabled}
             onPress={() => onSelect(c.id)}
           >
-            <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{`${c.emoji || ''} ${c.name}`.trim()}</Text>
+            <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{categoryLabel(c)}</Text>
           </TouchableOpacity>
         );
       })}
       <TouchableOpacity
         style={[styles.chip, styles.chipAction]}
         disabled={disabled}
-        onPress={() => navigation.navigate('CategoryEdit', { txId })}
+        onPress={() => navigation.navigate('CategoryEdit', { txId, typeId: newCategoryTypeId ?? undefined })}
       >
         <Text style={styles.chipActionText}>＋ Новая категория</Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={[styles.chip, styles.chipAction]}
-        disabled={disabled}
-        onPress={() => navigation.navigate('Categories')}
-      >
-        <Text style={styles.chipActionText}>⚙︎ Управление категориями</Text>
       </TouchableOpacity>
     </View>
   );

@@ -3,6 +3,7 @@ import { ActivityIndicator, SectionList, StyleSheet, Text, TouchableOpacity, Vie
 import { useFocusEffect } from '@react-navigation/native';
 import { listTransactionsPage, PageCursor, TransactionRow } from '../db/transactions';
 import { onTransactionsChanged } from '../events';
+import { categoryLabel } from '../db/categories';
 import { useRootNavigation } from '../navigation';
 import { dayKey, formatAmount, formatDay, formatTime, isIncome } from './format';
 import { colors } from './theme';
@@ -94,7 +95,7 @@ export default function TransactionsList() {
               <Text style={styles.merchant} numberOfLines={1}>{item.raw_merchant || 'Без мерчанта'}</Text>
               {item.category_id ? (
                 <Text style={styles.category} numberOfLines={1}>
-                  {`${item.category_emoji || ''} ${item.category_name}`.trim()} · {formatTime(item.occurred_at)}
+                  {categoryLabel({ emoji: item.category_emoji, name: item.category_name!, type_name: item.category_type_name })} · {formatTime(item.occurred_at)}
                 </Text>
               ) : (
                 <View style={styles.inline}>

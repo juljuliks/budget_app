@@ -7,7 +7,7 @@ import {
   addPlanItem, currentYm, ensureMonthPlan, listPlan, monthRange, monthStats, planHistory, removePlanItem,
   setPlanAmount, setPlanPinned, ymOf,
 } from '../src/db/plans';
-import { createCategory, deleteCategory, setCategoryArchived } from '../src/db/categories';
+import { createCategory, deleteCategory } from '../src/db/categories';
 import { addManualTransaction } from '../src/db/transactions';
 import { freshDb } from './helpers';
 
@@ -67,10 +67,12 @@ describe('carry-over', () => {
     expect(brief(await listPlan(M1))).toEqual([{ id: 1, limit: 100, pinned: true, prev: null }]);
   });
 
-  test('archived categories are not carried over', async () => {
+  test('deleted categories are not carried over', async () => {
     await addPlanItem(M1, 1); await setPlanPinned(M1, 1, true); await setPlanAmount(M1, 1, 100);
-    await setCategoryArchived(1, true);
+    await deleteCategory(1, null, M2);
     expect(await listPlan(M2)).toEqual([]);
+    // the earlier month keeps it
+    expect(brief(await listPlan(M1))).toEqual([{ id: 1, limit: 100, pinned: true, prev: null }]);
   });
 
   test('past months are never auto-initialized', async () => {
@@ -80,10 +82,10 @@ describe('carry-over', () => {
     expect(await db.get("SELECT * FROM plan_months WHERE ym = '2098-06'")).toBeUndefined();
   });
 
-  test('deleting a category removes its plan items', async () => {
+  test('deleting a category removes its plan items from the current month on', async () => {
     const id = await createCategory('Спорт');
     await addPlanItem(M1, id);
-    await deleteCategory(id);
+    await deleteCategory(id, null, M1);
     expect(await listPlan(M1)).toEqual([]);
   });
 });

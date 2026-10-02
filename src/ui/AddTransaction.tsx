@@ -7,6 +7,7 @@ import { addManualTransaction } from '../db/transactions';
 import { emitTransactionsChanged } from '../events';
 import type { RootStackParamList } from '../navigation';
 import CategoryPicker from './CategoryPicker';
+import SectionHeading from './SectionHeading';
 import { parseAmountInput } from './money';
 import { colors } from './theme';
 
@@ -91,7 +92,7 @@ export default function AddTransaction({ navigation }: Props) {
         onChange={(v) => setDay(v as Day)}
       />
 
-      <Text style={styles.label}>Категория</Text>
+      <SectionHeading title="Категория" onSettings={() => navigation.navigate('Categories')} settingsLabel="Управление категориями" />
       <CategoryPicker
         categories={categories}
         selectedId={categoryId}

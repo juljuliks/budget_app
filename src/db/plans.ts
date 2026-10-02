@@ -27,7 +27,8 @@ export type PlanItem = {
   category_id: number;
   name: string;
   emoji: string | null;
-  is_archived: number;
+  type_id: number | null;
+  type_name: string | null;
   /** 0 = amount not set yet this month */
   limit_minor: number;
   pinned: boolean;
@@ -51,7 +52,7 @@ export async function ensureMonthPlan(ym: string, nowYm = currentYm()): Promise<
         `INSERT OR IGNORE INTO plan_items (ym, category_id, limit_minor, pinned)
           SELECT ?, p.category_id, CASE WHEN p.pinned = 1 THEN p.limit_minor ELSE 0 END, p.pinned
           FROM plan_items p JOIN categories c ON c.id = p.category_id
-          WHERE p.ym = ? AND c.is_archived = 0`,
+          WHERE p.ym = ? AND c.deleted_at IS NULL`,
         [ym, source.ym]);
     }
     await db.run('INSERT OR IGNORE INTO plan_months (ym) VALUES (?)', [ym]);
@@ -67,11 +68,13 @@ export async function listPlan(ym: string): Promise<PlanItem[]> {
   const db = await getDb();
   const prev = await db.get<{ ym: string }>('SELECT ym FROM plan_months WHERE ym < ? ORDER BY ym DESC LIMIT 1', [ym]);
   const rows = await db.all<Omit<PlanItem, 'pinned'> & { pinned: number }>(
-    `SELECT p.category_id, c.name, c.emoji, c.is_archived, p.limit_minor, p.pinned,
+    `SELECT p.category_id, c.name, c.emoji, c.type_id, ct.name AS type_name, p.limit_minor, p.pinned,
         (SELECT q.limit_minor FROM plan_items q WHERE q.ym = ? AND q.category_id = p.category_id) AS previous_minor
-      FROM plan_items p JOIN categories c ON c.id = p.category_id
+      FROM plan_items p
+      JOIN categories c ON c.id = p.category_id
+      LEFT JOIN category_types ct ON ct.id = c.type_id
       WHERE p.ym = ?
-      ORDER BY c.sort_order, c.name`,
+      ORDER BY ct.id IS NULL, ct.sort_order, ct.name, c.sort_order, c.name`,
     [prev?.ym ?? '', ym]);
   return rows.map((r) => ({ ...r, pinned: r.pinned === 1, previous_minor: r.previous_minor || null }));
 }
@@ -114,6 +117,8 @@ export type CategoryStat = {
   category_id: number | null; // null = uncategorized
   name: string;
   emoji: string | null;
+  type_id: number | null;
+  type_name: string | null;
   spent_minor: number;
   /** null = no plan (or amount not set) for this category this month */
   limit_minor: number | null;
@@ -121,8 +126,35 @@ export type CategoryStat = {
   color_rank: number;
 };
 
+export type StatGroup = {
+  /** null: categories without a type, then "Без категории" */
+  type_id: number | null;
+  title: string;
+  spent_minor: number;
+  planned_minor: number;
+  categories: CategoryStat[];
+};
+
+/** Sections for the stats list: types in their order, untyped categories last, uncategorized at the very end. */
+export function groupByType(categories: CategoryStat[], types: Array<{ id: number; name: string }>): StatGroup[] {
+  const groups: StatGroup[] = [];
+  const add = (type_id: number | null, title: string, cats: CategoryStat[]) => {
+    if (cats.length === 0) return;
+    groups.push({
+      type_id, title, categories: cats,
+      spent_minor: cats.reduce((s, c) => s + c.spent_minor, 0),
+      planned_minor: cats.reduce((s, c) => s + (c.limit_minor ?? 0), 0),
+    });
+  };
+  for (const t of types) add(t.id, t.name, categories.filter((c) => c.type_id === t.id));
+  add(null, 'Без типа', categories.filter((c) => c.type_id === null && c.category_id !== null));
+  add(null, 'Без категории', categories.filter((c) => c.category_id === null));
+  return groups;
+}
+
 export type MonthStats = {
   ym: string;
+  groups: StatGroup[];
   spent_minor: number;
   planned_minor: number;
   categories: CategoryStat[];
@@ -149,9 +181,11 @@ export async function monthStats(year: number, month: number): Promise<MonthStat
       GROUP BY t.category_id ORDER BY ${SPEND_EXPR} DESC, t.category_id`, [BUDGET_CURRENCY]);
   const rankOf = new Map(ranks.map((r, i) => [r.category_id, i]));
 
-  const cats = await db.all<{ id: number; name: string; emoji: string | null; limit_minor: number | null }>(
-    `SELECT c.id, c.name, c.emoji, p.limit_minor
-      FROM categories c LEFT JOIN plan_items p ON p.category_id = c.id AND p.ym = ?`, [ym]);
+  const cats = await db.all<{ id: number; name: string; emoji: string | null; type_id: number | null; type_name: string | null; limit_minor: number | null }>(
+    `SELECT c.id, c.name, c.emoji, c.type_id, ct.name AS type_name, p.limit_minor
+      FROM categories c
+      LEFT JOIN category_types ct ON ct.id = c.type_id
+      LEFT JOIN plan_items p ON p.category_id = c.id AND p.ym = ?`, [ym]);
 
   const categories: CategoryStat[] = [];
   for (const c of cats) {
@@ -159,13 +193,16 @@ export async function monthStats(year: number, month: number): Promise<MonthStat
     const limit = c.limit_minor ? c.limit_minor : null;
     if (s === 0 && limit === null) continue;
     categories.push({
-      category_id: c.id, name: c.name, emoji: c.emoji, spent_minor: s, limit_minor: limit,
+      category_id: c.id, name: c.name, emoji: c.emoji, type_id: c.type_id, type_name: c.type_name, spent_minor: s, limit_minor: limit,
       color_rank: rankOf.get(c.id) ?? Number.MAX_SAFE_INTEGER,
     });
   }
   const uncategorized = spentBy.get(null) ?? 0;
   if (uncategorized !== 0) {
-    categories.push({ category_id: null, name: 'Без категории', emoji: null, spent_minor: uncategorized, limit_minor: null, color_rank: Number.MAX_SAFE_INTEGER });
+    categories.push({
+      category_id: null, name: 'Без категории', emoji: null, type_id: null, type_name: null,
+      spent_minor: uncategorized, limit_minor: null, color_rank: Number.MAX_SAFE_INTEGER,
+    });
   }
   categories.sort((a, b) => b.spent_minor - a.spent_minor || (b.limit_minor ?? 0) - (a.limit_minor ?? 0));
 
@@ -174,8 +211,11 @@ export async function monthStats(year: number, month: number): Promise<MonthStat
       WHERE t.occurred_at >= ? AND t.occurred_at < ? AND t.currency != ?
       GROUP BY t.currency HAVING spent_minor != 0`, [from, to, BUDGET_CURRENCY]);
 
+  const types = await db.all<{ id: number; name: string }>('SELECT id, name FROM category_types ORDER BY sort_order, name');
+
   return {
     ym,
+    groups: groupByType(categories, types),
     spent_minor: categories.reduce((sum, c) => sum + c.spent_minor, 0),
     planned_minor: categories.reduce((sum, c) => sum + (c.limit_minor ?? 0), 0),
     categories,

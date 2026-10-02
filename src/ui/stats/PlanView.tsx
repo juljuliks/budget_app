@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Category, listCategories } from '../../db/categories';
+import { Category, categoryLabel, listCategories } from '../../db/categories';
 import {
   addPlanItem, BUDGET_CURRENCY, listPlan, PlanItem, removePlanItem, setPlanAmount, setPlanPinned,
 } from '../../db/plans';
@@ -78,9 +78,7 @@ export default function PlanView({ ym }: { ym: string }) {
           >
             <PinIcon color={item.pinned ? colors.accent : colors.muted} filled={item.pinned} />
           </TouchableOpacity>
-          <Text style={[styles.name, item.is_archived ? styles.muted : null]} numberOfLines={1}>
-            {`${item.emoji || ''} ${item.name}`.trim()}
-          </Text>
+          <Text style={styles.name} numberOfLines={1}>{categoryLabel(item)}</Text>
           <TextInput
             style={styles.input}
             value={drafts.get(item.category_id) ?? ''}
@@ -105,7 +103,7 @@ export default function PlanView({ ym }: { ym: string }) {
           <View style={styles.chips}>
             {available.map((c) => (
               <TouchableOpacity key={c.id} style={styles.chip} onPress={() => { setAdding(false); run(addPlanItem(ym, c.id)); }}>
-                <Text style={styles.chipText}>{`${c.emoji || ''} ${c.name}`.trim()}</Text>
+                <Text style={styles.chipText}>{categoryLabel(c)}</Text>
               </TouchableOpacity>
             ))}
             <TouchableOpacity style={[styles.chip, styles.chipCancel]} onPress={() => setAdding(false)}>
@@ -135,7 +133,6 @@ const styles = StyleSheet.create({
   },
   pin: { paddingRight: 8 },
   name: { flex: 1, fontSize: 15, color: colors.text, marginRight: 8 },
-  muted: { color: colors.muted },
   input: {
     width: 100, fontSize: 16, color: colors.text, textAlign: 'right', fontVariant: ['tabular-nums'],
     borderWidth: 1, borderColor: colors.border, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6,
