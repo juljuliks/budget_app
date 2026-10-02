@@ -23,7 +23,9 @@ This document outlines the remaining work to finish the privacy-first SMS transa
   - [x] `assembleDebug` with quick-sqlite verified (needs NDK 23.1.7779620 + CMake 3.22.1)
 - Notifee notifications + action buttons
   - [x] Show top category suggestions in notification
-  - [x] "Create new category" action opens the app on the CreateCategory screen; tapping the body opens the transaction
+  - [x] "Create new category" action opens the app on the category editor; tapping the body opens the transaction
+  - [x] Android shows max 3 action buttons: 2 suggestions + "➕ Новая категория" (always present)
+  - [x] Money transfers: notification suggests only transfer-type categories; the in-app picker shows all, transfer ones first
   - [x] Handle action presses in JS and persist assignments (+ exact rule + backfill that keeps manual choices)
 - Permissions & device testing
   - [x] Runtime permissions (`RECEIVE_SMS`, `POST_NOTIFICATIONS`) requested on app start (`src/permissions.ts`); `READ_SMS` removed as unused
@@ -38,14 +40,41 @@ This document outlines the remaining work to finish the privacy-first SMS transa
   - [x] List: all transactions, keyset pagination by 50, day headers, pull-to-refresh, live refresh on new SMS
   - [x] Detail: category chips, "remember for merchant" toggle (rule + backfill), clear category, raw SMS
   - [x] Create category screen (from detail or notification), assigns it to the transaction
-  - [ ] Filter: uncategorized only / by month
-- Budget planning — separate tab (see section below)
+  - [x] Category management (gear next to "Категория"): list grouped by type, ✎ edit, 🗑 delete
+  - [x] Delete = soft delete: this month's transactions move to a chosen category (rules follow), past months keep the old one
+  - [x] Category types ("Хобби: Гитара"), optional; types screen (gear next to "Тип"); "Переводы" is the system transfer type
+  - [x] Delete a transaction
+  - [ ] Rename applies to all months (ask if past months should keep the old name)
+  - [x] Add transaction manually (amount, income/expense, description, today/yesterday, category)
+  - [x] Search by SMS text, merchant / description, category and type (Cyrillic case-insensitive, ё = е); edit / delete icons on results
+  - [x] Multi-select ("Выбрать несколько") -> bulk change category (existing categories, no merchant rules)
+  - [x] Tap a category in Статистика / История -> Transactions with the search prefilled
+  - [x] Read state: unread = never opened and uncategorized; blue dot in the list, count badge on the tab
+  - [x] Filter modes: По тексту / По категории (categories that have transactions, with counts) / По дате (day or period calendar)
+  - [x] "Выбрать все" selects everything shown; "Редактировать" in the tab header; "+" hidden while a filter is active
+  - [ ] Combine filters (e.g. category + period)
+  - [ ] Edit / delete a manual transaction; arbitrary date picker
+- [x] Bottom tabs: Статистика / Транзакции; inside Статистика: Статистика | План | История (see section below)
 - Merchant rules UI: create/edit/list and backfill
 - Backup/export & import (JSON/CSV via SAF)
 - Locale strings (en/ka/ru)
 - Category usage analytics (local only) and suggestions
 
-## Budget Planning (separate tab)
+## Budget Planning (Статистика tab: Статистика | План | История) — v2 done
+Done:
+- Per-month plan (`plan_months`, `plan_items`, migration 3; the old standing plan became pinned items of the current month)
+- A new month starts from the latest planned month: 📌 pinned items keep their amount, others come with an empty
+  amount (last month's shown as a hint), removed items don't carry over; past months are never auto-created
+- Plan can be prepared one month ahead
+- Stats: month switcher, donut with total spent in the center, plan / remaining, per-category progress bars,
+  grouped by category type with section titles (also in История details)
+- История: every month plan vs spent (+ meter), expand -> per category plan vs fact
+- Amount to distribute per month (`plan_months.budget_minor`, migration 6; carries over): the plan can't exceed it,
+  categories show their share in %, the rest is "Свободно"; amounts are edited via ✎ → input dialog
+- История: "Сумма / Не распределено / Сохранено" (amount − spent) for months with an amount set
+Remaining: tap a category -> its transactions for the month; over-limit notifications; salary-day month start (if needed).
+
+Original spec:
 Goal: set a monthly target amount per category and see at a glance which categories are over their limit.
 
 - Navigation: bottom tabs (`@react-navigation/bottom-tabs` 6.x) — "Транзакции" (current stack) and "Бюджет"

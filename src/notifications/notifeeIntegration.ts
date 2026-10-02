@@ -1,31 +1,34 @@
 // Helper integration points for notifee notifications.
 import notifee, { AndroidImportance } from '@notifee/react-native';
 import { buildCategorySuggestions } from './notifyHelper';
+import { categoryLabel } from '../db/categories';
 import { getDb } from '../db';
 import { assignCategory } from '../assign';
 import { navigateWhenReady } from '../navigation';
 
 export const CHANNEL_ID = 'transactions';
 export const CREATE_CATEGORY_ACTION = 'create_new';
+// Android shows at most 3 action buttons; the last one is always "new category"
+const MAX_ACTIONS = 3;
 
 export async function showUncategorizedTransactionNotification(txId: number) {
   const db = await getDb();
-  const tx = await db.get<{ amount_minor: number; currency: string; raw_merchant: string | null; merchant_key: string | null }>(
-    'SELECT amount_minor, currency, raw_merchant, merchant_key FROM transactions WHERE id = ? AND category_id IS NULL', [txId]);
+  const tx = await db.get<{ kind: string; amount_minor: number; currency: string; raw_merchant: string | null; merchant_key: string | null }>(
+    'SELECT kind, amount_minor, currency, raw_merchant, merchant_key FROM transactions WHERE id = ? AND category_id IS NULL', [txId]);
   if (!tx) return;
 
-  const suggestions = await buildCategorySuggestions(3);
+  const suggestions = await buildCategorySuggestions(tx.kind, MAX_ACTIONS - 1);
   const actions: Array<{ title: string; pressAction: { id: string; launchActivity?: string } }> = suggestions.map((s) => ({
-    title: `${s.emoji || ''} ${s.name}`.trim(),
+    title: categoryLabel(s),
     pressAction: { id: `suggest_${s.id}` },
   }));
-  // opens the app on the CreateCategory screen
-  actions.push({ title: 'Создать категорию…', pressAction: { id: CREATE_CATEGORY_ACTION, launchActivity: 'default' } });
+  // opens the app on the category editor
+  actions.push({ title: '➕ Новая категория', pressAction: { id: CREATE_CATEGORY_ACTION, launchActivity: 'default' } });
 
   await notifee.displayNotification({
     // one notification per transaction; re-showing replaces instead of stacking
     id: `tx_${txId}`,
-    title: `Новая транзакция — ${(tx.amount_minor / 100).toFixed(2)} ${tx.currency}`,
+    title: `${tx.kind === 'transfer' ? 'Перевод' : 'Новая транзакция'} — ${(tx.amount_minor / 100).toFixed(2)} ${tx.currency}`,
     body: tx.raw_merchant || 'Без мерчанта',
     android: {
       channelId: CHANNEL_ID,
@@ -53,7 +56,7 @@ export async function handleNotificationAction(event: ActionEvent) {
   if (id.startsWith('suggest_')) {
     await assignCategory(txId, Number(id.slice('suggest_'.length)));
   } else if (id === CREATE_CATEGORY_ACTION) {
-    navigateWhenReady({ name: 'CreateCategory', params: { txId } });
+    navigateWhenReady({ name: 'CategoryEdit', params: { txId } });
   } else if (id === 'default') {
     navigateWhenReady({ name: 'TransactionDetail', params: { txId } });
     return; // keep the notification until a category is chosen

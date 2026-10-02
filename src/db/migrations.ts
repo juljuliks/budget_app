@@ -57,6 +57,75 @@ export const MIGRATIONS: string[][] = [
       ('Переводы', '🔁', 11),
       ('Другое', '🔖', 99)`,
   ],
+  // 2: monthly spending plan per category. One standing amount, applies to every month.
+  [
+    `CREATE TABLE IF NOT EXISTS budgets (
+      category_id INTEGER PRIMARY KEY,
+      limit_minor INTEGER NOT NULL CHECK (limit_minor > 0),
+      currency TEXT NOT NULL DEFAULT 'GEL',
+      FOREIGN KEY(category_id) REFERENCES categories(id) ON DELETE CASCADE
+    )`,
+  ],
+  // 3: per-month plan replaces the standing one. Standing amounts become pinned items of the
+  // current month, so they keep carrying over.
+  [
+    'CREATE TABLE IF NOT EXISTS plan_months (ym TEXT PRIMARY KEY)',
+    `CREATE TABLE IF NOT EXISTS plan_items (
+      ym TEXT NOT NULL,
+      category_id INTEGER NOT NULL,
+      limit_minor INTEGER NOT NULL DEFAULT 0 CHECK (limit_minor >= 0),
+      pinned INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (ym, category_id),
+      FOREIGN KEY(category_id) REFERENCES categories(id) ON DELETE CASCADE
+    )`,
+    `INSERT OR IGNORE INTO plan_months (ym)
+      SELECT strftime('%Y-%m', 'now', 'localtime') WHERE EXISTS (SELECT 1 FROM budgets)`,
+    `INSERT OR IGNORE INTO plan_items (ym, category_id, limit_minor, pinned)
+      SELECT strftime('%Y-%m', 'now', 'localtime'), category_id, limit_minor, 1 FROM budgets`,
+    'DROP TABLE budgets',
+  ],
+  // 4: category types ("Переводы: Маме") and soft delete (past months keep the category).
+  // categories is rebuilt to drop UNIQUE(name): the same name may exist under different types
+  // or as a deleted category; uniqueness among live categories is checked in the app.
+  [
+    `CREATE TABLE IF NOT EXISTS category_types (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL,
+      is_transfer INTEGER NOT NULL DEFAULT 0,
+      sort_order INTEGER NOT NULL DEFAULT 0
+    )`,
+    "INSERT INTO category_types (name, is_transfer, sort_order) VALUES ('Переводы', 1, 100)",
+    `CREATE TABLE categories_new (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL,
+      emoji TEXT,
+      sort_order INTEGER DEFAULT 0,
+      is_archived INTEGER DEFAULT 0,
+      type_id INTEGER REFERENCES category_types(id),
+      deleted_at INTEGER
+    )`,
+    'INSERT INTO categories_new (id, name, emoji, sort_order, is_archived) SELECT id, name, emoji, sort_order, is_archived FROM categories',
+    'DROP TABLE categories',
+    'ALTER TABLE categories_new RENAME TO categories',
+    // LIKE only folds ASCII case, hence both spellings
+    `UPDATE categories SET type_id = (SELECT id FROM category_types WHERE is_transfer = 1)
+      WHERE name LIKE 'Перевод%' OR name LIKE 'перевод%' OR name LIKE 'ПЕРЕВОД%'`,
+    // the seeded "Переводы" would read "Переводы: Переводы" with its new type prefix
+    `UPDATE categories SET name = 'Прочие'
+      WHERE name = 'Переводы' AND type_id = (SELECT id FROM category_types WHERE is_transfer = 1)`,
+    // archive is replaced by soft delete
+    "UPDATE categories SET deleted_at = CAST(strftime('%s', 'now') AS INTEGER) WHERE is_archived = 1",
+  ],
+  // 5: read state. NULL = not opened yet (blue dot, tab badge). Everything already stored counts as
+  // read, so the badge starts at zero instead of the whole backlog.
+  [
+    'ALTER TABLE transactions ADD COLUMN seen_at INTEGER',
+    "UPDATE transactions SET seen_at = CAST(strftime('%s', 'now') AS INTEGER)",
+  ],
+  // 6: the amount a month's plan distributes (e.g. salary). NULL = not set, the plan is unbounded.
+  [
+    'ALTER TABLE plan_months ADD COLUMN budget_minor INTEGER CHECK (budget_minor >= 0)',
+  ],
 ];
 
 export async function getSchemaVersion(db: Db): Promise<number> {

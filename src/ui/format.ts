@@ -31,3 +31,8 @@ export function formatTime(unixSeconds: number): string {
   const d = new Date(unixSeconds * 1000);
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
+
+/** Row title: merchant from the SMS or the manual description. */
+export function merchantLabel(tx: { raw_merchant: string | null }): string {
+  return tx.raw_merchant || 'Без мерчанта';
+}

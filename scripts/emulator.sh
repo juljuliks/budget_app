@@ -21,9 +21,18 @@ if ! "$ADB" devices | grep -q "^emulator-"; then
   nohup "$SDK/emulator/emulator" -avd "$AVD_NAME" -no-snapshot-save -no-boot-anim >/tmp/budget_emulator.log 2>&1 &
 fi
 
-echo "Waiting for boot..."
-"$ADB" wait-for-device
-until [ "$("$ADB" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ]; do sleep 2; done
+# Always address the emulator by serial: a phone plugged in over USB must never be touched
+# (the reinstall fallback below wipes app data).
+echo "Waiting for emulator..."
+SERIAL=""
+until [ -n "$SERIAL" ]; do
+  SERIAL="$("$ADB" devices | awk '/^emulator-/{print $1; exit}')"
+  [ -n "$SERIAL" ] || sleep 2
+done
+ADB_EMU=("$ADB" -s "$SERIAL")
+"${ADB_EMU[@]}" wait-for-device
+until [ "$("${ADB_EMU[@]}" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ]; do sleep 2; done
+echo "Emulator $SERIAL booted."
 
 cd "$ROOT_DIR/android"
 if [ "$VARIANT" = "release" ]; then
@@ -32,16 +41,16 @@ if [ "$VARIANT" = "release" ]; then
 else
   ./gradlew assembleDebug -q -PreactNativeArchitectures=arm64-v8a
   APK=app/build/outputs/apk/debug/app-debug.apk
-  "$ADB" reverse tcp:8081 tcp:8081
+  "${ADB_EMU[@]}" reverse tcp:8081 tcp:8081
 fi
 
 # debug and release are signed with different keys and can't replace each other
-if ! "$ADB" install -r "$APK"; then
+if ! "${ADB_EMU[@]}" install -r "$APK"; then
   echo "Install failed (signature mismatch?). Reinstalling — this wipes the app's data on the emulator."
-  "$ADB" uninstall com.budgetapp || true
-  "$ADB" install "$APK"
+  "${ADB_EMU[@]}" uninstall com.budgetapp || true
+  "${ADB_EMU[@]}" install "$APK"
 fi
-"$ADB" shell pm grant com.budgetapp android.permission.RECEIVE_SMS || true
-"$ADB" shell pm grant com.budgetapp android.permission.POST_NOTIFICATIONS || true
-"$ADB" shell monkey -p com.budgetapp -c android.intent.category.LAUNCHER 1 >/dev/null
-echo "App started. Send test SMS with: ./scripts/send_test_sms.sh"
+"${ADB_EMU[@]}" shell pm grant com.budgetapp android.permission.RECEIVE_SMS || true
+"${ADB_EMU[@]}" shell pm grant com.budgetapp android.permission.POST_NOTIFICATIONS || true
+"${ADB_EMU[@]}" shell monkey -p com.budgetapp -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
+echo "App started on $SERIAL."

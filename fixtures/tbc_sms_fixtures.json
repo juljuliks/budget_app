@@ -128,5 +128,22 @@
       "counterparty": "MC GOLD",
       "occurred_at": "2026-09-28T00:00:00"
     }
+  },
+  {
+    "id": "tbc-010",
+    "sender": "TBC SMS",
+    "raw_sms": "Money Transfer:\n1.00 GEL\nMC GOLD\n02/10/2026",
+    "masked": true,
+    "expected_parsed": {
+      "bank": "tbc",
+      "kind": "transfer",
+      "amount_minor": 100,
+      "currency": "GEL",
+      "raw_merchant": "MC GOLD",
+      "merchant_key": "MC GOLD",
+      "counterparty": "MC GOLD",
+      "occurred_at": "2026-10-02T00:00:00"
+    },
+    "notes": "Real SMS (2026-10-02): amount on its own line after 'Money Transfer:'"
   }
 ]
