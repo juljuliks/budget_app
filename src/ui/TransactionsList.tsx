@@ -165,12 +165,13 @@ export default function TransactionsList() {
     return out;
   }, [data]);
 
+  // selection lives inside edit mode
   function toggleSelectMode() {
     setSelectMode((on) => !on);
-    setEditMode(false);
     setSelected(new Set());
   }
 
+  // "Готово" leaves edit mode together with any selection
   function toggleEditMode() {
     setEditMode((on) => !on);
     setSelectMode(false);
@@ -180,7 +181,6 @@ export default function TransactionsList() {
   // everything currently in the list (filtered results, or the loaded part of the feed)
   const allSelected = selectMode && data.length > 0 && data.every((r) => selected.has(r.id));
   function toggleSelectAll() {
-    setEditMode(false);
     if (allSelected) {
       setSelected(new Set());
     } else {
@@ -348,17 +348,19 @@ export default function TransactionsList() {
           </View>
         ) : null}
 
-        <View style={styles.toolbar}>
-          <TouchableOpacity style={styles.selectToggle} onPress={toggleSelectMode} accessibilityRole="checkbox" accessibilityState={{ checked: selectMode }}>
-            <Checkbox checked={selectMode} size={20} />
-            <Text style={styles.selectLabel}>Выбрать несколько</Text>
-            {selectMode && selected.size > 0 ? <Text style={styles.selectCount}>({selected.size})</Text> : null}
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.selectToggle} onPress={toggleSelectAll} accessibilityRole="checkbox" accessibilityState={{ checked: allSelected }}>
-            <Checkbox checked={allSelected} size={20} />
-            <Text style={styles.selectLabel}>Выбрать все</Text>
-          </TouchableOpacity>
-        </View>
+        {editMode ? (
+          <View style={styles.toolbar}>
+            <TouchableOpacity style={styles.selectToggle} onPress={toggleSelectMode} accessibilityRole="checkbox" accessibilityState={{ checked: selectMode }}>
+              <Checkbox checked={selectMode} size={20} />
+              <Text style={styles.selectLabel}>Выбрать несколько</Text>
+              {selectMode && selected.size > 0 ? <Text style={styles.selectCount}>({selected.size})</Text> : null}
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.selectToggle} onPress={toggleSelectAll} accessibilityRole="checkbox" accessibilityState={{ checked: allSelected }}>
+              <Checkbox checked={allSelected} size={20} />
+              <Text style={styles.selectLabel}>Выбрать все</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
       </View>
 
       <SectionList
@@ -435,7 +437,7 @@ export default function TransactionsList() {
             </TouchableOpacity>
           </View>
         ) : null
-      ) : filterActive ? null : (
+      ) : filterActive || editMode ? null : (
         <TouchableOpacity
           style={styles.fab}
           onPress={() => navigation.navigate('AddTransaction')}
