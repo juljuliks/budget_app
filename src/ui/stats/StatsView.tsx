@@ -1,6 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { categorySearchQuery } from '../../db/transactions';
+import type { TabParamList } from '../../navigation';
 import { BUDGET_CURRENCY, CategoryStat, monthStats, MonthStats } from '../../db/plans';
 import { onTransactionsChanged } from '../../events';
 import Donut, { DonutSegment } from '../Donut';
@@ -99,13 +102,17 @@ function SummaryItem({ label, value, danger }: { label: string; value: string; d
 }
 
 function CategoryRow({ stat }: { stat: CategoryStat }) {
+  const navigation = useNavigation<BottomTabNavigationProp<TabParamList>>();
   const { spent_minor: spent, limit_minor: limit } = stat;
   const dot = stat.category_id !== null && stat.color_rank < chart.series.length ? seriesColor(stat.color_rank) : chart.other;
   const ratio = limit ? spent / limit : 0;
   const fill = ratio > 1 ? chart.critical : ratio >= 0.8 ? chart.warning : chart.meterFill;
 
+  // tap: the category's transactions (search prefilled)
+  const open = () => navigation.navigate('Transactions', { query: categorySearchQuery(stat), nonce: Date.now() });
+
   return (
-    <View style={styles.row}>
+    <TouchableOpacity style={styles.row} onPress={open} accessibilityHint="Показать транзакции категории">
       <View style={styles.rowTop}>
         <View style={[styles.dot, { backgroundColor: dot }]} />
         <Text style={styles.rowName} numberOfLines={1}>{`${stat.emoji || ''} ${stat.name}`.trim()}</Text>
@@ -125,7 +132,7 @@ function CategoryRow({ stat }: { stat: CategoryStat }) {
           </Text>
         </>
       ) : null}
-    </View>
+    </TouchableOpacity>
   );
 }
 

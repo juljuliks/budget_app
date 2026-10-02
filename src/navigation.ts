@@ -3,7 +3,8 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 export type TabParamList = {
   Stats: undefined;
-  Transactions: undefined;
+  /** query: prefill the search (nonce makes the same query apply again) */
+  Transactions: { query?: string; nonce?: number } | undefined;
 };
 
 /** Screens pushed over the tab bar. */

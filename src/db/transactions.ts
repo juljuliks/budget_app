@@ -51,6 +51,14 @@ export function normalizeForSearch(s: string): string {
 }
 
 const SEARCH_LIMIT = 500;
+/** uncategorized transactions match this phrase (what the UI calls them) */
+const UNCATEGORIZED = 'Без категории';
+
+/** Search query that finds a category's transactions (type + name, no ":" so words match). */
+export function categorySearchQuery(c: { name: string; type_name?: string | null; category_id?: number | null }): string {
+  if (c.category_id === null) return UNCATEGORIZED;
+  return [c.type_name, c.name].filter(Boolean).join(' ');
+}
 
 /**
  * Transactions whose SMS text, merchant / description, category or category type contain every
@@ -65,7 +73,8 @@ export async function searchTransactions(query: string, limit = SEARCH_LIMIT): P
   const out: TransactionRow[] = [];
   for (const r of rows) {
     const haystack = normalizeForSearch(
-      [r.raw_sms, r.raw_merchant, r.category_name, r.category_type_name].filter(Boolean).join(' '));
+      [r.raw_sms, r.raw_merchant, r.category_name, r.category_type_name, r.category_id === null ? UNCATEGORIZED : '']
+        .filter(Boolean).join(' '));
     if (words.every((w) => haystack.includes(w))) {
       out.push(r);
       if (out.length >= limit) break;

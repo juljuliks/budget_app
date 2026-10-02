@@ -1,6 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { categorySearchQuery } from '../../db/transactions';
+import type { TabParamList } from '../../navigation';
 import { HistoryMonth, monthStats, MonthStats, parseYm, planHistory } from '../../db/plans';
 import { onTransactionsChanged } from '../../events';
 import { formatMoney } from '../money';
@@ -66,6 +69,8 @@ function MonthRow({ month, expanded, onToggle }: { month: HistoryMonth; expanded
 }
 
 function MonthDetails({ ym }: { ym: string }) {
+  // tap a category: its transactions (search prefilled), same as on the stats screen
+  const navigation = useNavigation<BottomTabNavigationProp<TabParamList>>();
   const [stats, setStats] = useState<MonthStats | null>(null);
   useEffect(() => {
     const { year, month } = parseYm(ym);
@@ -92,13 +97,17 @@ function MonthDetails({ ym }: { ym: string }) {
           {g.categories.map((c) => {
             const over = c.limit_minor !== null && c.spent_minor > c.limit_minor;
             return (
-              <View key={String(c.category_id)} style={styles.detailRow}>
+              <TouchableOpacity
+                key={String(c.category_id)}
+                style={styles.detailRow}
+                onPress={() => navigation.navigate('Transactions', { query: categorySearchQuery(c), nonce: Date.now() })}
+              >
                 <Text style={styles.detailName} numberOfLines={1}>{`${c.emoji || ''} ${c.name}`.trim()}</Text>
                 <Text style={styles.detailNum}>{c.limit_minor ? formatMoney(c.limit_minor, { compact: true }) : '—'}</Text>
                 <Text style={[styles.detailNum, over && styles.danger]}>
                   {over ? '⚠ ' : ''}{formatMoney(c.spent_minor, { compact: true })}
                 </Text>
-              </View>
+              </TouchableOpacity>
             );
           })}
         </View>

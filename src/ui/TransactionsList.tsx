@@ -1,13 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, SectionList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { RouteProp, useFocusEffect, useRoute } from '@react-navigation/native';
 import {
   deleteTransaction, listTransactionsPage, PageCursor, searchTransactions, TransactionRow,
 } from '../db/transactions';
 import { emitTransactionsChanged, onTransactionsChanged } from '../events';
 import { categoryLabel } from '../db/categories';
 import { assignCategoryToMany } from '../assign';
-import { useRootNavigation } from '../navigation';
+import { TabParamList, useRootNavigation } from '../navigation';
 import CategoryPickerModal from './CategoryPickerModal';
 import Checkbox from './Checkbox';
 import { dayKey, formatAmount, formatDay, formatTime, isIncome } from './format';
@@ -34,6 +34,13 @@ export default function TransactionsList() {
   queryRef.current = query;
   const [results, setResults] = useState<TransactionRow[] | null>(null); // null = not searching
   const searchId = useRef(0);
+
+  // opened from the stats screen with a category: prefill the search
+  const route = useRoute<RouteProp<TabParamList, 'Transactions'>>();
+  const { query: incomingQuery, nonce } = route.params ?? {};
+  useEffect(() => {
+    if (incomingQuery !== undefined) setQuery(incomingQuery);
+  }, [incomingQuery, nonce]);
 
   const [selectMode, setSelectMode] = useState(false);
   // shows edit / delete icons on every row; exclusive with selectMode
