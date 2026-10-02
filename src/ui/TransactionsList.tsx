@@ -226,6 +226,13 @@ export default function TransactionsList() {
     if (from) tabNavigation.setParams({ from: undefined });
   }), [tabNavigation, from]);
 
+  // leaving the tab ends edit mode together with any selection
+  useEffect(() => tabNavigation.addListener('blur', () => {
+    setEditMode(false);
+    setSelectMode(false);
+    setSelected(new Set());
+  }), [tabNavigation]);
+
   useLayoutEffect(() => {
     tabNavigation.setOptions({
       headerLeft: from
