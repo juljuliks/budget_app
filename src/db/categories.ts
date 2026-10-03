@@ -1,5 +1,6 @@
 import { getDb } from './index';
 import { currentYm, monthStart } from './plans';
+import { merchantIdSql } from './merchantId';
 
 export type Category = {
   id: number;
@@ -128,8 +129,10 @@ export async function moveTransactionsOutOfCategory(txIds: number[], fromId: num
   const db = await getDb();
   const marks = txIds.map(() => '?').join(',');
   await db.transaction(async () => {
+    // merchant ids: a merchant in a group has the group's category
     const keys = (await db.all<{ k: string }>(
-      `SELECT DISTINCT merchant_key AS k FROM transactions WHERE id IN (${marks}) AND category_id = ? AND merchant_key IS NOT NULL`,
+      `SELECT DISTINCT ${merchantIdSql('transactions')} AS k FROM transactions
+        WHERE id IN (${marks}) AND category_id = ? AND merchant_key IS NOT NULL`,
       [...txIds, fromId])).map((r) => r.k);
     // a rule-picked one keeps following its merchant (whose rule moves along); none = no source
     await db.run(

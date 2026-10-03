@@ -1,4 +1,5 @@
 import { getDb } from './index';
+import { merchantIdSql } from './merchantId';
 
 export type CategorySource = 'user' | 'rule';
 
@@ -90,7 +91,7 @@ export type CategoryFilter = number | 'none';
 
 export type TxFilter = {
   category?: CategoryFilter;
-  /** merchant_key */
+  /** merchant id (merchantId.ts): a merchant_key or a group */
   merchant?: string;
   /** unix seconds, [from, to) */
   from?: number;
@@ -105,7 +106,7 @@ export async function listTransactionsFiltered(f: TxFilter, limit = FILTER_LIMIT
   const params: Array<number | string> = [];
   if (f.category === 'none') where.push('t.category_id IS NULL');
   else if (f.category !== undefined) { where.push('t.category_id = ?'); params.push(f.category); }
-  if (f.merchant !== undefined) { where.push('t.merchant_key = ?'); params.push(f.merchant); }
+  if (f.merchant !== undefined) { where.push(`${merchantIdSql('t')} = ?`); params.push(f.merchant); }
   if (f.from !== undefined) { where.push('t.occurred_at >= ?'); params.push(f.from); }
   if (f.to !== undefined) { where.push('t.occurred_at < ?'); params.push(f.to); }
   const db = await getDb();
@@ -145,16 +146,21 @@ export async function categoriesWithTransactions(): Promise<CategoryWithCount[]>
 
 export type MerchantWithCount = { merchant: string; name: string; count: number };
 
-/** Merchants that have transactions (shops, people of deposits): the most frequent first. */
+/**
+ * Merchants that have transactions (shops, people of deposits), a group as one: the most frequent first.
+ * `merchant` is the merchant id (merchantId.ts).
+ */
 export async function merchantsWithTransactions(): Promise<MerchantWithCount[]> {
   const db = await getDb();
-  // the name as it reads in the newest SMS
-  const rows = await db.all<{ merchant_key: string; name: string | null; n: number }>(
-    `SELECT t.merchant_key, (SELECT raw_merchant FROM transactions x WHERE x.merchant_key = t.merchant_key
-        ORDER BY x.occurred_at DESC LIMIT 1) AS name, count(*) AS n
+  // a group by its name, a merchant by its name in the newest SMS
+  const rows = await db.all<{ mid: string; name: string | null; n: number }>(
+    `SELECT ${merchantIdSql('t')} AS mid, coalesce(
+        (SELECT g.name FROM merchant_group_members gm JOIN merchant_groups g ON g.id = gm.group_id WHERE gm.merchant_key = t.merchant_key),
+        (SELECT raw_merchant FROM transactions x WHERE x.merchant_key = t.merchant_key ORDER BY x.occurred_at DESC LIMIT 1)) AS name,
+        count(*) AS n
       FROM transactions t WHERE t.merchant_key IS NOT NULL
-      GROUP BY t.merchant_key ORDER BY n DESC, name`);
-  return rows.map((r) => ({ merchant: r.merchant_key, name: r.name || r.merchant_key, count: r.n }));
+      GROUP BY mid ORDER BY n DESC, name`);
+  return rows.map((r) => ({ merchant: r.mid, name: r.name || r.mid, count: r.n }));
 }
 
 /** Bulk "change category" from the list: a manual choice ("Без категории" too), so no merchant rules are created. */

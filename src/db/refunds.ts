@@ -1,4 +1,5 @@
 import { getDb } from './index';
+import { merchantIdOf, merchantIdSql } from './merchantId';
 import { REMEMBERABLE_KINDS } from '../types';
 
 /** How far back a refund looks for the purchase it belongs to. */
@@ -43,10 +44,10 @@ export async function refundCandidates(refundId: number): Promise<RefundCandidat
   const db = await getDb();
   const rows = await db.all<Omit<RefundCandidate, 'same_amount'>>(
     `SELECT id, kind, amount_minor, currency, raw_merchant, occurred_at FROM transactions
-      WHERE merchant_key = ? AND currency = ? AND kind IN (${REMEMBERABLE_KINDS.map((k) => `'${k}'`).join(',')})
+      WHERE ${merchantIdSql('transactions')} = ? AND currency = ? AND kind IN (${REMEMBERABLE_KINDS.map((k) => `'${k}'`).join(',')})
         AND occurred_at >= ?
       ORDER BY amount_minor = ? DESC, occurred_at DESC, id DESC`,
-    [refund.merchant_key, refund.currency, refund.occurred_at - REFUND_LOOKBACK_DAYS * 86400, refund.amount_minor]);
+    [await merchantIdOf(refund.merchant_key), refund.currency, refund.occurred_at - REFUND_LOOKBACK_DAYS * 86400, refund.amount_minor]);
   return rows.map((r) => ({ ...r, same_amount: r.amount_minor === refund.amount_minor }));
 }
 

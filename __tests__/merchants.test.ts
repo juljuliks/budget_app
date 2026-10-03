@@ -1,0 +1,119 @@
+jest.mock('../src/navigation', () => ({ navigateWhenReady: jest.fn() }));
+
+import { getDb } from '../src/db';
+import { ingestSms } from '../src/ingest';
+import { assignCategory, merchantChangePreview } from '../src/assign';
+import {
+  categoriesOfMerchants, excludeFromGroup, getMerchant, listMerchants, mergeMerchants, renameMerchantGroup, setMerchantCategory,
+} from '../src/db/merchants';
+import { listTransactionsFiltered, merchantsWithTransactions } from '../src/db/transactions';
+import { refundCandidates } from '../src/db/refunds';
+import { findCategoryForMerchant } from '../src/categorize';
+import { freshDb } from './helpers';
+
+let ts = 1;
+async function sms(merchant: string, amount = '5.00') {
+  const r = await ingestSms({ sender: 'TBC SMS', body: `${amount}GEL\n(*XXXX)\n${merchant}\n03/10/26 12:00`, timestamp: ts++ });
+  if (r.status !== 'inserted') throw new Error(`not inserted: ${r.status}`);
+  return r.txId;
+}
+const categoryOf = async (id: number) =>
+  (await (await getDb()).get<{ category_id: number | null }>('SELECT category_id FROM transactions WHERE id = ?', [id]))!.category_id;
+
+beforeEach(() => freshDb());
+
+test('the list: merchants of purchases with their category, most frequent first', async () => {
+  const a = await sms('SPAR VAKE');
+  await sms('SPAR VAKE');
+  await sms('WOLT');
+  await assignCategory(a, 1);
+  const list = await listMerchants();
+  expect(list.map((m) => [m.id, m.name, m.count, m.category_id])).toEqual([['SPAR VAKE', 'SPAR VAKE', 2, 1], ['WOLT', 'WOLT', 1, null]]);
+});
+
+test('setting / removing a merchant category: followers change, manual choices stay; removing changes nothing', async () => {
+  const a = await sms('SPAR');
+  const b = await sms('SPAR');
+  await assignCategory(a, 1);          // SPAR -> 1, b follows
+  await assignCategory(b, 3, 'only');  // b: a manual choice
+  await setMerchantCategory('SPAR', 2);
+  expect([await categoryOf(a), await categoryOf(b)]).toEqual([2, 3]);
+  await setMerchantCategory('SPAR', null);
+  expect(await findCategoryForMerchant('SPAR')).toBeNull();
+  expect([await categoryOf(a), await categoryOf(b)]).toEqual([2, 3]);
+  const c = await sms('SPAR');
+  expect(await categoryOf(c)).toBeNull(); // arrives without a category again
+});
+
+test('merging: one merchant with one category; new SMS of any member get it; filter and chip show the group', async () => {
+  const vake = await sms('SPAR VAKE');
+  const sab = await sms('SPAR SABURTALO');
+  await sms('WOLT');
+  await assignCategory(vake, 1);
+  await assignCategory(sab, 2);
+  expect(await categoriesOfMerchants(['SPAR VAKE', 'SPAR SABURTALO'])).toEqual(expect.arrayContaining([1, 2]));
+
+  const id = await mergeMerchants(['SPAR VAKE', 'SPAR SABURTALO'], 'SPAR', 2);
+  // the members' own categories are gone, their followers follow the group
+  expect([await categoryOf(vake), await categoryOf(sab)]).toEqual([2, 2]);
+  const rules = await (await getDb()).all('SELECT pattern, category_id FROM merchant_rules ORDER BY pattern');
+  expect(rules).toEqual([{ pattern: id, category_id: 2 }]);
+
+  const next = await sms('SPAR VAKE', '1.00');
+  expect(await categoryOf(next)).toBe(2);
+
+  const g = (await listMerchants()).find((m) => m.id === id)!;
+  expect(g).toEqual(expect.objectContaining({ name: 'SPAR', group: true, count: 3, category_id: 2 }));
+  expect(g.members.sort()).toEqual(['SPAR SABURTALO', 'SPAR VAKE']);
+  expect((await merchantsWithTransactions()).find((m) => m.merchant === id)).toEqual({ merchant: id, name: 'SPAR', count: 3 });
+  expect((await listTransactionsFiltered({ merchant: id })).length).toBe(3);
+
+  // changing a member transaction's category asks about the group
+  expect(await merchantChangePreview(next, 1)).toEqual(expect.objectContaining({ merchant: 'SPAR', fromCategoryId: 2, count: 3 }));
+  await assignCategory(next, 1, 'merchant');
+  expect([await categoryOf(vake), await categoryOf(sab), await categoryOf(next)]).toEqual([1, 1, 1]);
+});
+
+test('merging a group with another merchant adds it to the group; two groups become one', async () => {
+  await sms('A1'); await sms('A2'); await sms('B1'); await sms('B2'); await sms('C');
+  const a = await mergeMerchants(['A1', 'A2'], 'A', null);
+  const b = await mergeMerchants(['B1', 'B2'], 'B', 3);
+  const merged = await mergeMerchants([a, b, 'C'], 'ABC', 4);
+  expect(merged).toBe(a);
+  const g = (await getMerchant(merged))!;
+  expect(g.memberRows.map((m) => m.key).sort()).toEqual(['A1', 'A2', 'B1', 'B2', 'C']);
+  expect((await listMerchants()).map((m) => m.id)).toEqual([merged]);
+  expect(await (await getDb()).all('SELECT pattern, category_id FROM merchant_rules')).toEqual([{ pattern: merged, category_id: 4 }]);
+});
+
+test('excluding from a group: the merchant keeps the group category as its own; an emptied group is removed', async () => {
+  const x = await sms('X1');
+  await sms('X2');
+  const id = await mergeMerchants(['X1', 'X2'], 'X', 2);
+  await renameMerchantGroup(id, 'Икс');
+  expect((await getMerchant(id))!.name).toBe('Икс');
+
+  await excludeFromGroup(id, ['X1']);
+  expect(await findCategoryForMerchant('X1')).toEqual({ category_id: 2, source: 'rule' });
+  expect(await categoryOf(x)).toBe(2);
+  expect((await getMerchant(id))!.memberRows.map((m) => m.key)).toEqual(['X2']);
+
+  await excludeFromGroup(id, ['X2']);
+  expect(await getMerchant(id)).toBeNull();
+  expect((await listMerchants()).map((m) => m.id).sort()).toEqual(['X1', 'X2']);
+  expect(await (await getDb()).get("SELECT 1 FROM merchant_rules WHERE pattern = ?", [id])).toBeUndefined();
+});
+
+test('a refund finds purchases at any merchant of its group', async () => {
+  const p = await sms('TEMU COM', '20.00');
+  const refund = await ingestSms({
+    sender: 'TBC SMS', timestamp: ts++,
+    body: 'A refund of 20.00 GEL has been initiated by TEMU.COM INT to your MC GOLD (*1834). The amount will be credited to your account within 2–5 days.',
+  });
+  if (refund.status !== 'inserted') throw new Error('refund not inserted');
+  const key = (await (await getDb()).get<{ merchant_key: string }>('SELECT merchant_key FROM transactions WHERE id = ?', [refund.txId]))!.merchant_key;
+  expect(key).not.toBe('TEMU COM');
+  expect(await refundCandidates(refund.txId)).toEqual([]);
+  await mergeMerchants(['TEMU COM', key], 'TEMU', null);
+  expect((await refundCandidates(refund.txId)).map((c) => c.id)).toEqual([p]);
+});

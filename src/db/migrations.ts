@@ -202,6 +202,21 @@ export const MIGRATIONS: MigrationStep[][] = [
       WHERE category_source = 'user' AND kind IN ('purchase', 'payment') AND merchant_key IS NOT NULL
         AND category_id = (SELECT r.category_id FROM merchant_rules r WHERE r.match_type = 'exact' AND r.pattern = transactions.merchant_key)`,
   ],
+  // 16: merchant groups ("SPAR VAKE" + "SPAR SABURTALO" = "SPAR"): a group acts as one merchant (one category,
+  // one filter chip) under a name the user picks; its members keep their own merchant_key on transactions.
+  // A group's merchant id is 'group:<id>' (merchant keys are upper case, so it can't clash) - see src/db/merchants.ts
+  [
+    `CREATE TABLE IF NOT EXISTS merchant_groups (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL,
+      created_at INTEGER NOT NULL
+    )`,
+    `CREATE TABLE IF NOT EXISTS merchant_group_members (
+      merchant_key TEXT PRIMARY KEY,
+      group_id INTEGER NOT NULL
+    )`,
+    'CREATE INDEX IF NOT EXISTS merchant_group_members_group ON merchant_group_members (group_id)',
+  ],
 ];
 
 export async function getSchemaVersion(db: Db): Promise<number> {
