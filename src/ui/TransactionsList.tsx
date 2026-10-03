@@ -10,7 +10,7 @@ import {
 import { onTransactionsChanged } from '../events';
 import { categoryLabel } from '../db/categories';
 import { assignCategoryToMany } from '../assign';
-import { TabParamList, useRootNavigation } from '../navigation';
+import { navigationRef, TabParamList, useRootNavigation } from '../navigation';
 import Button from './Button';
 import CategoryPickerModal from './CategoryPickerModal';
 import Checkbox from './Checkbox';
@@ -227,10 +227,16 @@ export default function TransactionsList() {
   }), [tabNavigation, from]);
 
   // leaving the tab ends edit mode together with any selection
+  // Leaving for another tab starts the next visit clean: no filters, search or edit mode. Opening a
+  // transaction from here (a screen pushed over the tabs) keeps them, to come back to the same list.
   useEffect(() => tabNavigation.addListener('blur', () => {
+    const routes = navigationRef.getRootState()?.routes;
+    if (routes && routes[routes.length - 1].name !== 'Main') return;
     setEditMode(false);
     setSelectMode(false);
     setSelected(new Set());
+    resetFilters();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [tabNavigation]);
 
   useLayoutEffect(() => {

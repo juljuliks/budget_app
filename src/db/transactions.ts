@@ -15,6 +15,8 @@ export type TransactionRow = {
   occurred_at: number;
   /** null = not opened yet; unread = not opened AND uncategorized (see isUnread) */
   seen_at: number | null;
+  /** refunds: when it was settled on its purchase (see refunds.ts) */
+  refund_settled_at: number | null;
   category_name: string | null;
   category_emoji: string | null;
   category_type_name: string | null;
@@ -25,7 +27,7 @@ export type PageCursor = { occurred_at: number; id: number };
 
 const CATEGORY_COLUMNS = 'c.name AS category_name, c.emoji AS category_emoji, ct.name AS category_type_name';
 const TX_COLUMNS = `t.id, t.bank, t.kind, t.amount_minor, t.currency, t.raw_merchant, t.merchant_key, t.category_id,
-    t.category_source, t.occurred_at, t.seen_at, ${CATEGORY_COLUMNS}`;
+    t.category_source, t.occurred_at, t.seen_at, t.refund_settled_at, ${CATEGORY_COLUMNS}`;
 const FROM_TX = `FROM transactions t
     LEFT JOIN categories c ON c.id = t.category_id
     LEFT JOIN category_types ct ON ct.id = c.type_id`;
@@ -149,7 +151,7 @@ export async function setCategoryForTransactions(txIds: number[], categoryId: nu
 
 export async function getTransaction(id: number) {
   const db = await getDb();
-  return db.get<TransactionRow & { raw_sms: string; refund_settled_at: number | null; note: string | null; merchant_detached: number }>(
+  return db.get<TransactionRow & { raw_sms: string; note: string | null; merchant_detached: number }>(
     `SELECT t.*, ${CATEGORY_COLUMNS} ${FROM_TX} WHERE t.id = ?`, [id]);
 }
 

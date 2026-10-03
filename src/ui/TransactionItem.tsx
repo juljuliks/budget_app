@@ -21,6 +21,8 @@ type Props = {
 /** One row of the transactions list: merchant (bold + blue dot when unread), category · time, amount. */
 export default function TransactionItem({ tx, onPress, selectable, selected, onEdit, onDelete }: Props) {
   const unread = isUnread(tx);
+  // new and categorized by a merchant rule, not by the user: worth a glance
+  const auto = tx.seen_at === null && tx.category_source === 'rule';
   const category = txCategoryLabel(tx);
   return (
     <TouchableOpacity style={[styles.row, selected && styles.rowSelected]} onPress={onPress}>
@@ -29,8 +31,19 @@ export default function TransactionItem({ tx, onPress, selectable, selected, onE
         <View style={styles.titleRow}>
           {unread ? <View style={styles.unreadDot} accessibilityLabel="Не просмотрена" /> : null}
           <Text style={[styles.merchant, unread && styles.merchantUnread]} numberOfLines={1}>{merchantLabel(tx)}</Text>
+          {auto ? <Text style={styles.auto} accessibilityLabel="Категория определена автоматически">🤖 авто</Text> : null}
         </View>
-        {category ? (
+        {tx.kind === 'refund' && !category ? (
+          // a refund is settled on its purchase instead of getting a category
+          tx.refund_settled_at ? (
+            <Text style={styles.meta} numberOfLines={1}>✓ учтён в покупке · {formatTime(tx.occurred_at)}</Text>
+          ) : (
+            <View style={styles.inline}>
+              <Text style={styles.badge}>Найти покупку</Text>
+              <Text style={styles.meta}> · {formatTime(tx.occurred_at)}</Text>
+            </View>
+          )
+        ) : category ? (
           <Text style={styles.meta} numberOfLines={1}>{category} · {formatTime(tx.occurred_at)}</Text>
         ) : (
           <View style={styles.inline}>
@@ -59,6 +72,10 @@ const styles = StyleSheet.create({
   unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accent, marginRight: 8 },
   merchant: { flexShrink: 1, fontSize: 16, color: colors.text },
   merchantUnread: { fontWeight: '600' },
+  auto: {
+    marginLeft: 8, fontSize: 11, color: colors.accent, backgroundColor: '#EFF6FF',
+    paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4, overflow: 'hidden',
+  },
   meta: { fontSize: 13, color: colors.muted, marginTop: 2 },
   inline: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
   badge: {

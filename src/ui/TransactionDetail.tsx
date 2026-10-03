@@ -63,7 +63,7 @@ export default function TransactionDetail({ route, navigation }: Props) {
     return null;
   }
 
-  // "Обработать эту транзакцию иначе": unlink this one from the merchant's rule (and back)
+  // "Открепить / вернуть мерчанта для этой транзакции": unlink this one from the merchant's rule (and back)
   function toggleDetached() {
     if (!tx) return;
     if (tx.merchant_detached) {
@@ -71,7 +71,7 @@ export default function TransactionDetail({ route, navigation }: Props) {
       return;
     }
     Alert.alert(
-      'Обработать эту транзакцию иначе?',
+      'Открепить мерчанта для этой транзакции?',
       `Правило для «${tx.raw_merchant || tx.merchant_key}» не будет менять её категорию, а выбранная здесь категория не запомнится для мерчанта.`,
       [
         { text: 'Отмена', style: 'cancel' },
@@ -162,7 +162,7 @@ export default function TransactionDetail({ route, navigation }: Props) {
             <Text style={styles.detachInfo}>Откреплена от мерчанта «{merchantName}»: категория только для этой транзакции.</Text>
           ) : null}
           <TouchableOpacity onPress={toggleDetached} hitSlop={8}>
-            <Text style={styles.link}>{tx.merchant_detached ? 'Вернуть связь с мерчантом' : 'Обработать эту транзакцию иначе'}</Text>
+            <Text style={styles.link}>{tx.merchant_detached ? 'Вернуть мерчанта для этой транзакции' : 'Открепить мерчанта для этой транзакции'}</Text>
           </TouchableOpacity>
         </View>
       ) : null}
