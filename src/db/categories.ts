@@ -119,6 +119,35 @@ export async function deleteCategory(id: number, targetId: number | null, nowYm 
   });
 }
 
+/**
+ * Deleting a category, step by step: these transactions (of the category being deleted) move to `toId`
+ * (null = none), and their merchants' rules pointing to the deleted category follow them.
+ */
+export async function moveTransactionsOutOfCategory(txIds: number[], fromId: number, toId: number | null) {
+  if (txIds.length === 0) return;
+  const db = await getDb();
+  const marks = txIds.map(() => '?').join(',');
+  await db.transaction(async () => {
+    const keys = (await db.all<{ k: string }>(
+      `SELECT DISTINCT merchant_key AS k FROM transactions WHERE id IN (${marks}) AND category_id = ? AND merchant_key IS NOT NULL`,
+      [...txIds, fromId])).map((r) => r.k);
+    // a rule-picked one keeps following its merchant (whose rule moves along); none = no source
+    await db.run(
+      `UPDATE transactions SET category_id = ?, category_source = CASE WHEN ? IS NULL THEN NULL ELSE category_source END
+        WHERE id IN (${marks}) AND category_id = ?`,
+      [toId, toId, ...txIds, fromId]);
+    if (keys.length > 0) {
+      const keyMarks = keys.map(() => '?').join(',');
+      if (toId === null) {
+        await db.run(`DELETE FROM merchant_rules WHERE category_id = ? AND match_type = 'exact' AND pattern IN (${keyMarks})`, [fromId, ...keys]);
+      } else {
+        await db.run(`UPDATE merchant_rules SET category_id = ? WHERE category_id = ? AND match_type = 'exact' AND pattern IN (${keyMarks})`, [toId, fromId, ...keys]);
+      }
+    }
+  });
+  if (toId !== null) await incrementCategoryUsage(toId);
+}
+
 export async function incrementCategoryUsage(categoryId: number, by = 1) {
   const db = await getDb();
   await db.run(
@@ -140,6 +169,6 @@ export async function topCategories(limit = 3): Promise<Array<Category & { usage
 
 export default {
   listCategories, getCategory, findCategoryByName, createCategory, updateCategory, deleteCategory,
-  currentTransactionsOfCategory, countPastTransactionsOfCategory, incrementCategoryUsage, topCategories,
+  currentTransactionsOfCategory, countPastTransactionsOfCategory, moveTransactionsOutOfCategory, incrementCategoryUsage, topCategories,
   isTransferCategory, categoryLabel, txCategoryLabel,
 };

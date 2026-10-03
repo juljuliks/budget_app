@@ -90,6 +90,8 @@ export type CategoryFilter = number | 'none';
 
 export type TxFilter = {
   category?: CategoryFilter;
+  /** merchant_key */
+  merchant?: string;
   /** unix seconds, [from, to) */
   from?: number;
   to?: number;
@@ -100,9 +102,10 @@ const FILTER_LIMIT = 2000;
 /** Exact filters (category, date range); newest first, no pagination (capped). */
 export async function listTransactionsFiltered(f: TxFilter, limit = FILTER_LIMIT): Promise<TransactionRow[]> {
   const where: string[] = [];
-  const params: Array<number> = [];
+  const params: Array<number | string> = [];
   if (f.category === 'none') where.push('t.category_id IS NULL');
   else if (f.category !== undefined) { where.push('t.category_id = ?'); params.push(f.category); }
+  if (f.merchant !== undefined) { where.push('t.merchant_key = ?'); params.push(f.merchant); }
   if (f.from !== undefined) { where.push('t.occurred_at >= ?'); params.push(f.from); }
   if (f.to !== undefined) { where.push('t.occurred_at < ?'); params.push(f.to); }
   const db = await getDb();
@@ -138,6 +141,20 @@ export async function categoriesWithTransactions(): Promise<CategoryWithCount[]>
     deleted: r.deleted_at !== null,
     count: r.n,
   }));
+}
+
+export type MerchantWithCount = { merchant: string; name: string; count: number };
+
+/** Merchants that have transactions (shops, people of deposits): the most frequent first. */
+export async function merchantsWithTransactions(): Promise<MerchantWithCount[]> {
+  const db = await getDb();
+  // the name as it reads in the newest SMS
+  const rows = await db.all<{ merchant_key: string; name: string | null; n: number }>(
+    `SELECT t.merchant_key, (SELECT raw_merchant FROM transactions x WHERE x.merchant_key = t.merchant_key
+        ORDER BY x.occurred_at DESC LIMIT 1) AS name, count(*) AS n
+      FROM transactions t WHERE t.merchant_key IS NOT NULL
+      GROUP BY t.merchant_key ORDER BY n DESC, name`);
+  return rows.map((r) => ({ merchant: r.merchant_key, name: r.name || r.merchant_key, count: r.n }));
 }
 
 /** Bulk "change category" from the list: a manual choice, so no merchant rules are created. */

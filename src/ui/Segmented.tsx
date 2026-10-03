@@ -7,23 +7,29 @@ type Props<T extends string> = {
   value: T;
   onChange: (value: T) => void;
   style?: StyleProp<ViewStyle>;
+  /** greyed out, not selectable */
+  disabled?: ReadonlyArray<T>;
 };
 
 /** iOS-style segmented control: "Расход | Доход", "Статистика | План | История", filter modes. */
-export default function Segmented<T extends string>({ options, value, onChange, style }: Props<T>) {
+export default function Segmented<T extends string>({ options, value, onChange, style, disabled }: Props<T>) {
   return (
     <View style={[styles.segmented, style]}>
-      {options.map(([key, label]) => (
-        <TouchableOpacity
-          key={key}
-          style={[styles.segment, value === key && styles.segmentOn]}
-          onPress={() => onChange(key)}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: value === key }}
-        >
-          <Text style={[styles.text, value === key && styles.textOn]}>{label}</Text>
-        </TouchableOpacity>
-      ))}
+      {options.map(([key, label]) => {
+        const off = disabled?.includes(key) ?? false;
+        return (
+          <TouchableOpacity
+            key={key}
+            style={[styles.segment, value === key && styles.segmentOn]}
+            onPress={() => onChange(key)}
+            disabled={off}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: value === key, disabled: off }}
+          >
+            <Text style={[styles.text, value === key && styles.textOn, off && styles.textOff]} numberOfLines={1}>{label}</Text>
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 }
@@ -34,4 +40,5 @@ const styles = StyleSheet.create({
   segmentOn: { backgroundColor: colors.bg },
   text: { fontSize: 14, color: colors.muted },
   textOn: { color: colors.text, fontWeight: '600' },
+  textOff: { opacity: 0.4 },
 });

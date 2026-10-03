@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { categoryLabel, createCategory, findCategoryByName, getCategory, updateCategory } from '../db/categories';
+import { categoryLabel, createCategory, findCategoryByName, getCategory, moveTransactionsOutOfCategory, updateCategory } from '../db/categories';
 import { CategoryType, listCategoryTypes } from '../db/categoryTypes';
 import { assignCategory, assignCategoryToMany } from '../assign';
 import { addPlanItem } from '../db/plans';
@@ -21,7 +21,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'CategoryEdit'>;
 
 /** Create (no categoryId) or edit a category: name, emoji, optional type. */
 export default function CategoryEdit({ route, navigation }: Props) {
-  const { categoryId, txId, txIds, planYm, typeId: initialTypeId, returnSelection, selectTypeId } = route.params ?? {};
+  const { categoryId, txId, txIds, planYm, typeId: initialTypeId, returnSelection, selectTypeId, moveFromCategoryId } = route.params ?? {};
   const isNew = categoryId === undefined;
   const [name, setName] = useState('');
   const [emoji, setEmoji] = useState('');
@@ -76,7 +76,12 @@ export default function CategoryEdit({ route, navigation }: Props) {
         const id = await createCategory(trimmed, emoji, typeId, color);
         createdId = id;
         if (txId) await assignCategory(txId, id);
-        if (txIds?.length) await assignCategoryToMany(txIds, id);
+        if (txIds?.length && moveFromCategoryId !== undefined) {
+          await moveTransactionsOutOfCategory(txIds, moveFromCategoryId, id);
+          emitTransactionsChanged();
+        } else if (txIds?.length) {
+          await assignCategoryToMany(txIds, id);
+        }
         if (planYm) await addPlanItem(planYm, id);
         emitTransactionsChanged();
       } else {
@@ -135,7 +140,7 @@ export default function CategoryEdit({ route, navigation }: Props) {
       <TextInput style={[formStyles.input, styles.emoji]} value={emoji} onChangeText={setEmoji} placeholder="🏋️" maxLength={8} />
 
       {error ? <Text style={formStyles.error}>{error}</Text> : null}
-      {isNew && txId ? <Text style={formStyles.hint}>Категория будет назначена транзакции и запомнена для её мерчанта.</Text> : null}
+      {isNew && txId ? <Text style={formStyles.hint}>Категория будет назначена транзакции, а если у её мерчанта ещё нет категории — запомнена для него.</Text> : null}
       {isNew && txIds?.length ? <Text style={formStyles.hint}>Категория будет назначена выбранным транзакциям ({txIds.length}).</Text> : null}
       {isNew && planYm ? <Text style={formStyles.hint}>Категория будет добавлена в план месяца.</Text> : null}
 

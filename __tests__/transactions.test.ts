@@ -3,7 +3,7 @@ jest.mock('../src/navigation', () => ({ navigateWhenReady: jest.fn() }));
 import { getDb } from '../src/db';
 import {
   addManualTransaction, countUnseenTransactions, deleteTransaction, isUnread, listTransactionsPage, markTransactionSeen,
-  normalizeForSearch, searchTransactions, listTransactionsFiltered, categoriesWithTransactions,
+  normalizeForSearch, searchTransactions, listTransactionsFiltered, categoriesWithTransactions, merchantsWithTransactions,
 } from '../src/db/transactions';
 import { rangeToUnix } from '../src/ui/dateRange';
 import { createCategory } from '../src/db/categories';
@@ -218,5 +218,18 @@ describe('exact filters', () => {
     const opts = await categoriesWithTransactions();
     expect(opts.map((o) => [o.category, o.count, o.deleted])).toEqual([[1, 2, false], [2, 1, true], ['none', 1, false]]);
     expect(opts[2].name).toBe('Без категории');
+  });
+});
+
+describe('merchant filter', () => {
+  test('merchants with counts (most frequent first), and their transactions', async () => {
+    await insertTx(1, 1000, 'SPAR');
+    await insertTx(2, 2000, 'WOLT');
+    await insertTx(3, 3000, 'SPAR');
+    expect(await merchantsWithTransactions()).toEqual([
+      { merchant: 'SPAR', name: 'SPAR', count: 2 },
+      { merchant: 'WOLT', name: 'WOLT', count: 1 },
+    ]);
+    expect((await listTransactionsFiltered({ merchant: 'SPAR' })).map((r) => r.amount_minor)).toEqual([103, 101]);
   });
 });

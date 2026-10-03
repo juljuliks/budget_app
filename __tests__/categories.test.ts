@@ -5,7 +5,7 @@ import { openDatabase } from '../src/db/driver';
 import { migrate, MIGRATIONS } from '../src/db/migrations';
 import {
   categoryLabel, countPastTransactionsOfCategory, createCategory, currentTransactionsOfCategory, deleteCategory,
-  findCategoryByName, getCategory, isTransferCategory, listCategories, topCategories, updateCategory,
+  findCategoryByName, getCategory, isTransferCategory, listCategories, moveTransactionsOutOfCategory, topCategories, updateCategory,
 } from '../src/db/categories';
 import {
   countCategoriesOfType, createCategoryType, deleteCategoryType, findCategoryTypeByName, getTransferTypeId,
@@ -88,6 +88,32 @@ describe('names', () => {
     await createCategory('Спорт', '🏋️');
     const names = (await listCategories()).filter((c) => !c.type_id).map((c) => c.name);
     expect(names.slice(-2)).toEqual(['Спорт', 'Другое']);
+  });
+});
+
+describe('moveTransactionsOutOfCategory (deleting a category step by step)', () => {
+  test('moved transactions take the new category, their merchants\' rules follow; others stay', async () => {
+    const db = await getDb();
+    const a = await tx(1, at(2026, 9, 2));
+    const b = await tx(1, at(2026, 9, 3));
+    const c = await tx(1, at(2026, 9, 4));
+    await db.run("UPDATE transactions SET merchant_key = 'SPAR', category_source = 'rule' WHERE id = ?", [a]);
+    await db.run("UPDATE transactions SET merchant_key = 'WOLT' WHERE id IN (?, ?)", [b, c]);
+    await createRule('exact', 'SPAR', 1);
+    await createRule('exact', 'WOLT', 1);
+    await createRule('exact', 'IKEA', 1);
+
+    await moveTransactionsOutOfCategory([a], 1, 2);
+    await moveTransactionsOutOfCategory([b], 1, null);
+
+    const rows = await db.all('SELECT id, category_id, category_source FROM transactions ORDER BY id');
+    expect(rows).toEqual([
+      { id: a, category_id: 2, category_source: 'rule' }, // still follows SPAR, whose rule moved
+      { id: b, category_id: null, category_source: null },
+      { id: c, category_id: 1, category_source: 'user' },
+    ]);
+    const rules = await db.all('SELECT pattern, category_id FROM merchant_rules ORDER BY pattern');
+    expect(rules).toEqual([{ pattern: 'IKEA', category_id: 1 }, { pattern: 'SPAR', category_id: 2 }]);
   });
 });
 

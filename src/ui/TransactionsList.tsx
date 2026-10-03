@@ -4,11 +4,12 @@ import { RouteProp, useFocusEffect, useNavigation, useRoute } from '@react-navig
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { HeaderBackButton } from '@react-navigation/elements';
 import {
-  categoriesWithTransactions, CategoryFilter, CategoryWithCount, listTransactionsFiltered,
-  listTransactionsPage, PageCursor, searchTransactions, TransactionRow,
+  categoriesWithTransactions, CategoryFilter, CategoryWithCount, listTransactionsFiltered, listTransactionsPage,
+  merchantsWithTransactions, MerchantWithCount, normalizeForSearch, PageCursor, searchTransactions, TransactionRow,
 } from '../db/transactions';
-import { onTransactionsChanged } from '../events';
-import { categoryLabel } from '../db/categories';
+import { emitTransactionsChanged, onTransactionsChanged } from '../events';
+import { Category, categoryLabel, countPastTransactionsOfCategory, deleteCategory, getCategory, moveTransactionsOutOfCategory } from '../db/categories';
+import { currentYm, monthStart } from '../db/plans';
 import { assignCategoryToMany } from '../assign';
 import { navigationRef, TabParamList, useRootNavigation } from '../navigation';
 import Button from './Button';
@@ -17,7 +18,7 @@ import Checkbox from './Checkbox';
 import Chip from './Chip';
 import Fab from './Fab';
 import PushAccessBanner from './PushAccessBanner';
-import { dayKey, formatDay } from './format';
+import { dayKey, formatDay, plural } from './format';
 import { formStyles } from './formStyles';
 import { PencilIcon, SearchIcon } from './icons';
 import RangeCalendar, { DayRange, formatRange, rangeToUnix } from './RangeCalendar';
@@ -28,27 +29,45 @@ import TransactionItem from './TransactionItem';
 
 const PAGE_SIZE = 50;
 
-type FilterMode = 'text' | 'category' | 'date';
-const MODES = [['text', 'По тексту'], ['category', 'По категории'], ['date', 'По дате']] as const;
-type Filter = { mode: FilterMode; query: string; category: CategoryFilter | null; range: DayRange | null };
+type FilterMode = 'text' | 'category' | 'merchant' | 'date';
+const MODES = [['text', 'Текст'], ['category', 'Категория'], ['merchant', 'Мерчант'], ['date', 'Дата']] as const;
+type Filter = {
+  mode: FilterMode; query: string; category: CategoryFilter | null; merchant: string | null; range: DayRange | null;
+  /** deleting a category: only its transactions from this month on */
+  from?: number;
+};
 
 /** Only the filter of the selected mode applies. */
 function isFilterActive(f: Filter): boolean {
   if (f.mode === 'text') return f.query.trim() !== '';
   if (f.mode === 'category') return f.category !== null;
+  if (f.mode === 'merchant') return f.merchant !== null;
   return f.range !== null;
 }
 
 async function runFilterQuery(f: Filter): Promise<TransactionRow[] | null> {
   if (!isFilterActive(f)) return null;
   if (f.mode === 'text') return searchTransactions(f.query);
-  if (f.mode === 'category') return listTransactionsFiltered({ category: f.category! });
+  if (f.mode === 'category') return listTransactionsFiltered({ category: f.category!, from: f.from });
+  if (f.mode === 'merchant') return listTransactionsFiltered({ merchant: f.merchant! });
   return listTransactionsFiltered(rangeToUnix(f.range!));
 }
 
+/** Deleting a category: every mode but "Категория" and every other category are off. */
+const DELETE_MODE_DISABLED: FilterMode[] = ['text', 'merchant', 'date'];
+
 const SEARCH_DEBOUNCE_MS = 200;
 
-export default function TransactionsList() {
+type Props = {
+  /**
+   * The list reused to delete a category (CategoryDelete): its transactions of this month, already in
+   * multi-select, are moved to other categories; the category can be deleted once none are left.
+   */
+  deleteCategoryId?: number;
+};
+
+export default function TransactionsList({ deleteCategoryId }: Props = {}) {
+  const deleting = deleteCategoryId !== undefined;
   const navigation = useRootNavigation();
   const [rows, setRows] = useState<TransactionRow[]>([]);
   const [cursor, setCursor] = useState<PageCursor | null>(null);
@@ -59,13 +78,16 @@ export default function TransactionsList() {
   const requestId = useRef(0);
   const loadedCount = useRef(0);
 
-  const [mode, setMode] = useState<FilterMode>('text');
+  const [mode, setMode] = useState<FilterMode>(deleting ? 'category' : 'text');
   const [query, setQuery] = useState('');
-  const [category, setCategory] = useState<CategoryFilter | null>(null);
+  const [category, setCategory] = useState<CategoryFilter | null>(deleting ? deleteCategoryId! : null);
+  const [merchant, setMerchant] = useState<string | null>(null);
+  const [merchantQuery, setMerchantQuery] = useState('');
   const [range, setRange] = useState<DayRange | null>(null);
   const [calendarOpen, setCalendarOpen] = useState(true);
   const [categoryOptions, setCategoryOptions] = useState<CategoryWithCount[]>([]);
-  const filter: Filter = { mode, query, category, range };
+  const [merchantOptions, setMerchantOptions] = useState<MerchantWithCount[]>([]);
+  const filter: Filter = { mode, query, category, merchant, range, from: deleting ? monthStart(currentYm()) : undefined };
   // read by refreshAll without making it change (and re-run focus effects) on every keystroke
   const filterRef = useRef(filter);
   filterRef.current = filter;
@@ -80,8 +102,8 @@ export default function TransactionsList() {
   }, [incomingCategory, nonce]);
 
   // edit mode: ✎ / 🗑 on every row and the selection toolbar; selectMode (inside edit mode) replaces the icons with checkboxes
-  const [editMode, setEditMode] = useState(false);
-  const [selectMode, setSelectMode] = useState(false);
+  const [editMode, setEditMode] = useState(deleting);
+  const [selectMode, setSelectMode] = useState(deleting);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [bulkOpen, setBulkOpen] = useState(false);
 
@@ -105,6 +127,7 @@ export default function TransactionsList() {
 
   const loadCategoryOptions = useCallback(() => {
     categoriesWithTransactions().then(setCategoryOptions).catch((e) => console.error('load category filter failed', e));
+    merchantsWithTransactions().then(setMerchantOptions).catch((e) => console.error('load merchant filter failed', e));
   }, []);
 
   const loadMore = useCallback(async () => {
@@ -141,7 +164,7 @@ export default function TransactionsList() {
   }, [query, runFilter]);
   useEffect(() => {
     runFilter(filterRef.current).catch((e) => console.error('filter failed', e));
-  }, [mode, category, range, runFilter]);
+  }, [mode, category, merchant, range, runFilter]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -203,6 +226,8 @@ export default function TransactionsList() {
     setMode('text');
     setQuery('');
     setCategory(null);
+    setMerchant(null);
+    setMerchantQuery('');
     setRange(null);
   }
 
@@ -223,14 +248,14 @@ export default function TransactionsList() {
   }, [from]));
 
   // opening the tab from the tab bar is a normal visit: no back button
-  useEffect(() => tabNavigation.addListener('tabPress', () => {
+  useEffect(() => (deleting ? undefined : tabNavigation.addListener('tabPress', () => {
     if (from) tabNavigation.setParams({ from: undefined });
-  }), [tabNavigation, from]);
+  })), [tabNavigation, from, deleting]);
 
   // leaving the tab ends edit mode together with any selection
   // Leaving for another tab starts the next visit clean: no filters, search or edit mode. Opening a
   // transaction from here (a screen pushed over the tabs) keeps them, to come back to the same list.
-  useEffect(() => tabNavigation.addListener('blur', () => {
+  useEffect(() => (deleting ? undefined : tabNavigation.addListener('blur', () => {
     const routes = navigationRef.getRootState()?.routes;
     if (routes && routes[routes.length - 1].name !== 'Main') return;
     setEditMode(false);
@@ -238,9 +263,10 @@ export default function TransactionsList() {
     setSelected(new Set());
     resetFilters();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [tabNavigation]);
+  })), [tabNavigation, deleting]);
 
   useLayoutEffect(() => {
+    if (deleting) return; // the delete screen keeps its own header
     tabNavigation.setOptions({
       headerLeft: from
         ? () => <HeaderBackButton onPress={goBack} accessibilityLabel="Назад" />
@@ -259,7 +285,7 @@ export default function TransactionsList() {
     });
     // toggleEditMode / goBack only use state setters, navigation and `from`
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tabNavigation, editMode, from]);
+  }, [tabNavigation, editMode, from, deleting]);
 
   function toggle(id: number) {
     setSelected((prev) => {
@@ -272,6 +298,13 @@ export default function TransactionsList() {
   async function applyBulk(categoryId: number | null) {
     setBulkOpen(false);
     try {
+      if (deleting) {
+        // moved ones leave the list (they are no longer in the category being deleted)
+        await moveTransactionsOutOfCategory([...selected], deleteCategoryId!, categoryId);
+        emitTransactionsChanged();
+        setSelected(new Set());
+        return;
+      }
       await assignCategoryToMany([...selected], categoryId);
       setSelected(new Set());
       setSelectMode(false);
@@ -283,6 +316,30 @@ export default function TransactionsList() {
   const selectedRows = data.filter((r) => selected.has(r.id));
   const showRowActions = editMode && !selectMode;
 
+  const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
+  const [pastCount, setPastCount] = useState(0);
+  useEffect(() => {
+    if (!deleting) return;
+    Promise.all([getCategory(deleteCategoryId!), countPastTransactionsOfCategory(deleteCategoryId!)])
+      .then(([c, n]) => { setDeletingCategory(c ?? null); setPastCount(n); })
+      .catch((e) => console.error('load category failed', e));
+  }, [deleting, deleteCategoryId]);
+
+  async function removeCategory() {
+    try {
+      await deleteCategory(deleteCategoryId!, null);
+      emitTransactionsChanged();
+      navigation.goBack();
+    } catch (e) {
+      console.error('delete category failed', e);
+    }
+  }
+
+  const merchantWords = normalizeForSearch(merchantQuery);
+  const shownMerchants = merchantWords
+    ? merchantOptions.filter((m) => normalizeForSearch(m.name).includes(merchantWords))
+    : merchantOptions;
+
   if (loading) {
     return <View style={styles.center}><ActivityIndicator /></View>;
   }
@@ -290,8 +347,18 @@ export default function TransactionsList() {
   return (
     <View style={styles.list}>
       <View style={styles.header}>
-        <PushAccessBanner />
-        <Segmented options={MODES} value={mode} onChange={setMode} style={styles.modes} />
+        {deleting ? (
+          <View style={styles.deleteInfo}>
+            <Text style={styles.deleteTitle}>Удалить «{deletingCategory ? categoryLabel(deletingCategory) : '…'}»</Text>
+            <Text style={styles.deleteHint}>
+              {data.length > 0
+                ? 'Удалить можно категорию без транзакций. Выберите транзакции этого месяца и перенесите их в другие категории — перенесённые пропадут из списка. Правила мерчантов переходят вместе с их транзакциями.'
+                : 'В этом месяце транзакций в категории нет — её можно удалить. Оставшиеся правила мерчантов и пункт плана этого месяца тоже удалятся.'}
+              {pastCount > 0 ? ` Прошлые месяцы (${pastCount} ${plural(pastCount, ['транзакция', 'транзакции', 'транзакций'])}) останутся в этой категории, история не изменится.` : ''}
+            </Text>
+          </View>
+        ) : <PushAccessBanner />}
+        <Segmented options={MODES} value={mode} onChange={setMode} style={styles.modes} disabled={deleting ? DELETE_MODE_DISABLED : undefined} />
 
         {mode === 'text' ? (
           <View style={styles.search}>
@@ -315,14 +382,19 @@ export default function TransactionsList() {
 
         {mode === 'category' ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catChips} keyboardShouldPersistTaps="handled">
-            {categoryOptions.map((c) => {
+            {deleting && deletingCategory ? (
+              // the category being deleted: its transactions of this month
+              <Chip label={`${categoryLabel(deletingCategory)} · ${data.length}`} selected />
+            ) : null}
+            {categoryOptions.filter((c) => !deleting || c.category !== deleteCategoryId).map((c) => {
               const on = category === c.category;
               return (
                 <Chip
                   key={String(c.category)}
                   label={`${categoryLabel(c)}${c.deleted ? ' (удалена)' : ''} · ${c.count}`}
                   selected={on}
-                  muted={c.deleted}
+                  muted={c.deleted || deleting}
+                  disabled={deleting}
                   // tap the selected one again to clear
                   onPress={() => setCategory(on ? null : c.category)}
                 />
@@ -330,6 +402,36 @@ export default function TransactionsList() {
             })}
             {categoryOptions.length === 0 ? <Text style={styles.filterHint}>Транзакций пока нет</Text> : null}
           </ScrollView>
+        ) : null}
+
+        {mode === 'merchant' ? (
+          <View style={styles.merchantBox}>
+            <View style={styles.search}>
+              <SearchIcon color={colors.muted} />
+              <TextInput
+                style={styles.searchInput}
+                value={merchantQuery}
+                onChangeText={setMerchantQuery}
+                placeholder="Найти мерчанта"
+                placeholderTextColor={colors.muted}
+                autoCorrect={false}
+              />
+              {merchantQuery ? (
+                <TouchableOpacity onPress={() => setMerchantQuery('')} hitSlop={10} accessibilityLabel="Очистить">
+                  <Text style={styles.clear}>✕</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catChips} keyboardShouldPersistTaps="handled">
+              {shownMerchants.map((m) => {
+                const on = merchant === m.merchant;
+                return (
+                  <Chip key={m.merchant} label={`${m.name} · ${m.count}`} selected={on} onPress={() => setMerchant(on ? null : m.merchant)} />
+                );
+              })}
+              {shownMerchants.length === 0 ? <Text style={styles.filterHint}>{merchantQuery ? 'Не найдено' : 'Мерчантов пока нет'}</Text> : null}
+            </ScrollView>
+          </View>
         ) : null}
 
         {mode === 'date' ? (
@@ -351,7 +453,8 @@ export default function TransactionsList() {
 
         {editMode ? (
           <View style={styles.toolbar}>
-            <TouchableOpacity style={styles.selectToggle} onPress={toggleSelectMode} accessibilityRole="checkbox" accessibilityState={{ checked: selectMode }}>
+            {/* deleting a category: always selecting */}
+            <TouchableOpacity style={styles.selectToggle} onPress={toggleSelectMode} disabled={deleting} accessibilityRole="checkbox" accessibilityState={{ checked: selectMode, disabled: deleting }}>
               <Checkbox checked={selectMode} size={20} />
               <Text style={styles.selectLabel}>Выбрать несколько</Text>
               {selectMode && selected.size > 0 ? <Text style={styles.selectCount}>({selected.size})</Text> : null}
@@ -391,14 +494,18 @@ export default function TransactionsList() {
         ListFooterComponent={loadingMore ? <ActivityIndicator style={styles.footer} /> : <View style={styles.footer} />}
         ListEmptyComponent={
           <Text style={styles.empty}>
-            {results ? 'Ничего не найдено.' : mode === 'date' && !range ? 'Выберите день или период в календаре.' : 'Транзакций пока нет. Они появятся здесь после SMS от банка.'}
+            {deleting ? 'Транзакций не осталось.' : results ? 'Ничего не найдено.' : mode === 'date' && !range ? 'Выберите день или период в календаре.' : 'Транзакций пока нет. Они появятся здесь после SMS от банка.'}
           </Text>
         }
       />
 
       {selectMode && selected.size > 0 ? (
         <View style={styles.bottomBar}>
-          <Button title={`Изменить категорию (${selected.size})`} onPress={() => setBulkOpen(true)} />
+          <Button title={`${deleting ? 'Перенести в категорию' : 'Изменить категорию'} (${selected.size})`} onPress={() => setBulkOpen(true)} />
+        </View>
+      ) : deleting && results !== null && data.length === 0 ? (
+        <View style={styles.bottomBar}>
+          <Button title="Удалить категорию" danger onPress={removeCategory} />
         </View>
       ) : null}
       {/* hidden in edit mode: it would cover the ✎ / 🗑 of the last row */}
@@ -408,7 +515,8 @@ export default function TransactionsList() {
         visible={bulkOpen}
         title={`Выбрано транзакций: ${selected.size}`}
         // a category created from here is applied to the selection right away
-        newCategory={{ txIds: [...selected] }}
+        newCategory={{ txIds: [...selected], moveFromCategoryId: deleteCategoryId }}
+        excludeIds={deleting ? [deleteCategoryId!] : undefined}
         transferFirst={selectedRows.length > 0 && selectedRows.every((r) => r.kind === 'transfer')}
         allowNone
         onPick={applyBulk}
@@ -453,4 +561,8 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
   },
   empty: { padding: 32, textAlign: 'center', color: colors.muted },
+  merchantBox: { gap: 8 },
+  deleteInfo: { paddingBottom: 10, gap: 4 },
+  deleteTitle: { fontSize: 18, fontWeight: '600', color: colors.text },
+  deleteHint: { fontSize: 13, color: colors.muted },
 });

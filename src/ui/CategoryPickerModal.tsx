@@ -12,12 +12,14 @@ type Props = {
   /** what to do with a category created from here (see CategoryEdit params) */
   newCategory?: Omit<RootStackParamList['CategoryEdit'], 'categoryId'>;
   allowNone?: boolean;
+  /** categories not offered (e.g. the one being deleted) */
+  excludeIds?: number[];
   onPick: (categoryId: number | null) => void;
   onClose: () => void;
 };
 
 /** Bottom sheet with the shared CategoryPicker (gear, categories, "+ Новая категория"). */
-export default function CategoryPickerModal({ visible, title, selectedId, transferFirst, allowNone, newCategory, onPick, onClose }: Props) {
+export default function CategoryPickerModal({ visible, title, selectedId, transferFirst, allowNone, excludeIds, newCategory, onPick, onClose }: Props) {
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Закрыть" />
@@ -30,6 +32,7 @@ export default function CategoryPickerModal({ visible, title, selectedId, transf
             allowNone={allowNone}
             transferFirst={transferFirst}
             newCategory={newCategory}
+            excludeIds={excludeIds}
             // the gear / new category leave to other screens: close the sheet first
             onNavigateAway={onClose}
           />

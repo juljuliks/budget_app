@@ -24,10 +24,12 @@ export type RootStackParamList = {
   CategoryEdit: {
     categoryId?: number; txId?: number; txIds?: number[]; planYm?: string; typeId?: number; returnSelection?: boolean;
     selectTypeId?: number;
+    /** with txIds: they are moved out of this category being deleted (their merchants' rules follow) */
+    moveFromCategoryId?: number;
   };
   Categories: undefined;
-  /** Delete a category, moving its current-month transactions to another one */
-  CategoryDelete: { categoryId: number; selectCategoryId?: number };
+  /** Delete a category: first move its current-month transactions to other ones (the transactions list in a delete mode) */
+  CategoryDelete: { categoryId: number };
   /** returnSelection: a newly created type goes back to the previous screen (category editor) as `selectTypeId` */
   CategoryTypes: { returnSelection?: boolean } | undefined;
   AddTransaction: { selectCategoryId?: number } | undefined;
