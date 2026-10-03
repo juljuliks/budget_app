@@ -24,6 +24,19 @@ function percentOf(part: number, whole: number): string {
   return p === 0 ? '<1%' : `${p}%`;
 }
 
+/** Plan items in sections by category type (listPlan returns them in type order); untyped last. */
+function groupByType(items: PlanItem[]): Array<{ title: string; planned: number; items: PlanItem[] }> {
+  const groups: Array<{ title: string; planned: number; items: PlanItem[] }> = [];
+  for (const item of items) {
+    const title = item.type_name ?? 'Без типа';
+    let g = groups[groups.length - 1];
+    if (!g || g.title !== title) { g = { title, planned: 0, items: [] }; groups.push(g); }
+    g.items.push(item);
+    g.planned += item.limit_minor;
+  }
+  return groups;
+}
+
 /**
  * Plan for one month. A new month starts from the previous month's items:
  * pinned ones keep their amount, the others need a new amount (last month's is shown as a hint).
@@ -111,44 +124,53 @@ export default function PlanView({ ym }: { ym: string }) {
 
       {items.length === 0 ? <Text style={styles.hint}>План пуст. Добавьте категории, на которые хотите выделить сумму.</Text> : null}
 
-      {items.map((item) => (
-        <View key={item.category_id} style={styles.row}>
-          <TouchableOpacity
-            onPress={() => run(setPlanPinned(ym, item.category_id, !item.pinned))}
-            hitSlop={8}
-            accessibilityLabel={item.pinned ? 'Открепить' : 'Закрепить'}
-            style={styles.pin}
-          >
-            <PinIcon color={item.pinned ? colors.accent : colors.muted} filled={item.pinned} />
-          </TouchableOpacity>
-          <View style={styles.nameBox}>
-            <Text style={styles.name} numberOfLines={1}>{categoryLabel(item)}</Text>
-            {item.kind === 'fixed' || (budget && item.limit_minor) ? (
-              <Text style={styles.percent}>
-                {[
-                  item.kind === 'fixed' ? 'фиксированная трата' : '',
-                  budget && item.limit_minor ? `${percentOf(item.limit_minor, budget)} суммы` : '',
-                ].filter(Boolean).join(' · ')}
-              </Text>
-            ) : null}
+      {groupByType(items).map((g) => (
+        <View key={g.title} style={styles.group}>
+          <View style={styles.groupHeader}>
+            <Text style={styles.groupTitle}>{g.title}</Text>
+            <Text style={styles.groupTotal}>{formatShort(g.planned)}</Text>
           </View>
-          <TouchableOpacity
-            style={styles.amountButton}
-            onPress={() => setEditingItem({ ...item, label: categoryLabel(item) })}
-            accessibilityLabel={`Изменить сумму: ${categoryLabel(item)}`}
-          >
-            {item.limit_minor ? (
-              <Text style={styles.amount}>{formatShort(item.limit_minor)}</Text>
-            ) : (
-              // carried over without an amount: last month's as a muted hint
-              <Text style={[styles.amount, styles.amountEmpty]}>
-                {item.previous_minor ? `было ${formatShort(item.previous_minor)}` : '0'}
-              </Text>
-            )}
-            {/* tapping the amount edits it too, so the pencil sits with it rather than in RowActions */}
-            <PencilIcon color={colors.muted} size={ROW_ICON_SIZE} />
-          </TouchableOpacity>
-          <RowActions subject={categoryLabel(item)} onDelete={() => run(removePlanItem(ym, item.category_id))} />
+          {g.items.map((item) => (
+            <View key={item.category_id} style={styles.row}>
+              <TouchableOpacity
+                onPress={() => run(setPlanPinned(ym, item.category_id, !item.pinned))}
+                hitSlop={8}
+                accessibilityLabel={item.pinned ? 'Открепить' : 'Закрепить'}
+                style={styles.pin}
+              >
+                <PinIcon color={item.pinned ? colors.accent : colors.muted} filled={item.pinned} />
+              </TouchableOpacity>
+              <View style={styles.nameBox}>
+                {/* the type is the section title, so just emoji + name here */}
+                <Text style={styles.name} numberOfLines={1}>{`${item.emoji || ''} ${item.name}`.trim()}</Text>
+                {item.kind === 'fixed' || (budget && item.limit_minor) ? (
+                  <Text style={styles.percent}>
+                    {[
+                      item.kind === 'fixed' ? 'фиксированная трата' : '',
+                      budget && item.limit_minor ? `${percentOf(item.limit_minor, budget)} дохода` : '',
+                    ].filter(Boolean).join(' · ')}
+                  </Text>
+                ) : null}
+              </View>
+              <TouchableOpacity
+                style={styles.amountButton}
+                onPress={() => setEditingItem({ ...item, label: categoryLabel(item) })}
+                accessibilityLabel={`Изменить сумму: ${categoryLabel(item)}`}
+              >
+                {item.limit_minor ? (
+                  <Text style={styles.amount}>{formatShort(item.limit_minor)}</Text>
+                ) : (
+                  // carried over without an amount: last month's as a muted hint
+                  <Text style={[styles.amount, styles.amountEmpty]}>
+                    {item.previous_minor ? `было ${formatShort(item.previous_minor)}` : '0'}
+                  </Text>
+                )}
+                {/* tapping the amount edits it too, so the pencil sits with it rather than in RowActions */}
+                <PencilIcon color={colors.muted} size={ROW_ICON_SIZE} />
+              </TouchableOpacity>
+              <RowActions subject={categoryLabel(item)} onDelete={() => run(removePlanItem(ym, item.category_id))} />
+            </View>
+          ))}
         </View>
       ))}
 
@@ -192,6 +214,13 @@ const styles = StyleSheet.create({
   pinNote: { marginTop: 10 },
   caption: { fontSize: 13, color: colors.muted, textAlign: 'center' },
   hint: { color: colors.muted, fontSize: 14, textAlign: 'center', marginVertical: 12 },
+  group: { marginTop: 12 },
+  groupHeader: {
+    flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between',
+    paddingBottom: 4, borderBottomWidth: 1, borderColor: colors.border,
+  },
+  groupTitle: { fontSize: 13, fontWeight: '600', color: colors.muted, textTransform: 'uppercase' },
+  groupTotal: { fontSize: 13, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
   row: {
     flexDirection: 'row', alignItems: 'center', paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border,

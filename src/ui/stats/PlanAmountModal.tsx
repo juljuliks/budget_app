@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { BUDGET_CURRENCY, getPlanBudget, OverBudgetError, PlanKind, plannedTotal, setPlanAmount } from '../../db/plans';
+import { BUDGET_CURRENCY, getPlanBudget, lastPlanItem, OverBudgetError, PlanKind, plannedTotal, setPlanAmount } from '../../db/plans';
 import { formatWithCurrency, parseAmountOrZero, toInputValue } from '../money';
 import RadioGroup from '../RadioGroup';
 import TextInputModal from '../TextInputModal';
@@ -14,8 +14,6 @@ export type PlanAmountTarget = {
   label: string;
   /** current amount in the plan; 0 = not set / not in the plan yet */
   limit_minor: number;
-  /** last month's amount, shown as a hint */
-  previous_minor?: number | null;
   /** current kind; a category not in the plan yet starts as a limit */
   kind?: PlanKind;
 };
@@ -39,12 +37,23 @@ export default function PlanAmountModal({ ym, target, onClose, onSaved }: Props)
   // free for this category = amount to distribute − the other categories; null = no amount set
   const [free, setFree] = useState<number | null>(null);
   const [kind, setKind] = useState<PlanKind>('limit');
+  // the field starts with the current amount, or the category's amount from the last month that planned it
+  const [initial, setInitial] = useState('');
+  const [previous, setPrevious] = useState<number | null>(null);
 
   useEffect(() => {
     if (!target) return;
     setKind(target.kind ?? 'limit');
-    Promise.all([getPlanBudget(ym), plannedTotal(ym, target.category_id)])
-      .then(([budget, others]) => setFree(budget === null ? null : Math.max(budget - others, 0)))
+    setInitial(toInputValue(target.limit_minor));
+    Promise.all([getPlanBudget(ym), plannedTotal(ym, target.category_id), lastPlanItem(ym, target.category_id)])
+      .then(([budget, others, last]) => {
+        setFree(budget === null ? null : Math.max(budget - others, 0));
+        setPrevious(last?.limit_minor ?? null);
+        if (!target.limit_minor && last) {
+          setInitial(toInputValue(last.limit_minor));
+          if (!target.kind) setKind(last.kind);
+        }
+      })
       .catch((e) => console.error('load plan budget failed', e));
   }, [ym, target]);
 
@@ -64,7 +73,7 @@ export default function PlanAmountModal({ ym, target, onClose, onSaved }: Props)
 
   const hint = [
     free !== null ? `Свободно: ${money(free)}` : '',
-    target?.previous_minor ? `В прошлом месяце: ${money(target.previous_minor)}` : '',
+    previous ? `В прошлый раз: ${money(previous)}` : '',
   ].filter(Boolean).join('\n');
 
   return (
@@ -72,7 +81,7 @@ export default function PlanAmountModal({ ym, target, onClose, onSaved }: Props)
       visible={target !== null}
       title={target?.label ?? ''}
       hint={hint || undefined}
-      initialValue={toInputValue(target?.limit_minor)}
+      initialValue={initial}
       placeholder="0"
       keyboardType="decimal-pad"
       maxLength={12}

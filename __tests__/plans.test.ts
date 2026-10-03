@@ -119,6 +119,27 @@ describe('monthStats', () => {
   });
 });
 
+describe('adding a category takes its last planned amount', () => {
+  const M1 = '2099-01', M3 = '2099-03';
+
+  test('amount and kind come from the last month that planned it; an explicit amount wins', async () => {
+    await setPlanAmount(M1, 1, 30000, 'fixed');
+    await removePlanItem('2099-02', 1); // February plans without it
+    await addPlanItem(M3, 1);
+    expect((await listPlan(M3)).find((i) => i.category_id === 1)).toEqual(expect.objectContaining({ limit_minor: 30000, kind: 'fixed' }));
+    await addPlanItem(M3, 2, 0);
+    expect((await listPlan(M3)).find((i) => i.category_id === 2)!.limit_minor).toBe(0);
+  });
+
+  test('starts empty when the last amount no longer fits the amount to distribute', async () => {
+    await setPlanAmount(M1, 1, 30000);
+    await removePlanItem('2099-02', 1);
+    await setPlanBudget(M3, 20000);
+    await addPlanItem(M3, 1);
+    expect((await listPlan(M3)).find((i) => i.category_id === 1)!.limit_minor).toBe(0);
+  });
+});
+
 describe('plan item kind (limit / fixed payment)', () => {
   const M1 = '2099-01', M2 = '2099-02';
 

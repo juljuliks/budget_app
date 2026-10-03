@@ -150,10 +150,34 @@ async function markPlanned(ym: string) {
   await db.run('INSERT OR IGNORE INTO plan_months (ym) VALUES (?)', [ym]);
 }
 
-export async function addPlanItem(ym: string, categoryId: number, limitMinor = 0) {
+/** The category's amount and kind in the latest earlier month that planned it with an amount. */
+export async function lastPlanItem(ym: string, categoryId: number): Promise<{ limit_minor: number; kind: PlanKind } | null> {
+  const db = await getDb();
+  return (await db.get<{ limit_minor: number; kind: PlanKind }>(
+    `SELECT limit_minor, kind FROM plan_items WHERE ym < ? AND category_id = ? AND limit_minor > 0
+      ORDER BY ym DESC LIMIT 1`, [ym, categoryId])) ?? null;
+}
+
+/**
+ * Adds a category to the month's plan. Without an amount it takes the category's amount (and kind) from the
+ * last month that planned it — unless that no longer fits the amount to distribute, then it starts empty.
+ */
+export async function addPlanItem(ym: string, categoryId: number, limitMinor?: number) {
   await ensureMonthPlan(ym);
   const db = await getDb();
-  await db.run('INSERT OR IGNORE INTO plan_items (ym, category_id, limit_minor) VALUES (?, ?, ?)', [ym, categoryId, limitMinor]);
+  let amount = limitMinor ?? 0;
+  let kind: PlanKind = 'limit';
+  if (limitMinor === undefined) {
+    const last = await lastPlanItem(ym, categoryId);
+    const budget = await storedBudget(ym);
+    if (last && (budget === null || (await plannedTotal(ym)) + last.limit_minor <= budget)) {
+      amount = last.limit_minor;
+      kind = last.kind;
+    } else if (last) {
+      kind = last.kind;
+    }
+  }
+  await db.run('INSERT OR IGNORE INTO plan_items (ym, category_id, limit_minor, kind) VALUES (?, ?, ?, ?)', [ym, categoryId, amount, kind]);
   await markPlanned(ym);
 }
 
@@ -342,6 +366,6 @@ export async function planHistory(nowYm = currentYm()): Promise<HistoryMonth[]> 
 }
 
 export default {
-  ymOf, parseYm, currentYm, monthRange, monthStart, ensureMonthPlan, listPlan, addPlanItem, setPlanAmount,
+  ymOf, parseYm, currentYm, monthRange, monthStart, lastPlanItem, ensureMonthPlan, listPlan, addPlanItem, setPlanAmount,
   setPlanPinned, removePlanItem, monthStats, planHistory, getPlanBudget, setPlanBudget, plannedTotal, monthIncome,
 };
