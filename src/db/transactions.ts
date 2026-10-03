@@ -163,7 +163,7 @@ export async function setTransactionNote(id: number, note: string) {
 
 /**
  * "Открепить мерчанта для этой транзакции": merchant rules no longer touch this transaction and choosing its
- * category doesn't teach the merchant. Reattaching goes through reattachMerchant (assign.ts).
+ * category doesn't teach the merchant. One way: the app offers no reattaching.
  */
 export async function setMerchantDetached(id: number, detached: boolean) {
   const db = await getDb();

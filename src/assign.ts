@@ -1,7 +1,7 @@
 import { getDb } from './db';
-import { setCategoryForTransactions, setMerchantDetached, setTransactionCategory } from './db/transactions';
+import { setCategoryForTransactions, setTransactionCategory } from './db/transactions';
 import { incrementCategoryUsage } from './db/categories';
-import { createRule, backfillRule, findCategoryForMerchant } from './categorize';
+import { createRule, backfillRule } from './categorize';
 import { emitTransactionsChanged } from './events';
 import { isRememberable } from './types';
 
@@ -29,23 +29,6 @@ export async function assignCategory(txId: number, categoryId: number | null, op
 }
 
 export default assignCategory;
-
-/**
- * "Вернуть мерчанта для этой транзакции": back under the merchant's rule, so it takes the rule's category
- * (the one picked while detached was for this transaction only).
- */
-export async function reattachMerchant(txId: number) {
-  await setMerchantDetached(txId, false);
-  const db = await getDb();
-  const tx = await db.get<{ kind: string; merchant_key: string | null }>(
-    'SELECT kind, merchant_key FROM transactions WHERE id = ?', [txId]);
-  if (tx?.merchant_key && isRememberable(tx.kind)) {
-    // the rule can be gone only if its category was deleted ("Оставить без категории"): the merchant has none
-    const rule = await findCategoryForMerchant(tx.merchant_key);
-    await setTransactionCategory(txId, rule?.category_id ?? null, 'rule');
-  }
-  emitTransactionsChanged();
-}
 
 /** Same category (null = none) for several transactions (bulk edit from the list). No merchant rules: a one-off manual choice. */
 export async function assignCategoryToMany(txIds: number[], categoryId: number | null) {
