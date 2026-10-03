@@ -57,3 +57,29 @@ export function buildCategoryColors(
   }
   return out;
 }
+
+/** Palettes a type may pick: its own plus those no other type uses (all of them once every one is taken). */
+export function freePalettes(types: Array<{ id: number; palette: string | null }>, typeId: number): PaletteKey[] {
+  const taken = new Set(types.map((t, i) => (t.id === typeId ? null : typePalette(t, i))));
+  const free = PALETTE_ORDER.filter((k) => !taken.has(k));
+  return free.length > 0 ? free : PALETTE_ORDER;
+}
+
+/**
+ * Colors a category may pick: its type's shades, then the base colors of palettes no type uses, minus the
+ * colors other live categories already have (`taken`). Its current color is always offered.
+ */
+export function freeCategoryColors(
+  types: Array<{ id: number; palette: string | null }>,
+  typeId: number | null,
+  taken: Set<string>,
+  current: string | null,
+): string[] {
+  const palettes = types.map((t, i) => typePalette(t, i));
+  const own = typeId === null ? null : palettes[types.findIndex((t) => t.id === typeId)] ?? null;
+  const options = [
+    ...(own ? PALETTES[own].shades : []),
+    ...PALETTE_ORDER.filter((k) => !palettes.includes(k)).map((k) => PALETTES[k].shades[0]),
+  ].filter((c) => !taken.has(c) || c === current);
+  return current && !options.includes(current) ? [current, ...options] : options;
+}

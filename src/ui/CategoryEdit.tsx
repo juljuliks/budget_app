@@ -11,7 +11,8 @@ import { returnToPrevious, RootStackParamList } from '../navigation';
 import Button from './Button';
 import Chip from './Chip';
 import ColorSwatches from './ColorSwatches';
-import { PALETTE_ORDER, PALETTES, typePalette } from '../colors';
+import { freeCategoryColors } from '../colors';
+import { takenCategoryColors } from '../db/colors';
 import { formStyles } from './formStyles';
 import SectionHeading from './SectionHeading';
 import { colors } from './theme';
@@ -28,6 +29,8 @@ export default function CategoryEdit({ route, navigation }: Props) {
   // own color; null = from the type's palette
   const [color, setColor] = useState<string | null>(null);
   const [types, setTypes] = useState<CategoryType[]>([]);
+  // colors other categories already have: not offered
+  const [taken, setTaken] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -50,12 +53,13 @@ export default function CategoryEdit({ route, navigation }: Props) {
 
   // on focus: types may have been edited on the types screen
   useFocusEffect(useCallback(() => {
+    takenCategoryColors(categoryId).then(setTaken).catch((e) => console.error('load colors failed', e));
     listCategoryTypes().then((t) => {
       setTypes(t);
       // the selected type was deleted meanwhile
       setTypeId((cur) => (cur !== null && !t.some((x) => x.id === cur) ? null : cur));
     }).catch((e) => console.error('load types failed', e));
-  }, []));
+  }, [categoryId]));
 
   async function save() {
     const trimmed = name.trim();
@@ -93,12 +97,8 @@ export default function CategoryEdit({ route, navigation }: Props) {
     }
   }
 
-  const typeIndex = types.findIndex((t) => t.id === typeId);
-  const ownPalette = typeIndex >= 0 ? typePalette(types[typeIndex], typeIndex) : null;
-  const colorOptions = [
-    ...(ownPalette ? PALETTES[ownPalette].shades : []),
-    ...PALETTE_ORDER.filter((k) => k !== ownPalette).map((k) => PALETTES[k].shades[0]),
-  ];
+  // the type's shades first: a type reads as one color family on the charts
+  const colorOptions = freeCategoryColors(types, typeId, taken, color);
 
   const typeOptions: Array<[number | null, string]> = [[null, 'Без типа'], ...types.map((t): [number, string] => [t.id, t.name])];
 
@@ -129,7 +129,6 @@ export default function CategoryEdit({ route, navigation }: Props) {
       ) : null}
 
       <Text style={formStyles.label}>Цвет</Text>
-      {/* the type's shades first: a type reads as one color family on the charts */}
       <ColorSwatches options={colorOptions} value={color} onChange={setColor} />
 
       <Text style={formStyles.label}>Эмодзи (необязательно)</Text>

@@ -7,7 +7,7 @@ import {
 } from '../db/categoryTypes';
 import { emitTransactionsChanged } from '../events';
 import { returnToPrevious, RootStackParamList } from '../navigation';
-import { PALETTE_ORDER, PaletteKey, PALETTES, typePalette } from '../colors';
+import { freePalettes, PaletteKey, PALETTES, typePalette } from '../colors';
 import { PaletteStrip } from './ColorSwatches';
 import Fab from './Fab';
 import RowActions from './RowActions';
@@ -102,7 +102,8 @@ export default function CategoryTypes({ route, navigation }: Props) {
           {/* taps inside the dialog must not reach the backdrop (which closes it) */}
           <View style={styles.dialog} onStartShouldSetResponder={() => true}>
             <Text style={styles.dialogTitle}>Цвета «{paletteFor?.name}»</Text>
-            {PALETTE_ORDER.map((k) => (
+            {/* palettes other types use are not offered */}
+            {(paletteFor ? freePalettes(types, paletteFor.id) : []).map((k) => (
               <TouchableOpacity key={k} style={styles.paletteOption} onPress={() => choosePalette(k)}>
                 <PaletteStrip shades={PALETTES[k].shades} size={20} />
                 <Text style={[styles.paletteName, paletteFor?.palette === k && styles.paletteChosen]}>{PALETTES[k].label}</Text>

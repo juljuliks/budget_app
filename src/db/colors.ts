@@ -11,4 +11,12 @@ export async function categoryColors(): Promise<Map<number, string>> {
   return buildCategoryColors(cats, types);
 }
 
-export default { categoryColors };
+/** Colors live categories other than `exceptId` show (own or automatic): not offered again in the editor. */
+export async function takenCategoryColors(exceptId?: number): Promise<Set<string>> {
+  const db = await getDb();
+  const live = await db.all<{ id: number }>('SELECT id FROM categories WHERE deleted_at IS NULL');
+  const colors = await categoryColors();
+  return new Set(live.filter((c) => c.id !== exceptId).map((c) => colors.get(c.id)!).filter(Boolean));
+}
+
+export default { categoryColors, takenCategoryColors };

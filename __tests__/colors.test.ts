@@ -1,4 +1,4 @@
-import { buildCategoryColors, PALETTES, UNTYPED_COLORS } from '../src/colors';
+import { buildCategoryColors, freeCategoryColors, freePalettes, PALETTE_ORDER, PALETTES, UNTYPED_COLORS } from '../src/colors';
 
 test('a type colors its categories with its palette shades, in order; own color wins; untyped get base colors', () => {
   const colors = buildCategoryColors(
@@ -20,4 +20,26 @@ test('a type colors its categories with its palette shades, in order; own color 
   expect(colors.get(4)).toBe(PALETTES.orange.shades[0]);
   // untyped skip the palettes the types use (green, orange): blue, amber
   expect([colors.get(5), colors.get(6)]).toEqual([UNTYPED_COLORS[0], UNTYPED_COLORS[3]]);
+});
+
+test('a type is offered only palettes no other type uses (its own stays)', () => {
+  const types = [{ id: 1, palette: 'green' }, { id: 2, palette: null }, { id: 3, palette: 'blue' }];
+  // type 2 has no palette of its own: the 2nd in order (orange)
+  expect(freePalettes(types, 3)).toEqual(['blue', 'amber', 'pink', 'purple', 'teal', 'red']);
+  expect(freePalettes(types, 2)).toEqual(['orange', 'amber', 'pink', 'purple', 'teal', 'red']);
+  // every palette taken: all are offered
+  const nine = PALETTE_ORDER.map((p, i) => ({ id: i, palette: p })).concat([{ id: 99, palette: 'blue' }]);
+  expect(freePalettes(nine, 99)).toEqual(PALETTE_ORDER);
+});
+
+test('a category is offered its type shades and free palettes, minus colors other categories have', () => {
+  const types = [{ id: 1, palette: 'green' }];
+  const taken = new Set([PALETTES.green.shades[0], PALETTES.blue.shades[0]]);
+  const opts = freeCategoryColors(types, 1, taken, null);
+  expect(opts.slice(0, 4)).toEqual(PALETTES.green.shades.slice(1));
+  expect(opts).not.toContain(PALETTES.blue.shades[0]);
+  // the green type's palette is not offered to an untyped category
+  expect(freeCategoryColors(types, null, new Set(), null)).not.toContain(PALETTES.green.shades[0]);
+  // the current color stays even if taken
+  expect(freeCategoryColors(types, 1, taken, PALETTES.blue.shades[0])).toContain(PALETTES.blue.shades[0]);
 });
