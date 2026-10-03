@@ -1,7 +1,7 @@
 import { getDb } from './db';
 import { setCategoryForTransactions, setTransactionCategory } from './db/transactions';
 import { incrementCategoryUsage } from './db/categories';
-import { createRule, backfillRule, deleteRule } from './categorize';
+import { createRule, backfillRule } from './categorize';
 import { emitTransactionsChanged } from './events';
 import { isRememberable } from './types';
 
@@ -16,15 +16,12 @@ export async function assignCategory(txId: number, categoryId: number | null, op
 
   if (categoryId !== null) {
     const db = await getDb();
-    const tx = await db.get<{ kind: string; merchant_key: string | null }>('SELECT kind, merchant_key FROM transactions WHERE id = ?', [txId]);
-    if (tx?.merchant_key && isRememberable(tx.kind)) {
-      if (applyToMerchant) {
-        await createRule('exact', tx.merchant_key, categoryId);
-        await backfillRule('exact', tx.merchant_key, categoryId);
-      } else {
-        // "Запомнить" switched off: forget an earlier choice too, or it would keep categorizing this merchant
-        await deleteRule('exact', tx.merchant_key);
-      }
+    const tx = await db.get<{ kind: string; merchant_key: string | null; merchant_detached: number }>(
+      'SELECT kind, merchant_key, merchant_detached FROM transactions WHERE id = ?', [txId]);
+    // switched off or detached ("обработать иначе"): the category is for this transaction only
+    if (applyToMerchant && tx?.merchant_key && isRememberable(tx.kind) && !tx.merchant_detached) {
+      await createRule('exact', tx.merchant_key, categoryId);
+      await backfillRule('exact', tx.merchant_key, categoryId);
     }
     await incrementCategoryUsage(categoryId);
   }

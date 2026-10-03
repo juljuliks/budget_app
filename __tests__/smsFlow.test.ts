@@ -19,6 +19,7 @@ import SmsBackgroundTask from '../src/native/SmsBackgroundTask';
 import { handleNotificationAction } from '../src/notifications/notifeeIntegration';
 import { backfillRule, createRule } from '../src/categorize';
 import { assignCategory } from '../src/assign';
+import { setMerchantDetached } from '../src/db/transactions';
 import { createCategory } from '../src/db/categories';
 import { getTransferTypeId } from '../src/db/categoryTypes';
 import { getDb } from '../src/db';
@@ -149,13 +150,23 @@ test('a refund asks to find its purchase instead of a category', async () => {
   expect(cancelNotification).not.toHaveBeenCalled();
 });
 
-test('choosing with "Запомнить" off forgets an earlier rule for the merchant', async () => {
+test('"Запомнить" off: the category is for this transaction only, the merchant rule stays', async () => {
   await createRule('exact', 'SPAR', 3);
   await SmsBackgroundTask(SPAR_1);
   const id = (await tx('SELECT id FROM transactions')).id;
   await assignCategory(id, 2, { applyToMerchant: false });
-  expect(await tx('SELECT * FROM merchant_rules')).toBeUndefined();
+  expect(await tx('SELECT pattern, category_id FROM merchant_rules')).toEqual({ pattern: 'SPAR', category_id: 3 });
   expect(await tx('SELECT category_id, category_source FROM transactions')).toEqual({ category_id: 2, category_source: 'user' });
+});
+
+test('a detached transaction: rules skip it and its category teaches nothing', async () => {
+  await SmsBackgroundTask(SPAR_1);
+  const id = (await tx('SELECT id FROM transactions')).id;
+  await setMerchantDetached(id, true);
+  await backfillRule('exact', 'SPAR', 3);
+  expect(await tx('SELECT category_id FROM transactions')).toEqual({ category_id: null });
+  await assignCategory(id, 2);
+  expect(await tx('SELECT * FROM merchant_rules')).toBeUndefined();
 });
 
 test('a merchant rule never categorizes a money transfer: every transfer asks for a category', async () => {

@@ -68,12 +68,12 @@ export async function searchTransactions(query: string, limit = SEARCH_LIMIT): P
   const words = normalizeForSearch(query).split(' ').filter(Boolean);
   if (words.length === 0) return [];
   const db = await getDb();
-  const rows = await db.all<TransactionRow & { raw_sms: string }>(
-    `SELECT t.raw_sms, ${TX_COLUMNS} ${FROM_TX} ${NEWEST_FIRST}`);
+  const rows = await db.all<TransactionRow & { raw_sms: string; note: string | null }>(
+    `SELECT t.raw_sms, t.note, ${TX_COLUMNS} ${FROM_TX} ${NEWEST_FIRST}`);
   const out: TransactionRow[] = [];
   for (const r of rows) {
     const haystack = normalizeForSearch(
-      [r.raw_sms, r.raw_merchant, r.category_name, r.category_type_name, r.category_id === null ? UNCATEGORIZED : '']
+      [r.raw_sms, r.note, r.raw_merchant, r.category_name, r.category_type_name, r.category_id === null ? UNCATEGORIZED : '']
         .filter(Boolean).join(' '));
     if (words.every((w) => haystack.includes(w))) {
       out.push(r);
@@ -149,8 +149,23 @@ export async function setCategoryForTransactions(txIds: number[], categoryId: nu
 
 export async function getTransaction(id: number) {
   const db = await getDb();
-  return db.get<TransactionRow & { raw_sms: string; refund_settled_at: number | null }>(
+  return db.get<TransactionRow & { raw_sms: string; refund_settled_at: number | null; note: string | null; merchant_detached: number }>(
     `SELECT t.*, ${CATEGORY_COLUMNS} ${FROM_TX} WHERE t.id = ?`, [id]);
+}
+
+/** Free-text note shown under the SMS; empty clears it. */
+export async function setTransactionNote(id: number, note: string) {
+  const db = await getDb();
+  await db.run('UPDATE transactions SET note = ? WHERE id = ?', [note.trim() || null, id]);
+}
+
+/**
+ * "Обработать эту транзакцию иначе": merchant rules no longer touch this transaction and choosing its
+ * category doesn't teach the merchant. false puts it back under the merchant's rule.
+ */
+export async function setMerchantDetached(id: number, detached: boolean) {
+  const db = await getDb();
+  await db.run('UPDATE transactions SET merchant_detached = ? WHERE id = ?', [detached ? 1 : 0, id]);
 }
 
 /** Opening a transaction marks it read. Returns true if it was unread. */

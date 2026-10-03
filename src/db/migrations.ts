@@ -173,6 +173,12 @@ export const MIGRATIONS: MigrationStep[][] = [
     'ALTER TABLE transactions ADD COLUMN refund_settled_at INTEGER',
     'ALTER TABLE transactions ADD COLUMN refund_target_id INTEGER',
   ],
+  // 11: a free-text note on a transaction, and "handle this one differently": merchant rules neither apply to
+  // the transaction nor learn from it
+  [
+    'ALTER TABLE transactions ADD COLUMN note TEXT',
+    'ALTER TABLE transactions ADD COLUMN merchant_detached INTEGER NOT NULL DEFAULT 0',
+  ],
 ];
 
 export async function getSchemaVersion(db: Db): Promise<number> {

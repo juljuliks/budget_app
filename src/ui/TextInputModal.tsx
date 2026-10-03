@@ -15,6 +15,8 @@ type Props = {
   maxLength?: number;
   /** empty input is submitted (as '') instead of "Введите название" */
   allowEmpty?: boolean;
+  /** several lines (notes) */
+  multiline?: boolean;
   /** extra controls under the field (e.g. the plan item kind) */
   children?: React.ReactNode;
   /** returns an error message to show, or null when saved */
@@ -24,7 +26,7 @@ type Props = {
 
 /** Small dialog with one text field (create / rename, plan amounts). */
 export default function TextInputModal({
-  visible, title, initialValue = '', placeholder, submitLabel = 'Сохранить', hint, keyboardType, maxLength = 30, allowEmpty,
+  visible, title, initialValue = '', placeholder, submitLabel = 'Сохранить', hint, keyboardType, maxLength = 30, allowEmpty, multiline,
   onSubmit, onClose, children,
 }: Props) {
   const [value, setValue] = useState(initialValue);
@@ -51,7 +53,9 @@ export default function TextInputModal({
           <Text style={styles.title}>{title}</Text>
           {hint ? <Text style={styles.hint}>{hint}</Text> : null}
           <TextInput
-            style={formStyles.input}
+            style={[formStyles.input, multiline && styles.multiline]}
+            multiline={multiline}
+            textAlignVertical={multiline ? 'top' : undefined}
             value={value}
             onChangeText={(v) => { setValue(v); setError(null); }}
             placeholder={placeholder}
@@ -59,8 +63,8 @@ export default function TextInputModal({
             autoFocus
             keyboardType={keyboardType}
             maxLength={maxLength}
-            returnKeyType="done"
-            onSubmitEditing={submit}
+            returnKeyType={multiline ? 'default' : 'done'}
+            onSubmitEditing={multiline ? undefined : submit}
           />
           {children ? <View style={styles.extra}>{children}</View> : null}
           {error ? <Text style={formStyles.error}>{error}</Text> : null}
@@ -84,6 +88,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 18, fontWeight: '600', color: colors.text, marginBottom: 12 },
   hint: { fontSize: 14, color: colors.muted, marginTop: -6, marginBottom: 12 },
   extra: { marginTop: 12 },
+  multiline: { minHeight: 96, maxHeight: 200 },
   buttons: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 16 },
   button: { paddingHorizontal: 12, paddingVertical: 8 },
   cancel: { fontSize: 16, color: colors.muted },

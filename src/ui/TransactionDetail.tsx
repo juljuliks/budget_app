@@ -1,8 +1,8 @@
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { getTransaction, markTransactionSeen } from '../db/transactions';
+import { getTransaction, markTransactionSeen, setMerchantDetached, setTransactionNote } from '../db/transactions';
 import { assignCategory } from '../assign';
 import { emitTransactionsChanged } from '../events';
 import type { RootStackParamList } from '../navigation';
@@ -16,6 +16,7 @@ import { PencilIcon } from './icons';
 import { txCategoryLabel } from '../db/categories';
 import { colors } from './theme';
 import { isRememberable } from '../types';
+import TextInputModal from './TextInputModal';
 import { confirmDeleteTransaction } from './transactionActions';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TransactionDetail'>;
@@ -27,6 +28,11 @@ export default function TransactionDetail({ route, navigation }: Props) {
   const [applyToMerchant, setApplyToMerchant] = useState(true);
   const [saving, setSaving] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [noteOpen, setNoteOpen] = useState(false);
+
+  const reload = useCallback(() => {
+    getTransaction(txId).then((t) => setTx(t ?? null)).catch((e) => console.error('load transaction failed', e));
+  }, [txId]);
 
   // on focus: the category may have been changed on the category screens
   useFocusEffect(useCallback(() => {
@@ -50,8 +56,37 @@ export default function TransactionDetail({ route, navigation }: Props) {
     }
   }
 
+  async function saveNote(text: string): Promise<string | null> {
+    await setTransactionNote(txId, text);
+    emitTransactionsChanged();
+    reload();
+    return null;
+  }
+
+  // "Обработать эту транзакцию иначе": unlink this one from the merchant's rule (and back)
+  function toggleDetached() {
+    if (!tx) return;
+    if (tx.merchant_detached) {
+      setMerchantDetached(txId, false).then(reload).catch((e) => console.error('attach failed', e));
+      return;
+    }
+    Alert.alert(
+      'Обработать эту транзакцию иначе?',
+      `Правило для «${tx.raw_merchant || tx.merchant_key}» не будет менять её категорию, а выбранная здесь категория не запомнится для мерчанта.`,
+      [
+        { text: 'Отмена', style: 'cancel' },
+        {
+          text: 'Открепить', onPress: () => {
+            setMerchantDetached(txId, true).then(reload).catch((e) => console.error('detach failed', e));
+          },
+        },
+      ]);
+  }
+
   if (!tx) return <View style={styles.center}><ActivityIndicator /></View>;
   const category = txCategoryLabel(tx);
+  const merchantName = tx.raw_merchant || tx.merchant_key;
+  const rememberable = !!tx.merchant_key && isRememberable(tx.kind);
 
   return (
     <View style={styles.screen}>
@@ -115,10 +150,20 @@ export default function TransactionDetail({ route, navigation }: Props) {
       )}
 
       {/* only purchases / payments are remembered for their merchant (see assignCategory) */}
-      {tx.merchant_key && isRememberable(tx.kind) ? (
+      {rememberable && !tx.merchant_detached ? (
         <View style={styles.switchRow}>
-          <Text style={styles.switchLabel}>Запомнить для «{tx.raw_merchant || tx.merchant_key}» и применить к его транзакциям</Text>
+          <Text style={styles.switchLabel}>Запомнить категорию для мерчанта «{merchantName}» и применить к его транзакциям</Text>
           <Switch value={applyToMerchant} onValueChange={setApplyToMerchant} />
+        </View>
+      ) : null}
+      {rememberable ? (
+        <View style={styles.detachRow}>
+          {tx.merchant_detached ? (
+            <Text style={styles.detachInfo}>Откреплена от мерчанта «{merchantName}»: категория только для этой транзакции.</Text>
+          ) : null}
+          <TouchableOpacity onPress={toggleDetached} hitSlop={8}>
+            <Text style={styles.link}>{tx.merchant_detached ? 'Вернуть связь с мерчантом' : 'Обработать эту транзакцию иначе'}</Text>
+          </TouchableOpacity>
         </View>
       ) : null}
 
@@ -128,6 +173,29 @@ export default function TransactionDetail({ route, navigation }: Props) {
           <Text style={styles.sms} selectable>{tx.raw_sms}</Text>
         </>
       ) : null}
+
+      <SectionHeading title="Заметка" />
+      {tx.note ? (
+        <TouchableOpacity style={styles.note} onPress={() => setNoteOpen(true)} accessibilityLabel="Изменить заметку">
+          <Text style={styles.noteText}>{tx.note}</Text>
+          <PencilIcon color={colors.muted} size={16} />
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity onPress={() => setNoteOpen(true)} hitSlop={8}>
+          <Text style={styles.link}>＋ Добавить заметку</Text>
+        </TouchableOpacity>
+      )}
+      <TextInputModal
+        visible={noteOpen}
+        title="Заметка"
+        initialValue={tx.note ?? ''}
+        placeholder="Например, подарок маме"
+        multiline
+        maxLength={500}
+        allowEmpty
+        onSubmit={saveNote}
+        onClose={() => setNoteOpen(false)}
+      />
 
     </ScrollView>
       {/* pinned to the bottom, outside the scroll */}
@@ -159,6 +227,14 @@ const styles = StyleSheet.create({
   refundText: { fontSize: 14, color: colors.muted, lineHeight: 20 },
   refundDone: { fontSize: 15, color: colors.income, fontWeight: '600' },
   switchRow: { flexDirection: 'row', alignItems: 'center', marginTop: 16 },
+  detachRow: { marginTop: 10, gap: 4 },
+  detachInfo: { fontSize: 13, color: colors.muted },
+  link: { fontSize: 14, color: colors.accent },
+  note: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 8,
+    backgroundColor: colors.surface, padding: 12, borderRadius: 8,
+  },
+  noteText: { flex: 1, fontSize: 15, color: colors.text },
   switchLabel: { flex: 1, fontSize: 14, color: colors.text, marginRight: 12 },
   footer: {
     padding: 16, backgroundColor: colors.bg,
