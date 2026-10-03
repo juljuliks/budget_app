@@ -80,15 +80,20 @@ describe('assignCategory', () => {
     expect(await db.get('SELECT * FROM merchant_rules')).toBeUndefined();
   });
 
-  test('clearing the category resets source and notifies listeners', async () => {
+  test('"Без категории" picked by the user stays: a merchant category doesn\'t fill it in later; notifies listeners', async () => {
     await insertTx(1, 1000, 'SPAR');
+    await insertTx(2, 2000, 'SPAR');
     const listener = jest.fn();
     const off = onTransactionsChanged(listener);
-    await assignCategory(1, 4);
+    await assignCategory(1, 4);           // SPAR gets category 4, transaction 2 follows
     await assignCategory(1, null);
     off();
-    expect(await (await getDb()).get('SELECT category_id, category_source FROM transactions')).toEqual({ category_id: null, category_source: null });
+    const db = await getDb();
+    expect(await db.get('SELECT category_id, category_source FROM transactions WHERE id = 1')).toEqual({ category_id: null, category_source: 'user' });
     expect(listener).toHaveBeenCalledTimes(2);
+    // SPAR's category changes: transaction 2 follows, the manual "Без категории" doesn't
+    await assignCategory(2, 5, 'merchant');
+    expect((await db.all('SELECT category_id FROM transactions ORDER BY id')).map((r) => r.category_id)).toEqual([null, 5]);
   });
 });
 

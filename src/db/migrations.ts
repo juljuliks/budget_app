@@ -194,6 +194,14 @@ export const MIGRATIONS: MigrationStep[][] = [
   [
     "UPDATE transactions SET category_source = 'user' WHERE merchant_detached = 1 AND category_id IS NOT NULL",
   ],
+  // 15: until now picking a category always marked the transaction as a manual choice, even when that pick made
+  // it the merchant's category; so it didn't follow when the merchant's category changed. Purchases / payments
+  // that have their merchant's category follow the merchant from now on
+  [
+    `UPDATE transactions SET category_source = 'rule'
+      WHERE category_source = 'user' AND kind IN ('purchase', 'payment') AND merchant_key IS NOT NULL
+        AND category_id = (SELECT r.category_id FROM merchant_rules r WHERE r.match_type = 'exact' AND r.pattern = transactions.merchant_key)`,
+  ],
 ];
 
 export async function getSchemaVersion(db: Db): Promise<number> {

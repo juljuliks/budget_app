@@ -157,13 +157,13 @@ export async function merchantsWithTransactions(): Promise<MerchantWithCount[]> 
   return rows.map((r) => ({ merchant: r.merchant_key, name: r.name || r.merchant_key, count: r.n }));
 }
 
-/** Bulk "change category" from the list: a manual choice, so no merchant rules are created. */
+/** Bulk "change category" from the list: a manual choice ("Без категории" too), so no merchant rules are created. */
 export async function setCategoryForTransactions(txIds: number[], categoryId: number | null) {
   if (txIds.length === 0) return;
   const db = await getDb();
   await db.run(
     `UPDATE transactions SET category_id = ?, category_source = ? WHERE id IN (${txIds.map(() => '?').join(',')})`,
-    [categoryId, categoryId === null ? null : 'user', ...txIds]);
+    [categoryId, 'user', ...txIds]);
 }
 
 export async function getTransaction(id: number) {
@@ -205,11 +205,14 @@ export async function deleteTransaction(id: number) {
   await db.run('DELETE FROM transactions WHERE id = ?', [id]);
 }
 
-/** categoryId = null clears the category. */
+/**
+ * categoryId = null clears the category. "Без категории" picked by the user keeps source 'user', so a merchant
+ * category never fills it in later; an untouched uncategorized transaction has no source.
+ */
 export async function setTransactionCategory(txId: number, categoryId: number | null, source: CategorySource) {
   const db = await getDb();
   return db.run('UPDATE transactions SET category_id = ?, category_source = ? WHERE id = ?',
-    [categoryId, categoryId === null ? null : source, txId]);
+    [categoryId, source, txId]);
 }
 
 /** Manually entered transaction (cash etc.). Stored like an SMS one, with a unique synthetic hash. */

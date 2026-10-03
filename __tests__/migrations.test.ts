@@ -64,6 +64,22 @@ describe('migrations', () => {
     expect(await db.all('SELECT pattern FROM merchant_rules')).toEqual([{ pattern: 'SPAR' }]);
   });
 
+  test('migration 15: manual picks equal to the merchant\'s category follow the merchant, others stay manual', async () => {
+    const db = openDatabase(':memory:');
+    await migrate(db, MIGRATIONS.slice(0, 14));
+    await db.run("INSERT INTO merchant_rules (match_type, pattern, category_id, created_at) VALUES ('exact', 'SPAR', 1, 0)");
+    const add = (merchant: string, category: number, kind: string, hash: string) => db.run(
+      `INSERT INTO transactions (bank, kind, amount_minor, currency, merchant_key, category_id, category_source, occurred_at, raw_sms, sms_hash)
+        VALUES ('TBC', ?, 100, 'GEL', ?, ?, 'user', 1, '', ?)`, [kind, merchant, category, hash]);
+    await add('SPAR', 1, 'purchase', 'a'); // made SPAR's category: now follows it
+    await add('SPAR', 2, 'purchase', 'b'); // another category for this one only
+    await add('WOLT', 1, 'purchase', 'c'); // merchant without a category
+    await add('SPAR', 1, 'transfer', 'd'); // transfers never follow a merchant
+    await migrate(db);
+    expect((await db.all<{ category_source: string }>('SELECT category_source FROM transactions ORDER BY sms_hash')).map((r) => r.category_source))
+      .toEqual(['rule', 'user', 'user', 'user']);
+  });
+
   test('a failing migration is rolled back and version is not bumped', async () => {
     const db = openDatabase(':memory:');
     const broken = [...MIGRATIONS, ['CREATE TABLE extra (id INTEGER)', 'NOT VALID SQL']];

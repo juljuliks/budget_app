@@ -27,7 +27,7 @@ export async function createRule(matchType: MatchType, pattern: string, category
 
 /**
  * Applies a rule to existing transactions. Only touches uncategorized or rule-assigned
- * ones, so manual (category_source = 'user') choices are never overwritten. Only purchases / payments
+ * ones, so manual (category_source = 'user', "Без категории" included) choices are never overwritten. Only purchases / payments
  * (see isRememberable).
  */
 export async function backfillRule(matchType: MatchType, pattern: string, categoryId: number) {
@@ -39,7 +39,7 @@ export async function backfillRule(matchType: MatchType, pattern: string, catego
   const res = await db.run(
     `UPDATE transactions SET category_id = ?, category_source = 'rule'
       WHERE ${match} AND kind IN (${REMEMBERABLE_KINDS.map((k) => `'${k}'`).join(',')})
-        AND (category_id IS NULL OR category_source = 'rule')`,
+        AND (category_source IS NULL OR category_source = 'rule')`,
     [categoryId, ...matchParams]);
   return res.changes;
 }

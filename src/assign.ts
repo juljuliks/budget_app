@@ -62,7 +62,7 @@ export async function merchantChangePreview(txId: number, categoryId: number | n
   const totals = await db.all<{ currency: string; amount_minor: number; n: number }>(
     `SELECT currency, sum(amount_minor) AS amount_minor, count(*) AS n FROM transactions
       WHERE merchant_key = ? AND kind IN (${REMEMBERABLE_KINDS.map(() => '?').join(',')})
-        AND (id = ? OR category_id IS NULL OR category_source = 'rule')
+        AND (id = ? OR category_source IS NULL OR category_source = 'rule')
         AND (category_id IS NULL OR category_id != ?)
       GROUP BY currency ORDER BY sum(amount_minor) DESC`,
     [tx.merchant_key, ...REMEMBERABLE_KINDS, txId, categoryId]);
