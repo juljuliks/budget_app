@@ -1,5 +1,15 @@
 const INCOME_KINDS = new Set(['deposit', 'refund']);
 
+/** Transaction type as the bank SMS names it ("Deposit Money", "Payment", "Money Transfer", ...). */
+export const KIND_LABELS: Record<string, string> = {
+  purchase: 'Покупка',
+  payment: 'Оплата',
+  transfer: 'Перевод',
+  deposit: 'Поступление',
+  refund: 'Возврат',
+  withdrawal: 'Снятие наличных',
+};
+
 export function formatAmount(amountMinor: number, currency: string, kind?: string): string {
   const sign = kind && INCOME_KINDS.has(kind) ? '+' : '−';
   return `${sign}${(amountMinor / 100).toFixed(2)} ${currency}`;
@@ -32,7 +42,12 @@ export function formatTime(unixSeconds: number): string {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
-/** Row title: merchant from the SMS or the manual description. */
-export function merchantLabel(tx: { raw_merchant: string | null }): string {
-  return tx.raw_merchant || 'Без мерчанта';
+/**
+ * Row title: the type from the SMS and the merchant / person when known — "Поступление · DEMID RIABOV",
+ * "Оплата · TELMICO", "Перевод". A plain card purchase is just its merchant ("SPAR").
+ */
+export function merchantLabel(tx: { kind: string; raw_merchant: string | null }): string {
+  const label = KIND_LABELS[tx.kind] ?? 'Транзакция';
+  if (tx.kind === 'purchase') return tx.raw_merchant || label;
+  return tx.raw_merchant ? `${label} · ${tx.raw_merchant}` : label;
 }

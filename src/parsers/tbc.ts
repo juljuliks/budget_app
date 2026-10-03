@@ -15,12 +15,26 @@ const DATE_TIME = /(\d{1,2})\/(\d{1,2})\/(\d{4}|\d{2})(?:\s+(\d{1,2}):(\d{2}))?/
 const CARD_MASK = /\(\*[^)]+\)/;
 const BALANCE_LINE = /^(balance|available)\b/i;
 
-// Wording of non-purchase SMS is a best guess (no real samples in fixtures yet) — extend with real SMS.
+// Not money movements we record: declined payments, currency conversions between own accounts
+// ("Conversion: 14.02 USD / 36.40 GEL / Rate: ..."), one-time codes ("Code: 195448 27.00 GEL payment ...").
 const DECLINED = /declin|reject|insufficient|unsuccessful|not enough|\bfailed\b|отклон|отказ|недостаточно/i;
+const CONVERSION = /^conversion\b/i;
+const ONE_TIME_CODE = /^(code|otp|код)\b\s*:?\s*\d/i;
+
+// Real samples: "Payment\n25.69GEL\nTELMICO\nID:1951043\n29/09/2026",
+// "Deposit Money: 1.00 GEL\nMC GOLD\n03/10/2026\nDEMID RIABOV", "Money Transfer:\n1.00 GEL\nMC GOLD\n02/10/2026",
+// "A refund of 94.78 GEL has been initiated by TEMU.COM to your MC GOLD (*1834). ..."
 const REFUND = /refund|reversal|\breturn(ed)?\b|возврат/i;
+const REFUND_MERCHANT = /initiated by\s+(.+?)\s+to your\b/i;
 const DEPOSIT = /deposit money|deposit:|credited|зачислен/i;
 const TRANSFER = /money transfer|money transferred|transfer:/i;
+const PAYMENT = /^payment\b/i;
 const WITHDRAWAL = /cash withdrawal|withdrawal|\bATM\b|снятие наличных/i;
+
+// The card the money moved on ("MC GOLD", "VISA CLASSIC") — never a merchant
+const CARD_NAME = /^(MC|MASTERCARD|VISA|AMEX|MAESTRO|UNIONPAY)\b/i;
+// "ID:1951043" under a payment
+const REFERENCE_LINE = /^(ID|REF|RRN)\s*[:#]/i;
 
 type Amount = { minor: number; currency: string };
 
@@ -75,6 +89,7 @@ function classify(text: string): Kind | null {
   if (REFUND.test(text)) return 'refund';
   if (DEPOSIT.test(text)) return 'deposit';
   if (TRANSFER.test(text)) return 'transfer';
+  if (PAYMENT.test(text)) return 'payment';
   if (WITHDRAWAL.test(text)) return 'withdrawal';
   // A plain card purchase always carries the masked card "(*XXXX)"; without it this is
   // not a transaction SMS we understand (promo, OTP, personal message).
@@ -85,7 +100,7 @@ function classify(text: string): Kind | null {
 export function parseTbc(raw_sms: string): ParsedTx | null {
   const text = raw_sms.replace(/\r\n?/g, '\n').trim();
   if (!text) return null;
-  if (DECLINED.test(text)) return null;
+  if (DECLINED.test(text) || CONVERSION.test(text) || ONE_TIME_CODE.test(text)) return null;
 
   const lines = text.split(/\n+/).map((l) => l.trim()).filter(Boolean);
   // balance-only SMS end up here too: amounts on "Balance:" lines are skipped
@@ -95,7 +110,9 @@ export function parseTbc(raw_sms: string): ParsedTx | null {
   const kind = classify(text);
   if (!kind) return null;
 
-  const merchant = extractMerchant(lines);
+  const merchant = kind === 'refund' ? refundMerchant(text, lines)
+    : kind === 'deposit' || kind === 'transfer' ? counterparty(lines)
+      : extractMerchant(lines);
   const date = findDate(text);
   return {
     bank: 'tbc',
@@ -104,7 +121,7 @@ export function parseTbc(raw_sms: string): ParsedTx | null {
     currency: amount.currency,
     raw_merchant: merchant,
     merchant_key: normalizeMerchant(merchant),
-    ...(kind === 'transfer' ? { counterparty: merchant } : {}),
+    ...((kind === 'transfer' || kind === 'deposit') && merchant ? { counterparty: merchant } : {}),
     occurred_at: date?.iso,
     has_time: date?.hasTime ?? false,
     raw_sms,
@@ -121,11 +138,28 @@ function stripGateway(line: string): string {
   return looksLikeId ? parts[parts.length - 2] : last;
 }
 
+/** "A refund of 94.78 GEL has been initiated by TEMU.COM to your ..." -> "TEMU.COM" */
+function refundMerchant(text: string, lines: string[]): string {
+  const m = REFUND_MERCHANT.exec(text.replace(/\s+/g, ' '));
+  return m ? m[1].trim() : extractMerchant(lines);
+}
+
+/**
+ * Deposits and transfers: the line after the date is the other person ("DEMID RIABOV"), when the bank
+ * includes it. The line before the date is the card ("MC GOLD"), not a counterparty.
+ */
+function counterparty(lines: string[]): string {
+  const dateLine = lines.findIndex((l) => DATE_TIME.test(l));
+  if (dateLine < 0) return '';
+  const after = lines.slice(dateLine + 1).find((l) => !BALANCE_LINE.test(l) && !CARD_NAME.test(l) && !/^https?:/i.test(l));
+  return after ?? '';
+}
+
 /** Merchant is the first "free text" line after the amount line (TBC puts it after the card mask). */
 function extractMerchant(lines: string[]): string {
   for (let i = 1; i < Math.min(lines.length, 5); i++) {
     const line = lines[i];
-    if (BALANCE_LINE.test(line)) continue;
+    if (BALANCE_LINE.test(line) || CARD_NAME.test(line) || REFERENCE_LINE.test(line)) continue;
     if (/^https?:/i.test(line)) continue;
     if (parseAmountLine(line) && line.replace(AMOUNT_AFTER, '').replace(AMOUNT_BEFORE, '').trim() === '') continue;
     const candidate = stripGateway(line.replace(CARD_MASK, '').replace(DATE_TIME, '').trim());

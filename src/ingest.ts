@@ -3,6 +3,7 @@ import type { ParsedTx } from './types';
 import { sha256Hex } from './hash';
 import { getDb } from './db';
 import { findCategoryForMerchant } from './categorize';
+import { isRememberable } from './types';
 import { incrementCategoryUsage } from './db/categories';
 import { emitTransactionsChanged } from './events';
 
@@ -52,9 +53,9 @@ export async function ingestSms(sms: IncomingSms): Promise<IngestResult> {
   const db = await getDb();
   const hash = smsHash(sms);
 
-  // Never for money transfers: their "merchant" line is the card type ("MC GOLD"), the same for every
-  // transfer, so a rule would put all transfers into one category. A transfer always asks for a category.
-  const rule = parsed.merchant_key && parsed.kind !== 'transfer' ? await findCategoryForMerchant(parsed.merchant_key) : null;
+  // Only purchases / payments: a transfer or deposit "merchant" is a person (or nothing), the same person can
+  // send money for different things, so those always ask for a category.
+  const rule = parsed.merchant_key && isRememberable(parsed.kind) ? await findCategoryForMerchant(parsed.merchant_key) : null;
   const categoryId = rule?.category_id ?? null;
 
   // OR IGNORE + changes check instead of SELECT-then-INSERT: the same SMS may be

@@ -47,6 +47,23 @@ describe('migrations', () => {
     ]);
   });
 
+  test('migration 9: card names stop being merchants, deposits get the sender, card rules are dropped', async () => {
+    const db = openDatabase(':memory:');
+    await migrate(db, MIGRATIONS.slice(0, 8));
+    const add = (kind: string, sms: string, source: string | null, hash: string) => db.run(
+      `INSERT INTO transactions (bank, kind, amount_minor, currency, raw_merchant, merchant_key, category_id, category_source, occurred_at, raw_sms, sms_hash)
+        VALUES ('tbc', ?, 100, 'GEL', 'MC GOLD', 'MC GOLD', ?, ?, 1, ?, ?)`, [kind, source ? 1 : null, source, sms, hash]);
+    await add('deposit', 'Deposit Money: 1.00 GEL\nMC GOLD\n03/10/2026\nDEMID RIABOV', 'rule', 'a');
+    await add('transfer', 'Money Transfer:\n1.00 GEL\nMC GOLD\n02/10/2026', 'user', 'b');
+    await db.run("INSERT INTO merchant_rules (match_type, pattern, category_id, created_at) VALUES ('exact', 'MC GOLD', 1, 0), ('exact', 'SPAR', 1, 0)");
+    await migrate(db);
+    expect(await db.all('SELECT kind, raw_merchant, merchant_key, category_id FROM transactions ORDER BY sms_hash')).toEqual([
+      { kind: 'deposit', raw_merchant: 'DEMID RIABOV', merchant_key: 'DEMID RIABOV', category_id: null },
+      { kind: 'transfer', raw_merchant: null, merchant_key: null, category_id: 1 },
+    ]);
+    expect(await db.all('SELECT pattern FROM merchant_rules')).toEqual([{ pattern: 'SPAR' }]);
+  });
+
   test('a failing migration is rolled back and version is not bumped', async () => {
     const db = openDatabase(':memory:');
     const broken = [...MIGRATIONS, ['CREATE TABLE extra (id INTEGER)', 'NOT VALID SQL']];

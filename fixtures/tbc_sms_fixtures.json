@@ -47,11 +47,11 @@
       "kind": "transfer",
       "amount_minor": 8000,
       "currency": "GEL",
-      "raw_merchant": "MC GOLD",
-      "merchant_key": "MC GOLD",
-      "counterparty": "MC GOLD",
+      "raw_merchant": "",
+      "merchant_key": "",
       "occurred_at": "2026-09-28T00:00:00"
-    }
+    },
+    "notes": "MC GOLD is the card, not a merchant"
   },
   {
     "id": "tbc-005",
@@ -78,10 +78,11 @@
       "kind": "deposit",
       "amount_minor": 28000,
       "currency": "GEL",
-      "raw_merchant": "MC GOLD",
-      "merchant_key": "MC GOLD",
+      "raw_merchant": "",
+      "merchant_key": "",
       "occurred_at": "2026-09-28T00:00:00"
-    }
+    },
+    "notes": "MC GOLD is the card, not a merchant"
   },
   {
     "id": "tbc-007",
@@ -108,10 +109,12 @@
       "kind": "deposit",
       "amount_minor": 10299,
       "currency": "GEL",
-      "raw_merchant": "MC GOLD",
-      "merchant_key": "MC GOLD",
-      "occurred_at": "2026-09-28T00:00:00"
-    }
+      "raw_merchant": "[REDACTED_NAME]",
+      "merchant_key": "[REDACTED NAME]",
+      "occurred_at": "2026-09-28T00:00:00",
+      "counterparty": "[REDACTED_NAME]"
+    },
+    "notes": "Deposit: MC GOLD is the card; the sender after the date is the counterparty"
   },
   {
     "id": "tbc-009",
@@ -123,11 +126,11 @@
       "kind": "transfer",
       "amount_minor": 3000,
       "currency": "GEL",
-      "raw_merchant": "MC GOLD",
-      "merchant_key": "MC GOLD",
-      "counterparty": "MC GOLD",
+      "raw_merchant": "",
+      "merchant_key": "",
       "occurred_at": "2026-09-28T00:00:00"
-    }
+    },
+    "notes": "MC GOLD is the card, not a merchant"
   },
   {
     "id": "tbc-010",
@@ -139,11 +142,10 @@
       "kind": "transfer",
       "amount_minor": 100,
       "currency": "GEL",
-      "raw_merchant": "MC GOLD",
-      "merchant_key": "MC GOLD",
-      "counterparty": "MC GOLD",
+      "raw_merchant": "",
+      "merchant_key": "",
       "occurred_at": "2026-10-02T00:00:00"
     },
-    "notes": "Real SMS (2026-10-02): amount on its own line after 'Money Transfer:'"
+    "notes": "Real SMS (2026-10-02): amount on its own line after 'Money Transfer:'; MC GOLD is the card, not a merchant"
   }
 ]

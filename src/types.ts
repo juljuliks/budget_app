@@ -1,4 +1,14 @@
-export type Kind = 'purchase' | 'refund' | 'withdrawal' | 'transfer' | 'deposit';
+export type Kind = 'purchase' | 'payment' | 'refund' | 'withdrawal' | 'transfer' | 'deposit';
+
+/**
+ * Kinds whose merchant is a real merchant, so a category can be remembered for it (merchant rules).
+ * Not transfers / deposits (the "merchant" is a person or the card), refunds or ATM withdrawals.
+ */
+export const REMEMBERABLE_KINDS: ReadonlyArray<Kind> = ['purchase', 'payment'];
+
+export function isRememberable(kind: string): boolean {
+  return (REMEMBERABLE_KINDS as ReadonlyArray<string>).includes(kind);
+}
 
 export interface ParsedTx {
   bank: string;

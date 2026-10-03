@@ -1,9 +1,40 @@
 import { Db } from './types';
+import { parseTbc } from '../parsers/tbc';
+import { REMEMBERABLE_KINDS } from '../types';
+
+/** A migration step: one SQL statement, or a function for data fixes SQL can't express (re-parsing SMS). */
+export type MigrationStep = string | ((db: Db) => Promise<void>);
+
+const CARD_NAME_KEY = /^(MC|MASTERCARD|VISA|AMEX|MAESTRO|UNIONPAY)\b/;
+
+/**
+ * 9: "MC GOLD" on deposits / transfers / refunds is the card, not a merchant. Re-parse those SMS with the
+ * current parser (deposits get the sender as merchant, transfers none, refunds the shop), drop merchant
+ * rules on card names, and uncategorize what a rule put on kinds that are never remembered.
+ */
+async function fixCardMerchants(db: Db) {
+  const rows = await db.all<{ id: number; raw_sms: string }>(
+    `SELECT id, raw_sms FROM transactions
+      WHERE raw_sms != '' AND (kind IN ('deposit', 'transfer', 'refund') OR merchant_key LIKE 'MC %' OR merchant_key LIKE 'VISA%')`);
+  for (const r of rows) {
+    const p = parseTbc(r.raw_sms);
+    if (!p) continue;
+    await db.run('UPDATE transactions SET raw_merchant = ?, merchant_key = ? WHERE id = ?',
+      [p.raw_merchant || null, p.merchant_key || null, r.id]);
+  }
+  const rules = await db.all<{ id: number; pattern: string }>('SELECT id, pattern FROM merchant_rules');
+  for (const rule of rules) {
+    if (CARD_NAME_KEY.test(rule.pattern)) await db.run('DELETE FROM merchant_rules WHERE id = ?', [rule.id]);
+  }
+  await db.run(
+    `UPDATE transactions SET category_id = NULL, category_source = NULL
+      WHERE category_source = 'rule' AND kind NOT IN (${REMEMBERABLE_KINDS.map((k) => `'${k}'`).join(',')})`);
+}
 
 // Each migration is a list of single statements (quick-sqlite executes one statement per call).
 // Append new migrations to the end; never edit ones that have shipped.
 // PRAGMA user_version stores how many have been applied.
-export const MIGRATIONS: string[][] = [
+export const MIGRATIONS: MigrationStep[][] = [
   // 1: initial schema. IF NOT EXISTS / OR IGNORE so dev databases created from the
   // old db/schema.sql (user_version = 0) upgrade cleanly.
   [
@@ -136,6 +167,7 @@ export const MIGRATIONS: string[][] = [
   [
     "UPDATE transactions SET category_id = NULL, category_source = NULL WHERE kind = 'transfer' AND category_source = 'rule'",
   ],
+  [fixCardMerchants],
 ];
 
 export async function getSchemaVersion(db: Db): Promise<number> {
@@ -143,11 +175,14 @@ export async function getSchemaVersion(db: Db): Promise<number> {
   return row?.user_version ?? 0;
 }
 
-export async function migrate(db: Db, migrations: string[][] = MIGRATIONS): Promise<number> {
+export async function migrate(db: Db, migrations: MigrationStep[][] = MIGRATIONS): Promise<number> {
   const current = await getSchemaVersion(db);
   for (let v = current; v < migrations.length; v++) {
     await db.transaction(async () => {
-      for (const sql of migrations[v]) await db.run(sql);
+      for (const step of migrations[v]) {
+        if (typeof step === 'string') await db.run(step);
+        else await step(db);
+      }
       // PRAGMA doesn't accept bound parameters; v is always an integer here
       await db.run(`PRAGMA user_version = ${v + 1}`);
     });

@@ -1,3 +1,4 @@
+import { REMEMBERABLE_KINDS } from './types';
 import { getDb } from './db';
 
 export type MatchType = 'exact' | 'prefix';
@@ -24,10 +25,16 @@ export async function createRule(matchType: MatchType, pattern: string, category
     [matchType, pattern, categoryId, Math.floor(Date.now() / 1000)]);
 }
 
+/** Forgets a merchant: new transactions from it will ask for a category again. */
+export async function deleteRule(matchType: MatchType, pattern: string) {
+  const db = await getDb();
+  await db.run('DELETE FROM merchant_rules WHERE match_type = ? AND pattern = ?', [matchType, pattern]);
+}
+
 /**
  * Applies a rule to existing transactions. Only touches uncategorized or rule-assigned
- * ones, so manual (category_source = 'user') choices are never overwritten. Money transfers are
- * never touched (see ingestSms).
+ * ones, so manual (category_source = 'user') choices are never overwritten. Only purchases / payments
+ * (see isRememberable).
  */
 export async function backfillRule(matchType: MatchType, pattern: string, categoryId: number) {
   const db = await getDb();
@@ -37,9 +44,10 @@ export async function backfillRule(matchType: MatchType, pattern: string, catego
     : ['substr(merchant_key, 1, length(?)) = ?', [pattern, pattern]];
   const res = await db.run(
     `UPDATE transactions SET category_id = ?, category_source = 'rule'
-      WHERE ${match} AND kind != 'transfer' AND (category_id IS NULL OR category_source = 'rule')`,
+      WHERE ${match} AND kind IN (${REMEMBERABLE_KINDS.map((k) => `'${k}'`).join(',')})
+        AND (category_id IS NULL OR category_source = 'rule')`,
     [categoryId, ...matchParams]);
   return res.changes;
 }
 
-export default { findCategoryForMerchant, createRule, backfillRule };
+export default { findCategoryForMerchant, createRule, deleteRule, backfillRule };

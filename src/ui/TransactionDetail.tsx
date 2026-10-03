@@ -15,6 +15,7 @@ import SectionHeading from './SectionHeading';
 import { PencilIcon } from './icons';
 import { txCategoryLabel } from '../db/categories';
 import { colors } from './theme';
+import { isRememberable } from '../types';
 import { confirmDeleteTransaction } from './transactionActions';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TransactionDetail'>;
@@ -101,8 +102,8 @@ export default function TransactionDetail({ route, navigation }: Props) {
         />
       )}
 
-      {/* transfers never create merchant rules (see assignCategory) */}
-      {tx.merchant_key && tx.kind !== 'transfer' ? (
+      {/* only purchases / payments are remembered for their merchant (see assignCategory) */}
+      {tx.merchant_key && isRememberable(tx.kind) ? (
         <View style={styles.switchRow}>
           <Text style={styles.switchLabel}>Запомнить для «{tx.raw_merchant || tx.merchant_key}» и применить к его транзакциям</Text>
           <Switch value={applyToMerchant} onValueChange={setApplyToMerchant} />

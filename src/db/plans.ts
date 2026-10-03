@@ -3,7 +3,7 @@ import { getDb } from './index';
 export const BUDGET_CURRENCY = 'GEL';
 
 /** Kinds that count as spending. Refunds are subtracted; deposits are income and ignored. */
-const EXPENSE_KINDS = ['purchase', 'withdrawal', 'transfer'];
+const EXPENSE_KINDS = ['purchase', 'payment', 'withdrawal', 'transfer'];
 const SPEND_EXPR = `sum(CASE WHEN t.kind = 'refund' THEN -t.amount_minor
   WHEN t.kind IN (${EXPENSE_KINDS.map((k) => `'${k}'`).join(',')}) THEN t.amount_minor ELSE 0 END)`;
 
