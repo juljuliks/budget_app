@@ -4,6 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { getTransaction, markTransactionSeen, setMerchantDetached, setTransactionNote } from '../db/transactions';
 import { assignCategory, reattachMerchant } from '../assign';
+import { findCategoryForMerchant } from '../categorize';
 import { emitTransactionsChanged } from '../events';
 import type { RootStackParamList } from '../navigation';
 import { formatAmount, formatDay, formatTime, isIncome, merchantLabel } from './format';
@@ -30,19 +31,29 @@ export default function TransactionDetail({ route, navigation }: Props) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [noteOpen, setNoteOpen] = useState(false);
 
-  const reload = useCallback(() => {
-    getTransaction(txId).then((t) => setTx(t ?? null)).catch((e) => console.error('load transaction failed', e));
+  // the merchant's rule category: only with a rule can this transaction be detached from it
+  const [ruleCategoryId, setRuleCategoryId] = useState<number | null>(null);
+
+  const load = useCallback(async () => {
+    const t = await getTransaction(txId);
+    setTx(t ?? null);
+    const rule = t?.merchant_key && isRememberable(t.kind) ? await findCategoryForMerchant(t.merchant_key) : null;
+    setRuleCategoryId(rule?.category_id ?? null);
+    return t;
   }, [txId]);
+
+  const reload = useCallback(() => {
+    load().catch((e) => console.error('load transaction failed', e));
+  }, [load]);
 
   // on focus: the category may have been changed on the category screens
   useFocusEffect(useCallback(() => {
     (async () => {
-      const t = await getTransaction(txId);
-      setTx(t ?? null);
+      const t = await load();
       // opening a transaction marks it read (list dot, tab badge)
       if (t && t.seen_at === null && await markTransactionSeen(txId)) emitTransactionsChanged();
     })().catch((e) => console.error('load transaction failed', e));
-  }, [txId]));
+  }, [txId, load]));
 
   async function choose(categoryId: number | null) {
     if (saving) return;
@@ -149,14 +160,16 @@ export default function TransactionDetail({ route, navigation }: Props) {
         />
       )}
 
-      {/* only purchases / payments are remembered for their merchant (see assignCategory) */}
-      {rememberable && !tx.merchant_detached ? (
+      {/* only purchases / payments are remembered for their merchant (see assignCategory). The first pick
+          always remembers it; once there is a category the switch decides whether changing it updates the rule */}
+      {rememberable && !tx.merchant_detached && tx.category_id !== null ? (
         <View style={styles.switchRow}>
           <Text style={styles.switchLabel}>Запомнить категорию для мерчанта «{merchantName}» и применить к его транзакциям</Text>
           <Switch value={applyToMerchant} onValueChange={setApplyToMerchant} />
         </View>
       ) : null}
-      {rememberable ? (
+      {/* detaching = excluding this one from the merchant's rule, so it needs a rule; a detached one can always go back */}
+      {rememberable && (tx.merchant_detached || ruleCategoryId !== null) ? (
         <View style={styles.detachRow}>
           {tx.merchant_detached ? (
             <Text style={styles.detachInfo}>Откреплена от мерчанта «{merchantName}»: категория только для этой транзакции.</Text>

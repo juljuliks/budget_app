@@ -191,13 +191,15 @@ test('reattaching a detached transaction gives it the merchant rule category', a
     .toEqual({ category_id: 3, category_source: 'rule', merchant_detached: 0 });
 });
 
-test('reattaching without a merchant rule keeps the category', async () => {
+test('reattaching after the rule is gone (its category deleted): the merchant has no category, neither does it', async () => {
+  await createRule('exact', 'SPAR', 3);
   await SmsBackgroundTask(SPAR_1);
   const id = (await tx('SELECT id FROM transactions')).id;
   await setMerchantDetached(id, true);
   await assignCategory(id, 2);
+  await (await getDb()).run('DELETE FROM merchant_rules');
   await reattachMerchant(id);
-  expect(await tx('SELECT category_id, merchant_detached FROM transactions')).toEqual({ category_id: 2, merchant_detached: 0 });
+  expect(await tx('SELECT category_id, merchant_detached FROM transactions')).toEqual({ category_id: null, merchant_detached: 0 });
 });
 
 test('a merchant rule never categorizes a money transfer: every transfer asks for a category', async () => {

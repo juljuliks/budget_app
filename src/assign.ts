@@ -32,15 +32,18 @@ export default assignCategory;
 
 /**
  * "Вернуть мерчанта для этой транзакции": back under the merchant's rule, so it takes the rule's category
- * (the one picked while detached was for this transaction only). No rule: the category stays.
+ * (the one picked while detached was for this transaction only).
  */
 export async function reattachMerchant(txId: number) {
   await setMerchantDetached(txId, false);
   const db = await getDb();
   const tx = await db.get<{ kind: string; merchant_key: string | null }>(
     'SELECT kind, merchant_key FROM transactions WHERE id = ?', [txId]);
-  const rule = tx?.merchant_key && isRememberable(tx.kind) ? await findCategoryForMerchant(tx.merchant_key) : null;
-  if (rule) await setTransactionCategory(txId, rule.category_id, 'rule');
+  if (tx?.merchant_key && isRememberable(tx.kind)) {
+    // the rule can be gone only if its category was deleted ("Оставить без категории"): the merchant has none
+    const rule = await findCategoryForMerchant(tx.merchant_key);
+    await setTransactionCategory(txId, rule?.category_id ?? null, 'rule');
+  }
   emitTransactionsChanged();
 }
 
