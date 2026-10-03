@@ -10,8 +10,10 @@ const ITEMS = [['Merchants', 'Мерчанты'], ['Categories', 'Категор
 export default function SettingsMenuButton() {
   const navigation = useRootNavigation();
   const [open, setOpen] = useState(false);
+  // one child for the header row: an open Modal is a view of its own on Android and would take a gap there,
+  // shifting the header's buttons
   return (
-    <>
+    <View>
       <TouchableOpacity onPress={() => setOpen(true)} hitSlop={10} style={styles.button} accessibilityLabel="Настройки">
         <GearIcon color={colors.accent} size={22} />
       </TouchableOpacity>
@@ -26,7 +28,7 @@ export default function SettingsMenuButton() {
           </View>
         </Pressable>
       </Modal>
-    </>
+    </View>
   );
 }
 
