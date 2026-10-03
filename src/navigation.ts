@@ -8,7 +8,7 @@ export type TabParamList = {
    * open filtered by a category ('none' = uncategorized); nonce re-applies the same one.
    * from: the tab we came from (not via the tab bar) -> a back button in the header returns there.
    */
-  Transactions: { category?: number | 'none'; nonce?: number; from?: keyof TabParamList } | undefined;
+  Transactions: { category?: number | 'none'; merchant?: string; nonce?: number; from?: keyof TabParamList } | undefined;
 };
 
 /** Screens pushed over the tab bar. */
@@ -28,6 +28,8 @@ export type RootStackParamList = {
     moveFromCategoryId?: number;
   };
   Categories: undefined;
+  /** Merchants with their categories; merging into groups */
+  Merchants: undefined;
   /** Delete a category: first move its current-month transactions to other ones (the transactions list in a delete mode) */
   CategoryDelete: { categoryId: number };
   /** returnSelection: a newly created type goes back to the previous screen (category editor) as `selectTypeId` */

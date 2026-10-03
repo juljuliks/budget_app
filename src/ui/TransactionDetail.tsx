@@ -5,6 +5,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { getTransaction, markTransactionSeen, setTransactionNote } from '../db/transactions';
 import { assignCategory, MerchantChoice, merchantChangePreview } from '../assign';
 import { findCategoryForMerchant } from '../categorize';
+import { groupNameOf } from '../db/merchants';
 import { emitTransactionsChanged } from '../events';
 import type { RootStackParamList } from '../navigation';
 import { formatAmount, formatDay, formatTime, isIncome, merchantLabel, plural } from './format';
@@ -32,6 +33,8 @@ export default function TransactionDetail({ route, navigation }: Props) {
 
   // the merchant's category (its rule): new transactions of the merchant get it automatically
   const [merchantCategory, setMerchantCategory] = useState<string | null>(null);
+  // the merchant's group, shown as the merchant
+  const [groupName, setGroupName] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const t = await getTransaction(txId);
@@ -39,6 +42,7 @@ export default function TransactionDetail({ route, navigation }: Props) {
     const rule = t?.merchant_key && isRememberable(t.kind) ? await findCategoryForMerchant(t.merchant_key) : null;
     const c = rule ? await getCategory(rule.category_id) : undefined;
     setMerchantCategory(c ? categoryLabel(c) : null);
+    setGroupName(t?.merchant_key ? await groupNameOf(t.merchant_key) : null);
     return t;
   }, [txId]);
 
@@ -160,7 +164,9 @@ export default function TransactionDetail({ route, navigation }: Props) {
 
       {/* only purchases / payments are remembered for their merchant (see assignCategory) */}
       {rememberable && merchantCategory ? (
-        <Text style={styles.merchantInfo}>Категория мерчанта «{merchantName}»: {merchantCategory}. Новые транзакции мерчанта получают её автоматически.</Text>
+        <Text style={styles.merchantInfo}>
+          Категория {groupName ? `группы мерчантов «${groupName}»` : `мерчанта «${merchantName}»`}: {merchantCategory}. Новые транзакции мерчанта получают её автоматически.
+        </Text>
       ) : null}
 
       {tx.raw_sms ? (

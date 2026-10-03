@@ -167,4 +167,12 @@ export async function excludeFromGroup(id: string, keys: string[]) {
   });
 }
 
-export default { listMerchants, getMerchant, setMerchantCategory, categoriesOfMerchants, mergeMerchants, renameMerchantGroup, excludeFromGroup };
+/** The name of a transaction's merchant as the app shows it: its group's name if it is in one. */
+export async function groupNameOf(merchantKey: string): Promise<string | null> {
+  const db = await getDb();
+  const g = await db.get<{ name: string }>(
+    'SELECT g.name FROM merchant_group_members gm JOIN merchant_groups g ON g.id = gm.group_id WHERE gm.merchant_key = ?', [merchantKey]);
+  return g?.name ?? null;
+}
+
+export default { groupNameOf, listMerchants, getMerchant, setMerchantCategory, categoriesOfMerchants, mergeMerchants, renameMerchantGroup, excludeFromGroup };

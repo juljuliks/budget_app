@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { AppState } from 'react-native';
+import { AppState, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -13,6 +13,8 @@ import CategoryTypes from './ui/CategoryTypes';
 import AddTransaction from './ui/AddTransaction';
 import RefundResolve from './ui/RefundResolve';
 import StatsHome from './ui/stats/StatsHome';
+import MerchantsScreen from './ui/MerchantsScreen';
+import SettingsMenuButton from './ui/SettingsMenuButton';
 import { HistoryIcon, StatsIcon } from './ui/icons';
 import { colors } from './ui/theme';
 import { createNotificationChannel } from './notifications/notifeeBootstrap';
@@ -23,6 +25,7 @@ import { onTransactionsChanged } from './events';
 import { navigationRef, flushPendingNavigation, RootStackParamList, TabParamList } from './navigation';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+const headerRightStyle = { marginRight: 16 };
 const Tab = createBottomTabNavigator<TabParamList>();
 
 /** Unread (not yet opened) transactions for the tab badge; refreshed on any data change. */
@@ -46,7 +49,11 @@ function MainTabs() {
       <Tab.Screen
         name="Stats"
         component={StatsHome}
-        options={{ title: 'Статистика', tabBarIcon: ({ color }) => <StatsIcon color={color} /> }}
+        options={{
+          title: 'Статистика',
+          tabBarIcon: ({ color }) => <StatsIcon color={color} />,
+          headerRight: () => <View style={headerRightStyle}><SettingsMenuButton /></View>,
+        }}
       />
       <Tab.Screen
         name="Transactions"
@@ -91,6 +98,7 @@ export default function App() {
         <Stack.Screen name="TransactionDetail" component={TransactionDetail} options={{ title: 'Транзакция' }} />
         <Stack.Screen name="CategoryEdit" component={CategoryEdit} options={{ title: 'Категория' }} />
         <Stack.Screen name="Categories" component={CategoriesScreen} options={{ title: 'Категории' }} />
+        <Stack.Screen name="Merchants" component={MerchantsScreen} options={{ title: 'Мерчанты' }} />
         <Stack.Screen name="CategoryDelete" component={CategoryDelete} options={{ title: 'Удаление категории' }} />
         <Stack.Screen name="CategoryTypes" component={CategoryTypes} options={{ title: 'Типы категорий' }} />
         <Stack.Screen name="AddTransaction" component={AddTransaction} options={{ title: 'Новая транзакция' }} />

@@ -18,6 +18,7 @@ import Checkbox from './Checkbox';
 import Chip from './Chip';
 import Fab from './Fab';
 import PushAccessBanner from './PushAccessBanner';
+import SettingsMenuButton from './SettingsMenuButton';
 import { dayKey, formatDay, plural } from './format';
 import { formStyles } from './formStyles';
 import { PencilIcon, SearchIcon } from './icons';
@@ -96,10 +97,14 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
 
   // opened from the stats screen: filter by that category
   const route = useRoute<RouteProp<TabParamList, 'Transactions'>>();
-  const { category: incomingCategory, nonce, from } = route.params ?? {};
+  const { category: incomingCategory, merchant: incomingMerchant, nonce, from } = route.params ?? {};
   useEffect(() => {
     if (incomingCategory !== undefined) { setMode('category'); setCategory(incomingCategory); }
   }, [incomingCategory, nonce]);
+  // opened from a merchant's card: filter by that merchant
+  useEffect(() => {
+    if (incomingMerchant !== undefined) { setMode('merchant'); setMerchant(incomingMerchant); }
+  }, [incomingMerchant, nonce]);
 
   // edit mode: ✎ / 🗑 on every row and the selection toolbar; selectMode (inside edit mode) replaces the icons with checkboxes
   const [editMode, setEditMode] = useState(deleting);
@@ -234,7 +239,7 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
   // came here from another screen (not the tab bar): back returns there with the filter cleared
   function goBack() {
     const target = from;
-    tabNavigation.setParams({ from: undefined, category: undefined });
+    tabNavigation.setParams({ from: undefined, category: undefined, merchant: undefined });
     resetFilters();
     if (target) tabNavigation.navigate(target);
   }
@@ -272,15 +277,18 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
         ? () => <HeaderBackButton onPress={goBack} accessibilityLabel="Назад" />
         : undefined,
       headerRight: () => (
-        <TouchableOpacity
-          style={[styles.editToggle, editMode && styles.editToggleOn]}
-          onPress={toggleEditMode}
-          accessibilityRole="button"
-          accessibilityState={{ selected: editMode }}
-        >
-          <PencilIcon color={editMode ? '#FFFFFF' : colors.accent} size={16} />
-          <Text style={[styles.editToggleText, editMode && styles.editToggleTextOn]}>{editMode ? 'Готово' : 'Редактировать'}</Text>
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            style={[styles.editToggle, editMode && styles.editToggleOn]}
+            onPress={toggleEditMode}
+            accessibilityRole="button"
+            accessibilityState={{ selected: editMode }}
+          >
+            <PencilIcon color={editMode ? '#FFFFFF' : colors.accent} size={16} />
+            <Text style={[styles.editToggleText, editMode && styles.editToggleTextOn]}>{editMode ? 'Готово' : 'Редактировать'}</Text>
+          </TouchableOpacity>
+          <SettingsMenuButton />
+        </View>
       ),
     });
     // toggleEditMode / goBack only use state setters, navigation and `from`
@@ -549,9 +557,10 @@ const styles = StyleSheet.create({
   selectLabel: { fontSize: 15, color: colors.text },
   selectCount: { fontSize: 13, color: colors.muted },
   editToggle: {
-    flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, marginRight: 16,
+    flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6,
     borderRadius: 16, borderWidth: 1, borderColor: colors.accent,
   },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 14, marginRight: 16 },
   editToggleOn: { backgroundColor: colors.accent },
   editToggleText: { fontSize: 14, color: colors.accent },
   editToggleTextOn: { color: '#FFFFFF' },
