@@ -52,6 +52,8 @@ This document outlines the remaining work to finish the privacy-first SMS transa
   - [x] Read state: unread = never opened and uncategorized; blue dot in the list, count badge on the tab
   - [x] Filter modes: По тексту / По категории (categories that have transactions, with counts) / По дате (day or period calendar)
   - [x] "Выбрать все" selects everything shown; "Редактировать" in the tab header; "+" hidden while a filter is active
+  - [x] Refunds ("A refund of ... initiated by TEMU.COM"): notification "Найти покупку" -> purchases at that shop in
+    the last 90 days (same amount first); reduce the purchase by the refund (−) or delete it (🗑)
   - [ ] Combine filters (e.g. category + period)
   - [ ] Edit / delete a manual transaction; arbitrary date picker
 - [x] Bottom tabs: Статистика / Транзакции; inside Статистика: Статистика | План | История (see section below)

@@ -11,6 +11,7 @@ import CategoriesScreen from './ui/CategoriesScreen';
 import CategoryDelete from './ui/CategoryDelete';
 import CategoryTypes from './ui/CategoryTypes';
 import AddTransaction from './ui/AddTransaction';
+import RefundResolve from './ui/RefundResolve';
 import StatsHome from './ui/stats/StatsHome';
 import { HistoryIcon, StatsIcon } from './ui/icons';
 import { colors } from './ui/theme';
@@ -93,6 +94,7 @@ export default function App() {
         <Stack.Screen name="CategoryDelete" component={CategoryDelete} options={{ title: 'Удаление категории' }} />
         <Stack.Screen name="CategoryTypes" component={CategoryTypes} options={{ title: 'Типы категорий' }} />
         <Stack.Screen name="AddTransaction" component={AddTransaction} options={{ title: 'Новая транзакция' }} />
+        <Stack.Screen name="RefundResolve" component={RefundResolve} options={{ title: 'Возврат' }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

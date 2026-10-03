@@ -139,6 +139,16 @@ test('money transfer offers only categories of the transfer type, plus "new cate
   expect(n.android.actions[2].pressAction.id).toBe('all_categories');
 });
 
+test('a refund asks to find its purchase instead of a category', async () => {
+  await SmsBackgroundTask({ sender: 'TBC SMS', body: 'A refund of 94.78 GEL has been initiated by TEMU.COM to your MC GOLD (*1834). The amount will be credited to your account within 2–5 days.', timestamp: 1 });
+  const n = displayNotification.mock.calls[0][0];
+  expect(n.title).toBe('Возврат — 94.78 GEL');
+  expect(n.android.actions.map((a: any) => a.pressAction.id)).toEqual(['refund_resolve']);
+  await handleNotificationAction({ id: 'refund_resolve', notification: { id: n.id, data: n.data } });
+  expect(navigateWhenReady).toHaveBeenLastCalledWith({ name: 'RefundResolve', params: { refundId: Number(n.data.txId) } });
+  expect(cancelNotification).not.toHaveBeenCalled();
+});
+
 test('choosing with "Запомнить" off forgets an earlier rule for the merchant', async () => {
   await createRule('exact', 'SPAR', 3);
   await SmsBackgroundTask(SPAR_1);

@@ -62,7 +62,19 @@ export default function TransactionDetail({ route, navigation }: Props) {
       <Text style={styles.merchant}>{merchantLabel(tx)}</Text>
       <Text style={styles.meta}>{formatDay(tx.occurred_at)}, {formatTime(tx.occurred_at)}</Text>
 
-      {category ? (
+      {tx.kind === 'refund' ? (
+        // a refund is settled on its purchase (reduced / deleted) instead of getting a category
+        <View style={styles.refundBox}>
+          {tx.refund_settled_at ? (
+            <Text style={styles.refundDone}>✓ Возврат учтён в покупке</Text>
+          ) : (
+            <>
+              <Text style={styles.refundText}>Найдите покупку, за которую вернули деньги, и уменьшите её сумму или удалите её.</Text>
+              <Button title="Найти покупку" onPress={() => navigation.navigate('RefundResolve', { refundId: txId })} />
+            </>
+          )}
+        </View>
+      ) : category ? (
         // categorized: the category and "Сменить" (the picker opens in a sheet)
         <>
           {/* no gear here: category management is in the "Сменить категорию" sheet */}
@@ -143,6 +155,9 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed',
   },
   changeText: { fontSize: 15, color: colors.accent },
+  refundBox: { marginTop: 24, gap: 12 },
+  refundText: { fontSize: 14, color: colors.muted, lineHeight: 20 },
+  refundDone: { fontSize: 15, color: colors.income, fontWeight: '600' },
   switchRow: { flexDirection: 'row', alignItems: 'center', marginTop: 16 },
   switchLabel: { flex: 1, fontSize: 14, color: colors.text, marginRight: 12 },
   footer: {

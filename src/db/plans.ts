@@ -2,9 +2,13 @@ import { getDb } from './index';
 
 export const BUDGET_CURRENCY = 'GEL';
 
-/** Kinds that count as spending. Refunds are subtracted; deposits are income and ignored. */
+/**
+ * Kinds that count as spending; deposits are income and ignored. A refund is subtracted only when the user
+ * put it into a category; otherwise it is settled on the purchase itself (reduced or deleted, see refunds.ts)
+ * and must not count twice — or turn "Без категории" negative while waiting.
+ */
 const EXPENSE_KINDS = ['purchase', 'payment', 'withdrawal', 'transfer'];
-const SPEND_EXPR = `sum(CASE WHEN t.kind = 'refund' THEN -t.amount_minor
+const SPEND_EXPR = `sum(CASE WHEN t.kind = 'refund' THEN CASE WHEN t.category_id IS NULL THEN 0 ELSE -t.amount_minor END
   WHEN t.kind IN (${EXPENSE_KINDS.map((k) => `'${k}'`).join(',')}) THEN t.amount_minor ELSE 0 END)`;
 
 /** Month key "2026-10". month is 0-based like Date#getMonth. */

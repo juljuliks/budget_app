@@ -57,3 +57,11 @@ export const SearchIcon = ({ color, size = 18 }: P) => (
     <Path d="m20 20-4-4" />
   </Svg>
 );
+
+/** "Reduce the amount": a minus in a circle (after Lucide "circle-minus", ISC license). */
+export const MinusCircleIcon = ({ color, size = 20 }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round">
+    <Circle cx={12} cy={12} r={10} />
+    <Path d="M8 12h8" />
+  </Svg>
+);

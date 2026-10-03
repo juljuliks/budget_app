@@ -149,7 +149,8 @@ export async function setCategoryForTransactions(txIds: number[], categoryId: nu
 
 export async function getTransaction(id: number) {
   const db = await getDb();
-  return db.get<TransactionRow & { raw_sms: string }>(`SELECT t.*, ${CATEGORY_COLUMNS} ${FROM_TX} WHERE t.id = ?`, [id]);
+  return db.get<TransactionRow & { raw_sms: string; refund_settled_at: number | null }>(
+    `SELECT t.*, ${CATEGORY_COLUMNS} ${FROM_TX} WHERE t.id = ?`, [id]);
 }
 
 /** Opening a transaction marks it read. Returns true if it was unread. */

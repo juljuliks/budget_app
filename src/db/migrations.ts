@@ -168,6 +168,11 @@ export const MIGRATIONS: MigrationStep[][] = [
     "UPDATE transactions SET category_id = NULL, category_source = NULL WHERE kind = 'transfer' AND category_source = 'rule'",
   ],
   [fixCardMerchants],
+  // 10: a refund settled against a purchase (the purchase reduced or deleted): when, and which purchase
+  [
+    'ALTER TABLE transactions ADD COLUMN refund_settled_at INTEGER',
+    'ALTER TABLE transactions ADD COLUMN refund_target_id INTEGER',
+  ],
 ];
 
 export async function getSchemaVersion(db: Db): Promise<number> {

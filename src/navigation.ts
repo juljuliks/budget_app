@@ -31,6 +31,8 @@ export type RootStackParamList = {
   /** returnSelection: a newly created type goes back to the previous screen (category editor) as `selectTypeId` */
   CategoryTypes: { returnSelection?: boolean } | undefined;
   AddTransaction: { selectCategoryId?: number } | undefined;
+  /** Settle a refund on the purchase it belongs to (reduce it or delete it) */
+  RefundResolve: { refundId: number };
 };
 
 export const navigationRef = createNavigationContainerRef<RootStackParamList>();
