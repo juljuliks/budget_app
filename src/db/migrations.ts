@@ -179,6 +179,11 @@ export const MIGRATIONS: MigrationStep[][] = [
     'ALTER TABLE transactions ADD COLUMN note TEXT',
     'ALTER TABLE transactions ADD COLUMN merchant_detached INTEGER NOT NULL DEFAULT 0',
   ],
+  // 12: colors. A type's palette (see src/colors.ts; NULL = by its position), a category's own color (NULL = auto)
+  [
+    'ALTER TABLE category_types ADD COLUMN palette TEXT',
+    'ALTER TABLE categories ADD COLUMN color TEXT',
+  ],
 ];
 
 export async function getSchemaVersion(db: Db): Promise<number> {

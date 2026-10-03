@@ -10,6 +10,7 @@ import {
 import { createCategory, deleteCategory } from '../src/db/categories';
 import { addManualTransaction } from '../src/db/transactions';
 import { freshDb } from './helpers';
+import { NEUTRAL_COLOR } from '../src/colors';
 
 const NOW = currentYm(new Date());
 const at = (year: number, month: number, day = 10) => Math.floor(new Date(year, month, day, 12).getTime() / 1000);
@@ -108,14 +109,12 @@ describe('monthStats', () => {
     expect(s.other_currencies).toEqual([{ currency: 'USD', spent_minor: 999 }]);
   });
 
-  test('color rank follows all-time spend', async () => {
+  test('each category carries its chart color; uncategorized is neutral', async () => {
     await spend(100, 1, 2026, 7);
-    await spend(9000, 2, 2026, 7);
-    await spend(50, 1, 2026, 8);
-    await spend(10, 2, 2026, 8);
-    const rank = new Map((await monthStats(2026, 8)).categories.map((c) => [c.category_id, c.color_rank]));
-    expect(rank.get(2)).toBe(0);
-    expect(rank.get(1)).toBe(1);
+    await spend(50, null, 2026, 7);
+    const byId = new Map((await monthStats(2026, 7)).categories.map((c) => [c.category_id, c.color]));
+    expect(byId.get(1)).toMatch(/^#[0-9a-f]{6}$/);
+    expect(byId.get(null)).toBe(NEUTRAL_COLOR);
   });
 });
 

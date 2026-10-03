@@ -1,10 +1,14 @@
 import { getDb } from './index';
 
-export type CategoryType = { id: number; name: string; is_transfer: number; sort_order: number };
+export type CategoryType = {
+  id: number; name: string; is_transfer: number; sort_order: number;
+  /** palette key (src/colors.ts); null = by position */
+  palette: string | null;
+};
 
 export async function listCategoryTypes(): Promise<CategoryType[]> {
   const db = await getDb();
-  return db.all('SELECT id, name, is_transfer, sort_order FROM category_types ORDER BY sort_order, name');
+  return db.all('SELECT id, name, is_transfer, sort_order, palette FROM category_types ORDER BY sort_order, name');
 }
 
 /** Case-insensitive (Cyrillic too, hence JS) duplicate check. */
@@ -20,6 +24,11 @@ export async function createCategoryType(name: string): Promise<number> {
       VALUES (?, (SELECT coalesce(max(sort_order), 0) + 1 FROM category_types WHERE sort_order < 100))`,
     [name.trim()]);
   return lastInsertRowid;
+}
+
+export async function setCategoryTypePalette(id: number, palette: string | null) {
+  const db = await getDb();
+  await db.run('UPDATE category_types SET palette = ? WHERE id = ?', [palette, id]);
 }
 
 export async function renameCategoryType(id: number, name: string) {

@@ -3,6 +3,7 @@ import { SectionList, StyleSheet, Text, TouchableOpacity, View } from 'react-nat
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Category, listCategories } from '../db/categories';
+import { categoryColors } from '../db/colors';
 import type { RootStackParamList } from '../navigation';
 import { formStyles } from './formStyles';
 import RowActions from './RowActions';
@@ -13,6 +14,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Categories'>;
 /** All live categories grouped by type, with edit (pencil) and delete (trash). */
 export default function CategoriesScreen({ navigation }: Props) {
   const [cats, setCats] = useState<Category[]>([]);
+  const [colorOf, setColorOf] = useState<Map<number, string>>(new Map());
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -25,7 +27,9 @@ export default function CategoriesScreen({ navigation }: Props) {
   }, [navigation]);
 
   useFocusEffect(useCallback(() => {
-    listCategories().then(setCats).catch((e) => console.error('load categories failed', e));
+    Promise.all([listCategories(), categoryColors()])
+      .then(([c, colorMap]) => { setCats(c); setColorOf(colorMap); })
+      .catch((e) => console.error('load categories failed', e));
   }, []));
 
   // listCategories is ordered by type, so consecutive runs form the sections
@@ -44,6 +48,7 @@ export default function CategoriesScreen({ navigation }: Props) {
       renderSectionHeader={({ section }) => <Text style={formStyles.sectionHeader}>{section.title}</Text>}
       renderItem={({ item }) => (
         <View style={styles.row}>
+          <View style={[styles.dot, { backgroundColor: colorOf.get(item.id) ?? colors.border }]} />
           <Text style={styles.name} numberOfLines={1}>{`${item.emoji || ''} ${item.name}`.trim()}</Text>
           <RowActions
             subject={item.name}
@@ -64,6 +69,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', paddingLeft: 16, paddingRight: 8, paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
   },
+  dot: { width: 10, height: 10, borderRadius: 5, marginRight: 10 },
   name: { flex: 1, fontSize: 16, color: colors.text },
   empty: { padding: 32, textAlign: 'center', color: colors.muted },
 });

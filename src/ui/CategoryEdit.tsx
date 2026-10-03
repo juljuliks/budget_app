@@ -10,6 +10,8 @@ import { emitTransactionsChanged } from '../events';
 import { returnToPrevious, RootStackParamList } from '../navigation';
 import Button from './Button';
 import Chip from './Chip';
+import ColorSwatches from './ColorSwatches';
+import { PALETTE_ORDER, PALETTES, typePalette } from '../colors';
 import { formStyles } from './formStyles';
 import SectionHeading from './SectionHeading';
 import { colors } from './theme';
@@ -23,6 +25,8 @@ export default function CategoryEdit({ route, navigation }: Props) {
   const [name, setName] = useState('');
   const [emoji, setEmoji] = useState('');
   const [typeId, setTypeId] = useState<number | null>(initialTypeId ?? null);
+  // own color; null = from the type's palette
+  const [color, setColor] = useState<string | null>(null);
   const [types, setTypes] = useState<CategoryType[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -35,6 +39,7 @@ export default function CategoryEdit({ route, navigation }: Props) {
       setName(c.name);
       setEmoji(c.emoji ?? '');
       setTypeId(c.type_id);
+      setColor(c.color);
     }).catch((e) => console.error('load category failed', e));
   }, [categoryId, isNew, navigation]);
 
@@ -64,14 +69,14 @@ export default function CategoryEdit({ route, navigation }: Props) {
       }
       let createdId: number | null = null;
       if (isNew) {
-        const id = await createCategory(trimmed, emoji, typeId);
+        const id = await createCategory(trimmed, emoji, typeId, color);
         createdId = id;
         if (txId) await assignCategory(txId, id);
         if (txIds?.length) await assignCategoryToMany(txIds, id);
         if (planYm) await addPlanItem(planYm, id);
         emitTransactionsChanged();
       } else {
-        await updateCategory(categoryId, { name: trimmed, emoji, typeId });
+        await updateCategory(categoryId, { name: trimmed, emoji, typeId, color });
         emitTransactionsChanged();
       }
       // created for a transaction from its detail screen: the choice is made, leave that screen too
@@ -87,6 +92,13 @@ export default function CategoryEdit({ route, navigation }: Props) {
       setSaving(false);
     }
   }
+
+  const typeIndex = types.findIndex((t) => t.id === typeId);
+  const ownPalette = typeIndex >= 0 ? typePalette(types[typeIndex], typeIndex) : null;
+  const colorOptions = [
+    ...(ownPalette ? PALETTES[ownPalette].shades : []),
+    ...PALETTE_ORDER.filter((k) => k !== ownPalette).map((k) => PALETTES[k].shades[0]),
+  ];
 
   const typeOptions: Array<[number | null, string]> = [[null, 'Без типа'], ...types.map((t): [number, string] => [t.id, t.name])];
 
@@ -115,6 +127,10 @@ export default function CategoryEdit({ route, navigation }: Props) {
           Будет выглядеть так: {categoryLabel({ emoji, name: name.trim(), type_name: types.find((t) => t.id === typeId)?.name })}
         </Text>
       ) : null}
+
+      <Text style={formStyles.label}>Цвет</Text>
+      {/* the type's shades first: a type reads as one color family on the charts */}
+      <ColorSwatches options={colorOptions} value={color} onChange={setColor} />
 
       <Text style={formStyles.label}>Эмодзи (необязательно)</Text>
       <TextInput style={[formStyles.input, styles.emoji]} value={emoji} onChangeText={setEmoji} placeholder="🏋️" maxLength={8} />

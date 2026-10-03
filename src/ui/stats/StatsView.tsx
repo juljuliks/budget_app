@@ -3,30 +3,22 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View
 import { useFocusEffect } from '@react-navigation/native';
 import { useOpenCategoryTransactions } from '../../navigation';
 import { categoryLabel } from '../../db/categories';
-import { BUDGET_CURRENCY, CategoryStat, monthStats, MonthStats, ymOf } from '../../db/plans';
+import { BUDGET_CURRENCY, CategoryStat, monthStats, MonthStats, StatGroup, ymOf } from '../../db/plans';
 import { onTransactionsChanged } from '../../events';
 import Donut, { DonutSegment } from '../Donut';
 import Meter from '../Meter';
 import { formatMoney, formatShort } from '../money';
-import { chart, colors, seriesColor } from '../theme';
+import { colors } from '../theme';
 import PlanAmountModal, { PlanAmountTarget } from './PlanAmountModal';
 
-/** Its own color for the top categories by all-time spend; the rest (and uncategorized) share "other". */
-function hasOwnColor(c: CategoryStat): boolean {
-  return c.category_id !== null && c.color_rank < chart.series.length;
-}
-
-/** Donut: the top-colored categories (≤5) + one folded "other" segment, so ≤6 segments. */
-function donutSegments(cats: CategoryStat[]): DonutSegment[] {
-  const segments: DonutSegment[] = [];
-  let other = 0;
-  for (const c of cats) {
-    if (c.spent_minor <= 0) continue;
-    if (hasOwnColor(c)) segments.push({ key: String(c.category_id), value: c.spent_minor, color: seriesColor(c.color_rank) });
-    else other += c.spent_minor;
-  }
-  if (other > 0) segments.push({ key: 'other', value: other, color: chart.other });
-  return segments;
+/**
+ * Donut: one segment per category with spending, in section order, so a type's categories sit next to
+ * each other in their palette's shades (src/colors.ts).
+ */
+function donutSegments(groups: StatGroup[]): DonutSegment[] {
+  return groups.flatMap((g) => g.categories)
+    .filter((c) => c.spent_minor > 0)
+    .map((c) => ({ key: String(c.category_id), value: c.spent_minor, color: c.color }));
 }
 
 export default function StatsView({ year, month }: { year: number; month: number }) {
@@ -42,7 +34,7 @@ export default function StatsView({ year, month }: { year: number; month: number
   useEffect(load, [load]);
   useEffect(() => onTransactionsChanged(load), [load]);
 
-  const segments = useMemo(() => (stats ? donutSegments(stats.categories) : []), [stats]);
+  const segments = useMemo(() => (stats ? donutSegments(stats.groups) : []), [stats]);
 
   if (!stats) return <View style={styles.center}><ActivityIndicator /></View>;
 
@@ -119,7 +111,6 @@ function SummaryItem({ label, value, danger }: { label: string; value: string; d
 function CategoryRow({ stat, onAddToPlan }: { stat: CategoryStat; onAddToPlan?: () => void }) {
   const openTransactions = useOpenCategoryTransactions();
   const { spent_minor: spent, limit_minor: limit } = stat;
-  const dot = hasOwnColor(stat) ? seriesColor(stat.color_rank) : chart.other;
   const ratio = limit ? spent / limit : 0;
   // fixed payment (rent, subscription): any spending this month means it's paid
   const fixed = stat.plan_kind === 'fixed';
@@ -128,7 +119,7 @@ function CategoryRow({ stat, onAddToPlan }: { stat: CategoryStat; onAddToPlan?: 
   return (
     <TouchableOpacity style={styles.row} onPress={() => openTransactions(stat.category_id)} accessibilityHint="Показать транзакции категории">
       <View style={styles.rowTop}>
-        <View style={[styles.dot, { backgroundColor: dot }]} />
+        <View style={[styles.dot, { backgroundColor: stat.color }]} />
         <Text style={styles.rowName} numberOfLines={1}>{`${stat.emoji || ''} ${stat.name}`.trim()}</Text>
         {onAddToPlan ? (
           <TouchableOpacity style={styles.addToPlan} onPress={onAddToPlan} hitSlop={8} accessibilityLabel={`Добавить в план: ${stat.name}`}>

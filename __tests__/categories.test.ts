@@ -31,7 +31,7 @@ beforeEach(() => freshDb());
 describe('types', () => {
   test('fresh DB has the transfer type with the seeded category renamed to avoid "Переводы: Переводы"', async () => {
     const transfer = await getTransferTypeId();
-    expect(await listCategoryTypes()).toEqual([{ id: transfer, name: 'Переводы', is_transfer: 1, sort_order: 100 }]);
+    expect(await listCategoryTypes()).toEqual([{ id: transfer, name: 'Переводы', is_transfer: 1, sort_order: 100, palette: null }]);
     const cats = (await listCategories()).filter(isTransferCategory);
     expect(cats.map(categoryLabel)).toEqual(['🔁 Переводы: Прочие']);
     expect(isTransferCategory(cats[0])).toBe(true);

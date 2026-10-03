@@ -11,11 +11,8 @@ export const colors = {
   danger: '#B91C1C',
 };
 
-// Chart colors (dataviz reference palette, validated for CVD on a white surface).
-// Slots are assigned by a category's all-time spend rank so colors stay stable across months.
+// Chart colors. Category colors (palettes per type) live in src/colors.ts.
 export const chart = {
-  series: ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4'],
-  other: '#c3c2b7', // folded "Другое" + uncategorized
   track: '#f0efec',
   meterFill: '#2a78d6',
   meterTrack: '#cde2fb',
@@ -23,10 +20,6 @@ export const chart = {
   /** spent / limit meter: green while far from the limit, turning red towards it (see meterColor) */
   meterStops: [[0, '#1baf7a'], [0.6, '#eda100'], [1, '#d03b3b']] as Array<[number, string]>,
 };
-
-export function seriesColor(colorRank: number): string {
-  return chart.series[colorRank] ?? chart.other;
-}
 
 const rgb = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
 

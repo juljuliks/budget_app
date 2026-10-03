@@ -1,4 +1,6 @@
 import { getDb } from './index';
+import { categoryColors } from './colors';
+import { NEUTRAL_COLOR } from '../colors';
 
 export const BUDGET_CURRENCY = 'GEL';
 
@@ -225,8 +227,8 @@ export type CategoryStat = {
   limit_minor: number | null;
   /** how the plan amount is shown: a progress bar (limit) or paid / not paid (fixed); null without a plan */
   plan_kind: PlanKind | null;
-  /** rank by all-time spend: keeps a category's chart color stable across months */
-  color_rank: number;
+  /** chart color: the type's palette shade or the category's own (src/colors.ts) */
+  color: string;
   /** deleted category that still has spending in this month: can't be added to a plan */
   deleted: boolean;
 };
@@ -280,11 +282,7 @@ export async function monthStats(year: number, month: number): Promise<MonthStat
       GROUP BY t.category_id`, [from, to, BUDGET_CURRENCY]);
   const spentBy = new Map(spent.map((s) => [s.category_id, s.spent_minor]));
 
-  const ranks = await db.all<{ category_id: number }>(
-    `SELECT t.category_id FROM transactions t
-      WHERE t.category_id IS NOT NULL AND t.currency = ?
-      GROUP BY t.category_id ORDER BY ${SPEND_EXPR} DESC, t.category_id`, [BUDGET_CURRENCY]);
-  const rankOf = new Map(ranks.map((r, i) => [r.category_id, i]));
+  const colorOf = await categoryColors();
 
   const cats = await db.all<{ id: number; name: string; emoji: string | null; type_id: number | null; type_name: string | null; limit_minor: number | null; plan_kind: PlanKind | null; deleted_at: number | null }>(
     `SELECT c.id, c.name, c.emoji, c.type_id, ct.name AS type_name, p.limit_minor, p.kind AS plan_kind, c.deleted_at
@@ -300,14 +298,14 @@ export async function monthStats(year: number, month: number): Promise<MonthStat
     categories.push({
       category_id: c.id, name: c.name, emoji: c.emoji, type_id: c.type_id, type_name: c.type_name, spent_minor: s, limit_minor: limit,
       plan_kind: limit === null ? null : c.plan_kind,
-      color_rank: rankOf.get(c.id) ?? Number.MAX_SAFE_INTEGER, deleted: c.deleted_at !== null,
+      color: colorOf.get(c.id) ?? NEUTRAL_COLOR, deleted: c.deleted_at !== null,
     });
   }
   const uncategorized = spentBy.get(null) ?? 0;
   if (uncategorized !== 0) {
     categories.push({
       category_id: null, name: 'Без категории', emoji: null, type_id: null, type_name: null,
-      spent_minor: uncategorized, limit_minor: null, plan_kind: null, color_rank: Number.MAX_SAFE_INTEGER, deleted: false,
+      spent_minor: uncategorized, limit_minor: null, plan_kind: null, color: NEUTRAL_COLOR, deleted: false,
     });
   }
   categories.sort((a, b) => b.spent_minor - a.spent_minor || (b.limit_minor ?? 0) - (a.limit_minor ?? 0));

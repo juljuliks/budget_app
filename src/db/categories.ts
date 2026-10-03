@@ -11,9 +11,11 @@ export type Category = {
   /** 1 when the category's type is the transfer type: offered for money transfers (see isTransferCategory) */
   type_is_transfer: number;
   deleted_at: number | null;
+  /** own color; null = from the type's palette (see src/colors.ts) */
+  color: string | null;
 };
 
-const COLUMNS = `c.id, c.name, c.emoji, c.sort_order, c.type_id, c.deleted_at,
+const COLUMNS = `c.id, c.name, c.emoji, c.sort_order, c.type_id, c.deleted_at, c.color,
     t.name AS type_name, coalesce(t.is_transfer, 0) AS type_is_transfer`;
 const FROM = 'FROM categories c LEFT JOIN category_types t ON t.id = c.type_id';
 const SELECT = `SELECT ${COLUMNS} ${FROM}`;
@@ -53,21 +55,21 @@ export async function findCategoryByName(name: string, typeId: number | null, ex
     (c) => c.id !== exceptId && c.type_id === typeId && c.name.trim().toLowerCase() === wanted);
 }
 
-export async function createCategory(name: string, emoji?: string | null, typeId: number | null = null): Promise<number> {
+export async function createCategory(name: string, emoji?: string | null, typeId: number | null = null, color: string | null = null): Promise<number> {
   const db = await getDb();
   // new categories go to the end of the list (before the seeded "Другое" at 99)
   const { lastInsertRowid } = await db.run(
-    `INSERT INTO categories (name, emoji, type_id, sort_order)
-      VALUES (?, ?, ?, (SELECT coalesce(max(sort_order), 0) + 1 FROM categories WHERE sort_order < 99))`,
-    [name.trim(), emoji?.trim() || null, typeId]);
+    `INSERT INTO categories (name, emoji, type_id, color, sort_order)
+      VALUES (?, ?, ?, ?, (SELECT coalesce(max(sort_order), 0) + 1 FROM categories WHERE sort_order < 99))`,
+    [name.trim(), emoji?.trim() || null, typeId, color]);
   await db.run('INSERT OR REPLACE INTO category_usage (category_id, usage_count) VALUES (?, 0)', [lastInsertRowid]);
   return lastInsertRowid;
 }
 
-export async function updateCategory(id: number, fields: { name: string; emoji?: string | null; typeId: number | null }) {
+export async function updateCategory(id: number, fields: { name: string; emoji?: string | null; typeId: number | null; color?: string | null }) {
   const db = await getDb();
-  await db.run('UPDATE categories SET name = ?, emoji = ?, type_id = ? WHERE id = ?',
-    [fields.name.trim(), fields.emoji?.trim() || null, fields.typeId, id]);
+  await db.run('UPDATE categories SET name = ?, emoji = ?, type_id = ?, color = ? WHERE id = ?',
+    [fields.name.trim(), fields.emoji?.trim() || null, fields.typeId, fields.color ?? null, id]);
 }
 
 /** Transactions of the category from the current month on (those a delete would move). */
