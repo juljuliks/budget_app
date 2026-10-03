@@ -184,6 +184,11 @@ export const MIGRATIONS: MigrationStep[][] = [
     'ALTER TABLE category_types ADD COLUMN palette TEXT',
     'ALTER TABLE categories ADD COLUMN color TEXT',
   ],
+  // 13: where a transaction came from ('sms' / 'push' from the bank app), and small app settings
+  [
+    "ALTER TABLE transactions ADD COLUMN source TEXT NOT NULL DEFAULT 'sms'",
+    'CREATE TABLE IF NOT EXISTS app_settings (key TEXT PRIMARY KEY, value TEXT)',
+  ],
 ];
 
 export async function getSchemaVersion(db: Db): Promise<number> {

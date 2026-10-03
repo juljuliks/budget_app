@@ -16,6 +16,7 @@ import CategoryPickerModal from './CategoryPickerModal';
 import Checkbox from './Checkbox';
 import Chip from './Chip';
 import Fab from './Fab';
+import PushAccessBanner from './PushAccessBanner';
 import { dayKey, formatDay } from './format';
 import { formStyles } from './formStyles';
 import { PencilIcon, SearchIcon } from './icons';
@@ -289,6 +290,7 @@ export default function TransactionsList() {
   return (
     <View style={styles.list}>
       <View style={styles.header}>
+        <PushAccessBanner />
         <Segmented options={MODES} value={mode} onChange={setMode} style={styles.modes} />
 
         {mode === 'text' ? (

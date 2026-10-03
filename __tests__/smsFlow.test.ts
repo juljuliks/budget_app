@@ -140,6 +140,16 @@ test('money transfer offers only categories of the transfer type, plus "new cate
   expect(n.android.actions[2].pressAction.id).toBe('all_categories');
 });
 
+test('the same operation by SMS and by bank push is stored once; two real purchases stay two', async () => {
+  const body = '12.50GEL\n(*XXXX)\nSPAR\nBalance: 100.00GEL\n28/09/26 14:00';
+  await SmsBackgroundTask({ sender: 'TBC SMS', body, timestamp: 1759060800000 });
+  await SmsBackgroundTask({ sender: 'push:ge.tbcbank', body, timestamp: 1759060860000, source: 'push' });
+  expect((await tx('SELECT count(*) AS n FROM transactions')).n).toBe(1);
+  // a second identical purchase by SMS (another SMS) is a real second purchase
+  await SmsBackgroundTask({ sender: 'TBC SMS', body, timestamp: 1759060900000 });
+  expect((await tx('SELECT count(*) AS n FROM transactions')).n).toBe(2);
+});
+
 test('a refund asks to find its purchase instead of a category', async () => {
   await SmsBackgroundTask({ sender: 'TBC SMS', body: 'A refund of 94.78 GEL has been initiated by TEMU.COM to your MC GOLD (*1834). The amount will be credited to your account within 2–5 days.', timestamp: 1 });
   const n = displayNotification.mock.calls[0][0];

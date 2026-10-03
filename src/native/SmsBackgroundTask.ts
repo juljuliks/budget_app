@@ -6,12 +6,14 @@ export type SmsTaskData = {
   sender: string;
   body: string;
   timestamp: number;
+  /** 'push' when it came from the bank app's notification (BankPushListener) */
+  source?: 'sms' | 'push';
 };
 
 // Headless JS task started by SmsHeadlessService (android/.../sms). Registered in index.js.
 export default async function SmsBackgroundTask(data: SmsTaskData): Promise<void> {
   try {
-    const result = await ingestSms({ sender: data.sender, body: data.body, timestamp: data.timestamp });
+    const result = await ingestSms({ sender: data.sender, body: data.body, timestamp: data.timestamp, source: data.source });
     console.log('SmsBackgroundTask:', result.status, 'txId' in result ? result.txId : '');
 
     if (result.status === 'inserted' && result.categoryId === null) {

@@ -27,12 +27,17 @@ This document outlines the remaining work to finish the privacy-first SMS transa
   - [x] Android shows max 3 action buttons: 2 suggestions + "➡️ К категориям" (always present)
   - [x] Money transfers: notification suggests only transfer-type categories; the in-app picker shows all, transfer ones first
   - [x] Handle action presses in JS and persist assignments (+ exact rule + backfill that keeps manual choices)
+- [x] Bank app push notifications (BankPushListener, "Доступ к уведомлениям"; banner in Транзакции): text goes through
+  the SMS parser; the same operation by SMS and push within 15 min is stored once
+  - [ ] Confirm the TBC app package (matched as "*tbc*" for now) and real push texts
 - Permissions & device testing
   - [x] Runtime permissions (`RECEIVE_SMS`, `POST_NOTIFICATIONS`) requested on app start (`src/permissions.ts`); `READ_SMS` removed as unused
   - Background/boot behavior and battery optimizations
 
 - Parser coverage (needs real TBC SMS samples, masked)
-  - [ ] Declined / refund / cash withdrawal / transfer to a person / purchase in USD — current keywords for these are a best guess
+  - [x] Real samples: Payment, Deposit (sender after the date), Money Transfer, refund "initiated by", declined,
+    Conversion, one-time Code (2026-10-03); "MC GOLD" is the card, never a merchant
+  - [ ] Cash withdrawal / purchase in USD — still a best guess
   - [x] Confirm TBC sender IDs: real sender is `TBC SMS` (`SmsReceiver.BANK_SENDERS` also accepts `TBC`, `TBC BANK`)
 
 ## Medium Priority (UX & data)

@@ -12,7 +12,12 @@ export type IncomingSms = {
   body: string;
   /** ms since epoch as reported by the SMS; omitted for fixture imports */
   timestamp?: number;
+  /** 'push' = a bank app notification (BankPushListener); default 'sms' */
+  source?: 'sms' | 'push';
 };
+
+/** The same operation reported by SMS and by push within this window is stored once. */
+export const CROSS_SOURCE_WINDOW_S = 15 * 60;
 
 export type IngestResult =
   | { status: 'ignored' }                       // not a transaction SMS
@@ -58,12 +63,23 @@ export async function ingestSms(sms: IncomingSms): Promise<IngestResult> {
   const rule = parsed.merchant_key && isRememberable(parsed.kind) ? await findCategoryForMerchant(parsed.merchant_key) : null;
   const categoryId = rule?.category_id ?? null;
 
+  const source = sms.source ?? 'sms';
+  const occurredAt = resolveOccurredAt(parsed, sms.timestamp);
+  // the bank may report one operation both by SMS and by push: keep the first
+  const twin = await db.get<{ id: number }>(
+    `SELECT id FROM transactions
+      WHERE source != ? AND kind = ? AND amount_minor = ? AND currency = ? AND coalesce(merchant_key, '') = ?
+        AND abs(occurred_at - ?) <= ?
+      LIMIT 1`,
+    [source, parsed.kind, parsed.amount_minor, parsed.currency, parsed.merchant_key || '', occurredAt, CROSS_SOURCE_WINDOW_S]);
+  if (twin) return { status: 'duplicate', txId: twin.id };
+
   // OR IGNORE + changes check instead of SELECT-then-INSERT: the same SMS may be
   // delivered twice concurrently (e.g. receiver retry), and sms_hash is UNIQUE.
   const { changes, lastInsertRowid } = await db.run(
     `INSERT OR IGNORE INTO transactions
-      (bank, kind, amount_minor, currency, raw_merchant, merchant_key, category_id, category_source, occurred_at, raw_sms, sms_hash)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (bank, kind, amount_minor, currency, raw_merchant, merchant_key, category_id, category_source, occurred_at, raw_sms, sms_hash, source)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       parsed.bank,
       parsed.kind,
@@ -73,9 +89,10 @@ export async function ingestSms(sms: IncomingSms): Promise<IngestResult> {
       parsed.merchant_key || null,
       categoryId,
       categoryId ? 'rule' : null,
-      resolveOccurredAt(parsed, sms.timestamp),
+      occurredAt,
       sms.body,
       hash,
+      source,
     ]
   );
   if (changes === 0) {
