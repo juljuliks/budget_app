@@ -151,7 +151,7 @@ export async function setCategoryForTransactions(txIds: number[], categoryId: nu
 
 export async function getTransaction(id: number) {
   const db = await getDb();
-  return db.get<TransactionRow & { raw_sms: string; note: string | null; merchant_detached: number }>(
+  return db.get<TransactionRow & { raw_sms: string; note: string | null }>(
     `SELECT t.*, ${CATEGORY_COLUMNS} ${FROM_TX} WHERE t.id = ?`, [id]);
 }
 
@@ -159,15 +159,6 @@ export async function getTransaction(id: number) {
 export async function setTransactionNote(id: number, note: string) {
   const db = await getDb();
   await db.run('UPDATE transactions SET note = ? WHERE id = ?', [note.trim() || null, id]);
-}
-
-/**
- * "Открепить мерчанта для этой транзакции": merchant rules no longer touch this transaction and choosing its
- * category doesn't teach the merchant. One way: the app offers no reattaching.
- */
-export async function setMerchantDetached(id: number, detached: boolean) {
-  const db = await getDb();
-  await db.run('UPDATE transactions SET merchant_detached = ? WHERE id = ?', [detached ? 1 : 0, id]);
 }
 
 /** Opening a transaction marks it read. Returns true if it was unread. */

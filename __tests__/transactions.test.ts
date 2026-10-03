@@ -71,10 +71,10 @@ describe('deleteTransaction', () => {
 });
 
 describe('assignCategory', () => {
-  test('without applyToMerchant only this transaction changes and no rule is created', async () => {
+  test("'only': only this transaction changes and no rule is created", async () => {
     await insertTx(1, 1000, 'SPAR');
     await insertTx(2, 2000, 'SPAR');
-    await assignCategory(1, 4, { applyToMerchant: false });
+    await assignCategory(1, 4, 'only');
     const db = await getDb();
     expect((await db.all('SELECT category_id FROM transactions ORDER BY id')).map((r) => r.category_id)).toEqual([4, null]);
     expect(await db.get('SELECT * FROM merchant_rules')).toBeUndefined();

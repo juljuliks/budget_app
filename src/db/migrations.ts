@@ -189,6 +189,11 @@ export const MIGRATIONS: MigrationStep[][] = [
     "ALTER TABLE transactions ADD COLUMN source TEXT NOT NULL DEFAULT 'sms'",
     'CREATE TABLE IF NOT EXISTS app_settings (key TEXT PRIMARY KEY, value TEXT)',
   ],
+  // 14: no more detaching a transaction from its merchant (any transaction can simply get a category of its
+  // own). Detached ones keep their category as a manual choice, which rules never overwrite; the column stays unused
+  [
+    "UPDATE transactions SET category_source = 'user' WHERE merchant_detached = 1 AND category_id IS NOT NULL",
+  ],
 ];
 
 export async function getSchemaVersion(db: Db): Promise<number> {

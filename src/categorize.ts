@@ -39,7 +39,7 @@ export async function backfillRule(matchType: MatchType, pattern: string, catego
   const res = await db.run(
     `UPDATE transactions SET category_id = ?, category_source = 'rule'
       WHERE ${match} AND kind IN (${REMEMBERABLE_KINDS.map((k) => `'${k}'`).join(',')})
-        AND merchant_detached = 0 AND (category_id IS NULL OR category_source = 'rule')`,
+        AND (category_id IS NULL OR category_source = 'rule')`,
     [categoryId, ...matchParams]);
   return res.changes;
 }

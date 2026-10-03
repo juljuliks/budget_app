@@ -51,3 +51,11 @@ export function merchantLabel(tx: { kind: string; raw_merchant: string | null })
   if (tx.kind === 'purchase') return tx.raw_merchant || label;
   return tx.raw_merchant ? `${label} · ${tx.raw_merchant}` : label;
 }
+
+/** Russian plural: plural(5, ['транзакция', 'транзакции', 'транзакций']) → 'транзакций'. */
+export function plural(n: number, [one, few, many]: [string, string, string]): string {
+  const d = n % 10, dd = n % 100;
+  if (d === 1 && dd !== 11) return one;
+  if (d >= 2 && d <= 4 && (dd < 12 || dd > 14)) return few;
+  return many;
+}

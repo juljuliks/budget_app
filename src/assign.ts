@@ -1,34 +1,78 @@
 import { getDb } from './db';
 import { setCategoryForTransactions, setTransactionCategory } from './db/transactions';
 import { incrementCategoryUsage } from './db/categories';
-import { createRule, backfillRule } from './categorize';
+import { createRule, backfillRule, findCategoryForMerchant } from './categorize';
 import { emitTransactionsChanged } from './events';
-import { isRememberable } from './types';
+import { isRememberable, REMEMBERABLE_KINDS } from './types';
 
 /**
- * User picked a category for a transaction. Optionally remembers it for the merchant:
- * creates an exact rule and applies it to the merchant's uncategorized / rule-assigned transactions.
- * Only for purchases / payments (isRememberable): a transfer or deposit "merchant" is a person or the card.
+ * What a merchant rule is for: it picks the category of the merchant's new transactions automatically.
+ * Any transaction can still get another category of its own ('only'). 'merchant' makes the category the
+ * merchant's: the rule changes and so do the merchant's transactions that follow it (category_source
+ * 'rule' or none yet); manual choices stay. Without `merchant`, the category becomes the merchant's only
+ * if it has none yet (first pick, notification buttons).
  */
-export async function assignCategory(txId: number, categoryId: number | null, opts: { applyToMerchant?: boolean } = {}) {
-  const { applyToMerchant = true } = opts;
-  await setTransactionCategory(txId, categoryId, 'user');
+export type MerchantChoice = 'merchant' | 'only';
 
-  if (categoryId !== null) {
-    const db = await getDb();
-    const tx = await db.get<{ kind: string; merchant_key: string | null; merchant_detached: number }>(
-      'SELECT kind, merchant_key, merchant_detached FROM transactions WHERE id = ?', [txId]);
-    // switched off or detached ("обработать иначе"): the category is for this transaction only
-    if (applyToMerchant && tx?.merchant_key && isRememberable(tx.kind) && !tx.merchant_detached) {
-      await createRule('exact', tx.merchant_key, categoryId);
-      await backfillRule('exact', tx.merchant_key, categoryId);
-    }
-    await incrementCategoryUsage(categoryId);
+export async function assignCategory(txId: number, categoryId: number | null, choice?: MerchantChoice) {
+  const db = await getDb();
+  const tx = await db.get<{ kind: string; merchant_key: string | null }>(
+    'SELECT kind, merchant_key FROM transactions WHERE id = ?', [txId]);
+  // only purchases / payments are remembered: a transfer or deposit "merchant" is a person or the card
+  const key = tx?.merchant_key && isRememberable(tx.kind) ? tx.merchant_key : null;
+  const forMerchant = categoryId !== null && key !== null
+    && (choice === 'merchant' || (choice === undefined && !(await findCategoryForMerchant(key))));
+
+  if (forMerchant) {
+    await createRule('exact', key!, categoryId!);
+    // this one follows the merchant from now on, like the ones the rule picked
+    await setTransactionCategory(txId, categoryId, 'rule');
+    await backfillRule('exact', key!, categoryId!);
+  } else {
+    await setTransactionCategory(txId, categoryId, 'user');
   }
+  if (categoryId !== null) await incrementCategoryUsage(categoryId);
   emitTransactionsChanged();
 }
 
 export default assignCategory;
+
+export type MerchantChange = {
+  merchant: string;
+  /** the merchant's category now */
+  fromCategoryId: number;
+  /** transactions whose category changes if the new one becomes the merchant's (this one included) */
+  count: number;
+  totals: Array<{ currency: string; amount_minor: number }>;
+};
+
+/**
+ * Picking `categoryId` for a transaction whose merchant already has another category: what making it the
+ * merchant's category would change (asked before changing). null = nothing to ask.
+ */
+export async function merchantChangePreview(txId: number, categoryId: number | null): Promise<MerchantChange | null> {
+  if (categoryId === null) return null;
+  const db = await getDb();
+  const tx = await db.get<{ kind: string; merchant_key: string | null; raw_merchant: string | null }>(
+    'SELECT kind, merchant_key, raw_merchant FROM transactions WHERE id = ?', [txId]);
+  if (!tx?.merchant_key || !isRememberable(tx.kind)) return null;
+  const rule = await findCategoryForMerchant(tx.merchant_key);
+  if (!rule || rule.category_id === categoryId) return null;
+  // the same rows backfillRule touches, plus this one; only those whose category really changes
+  const totals = await db.all<{ currency: string; amount_minor: number; n: number }>(
+    `SELECT currency, sum(amount_minor) AS amount_minor, count(*) AS n FROM transactions
+      WHERE merchant_key = ? AND kind IN (${REMEMBERABLE_KINDS.map(() => '?').join(',')})
+        AND (id = ? OR category_id IS NULL OR category_source = 'rule')
+        AND (category_id IS NULL OR category_id != ?)
+      GROUP BY currency ORDER BY sum(amount_minor) DESC`,
+    [tx.merchant_key, ...REMEMBERABLE_KINDS, txId, categoryId]);
+  return {
+    merchant: tx.raw_merchant || tx.merchant_key,
+    fromCategoryId: rule.category_id,
+    count: totals.reduce((s, t) => s + t.n, 0),
+    totals: totals.map(({ currency, amount_minor }) => ({ currency, amount_minor })),
+  };
+}
 
 /** Same category (null = none) for several transactions (bulk edit from the list). No merchant rules: a one-off manual choice. */
 export async function assignCategoryToMany(txIds: number[], categoryId: number | null) {

@@ -18,8 +18,7 @@ jest.mock('../src/navigation', () => ({ navigateWhenReady: (...a: any[]) => navi
 import SmsBackgroundTask from '../src/native/SmsBackgroundTask';
 import { handleNotificationAction } from '../src/notifications/notifeeIntegration';
 import { backfillRule, createRule } from '../src/categorize';
-import { assignCategory } from '../src/assign';
-import { setMerchantDetached } from '../src/db/transactions';
+import { assignCategory, merchantChangePreview } from '../src/assign';
 import { createCategory } from '../src/db/categories';
 import { getTransferTypeId } from '../src/db/categoryTypes';
 import { getDb } from '../src/db';
@@ -81,8 +80,9 @@ test('picking a suggestion assigns the category, creates a rule and backfills sa
   await handleNotificationAction({ id: 'suggest_2', notification: { id: first.id, data: first.data } });
 
   const rows = await (await getDb()).all('SELECT category_id, category_source FROM transactions ORDER BY id');
+  // the picked one follows the merchant from now on too
   expect(rows).toEqual([
-    { category_id: 2, category_source: 'user' },
+    { category_id: 2, category_source: 'rule' },
     { category_id: 2, category_source: 'rule' },
   ]);
   expect(await tx("SELECT category_id FROM merchant_rules WHERE match_type = 'exact' AND pattern = 'SPAR'")).toEqual({ category_id: 2 });
@@ -160,23 +160,43 @@ test('a refund asks to find its purchase instead of a category', async () => {
   expect(cancelNotification).not.toHaveBeenCalled();
 });
 
-test('"Запомнить" off: the category is for this transaction only, the merchant rule stays', async () => {
+test('the merchant has a category: another one for this transaction only leaves the merchant alone', async () => {
   await createRule('exact', 'SPAR', 3);
   await SmsBackgroundTask(SPAR_1);
   const id = (await tx('SELECT id FROM transactions')).id;
-  await assignCategory(id, 2, { applyToMerchant: false });
+  await assignCategory(id, 2, 'only');
   expect(await tx('SELECT pattern, category_id FROM merchant_rules')).toEqual({ pattern: 'SPAR', category_id: 3 });
   expect(await tx('SELECT category_id, category_source FROM transactions')).toEqual({ category_id: 2, category_source: 'user' });
 });
 
-test('a detached transaction: rules skip it and its category teaches nothing', async () => {
+test('without a choice the first category becomes the merchant\'s, a later different one is for the transaction only', async () => {
   await SmsBackgroundTask(SPAR_1);
-  const id = (await tx('SELECT id FROM transactions')).id;
-  await setMerchantDetached(id, true);
-  await backfillRule('exact', 'SPAR', 3);
-  expect(await tx('SELECT category_id FROM transactions')).toEqual({ category_id: null });
-  await assignCategory(id, 2);
-  expect(await tx('SELECT * FROM merchant_rules')).toBeUndefined();
+  await SmsBackgroundTask(SPAR_2);
+  const [a, b] = (await (await getDb()).all<{ id: number }>('SELECT id FROM transactions ORDER BY id')).map((r) => r.id);
+  await assignCategory(a, 3); // e.g. a notification button: SPAR had no category
+  expect(await tx('SELECT category_id FROM merchant_rules')).toEqual({ category_id: 3 });
+  // the other SPAR one followed the new rule
+  expect(await tx('SELECT category_id, category_source FROM transactions WHERE id = ?', [b])).toEqual({ category_id: 3, category_source: 'rule' });
+  await assignCategory(b, 2);
+  expect(await tx('SELECT category_id FROM merchant_rules')).toEqual({ category_id: 3 });
+});
+
+test('preview of making a category the merchant\'s: count and sum of what changes; saving changes them', async () => {
+  await createRule('exact', 'SPAR', 3);
+  await SmsBackgroundTask(SPAR_1); // 12.50, by the rule
+  await SmsBackgroundTask(SPAR_2); // 7.00, by the rule
+  await SmsBackgroundTask({ ...SPAR_1, body: SPAR_1.body.replace('12.50', '1.00'), timestamp: SPAR_1.timestamp + 10 });
+  const [a, b, manual] = (await (await getDb()).all<{ id: number }>('SELECT id FROM transactions ORDER BY id')).map((r) => r.id);
+  await assignCategory(manual, 4, 'only'); // a manual choice: saving for the merchant won't touch it
+  expect(await merchantChangePreview(a, 3)).toBeNull(); // already the merchant's category
+  expect(await merchantChangePreview(a, null)).toBeNull();
+  expect(await merchantChangePreview(a, 2)).toEqual({
+    merchant: 'SPAR', fromCategoryId: 3, count: 2, totals: [{ currency: 'GEL', amount_minor: 1950 }],
+  });
+  await assignCategory(a, 2, 'merchant');
+  expect(await tx('SELECT category_id FROM merchant_rules')).toEqual({ category_id: 2 });
+  const rows = await (await getDb()).all('SELECT id, category_id FROM transactions ORDER BY id');
+  expect(rows).toEqual([{ id: a, category_id: 2 }, { id: b, category_id: 2 }, { id: manual, category_id: 4 }]);
 });
 
 test('a merchant rule never categorizes a money transfer: every transfer asks for a category', async () => {
