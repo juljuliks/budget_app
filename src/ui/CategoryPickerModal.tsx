@@ -18,7 +18,7 @@ type Props = {
   onClose: () => void;
 };
 
-/** Bottom sheet with the shared CategoryPicker (gear, categories, "+ Новая категория"). */
+/** Bottom sheet with the shared CategoryPicker (categories, "+ Новая категория"). */
 export default function CategoryPickerModal({ visible, title, selectedId, transferFirst, allowNone, excludeIds, newCategory, onPick, onClose }: Props) {
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -33,7 +33,7 @@ export default function CategoryPickerModal({ visible, title, selectedId, transf
             transferFirst={transferFirst}
             newCategory={newCategory}
             excludeIds={excludeIds}
-            // the gear / new category leave to other screens: close the sheet first
+            // "+ Новая категория" leaves to another screen: close the sheet first
             onNavigateAway={onClose}
           />
         </ScrollView>

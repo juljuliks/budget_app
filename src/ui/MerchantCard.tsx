@@ -145,7 +145,7 @@ export default function MerchantCard({ merchantId, categories, onClose, onChange
             <Text style={styles.heading}>Категория</Text>
             {picking ? (
               <>
-                <CategoryPicker title="Выберите категорию" showSettings={false} selectedId={m.category_id} onSelect={pick} onNavigateAway={onClose} />
+                <CategoryPicker title="Выберите категорию" selectedId={m.category_id} onSelect={pick} onNavigateAway={onClose} />
                 <TouchableOpacity onPress={() => setPicking(false)} style={styles.inlineCancel}>
                   <Text style={styles.cancelText}>Отмена</Text>
                 </TouchableOpacity>

@@ -3,15 +3,16 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View
 import { useFocusEffect } from '@react-navigation/native';
 import { categoryLabel } from '../../db/categories';
 import {
-  addPlanItem, BUDGET_CURRENCY, getPlanBudget, listPlan, monthIncome, OverBudgetError, PlanItem, removePlanItem,
+  BUDGET_CURRENCY, getPlanBudget, listPlan, monthIncome, OverBudgetError, PlanItem, removePlanItem,
   setPlanBudget, setPlanPinned,
 } from '../../db/plans';
-import CategoryPicker from '../CategoryPicker';
+import Fab from '../Fab';
 import { PencilIcon, PinIcon } from '../icons';
 import Meter from '../Meter';
 import { formatShort, formatWithCurrency, parseAmountOrZero, toInputValue } from '../money';
 import RowActions, { ROW_ICON_SIZE } from '../RowActions';
 import TextInputModal from '../TextInputModal';
+import PlanAddModal from './PlanAddModal';
 import PlanAmountModal, { PlanAmountTarget } from './PlanAmountModal';
 import { chart, colors } from '../theme';
 
@@ -49,6 +50,7 @@ export default function PlanView({ ym }: { ym: string }) {
   const [income, setIncome] = useState(0);
   const [budgetOpen, setBudgetOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<PlanAmountTarget | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
 
   const load = useCallback(() => {
     Promise.all([listPlan(ym), getPlanBudget(ym), monthIncome(ym)])
@@ -89,6 +91,7 @@ export default function PlanView({ ym }: { ym: string }) {
   ].filter(Boolean).join('\n') || 'Например, зарплата. План не сможет её превысить.';
 
   return (
+    <View style={styles.screen}>
     <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <View style={styles.budgetBox}>
         <Text style={styles.caption}>Сумма к планированию</Text>
@@ -122,7 +125,7 @@ export default function PlanView({ ym }: { ym: string }) {
         <Text style={[styles.caption, styles.pinNote]}>📌 — пункт перейдёт в следующий месяц вместе с суммой</Text>
       </View>
 
-      {items.length === 0 ? <Text style={styles.hint}>План пуст. Добавьте категории, на которые хотите выделить сумму.</Text> : null}
+      {items.length === 0 ? <Text style={styles.hint}>План пуст. Нажмите ＋, чтобы добавить категории и суммы.</Text> : null}
 
       {groupByType(items).map((g) => (
         <View key={g.title} style={styles.group}>
@@ -174,14 +177,6 @@ export default function PlanView({ ym }: { ym: string }) {
         </View>
       ))}
 
-      <CategoryPicker
-        title="Добавить в план"
-        onSelect={(id) => { if (id !== null) run(addPlanItem(ym, id)); }}
-        excludeIds={items.map((i) => i.category_id)}
-        // a category created from here goes straight into this month's plan
-        newCategory={{ planYm: ym }}
-      />
-
       <TextInputModal
         visible={budgetOpen}
         title="Сумма к планированию"
@@ -196,11 +191,17 @@ export default function PlanView({ ym }: { ym: string }) {
       />
       <PlanAmountModal ym={ym} target={editingItem} onClose={() => setEditingItem(null)} onSaved={load} />
     </ScrollView>
+    {/* like the "+" on the transactions screen: several categories with amounts at once */}
+    <Fab onPress={() => setAddOpen(true)} accessibilityLabel="Добавить категории в план" />
+    <PlanAddModal ym={ym} visible={addOpen} plannedIds={items.map((i) => i.category_id)} onClose={() => setAddOpen(false)} onSaved={load} />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: 16, paddingBottom: 32 },
+  screen: { flex: 1 },
+  // room under the last row for the "+"
+  content: { paddingHorizontal: 16, paddingBottom: 88 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   budgetBox: {
     alignItems: 'center', marginBottom: 12, padding: 16, borderRadius: 12, backgroundColor: colors.surface,

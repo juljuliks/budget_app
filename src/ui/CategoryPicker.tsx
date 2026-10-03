@@ -15,8 +15,6 @@ type Props = {
   /** adds a "Без категории" chip (selected when selectedId is null) */
   allowNone?: boolean;
   title?: string;
-  /** gear next to the title (category management); off where we already are in category management */
-  showSettings?: boolean;
   /** money transfers: categories of the transfer type come first; a new category gets that type */
   transferFirst?: boolean;
   /** categories not to offer (already in the plan, the one being deleted, ...) */
@@ -29,12 +27,12 @@ type Props = {
 };
 
 /**
- * The one category selector used wherever a category is set: title with a gear (category
- * management), category chips and "+ Новая категория". Loads categories itself and refreshes on
+ * The one category selector used wherever a category is set: title, category chips and
+ * "+ Новая категория". Loads categories itself and refreshes on
  * focus / changes, so a category created or edited elsewhere shows up immediately.
  */
 export default function CategoryPicker({
-  selectedId, onSelect, allowNone = false, title = 'Категория', showSettings = true, transferFirst = false, excludeIds, newCategory, onNavigateAway, disabled,
+  selectedId, onSelect, allowNone = false, title = 'Категория', transferFirst = false, excludeIds, newCategory, onNavigateAway, disabled,
 }: Props) {
   const navigation = useRootNavigation();
   const [categories, setCategories] = useState<Category[]>([]);
@@ -66,11 +64,8 @@ export default function CategoryPicker({
 
   return (
     <View>
-      <SectionHeading
-        title={title}
-        onSettings={showSettings ? () => go(() => navigation.navigate('Categories')) : undefined}
-        settingsLabel="Управление категориями"
-      />
+      {/* no gear: categories are managed only from the settings (gear in the tab headers) */}
+      <SectionHeading title={title} />
       <View style={styles.chips}>
         {shown.map((c) => (
           <Chip key={c.id} label={categoryLabel(c)} selected={c.id === selectedId} disabled={disabled} onPress={() => onSelect(c.id)} />
