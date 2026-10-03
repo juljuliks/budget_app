@@ -3,7 +3,7 @@ import { ActivityIndicator, Alert, ScrollView, StyleSheet, Switch, Text, Touchab
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { getTransaction, markTransactionSeen, setMerchantDetached, setTransactionNote } from '../db/transactions';
-import { assignCategory } from '../assign';
+import { assignCategory, reattachMerchant } from '../assign';
 import { emitTransactionsChanged } from '../events';
 import type { RootStackParamList } from '../navigation';
 import { formatAmount, formatDay, formatTime, isIncome, merchantLabel } from './format';
@@ -67,7 +67,7 @@ export default function TransactionDetail({ route, navigation }: Props) {
   function toggleDetached() {
     if (!tx) return;
     if (tx.merchant_detached) {
-      setMerchantDetached(txId, false).then(reload).catch((e) => console.error('attach failed', e));
+      reattachMerchant(txId).then(reload).catch((e) => console.error('attach failed', e));
       return;
     }
     Alert.alert(

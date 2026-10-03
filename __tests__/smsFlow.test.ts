@@ -18,7 +18,7 @@ jest.mock('../src/navigation', () => ({ navigateWhenReady: (...a: any[]) => navi
 import SmsBackgroundTask from '../src/native/SmsBackgroundTask';
 import { handleNotificationAction } from '../src/notifications/notifeeIntegration';
 import { backfillRule, createRule } from '../src/categorize';
-import { assignCategory } from '../src/assign';
+import { assignCategory, reattachMerchant } from '../src/assign';
 import { setMerchantDetached } from '../src/db/transactions';
 import { createCategory } from '../src/db/categories';
 import { getTransferTypeId } from '../src/db/categoryTypes';
@@ -177,6 +177,27 @@ test('a detached transaction: rules skip it and its category teaches nothing', a
   expect(await tx('SELECT category_id FROM transactions')).toEqual({ category_id: null });
   await assignCategory(id, 2);
   expect(await tx('SELECT * FROM merchant_rules')).toBeUndefined();
+});
+
+test('reattaching a detached transaction gives it the merchant rule category', async () => {
+  await createRule('exact', 'SPAR', 3);
+  await SmsBackgroundTask(SPAR_1);
+  const id = (await tx('SELECT id FROM transactions')).id;
+  await setMerchantDetached(id, true);
+  await assignCategory(id, 2);
+  expect(await tx('SELECT category_id, category_source FROM transactions')).toEqual({ category_id: 2, category_source: 'user' });
+  await reattachMerchant(id);
+  expect(await tx('SELECT category_id, category_source, merchant_detached FROM transactions'))
+    .toEqual({ category_id: 3, category_source: 'rule', merchant_detached: 0 });
+});
+
+test('reattaching without a merchant rule keeps the category', async () => {
+  await SmsBackgroundTask(SPAR_1);
+  const id = (await tx('SELECT id FROM transactions')).id;
+  await setMerchantDetached(id, true);
+  await assignCategory(id, 2);
+  await reattachMerchant(id);
+  expect(await tx('SELECT category_id, merchant_detached FROM transactions')).toEqual({ category_id: 2, merchant_detached: 0 });
 });
 
 test('a merchant rule never categorizes a money transfer: every transfer asks for a category', async () => {
