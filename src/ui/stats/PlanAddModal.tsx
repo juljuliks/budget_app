@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Category, categoryLabel, listCategories } from '../../db/categories';
 import { addPlanItem, BUDGET_CURRENCY, getPlanBudget, lastPlanItem, PlanKind, plannedTotal, setPlanAmount } from '../../db/plans';
-import { useRootNavigation } from '../../navigation';
 import Button from '../Button';
 import Checkbox from '../Checkbox';
 import { formatShort, formatWithCurrency, parseAmountOrZero } from '../money';
@@ -27,7 +26,6 @@ const money = (minor: number) => formatWithCurrency(minor, BUDGET_CURRENCY);
  * The total can't go over what is still free of the amount to distribute.
  */
 export default function PlanAddModal({ ym, visible, plannedIds, onClose, onSaved }: Props) {
-  const navigation = useRootNavigation();
   const [rows, setRows] = useState<Row[]>([]);
   const [checked, setChecked] = useState<Set<number>>(new Set());
   const [amounts, setAmounts] = useState<Record<number, string>>({});
@@ -130,12 +128,6 @@ export default function PlanAddModal({ ym, visible, plannedIds, onClose, onSaved
             );
           })}
           {rows.length === 0 ? <Text style={styles.empty}>Все категории уже в плане.</Text> : null}
-          <TouchableOpacity
-            style={styles.newCategory}
-            onPress={() => { onClose(); navigation.navigate('CategoryEdit', { planYm: ym }); }}
-          >
-            <Text style={styles.newCategoryText}>＋ Новая категория</Text>
-          </TouchableOpacity>
         </ScrollView>
         <View style={styles.footer}>
           {error ? <Text style={styles.error}>{error}</Text> : (
@@ -157,7 +149,7 @@ const styles = StyleSheet.create({
   head: { padding: 16, paddingBottom: 8 },
   title: { fontSize: 18, fontWeight: '600', color: colors.text },
   caption: { fontSize: 13, color: colors.muted, marginTop: 4 },
-  list: { paddingHorizontal: 16 },
+  list: { paddingHorizontal: 16, paddingBottom: 8 },
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6,
     borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
@@ -169,8 +161,6 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border, borderRadius: 8, fontVariant: ['tabular-nums'],
   },
   empty: { color: colors.muted, textAlign: 'center', paddingVertical: 16 },
-  newCategory: { paddingVertical: 14 },
-  newCategoryText: { fontSize: 15, color: colors.accent },
   footer: { padding: 16, paddingTop: 8, borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
   hint: { fontSize: 12, color: colors.muted, marginBottom: 8 },
   error: { fontSize: 13, color: colors.danger, marginBottom: 8 },
