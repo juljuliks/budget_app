@@ -66,12 +66,22 @@ test('a custom palette: five shades of its base, used for its type\'s categories
   expect([colors.get(1), colors.get(2)]).toEqual(shades.slice(0, 2));
 });
 
-test('a distinct hue keeps away from the colors in use', () => {
-  const { distinctHue, colorFromHue } = require('../src/colors');
-  const taken = [0, 30, 60, 90, 120, 150].map((h: number) => colorFromHue(h));
-  const h = distinctHue(taken, () => 0.5);
-  expect(h).toBeGreaterThan(180);
-  expect(h).toBeLessThan(345);
+test('a random hue: anywhere on the wheel, not on a color in use, away from the current one', () => {
+  const { distinctHue, colorFromHue, hexToHsl } = require('../src/colors');
+  const gap = (a: number, b: number) => { const d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d; };
+  // a crowded wheel: a color every 30° still leaves every part of it reachable
+  const taken = Array.from({ length: 12 }, (_, i) => colorFromHue(i * 30));
+  const hues = new Set<number>();
+  let current: string | null = null;
+  for (let i = 0; i < 200; i++) {
+    const h: number = distinctHue(taken, current);
+    for (let t = 0; t < 360; t += 30) expect(gap(h, t)).toBeGreaterThanOrEqual(8);
+    if (current) expect(gap(h, hexToHsl(current)[0])).toBeGreaterThanOrEqual(40);
+    hues.add(Math.floor(h / 60));
+    current = colorFromHue(h);
+  }
+  // spread over the whole wheel, not one neighbourhood
+  expect(hues.size).toBe(6);
 });
 
 test('many untyped categories: no repeated colors (other shades after the base ones)', () => {

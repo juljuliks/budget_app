@@ -55,7 +55,7 @@ export default function TypeEditModal({ visible, type, types, onClose, onSaved }
 
   function randomPalette() {
     // away from the base colors of the palettes the other types use
-    setPalette(colorFromHue(distinctHue(others.map((t, i) => paletteShades(typePalette(t, i))[0]))));
+    setPalette(colorFromHue(distinctHue(others.map((t, i) => paletteShades(typePalette(t, i))[0]), palette)));
   }
 
   const custom = isCustomPalette(palette);

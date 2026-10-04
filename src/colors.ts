@@ -102,19 +102,22 @@ function hueGap(a: number, b: number): number {
 }
 
 /**
- * A hue as far as possible from the (saturated) colors already used, with a little randomness so pressing
- * "случайный" again gives another one.
+ * A random hue anywhere on the wheel: not the same as a (saturated) color already in use, and far from `current`
+ * (pressing "случайный" again gives a clearly different color). Only a small gap to the colors in use, so the
+ * whole wheel stays reachable even with many categories.
  */
-export function distinctHue(taken: Iterable<string>, random = Math.random): number {
+export function distinctHue(taken: Iterable<string>, current: string | null = null, random = Math.random): number {
   const hues = [...taken].map(hexToHsl).filter(([, sat]) => sat > 15).map(([h]) => h);
-  if (hues.length === 0) return Math.floor(random() * 360);
-  let best = 0, bestGap = -1;
-  for (let i = 0; i < 36; i++) {
-    const h = (i * 10 + random() * 10) % 360;
-    const gap = Math.min(...hues.map((t) => hueGap(h, t))) + random() * 8;
-    if (gap > bestGap) { best = h; bestGap = gap; }
+  const now = current && isCustomPalette(current) ? hexToHsl(current)[0] : null;
+  // every 5° with one random shift, so any hue can come up and the distance checks hold exactly
+  const shift = Math.floor(random() * 5);
+  const all = Array.from({ length: 72 }, (_, i) => i * 5 + shift);
+  const farFromNow = (h: number) => now === null || hueGap(h, now) >= 45;
+  for (const minGap of [8, 0]) {
+    const ok = all.filter((h) => farFromNow(h) && hues.every((t) => hueGap(h, t) >= minGap));
+    if (ok.length > 0) return ok[Math.floor(random() * ok.length)];
   }
-  return Math.round(best);
+  return Math.floor(random() * 360);
 }
 
 /**

@@ -142,7 +142,7 @@ export default function CategoryEdit({ route, navigation }: Props) {
       {/* a color of its own: any hue on the bar, or one far from the colors in use */}
       <View style={styles.customHead}>
         <Text style={styles.customLabel}>Свой цвет</Text>
-        <TouchableOpacity onPress={() => setColor(colorFromHue(distinctHue(taken)))} hitSlop={8}>
+        <TouchableOpacity onPress={() => setColor(colorFromHue(distinctHue(taken, color)))} hitSlop={8}>
           <Text style={styles.link}>🎲 Случайный</Text>
         </TouchableOpacity>
       </View>
