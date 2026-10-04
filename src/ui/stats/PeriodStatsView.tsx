@@ -30,6 +30,10 @@ type Norms = {
   /** the flexible categories' norm (fixed payments come in one go and aren't split by days) */
   total: number;
   byCategory: Map<number, { norm: number; kind: PlanKind; monthLimit: number }>;
+  /** each category's spending in the whole month(s) the period falls in */
+  monthSpent: Map<number | null, number>;
+  /** "октябрь", or "сентябрь–октябрь" for a week across two months */
+  monthsLabel: string;
   /** the month, when the whole period is in one (for "N% плана на октябрь") */
   singleYm: string | null;
 };
@@ -42,12 +46,17 @@ function pct(part: number, whole: number): string {
 
 async function loadNorms(range: DayRange, currency: Parameters<typeof monthStats>[2]): Promise<Norms> {
   const months = daysByMonth(range);
-  const norms: Norms = { total: 0, byCategory: new Map(), singleYm: months.size === 1 ? [...months.keys()][0] : null };
+  const names = [...months.keys()].map((ym) => MONTHS_IN[parseYm(ym).month]);
+  const norms: Norms = {
+    total: 0, byCategory: new Map(), singleYm: months.size === 1 ? [...months.keys()][0] : null,
+    monthSpent: new Map(), monthsLabel: names.length > 1 ? `${names[0]}–${names[names.length - 1]}` : names[0],
+  };
   for (const [ym, days] of months) {
     const { year, month } = parseYm(ym);
     const m = await monthStats(year, month, currency);
     const share = days / daysInMonth(ym);
     for (const c of m.categories) {
+      norms.monthSpent.set(c.category_id, (norms.monthSpent.get(c.category_id) ?? 0) + c.spent_minor);
       if (c.category_id === null || !c.limit_minor) continue;
       const cur = norms.byCategory.get(c.category_id) ?? { norm: 0, kind: c.plan_kind ?? 'limit', monthLimit: 0 };
       cur.norm += c.limit_minor * share;
@@ -97,7 +106,6 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
     const p = c.category_id === null ? undefined : norms?.byCategory.get(c.category_id);
     return p && p.kind === 'limit' ? sum + c.spent_minor : sum;
   }, 0);
-  const monthName = norms?.singleYm ? MONTHS_IN[parseYm(norms.singleYm).month] : '';
 
   // under the donut: the pace against the whole plan, or the average per month for a long period
   const summary = pace
@@ -136,16 +144,14 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                   <Text style={styles.name} numberOfLines={1}>{`${c.emoji || ''} ${c.name}`.trim()}</Text>
                   <Text style={styles.amount}>{formatShort(c.spent_minor)} {cur}</Text>
                 </View>
-                {plan && plan.kind === 'fixed' ? (
-                  // rent, subscriptions: not split by days — paid in this period or not
-                  <Text style={[styles.share, styles.paid]}>✓ Оплачено</Text>
-                ) : plan ? (
+                {plan ? (
+                  // the period against the category's month: how much of its month's spending and of its plan
+                  // this is (no "norm" per category: one purchase a month is fine as long as the month fits)
                   <>
-                    {/* the flexible limit's norm for these days, colored like the month's bars */}
-                    <Meter ratio={plan.norm > 0 ? c.spent_minor / plan.norm : 0} height={8} />
-                    <Text style={[styles.share, c.spent_minor > plan.norm && styles.over]}>
-                      {formatShort(c.spent_minor)} из {formatShort(Math.round(plan.norm))} {normLabel} ({pct(c.spent_minor, plan.norm)})
-                      {norms?.singleYm ? ` · ${pct(c.spent_minor, plan.monthLimit)} плана на ${monthName}` : ''}
+                    <Meter ratio={plan.monthLimit > 0 ? c.spent_minor / plan.monthLimit : 0} height={8} color={c.color} />
+                    <Text style={styles.share}>
+                      {pct(c.spent_minor, norms?.monthSpent.get(c.category_id) ?? 0)} трат категории за {norms?.monthsLabel}
+                      {' · '}{pct(c.spent_minor, plan.monthLimit)} плана
                     </Text>
                   </>
                 ) : (
@@ -172,19 +178,17 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                 неделю — 800 × 7 / 31 ≈ 181 {cur}. Неделя на стыке месяцев считается по планам обоих месяцев.
               </Text>
               <Text style={styles.infoText}>
-                <Text style={styles.infoBold}>Гибкая трата</Text> (еда, кафе): полоска — потрачено от нормы. Зелёная — в
-                темпе, жёлтая — близко к норме, красная — перерасход. Рядом — доля от плана на весь месяц.
+                Строка под диаграммой — <Text style={styles.infoBold}>гибкие траты</Text> (еда, бары) за период против
+                их нормы. Можно где-то потратить больше, где-то меньше — важно, укладываетесь ли вы в сумме. Фиксированные
+                траты (аренда, подписки) приходят одним платежом и в норму не входят.
               </Text>
               <Text style={styles.infoText}>
-                <Text style={styles.infoBold}>Фиксированная трата</Text> (аренда, подписки) по дням не делится: «✓ Оплачено»,
-                если платёж был в этот период.
+                <Text style={styles.infoBold}>Категория с планом:</Text> полоска — какая часть плана категории на месяц
+                ушла за этот период. Под ней — доля от всех трат категории за месяц и доля от её плана. Купили одежду
+                один раз за месяц — это 100% трат категории за месяц, но, например, 60% плана: вы в рамках.
               </Text>
               <Text style={styles.infoText}>
                 <Text style={styles.infoBold}>Без плана</Text> — только сумма и доля от всех трат за период.
-              </Text>
-              <Text style={styles.infoText}>
-                Под диаграммой — то же для всех гибких трат вместе. Фиксированные траты и категории без плана в эту
-                строку не входят.
               </Text>
             </>
           ) : (
@@ -222,8 +226,6 @@ const styles = StyleSheet.create({
   dot: { width: 10, height: 10, borderRadius: 5, marginRight: 8 },
   name: { flex: 1, fontSize: 15, color: colors.text },
   share: { fontSize: 13, color: colors.muted, marginTop: 4, fontVariant: ['tabular-nums'] },
-  over: { color: colors.danger },
-  paid: { color: colors.income, textAlign: 'right' },
   amount: { fontSize: 15, color: colors.text, fontVariant: ['tabular-nums'] },
   info: { paddingHorizontal: 20, gap: 10 },
   infoText: { fontSize: 15, color: colors.text, lineHeight: 21 },
