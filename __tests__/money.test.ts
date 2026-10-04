@@ -1,4 +1,7 @@
-import { formatMoney, parseAmountInput, toInputValue } from '../src/ui/money';
+import { formatAmount } from '../src/ui/format';
+import {
+  currencySymbol, formatMoney, formatMoneyWithCurrency, formatWithCurrency, parseAmountInput, toInputValue,
+} from '../src/ui/money';
 import { meterColor } from '../src/ui/theme';
 
 test.each([
@@ -12,6 +15,23 @@ test('formatMoney', () => {
   expect(formatMoney(123456)).toBe('1 234.56');
   expect(formatMoney(120000, { compact: true })).toBe('1 200');
   expect(formatMoney(-250)).toBe('−2.50');
+});
+
+const NBSP = '\u00a0';
+
+test('currencySymbol: known codes become symbols, unknown stay as is', () => {
+  expect(currencySymbol('GEL')).toBe('₾');
+  expect(currencySymbol('USD')).toBe('$');
+  expect(currencySymbol('EUR')).toBe('€');
+  expect(currencySymbol('TRY')).toBe('TRY');
+});
+
+test('amounts with a currency symbol, non-breaking spaces', () => {
+  expect(formatWithCurrency(140000, 'GEL')).toBe(`1${NBSP}400${NBSP}₾`);
+  expect(formatWithCurrency(1250, 'USD')).toBe(`12.50${NBSP}$`);
+  expect(formatMoneyWithCurrency(140000, 'EUR')).toBe(`1${NBSP}400.00${NBSP}€`);
+  expect(formatAmount(2569, 'GEL', 'payment')).toBe(`−25.69${NBSP}₾`);
+  expect(formatAmount(100, 'USD', 'deposit')).toBe(`+1.00${NBSP}$`);
 });
 
 test('toInputValue', () => {

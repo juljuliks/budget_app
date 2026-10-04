@@ -6,6 +6,7 @@ import { getDb } from '../db';
 import { assignCategory } from '../assign';
 import { navigateWhenReady } from '../navigation';
 import { KIND_LABELS } from '../ui/format';
+import { formatMoneyWithCurrency } from '../ui/money';
 
 export const CHANNEL_ID = 'transactions';
 export const ALL_CATEGORIES_ACTION = 'all_categories';
@@ -37,8 +38,8 @@ export async function showUncategorizedTransactionNotification(txId: number) {
   await notifee.displayNotification({
     // one notification per transaction; re-showing replaces instead of stacking
     id: `tx_${txId}`,
-    // "Перевод — 25.00 GEL" / "Оплата — 25.69 GEL", the merchant or person below when known
-    title: `${KIND_LABELS[tx.kind] ?? 'Транзакция'} — ${(tx.amount_minor / 100).toFixed(2)} ${tx.currency}`,
+    // "Перевод — 25.00 ₾" / "Оплата — 25.69 ₾", the merchant or person below when known
+    title: `${KIND_LABELS[tx.kind] ?? 'Транзакция'} — ${formatMoneyWithCurrency(tx.amount_minor, tx.currency)}`,
     body: tx.raw_merchant || ' ',
     android: {
       channelId: CHANNEL_ID,
@@ -56,7 +57,7 @@ export async function showUncategorizedTransactionNotification(txId: number) {
 async function showRefundNotification(txId: number, tx: { amount_minor: number; currency: string; raw_merchant: string | null }) {
   await notifee.displayNotification({
     id: `tx_${txId}`,
-    title: `Возврат — ${(tx.amount_minor / 100).toFixed(2)} ${tx.currency}`,
+    title: `Возврат — ${formatMoneyWithCurrency(tx.amount_minor, tx.currency)}`,
     body: tx.raw_merchant ? `${tx.raw_merchant}: найдите покупку и уменьшите её сумму` : 'Найдите покупку и уменьшите её сумму',
     android: {
       channelId: CHANNEL_ID,

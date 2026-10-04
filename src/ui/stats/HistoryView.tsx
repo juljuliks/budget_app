@@ -6,7 +6,7 @@ import { Currency } from '../../db/fx';
 import { HistoryMonth, monthStats, MonthStats, parseYm, planHistory } from '../../db/plans';
 import { onTransactionsChanged } from '../../events';
 import Meter from '../Meter';
-import { formatMoney, formatShort } from '../money';
+import { formatMoneyWithCurrency, formatWithCurrency } from '../money';
 import { colors } from '../theme';
 import { monthTitle } from './months';
 
@@ -48,6 +48,7 @@ function MonthRow({ month, expanded, onToggle, currency }: { month: HistoryMonth
   const budget = month.budget_minor;
   // not spent out of the amount to distribute (both the unplanned part and underspent categories)
   const saved = (budget ?? 0) - spent;
+  const money = (minor: number) => formatWithCurrency(minor, currency);
 
   return (
     <View style={styles.month}>
@@ -57,11 +58,11 @@ function MonthRow({ month, expanded, onToggle, currency }: { month: HistoryMonth
           <Text style={styles.chevron}>{expanded ? '⌃' : '⌄'}</Text>
         </View>
         <View style={styles.totals}>
-          <Total label="План" value={planned ? formatShort(planned) : '—'} />
-          <Total label="Потрачено" value={formatShort(spent)} />
+          <Total label="План" value={planned ? money(planned) : '—'} />
+          <Total label="Потрачено" value={money(spent)} />
           <Total
             label={planned ? (diff >= 0 ? 'Осталось' : 'Перерасход') : ''}
-            value={planned ? `${diff < 0 ? '⚠ ' : ''}${formatShort(Math.abs(diff))}` : ''}
+            value={planned ? `${diff < 0 ? '⚠ ' : ''}${money(Math.abs(diff))}` : ''}
             danger={planned > 0 && diff < 0}
           />
         </View>
@@ -69,11 +70,11 @@ function MonthRow({ month, expanded, onToggle, currency }: { month: HistoryMonth
         {budget !== null ? (
           // the amount to distribute: what was left unplanned, and what was not spent at all
           <View style={styles.totals}>
-            <Total label="Сумма" value={formatShort(budget)} />
-            <Total label="Не распределено" value={formatShort(Math.max(budget - planned, 0))} />
+            <Total label="Сумма" value={money(budget)} />
+            <Total label="Не распределено" value={money(Math.max(budget - planned, 0))} />
             <Total
               label={saved >= 0 ? 'Сохранено' : 'Сверх суммы'}
-              value={`${saved < 0 ? '⚠ ' : ''}${formatShort(Math.abs(saved))}`}
+              value={`${saved < 0 ? '⚠ ' : ''}${money(Math.abs(saved))}`}
               danger={saved < 0}
               good={saved > 0}
             />
@@ -94,6 +95,7 @@ function MonthDetails({ ym, currency }: { ym: string; currency: Currency }) {
     monthStats(year, month, currency).then(setStats).catch((e) => console.error('load month failed', e));
   }, [ym, currency]);
 
+  const money = (minor: number) => formatWithCurrency(minor, currency);
   if (!stats) return <ActivityIndicator style={styles.detailsLoading} />;
   if (stats.categories.length === 0) return <Text style={styles.hint}>Нет трат и плана.</Text>;
 
@@ -108,8 +110,8 @@ function MonthDetails({ ym, currency }: { ym: string; currency: Currency }) {
         <View key={`${g.type_id}-${g.title}`}>
           <View style={[styles.detailRow, styles.groupRow]}>
             <Text style={[styles.detailName, styles.groupTitle]} numberOfLines={1}>{g.title}</Text>
-            <Text style={[styles.detailNum, styles.groupTitle]}>{g.planned_minor ? formatShort(g.planned_minor) : '—'}</Text>
-            <Text style={[styles.detailNum, styles.groupTitle]}>{formatShort(g.spent_minor)}</Text>
+            <Text style={[styles.detailNum, styles.groupTitle]}>{g.planned_minor ? money(g.planned_minor) : '—'}</Text>
+            <Text style={[styles.detailNum, styles.groupTitle]}>{money(g.spent_minor)}</Text>
           </View>
           {g.categories.map((c) => {
             const over = c.limit_minor !== null && c.spent_minor > c.limit_minor;
@@ -120,9 +122,9 @@ function MonthDetails({ ym, currency }: { ym: string; currency: Currency }) {
                 onPress={() => openTransactions(c.category_id)}
               >
                 <Text style={styles.detailName} numberOfLines={1}>{`${c.emoji || ''} ${c.name}`.trim()}</Text>
-                <Text style={styles.detailNum}>{c.limit_minor ? formatShort(c.limit_minor) : '—'}</Text>
+                <Text style={styles.detailNum}>{c.limit_minor ? money(c.limit_minor) : '—'}</Text>
                 <Text style={[styles.detailNum, over && styles.danger]}>
-                  {over ? '⚠ ' : ''}{formatShort(c.spent_minor)}
+                  {over ? '⚠ ' : ''}{money(c.spent_minor)}
                 </Text>
               </TouchableOpacity>
             );
@@ -131,7 +133,7 @@ function MonthDetails({ ym, currency }: { ym: string; currency: Currency }) {
       ))}
       {stats.other_currencies.length > 0 ? (
         <Text style={styles.note}>
-          Не учтено, нет курса: {stats.other_currencies.map((o) => `${formatMoney(o.spent_minor)} ${o.currency}`).join(', ')}
+          Не учтено, нет курса: {stats.other_currencies.map((o) => formatMoneyWithCurrency(o.spent_minor, o.currency)).join(', ')}
         </Text>
       ) : null}
     </View>
@@ -166,7 +168,7 @@ const styles = StyleSheet.create({
   detailRow: { flexDirection: 'row', paddingVertical: 4 },
   detailHead: { fontSize: 12, color: colors.muted },
   detailName: { flex: 1, fontSize: 14, color: colors.text, marginRight: 8 },
-  detailNum: { width: 80, textAlign: 'right', fontSize: 14, color: colors.text, fontVariant: ['tabular-nums'] },
+  detailNum: { width: 92, textAlign: 'right', fontSize: 14, color: colors.text, fontVariant: ['tabular-nums'] },
   note: { fontSize: 12, color: colors.muted, marginTop: 6 },
   groupRow: { marginTop: 6, borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border, paddingTop: 6 },
   groupTitle: { fontSize: 12, fontWeight: '600', color: colors.muted, textTransform: 'uppercase' },

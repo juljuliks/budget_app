@@ -1,3 +1,5 @@
+import { CURRENCY_SYMBOLS, isCurrency } from '../db/fx';
+
 /** "12,50" / "12.5" / "1 200" -> 1250 / 1250 / 120000 minor units; null if not a positive amount. */
 export function parseAmountInput(input: string): number | null {
   const s = input.replace(/[\s ]/g, '').replace(',', '.');
@@ -33,7 +35,17 @@ export function formatShort(minor: number): string {
   return formatMoney(minor, { compact: true });
 }
 
-/** "1 400 GEL" with non-breaking spaces, so it never wraps in the middle. */
-export function formatWithCurrency(minor: number, currency = 'GEL'): string {
-  return `${formatShort(minor)} ${currency}`.replace(/ /g, ' ');
+/** "₾" / "$" / "€"; an unknown code (e.g. from a bank SMS) stays as is. */
+export function currencySymbol(code: string): string {
+  return isCurrency(code) ? CURRENCY_SYMBOLS[code] : code;
+}
+
+/** "1 400 ₾", "12.50 $" with non-breaking spaces, so it never wraps in the middle. */
+export function formatWithCurrency(minor: number, currency: string = 'GEL'): string {
+  return `${formatShort(minor)} ${currencySymbol(currency)}`.replace(/ /g, '\u00a0');
+}
+
+/** Always with cents: "1 400.00 ₾". */
+export function formatMoneyWithCurrency(minor: number, currency: string = 'GEL'): string {
+  return `${formatMoney(minor)} ${currencySymbol(currency)}`.replace(/ /g, '\u00a0');
 }

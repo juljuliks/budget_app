@@ -8,7 +8,7 @@ import { CategoryStat, monthStats, MonthStats, StatGroup, ymOf } from '../../db/
 import { onTransactionsChanged } from '../../events';
 import Donut, { DonutSegment } from '../Donut';
 import Meter from '../Meter';
-import { formatMoney, formatShort } from '../money';
+import { currencySymbol, formatMoneyWithCurrency, formatShort, formatWithCurrency } from '../money';
 import { colors } from '../theme';
 import PlanAmountModal, { PlanAmountTarget } from './PlanAmountModal';
 
@@ -54,10 +54,10 @@ export default function StatsView({ year, month, currency }: { year: number; mon
 
       {stats.planned_minor > 0 ? (
         <View style={styles.summary}>
-          <SummaryItem label="План" value={formatShort(stats.planned_minor)} />
+          <SummaryItem label="План" value={formatWithCurrency(stats.planned_minor, stats.currency)} />
           <SummaryItem
             label={remaining >= 0 ? 'Осталось' : 'Сверх плана'}
-            value={formatShort(Math.abs(remaining))}
+            value={formatWithCurrency(Math.abs(remaining), stats.currency)}
             danger={remaining < 0}
           />
         </View>
@@ -73,14 +73,15 @@ export default function StatsView({ year, month, currency }: { year: number; mon
             <View style={styles.groupHeader}>
               <Text style={styles.groupTitle}>{g.title}</Text>
               <Text style={styles.groupTotal}>
-                {formatShort(g.spent_minor)}
-                {g.planned_minor ? <Text style={styles.rowLimit}> / {formatShort(g.planned_minor)}</Text> : null}
+                {g.planned_minor ? formatShort(g.spent_minor) : formatWithCurrency(g.spent_minor, stats.currency)}
+                {g.planned_minor ? <Text style={styles.rowLimit}> / {formatWithCurrency(g.planned_minor, stats.currency)}</Text> : null}
               </Text>
             </View>
             {g.categories.map((c) => (
               <CategoryRow
                 key={String(c.category_id)}
                 stat={c}
+                currency={stats.currency}
                 onAddToPlan={c.category_id !== null && c.limit_minor === null && !c.deleted
                   ? () => setPlanTarget({ category_id: c.category_id!, label: categoryLabel(c), limit_minor: 0, currency })
                   : undefined}
@@ -92,7 +93,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
 
       {stats.other_currencies.length > 0 ? (
         <Text style={styles.hint}>
-          Не учтено, нет курса (нужен интернет): {stats.other_currencies.map((o) => `${formatMoney(o.spent_minor)} ${o.currency}`).join(', ')}
+          Не учтено, нет курса (нужен интернет): {stats.other_currencies.map((o) => formatMoneyWithCurrency(o.spent_minor, o.currency)).join(', ')}
         </Text>
       ) : null}
 
@@ -108,7 +109,7 @@ export function DonutCenter({ total, picked, currency }: { total: number; picked
       <>
         <Text style={styles.caption}>Потрачено</Text>
         <Text style={styles.hero}>{formatShort(total)}</Text>
-        <Text style={styles.caption}>{currency}</Text>
+        <Text style={styles.caption}>{currencySymbol(currency)}</Text>
       </>
     );
   }
@@ -116,7 +117,7 @@ export function DonutCenter({ total, picked, currency }: { total: number; picked
   return (
     <>
       <Text style={styles.pickedName} numberOfLines={2}>{`${picked.emoji || ''} ${picked.name}`.trim()}</Text>
-      <Text style={styles.pickedAmount}>{formatShort(picked.spent_minor)} {currency}</Text>
+      <Text style={styles.pickedAmount}>{formatWithCurrency(picked.spent_minor, currency)}</Text>
       <Text style={styles.caption}>{share === 0 && picked.spent_minor > 0 ? '<1' : share}% всех трат</Text>
     </>
   );
@@ -138,7 +139,7 @@ function SummaryItem({ label, value, danger }: { label: string; value: string; d
   );
 }
 
-function CategoryRow({ stat, onAddToPlan }: { stat: CategoryStat; onAddToPlan?: () => void }) {
+function CategoryRow({ stat, currency, onAddToPlan }: { stat: CategoryStat; currency: Currency; onAddToPlan?: () => void }) {
   const openTransactions = useOpenCategoryTransactions();
   const { spent_minor: spent, limit_minor: limit } = stat;
   const ratio = limit ? spent / limit : 0;
@@ -157,7 +158,7 @@ function CategoryRow({ stat, onAddToPlan }: { stat: CategoryStat; onAddToPlan?: 
           </TouchableOpacity>
         ) : null}
         <Text style={styles.rowAmount}>
-          {formatShort(spent)}{limit ? <Text style={styles.rowLimit}> / {formatShort(limit)}{fixed ? '' : planShare(spent, limit)}</Text> : null}
+          {limit ? formatShort(spent) : formatWithCurrency(spent, currency)}{limit ? <Text style={styles.rowLimit}> / {formatWithCurrency(limit, currency)}{fixed ? '' : planShare(spent, limit)}</Text> : null}
         </Text>
       </View>
       {limit && fixed ? (
@@ -169,7 +170,7 @@ function CategoryRow({ stat, onAddToPlan }: { stat: CategoryStat; onAddToPlan?: 
         <>
           <Meter ratio={ratio} height={8} />
           <Text style={[styles.rowStatus, ratio > 1 && styles.dangerText]}>
-            {ratio > 1 ? `⚠ превышено на ${formatShort(spent - limit)}` : `осталось ${formatShort(limit - spent)}`}
+            {ratio > 1 ? `⚠ превышено на ${formatWithCurrency(spent - limit, currency)}` : `осталось ${formatWithCurrency(limit - spent, currency)}`}
           </Text>
         </>
       ) : null}

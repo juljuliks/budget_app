@@ -14,6 +14,7 @@ import { PencilIcon } from './icons';
 import type { CategoryInfo } from './MerchantsScreen';
 import TextInputModal from './TextInputModal';
 import { colors } from './theme';
+import { formatMoneyWithCurrency } from './money';
 
 type Props = {
   /** null = closed */
@@ -24,7 +25,7 @@ type Props = {
 };
 
 const money = (totals: Array<{ currency: string; amount_minor: number }>) =>
-  totals.map((t) => `${(t.amount_minor / 100).toFixed(2)} ${t.currency}`).join(' + ');
+  totals.map((t) => formatMoneyWithCurrency(t.amount_minor, t.currency)).join(' + ');
 
 /**
  * A merchant's card (bottom sheet): its transactions, its category (change / unpin), and for a group its name

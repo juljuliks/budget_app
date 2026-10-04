@@ -21,7 +21,7 @@ import Fab from './Fab';
 import PushAccessBanner from './PushAccessBanner';
 import SettingsButton from './SettingsButton';
 import { dayKey, formatDay, plural } from './format';
-import { formatShort } from './money';
+import { formatWithCurrency } from './money';
 import { formStyles } from './formStyles';
 import { ChevronRightIcon, PencilIcon, SearchIcon } from './icons';
 import RangeCalendar, { DayRange, formatRange, rangeToUnix } from './RangeCalendar';
@@ -508,7 +508,7 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
           return (
             <View style={[formStyles.sectionHeader, styles.dayHeader]}>
               <Text style={styles.dayTitle}>{section.title}</Text>
-              {spent > 0 ? <Text style={styles.daySpent}>−{formatShort(spent)} {currency}</Text> : null}
+              {spent > 0 ? <Text style={styles.daySpent}>−{formatWithCurrency(spent, currency)}</Text> : null}
               <TouchableOpacity
                 // the stats tab with this day picked
                 onPress={() => tabNavigation.navigate('Stats', { day: section.dayStart, nonce: Date.now() })}
