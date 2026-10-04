@@ -23,3 +23,26 @@ export function formatRange(r: DayRange): string {
   const f = (k: DayKey) => { const d = parseDayKey(k); return `${d.getDate()} ${SHORT_MONTHS[d.getMonth()]} ${d.getFullYear()}`; };
   return r.from === r.to ? f(r.from) : `${f(r.from)} — ${f(r.to)}`;
 }
+
+/** What the stats cover: a calendar month (with the plan), a day, a week (Monday–Sunday), a year or any range. */
+export type PeriodKind = 'day' | 'week' | 'month' | 'year' | 'custom';
+
+/** The day / week / year containing `anchor`. */
+export function periodRange(kind: 'day' | 'week' | 'year', anchor: Date): DayRange {
+  if (kind === 'day') return { from: dayKeyOf(anchor), to: dayKeyOf(anchor) };
+  if (kind === 'year') return { from: `${anchor.getFullYear()}-01-01`, to: `${anchor.getFullYear()}-12-31` };
+  const monday = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate() - ((anchor.getDay() + 6) % 7));
+  const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6);
+  return { from: dayKeyOf(monday), to: dayKeyOf(sunday) };
+}
+
+/** The previous / next day, week or year. */
+export function shiftAnchor(kind: 'day' | 'week' | 'year', anchor: Date, delta: number): Date {
+  if (kind === 'year') return new Date(anchor.getFullYear() + delta, anchor.getMonth(), 1);
+  return new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate() + delta * (kind === 'week' ? 7 : 1));
+}
+
+/** "4 окт 2026", "28 сен 2026 — 4 окт 2026", "2026". */
+export function periodLabel(kind: PeriodKind, range: DayRange): string {
+  return kind === 'year' ? range.from.slice(0, 4) : formatRange(range);
+}

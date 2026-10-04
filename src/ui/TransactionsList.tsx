@@ -508,7 +508,8 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
               <Text style={styles.dayTitle}>{section.title}</Text>
               {spent > 0 ? <Text style={styles.daySpent}>−{formatShort(spent)} {currency}</Text> : null}
               <TouchableOpacity
-                onPress={() => navigation.navigate('DayStats', { day: section.dayStart })}
+                // the stats tab with this day picked
+                onPress={() => tabNavigation.navigate('Stats', { day: section.dayStart, nonce: Date.now() })}
                 hitSlop={10}
                 accessibilityLabel={`Траты за день: ${section.title}`}
               >

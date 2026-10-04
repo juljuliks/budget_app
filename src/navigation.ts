@@ -3,7 +3,8 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 
 export type TabParamList = {
-  Stats: undefined;
+  /** day: open the stats of that day (a day header in the transactions list), its local midnight in unix seconds */
+  Stats: { day?: number; nonce?: number } | undefined;
   /**
    * open filtered by a category ('none' = uncategorized); nonce re-applies the same one.
    * from: the tab we came from (not via the tab bar) -> a back button in the header returns there.
@@ -30,8 +31,6 @@ export type RootStackParamList = {
   Categories: undefined;
   /** Merchants with their categories; merging into groups */
   Merchants: undefined;
-  /** Stats of one day (from a day header in the transactions list): `day` = its local midnight, unix seconds */
-  DayStats: { day: number };
   /** Delete a category: first move its current-month transactions to other ones (the transactions list in a delete mode) */
   CategoryDelete: { categoryId: number };
   /** Category types (settings → Категории → Типы) */
