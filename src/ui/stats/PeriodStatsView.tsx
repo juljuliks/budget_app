@@ -166,15 +166,21 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                   const p = paceOf(plan.windowSpent, plan.windowNorm, mtd, plan.monthLimit);
                   const bar = rhythmBar(plan, range, c.spent_minor);
                   const left = Math.round(plan.windowNorm) - plan.windowSpent;
+                  const flat = plan.rhythm === 'month' ? plan.windowNorm : flatOf(plan.windowParts);
+                  const change = plan.rhythm === 'month' ? null : limitChange(plan.windowNorm, flat);
                   return (
                     <>
                       <Meter ratio={bar.ratio} base={bar.base} marker={bar.marker} height={8} color={c.color} />
                       <TouchableOpacity style={styles.paceRow} onPress={() => openInfo({ id: c.category_id!, name })} accessibilityLabel="Как считается категория">
-                        <Text style={styles.share}>
+                        <Text style={[styles.share, styles.paceText]}>
                           <Text style={[styles.pace, paceStyle(p)]}>
                             {capitalize(windowLabel(plan))} {left < 0 ? `перерасход ${money(-left)}` : `осталось ${money(left)}`}
                           </Text>
                           {bar.end && left >= 0 ? ` · до ${until(bar.end, plan.rhythm)}` : ''}
+                          {/* the limit of this window; more than 5% off the plan's share: "лимит 113 ₾ (crossed out) → 95 ₾" */}
+                          {' · лимит '}
+                          {change ? <><Text style={styles.crossed}>{m(flat)}</Text>{' → '}</> : null}
+                          <Text style={change === 'down' ? styles.paceAhead : change === 'up' ? styles.paceOk : undefined}>{m(plan.windowNorm)}</Text>
                         </Text>
                         <InfoIcon color={colors.accent} size={INFO_SIZE} />
                       </TouchableOpacity>
@@ -359,6 +365,7 @@ const styles = StyleSheet.create({
   paceAhead: { color: colors.warn },
   paceOver: { color: colors.danger },
   paceRow: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' },
+  paceText: { flexShrink: 1 },
   share: { fontSize: 13, color: colors.muted, marginTop: 4, fontVariant: ['tabular-nums'] },
   amount: { fontSize: 15, color: colors.text, fontVariant: ['tabular-nums'] },
   info: { paddingHorizontal: 20, gap: 10, paddingBottom: 4 },
