@@ -2,7 +2,7 @@ jest.mock('../src/navigation', () => ({ navigateWhenReady: jest.fn() }));
 
 import { getDb } from '../src/db';
 import { ingestSms } from '../src/ingest';
-import { assignCategory, merchantChangePreview } from '../src/assign';
+import { assignCategory, categoryChangeTotals, merchantChangePreview } from '../src/assign';
 import {
   categoriesOfMerchants, excludeFromGroup, getMerchant, listMerchants, mergeMerchants, renameMerchantGroup, setMerchantCategory,
 } from '../src/db/merchants';
@@ -116,4 +116,20 @@ test('a refund finds purchases at any merchant of its group', async () => {
   expect(await refundCandidates(refund.txId)).toEqual([]);
   await mergeMerchants(['TEMU COM', key], 'TEMU', null);
   expect((await refundCandidates(refund.txId)).map((c) => c.id)).toEqual([p]);
+});
+
+test('category change totals: refunds subtract, ordered by the signed sum', async () => {
+  await sms('SPAR', '10.00');
+  const usd = async (amount: string) => {
+    const r = await ingestSms({ sender: 'TBC SMS', body: `${amount}USD\n(*XXXX)\nSPAR\n03/10/26 12:00`, timestamp: ts++ });
+    if (r.status !== 'inserted') throw new Error(`not inserted: ${r.status}`);
+    return r.txId;
+  };
+  await usd('5.00');
+  const refund = await usd('100.00');
+  await (await getDb()).run("UPDATE transactions SET kind = 'refund' WHERE id = ?", [refund]);
+  expect(await categoryChangeTotals('SPAR', 1)).toEqual([
+    { currency: 'GEL', amount_minor: 1000, n: 1 },
+    { currency: 'USD', amount_minor: -9500, n: 2 },
+  ]);
 });

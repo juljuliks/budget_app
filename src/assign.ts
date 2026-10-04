@@ -85,7 +85,7 @@ export async function categoryChangeTotals(merchantId: string, categoryId: numbe
         AND (kind IN (${REMEMBERABLE_KINDS.map(() => '?').join(',')}) OR (kind = 'refund' AND refund_settled_at IS NULL))
         AND (id = ? OR category_source IS NULL OR category_source = 'rule')
         AND (category_id IS NULL OR category_id != ?)
-      GROUP BY currency ORDER BY sum(amount_minor) DESC`,
+      GROUP BY currency ORDER BY sum(CASE WHEN kind = 'refund' THEN -amount_minor ELSE amount_minor END) DESC`,
     [merchantId, ...REMEMBERABLE_KINDS, alsoTxId, categoryId]);
 }
 
