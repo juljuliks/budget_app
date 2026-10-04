@@ -42,5 +42,6 @@ describe('norm windows', () => {
     expect(normWindow('2weeks', week)).toEqual({ from: '2026-09-21', to: '2026-10-04' });
     expect(normWindow('month', week)).toEqual({ from: '2026-10-01', to: '2026-10-04' });
     expect(shortRange(week)).toBe('28 сен – 4 окт');
+    expect(shortRange({ from: '2026-10-01', to: '2026-10-04' })).toBe('1 – 4 окт');
   });
 });

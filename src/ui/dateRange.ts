@@ -91,5 +91,8 @@ const SHORT = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'ию
 /** "28 сен – 4 окт", "4 окт" (no year: windows are always near). */
 export function shortRange(r: DayRange): string {
   const f = (k: DayKey) => { const d = parseDayKey(k); return `${d.getDate()} ${SHORT[d.getMonth()]}`; };
-  return r.from === r.to ? f(r.from) : `${f(r.from)} – ${f(r.to)}`;
+  if (r.from === r.to) return f(r.from);
+  // within one month: "1 – 4 окт"
+  if (r.from.slice(0, 7) === r.to.slice(0, 7)) return `${parseDayKey(r.from).getDate()} – ${f(r.to)}`;
+  return `${f(r.from)} – ${f(r.to)}`;
 }
