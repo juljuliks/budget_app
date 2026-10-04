@@ -153,7 +153,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                       />
                     ) : null}
                     <Text style={styles.share}>
-                      {pct(c.spent_minor, stats.spent_minor)} всех трат за период · {plan.monthLimit > 0
+                      {pct(c.spent_minor, stats.spent_minor)} всех трат · {plan.monthLimit > 0
                         ? `${pct(plan.spent, plan.monthLimit)} плана на ${monthIn}${mtd > plan.spent ? ` · с 1-го ${pct(mtd, plan.monthLimit)}` : ''}`
                         : `в ${MONTHS_PREP[parseYm(norms!.ym).month]} плана нет`}
                     </Text>
@@ -176,7 +176,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                     })() : null}
                   </>
                 ) : (
-                  <Text style={styles.share}>{pct(c.spent_minor, stats.spent_minor)} всех трат за период</Text>
+                  <Text style={styles.share}>{pct(c.spent_minor, stats.spent_minor)} всех трат</Text>
                 )}
               </View>
             );
