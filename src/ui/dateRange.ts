@@ -96,3 +96,11 @@ export function shortRange(r: DayRange): string {
   if (r.from.slice(0, 7) === r.to.slice(0, 7)) return `${parseDayKey(r.from).getDate()} – ${f(r.to)}`;
   return `${f(r.from)} – ${f(r.to)}`;
 }
+
+/** The week (Monday–Sunday) around `anchor`, cut to the anchor's month: stats never mix two months. */
+export function weekInMonth(anchor: Date): DayRange {
+  const w = periodRange('week', anchor);
+  const ym = dayKeyOf(anchor).slice(0, 7);
+  const last = `${ym}-${String(daysInMonth(ym)).padStart(2, '0')}`;
+  return { from: w.from < `${ym}-01` ? `${ym}-01` : w.from, to: w.to > last ? last : w.to };
+}

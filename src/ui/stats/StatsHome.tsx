@@ -7,7 +7,7 @@ import Segmented from '../Segmented';
 import Button from '../Button';
 import BottomSheet from '../BottomSheet';
 import RangeCalendar from '../RangeCalendar';
-import { dayKeyOf, DayRange, PeriodKind, periodLabel, periodRange, shiftAnchor } from '../dateRange';
+import { dayKeyOf, DayRange, parseDayKey, PeriodKind, periodLabel, periodRange, shiftAnchor, weekInMonth } from '../dateRange';
 import { useDisplayCurrency } from '../../displayCurrency';
 import { colors } from '../theme';
 import { ChevronDownIcon } from '../icons';
@@ -70,7 +70,15 @@ export default function StatsHome() {
   });
 
   const byPeriod = section === 'stats' && kind !== 'month';
-  const range: DayRange | null = kind === 'custom' ? custom : kind === 'month' ? null : periodRange(kind, anchor);
+  // a week across two months shows only its days in one month (the arrows step to the other part)
+  const range: DayRange | null = kind === 'custom' ? custom : kind === 'month' ? null
+    : kind === 'week' ? weekInMonth(anchor) : periodRange(kind, anchor);
+  /** previous / next day, week (part) or year */
+  const step = (delta: number) => setAnchor((a) => {
+    if (kind !== 'week' || !range) return shiftAnchor(kind as 'day', a, delta);
+    const edge = parseDayKey(delta < 0 ? range.from : range.to);
+    return new Date(edge.getFullYear(), edge.getMonth(), edge.getDate() + delta);
+  });
   const today = dayKeyOf(now);
 
   // the header title picks the period while the stats are shown: "Статистика за месяц ▾"
@@ -114,9 +122,9 @@ export default function StatsHome() {
             </TouchableOpacity>
           ) : (
             <>
-              <TouchableOpacity onPress={() => setAnchor((a) => shiftAnchor(kind as 'day', a, -1))} hitSlop={12}><Text style={styles.arrow}>‹</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => step(-1)} hitSlop={12}><Text style={styles.arrow}>‹</Text></TouchableOpacity>
               <Text style={styles.month}>{periodLabel(kind, range)}</Text>
-              <TouchableOpacity onPress={() => setAnchor((a) => shiftAnchor(kind as 'day', a, 1))} hitSlop={12} disabled={range.to >= today}>
+              <TouchableOpacity onPress={() => step(1)} hitSlop={12} disabled={range.to >= today}>
                 <Text style={[styles.arrow, range.to >= today && styles.arrowDisabled]}>›</Text>
               </TouchableOpacity>
             </>

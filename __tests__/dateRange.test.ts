@@ -45,3 +45,10 @@ describe('norm windows', () => {
     expect(shortRange({ from: '2026-10-01', to: '2026-10-04' })).toBe('1 – 4 окт');
   });
 });
+
+test('a week across two months is cut to the anchor month', () => {
+  const { weekInMonth } = require('../src/ui/dateRange');
+  expect(weekInMonth(new Date(2026, 9, 4))).toEqual({ from: '2026-10-01', to: '2026-10-04' });
+  expect(weekInMonth(new Date(2026, 8, 29))).toEqual({ from: '2026-09-28', to: '2026-09-30' });
+  expect(weekInMonth(new Date(2026, 9, 8))).toEqual({ from: '2026-10-05', to: '2026-10-11' });
+});

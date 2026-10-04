@@ -5,7 +5,7 @@ import { useDisplayCurrency } from '../../displayCurrency';
 import { onTransactionsChanged } from '../../events';
 import BottomSheet from '../BottomSheet';
 import Button from '../Button';
-import { DayRange, daysInMonth, normWindow, rangeDays, rangeToUnix, shortRange } from '../dateRange';
+import { DayRange, daysInMonth, normWindow, rangeDays, rangeToUnix } from '../dateRange';
 import Donut from '../Donut';
 import { InfoIcon } from '../icons';
 import Meter from '../Meter';
@@ -140,9 +140,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
   const cur = stats.currency;
   // spending of the flexible categories, compared with their norm under the donut
   const flexSpent = norms?.flexSpent ?? 0;
-  // a period across two months: the norms are about its part in the last month
-  const cut = !!norms && norms.range.from !== range.from;
-  const summaryLabel = cut && norms ? `на ${shortRange(norms.range)}` : normLabel;
+  const summaryLabel = normLabel;
 
   // under the donut: the pace against the whole plan, or the average per month for a long period
   const summary = pace
@@ -194,13 +192,10 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                     {plan.kind === 'limit' ? (() => {
                       const p = paceOf(plan.windowSpent, plan.windowNorm, norms?.monthToDate.get(c.category_id) ?? 0, plan.monthLimit);
                       const sameWindow = plan.window.from === range.from && plan.window.to === range.to;
-                      const fullLength = { day: 1, week: 7, '2weeks': 14, month: 0 }[plan.rhythm];
+                      // by the rhythm, without dates: the window is the week / two weeks / month around the period, within its month
                       const label = sameWindow ? normLabel
                         : plan.rhythm === 'month' ? `на ${MONTHS_IN[parseYm(plan.window.to).month]}`
-                          : rangeDays(plan.window) === fullLength
-                            ? `${plan.rhythm === 'week' ? 'на неделю' : 'на 2 недели'} ${shortRange(plan.window)}`
-                            // cut at the 1st of the month
-                            : `на ${shortRange(plan.window)}`;
+                          : plan.rhythm === 'week' ? 'на неделю' : 'на 2 недели';
                       return (
                         <TouchableOpacity style={styles.paceRow} onPress={() => setInfoOpen(true)} accessibilityLabel="Что значит цвет">
                           <Text style={[styles.share, styles.pace, p === 'ok' ? styles.paceOk : p === 'ahead' ? styles.paceAhead : styles.paceOver]}>
@@ -250,8 +245,8 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                 <Text style={styles.infoBold}>Цветная строка</Text> — траты гибкой категории против её нормы. Норма
                 считается в ритме, заданном в плане: в день (еда), в неделю (бары), за 2 недели или в месяц (одежда).
                 Если период короче ритма, берётся неделя / 2 недели / месяц, куда он попадает, — например, для баров за
-                день видно всю неделю: «73 · 61% от плана на неделю 5 – 11 окт». Неделя на стыке месяцев обрезается по
-                1-е число, и норма для неё меньше: «на 1 – 4 окт».
+                день видно всю неделю: «73 · 61% от плана на неделю». Неделя на стыке месяцев считается только по дням
+                текущего месяца, и норма для неё меньше: для 1–4 октября при плане 500 — 500 / 31 × 4 ≈ 64.5.
               </Text>
               <Text style={styles.infoText}>
                 <Text style={[styles.infoBold, styles.paceOk]}>Зелёный</Text> — за период потрачено не больше плана на эти дни.
