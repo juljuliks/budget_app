@@ -125,3 +125,15 @@ test('autoCategorizeRefunds: old refunds get their merchant\'s category; settled
   const cat = async (id: number) => (await db.get<{ category_id: number | null }>('SELECT category_id FROM transactions WHERE id = ?', [id]))!.category_id;
   expect([await cat(open), await cat(settled), await cat(cleared)]).toEqual([4, null, null]);
 });
+
+test('setting a merchant\'s category also gives it to its open refunds (settled ones and manual choices stay)', async () => {
+  const { setMerchantCategory } = require('../src/db/merchants');
+  const open = await add('refund', 300, 'TEMU COM', NOW);
+  const settled = await add('refund', 200, 'TEMU COM', NOW);
+  const db = await getDb();
+  await db.run('UPDATE transactions SET refund_settled_at = 1 WHERE id = ?', [settled]);
+  const manual = await add('refund', 100, 'TEMU COM', NOW, 9); // the user's own choice ('user')
+  await setMerchantCategory('TEMU COM', 4);
+  const cat = async (id: number) => (await db.get<{ category_id: number | null }>('SELECT category_id FROM transactions WHERE id = ?', [id]))!.category_id;
+  expect([await cat(open), await cat(settled), await cat(manual)]).toEqual([4, null, 9]);
+});

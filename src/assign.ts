@@ -80,8 +80,9 @@ export async function merchantChangePreview(txId: number, categoryId: number | n
 export async function categoryChangeTotals(merchantId: string, categoryId: number, alsoTxId = -1) {
   const db = await getDb();
   return db.all<{ currency: string; amount_minor: number; n: number }>(
-    `SELECT currency, sum(amount_minor) AS amount_minor, count(*) AS n FROM transactions
-      WHERE ${merchantIdSql('transactions')} = ? AND kind IN (${REMEMBERABLE_KINDS.map(() => '?').join(',')})
+    `SELECT currency, sum(CASE WHEN kind = 'refund' THEN -amount_minor ELSE amount_minor END) AS amount_minor, count(*) AS n FROM transactions
+      WHERE ${merchantIdSql('transactions')} = ?
+        AND (kind IN (${REMEMBERABLE_KINDS.map(() => '?').join(',')}) OR (kind = 'refund' AND refund_settled_at IS NULL))
         AND (id = ? OR category_source IS NULL OR category_source = 'rule')
         AND (category_id IS NULL OR category_id != ?)
       GROUP BY currency ORDER BY sum(amount_minor) DESC`,
