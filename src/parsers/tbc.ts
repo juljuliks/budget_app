@@ -168,4 +168,17 @@ function extractMerchant(lines: string[]): string {
   return '';
 }
 
+/**
+ * The card balance a TBC SMS reports ("Balance: 283.14GEL"): purchase SMS and balance-only SMS have it, deposits
+ * don't. It is the balance after the operation in the same SMS.
+ */
+export function parseTbcBalance(raw_sms: string): { minor: number; currency: string; occurred_at?: string; has_time: boolean } | null {
+  const lines = raw_sms.replace(/\r\n?/g, '\n').split('\n').map((l) => l.trim()).filter(Boolean);
+  const line = lines.find((l) => BALANCE_LINE.test(l));
+  const amount = line ? parseAmountLine(line) : null;
+  if (!amount) return null;
+  const date = findDate(raw_sms);
+  return { minor: amount.minor, currency: amount.currency, occurred_at: date?.iso, has_time: date?.hasTime ?? false };
+}
+
 export default parseTbc;

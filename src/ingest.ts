@@ -1,4 +1,5 @@
-import parseTbc from './parsers/tbc';
+import parseTbc, { parseTbcBalance } from './parsers/tbc';
+import { recordBalance } from './db/balance';
 import type { ParsedTx } from './types';
 import { sha256Hex } from './hash';
 import { getDb } from './db';
@@ -53,7 +54,15 @@ export function resolveOccurredAt(parsed: Pick<ParsedTx, 'occurred_at' | 'has_ti
 /** Parses one SMS, stores it and applies merchant rules. Shared by the headless task and importer. */
 export async function ingestSms(sms: IncomingSms): Promise<IngestResult> {
   const parsed = parseTbc(sms.body);
-  if (!parsed) return { status: 'ignored' };
+  const balance = parseTbcBalance(sms.body);
+  if (!parsed) {
+    // a balance-only SMS ("Balance: 281.00GEL"): not a transaction, but keeps the card balance in sync
+    if (balance) {
+      await recordBalance({ minor: balance.minor, currency: balance.currency, at: resolveOccurredAt(balance, sms.timestamp), txId: null });
+      emitTransactionsChanged();
+    }
+    return { status: 'ignored' };
+  }
 
   const db = await getDb();
   const hash = smsHash(sms);
@@ -66,13 +75,17 @@ export async function ingestSms(sms: IncomingSms): Promise<IngestResult> {
   const source = sms.source ?? 'sms';
   const occurredAt = resolveOccurredAt(parsed, sms.timestamp);
   // the bank may report one operation both by SMS and by push: keep the first
-  const twin = await db.get<{ id: number }>(
-    `SELECT id FROM transactions
+  const twin = await db.get<{ id: number; occurred_at: number }>(
+    `SELECT id, occurred_at FROM transactions
       WHERE source != ? AND kind = ? AND amount_minor = ? AND currency = ? AND coalesce(merchant_key, '') = ?
         AND abs(occurred_at - ?) <= ?
       LIMIT 1`,
     [source, parsed.kind, parsed.amount_minor, parsed.currency, parsed.merchant_key || '', occurredAt, CROSS_SOURCE_WINDOW_S]);
-  if (twin) return { status: 'duplicate', txId: twin.id };
+  if (twin) {
+    // the push came first without a balance, the SMS has it
+    if (balance) await recordBalance({ minor: balance.minor, currency: balance.currency, at: twin.occurred_at, txId: twin.id });
+    return { status: 'duplicate', txId: twin.id };
+  }
 
   // OR IGNORE + changes check instead of SELECT-then-INSERT: the same SMS may be
   // delivered twice concurrently (e.g. receiver retry), and sms_hash is UNIQUE.
@@ -99,6 +112,8 @@ export async function ingestSms(sms: IncomingSms): Promise<IngestResult> {
     const existing = await db.get<{ id: number }>('SELECT id FROM transactions WHERE sms_hash = ?', [hash]);
     return { status: 'duplicate', txId: existing!.id };
   }
+  // the balance after this operation, as the bank reports it
+  if (balance) await recordBalance({ minor: balance.minor, currency: balance.currency, at: occurredAt, txId: lastInsertRowid });
   if (categoryId) await incrementCategoryUsage(categoryId);
   emitTransactionsChanged();
 

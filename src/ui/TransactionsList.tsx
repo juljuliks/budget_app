@@ -19,6 +19,7 @@ import Checkbox from './Checkbox';
 import Chip from './Chip';
 import Fab from './Fab';
 import PushAccessBanner from './PushAccessBanner';
+import CardBalance from './CardBalance';
 import SettingsButton from './SettingsButton';
 import { dayKey, formatDay, plural } from './format';
 import { formatWithCurrency } from './money';
@@ -387,7 +388,7 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
               {pastCount > 0 ? ` Прошлые месяцы (${pastCount} ${plural(pastCount, ['транзакция', 'транзакции', 'транзакций'])}) останутся в этой категории, история не изменится.` : ''}
             </Text>
           </View>
-        ) : <PushAccessBanner />}
+        ) : <><PushAccessBanner /><CardBalance /></>}
         <Segmented options={MODES} value={mode} onChange={setMode} style={styles.modes} disabled={deleting ? DELETE_MODE_DISABLED : undefined} />
 
         {mode === 'text' ? (

@@ -1,0 +1,50 @@
+import React, { useCallback, useEffect, useState } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import { cardBalance, CardBalance as Balance } from '../db/balance';
+import { onTransactionsChanged } from '../events';
+import { formatDay, formatTime, plural } from './format';
+import { formatMoneyWithCurrency } from './money';
+import { sheetAlert } from './sheetAlert';
+import { colors } from './theme';
+
+/** "Баланс карты 283.14 ₾" as the bank last reported it, plus the operations after that (a deposit has no balance). */
+export default function CardBalance() {
+  const [balance, setBalance] = useState<Balance | null>(null);
+  const load = useCallback(() => {
+    cardBalance().then(setBalance).catch((e) => console.error('load card balance failed', e));
+  }, []);
+  useFocusEffect(load);
+  useEffect(() => onTransactionsChanged(load), [load]);
+
+  if (!balance) return null;
+  const when = `${formatDay(balance.asOf).toLowerCase()} ${formatTime(balance.asOf)}`;
+  const note = balance.pending
+    ? `≈ по SMS ${when} + ${balance.pending} ${plural(balance.pending, ['операция', 'операции', 'операций'])} после`
+    : `по SMS ${when}`;
+  return (
+    <TouchableOpacity
+      style={styles.box}
+      onPress={() => sheetAlert('Баланс карты', balance.pending
+        ? 'Последний баланс, который банк прислал в SMS, плюс операции после него: в SMS о пополнении баланса нет. Следующее SMS с балансом (покупка) поправит его точно.'
+        : 'Баланс, который банк прислал в последнем SMS.')}
+      accessibilityLabel={`Баланс карты ${formatMoneyWithCurrency(balance.minor, balance.currency)}, ${note}`}
+    >
+      <View>
+        <Text style={styles.label}>Баланс карты</Text>
+        <Text style={styles.note}>{note}</Text>
+      </View>
+      <Text style={styles.amount}>{balance.pending ? '≈ ' : ''}{formatMoneyWithCurrency(balance.minor, balance.currency)}</Text>
+    </TouchableOpacity>
+  );
+}
+
+const styles = StyleSheet.create({
+  box: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: colors.surface, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 8,
+  },
+  label: { fontSize: 13, color: colors.muted },
+  note: { fontSize: 12, color: colors.muted, marginTop: 2 },
+  amount: { fontSize: 20, fontWeight: '700', color: colors.text, fontVariant: ['tabular-nums'] },
+});
