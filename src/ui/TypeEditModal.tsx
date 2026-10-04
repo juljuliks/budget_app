@@ -7,7 +7,7 @@ import {
   colorFromHue, distinctHue, freePalettes, hexToHsl, isCustomPalette, PALETTES, paletteShades, typePalette,
 } from '../colors';
 import { emitTransactionsChanged } from '../events';
-import { PaletteStrip } from './ColorSwatches';
+import { AutoButton, PaletteStrip } from './ColorSwatches';
 import { formStyles } from './formStyles';
 import HueBar from './HueBar';
 import TextInputModal from './TextInputModal';
@@ -73,9 +73,7 @@ export default function TypeEditModal({ visible, type, types, onClose, onSaved }
       <Text style={formStyles.label}>Цвета</Text>
       <View style={styles.presets}>
         {/* "Авто": a generated palette (another one on each press), away from the other types' colors */}
-        <TouchableOpacity style={[styles.preset, styles.auto]} onPress={randomPalette} accessibilityLabel="Палитра автоматически">
-          <Text style={styles.autoText}>Авто</Text>
-        </TouchableOpacity>
+        <AutoButton onPress={randomPalette} style={styles.autoTile} accessibilityLabel="Палитра автоматически" />
         {presets.map((k) => (
           <TouchableOpacity
             key={k}
@@ -103,12 +101,11 @@ const styles = StyleSheet.create({
   // three in a row
   presets: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   preset: {
-    width: '31.5%', alignItems: 'center', justifyContent: 'center', paddingVertical: 8,
+    width: '31.5%', height: 38, alignItems: 'center', justifyContent: 'center',
     borderRadius: 10, borderWidth: 2, borderColor: 'transparent', backgroundColor: colors.surface,
   },
-  auto: { borderColor: colors.border, borderStyle: 'dashed' },
-  autoText: { fontSize: 13, color: colors.accent, fontWeight: '600' },
+  autoTile: { width: '31.5%' },
   selected: { borderColor: colors.accent },
   customLabel: { fontSize: 14, color: colors.text, marginTop: 14 },
-  customPreview: { alignSelf: 'flex-start', width: undefined, paddingHorizontal: 8, marginTop: 4 },
+  customPreview: { alignSelf: 'flex-start', width: undefined, paddingHorizontal: 10, marginTop: 4 },
 });

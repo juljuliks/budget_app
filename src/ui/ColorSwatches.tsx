@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleProp, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
 import { colors } from './theme';
 
 type Props = {
@@ -7,25 +7,38 @@ type Props = {
   /** null = "Авто" */
   value: string | null;
   onChange: (color: string | null) => void;
-  /** the color "Авто" resolves to, shown inside its swatch */
-  autoColor?: string;
   /** "Авто" does this instead of choosing null (e.g. generates a color) */
   onAuto?: () => void;
 };
 
+/**
+ * "Авто" for colors and palettes (the category editor, the type dialog): the same look in both places.
+ * `selected` (no color chosen yet) turns the dashed border solid.
+ */
+export function AutoButton({ onPress, selected, style, accessibilityLabel }: {
+  onPress: () => void; selected?: boolean; style?: StyleProp<ViewStyle>; accessibilityLabel: string;
+}) {
+  return (
+    <TouchableOpacity
+      style={[styles.auto, selected && styles.autoSelected, style]}
+      onPress={onPress}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ selected: !!selected }}
+    >
+      <Text style={styles.autoText}>Авто</Text>
+    </TouchableOpacity>
+  );
+}
+
 /** Row of color circles plus "Авто"; the selected one gets a ring. */
-export default function ColorSwatches({ options, value, onChange, autoColor, onAuto }: Props) {
+export default function ColorSwatches({ options, value, onChange, onAuto }: Props) {
   return (
     <View style={styles.row}>
-      <TouchableOpacity
-        style={[styles.auto, value === null && styles.selected]}
+      <AutoButton
+        selected={value === null}
         onPress={() => (onAuto ? onAuto() : onChange(null))}
         accessibilityLabel="Цвет автоматически"
-        accessibilityState={{ selected: value === null }}
-      >
-        {autoColor ? <View style={[styles.autoDot, { backgroundColor: autoColor }]} /> : null}
-        <Text style={styles.autoText}>Авто</Text>
-      </TouchableOpacity>
+      />
       {options.map((c) => (
         <TouchableOpacity
           key={c}
@@ -56,10 +69,10 @@ const styles = StyleSheet.create({
   selected: { borderColor: colors.accent },
   swatch: { width: 28, height: 28, borderRadius: 14 },
   auto: {
-    flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, height: 38,
-    borderRadius: 19, borderWidth: 2, borderColor: colors.border,
+    alignItems: 'center', justifyContent: 'center', paddingHorizontal: 14, height: 38,
+    borderRadius: 10, borderWidth: 2, borderColor: colors.border, borderStyle: 'dashed',
   },
-  autoDot: { width: 16, height: 16, borderRadius: 8 },
-  autoText: { fontSize: 14, color: colors.text },
+  autoSelected: { borderColor: colors.accent, borderStyle: 'solid' },
+  autoText: { fontSize: 14, fontWeight: '600', color: colors.accent },
   strip: { flexDirection: 'row', gap: 3 },
 });
