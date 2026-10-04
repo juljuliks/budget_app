@@ -178,6 +178,12 @@ export async function getTransaction(id: number) {
     `SELECT t.*, ${CATEGORY_COLUMNS} ${FROM_TX} WHERE t.id = ?`, [id]);
 }
 
+/** Corrects a transaction's amount and currency (e.g. the SMS was wrong or a manual entry was mistyped). */
+export async function setTransactionAmount(id: number, amountMinor: number, currency: string) {
+  const db = await getDb();
+  await db.run('UPDATE transactions SET amount_minor = ?, currency = ? WHERE id = ?', [amountMinor, currency, id]);
+}
+
 /** Free-text note shown under the SMS; empty clears it. */
 export async function setTransactionNote(id: number, note: string) {
   const db = await getDb();

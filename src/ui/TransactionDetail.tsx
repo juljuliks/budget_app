@@ -2,7 +2,10 @@ import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { getTransaction, markTransactionSeen, setTransactionNote } from '../db/transactions';
+import { getTransaction, markTransactionSeen, setTransactionAmount, setTransactionNote } from '../db/transactions';
+import { Currency, isCurrency } from '../db/fx';
+import CurrencyPicker from './CurrencyPicker';
+import { parseAmountInput, toInputValue } from './money';
 import { assignCategory, MerchantChoice, merchantChangePreview } from '../assign';
 import { findCategoryForMerchant } from '../categorize';
 import { groupNameOf } from '../db/merchants';
@@ -30,6 +33,8 @@ export default function TransactionDetail({ route, navigation }: Props) {
   const [saving, setSaving] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [noteOpen, setNoteOpen] = useState(false);
+  const [amountOpen, setAmountOpen] = useState(false);
+  const [amountCurrency, setAmountCurrency] = useState<Currency>('GEL');
 
   // the merchant's category (its rule): new transactions of the merchant get it automatically
   const [merchantCategory, setMerchantCategory] = useState<string | null>(null);
@@ -89,6 +94,15 @@ export default function TransactionDetail({ route, navigation }: Props) {
       { cancelable: true });
   }
 
+  async function saveAmount(text: string): Promise<string | null> {
+    const minor = parseAmountInput(text);
+    if (minor === null) return 'Введите сумму, например 12.50';
+    await setTransactionAmount(txId, minor, amountCurrency);
+    emitTransactionsChanged();
+    reload();
+    return null;
+  }
+
   async function saveNote(text: string): Promise<string | null> {
     await setTransactionNote(txId, text);
     emitTransactionsChanged();
@@ -104,9 +118,17 @@ export default function TransactionDetail({ route, navigation }: Props) {
   return (
     <View style={styles.screen}>
     <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-      <Text style={[styles.amount, isIncome(tx.kind) && styles.income]}>
-        {formatAmount(tx.amount_minor, tx.currency, tx.kind)}
-      </Text>
+      {/* tap the amount to correct it (and its currency) */}
+      <TouchableOpacity
+        style={styles.amountRow}
+        onPress={() => { setAmountCurrency(isCurrency(tx.currency) ? tx.currency : 'GEL'); setAmountOpen(true); }}
+        accessibilityLabel="Изменить сумму"
+      >
+        <Text style={[styles.amount, isIncome(tx.kind) && styles.income]}>
+          {formatAmount(tx.amount_minor, tx.currency, tx.kind)}
+        </Text>
+        <PencilIcon color={colors.accent} size={18} />
+      </TouchableOpacity>
       <Text style={styles.merchant}>{merchantLabel(tx)}</Text>
       <Text style={styles.meta}>{formatDay(tx.occurred_at)}, {formatTime(tx.occurred_at)}</Text>
 
@@ -188,6 +210,18 @@ export default function TransactionDetail({ route, navigation }: Props) {
         </TouchableOpacity>
       )}
       <TextInputModal
+        visible={amountOpen}
+        title="Сумма"
+        initialValue={toInputValue(tx.amount_minor)}
+        placeholder="0.00"
+        keyboardType="decimal-pad"
+        maxLength={12}
+        onSubmit={saveAmount}
+        onClose={() => setAmountOpen(false)}
+      >
+        <CurrencyPicker value={amountCurrency} onChange={setAmountCurrency} />
+      </TextInputModal>
+      <TextInputModal
         visible={noteOpen}
         title="Заметка"
         initialValue={tx.note ?? ''}
@@ -213,6 +247,7 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { padding: 16, paddingBottom: 32 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
+  amountRow: { flexDirection: 'row', alignItems: 'center', gap: 10, alignSelf: 'flex-start' },
   amount: { fontSize: 28, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
   income: { color: colors.income },
   merchant: { fontSize: 18, color: colors.text, marginTop: 4 },

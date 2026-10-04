@@ -3,7 +3,7 @@ jest.mock('../src/navigation', () => ({ navigateWhenReady: jest.fn() }));
 import { getDb } from '../src/db';
 import {
   addManualTransaction, countUnseenTransactions, deleteTransaction, isUnread, listTransactionsPage, markTransactionSeen,
-  normalizeForSearch, searchTransactions, listTransactionsFiltered, categoriesWithTransactions, merchantsWithTransactions,
+  normalizeForSearch, searchTransactions, listTransactionsFiltered, categoriesWithTransactions, merchantsWithTransactions, setTransactionAmount,
 } from '../src/db/transactions';
 import { rangeToUnix } from '../src/ui/dateRange';
 import { createCategory } from '../src/db/categories';
@@ -237,4 +237,10 @@ describe('merchant filter', () => {
     ]);
     expect((await listTransactionsFiltered({ merchant: 'SPAR' })).map((r) => r.amount_minor)).toEqual([103, 101]);
   });
+});
+
+test('the amount and currency of a transaction can be corrected', async () => {
+  await insertTx(1, 1000, 'SPAR');
+  await setTransactionAmount(1, 2550, 'USD');
+  expect(await (await getDb()).get('SELECT amount_minor, currency FROM transactions WHERE id = 1')).toEqual({ amount_minor: 2550, currency: 'USD' });
 });
