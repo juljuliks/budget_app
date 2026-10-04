@@ -122,6 +122,13 @@ export function DonutCenter({ total, picked, currency }: { total: number; picked
   );
 }
 
+/** " (50%)" after "spent / limit" of a flexible category; nothing while nothing is spent. */
+function planShare(spent: number, limit: number): string {
+  if (spent <= 0 || limit <= 0) return '';
+  const p = Math.round((spent / limit) * 100);
+  return ` (${p === 0 ? '<1' : p}%)`;
+}
+
 function SummaryItem({ label, value, danger }: { label: string; value: string; danger?: boolean }) {
   return (
     <View style={styles.summaryItem}>
@@ -150,7 +157,7 @@ function CategoryRow({ stat, onAddToPlan }: { stat: CategoryStat; onAddToPlan?: 
           </TouchableOpacity>
         ) : null}
         <Text style={styles.rowAmount}>
-          {formatShort(spent)}{limit ? <Text style={styles.rowLimit}> / {formatShort(limit)}</Text> : null}
+          {formatShort(spent)}{limit ? <Text style={styles.rowLimit}> / {formatShort(limit)}{fixed ? '' : planShare(spent, limit)}</Text> : null}
         </Text>
       </View>
       {limit && fixed ? (
