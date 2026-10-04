@@ -4,6 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Category, listCategories } from '../db/categories';
 import { categoryColors } from '../db/colors';
+import { listCategoryTypes } from '../db/categoryTypes';
 import type { RootStackParamList } from '../navigation';
 import { formStyles } from './formStyles';
 import RowActions from './RowActions';
@@ -15,6 +16,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Categories'>;
 export default function CategoriesScreen({ navigation }: Props) {
   const [cats, setCats] = useState<Category[]>([]);
   const [colorOf, setColorOf] = useState<Map<number, string>>(new Map());
+  const [types, setTypes] = useState<string[]>([]);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -27,8 +29,8 @@ export default function CategoriesScreen({ navigation }: Props) {
   }, [navigation]);
 
   useFocusEffect(useCallback(() => {
-    Promise.all([listCategories(), categoryColors()])
-      .then(([c, colorMap]) => { setCats(c); setColorOf(colorMap); })
+    Promise.all([listCategories(), categoryColors(), listCategoryTypes()])
+      .then(([c, colorMap, t]) => { setCats(c); setColorOf(colorMap); setTypes(t.map((x) => x.name)); })
       .catch((e) => console.error('load categories failed', e));
   }, []));
 
@@ -57,6 +59,16 @@ export default function CategoriesScreen({ navigation }: Props) {
           />
         </View>
       )}
+      // the category types live one level down from here
+      ListHeaderComponent={
+        <TouchableOpacity style={styles.typesRow} onPress={() => navigation.navigate('CategoryTypes')} accessibilityRole="button">
+          <View style={styles.flex}>
+            <Text style={styles.typesTitle}>Типы</Text>
+            <Text style={styles.typesNote} numberOfLines={1}>{types.length ? types.join(', ') : 'Группы категорий со своими цветами'}</Text>
+          </View>
+          <Text style={styles.chevron}>›</Text>
+        </TouchableOpacity>
+      }
       ListEmptyComponent={<Text style={styles.empty}>Категорий нет. Нажмите ＋, чтобы создать.</Text>}
     />
   );
@@ -72,4 +84,12 @@ const styles = StyleSheet.create({
   dot: { width: 10, height: 10, borderRadius: 5, marginRight: 10 },
   name: { flex: 1, fontSize: 16, color: colors.text },
   empty: { padding: 32, textAlign: 'center', color: colors.muted },
+  typesRow: {
+    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
+  },
+  flex: { flex: 1 },
+  typesTitle: { fontSize: 16, color: colors.text, fontWeight: '600' },
+  typesNote: { fontSize: 13, color: colors.muted, marginTop: 2 },
+  chevron: { fontSize: 24, color: colors.muted, marginLeft: 8 },
 });
