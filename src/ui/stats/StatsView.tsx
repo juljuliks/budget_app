@@ -5,7 +5,8 @@ import { useOpenCategoryTransactions } from '../../navigation';
 import { categoryLabel } from '../../db/categories';
 import { Currency } from '../../db/fx';
 import { CategoryStat, currentYm, monthStats, MonthStats, StatGroup, ymOf } from '../../db/plans';
-import { daysInMonth } from '../dateRange';
+import { dayKeyOf, daysInMonth } from '../dateRange';
+import { loadNorms, Norms, Pace, paceOf } from './norms';
 import { onTransactionsChanged } from '../../events';
 import Donut, { DonutSegment } from '../Donut';
 import Meter from '../Meter';
@@ -29,9 +30,15 @@ export default function StatsView({ year, month, currency }: { year: number; mon
   const [planTarget, setPlanTarget] = useState<PlanAmountTarget | null>(null);
   // the donut segment tapped: its category's spending and share in the hole
   const [selected, setSelected] = useState<string | null>(null);
+  // the current month: each flexible category's norm window around today (today / this week / these 2 weeks)
+  const [today, setToday] = useState<Norms | null>(null);
 
   const load = useCallback(() => {
     monthStats(year, month, currency).then(setStats).catch((e) => console.error('load stats failed', e));
+    if (ymOf(year, month) === currentYm()) {
+      const d = dayKeyOf(new Date());
+      loadNorms({ from: d, to: d }, currency).then(setToday).catch((e) => console.error('load norms failed', e));
+    } else setToday(null);
   }, [year, month, currency]);
 
   useFocusEffect(load);
@@ -87,6 +94,9 @@ export default function StatsView({ year, month, currency }: { year: number; mon
                 stat={c}
                 currency={stats.currency}
                 evenPace={evenPace}
+                dim={daysInMonth(ym)}
+                now={c.category_id === null ? undefined : today?.byCategory.get(c.category_id)}
+                monthToDate={c.category_id === null ? 0 : today?.monthToDate.get(c.category_id) ?? 0}
                 onAddToPlan={c.category_id !== null && c.limit_minor === null && !c.deleted
                   ? () => setPlanTarget({ category_id: c.category_id!, label: categoryLabel(c), limit_minor: 0, currency })
                   : undefined}
@@ -144,13 +154,26 @@ function SummaryItem({ label, value, danger }: { label: string; value: string; d
   );
 }
 
-function CategoryRow({ stat, currency, evenPace, onAddToPlan }: { stat: CategoryStat; currency: Currency; evenPace?: number; onAddToPlan?: () => void }) {
+const RHYTHM_PER = { day: 'в день', week: 'в неделю', '2weeks': 'за 2 недели' } as const;
+const RHYTHM_DAYS = { day: 1, week: 7, '2weeks': 14 } as const;
+const RHYTHM_NOW = { day: 'Сегодня', week: 'На этой неделе', '2weeks': 'За эти 2 недели' } as const;
+const WEEKDAYS = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+
+type NowNorm = Norms['byCategory'] extends Map<number, infer V> ? V : never;
+
+function CategoryRow({ stat, currency, evenPace, dim, now, monthToDate, onAddToPlan }: {
+  stat: CategoryStat; currency: Currency; evenPace?: number; dim: number;
+  /** the current month only: the norm window around today */
+  now?: NowNorm; monthToDate: number;
+  onAddToPlan?: () => void;
+}) {
   const openTransactions = useOpenCategoryTransactions();
   const { spent_minor: spent, limit_minor: limit } = stat;
   const ratio = limit ? spent / limit : 0;
   // fixed payment (rent, subscription): any spending this month means it's paid
   const fixed = stat.plan_kind === 'fixed';
   const paid = spent > 0;
+  const rhythm = !fixed && stat.plan_norm && stat.plan_norm !== 'month' ? stat.plan_norm : null;
 
   return (
     <TouchableOpacity style={styles.row} onPress={() => openTransactions(stat.category_id)} accessibilityHint="Показать транзакции категории">
@@ -176,7 +199,20 @@ function CategoryRow({ stat, currency, evenPace, onAddToPlan }: { stat: Category
           <Meter ratio={ratio} height={8} marker={stat.plan_norm === 'month' ? undefined : evenPace} />
           <Text style={[styles.rowStatus, ratio > 1 && styles.dangerText]}>
             {ratio > 1 ? `⚠ превышено на ${formatWithCurrency(spent - limit, currency)}` : `осталось ${formatWithCurrency(limit - spent, currency)}`}
+            {/* a flexible category with a rhythm shorter than a month: its norm per rhythm, "≈ 113 ₾ в неделю" */}
+            {rhythm ? <Text style={styles.rowStatusMuted}> · ≈ {formatWithCurrency(Math.round((limit / dim) * RHYTHM_DAYS[rhythm]), currency)} {RHYTHM_PER[rhythm]}</Text> : null}
           </Text>
+          {rhythm && now && now.rhythm === rhythm ? (() => {
+            // the current month: what's left in today's / this week's window, colored by pace
+            const left = Math.round(now.windowNorm) - now.windowSpent;
+            const p: Pace = paceOf(now.windowSpent, now.windowNorm, monthToDate, now.monthLimit);
+            return (
+              <Text style={[styles.rowStatus, styles.paceLine, p === 'ok' ? styles.paceOk : p === 'ahead' ? styles.paceAhead : styles.dangerText]}>
+                {RHYTHM_NOW[rhythm]} {left < 0 ? `перерасход ${formatWithCurrency(-left, currency)}` : `осталось ${formatWithCurrency(left, currency)}`}
+                {left >= 0 && rhythm !== 'day' ? <Text style={styles.rowStatusMuted}> · до {WEEKDAYS[new Date(`${now.window.to}T12:00:00`).getDay()]}</Text> : null}
+              </Text>
+            );
+          })() : null}
         </>
       ) : null}
     </TouchableOpacity>
@@ -216,6 +252,10 @@ const styles = StyleSheet.create({
   rowAmount: { marginLeft: 'auto', paddingLeft: 8, fontSize: 15, color: colors.text, fontVariant: ['tabular-nums'] },
   rowLimit: { color: colors.muted },
   rowStatus: { fontSize: 13, color: colors.muted, marginTop: 4 },
+  rowStatusMuted: { color: colors.muted },
+  paceLine: { fontWeight: '600' },
+  paceOk: { color: colors.income },
+  paceAhead: { color: colors.warn },
   // under the amount, on the right
   paidRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 6 },
   paidMark: { fontSize: 16, fontWeight: '700', marginRight: 4 },
