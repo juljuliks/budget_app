@@ -176,7 +176,8 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                   const limitName = plan.rhythm === 'month' ? `плана на ${monthIn}` : plan.rhythm === 'week' ? 'лимита на неделю' : plan.rhythm === '2weeks' ? 'лимита на 2 недели' : 'лимита на день';
                   return (
                     <>
-                      <Meter ratio={bar.ratio} base={bar.base} marker={bar.marker} height={8} color={c.color} />
+                      {/* no even-pace tick here: the period is part of the window, the tick only reads well in the month view */}
+                      <Meter ratio={bar.ratio} base={bar.base} height={8} color={c.color} />
                       <TouchableOpacity style={styles.paceRow} onPress={() => openInfo({ id: c.category_id!, name })} accessibilityLabel="Как считается категория">
                         <Text style={[styles.share, styles.paceText]}>
                           {shorter ? (
@@ -271,7 +272,6 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                 <Text style={styles.infoText}>
                   <Text style={styles.infoBold}>Прогресс</Text> — {p.rhythm === 'month' ? `весь ${monthIn}` : p.rhythm === 'day' ? 'выбранный период' : `вся ${p.rhythm === 'week' ? 'неделя' : 'пара недель'}`}:
                   {bar.base > 0 ? ' бледная часть — траты в другие дни, яркая — за выбранный период.' : ' заполнение — сколько лимита потрачено.'}
-                  {bar.marker !== undefined ? ' Отметка — сколько этого времени уже прошло: если прогресс правее отметки, вы тратите быстрее плана.' : ''}
                 </Text>
                 <Text style={styles.infoText}>
                   <Text style={[styles.infoBold, styles.paceOk]}>Зелёный</Text> — в пределах лимита.{'\n'}
