@@ -120,3 +120,68 @@
 
 ## Рекомендуемый первый шаг
 Этап 1 пункты 1–3 (бэкап/экспорт, защита подписи, версия) и 4–5 (транзакции и дубли при ингесте) — это единственное, что может безвозвратно потерять данные.
+
+## Рефакторинг и оптимизация
+
+### Context
+Пользователь попросил проанализировать проект на соблюдение best practices и составить план рефакторинга и оптимизации. Два аудита (UI и слой данных) по текущему `main`; ключевые находки перепроверены по коду (хук после раннего return в `StatsView.tsx:55`, `data` без memo в `TransactionsList.tsx:190`). Логику и поведение для пользователя не меняем — только качество кода, скорость и надёжность. Каждый этап — отдельный коммит/пуш, с прогоном `tsc` + `jest` и без изменения текстов. Пересекающиеся пункты `IMPROVEMENTS.md` (этапы 2, 3, 6) этот план уточняет.
+
+### Этап 0 — Баги, найденные аудитом (сразу)
+1. `src/ui/stats/StatsView.tsx:55` — `useOpenCategoryTransactions()` вызывается после раннего `return` (нарушение Rules of Hooks, может падать при загрузке). Поднять выше `if (!stats)`; в `CategoryRow` передавать `openTransactions` пропсом, а не вызывать хук в каждой строке.
+2. `src/ui/TransactionsList.tsx:190` — `data = results.slice(...)` без `useMemo` → при активном фильтре на **каждый рендер** заново `sections`, чистка выделения и **запрос `spendingEntries` в БД** (каждое нажатие клавиши). Обернуть в `useMemo`.
+3. `src/ui/MerchantCard.tsx:41-61` — эффект зависит от `onClose`, которую родитель передаёт инлайном → карточка обнуляется и перезагружается при любом рендере родителя (мигает, сбрасывает выбор участников). Ключевать эффект на `merchantId`, `onClose` — через ref.
+4. Двойная загрузка `useFocusEffect(load)` + `useEffect(load)`: `StatsView.tsx:45`, `PlanView.tsx:83`, `CategoryPicker.tsx:53` — оставить одно.
+5. Гонки ответов: `PeriodStatsView`, `StatsView`, `PlanView` не отбрасывают устаревшие ответы (быстрая смена периода показывает старые цифры). Общий хук `useLatestAsync` с счётчиком запроса (как `requestId` в TransactionsList).
+6. `src/db/transaction.ts` — обёртка сериализует только транзакции; обычный `db.run` из headless-задачи SMS может попасть внутрь чужой транзакции и откатиться. Один мьютекс на все запросы + `tx`-хэндл внутри транзакции.
+7. `src/assign.ts:88` — сортировка по беззнаковой сумме при знаковом столбце (после добавления возвратов).
+
+### Этап 1 — Производительность статистики (самое заметное)
+Сейчас один экран «за день» делает ~8–9 `periodStats` + 1–3 `monthStats` ≈ 60–90 SQL-запросов и 10+ полных чтений `fx_rates`, на каждое изменение операций.
+- **Один проход вместо многих:** новый `spendByDayCategory(from, to, currency)` в data-слое — траты агрегированы в SQL по (день, категория, валюта), конвертированы один раз. `loadNorms` считает все окна/«до периода»/«с 1-го» в JS префиксными суммами из одного результата; `PeriodStatsView` берёт `periodStats` из того же прохода. Планы — прямым `SELECT … FROM plan_items WHERE ym IN (…)` вместо `monthStats`.
+- **Кэш конвертера** (`fx.ts makeConverter`): один на модуль, сбрасывать при вставке курсов. Сейчас читает всю таблицу курсов на каждый вызов (дважды в `setPlanAmount`).
+- **Курсы в фоне:** статистика рисуется по кэшу, недостающие курсы докачиваются в фоне (таймаут 8 с, вставки одной транзакцией), затем `emitTransactionsChanged`.
+- `planHistory` / `averageFullMonths`: агрегировать в SQL, а не тянуть всю таблицу операций в JS.
+
+### Этап 2 — Запросы и индексы
+- Индексы (новая миграция): `transactions(category_id)`, `transactions(merchant_key, occurred_at)`, `transactions(kind, refund_settled_at)`; хэш/индекс для поиска дублей по тексту SMS при импорте.
+- `merchantIdSql` (коррелированный подзапрос в WHERE/GROUP BY, ломает индекс) → `merchantKeysOf(id)` и `merchant_key IN (…)`; для группировок — `LEFT JOIN merchant_group_members`. Места: `transactions.ts`, `merchants.ts`, `refunds.ts`, `categorize.ts`, `assign.ts`, `categories.ts`.
+- Проверка двойников SMS/push: `abs(occurred_at - ?) <= ?` → `occurred_at BETWEEN ? AND ?` (`ingest.ts:84`).
+- Поиск: нормализованная колонка `search_text` (заполняется при вставке/смене категории/группы) + фильтр в SQL с `LIMIT`, вместо чтения всех строк в JS (`transactions.ts:124`).
+- Импорт SMS: пачками в одной транзакции, существующие тексты — в Set один раз (`inboxImport.ts:19`); `autoCategorizeRefunds` — без N+1 (`refunds.ts:106`).
+- `getMerchant` / `categoriesOfMerchants`: прямой запрос одной строки вместо `listMerchants()` целиком.
+
+### Этап 3 — Целостность данных
+- После этапа 0.6 обернуть в транзакции многошаговые записи: `assign.ts:27`, `merchants.ts:97/140` (категория группы после коммита слияния), `categories.ts:62`, `plans.ts` (`setPlanBudget`, `setPlanAmount`), `ingest.ts:81-120` (проверка двойника + вставка + баланс), `balance.ts:47`.
+- Чтение без побочных эффектов: `monthStats`/`getPlanBudget`/`listPlan` не создают план месяца (`ensureMonthPlan` — только из команд плана и при старте); `cardBalance` не пишет настройку при чтении.
+
+### Этап 4 — Единые правила и дубли (data)
+- `src/db/spend.ts`: один источник «что считается тратой» — `SPEND_KINDS`, SQL-выражение со знаком возврата, фильтр «непривязанный возврат», JS `spendOf`. Сейчас правило продублировано в ~6 местах (`plans.ts spendOf`, `categorySummary`, `getMerchant`, `categoryChangeTotals`, `backfillRule`, `balance.ts SIGN`) и уже расходится.
+- Хелперы `sqlList()` / `placeholders()` вместо ручной сборки списков; общие SQL-константы (порядок категорий, список разделов); общий `buildCategoryStats` для `monthStats`/`periodStats` (~70% общего кода).
+
+### Этап 5 — Разбиение больших компонентов (UI)
+- `TransactionsList.tsx` (625 строк, ~25 useState): хуки `useTransactionFeed`, `useTransactionFilters`, `useSelection`, `useDaySpent`; подкомпоненты `SearchBar` (общий с Мерчантами и FilterSheets), `EditToolbar`, `DayHeader`, `BulkBar`, `DeleteCategoryHeader`. Режим удаления категории — отдельный экран на тех же хуках (уйдут 6× `deleteCategoryId!`).
+- `PeriodStatsView.tsx` (418): `PeriodCategoryRow`, `LimitEffect`, `CategoryInfo`, `SummaryInfo`; текстовые хелперы (`delta`, `formula`, `windowLabel`…) → `stats/periodText.ts` с тестами. Убрать IIFE в JSX (также `StatsView` `RhythmLimit`, `WindowPace`).
+- Списки: `React.memo` для `TransactionItem`, стабильные обработчики (`useCallback`, `onToggle(id)`), вынести `renderSectionHeader`/`keyExtractor`.
+- Производное состояние вместо эффектов: `shownResults`, чистка выделения, `activeFilters`, функция-конвертер в state у `PlanView`.
+
+### Этап 6 — Общие модули UI
+- `ui/dates.ts`: все массивы месяцев (им./род./пред. падеж, короткие) и дней недели — сейчас 6 копий; `weekdayShort(dayKey)`.
+- Одна карта «дней в ритме» (сейчас 4: `norms.ts`, `StatsView`, `PlanView`, `PeriodStatsView`), ярлыки ритма — из `strings.ts`.
+- `formatPercent` (4 реализации), `formatTotals` (3), `categoryShortLabel` (8 мест), константы плюралов «операция/операций».
+- Типизированный `useOpenTransactions()` в `navigation.ts` вместо копий `navigate({ name: 'Main', … } as never)` (MerchantCard, CategoryEdit); `NavigatorScreenParams` уберёт `as never`.
+- Тема: `colors.onAccent`, `colors.accentBg`, оверлей; шкала размеров шрифта/отступов; общий `stats/statsStyles.ts` (одинаковые `group/row/dot/pace*` в трёх экранах), `<Loading/>`, `SectionHeading` вместо 9 копий стиля.
+
+### Этап 7 — Архитектура и чистка
+- `loadNorms` (DB-работа) из `ui/stats/norms.ts` → доменный `src/stats/norms.ts`; в UI остаются чистые `paceOf`, `rhythmBar`, `limitChange`.
+- Data-слой не возвращает UI-тексты и цвета (`plans.ts` «Без раздела», `NEUTRAL_COLOR`) — ключи, UI подставляет текст.
+- Сетевая загрузка курсов из `db/fx.ts` → `src/fx/`. `categorize.ts` → `db/rules.ts` (убрать цикл db→domain→db). Миграция 9 — с замороженной копией логики парсера.
+- Единое место, где эмитится `emitTransactionsChanged` (команды), а не вперемешку в UI и db.
+- Мёртвый код: неиспользуемые `export default {…}` (~11 модулей), `currentTransactionsOfCategory`, колонки `merchant_detached`, `is_archived`; `'GEL'` → `BUDGET_CURRENCY`/валюта настроек; `nowS()`.
+- Типы: убрать `!` и `as` (особенно `StatsHome kind as 'day'`, `norms.ts rhythm as …`), экспортировать типы вместо выведения через conditional types.
+
+### Этап 8 — Инструменты (из IMPROVEMENTS этап 6, коротко)
+ESLint (`@react-native-community`, `react-hooks` — поймал бы баги 0.1, 0.4 и зависимости эффектов) + Prettier; CI (tsc + jest); тесты на вынесенные хелперы и хуки.
+
+### Порядок и проверка
+Этап 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8. Этапы 0–3 дают пользователю заметный эффект (стабильность, скорость статистики, целостность), 4–7 — сопровождаемость.
+Для каждого этапа: `npx tsc --noEmit`, `npx jest` (новые тесты: один проход статистики даёт те же числа, что старый `loadNorms` — сравнение на тестовой БД; транзакции под конкурентной записью; индексы применяются миграцией), ручной прогон экранов на эмуляторе (Операции с фильтрами, Статистика месяц/день/неделя + ⓘ, План, История, Мерчанты, Категории, импорт SMS). Для этапа 1 — замер числа SQL-запросов на загрузку «за день» до/после (счётчик в драйвере в dev-режиме).
