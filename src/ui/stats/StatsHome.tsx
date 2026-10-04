@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import type { TabParamList } from '../../navigation';
 import { currentYm, ymOf } from '../../db/plans';
@@ -87,7 +87,8 @@ export default function StatsHome() {
 
   function pick(k: PeriodKind) {
     setMenuOpen(false);
-    if (k === 'custom') { setDraft(custom); setCalendarOpen(true); return; }
+    // the calendar sheet comes up once the list has slid away
+    if (k === 'custom') { setDraft(custom); setTimeout(() => setCalendarOpen(true), 220); return; }
     setKind(k);
     setAnchor(new Date());
   }
@@ -139,19 +140,15 @@ export default function StatsHome() {
         {section === 'history' ? <HistoryView currency={currency} /> : null}
       </View>
 
-      {/* the period menu, under the header title */}
-      <Modal visible={menuOpen} transparent animationType="fade" onRequestClose={() => setMenuOpen(false)}>
-        <Pressable style={styles.menuBackdrop} onPress={() => setMenuOpen(false)} accessibilityLabel="Закрыть">
-          <View style={styles.menu}>
-            {PERIODS.map(([k, label]) => (
-              <TouchableOpacity key={k} style={styles.menuItem} onPress={() => pick(k)} accessibilityState={{ selected: k === kind }}>
-                <Text style={[styles.menuText, k === kind && styles.menuSelected]}>{label}</Text>
-                {k === kind ? <Text style={styles.menuCheck}>✓</Text> : null}
-              </TouchableOpacity>
-            ))}
-          </View>
-        </Pressable>
-      </Modal>
+      {/* the period list, as a sheet like every other choice */}
+      <BottomSheet visible={menuOpen} onClose={() => setMenuOpen(false)} title="Период">
+        {PERIODS.map(([k, label]) => (
+          <TouchableOpacity key={k} style={styles.menuItem} onPress={() => pick(k)} accessibilityState={{ selected: k === kind }}>
+            <Text style={[styles.menuText, k === kind && styles.menuSelected]}>{label}</Text>
+            {k === kind ? <Text style={styles.menuCheck}>✓</Text> : null}
+          </TouchableOpacity>
+        ))}
+      </BottomSheet>
 
       {/* "Свой период": the transactions' range calendar in a sheet */}
       <BottomSheet visible={calendarOpen} onClose={() => setCalendarOpen(false)} title="Свой период">
@@ -182,9 +179,10 @@ const styles = StyleSheet.create({
   title: { fontSize: 20, fontWeight: '500', color: colors.text },
   titlePeriod: { fontSize: 20, fontWeight: '500', color: colors.accent },
   titleArrow: { fontSize: 16, color: colors.accent },
-  menuBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.15)' },
-  menu: { position: 'absolute', top: 56, left: 16, minWidth: 200, backgroundColor: colors.bg, borderRadius: 10, paddingVertical: 6, elevation: 6 },
-  menuItem: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingVertical: 12 },
+  menuItem: {
+    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16,
+    borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
+  },
   menuText: { flex: 1, fontSize: 16, color: colors.text },
   menuSelected: { color: colors.accent, fontWeight: '600' },
   menuCheck: { fontSize: 16, color: colors.accent, marginLeft: 12 },
