@@ -1,6 +1,7 @@
 import { getDb } from '../db';
 import { emitTransactionsChanged } from '../events';
 import { ingestSms, IngestResult } from '../ingest';
+import { autoCategorizeRefunds } from '../db/refunds';
 import type { InboxSms } from '../native/smsInbox';
 
 export type InboxImportResult = Record<IngestResult['status'], number>;
@@ -24,6 +25,8 @@ export async function importInboxSms(messages: InboxSms[]): Promise<InboxImportR
       if (res.status === 'inserted') await db.run('UPDATE transactions SET seen_at = ? WHERE id = ? AND seen_at IS NULL', [Math.floor(Date.now() / 1000), res.txId]);
       counts[res.status]++;
     }
+    // past refunds whose purchases came later in the import
+    await autoCategorizeRefunds();
   } finally {
     emitTransactionsChanged();
   }

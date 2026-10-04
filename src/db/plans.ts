@@ -7,9 +7,10 @@ import { Converter, Currency, dateKey, ensureRates, isCurrency, makeConverter } 
 export const BUDGET_CURRENCY: Currency = 'GEL';
 
 /**
- * Kinds that count as spending; deposits are income and ignored. A refund is subtracted only when the user
- * put it into a category; otherwise it is settled on the purchase itself (reduced or deleted, see refunds.ts)
- * and must not count twice — or turn "Без категории" negative while waiting.
+ * Kinds that count as spending; deposits are income and ignored. A refund is subtracted: from its category (its
+ * merchant's, see refundCategory), or, without one, as "Возвраты без категории" (REFUND_KEY) apart from the
+ * uncategorized spending. A refund settled on its purchase (reduced or deleted, see refunds.ts) no longer counts:
+ * the purchase already shows it.
  */
 const EXPENSE_KINDS = ['purchase', 'payment', 'withdrawal', 'transfer'];
 
@@ -49,18 +50,23 @@ const asCurrency = (v: string | null | undefined): Currency => (isCurrency(v) ? 
 
 // --- spending, converted to the currency stats are shown in ---
 
-type SpendRow = { id: number; category_id: number | null; kind: string; amount_minor: number; currency: string; occurred_at: number };
+type SpendRow = { id: number; category_id: number | null; kind: string; amount_minor: number; currency: string; occurred_at: number; refund_settled_at: number | null };
+
+/** The key refunds without a category are summed under (instead of null, "Без категории"). */
+const REFUND_KEY = 'refund' as const;
+/** The category key a row is summed under. */
+const categoryKey = (r: SpendRow): number | null | typeof REFUND_KEY => (r.kind === 'refund' && r.category_id === null ? REFUND_KEY : r.category_id);
 
 /** A transaction's contribution to spending (see EXPENSE_KINDS), in its own currency. */
 function spendOf(r: SpendRow): number {
-  if (r.kind === 'refund') return r.category_id === null ? 0 : -r.amount_minor;
+  if (r.kind === 'refund') return r.refund_settled_at !== null ? 0 : -r.amount_minor;
   return EXPENSE_KINDS.includes(r.kind) ? r.amount_minor : 0;
 }
 
 async function spendRows(from: number, to: number): Promise<SpendRow[]> {
   const db = await getDb();
   return db.all<SpendRow>(
-    `SELECT id, category_id, kind, amount_minor, currency, occurred_at FROM transactions
+    `SELECT id, category_id, kind, amount_minor, currency, occurred_at, refund_settled_at FROM transactions
       WHERE occurred_at >= ? AND occurred_at < ? AND kind IN (${[...EXPENSE_KINDS, 'refund'].map((k) => `'${k}'`).join(',')})`,
     [from, to]);
 }
@@ -387,6 +393,8 @@ export type MonthStats = {
   spent_minor: number;
   planned_minor: number;
   categories: CategoryStat[];
+  /** refunds without a category (no merchant category known): subtracted from spent_minor, ≥ 0 */
+  refunds_unassigned_minor: number;
   /** spending that couldn't be converted yet (no rate known: offline), not in the totals */
   other_currencies: Array<{ currency: string; spent_minor: number }>;
 };
@@ -405,7 +413,8 @@ export async function monthStats(year: number, month: number, currency: Currency
   const [from, to] = monthRange(year, month);
   const planDate = planRateDate(ym);
   const { items, missing, conv } = await convertSpending(await spendRows(from, to), currency, [planDate]);
-  const spentBy = sumBy(items, (r) => r.category_id);
+  const spentBy = sumBy(items, categoryKey);
+  const refundsUnassigned = Math.max(0, -(spentBy.get(REFUND_KEY) ?? 0));
 
   const colorOf = await categoryColors();
 
@@ -443,7 +452,8 @@ export async function monthStats(year: number, month: number, currency: Currency
     ym,
     currency,
     groups: groupByType(categories, types),
-    spent_minor: categories.reduce((sum, c) => sum + c.spent_minor, 0),
+    spent_minor: categories.reduce((sum, c) => sum + c.spent_minor, 0) - refundsUnassigned,
+    refunds_unassigned_minor: refundsUnassigned,
     planned_minor: categories.reduce((sum, c) => sum + (c.limit_minor ?? 0), 0),
     categories,
     other_currencies: missing,
@@ -455,6 +465,8 @@ export type PeriodStats = {
   groups: StatGroup[];
   spent_minor: number;
   categories: CategoryStat[];
+  /** refunds without a category: subtracted from spent_minor, ≥ 0 */
+  refunds_unassigned_minor: number;
   other_currencies: Array<{ currency: string; spent_minor: number }>;
 };
 
@@ -462,8 +474,9 @@ export type PeriodStats = {
 export async function periodStats(from: number, to: number, currency: Currency = BUDGET_CURRENCY): Promise<PeriodStats> {
   const db = await getDb();
   const { items, missing } = await convertSpending(await spendRows(from, to), currency);
-  const spentBy = sumBy(items, (r) => r.category_id);
-  const ids = [...spentBy.keys()].filter((id): id is number => id !== null);
+  const spentBy = sumBy(items, categoryKey);
+  const refundsUnassigned = Math.max(0, -(spentBy.get(REFUND_KEY) ?? 0));
+  const ids = [...spentBy.keys()].filter((id): id is number => typeof id === 'number');
   const cats = ids.length === 0 ? [] : await db.all<{ id: number; name: string; emoji: string | null; type_id: number | null; type_name: string | null; deleted_at: number | null }>(
     `SELECT c.id, c.name, c.emoji, c.type_id, ct.name AS type_name, c.deleted_at FROM categories c
       LEFT JOIN category_types ct ON ct.id = c.type_id WHERE c.id IN (${ids.map(() => '?').join(',')})`, ids);
@@ -483,7 +496,8 @@ export async function periodStats(from: number, to: number, currency: Currency =
   const types = await db.all<{ id: number; name: string }>('SELECT id, name FROM category_types ORDER BY sort_order, name');
   return {
     currency, groups: groupByType(positive, types), categories: positive,
-    spent_minor: positive.reduce((s, c) => s + c.spent_minor, 0), other_currencies: missing,
+    spent_minor: positive.reduce((s, c) => s + c.spent_minor, 0) - refundsUnassigned, refunds_unassigned_minor: refundsUnassigned,
+    other_currencies: missing,
   };
 }
 

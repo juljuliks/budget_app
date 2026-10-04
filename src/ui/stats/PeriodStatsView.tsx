@@ -15,7 +15,7 @@ import { formatWithCurrency } from '../money';
 import { NO_RATE, PER_PERIOD, SPENDING_PATTERN } from '../strings';
 import { plural } from '../format';
 import { colors } from '../theme';
-import { DonutCenter } from './StatsView';
+import { DonutCenter, RefundsRow } from './StatsView';
 
 /** Periods up to this long are measured against the plan (its share for these days); longer ones aren't. */
 const PACE_MAX_DAYS = 31;
@@ -227,6 +227,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
           })}
         </View>
       ))}
+      <RefundsRow amount={stats.refunds_unassigned_minor} currency={stats.currency} onPress={() => openTransactions(null, range)} />
       {stats.other_currencies.length > 0 ? (
         <Text style={styles.hint}>
           {NO_RATE} {stats.other_currencies.map((o) => formatWithCurrency(o.spent_minor, o.currency)).join(', ')}

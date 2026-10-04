@@ -33,8 +33,8 @@ export default function TransactionItem({ tx, onPress, selectable, selected, onE
           <Text style={[styles.merchant, unread && styles.merchantUnread]} numberOfLines={1}>{merchantLabel(tx)}</Text>
           {auto ? <Text style={styles.auto} accessibilityLabel="Категория мерчанта, назначена автоматически">🤖 авто</Text> : null}
         </View>
-        {tx.kind === 'refund' && !category ? (
-          // a refund is settled on its purchase instead of getting a category
+        {tx.kind === 'refund' && (tx.refund_settled_at || !category) ? (
+          // a refund settled on its purchase; one without a category (its merchant has none) can still be settled
           tx.refund_settled_at ? (
             <Text style={styles.meta} numberOfLines={1}>✓ учтён в покупке · {formatTime(tx.occurred_at)}</Text>
           ) : (

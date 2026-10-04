@@ -1,5 +1,6 @@
 import parseTbc, { parseTbcBalance } from './parsers/tbc';
 import { recordBalance } from './db/balance';
+import { refundCategory } from './db/refunds';
 import type { ParsedTx } from './types';
 import { sha256Hex } from './hash';
 import { getDb } from './db';
@@ -71,11 +72,11 @@ export async function ingestSms(sms: IncomingSms, opts: { quiet?: boolean } = {}
 
   // Only purchases / payments: a transfer or deposit "merchant" is a person (or nothing), the same person can
   // send money for different things, so those always ask for a category.
-  const rule = parsed.merchant_key && isRememberable(parsed.kind) ? await findCategoryForMerchant(parsed.merchant_key) : null;
-  const categoryId = rule?.category_id ?? null;
-
   const source = sms.source ?? 'sms';
   const occurredAt = resolveOccurredAt(parsed, sms.timestamp);
+  const rule = parsed.merchant_key && isRememberable(parsed.kind) ? await findCategoryForMerchant(parsed.merchant_key) : null;
+  // a refund is subtracted from its merchant's category right away (see refundCategory); settling it on the purchase is optional
+  const categoryId = parsed.kind === 'refund' ? await refundCategory(parsed.merchant_key, occurredAt) : rule?.category_id ?? null;
   // the bank may report one operation both by SMS and by push: keep the first
   const twin = await db.get<{ id: number; occurred_at: number }>(
     `SELECT id, occurred_at FROM transactions
@@ -116,7 +117,7 @@ export async function ingestSms(sms: IncomingSms, opts: { quiet?: boolean } = {}
   }
   // the balance after this operation, as the bank reports it
   if (balance) await recordBalance({ minor: balance.minor, currency: balance.currency, at: occurredAt, txId: lastInsertRowid });
-  if (categoryId) await incrementCategoryUsage(categoryId);
+  if (categoryId && parsed.kind !== 'refund') await incrementCategoryUsage(categoryId);
   changed();
 
   return { status: 'inserted', txId: lastInsertRowid, categoryId };

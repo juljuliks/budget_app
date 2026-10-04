@@ -53,6 +53,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
   const remaining = stats.planned_minor - stats.spent_minor;
   // the current month: a tick on each flexible category's bar where an even pace would be today
   const ym = ymOf(year, month);
+  const openTransactions = useOpenCategoryTransactions();
   const evenPace = ym === currentYm() ? new Date().getDate() / daysInMonth(ym) : undefined;
   const picked = selected === null ? undefined : stats.categories.find((c) => String(c.category_id) === selected);
 
@@ -108,6 +109,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
         ))
       )}
 
+      <RefundsRow amount={stats.refunds_unassigned_minor} currency={stats.currency} onPress={() => openTransactions(null, monthDays(ym))} />
       {stats.other_currencies.length > 0 ? (
         <Text style={styles.hint}>
           {NO_RATE} {stats.other_currencies.map((o) => formatMoneyWithCurrency(o.spent_minor, o.currency)).join(', ')}
@@ -116,6 +118,17 @@ export default function StatsView({ year, month, currency }: { year: number; mon
 
       <PlanAmountModal ym={ymOf(year, month)} target={planTarget} onClose={() => setPlanTarget(null)} onSaved={load} />
     </ScrollView>
+  );
+}
+
+/** "↩ Возвраты без категории −25 ₾": refunds whose merchant has no category, subtracted from the total. */
+export function RefundsRow({ amount, currency, onPress }: { amount: number; currency: Currency; onPress: () => void }) {
+  if (amount <= 0) return null;
+  return (
+    <TouchableOpacity style={styles.refundsRow} onPress={onPress} accessibilityHint="Показать операции без категории">
+      <Text style={styles.refundsLabel}>↩ Возвраты без категории</Text>
+      <Text style={styles.refundsAmount}>−{formatWithCurrency(amount, currency)}</Text>
+    </TouchableOpacity>
   );
 }
 
@@ -277,6 +290,12 @@ const styles = StyleSheet.create({
   paceOk: { color: colors.income },
   paceAhead: { color: colors.warn },
   crossed: { textDecorationLine: 'line-through' },
+  refundsRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, paddingVertical: 10,
+    borderTopWidth: 1, borderColor: colors.border,
+  },
+  refundsLabel: { fontSize: 15, color: colors.muted },
+  refundsAmount: { fontSize: 15, color: colors.income, fontVariant: ['tabular-nums'] },
   // under the amount, on the right
   paidMark: { fontSize: 16, fontWeight: '700', marginLeft: 6 },
   paidOn: { color: colors.income },

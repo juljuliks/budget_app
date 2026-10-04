@@ -22,7 +22,8 @@ import { createNotificationChannel } from './notifications/notifeeBootstrap';
 import { handleNotificationAction } from './notifications/notifeeIntegration';
 import { requestAppPermissions } from './permissions';
 import { countUnseenTransactions } from './db/transactions';
-import { onTransactionsChanged } from './events';
+import { emitTransactionsChanged, onTransactionsChanged } from './events';
+import { autoCategorizeRefunds } from './db/refunds';
 import { navigationRef, flushPendingNavigation, RootStackParamList, TabParamList } from './navigation';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -76,6 +77,8 @@ export default function App() {
   useEffect(() => {
     createNotificationChannel();
     requestAppPermissions().catch(() => {});
+    // refunds that came before their merchant had a category (or before this existed) get one
+    autoCategorizeRefunds().then((n) => { if (n > 0) emitTransactionsChanged(); }).catch((e) => console.error('refund categories failed', e));
 
     // app was launched by tapping a notification / its action button
     notifee.getInitialNotification()
