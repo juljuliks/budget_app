@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, KeyboardTypeOptions, Modal, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { KeyboardTypeOptions, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import BottomSheet from './BottomSheet';
 import { formStyles } from './formStyles';
 import { colors } from './theme';
 
@@ -24,7 +25,7 @@ type Props = {
   onClose: () => void;
 };
 
-/** Small dialog with one text field (create / rename, plan amounts). */
+/** A bottom sheet with one text field (create / rename, amounts, notes). */
 export default function TextInputModal({
   visible, title, initialValue = '', placeholder, submitLabel = 'Сохранить', hint, keyboardType, maxLength = 30, allowEmpty, multiline,
   onSubmit, onClose, children,
@@ -33,9 +34,16 @@ export default function TextInputModal({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  const input = useRef<TextInput>(null);
   useEffect(() => {
     if (visible) { setValue(initialValue); setError(null); setSaving(false); }
   }, [visible, initialValue]);
+  // the keyboard opens once the sheet has slid up (autoFocus during the animation doesn't show it)
+  useEffect(() => {
+    if (!visible) return undefined;
+    const t = setTimeout(() => input.current?.focus(), 300);
+    return () => clearTimeout(t);
+  }, [visible]);
 
   async function submit() {
     if (!value.trim() && !allowEmpty) { setError('Введите название'); return; }
@@ -46,13 +54,11 @@ export default function TextInputModal({
   }
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <KeyboardAvoidingView style={styles.wrap} behavior="padding">
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Закрыть" />
+    <BottomSheet visible={visible} onClose={onClose} title={title}>
         <View style={styles.dialog}>
-          <Text style={styles.title}>{title}</Text>
           {hint ? <Text style={styles.hint}>{hint}</Text> : null}
           <TextInput
+            ref={input}
             style={[formStyles.input, multiline && styles.multiline]}
             multiline={multiline}
             textAlignVertical={multiline ? 'top' : undefined}
@@ -60,7 +66,6 @@ export default function TextInputModal({
             onChangeText={(v) => { setValue(v); setError(null); }}
             placeholder={placeholder}
             placeholderTextColor={colors.muted}
-            autoFocus
             keyboardType={keyboardType}
             maxLength={maxLength}
             returnKeyType={multiline ? 'default' : 'done'}
@@ -77,16 +82,13 @@ export default function TextInputModal({
             </TouchableOpacity>
           </View>
         </View>
-      </KeyboardAvoidingView>
-    </Modal>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'center', padding: 24 },
-  dialog: { backgroundColor: colors.bg, borderRadius: 12, padding: 20 },
-  title: { fontSize: 18, fontWeight: '600', color: colors.text, marginBottom: 12 },
-  hint: { fontSize: 14, color: colors.muted, marginTop: -6, marginBottom: 12 },
+  dialog: { paddingHorizontal: 20 },
+  hint: { fontSize: 14, color: colors.muted, marginBottom: 12 },
   extra: { marginTop: 12 },
   multiline: { minHeight: 96, maxHeight: 200 },
   buttons: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 16 },

@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { sheetAlert } from './sheetAlert';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import notifee from '@notifee/react-native';
@@ -50,10 +51,10 @@ export default function RefundResolve({ route, navigation }: Props) {
 
   function reduce(p: RefundCandidate) {
     if (p.amount_minor <= refund!.amount_minor) {
-      Alert.alert('Вернули всю сумму', `Возврат ${money(refund!.amount_minor)} покрывает покупку целиком — удалите её.`);
+      sheetAlert('Вернули всю сумму', `Возврат ${money(refund!.amount_minor)} покрывает покупку целиком — удалите её.`);
       return;
     }
-    Alert.alert(
+    sheetAlert(
       'Уменьшить сумму покупки?',
       `${shop}, ${formatDay(p.occurred_at).toLowerCase()}\n${money(p.amount_minor)} → ${money(p.amount_minor - refund!.amount_minor)}\n\n`
         + 'В тратах останется только то, что вы в итоге заплатили.',
@@ -64,7 +65,7 @@ export default function RefundResolve({ route, navigation }: Props) {
   }
 
   function remove(p: RefundCandidate) {
-    Alert.alert(
+    sheetAlert(
       'Удалить покупку?',
       `${shop}, ${formatDay(p.occurred_at).toLowerCase()}, ${money(p.amount_minor)}.\nДеньги вернули — покупка пропадёт из истории и статистики.`,
       [

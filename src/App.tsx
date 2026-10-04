@@ -15,6 +15,7 @@ import RefundResolve from './ui/RefundResolve';
 import StatsHome from './ui/stats/StatsHome';
 import MerchantsScreen from './ui/MerchantsScreen';
 import SettingsButton from './ui/SettingsButton';
+import { SheetAlertHost } from './ui/sheetAlert';
 import { HistoryIcon, StatsIcon } from './ui/icons';
 import { colors } from './ui/theme';
 import { createNotificationChannel } from './notifications/notifeeBootstrap';
@@ -107,6 +108,8 @@ export default function App() {
         <Stack.Screen name="AddTransaction" component={AddTransaction} options={{ title: 'Новая транзакция' }} />
         <Stack.Screen name="RefundResolve" component={RefundResolve} options={{ title: 'Возврат' }} />
       </Stack.Navigator>
+      {/* confirmations and messages (sheetAlert) */}
+      <SheetAlertHost />
     </NavigationContainer>
   );
 }

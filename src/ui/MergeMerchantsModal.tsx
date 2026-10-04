@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import BottomSheet from './BottomSheet';
 import { categoriesOfMerchants, mergeMerchants, MerchantRow } from '../db/merchants';
 import { emitTransactionsChanged } from '../events';
 import Button from './Button';
@@ -57,11 +58,8 @@ export default function MergeMerchantsModal({ visible, merchants, categories, on
   }
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Закрыть" />
-      <View style={styles.sheet}>
+    <BottomSheet visible={visible} onClose={onClose} title="Объединить в группу">
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
-          <Text style={styles.title}>Объединить в группу</Text>
           <Text style={styles.members}>{merchants.map((m) => (m.group ? `${m.name} (${m.members.join(', ')})` : m.name)).join(', ')}</Text>
 
           <Text style={formStyles.label}>Название группы</Text>
@@ -91,17 +89,13 @@ export default function MergeMerchantsModal({ visible, merchants, categories, on
             <Text style={styles.cancelText}>Отмена</Text>
           </TouchableOpacity>
         </ScrollView>
-      </View>
-    </Modal>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.3)' },
-  sheet: { maxHeight: '85%', backgroundColor: colors.bg, borderTopLeftRadius: 16, borderTopRightRadius: 16 },
-  content: { padding: 16, paddingBottom: 24 },
-  title: { fontSize: 18, fontWeight: '600', color: colors.text },
-  members: { fontSize: 14, color: colors.muted, marginTop: 6 },
+  content: { paddingHorizontal: 20 },
+  members: { fontSize: 14, color: colors.muted },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   button: { marginTop: 20 },
   cancel: { alignItems: 'center', paddingVertical: 14 },

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import BottomSheet from '../BottomSheet';
 import { Category, categoryLabel, listCategories } from '../../db/categories';
 import { Currency } from '../../db/fx';
 import { addPlanItem, getPlanBudget, lastPlanItem, PlanBudget, planConverter, PlanKind, plannedTotal, setPlanAmount } from '../../db/plans';
@@ -112,11 +113,8 @@ export default function PlanAddModal({ ym, currency: screenCurrency, visible, pl
   }
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Закрыть" />
-      <KeyboardAvoidingView behavior="height" style={styles.sheet}>
+    <BottomSheet visible={visible} onClose={onClose} title="Добавить в план" style={styles.sheet}>
         <View style={styles.head}>
-          <Text style={styles.title}>Добавить в план</Text>
           <Text style={styles.caption}>
             {free !== null ? `Свободно: ${formatWithCurrency(free, sumCurrency)}` : 'Сумма к планированию не задана'}
             {picked.length ? ` · выбрано на ${formatWithCurrency(sum, sumCurrency)}` : ''}
@@ -158,16 +156,13 @@ export default function PlanAddModal({ ym, currency: screenCurrency, visible, pl
             <Text style={styles.cancelText}>Отмена</Text>
           </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
-    </Modal>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.3)' },
-  sheet: { maxHeight: '88%', backgroundColor: colors.bg, borderTopLeftRadius: 16, borderTopRightRadius: 16 },
-  head: { padding: 16, paddingBottom: 8 },
-  title: { fontSize: 18, fontWeight: '600', color: colors.text },
+  sheet: { maxHeight: '88%', paddingBottom: 0 },
+  head: { paddingHorizontal: 16, paddingBottom: 8 },
   caption: { fontSize: 13, color: colors.muted, marginTop: 4 },
   currency: { marginTop: 10 },
   list: { paddingHorizontal: 16, paddingBottom: 8 },

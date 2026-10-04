@@ -5,6 +5,7 @@ import type { TabParamList } from '../../navigation';
 import { currentYm, ymOf } from '../../db/plans';
 import Segmented from '../Segmented';
 import Button from '../Button';
+import BottomSheet from '../BottomSheet';
 import RangeCalendar from '../RangeCalendar';
 import { dayKeyOf, DayRange, PeriodKind, periodLabel, periodRange, rangeToUnix, shiftAnchor } from '../dateRange';
 import { useDisplayCurrency } from '../../displayCurrency';
@@ -153,10 +154,8 @@ export default function StatsHome() {
       </Modal>
 
       {/* "Свой период": the transactions' range calendar in a sheet */}
-      <Modal visible={calendarOpen} transparent animationType="slide" onRequestClose={() => setCalendarOpen(false)}>
-        <Pressable style={styles.sheetBackdrop} onPress={() => setCalendarOpen(false)} accessibilityLabel="Закрыть" />
+      <BottomSheet visible={calendarOpen} onClose={() => setCalendarOpen(false)} title="Свой период">
         <View style={styles.sheet}>
-          <Text style={styles.sheetTitle}>Свой период</Text>
           <Text style={styles.sheetHint}>{draft ? periodLabel('custom', draft) : 'Выберите день или период'}</Text>
           <RangeCalendar value={draft} onChange={setDraft} />
           <Button title="Показать" onPress={applyRange} disabled={!draft} style={styles.sheetButton} />
@@ -164,7 +163,7 @@ export default function StatsHome() {
             <Text style={styles.sheetCancelText}>Отмена</Text>
           </TouchableOpacity>
         </View>
-      </Modal>
+      </BottomSheet>
     </View>
   );
 }
@@ -189,10 +188,8 @@ const styles = StyleSheet.create({
   menuText: { flex: 1, fontSize: 16, color: colors.text },
   menuSelected: { color: colors.accent, fontWeight: '600' },
   menuCheck: { fontSize: 16, color: colors.accent, marginLeft: 12 },
-  sheetBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.3)' },
-  sheet: { backgroundColor: colors.bg, borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 16, paddingBottom: 24 },
-  sheetTitle: { fontSize: 18, fontWeight: '600', color: colors.text },
-  sheetHint: { fontSize: 14, color: colors.muted, marginTop: 4, marginBottom: 8 },
+  sheet: { paddingHorizontal: 16 },
+  sheetHint: { fontSize: 14, color: colors.muted, marginBottom: 8, paddingHorizontal: 4 },
   sheetButton: { marginTop: 12 },
   sheetCancel: { alignItems: 'center', paddingTop: 12 },
   sheetCancelText: { fontSize: 16, color: colors.muted },

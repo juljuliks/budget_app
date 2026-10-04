@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import BottomSheet from './BottomSheet';
+import { sheetAlert } from './sheetAlert';
 import { useNavigation } from '@react-navigation/native';
 import { categoryChangeTotals } from '../assign';
 import { excludeFromGroup, getMerchant, MerchantDetails, renameMerchantGroup, setMerchantCategory } from '../db/merchants';
@@ -62,7 +64,7 @@ export default function MerchantCard({ merchantId, categories, onClose, onChange
     const totals = await categoryChangeTotals(m.id, categoryId);
     const n = totals.reduce((s, t) => s + t.n, 0);
     const label = categories.get(categoryId)?.label ?? '?';
-    Alert.alert(
+    sheetAlert(
       `Категория «${label}» для «${m.name}»?`,
       `Новые транзакции мерчанта будут получать её автоматически.${n > 0
         ? ` Категория изменится у ${n} ${plural(n, ['транзакции', 'транзакций', 'транзакций'])} на сумму ${money(totals)}.`
@@ -80,7 +82,7 @@ export default function MerchantCard({ merchantId, categories, onClose, onChange
 
   function unpin() {
     if (!m) return;
-    Alert.alert(
+    sheetAlert(
       'Открепить категорию?',
       `Новые транзакции «${m.name}» будут приходить без категории и спрашивать её. У уже разобранных транзакций категория останется.`,
       [
@@ -96,7 +98,7 @@ export default function MerchantCard({ merchantId, categories, onClose, onChange
   function exclude() {
     if (!m) return;
     const all = excluded.length === m.memberRows.length;
-    Alert.alert(
+    sheetAlert(
       `Исключить из группы «${m.name}»?`,
       `${m.memberRows.filter((r) => excluded.includes(r.key)).map((r) => r.name).join(', ')} ${excluded.length === 1
         ? 'снова станет отдельным мерчантом' : 'снова станут отдельными мерчантами'} с категорией группы.${all ? ' Группа будет удалена.' : ''}`,
@@ -121,9 +123,8 @@ export default function MerchantCard({ merchantId, categories, onClose, onChange
   const category = m?.category_id != null ? categories.get(m.category_id) : undefined;
 
   return (
-    <Modal visible={merchantId !== null} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Закрыть" />
-      <View style={styles.sheet}>
+    <>
+    <BottomSheet visible={merchantId !== null} onClose={onClose} style={styles.sheet}>
         {!m ? null : (
           <ScrollView contentContainerStyle={styles.content}>
             <View style={styles.titleRow}>
@@ -203,7 +204,7 @@ export default function MerchantCard({ merchantId, categories, onClose, onChange
             </TouchableOpacity>
           </ScrollView>
         )}
-      </View>
+    </BottomSheet>
       <TextInputModal
         visible={renaming}
         title="Название группы"
@@ -218,13 +219,12 @@ export default function MerchantCard({ merchantId, categories, onClose, onChange
         }}
         onClose={() => setRenaming(false)}
       />
-    </Modal>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.3)' },
-  sheet: { maxHeight: '85%', minHeight: 200, backgroundColor: colors.bg, borderTopLeftRadius: 16, borderTopRightRadius: 16 },
+  sheet: { maxHeight: '85%', minHeight: 200, paddingBottom: 0 },
   content: { padding: 16, paddingBottom: 8 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   title: { fontSize: 20, fontWeight: '600', color: colors.text, flexShrink: 1 },

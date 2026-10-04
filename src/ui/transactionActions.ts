@@ -1,4 +1,4 @@
-import { Alert } from 'react-native';
+import { sheetAlert } from './sheetAlert';
 import { deleteTransaction } from '../db/transactions';
 import { emitTransactionsChanged } from '../events';
 import { formatAmount, merchantLabel } from './format';
@@ -8,7 +8,7 @@ export function confirmDeleteTransaction(
   tx: { id: number; raw_merchant: string | null; amount_minor: number; currency: string; kind: string },
   onDeleted?: () => void,
 ) {
-  Alert.alert('Удалить транзакцию?', `${merchantLabel(tx)}, ${formatAmount(tx.amount_minor, tx.currency, tx.kind)}`, [
+  sheetAlert('Удалить транзакцию?', `${merchantLabel(tx)}, ${formatAmount(tx.amount_minor, tx.currency, tx.kind)}`, [
     { text: 'Отмена', style: 'cancel' },
     {
       text: 'Удалить', style: 'destructive', onPress: async () => {

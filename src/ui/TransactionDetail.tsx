@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { sheetAlert } from './sheetAlert';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { getTransaction, markTransactionSeen, setTransactionAmount, setTransactionNote } from '../db/transactions';
@@ -83,15 +84,14 @@ export default function TransactionDetail({ route, navigation }: Props) {
     if (!change) { await assign(categoryId); return; }
     const [from, to] = await Promise.all([getCategory(change.fromCategoryId), getCategory(categoryId!)]);
     const sum = change.totals.map((t) => `${(t.amount_minor / 100).toFixed(2)} ${t.currency}`).join(' + ');
-    Alert.alert(
+    sheetAlert(
       `Сохранить «${to ? categoryLabel(to) : '?'}» для мерчанта «${change.merchant}»?`,
       `Сейчас у мерчанта «${from ? categoryLabel(from) : '?'}». Если сохранить, категория изменится у ${change.count} ${plural(change.count, ['транзакции', 'транзакций', 'транзакций'])} на сумму ${sum}, и новые транзакции мерчанта будут получать её автоматически.`,
       [
         { text: 'Отмена', style: 'cancel' },
         { text: 'Только для этой транзакции', onPress: () => { assign(categoryId, 'only'); } },
         { text: 'Сохранить для мерчанта', onPress: () => { assign(categoryId, 'merchant'); } },
-      ],
-      { cancelable: true });
+      ]);
   }
 
   async function saveAmount(text: string): Promise<string | null> {

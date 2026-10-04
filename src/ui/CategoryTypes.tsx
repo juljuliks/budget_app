@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
-import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { sheetAlert } from './sheetAlert';
 import { useFocusEffect } from '@react-navigation/native';
 import { CategoryType, countCategoriesOfType, deleteCategoryType, listCategoryTypes } from '../db/categoryTypes';
 import { emitTransactionsChanged } from '../events';
@@ -23,7 +24,7 @@ export default function CategoryTypes() {
 
   async function remove(t: CategoryType) {
     const n = await countCategoriesOfType(t.id);
-    Alert.alert(
+    sheetAlert(
       `Удалить тип «${t.name}»?`,
       n > 0 ? `${n} категор. останутся без типа.` : undefined,
       [
@@ -54,7 +55,7 @@ export default function CategoryTypes() {
               onEdit={() => setEditing({ type: t })}
               deleteDisabled={!!t.is_transfer}
               onDelete={() => (t.is_transfer
-                ? Alert.alert('Системный тип', `«${t.name}» нельзя удалить: по нему приложение выбирает категории для переводов. Переименовать можно.`)
+                ? sheetAlert('Системный тип', `«${t.name}» нельзя удалить: по нему приложение выбирает категории для переводов. Переименовать можно.`)
                 : remove(t))}
             />
           </View>

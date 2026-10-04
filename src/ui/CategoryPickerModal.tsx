@@ -1,5 +1,6 @@
 import React from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import BottomSheet from './BottomSheet';
 import CategoryPicker from './CategoryPicker';
 import type { RootStackParamList } from '../navigation';
 import { colors } from './theme';
@@ -21,11 +22,8 @@ type Props = {
 /** Bottom sheet with the shared CategoryPicker (categories, "+ Новая категория"). */
 export default function CategoryPickerModal({ visible, title, selectedId, transferFirst, allowNone, excludeIds, newCategory, onPick, onClose }: Props) {
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Закрыть" />
-      <View style={styles.sheet}>
-        <Text style={styles.title}>{title}</Text>
-        <ScrollView>
+    <BottomSheet visible={visible} onClose={onClose} title={title} style={styles.sheet}>
+        <ScrollView contentContainerStyle={styles.content}>
           <CategoryPicker
             selectedId={selectedId}
             onSelect={onPick}
@@ -40,18 +38,13 @@ export default function CategoryPickerModal({ visible, title, selectedId, transf
         <TouchableOpacity style={styles.cancel} onPress={onClose}>
           <Text style={styles.cancelText}>Отмена</Text>
         </TouchableOpacity>
-      </View>
-    </Modal>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)' },
-  sheet: {
-    backgroundColor: colors.bg, borderTopLeftRadius: 16, borderTopRightRadius: 16,
-    padding: 16, paddingBottom: 24, maxHeight: '75%',
-  },
-  title: { fontSize: 17, fontWeight: '600', color: colors.text },
+  sheet: { maxHeight: '75%' },
+  content: { paddingHorizontal: 16 },
   cancel: { marginTop: 16, alignSelf: 'center', padding: 8 },
   cancelText: { fontSize: 16, color: colors.muted },
 });
