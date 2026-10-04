@@ -52,8 +52,6 @@ async function runFilterQuery(f: Filter): Promise<TransactionRow[] | null> {
   return f.query.trim() ? searchTransactions(f.query, tx) : listTransactionsFiltered(tx);
 }
 
-/** Inline: the first filters as chips, the rest behind "ещё N". */
-const SHOWN_FILTERS = 3;
 
 const SEARCH_DEBOUNCE_MS = 200;
 
@@ -429,19 +427,14 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
               <FilterButton label="Дата" active={range !== null} onPress={() => setSheet('date')} />
             </View>
             {activeFilters.length > 0 ? (
-              // the first filters as small chips wrapping onto the next line, the rest behind "ещё N", the reset ✕ last
-              <View style={[styles.chipsWrap, styles.activeRow]}>
-                {activeFilters.slice(0, SHOWN_FILTERS).map((f) => (
-                  <Chip key={f.key} label={f.label} trailing="✕" selected small onPress={f.clear} />
-                ))}
-                {activeFilters.length > SHOWN_FILTERS ? (
-                  <Chip small label={`ещё ${activeFilters.length - SHOWN_FILTERS}`} onPress={() => setSheet('all')} />
-                ) : null}
-                {activeFilters.length > 1 ? (
-                  <TouchableOpacity onPress={resetFilters} hitSlop={10} accessibilityRole="button" accessibilityLabel="Сбросить все фильтры" style={styles.resetAll}>
-                    <Text style={styles.clear}>✕</Text>
-                  </TouchableOpacity>
-                ) : null}
+              // how many filters are set (tap: the list of them, each with ✕) and "Сбросить все"
+              <View style={styles.appliedRow}>
+                <TouchableOpacity onPress={() => setSheet('all')} hitSlop={8} accessibilityRole="button" accessibilityHint="Показать фильтры">
+                  <Text style={styles.appliedText}>Применено фильтров: {activeFilters.length}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={resetFilters} hitSlop={8} accessibilityRole="button">
+                  <Text style={styles.resetText}>Сбросить все</Text>
+                </TouchableOpacity>
               </View>
             ) : null}
           </>
@@ -564,7 +557,9 @@ const styles = StyleSheet.create({
   activeRow: { marginBottom: 8 },
   // the Категория / Дата buttons, under the search field
   filterButtons: { marginTop: 10 },
-  resetAll: { paddingHorizontal: 6 },
+  appliedRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+  appliedText: { fontSize: 14, color: colors.accent },
+  resetText: { fontSize: 14, color: colors.danger },
   search: {
     flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.surface,
     borderRadius: 10, paddingHorizontal: 12,
