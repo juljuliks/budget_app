@@ -187,7 +187,9 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
     try { await reload(); } finally { setRefreshing(false); }
   }, [reload]);
 
-  const data = results ? results.slice(0, shownResults) : rows;
+  // memoized: sections, the selection pruning and the day totals (a DB query) depend on it, so a new array each render
+  // re-ran them on every keystroke while a filter was on
+  const data = useMemo(() => (results ? results.slice(0, shownResults) : rows), [results, shownResults, rows]);
 
   // the filters set, as chips to clear one by one
   const activeFilters: ActiveFilter[] = [];
