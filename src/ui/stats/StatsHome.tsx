@@ -58,7 +58,8 @@ export default function StatsHome() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  segmented: { margin: 16, marginBottom: 8 },
+  // close under the header title
+  segmented: { marginHorizontal: 16, marginTop: 4, marginBottom: 8 },
   monthRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, marginBottom: 8 },
   arrow: { fontSize: 28, color: colors.accent, paddingHorizontal: 8 },
   arrowDisabled: { color: colors.border },

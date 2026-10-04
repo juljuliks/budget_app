@@ -305,7 +305,7 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
             accessibilityRole="button"
             accessibilityState={{ selected: editMode }}
           >
-            <PencilIcon color={editMode ? '#FFFFFF' : colors.accent} size={16} />
+            <PencilIcon color={editMode ? '#FFFFFF' : colors.accent} size={13} />
             <Text style={[styles.editToggleText, editMode && styles.editToggleTextOn]}>{editMode ? 'Готово' : 'Редактировать'}</Text>
           </TouchableOpacity>
         </View>
@@ -572,7 +572,8 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
 const styles = StyleSheet.create({
   list: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
-  header: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4, backgroundColor: colors.bg },
+  // close under the header title
+  header: { paddingHorizontal: 16, paddingTop: 2, paddingBottom: 4, backgroundColor: colors.bg },
   modes: { marginBottom: 8 },
   catChips: { gap: 8, paddingVertical: 2 },
   filterHint: { fontSize: 14, color: colors.muted, paddingVertical: 8 },
@@ -592,12 +593,13 @@ const styles = StyleSheet.create({
   selectLabel: { fontSize: 15, color: colors.text },
   selectCount: { fontSize: 13, color: colors.muted },
   editToggle: {
-    flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6,
+    // as tall as the title text
+    flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 2,
     borderRadius: 16, borderWidth: 1, borderColor: colors.accent,
   },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 14, marginRight: 16 },
   editToggleOn: { backgroundColor: colors.accent },
-  editToggleText: { fontSize: 14, color: colors.accent },
+  editToggleText: { fontSize: 13, color: colors.accent },
   editToggleTextOn: { color: '#FFFFFF' },
   footer: { paddingVertical: 16, marginBottom: 72 },
   bottomBar: {
