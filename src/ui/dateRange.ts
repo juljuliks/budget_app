@@ -46,3 +46,24 @@ export function shiftAnchor(kind: 'day' | 'week' | 'year', anchor: Date, delta: 
 export function periodLabel(kind: PeriodKind, range: DayRange): string {
   return kind === 'year' ? range.from.slice(0, 4) : formatRange(range);
 }
+
+/** How many days of the range fall into each month: { '2026-09': 2, '2026-10': 5 }. */
+export function daysByMonth(r: DayRange): Map<string, number> {
+  const out = new Map<string, number>();
+  for (let d = parseDayKey(r.from); dayKeyOf(d) <= r.to; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1)) {
+    const ym = dayKeyOf(d).slice(0, 7);
+    out.set(ym, (out.get(ym) ?? 0) + 1);
+  }
+  return out;
+}
+
+/** Number of days in the range (inclusive). */
+export function rangeDays(r: DayRange): number {
+  return [...daysByMonth(r).values()].reduce((a, b) => a + b, 0);
+}
+
+/** Days in the month 'YYYY-MM'. */
+export function daysInMonth(ym: string): number {
+  const [y, m] = ym.split('-').map(Number);
+  return new Date(y, m, 0).getDate();
+}

@@ -7,7 +7,7 @@ import Segmented from '../Segmented';
 import Button from '../Button';
 import BottomSheet from '../BottomSheet';
 import RangeCalendar from '../RangeCalendar';
-import { dayKeyOf, DayRange, PeriodKind, periodLabel, periodRange, rangeToUnix, shiftAnchor } from '../dateRange';
+import { dayKeyOf, DayRange, PeriodKind, periodLabel, periodRange, shiftAnchor } from '../dateRange';
 import { useDisplayCurrency } from '../../displayCurrency';
 import { colors } from '../theme';
 import PeriodStatsView from './PeriodStatsView';
@@ -135,9 +135,8 @@ export default function StatsHome() {
         {section === 'stats' && byPeriod && range ? (
           <PeriodStatsView
             key={`${range.from}-${range.to}`}
-            {...rangeToUnix(range)}
-            // a day or a week is also measured against the plan of the month it starts in
-            planYm={kind === 'day' || kind === 'week' ? range.from.slice(0, 7) : undefined}
+            range={range}
+            normLabel={kind === 'day' ? 'на день' : kind === 'week' ? 'на неделю' : 'на период'}
           />
         ) : null}
         {section === 'stats' && !byPeriod ? <StatsView year={shown.year} month={shown.month} currency={currency} /> : null}

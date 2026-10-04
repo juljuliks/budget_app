@@ -1,23 +1,37 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { monthStats, parseYm, periodStats, PeriodStats } from '../../db/plans';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { monthStats, parseYm, periodStats, PeriodStats, PlanKind } from '../../db/plans';
 import { useDisplayCurrency } from '../../displayCurrency';
 import { onTransactionsChanged } from '../../events';
+import BottomSheet from '../BottomSheet';
+import { DayRange, dayKeyOf, daysByMonth, daysInMonth, rangeDays, rangeToUnix } from '../dateRange';
 import Donut from '../Donut';
+import { InfoIcon } from '../icons';
 import Meter from '../Meter';
 import { formatShort } from '../money';
 import { colors } from '../theme';
 import { DonutCenter } from './StatsView';
 
-type Props = {
-  from: number;
-  to: number;
-  emptyText?: string;
-  /** a day / a week: spending is also shown as a share of this month's plan (its total and each category's) */
-  planYm?: string;
-};
+/** Periods up to this long are measured against the plan (its share for these days); longer ones aren't. */
+const PACE_MAX_DAYS = 31;
+const DAYS_PER_MONTH = 365.25 / 12;
 
 const MONTHS_IN = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+
+type Props = {
+  range: DayRange;
+  /** "на день" / "на неделю" / "на период" */
+  normLabel: string;
+  emptyText?: string;
+};
+
+/** The plan's share for the days of a period: each day gets its month's plan / days in that month. */
+type Norms = {
+  total: number;
+  byCategory: Map<number, { norm: number; kind: PlanKind; monthLimit: number }>;
+  /** the month, when the whole period is in one (for "N% плана на октябрь") */
+  singleYm: string | null;
+};
 
 /** "12%", "<1%" for a tiny non-zero share. */
 function pct(part: number, whole: number): string {
@@ -25,25 +39,46 @@ function pct(part: number, whole: number): string {
   return p === 0 && part > 0 ? '<1%' : `${p}%`;
 }
 
-/** Spending of any period [from, to) by category, with a donut (one day, a week, a year, a chosen range). */
-export default function PeriodStatsView({ from, to, emptyText = 'За этот период трат нет.', planYm }: Props) {
+async function loadNorms(range: DayRange, currency: Parameters<typeof monthStats>[2]): Promise<Norms> {
+  const months = daysByMonth(range);
+  const norms: Norms = { total: 0, byCategory: new Map(), singleYm: months.size === 1 ? [...months.keys()][0] : null };
+  for (const [ym, days] of months) {
+    const { year, month } = parseYm(ym);
+    const m = await monthStats(year, month, currency);
+    const share = days / daysInMonth(ym);
+    norms.total += m.planned_minor * share;
+    for (const c of m.categories) {
+      if (c.category_id === null || !c.limit_minor) continue;
+      const cur = norms.byCategory.get(c.category_id) ?? { norm: 0, kind: c.plan_kind ?? 'limit', monthLimit: 0 };
+      cur.norm += c.limit_minor * share;
+      cur.monthLimit += c.limit_minor;
+      norms.byCategory.set(c.category_id, cur);
+    }
+  }
+  return norms;
+}
+
+/**
+ * Spending of a period by category, with a donut. A short period (a day, a week, up to a month) is measured
+ * against the plan's norm for these days: are we on pace? A long one (a year) shows the structure and the
+ * average per month.
+ */
+export default function PeriodStatsView({ range, normLabel, emptyText = 'За этот период трат нет.' }: Props) {
   const [stats, setStats] = useState<PeriodStats | null>(null);
+  const [norms, setNorms] = useState<Norms | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
+  const [infoOpen, setInfoOpen] = useState(false);
   // the app's currency (Настройки → Валюта)
   const currency = useDisplayCurrency();
-
-  // the month's plan in the same currency: its total and each category's amount
-  const [plan, setPlan] = useState<{ total: number; byCategory: Map<number | null, number> } | null>(null);
+  const days = rangeDays(range);
+  const pace = days <= PACE_MAX_DAYS;
 
   const load = useCallback(() => {
+    const { from, to } = rangeToUnix(range);
     periodStats(from, to, currency).then(setStats).catch((e) => console.error('load period stats failed', e));
-    if (!planYm) { setPlan(null); return; }
-    const { year, month } = parseYm(planYm);
-    monthStats(year, month, currency).then((m) => setPlan({
-      total: m.planned_minor,
-      byCategory: new Map(m.categories.filter((c) => c.limit_minor).map((c) => [c.category_id, c.limit_minor!])),
-    })).catch((e) => console.error('load month plan failed', e));
-  }, [from, to, currency, planYm]);
+    if (pace) loadNorms(range, currency).then(setNorms).catch((e) => console.error('load norms failed', e));
+    else setNorms(null);
+  }, [range, currency, pace]);
   useEffect(load, [load]);
   useEffect(() => onTransactionsChanged(load), [load]);
 
@@ -52,21 +87,31 @@ export default function PeriodStatsView({ from, to, emptyText = 'За этот �
 
   if (!stats) return <View style={styles.center}><ActivityIndicator /></View>;
   const picked = selected === null ? undefined : stats.categories.find((c) => String(c.category_id) === selected);
-  const shareLabel = (minor: number) => pct(minor, stats.spent_minor);
-  const monthName = planYm ? MONTHS_IN[parseYm(planYm).month] : '';
+  const cur = stats.currency;
+  // the average per month counts only the days already gone (the current year isn't over)
+  const today = dayKeyOf(new Date());
+  const pastDays = range.to > today ? Math.max(rangeDays({ from: range.from, to: today }), 1) : days;
+  const monthName = norms?.singleYm ? MONTHS_IN[parseYm(norms.singleYm).month] : '';
+
+  // under the donut: the pace against the whole plan, or the average per month for a long period
+  const summary = pace
+    ? (norms && norms.total > 0
+      ? `${formatShort(stats.spent_minor)} из нормы ${formatShort(Math.round(norms.total))} ${cur} ${normLabel} (${pct(stats.spent_minor, norms.total)})`
+      : 'Плана на эти дни нет — показана только структура трат.')
+    : `В среднем ${formatShort(Math.round((stats.spent_minor / pastDays) * DAYS_PER_MONTH))} ${cur} в месяц`;
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.donutWrap}>
         <Donut segments={segments} selectedKey={picked ? selected : null} onSelect={setSelected}>
-          <DonutCenter total={stats.spent_minor} picked={picked} currency={stats.currency} />
+          <DonutCenter total={stats.spent_minor} picked={picked} currency={cur} />
         </Donut>
       </View>
-      {plan && plan.total > 0 && stats.spent_minor > 0 ? (
-        <Text style={styles.planShare}>
-          {pct(stats.spent_minor, plan.total)} плана на {monthName} ({formatShort(plan.total)} {stats.currency})
-        </Text>
-      ) : null}
+      <TouchableOpacity style={styles.summaryRow} onPress={() => setInfoOpen(true)} accessibilityLabel="Как считается">
+        <Text style={styles.summary}>{summary}</Text>
+        <InfoIcon color={colors.accent} />
+      </TouchableOpacity>
+
       {stats.categories.length === 0 ? <Text style={styles.hint}>{emptyText}</Text> : null}
       {stats.groups.map((g) => (
         <View key={`${g.type_id}-${g.title}`} style={styles.group}>
@@ -74,21 +119,33 @@ export default function PeriodStatsView({ from, to, emptyText = 'За этот �
             <Text style={styles.groupTitle}>{g.title}</Text>
             <Text style={styles.groupTotal}>{formatShort(g.spent_minor)}</Text>
           </View>
-          {g.categories.map((c) => (
-            <View key={String(c.category_id)} style={styles.row}>
-              <View style={styles.rowTop}>
-                <View style={[styles.dot, { backgroundColor: c.color }]} />
-                <Text style={styles.name} numberOfLines={1}>{`${c.emoji || ''} ${c.name}`.trim()}</Text>
-                <Text style={styles.amount}>{formatShort(c.spent_minor)} {stats.currency}</Text>
+          {g.categories.map((c) => {
+            const plan = c.category_id === null ? undefined : norms?.byCategory.get(c.category_id);
+            return (
+              <View key={String(c.category_id)} style={styles.row}>
+                <View style={styles.rowTop}>
+                  <View style={[styles.dot, { backgroundColor: c.color }]} />
+                  <Text style={styles.name} numberOfLines={1}>{`${c.emoji || ''} ${c.name}`.trim()}</Text>
+                  <Text style={styles.amount}>{formatShort(c.spent_minor)} {cur}</Text>
+                </View>
+                {plan && plan.kind === 'fixed' ? (
+                  // rent, subscriptions: not split by days — paid in this period or not
+                  <Text style={[styles.share, styles.paid]}>✓ Оплачено</Text>
+                ) : plan ? (
+                  <>
+                    {/* the flexible limit's norm for these days, colored like the month's bars */}
+                    <Meter ratio={plan.norm > 0 ? c.spent_minor / plan.norm : 0} height={8} />
+                    <Text style={[styles.share, c.spent_minor > plan.norm && styles.over]}>
+                      {formatShort(c.spent_minor)} из {formatShort(Math.round(plan.norm))} {normLabel} ({pct(c.spent_minor, plan.norm)})
+                      {norms?.singleYm ? ` · ${pct(c.spent_minor, plan.monthLimit)} плана на ${monthName}` : ''}
+                    </Text>
+                  </>
+                ) : (
+                  <Text style={styles.share}>{pct(c.spent_minor, stats.spent_minor)} всех трат за период</Text>
+                )}
               </View>
-              {/* no plan outside a month: the bar is the category's share of all spending */}
-              <Meter ratio={stats.spent_minor > 0 ? c.spent_minor / stats.spent_minor : 0} height={8} color={c.color} />
-              <Text style={styles.share}>
-                {shareLabel(c.spent_minor)} всех трат за период
-                {plan?.byCategory.get(c.category_id) ? ` · ${pct(c.spent_minor, plan.byCategory.get(c.category_id)!)} плана категории` : ''}
-              </Text>
-            </View>
-          ))}
+            );
+          })}
         </View>
       ))}
       {stats.other_currencies.length > 0 ? (
@@ -96,6 +153,38 @@ export default function PeriodStatsView({ from, to, emptyText = 'За этот �
           Не учтено, нет курса (нужен интернет): {stats.other_currencies.map((o) => `${formatShort(o.spent_minor)} ${o.currency}`).join(', ')}
         </Text>
       ) : null}
+
+      <BottomSheet visible={infoOpen} onClose={() => setInfoOpen(false)} title="Как считается">
+        <View style={styles.info}>
+          {pace ? (
+            <>
+              <Text style={styles.infoText}>
+                <Text style={styles.infoBold}>Норма</Text> — часть месячного плана, приходящаяся на эти дни: план месяца
+                делится на число дней в нём и умножается на дни периода. Например, при плане 800 {cur} на октябрь норма на
+                неделю — 800 × 7 / 31 ≈ 181 {cur}. Неделя на стыке месяцев считается по планам обоих месяцев.
+              </Text>
+              <Text style={styles.infoText}>
+                <Text style={styles.infoBold}>Гибкая трата</Text> (еда, кафе): полоска — потрачено от нормы. Зелёная — в
+                темпе, жёлтая — близко к норме, красная — перерасход. Рядом — доля от плана на весь месяц.
+              </Text>
+              <Text style={styles.infoText}>
+                <Text style={styles.infoBold}>Фиксированная трата</Text> (аренда, подписки) по дням не делится: «✓ Оплачено»,
+                если платёж был в этот период.
+              </Text>
+              <Text style={styles.infoText}>
+                <Text style={styles.infoBold}>Без плана</Text> — только сумма и доля от всех трат за период.
+              </Text>
+              <Text style={styles.infoText}>Под диаграммой — то же для всего плана сразу.</Text>
+            </>
+          ) : (
+            <Text style={styles.infoText}>
+              Период длиннее месяца с планом не сравнивается: показана структура трат по категориям и среднее в месяц
+              (траты за период / число прошедших дней × {DAYS_PER_MONTH.toFixed(1)}).
+            </Text>
+          )}
+          <Text style={styles.infoText}>Все суммы — в валюте из настроек, по курсу на день каждой траты.</Text>
+        </View>
+      </BottomSheet>
     </ScrollView>
   );
 }
@@ -105,7 +194,8 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 32 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
   donutWrap: { alignItems: 'center', marginBottom: 8 },
-  planShare: { fontSize: 14, color: colors.text, textAlign: 'center', marginBottom: 8 },
+  summaryRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 8, paddingHorizontal: 8 },
+  summary: { flexShrink: 1, fontSize: 14, color: colors.text, textAlign: 'center' },
   hint: { color: colors.muted, fontSize: 14, textAlign: 'center', marginVertical: 12 },
   group: { marginTop: 16 },
   groupHeader: {
@@ -119,5 +209,10 @@ const styles = StyleSheet.create({
   dot: { width: 10, height: 10, borderRadius: 5, marginRight: 8 },
   name: { flex: 1, fontSize: 15, color: colors.text },
   share: { fontSize: 13, color: colors.muted, marginTop: 4, fontVariant: ['tabular-nums'] },
+  over: { color: colors.danger },
+  paid: { color: colors.income, textAlign: 'right' },
   amount: { fontSize: 15, color: colors.text, fontVariant: ['tabular-nums'] },
+  info: { paddingHorizontal: 20, gap: 10 },
+  infoText: { fontSize: 15, color: colors.text, lineHeight: 21 },
+  infoBold: { fontWeight: '600' },
 });

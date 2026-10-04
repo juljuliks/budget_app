@@ -17,3 +17,13 @@ describe('stats periods', () => {
     expect(periodLabel('custom', { from: '2026-10-01', to: '2026-10-03' })).toBe('1 окт 2026 — 3 окт 2026');
   });
 });
+
+describe('period norms helpers', () => {
+  const { daysByMonth, rangeDays, daysInMonth } = require('../src/ui/dateRange');
+  test('a week across two months is split by month', () => {
+    expect([...daysByMonth({ from: '2026-09-28', to: '2026-10-04' })]).toEqual([['2026-09', 3], ['2026-10', 4]]);
+    expect(rangeDays({ from: '2026-10-04', to: '2026-10-04' })).toBe(1);
+    expect(daysInMonth('2026-02')).toBe(28);
+    expect(daysInMonth('2026-10')).toBe(31);
+  });
+});
