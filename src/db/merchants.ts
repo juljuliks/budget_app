@@ -67,9 +67,12 @@ export async function getMerchant(id: string): Promise<MerchantDetails | null> {
   const row = (await listMerchants()).find((m) => m.id === id);
   if (!row) return null;
   const db = await getDb();
+  // spent there: purchases / payments minus refunds not settled on a purchase (a settled one already reduced it)
   const totals = await db.all<{ currency: string; amount_minor: number }>(
-    `SELECT currency, sum(amount_minor) AS amount_minor FROM transactions t
-      WHERE ${merchantIdSql('t')} = ? AND t.kind IN ${KINDS} GROUP BY currency ORDER BY amount_minor DESC`, [id]);
+    `SELECT currency, sum(CASE WHEN t.kind = 'refund' THEN -amount_minor ELSE amount_minor END) AS amount_minor FROM transactions t
+      WHERE ${merchantIdSql('t')} = ? AND (t.kind IN ${KINDS} OR (t.kind = 'refund' AND t.refund_settled_at IS NULL))
+      GROUP BY currency HAVING sum(CASE WHEN t.kind = 'refund' THEN -amount_minor ELSE amount_minor END) != 0
+      ORDER BY amount_minor DESC`, [id]);
   const groupId = groupIdOf(id);
   const memberRows = groupId === null ? [] : await (async () => {
     const names = await namesByKey();

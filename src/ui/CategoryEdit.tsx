@@ -3,7 +3,9 @@ import { NO_SECTION } from './strings';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { categoryLabel, createCategory, findCategoryByName, getCategory, moveTransactionsOutOfCategory, updateCategory } from '../db/categories';
+import { categoryLabel, categorySummary, createCategory, findCategoryByName, getCategory, moveTransactionsOutOfCategory, updateCategory } from '../db/categories';
+import { plural } from './format';
+import { formatMoneyWithCurrency } from './money';
 import { CategoryType, listCategoryTypes } from '../db/categoryTypes';
 import { assignCategory, assignCategoryToMany } from '../assign';
 import { addPlanItem } from '../db/plans';
@@ -26,6 +28,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'CategoryEdit'>;
 export default function CategoryEdit({ route, navigation }: Props) {
   const { categoryId, txId, txIds, planYm, typeId: initialTypeId, returnSelection, moveFromCategoryId } = route.params ?? {};
   const isNew = categoryId === undefined;
+  const [summary, setSummary] = useState<{ count: number; totals: Array<{ currency: string; amount_minor: number }> } | null>(null);
   const [name, setName] = useState('');
   const [emoji, setEmoji] = useState('');
   const [typeId, setTypeId] = useState<number | null>(initialTypeId ?? null);
@@ -61,6 +64,7 @@ export default function CategoryEdit({ route, navigation }: Props) {
 
   useFocusEffect(useCallback(() => {
     takenCategoryColors(categoryId).then(setTaken).catch((e) => console.error('load colors failed', e));
+    if (categoryId !== undefined) categorySummary(categoryId).then(setSummary).catch((e) => console.error('load category summary failed', e));
     loadTypes();
   }, [categoryId, loadTypes]));
 
@@ -112,8 +116,15 @@ export default function CategoryEdit({ route, navigation }: Props) {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      {!isNew && summary ? (
+        // like a merchant's card: how many operations and how much spent
+        <Text style={styles.meta}>
+          {summary.count} {plural(summary.count, ['операция', 'операции', 'операций'])}
+          {summary.totals.length ? ` · ${summary.totals.map((t) => formatMoneyWithCurrency(t.amount_minor, t.currency)).join(' + ')}` : ''}
+        </Text>
+      ) : null}
       {!isNew ? (
-        // like a merchant's card: the Operations tab filtered by this category, back returns to the categories
+        // the Operations tab filtered by this category, back returns to the categories
         <TouchableOpacity
           onPress={() => navigation.navigate({ name: 'Main', params: { screen: 'Transactions', params: { category: categoryId, nonce: Date.now(), from: 'Categories' } } } as never)}
           hitSlop={8}
@@ -175,7 +186,8 @@ export default function CategoryEdit({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  link: { fontSize: 14, color: colors.accent, marginBottom: 4 },
+  meta: { fontSize: 14, color: colors.muted },
+  link: { fontSize: 14, color: colors.accent, marginTop: 6, marginBottom: 4 },
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { padding: 16, paddingTop: 0, paddingBottom: 32 },
   emoji: { width: 80, textAlign: 'center' },
