@@ -3,7 +3,7 @@ jest.mock('../src/navigation', () => ({ navigateWhenReady: jest.fn() }));
 import { setPlanAmount } from '../src/db/plans';
 import { createCategory } from '../src/db/categories';
 import { addManualTransaction } from '../src/db/transactions';
-import { loadNorms } from '../src/ui/stats/norms';
+import { loadNorms, rhythmBar } from '../src/ui/stats/norms';
 import { freshDb } from './helpers';
 
 // past months (never created by looking at them): Sep 2025 has 30 days, Oct 2025 — 31; Mon Sep 29 – Sun Oct 5
@@ -56,4 +56,35 @@ test('the overall pace: a custom period across months, flexible per-day categori
   expect(n.total).toBeCloseTo(4000);
   expect(n.flexSpent).toBe(1500);
   expect(n.flex.map((f) => f.name)).toEqual(['Еда']);
+});
+
+describe('rhythmBar: the bar over the category\'s own rhythm', () => {
+  const week = { from: '2026-09-28', to: '2026-10-04' };
+  test('a day inside a week: faded — the week\'s other days, the tick — how much of the week has passed', () => {
+    const bar = rhythmBar({ rhythm: 'week', window: week, windowNorm: 10000, windowSpent: 6000 }, { from: '2026-10-01', to: '2026-10-01' }, 2000);
+    expect(bar.ratio).toBeCloseTo(0.6);
+    expect(bar.base).toBeCloseTo(0.4);
+    expect(bar.marker).toBeCloseTo(4 / 7);
+    expect(bar.end).toBe('2026-10-04');
+  });
+  test('the last day of the week: nothing after it', () => {
+    const bar = rhythmBar({ rhythm: 'week', window: week, windowNorm: 10000, windowSpent: 14000 }, { from: '2026-10-04', to: '2026-10-04' }, 8000);
+    expect(bar.ratio).toBeCloseTo(1.4);
+    expect(bar.marker).toBe(1);
+    expect(bar.end).toBeUndefined();
+  });
+  test('a month rhythm spans the whole month, its window being only the days so far', () => {
+    const bar = rhythmBar({ rhythm: 'month', window: { from: '2026-10-01', to: '2026-10-04' }, windowNorm: 31000, windowSpent: 3100 }, { from: '2026-10-04', to: '2026-10-04' }, 0);
+    expect(bar.marker).toBeCloseTo(4 / 31);
+    expect(bar.end).toBe('2026-10-31');
+    expect(bar.base).toBeCloseTo(0.1);
+  });
+  test('a day norm over the viewed day: no tick, no faded part', () => {
+    const day1 = { from: '2026-10-04', to: '2026-10-04' };
+    const bar = rhythmBar({ rhythm: 'day', window: day1, windowNorm: 1000, windowSpent: 500 }, day1, 500);
+    expect(bar).toEqual({ ratio: 0.5, base: 0, marker: undefined, end: undefined });
+  });
+  test('no norm (no plan in those months): spent shows as a full bar', () => {
+    expect(rhythmBar({ rhythm: 'week', window: week, windowNorm: 0, windowSpent: 100 }, week, 100).ratio).toBe(1);
+  });
 });

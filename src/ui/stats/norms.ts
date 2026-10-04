@@ -1,5 +1,5 @@
 import { currentYm, monthStats, NormPeriod, parseYm, periodStats, PlanKind } from '../../db/plans';
-import { DayRange, daysByMonth, daysInMonth, normWindow, rangeToUnix } from '../dateRange';
+import { DayKey, DayRange, daysByMonth, daysInMonth, normWindow, rangeDays, rangeToUnix } from '../dateRange';
 
 /** One month's share of a norm: its plan / days in it × the days that fall into it (0 when it has no plan). */
 export type NormPart = { ym: string; days: number; dim: number; limit: number; norm: number };
@@ -116,4 +116,30 @@ export type Pace = 'ok' | 'ahead' | 'over';
 export function paceOf(spent: number, norm: number, monthToDate: number, monthLimit: number): Pace {
   if (spent <= norm) return 'ok';
   return monthToDate <= monthLimit ? 'ahead' : 'over';
+}
+
+/**
+ * A flexible category's bar over its own rhythm: the week / two weeks / month the norm is about, not the viewed
+ * period. `ratio` — spent of the norm in that window, `base` — the part spent before the viewed period (faded),
+ * `marker` — how much of the window has passed by the period's end (where an even pace would be),
+ * `end` — the window's last day when it goes on after the viewed period ("до вс").
+ */
+export function rhythmBar(
+  plan: { rhythm: NormPeriod; window: DayRange; windowNorm: number; windowSpent: number },
+  viewed: DayRange, viewedSpent: number,
+): { ratio: number; base: number; marker?: number; end?: DayKey } {
+  const { rhythm, window: win, windowNorm: norm, windowSpent: spent } = plan;
+  // a month's norm is the whole month, its window only the days so far
+  const span: DayRange = rhythm === 'month'
+    ? { from: win.from, to: `${win.from.slice(0, 7)}-${String(daysInMonth(win.from.slice(0, 7))).padStart(2, '0')}` }
+    : win;
+  const total = rangeDays(span);
+  const passed = rangeDays({ from: span.from, to: viewed.to < span.to ? viewed.to : span.to });
+  const of = (v: number) => (norm > 0 ? v / norm : v > 0 ? 1 : 0);
+  return {
+    ratio: of(spent),
+    base: of(Math.max(0, spent - Math.min(viewedSpent, spent))),
+    marker: total > 1 ? passed / total : undefined,
+    end: span.to > viewed.to ? span.to : undefined,
+  };
 }
