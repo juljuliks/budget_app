@@ -14,20 +14,25 @@ type Props = {
   disabled?: boolean;
   /** compact: the active filters' chips */
   small?: boolean;
+  /** a mark after the label that is never cut off with it ("✕" on a removable filter) */
+  trailing?: string;
 };
 
 /** Rounded pill used for categories, types and filter options. */
-export default function Chip({ label, selected, muted, action, onPress, disabled, small }: Props) {
+export default function Chip({ label, selected, muted, action, onPress, disabled, small, trailing }: Props) {
   return (
     <TouchableOpacity
-      style={[styles.chip, small && styles.chipSmall, selected && styles.selected, action && styles.action]}
+      style={[styles.chip, small && styles.chipSmall, trailing !== undefined && styles.row, selected && styles.selected, action && styles.action]}
       onPress={onPress}
       disabled={disabled || !onPress}
       accessibilityState={{ selected: !!selected }}
     >
-      <Text style={[styles.text, small && styles.textSmall, selected && styles.textSelected, muted && !selected && styles.textMuted, action && styles.textAction]}>
+      <Text numberOfLines={1} style={[styles.text, small && styles.textSmall, trailing !== undefined && styles.shrink, selected && styles.textSelected, muted && !selected && styles.textMuted, action && styles.textAction]}>
         {label}
       </Text>
+      {trailing !== undefined ? (
+        <Text style={[styles.text, small && styles.textSmall, styles.trailing, selected && styles.textSelected]}>{trailing}</Text>
+      ) : null}
     </TouchableOpacity>
   );
 }
@@ -37,7 +42,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16,
     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.surface,
   },
-  chipSmall: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+  // a long name is cut with "…" so several fit on a line
+  chipSmall: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, maxWidth: '48%' },
+  row: { flexDirection: 'row', alignItems: 'center' },
+  trailing: { marginLeft: 6, flexShrink: 0 },
+  shrink: { flexShrink: 1 },
   selected: { backgroundColor: colors.accent, borderColor: colors.accent },
   action: { backgroundColor: colors.bg, borderColor: colors.border, borderStyle: 'dashed' },
   text: { fontSize: 15, color: colors.text },

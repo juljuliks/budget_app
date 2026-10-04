@@ -184,7 +184,7 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
   const activeFilters: ActiveFilter[] = [];
   for (const cat of categories) {
     const c = categoryOptions.find((o) => o.category === cat);
-    activeFilters.push({ key: `c${cat}`, label: c ? categoryLabel(c) : cat === 'none' ? 'Без категории' : 'Категория', clear: () => setCategories((p) => p.filter((x) => x !== cat)) });
+    activeFilters.push({ key: `c${cat}`, label: c ? `${c.emoji || ''} ${c.name}`.trim() : cat === 'none' ? 'Без категории' : 'Категория', clear: () => setCategories((p) => p.filter((x) => x !== cat)) });
   }
   for (const mer of merchants) {
     const m = merchantOptions.find((o) => o.merchant === mer);
@@ -432,7 +432,7 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
               // the first filters as small chips wrapping onto the next line, the rest behind "ещё N", the reset ✕ last
               <View style={[styles.chipsWrap, styles.activeRow]}>
                 {activeFilters.slice(0, SHOWN_FILTERS).map((f) => (
-                  <Chip key={f.key} label={`${f.label}  ✕`} selected small onPress={f.clear} />
+                  <Chip key={f.key} label={f.label} trailing="✕" selected small onPress={f.clear} />
                 ))}
                 {activeFilters.length > SHOWN_FILTERS ? (
                   <Chip small label={`ещё ${activeFilters.length - SHOWN_FILTERS}`} onPress={() => setSheet('all')} />

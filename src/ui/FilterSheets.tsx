@@ -112,7 +112,7 @@ export function AllFiltersSheet({ visible, filters, onReset, onClose }: {
   return (
     <BottomSheet visible={visible} onClose={onClose} title="Фильтры">
       <View style={[styles.chipsWrap, styles.allChips]}>
-        {filters.map((f) => <Chip key={f.key} small selected label={`${f.label}  ✕`} onPress={f.clear} />)}
+        {filters.map((f) => <Chip key={f.key} small selected label={f.label} trailing="✕" onPress={f.clear} />)}
         {filters.length ? <Chip small action label="Сбросить все" onPress={() => { onReset(); onClose(); }} /> : (
           <Text style={styles.empty}>Фильтров нет</Text>
         )}
