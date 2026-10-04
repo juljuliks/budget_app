@@ -21,6 +21,18 @@ export const PALETTE_ORDER: PaletteKey[] = ['blue', 'orange', 'green', 'amber', 
 /** Categories without a type: one base color each. */
 export const UNTYPED_COLORS = PALETTE_ORDER.map((k) => PALETTES[k].shades[0]).concat(['#7a8b99']);
 
+/**
+ * Colors for untyped categories, in the order they are handed out: the base colors of the palettes no type uses
+ * (and grey), then those palettes' other shades — so many untyped categories don't repeat a color.
+ */
+export function untypedColors(typePalettes: string[]): string[] {
+  const free = PALETTE_ORDER.filter((k) => !typePalettes.includes(k));
+  const pals = free.length > 0 ? free : PALETTE_ORDER;
+  const out = pals.map((k) => PALETTES[k].shades[0]).concat(['#7a8b99']);
+  for (let level = 1; level < 5; level++) out.push(...pals.map((k) => PALETTES[k].shades[level]));
+  return out;
+}
+
 /** "Без категории" and anything unknown. */
 export const NEUTRAL_COLOR = '#c3c2b7';
 
@@ -114,10 +126,8 @@ export function buildCategoryColors(
   types: Array<{ id: number; palette: string | null }>,
 ): Map<number, string> {
   const paletteOf = new Map(types.map((t, i) => [t.id, typePalette(t, i)]));
-  // untyped categories take the base colors of palettes no type uses, so they don't pass for a type's member
-  const taken = new Set(paletteOf.values());
-  const free = UNTYPED_COLORS.filter((_, i) => !taken.has(PALETTE_ORDER[i]));
-  const untyped = free.length > 0 ? free : UNTYPED_COLORS;
+  // untyped categories take the colors of palettes no type uses, so they don't pass for a type's member
+  const untyped = untypedColors([...paletteOf.values()]);
   const seen = new Map<number | null, number>(); // per type: how many categories got a shade so far
   const out = new Map<number, string>();
   for (const c of categories) {
@@ -152,7 +162,8 @@ export function freeCategoryColors(
   const own = typeId === null ? null : palettes[types.findIndex((t) => t.id === typeId)] ?? null;
   const options = [
     ...(own ? paletteShades(own) : []),
-    ...PALETTE_ORDER.filter((k) => !palettes.includes(k)).map((k) => PALETTES[k].shades[0]),
+    // the untyped colors in their order: once the free palettes' base colors are taken, their other shades
+    ...untypedColors(palettes).filter((c) => !taken.has(c)).slice(0, 8),
   ].filter((c) => !taken.has(c) || c === current);
   return current && !options.includes(current) ? [current, ...options] : options;
 }

@@ -73,3 +73,10 @@ test('a distinct hue keeps away from the colors in use', () => {
   expect(h).toBeGreaterThan(180);
   expect(h).toBeLessThan(345);
 });
+
+test('many untyped categories: no repeated colors (other shades after the base ones)', () => {
+  const cats = Array.from({ length: 20 }, (_, i) => ({ id: i + 1, type_id: null, color: null }));
+  const colors = buildCategoryColors(cats, [{ id: 1, palette: 'blue' }]);
+  expect(new Set(colors.values()).size).toBe(20);
+  expect([...colors.values()]).not.toContain(PALETTES.blue.shades[0]);
+});
