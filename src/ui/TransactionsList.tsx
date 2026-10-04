@@ -4,8 +4,8 @@ import { RouteProp, useFocusEffect, useNavigation, useRoute } from '@react-navig
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { HeaderBackButton } from '@react-navigation/elements';
 import {
-  categoriesWithTransactions, CategoryFilter, CategoryWithCount, countUnseenTransactions, listTransactionsFiltered, listTransactionsPage,
-  markAllTransactionsSeen, merchantsWithTransactions, MerchantWithCount, normalizeForSearch, PageCursor, searchTransactions, TransactionRow,
+  categoriesWithTransactions, CategoryFilter, CategoryWithCount, isUnread, listTransactionsFiltered, listTransactionsPage,
+  markTransactionsSeen, merchantsWithTransactions, MerchantWithCount, normalizeForSearch, PageCursor, searchTransactions, TransactionRow,
 } from '../db/transactions';
 import { emitTransactionsChanged, onTransactionsChanged } from '../events';
 import { Category, categoryLabel, countPastTransactionsOfCategory, deleteCategory, getCategory, moveTransactionsOutOfCategory } from '../db/categories';
@@ -114,18 +114,6 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
   const [selectMode, setSelectMode] = useState(deleting);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [bulkOpen, setBulkOpen] = useState(false);
-  // unread transactions, for "Прочитать все (N)" in edit mode
-  const [unseen, setUnseen] = useState(0);
-  useEffect(() => {
-    if (!editMode || deleting) return;
-    const load = () => { countUnseenTransactions().then(setUnseen).catch((e) => console.error('count unseen failed', e)); };
-    load();
-    return onTransactionsChanged(load);
-  }, [editMode, deleting]);
-  const readAll = () => {
-    markAllTransactionsSeen().then(() => emitTransactionsChanged()).catch((e) => console.error('mark all seen failed', e));
-  };
-
   // Re-reads everything currently on screen (at least one page), so returning
   // from a detail screen keeps the scroll depth instead of snapping back to 50 rows.
   const reload = useCallback(async () => {
@@ -192,6 +180,12 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
   }, [reload]);
 
   const data = results ?? rows;
+
+  // "Прочитать (N)": the unread ones among the selected
+  const unreadSelected = useMemo(() => data.filter((r) => selected.has(r.id) && isUnread(r)).map((r) => r.id), [data, selected]);
+  const readSelected = () => {
+    markTransactionsSeen(unreadSelected).then(() => emitTransactionsChanged()).catch((e) => console.error('mark seen failed', e));
+  };
 
   // forget selected transactions that are no longer shown (deleted, filtered out)
   useEffect(() => {
@@ -557,14 +551,13 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
         }
       />
 
-      {(editMode && !deleting && unseen > 0) || (selectMode && selected.size > 0) ? (
+      {selectMode && selected.size > 0 ? (
         <View style={[styles.bottomBar, styles.bottomBarStack]}>
-          {editMode && !deleting && unseen > 0 ? (
-            <Button title={`Прочитать все (${unseen})`} onPress={readAll} style={selectMode && selected.size > 0 ? styles.secondaryButton : undefined} />
+          {/* the unread ones among the selected */}
+          {!deleting && unreadSelected.length > 0 ? (
+            <Button title={`Прочитать (${unreadSelected.length})`} onPress={readSelected} style={styles.secondaryButton} />
           ) : null}
-          {selectMode && selected.size > 0 ? (
-            <Button title={`${deleting ? 'Перенести в категорию' : 'Изменить категорию'} (${selected.size})`} onPress={() => setBulkOpen(true)} />
-          ) : null}
+          <Button title={`${deleting ? 'Перенести в категорию' : 'Изменить категорию'} (${selected.size})`} onPress={() => setBulkOpen(true)} />
         </View>
       ) : deleting && results !== null && data.length === 0 ? (
         <View style={styles.bottomBar}>
