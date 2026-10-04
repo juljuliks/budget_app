@@ -42,8 +42,8 @@ export default function StatsView({ year, month, currency }: { year: number; mon
     } else setToday(null);
   }, [year, month, currency]);
 
+  // on focus, and again whenever load changes while focused (useFocusEffect re-runs on a new callback): no extra useEffect
   useFocusEffect(load);
-  useEffect(load, [load]);
   useEffect(() => onTransactionsChanged(load), [load]);
 
   const segments = useMemo(() => (stats ? donutSegments(stats.groups) : []), [stats]);

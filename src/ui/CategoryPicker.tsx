@@ -50,8 +50,8 @@ export default function CategoryPicker({
       .catch((e) => console.error('load categories failed', e));
   }, [transferFirst]);
 
+  // on focus, and again whenever load changes while focused (useFocusEffect re-runs on a new callback): no extra useEffect
   useFocusEffect(load);
-  useEffect(load, [load]);
   useEffect(() => onTransactionsChanged(load), [load]);
 
   const excluded = new Set(excludeIds ?? []);

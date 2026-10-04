@@ -80,8 +80,8 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
       .catch((e) => console.error('load plan failed', e));
   }, [ym, currency]);
 
+  // on focus, and again whenever load changes while focused (useFocusEffect re-runs on a new callback): no extra useEffect
   useFocusEffect(load);
-  useEffect(load, [load]);
 
   const money = (minor: number) => formatWithCurrency(minor, currency);
   // "(200 $)" after an amount shown converted from another currency
