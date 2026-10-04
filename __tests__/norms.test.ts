@@ -3,7 +3,7 @@ jest.mock('../src/navigation', () => ({ navigateWhenReady: jest.fn() }));
 import { setPlanAmount } from '../src/db/plans';
 import { createCategory } from '../src/db/categories';
 import { addManualTransaction } from '../src/db/transactions';
-import { loadNorms, rhythmBar } from '../src/ui/stats/norms';
+import { flatOf, limitChange, loadNorms, rhythmBar } from '../src/ui/stats/norms';
 import { freshDb } from './helpers';
 
 // past months (never created by looking at them): Sep 2025 has 30 days, Oct 2025 — 31; Mon Sep 29 – Sun Oct 5
@@ -105,4 +105,19 @@ test('a limit is rebalanced on what is left of the month: overspending lowers it
   const other = await createCategory('Такси');
   await setPlanAmount('2025-10', other, 31000, 'limit', 'GEL', 'day');
   expect(((await loadNorms(oct11, 'GEL')).byCategory.get(other)!).windowNorm).toBeCloseTo(31000 / 21);
+});
+
+test('limitChange: shown only when more than 5% off the plan\'s flat share, both ways', async () => {
+  expect(limitChange(10500, 10000)).toBeNull();
+  expect(limitChange(9500, 10000)).toBeNull();
+  expect(limitChange(9400, 10000)).toBe('down');
+  expect(limitChange(10600, 10000)).toBe('up');
+  expect(limitChange(500, 0)).toBeNull();
+  // the flat share stays plan / days in month × days whatever was spent
+  const food = await createCategory('Еда');
+  await setPlanAmount('2025-10', food, 31000, 'limit', 'GEL', 'day');
+  await spend(20500, food, '2025-10-06');
+  const b = (await loadNorms({ from: '2025-10-11', to: '2025-10-11' }, 'GEL')).byCategory.get(food)!;
+  expect(flatOf(b.windowParts)).toBeCloseTo(1000);
+  expect(limitChange(b.windowNorm, flatOf(b.windowParts))).toBe('down');
 });

@@ -7,7 +7,7 @@ import { onTransactionsChanged } from '../../events';
 import BottomSheet from '../BottomSheet';
 import Button from '../Button';
 import { DayRange, parseDayKey, rangeDays, rangeToUnix, shortRange } from '../dateRange';
-import { loadNorms, NormPart, Norms, Pace, paceOf, rhythmBar } from './norms';
+import { flatOf, limitChange, loadNorms, NormPart, Norms, Pace, paceOf, rhythmBar } from './norms';
 import Donut from '../Donut';
 import { InfoIcon } from '../icons';
 import Meter from '../Meter';
@@ -219,6 +219,9 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
             const mtd = norms.monthToDate.get(infoOpen.id) ?? 0;
             const pace_ = paceOf(p.windowSpent, p.windowNorm, mtd, p.monthLimit);
             const bar = rhythmBar(p, range, Math.min(p.windowSpent, stats.categories.find((c) => c.category_id === infoOpen.id)?.spent_minor ?? 0));
+            // the limit vs the plan's flat share, shown when more than 5% off
+            const flat = p.rhythm === 'month' ? p.windowNorm : flatOf(p.windowParts);
+            const change = p.rhythm === 'month' ? null : limitChange(p.windowNorm, flat);
             const whole = p.rhythm === 'month' ? `план на ${monthIn}` : `лимит ${windowLabel(p)} ${shortRange(p.window)}`;
             if (p.kind !== 'limit') {
               return (
@@ -231,7 +234,10 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
             return (
               <>
                 <Text style={styles.infoText}>
-                  {capitalize(whole)}: <Text style={styles.infoBold}>{m(p.windowNorm)}</Text>.
+                  {capitalize(whole)}:{' '}
+                  {change ? <><Text style={styles.crossed}>{m(flat)}</Text>{' → '}</> : null}
+                  <Text style={[styles.infoBold, change === 'down' ? styles.paceAhead : change === 'up' ? styles.paceOk : null]}>{m(p.windowNorm)}</Text>
+                  {change === 'down' ? ' — меньше плана из-за перерасхода раньше в месяце' : change === 'up' ? ' — больше плана за счёт экономии раньше в месяце' : ''}.
                   {p.rhythm === 'month' ? ' С 1-го потрачено' : ' Потрачено'} <Text style={styles.infoBold}>{money(p.windowSpent)}</Text> —{' '}
                   <Text style={[styles.infoBold, paceStyle(pace_)]}>{delta(p.windowSpent, p.windowNorm)}</Text>.
                 </Text>
@@ -358,6 +364,7 @@ const styles = StyleSheet.create({
   info: { paddingHorizontal: 20, gap: 10, paddingBottom: 4 },
   infoText: { fontSize: 15, color: colors.text, lineHeight: 21 },
   infoBold: { fontWeight: '600' },
+  crossed: { textDecorationLine: 'line-through' },
   calcToggle: { fontSize: 15, color: colors.accent, fontWeight: '600', paddingVertical: 4 },
   code: { fontFamily: Platform.select({ ios: 'Menlo', default: 'monospace' }), fontSize: 13, backgroundColor: colors.surface, color: colors.text },
   infoSheet: { maxHeight: '85%' },

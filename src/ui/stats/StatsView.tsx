@@ -6,7 +6,7 @@ import { categoryLabel } from '../../db/categories';
 import { Currency } from '../../db/fx';
 import { CategoryStat, currentYm, monthStats, MonthStats, StatGroup, ymOf } from '../../db/plans';
 import { dayKeyOf, daysInMonth, monthDays } from '../dateRange';
-import { loadNorms, Norms, Pace, paceOf } from './norms';
+import { flatOf, limitChange, loadNorms, Norms, Pace, paceOf } from './norms';
 import { onTransactionsChanged } from '../../events';
 import Donut, { DonutSegment } from '../Donut';
 import Meter from '../Meter';
@@ -205,7 +205,22 @@ function CategoryRow({ stat, currency, evenPace, dim, ym, now, monthToDate, onAd
             {ratio > 1 ? `⚠ перерасход ${formatWithCurrency(spent - limit, currency)}` : `осталось ${formatWithCurrency(limit - spent, currency)}`}
             {/* a category spent daily / weekly: its limit per that period, "лимит ≈ 113 ₾ в неделю" */}
             {/* the current month: this window's limit, rebalanced on what's left of the month; a past one: the plan's share */}
-            {rhythm ? <Text style={styles.rowStatusMuted}> · лимит ≈ {formatWithCurrency(Math.round(now && now.rhythm === rhythm ? now.windowNorm : (limit / dim) * RHYTHM_DAYS[rhythm]), currency)} {PER_PERIOD[rhythm]}</Text> : null}
+            {rhythm ? (() => {
+              const current = now && now.rhythm === rhythm ? now : undefined;
+              const flat = current ? flatOf(current.windowParts) : (limit / dim) * RHYTHM_DAYS[rhythm];
+              const value = current ? current.windowNorm : flat;
+              // more than 5% off the plan's share: "лимит 113 ₾ (crossed out) → 95 ₾"
+              const change = limitChange(value, flat);
+              return (
+                <Text style={styles.rowStatusMuted}>
+                  {' · лимит '}
+                  {change ? <Text style={styles.crossed}>{formatWithCurrency(Math.round(flat), currency)}</Text> : '≈ '}
+                  {change ? ' → ' : ''}
+                  <Text style={change === 'down' ? styles.paceAhead : change === 'up' ? styles.paceOk : undefined}>{formatWithCurrency(Math.round(value), currency)}</Text>
+                  {` ${PER_PERIOD[rhythm]}`}
+                </Text>
+              );
+            })() : null}
           </Text>
           {rhythm && now && now.rhythm === rhythm ? (() => {
             // the current month: what's left in today's / this week's window, colored by pace
@@ -261,6 +276,7 @@ const styles = StyleSheet.create({
   paceLine: { fontWeight: '600' },
   paceOk: { color: colors.income },
   paceAhead: { color: colors.warn },
+  crossed: { textDecorationLine: 'line-through' },
   // under the amount, on the right
   paidMark: { fontSize: 16, fontWeight: '700', marginLeft: 6 },
   paidOn: { color: colors.income },

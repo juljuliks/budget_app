@@ -13,6 +13,8 @@ export type NormPart = {
   /** days of the month from the first of these days to its end */
   daysLeft: number;
   norm: number;
+  /** the plan's flat share before rebalancing: plan / days in the month × days */
+  flat: number;
 };
 
 /**
@@ -86,7 +88,7 @@ export async function loadNorms(range: DayRange, currency: Parameters<typeof mon
       const spentBefore = firstDay > 1 ? (await spentOver({ from: `${m}-01`, to: dayBefore(first) })).get(id) ?? 0 : 0;
       const daysLeft = dim - firstDay + 1;
       const norm = limit > 0 ? (Math.max(0, limit - spentBefore) * days) / daysLeft : 0;
-      out.push({ ym: m, days, dim, limit, spentBefore, daysLeft, norm });
+      out.push({ ym: m, days, dim, limit, spentBefore, daysLeft, norm, flat: (limit * days) / dim });
     }
     return out;
   };
@@ -160,4 +162,18 @@ export function rhythmBar(
     marker: total > 1 ? passed / total : undefined,
     end: span.to > viewed.to ? span.to : undefined,
   };
+}
+
+/** The flat (not rebalanced) limit of these month parts. */
+export function flatOf(parts: NormPart[]): number {
+  return parts.reduce((a, p) => a + p.flat, 0);
+}
+
+/**
+ * Whether a rebalanced limit is worth showing as changed ("113 ₾ → 95 ₾"): more than 5% off the plan's flat share.
+ * 'down' — overspent earlier in the month, 'up' — spent less.
+ */
+export function limitChange(norm: number, flat: number): 'down' | 'up' | null {
+  if (flat <= 0 || Math.abs(norm - flat) / flat <= 0.05) return null;
+  return norm < flat ? 'down' : 'up';
 }
