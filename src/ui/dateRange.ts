@@ -67,3 +67,29 @@ export function daysInMonth(ym: string): number {
   const [y, m] = ym.split('-').map(Number);
   return new Date(y, m, 0).getDate();
 }
+
+/** The rhythm of a flexible plan item's norm (mirrors NormPeriod in db/plans). */
+export type NormRhythm = 'day' | 'week' | '2weeks' | 'month';
+
+/**
+ * The window a category's norm is checked over when looking at `viewed`: the viewed period itself if it is at
+ * least as long as the rhythm; otherwise the calendar week / the two weeks ending with that week / the month so
+ * far that contain the viewed period's last day.
+ */
+export function normWindow(rhythm: NormRhythm, viewed: DayRange): DayRange {
+  const days = rangeDays(viewed);
+  const end = parseDayKey(viewed.to);
+  if (rhythm === 'day' || (rhythm === 'week' && days >= 7) || (rhythm === '2weeks' && days >= 14)) return viewed;
+  if (rhythm === 'month') return { from: `${viewed.to.slice(0, 7)}-01`, to: viewed.to };
+  const week = periodRange('week', end);
+  if (rhythm === 'week') return week;
+  const start = parseDayKey(week.from);
+  return { from: dayKeyOf(new Date(start.getFullYear(), start.getMonth(), start.getDate() - 7)), to: week.to };
+}
+
+const SHORT = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+/** "28 сен – 4 окт", "4 окт" (no year: windows are always near). */
+export function shortRange(r: DayRange): string {
+  const f = (k: DayKey) => { const d = parseDayKey(k); return `${d.getDate()} ${SHORT[d.getMonth()]}`; };
+  return r.from === r.to ? f(r.from) : `${f(r.from)} – ${f(r.to)}`;
+}

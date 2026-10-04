@@ -229,6 +229,10 @@ export const MIGRATIONS: MigrationStep[][] = [
     "ALTER TABLE plan_months ADD COLUMN budget_currency TEXT NOT NULL DEFAULT 'GEL'",
     "ALTER TABLE plan_items ADD COLUMN currency TEXT NOT NULL DEFAULT 'GEL'",
   ],
+  // 18: how a flexible plan item's norm is counted in period stats: per day, week, two weeks or month
+  [
+    "ALTER TABLE plan_items ADD COLUMN norm_period TEXT NOT NULL DEFAULT 'day' CHECK (norm_period IN ('day', 'week', '2weeks', 'month'))",
+  ],
 ];
 
 export async function getSchemaVersion(db: Db): Promise<number> {

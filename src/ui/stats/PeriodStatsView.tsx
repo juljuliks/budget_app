@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { averageFullMonths, monthStats, parseYm, periodStats, PeriodStats, PlanKind } from '../../db/plans';
+import { averageFullMonths, monthStats, NormPeriod, parseYm, periodStats, PeriodStats, PlanKind } from '../../db/plans';
 import { useDisplayCurrency } from '../../displayCurrency';
 import { onTransactionsChanged } from '../../events';
 import BottomSheet from '../BottomSheet';
-import { DayRange, daysByMonth, daysInMonth, rangeDays, rangeToUnix } from '../dateRange';
+import { DayRange, daysByMonth, daysInMonth, normWindow, rangeDays, rangeToUnix, shortRange } from '../dateRange';
 import Donut from '../Donut';
 import { InfoIcon } from '../icons';
 import Meter from '../Meter';
@@ -27,7 +27,11 @@ type Props = {
 type Norms = {
   /** the flexible categories' norm (fixed payments come in one go and aren't split by days) */
   total: number;
-  byCategory: Map<number, { norm: number; kind: PlanKind; monthLimit: number }>;
+  byCategory: Map<number, {
+    norm: number; kind: PlanKind; monthLimit: number;
+    /** the norm checked over the category's own rhythm window (see normWindow) */
+    rhythm: NormPeriod; window: DayRange; windowNorm: number; windowSpent: number;
+  }>;
   /**
    * Per month of the period (two for a week across months): the category's spending on those days and its plan
    * for that month, for "Сентябрь 100% · Октябрь 100%".
@@ -66,9 +70,14 @@ async function loadNorms(range: DayRange, currency: Parameters<typeof monthStats
     });
     for (const c of m.categories) {
       if (c.category_id === null || !c.limit_minor) continue;
-      const cur = norms.byCategory.get(c.category_id) ?? { norm: 0, kind: c.plan_kind ?? 'limit', monthLimit: 0 };
+      const rhythm = c.plan_norm ?? 'day';
+      const cur = norms.byCategory.get(c.category_id) ?? {
+        norm: 0, kind: c.plan_kind ?? 'limit', monthLimit: 0, rhythm, window: range, windowNorm: 0, windowSpent: 0,
+      };
       cur.norm += c.limit_minor * share;
-      if ((c.plan_kind ?? 'limit') === 'limit') norms.total += c.limit_minor * share;
+      cur.rhythm = rhythm;
+      // the overall pace under the donut: per day, without the categories counted per month (big one-off buys)
+      if ((c.plan_kind ?? 'limit') === 'limit' && rhythm !== 'month') norms.total += c.limit_minor * share;
       // one month's plan: for a week across two months, the month it ends in (the later one overwrites)
       cur.monthLimit = c.limit_minor;
       norms.byCategory.set(c.category_id, cur);
@@ -77,6 +86,33 @@ async function loadNorms(range: DayRange, currency: Parameters<typeof monthStats
   const lastYm = [...months.keys()][months.size - 1];
   const mtd = rangeToUnix({ from: `${lastYm}-01`, to: range.to });
   norms.monthToDate = new Map((await periodStats(mtd.from, mtd.to, currency)).categories.map((c) => [c.category_id, c.spent_minor]));
+
+  // each flexible category's rhythm window: its spending there and its norm (plan / days of month × days)
+  const monthCache = new Map<string, Map<number, number>>();
+  const limitsOf = async (ym: string) => {
+    if (!monthCache.has(ym)) {
+      const { year, month } = parseYm(ym);
+      const m = await monthStats(year, month, currency);
+      monthCache.set(ym, new Map(m.categories.filter((c) => c.category_id !== null && c.limit_minor).map((c) => [c.category_id!, c.limit_minor!])));
+    }
+    return monthCache.get(ym)!;
+  };
+  const spentCache = new Map<string, Map<number | null, number>>();
+  for (const [id, cat] of norms.byCategory) {
+    if (cat.kind !== 'limit') continue;
+    const win = normWindow(cat.rhythm, range);
+    const key = `${win.from}|${win.to}`;
+    if (!spentCache.has(key)) {
+      const u = rangeToUnix(win);
+      spentCache.set(key, new Map((await periodStats(u.from, u.to, currency)).categories.map((c) => [c.category_id, c.spent_minor])));
+    }
+    let norm = 0;
+    if (cat.rhythm === 'month') norm = cat.monthLimit;
+    else for (const [ym, d] of daysByMonth(win)) norm += ((await limitsOf(ym)).get(id) ?? 0) * d / daysInMonth(ym);
+    cat.window = win;
+    cat.windowNorm = norm;
+    cat.windowSpent = spentCache.get(key)!.get(id) ?? 0;
+  }
   return norms;
 }
 
@@ -127,7 +163,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
   // spending of the flexible categories, compared with their norm under the donut
   const flexSpent = stats.categories.reduce((sum, c) => {
     const p = c.category_id === null ? undefined : norms?.byCategory.get(c.category_id);
-    return p && p.kind === 'limit' ? sum + c.spent_minor : sum;
+    return p && p.kind === 'limit' && p.rhythm !== 'month' ? sum + c.spent_minor : sum;
   }, 0);
 
   // under the donut: the pace against the whole plan, or the average per month for a long period
@@ -188,13 +224,18 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                         }).join(' · ') + ' плана'
                         : `${pct(c.spent_minor, plan.monthLimit)} плана на месяц`}
                     </Text>
-                    {/* the category's plan per day × days of the period (fixed payments aren't split by days) */}
+                    {/* the category's norm over its own rhythm window (fixed payments aren't split by days) */}
                     {plan.kind === 'limit' ? (() => {
-                      const p = paceOf(c.spent_minor, plan.norm, norms?.monthToDate.get(c.category_id) ?? 0, plan.monthLimit);
+                      const p = paceOf(plan.windowSpent, plan.windowNorm, norms?.monthToDate.get(c.category_id) ?? 0, plan.monthLimit);
+                      const sameWindow = plan.window.from === range.from && plan.window.to === range.to;
+                      const label = sameWindow ? normLabel
+                        : plan.rhythm === 'month' ? `на месяц (с ${shortRange({ from: plan.window.from, to: plan.window.from })})`
+                          : `${plan.rhythm === 'week' ? 'на неделю' : 'на 2 недели'} ${shortRange(plan.window)}`;
                       return (
                         <TouchableOpacity style={styles.paceRow} onPress={() => setInfoOpen(true)} accessibilityLabel="Что значит цвет">
                           <Text style={[styles.share, styles.pace, p === 'ok' ? styles.paceOk : p === 'ahead' ? styles.paceAhead : styles.paceOver]}>
-                            {pct(c.spent_minor, plan.norm)} от плана {normLabel} ({formatShort(Math.round(plan.norm))} {cur})
+                            {sameWindow ? '' : `${formatShort(plan.windowSpent)} · `}
+                            {pct(plan.windowSpent, plan.windowNorm)} от плана {label} ({formatShort(Math.round(plan.windowNorm))} {cur})
                           </Text>
                           <InfoIcon color={colors.muted} size={15} />
                         </TouchableOpacity>
@@ -225,18 +266,20 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                 неделю — 800 × 7 / 31 ≈ 181 {cur}. Неделя на стыке месяцев считается по планам обоих месяцев.
               </Text>
               <Text style={styles.infoText}>
-                Строка под диаграммой — <Text style={styles.infoBold}>гибкие траты</Text> (еда, бары) за период против
-                их нормы. Можно где-то потратить больше, где-то меньше — важно, укладываетесь ли вы в сумме. Фиксированные
-                траты (аренда, подписки) приходят одним платежом и в норму не входят.
+                Строка под диаграммой — общий темп <Text style={styles.infoBold}>гибких трат</Text> по дням: где-то
+                больше, где-то меньше — важно, укладываетесь ли вы в сумме. Фиксированные траты (аренда, подписки) и
+                категории с нормой «в месяц» (крупные разовые покупки) в неё не входят.
               </Text>
               <Text style={styles.infoText}>
                 <Text style={styles.infoBold}>Категория с планом:</Text> полоска — какая часть плана категории на месяц
-                ушла за этот период. Под ней — доля категории во всех тратах за период и доля от её плана на месяц. Если
-                период захватывает два месяца, доля считается отдельно для каждого: траты в днях сентября — от плана
-                сентября, в днях октября — от плана октября.
-                Ниже — сколько потрачено от плана гибкой категории на эти дни (план на месяц / дни месяца × дни периода).
-                Купили одежду один раз на 60% плана — вы в рамках, перерасхода нет. Если период захватывает два
-                месяца, берётся план месяца, в котором период заканчивается.
+                ушла за этот период. Под ней — доля категории во всех тратах за период и доля от плана на месяц (на стыке
+                месяцев — отдельно для каждого месяца).
+              </Text>
+              <Text style={styles.infoText}>
+                <Text style={styles.infoBold}>Цветная строка</Text> — траты гибкой категории против её нормы. Норма
+                считается в ритме, заданном в плане: в день (еда), в неделю (бары), за 2 недели или в месяц (одежда).
+                Если период короче ритма, берётся неделя / 2 недели / месяц, куда он попадает, — например, для баров за
+                день видно всю неделю: «73 · 61% от плана на неделю 28 сен – 4 окт».
               </Text>
               <Text style={styles.infoText}>
                 <Text style={[styles.infoBold, styles.paceOk]}>Зелёный</Text> — за период потрачено не больше плана на эти дни.

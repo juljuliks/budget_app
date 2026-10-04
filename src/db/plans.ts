@@ -93,6 +93,14 @@ async function convertSpending(rows: SpendRow[], to: Currency, extraDates: strin
 /** 'limit' = spending cap (progress bar); 'fixed' = fixed payment like rent (paid / not paid). */
 export type PlanKind = 'limit' | 'fixed';
 
+/**
+ * The rhythm a flexible item's norm is counted in for period stats: food every day, bars per week, clothes per
+ * month. The norm of a window is the month's plan / days in the month × days of the window ('month' = the plan).
+ */
+export type NormPeriod = 'day' | 'week' | '2weeks' | 'month';
+export const NORM_PERIODS: NormPeriod[] = ['day', 'week', '2weeks', 'month'];
+const asNorm = (v: string | null | undefined): NormPeriod => (NORM_PERIODS.includes(v as NormPeriod) ? (v as NormPeriod) : 'day');
+
 export type PlanItem = {
   category_id: number;
   name: string;
@@ -105,6 +113,7 @@ export type PlanItem = {
   /** limit_minor converted (to the currency asked for in listPlan); null without a rate */
   converted_minor: number | null;
   kind: PlanKind;
+  norm_period: NormPeriod;
   pinned: boolean;
   /** amount of the same item in the month this plan was carried over from (placeholder hint) */
   previous_minor: number | null;
@@ -126,8 +135,8 @@ export async function ensureMonthPlan(ym: string, nowYm = currentYm()): Promise<
     const source = await db.get<{ ym: string }>('SELECT ym FROM plan_months WHERE ym < ? ORDER BY ym DESC LIMIT 1', [ym]);
     if (source) {
       await db.run(
-        `INSERT OR IGNORE INTO plan_items (ym, category_id, limit_minor, pinned, kind, currency)
-          SELECT ?, p.category_id, CASE WHEN p.pinned = 1 THEN p.limit_minor ELSE 0 END, p.pinned, p.kind, p.currency
+        `INSERT OR IGNORE INTO plan_items (ym, category_id, limit_minor, pinned, kind, currency, norm_period)
+          SELECT ?, p.category_id, CASE WHEN p.pinned = 1 THEN p.limit_minor ELSE 0 END, p.pinned, p.kind, p.currency, p.norm_period
           FROM plan_items p JOIN categories c ON c.id = p.category_id
           WHERE p.ym = ? AND c.deleted_at IS NULL`,
         [ym, source.ym]);
@@ -174,7 +183,7 @@ export async function listPlan(ym: string, to?: Currency): Promise<PlanItem[]> {
   const db = await getDb();
   const prev = await db.get<{ ym: string }>('SELECT ym FROM plan_months WHERE ym < ? ORDER BY ym DESC LIMIT 1', [ym]);
   const rows = await db.all<Omit<PlanItem, 'pinned' | 'converted_minor' | 'currency'> & { pinned: number; currency: string }>(
-    `SELECT p.category_id, c.name, c.emoji, c.type_id, ct.name AS type_name, p.limit_minor, p.currency, p.kind, p.pinned,
+    `SELECT p.category_id, c.name, c.emoji, c.type_id, ct.name AS type_name, p.limit_minor, p.currency, p.kind, p.norm_period, p.pinned,
         (SELECT q.limit_minor FROM plan_items q WHERE q.ym = ? AND q.category_id = p.category_id) AS previous_minor
       FROM plan_items p
       JOIN categories c ON c.id = p.category_id
@@ -187,6 +196,7 @@ export async function listPlan(ym: string, to?: Currency): Promise<PlanItem[]> {
   return rows.map((r) => ({
     ...r,
     currency: asCurrency(r.currency),
+    norm_period: asNorm(r.norm_period),
     converted_minor: conv(r.limit_minor, asCurrency(r.currency), target),
     pinned: r.pinned === 1,
     previous_minor: r.previous_minor || null,
@@ -245,12 +255,12 @@ async function markPlanned(ym: string) {
 }
 
 /** The category's amount, currency and kind in the latest earlier month that planned it with an amount. */
-export async function lastPlanItem(ym: string, categoryId: number): Promise<{ limit_minor: number; currency: Currency; kind: PlanKind } | null> {
+export async function lastPlanItem(ym: string, categoryId: number): Promise<{ limit_minor: number; currency: Currency; kind: PlanKind; norm_period: NormPeriod } | null> {
   const db = await getDb();
-  const row = await db.get<{ limit_minor: number; currency: string; kind: PlanKind }>(
-    `SELECT limit_minor, currency, kind FROM plan_items WHERE ym < ? AND category_id = ? AND limit_minor > 0
+  const row = await db.get<{ limit_minor: number; currency: string; kind: PlanKind; norm_period: string }>(
+    `SELECT limit_minor, currency, kind, norm_period FROM plan_items WHERE ym < ? AND category_id = ? AND limit_minor > 0
       ORDER BY ym DESC LIMIT 1`, [ym, categoryId]);
-  return row ? { ...row, currency: asCurrency(row.currency) } : null;
+  return row ? { ...row, currency: asCurrency(row.currency), norm_period: asNorm(row.norm_period) } : null;
 }
 
 /** Would `minor` in `currency` for this category still fit the month's amount to distribute? */
@@ -273,17 +283,19 @@ export async function addPlanItem(ym: string, categoryId: number, limitMinor?: n
   const db = await getDb();
   let amount = limitMinor ?? 0;
   let kind: PlanKind = 'limit';
+  let norm: NormPeriod = 'day';
   let cur = currency ?? (await planCurrency(ym));
   if (limitMinor === undefined) {
     const last = await lastPlanItem(ym, categoryId);
     if (last) {
       kind = last.kind;
+      norm = last.norm_period;
       cur = last.currency;
       if (!(await fits(ym, categoryId, last.limit_minor, last.currency))) amount = last.limit_minor;
     }
   }
-  await db.run('INSERT OR IGNORE INTO plan_items (ym, category_id, limit_minor, kind, currency) VALUES (?, ?, ?, ?, ?)',
-    [ym, categoryId, amount, kind, cur]);
+  await db.run('INSERT OR IGNORE INTO plan_items (ym, category_id, limit_minor, kind, currency, norm_period) VALUES (?, ?, ?, ?, ?, ?)',
+    [ym, categoryId, amount, kind, cur, norm]);
   await markPlanned(ym);
 }
 
@@ -291,7 +303,7 @@ export async function addPlanItem(ym: string, categoryId: number, limitMinor?: n
  * Sets (and adds, if missing) a plan item. `kind` is kept as is when omitted; `currency` too (a new item takes
  * the amount to distribute's). Refused (OverBudgetError) if the month's plan would exceed its amount to distribute.
  */
-export async function setPlanAmount(ym: string, categoryId: number, limitMinor: number, kind?: PlanKind, currency?: Currency) {
+export async function setPlanAmount(ym: string, categoryId: number, limitMinor: number, kind?: PlanKind, currency?: Currency, normPeriod?: NormPeriod) {
   // also adds the item (from the stats screen), so the month must exist with its carried-over items first
   await ensureMonthPlan(ym);
   limitMinor = Math.max(0, limitMinor);
@@ -301,9 +313,10 @@ export async function setPlanAmount(ym: string, categoryId: number, limitMinor: 
   const over = await fits(ym, categoryId, limitMinor, cur);
   if (over) throw over;
   await db.run(
-    `INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency) VALUES (?, ?, ?, coalesce(?, 'limit'), ?)
-      ON CONFLICT(ym, category_id) DO UPDATE SET limit_minor = excluded.limit_minor, kind = coalesce(?, kind), currency = excluded.currency`,
-    [ym, categoryId, limitMinor, kind ?? null, cur, kind ?? null]);
+    `INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency, norm_period) VALUES (?, ?, ?, coalesce(?, 'limit'), ?, coalesce(?, 'day'))
+      ON CONFLICT(ym, category_id) DO UPDATE SET limit_minor = excluded.limit_minor, kind = coalesce(?, kind), currency = excluded.currency,
+        norm_period = coalesce(?, norm_period)`,
+    [ym, categoryId, limitMinor, kind ?? null, cur, normPeriod ?? null, kind ?? null, normPeriod ?? null]);
   await markPlanned(ym);
 }
 
@@ -332,6 +345,8 @@ export type CategoryStat = {
   limit_minor: number | null;
   /** how the plan amount is shown: a progress bar (limit) or paid / not paid (fixed); null without a plan */
   plan_kind: PlanKind | null;
+  /** a flexible plan item's norm rhythm for period stats; null without a plan */
+  plan_norm: NormPeriod | null;
   /** chart color: the type's palette shade or the category's own (src/colors.ts) */
   color: string;
   /** deleted category that still has spending in this month: can't be added to a plan */
@@ -394,8 +409,9 @@ export async function monthStats(year: number, month: number, currency: Currency
 
   const colorOf = await categoryColors();
 
-  const cats = await db.all<{ id: number; name: string; emoji: string | null; type_id: number | null; type_name: string | null; limit_minor: number | null; plan_currency: string | null; plan_kind: PlanKind | null; deleted_at: number | null }>(
-    `SELECT c.id, c.name, c.emoji, c.type_id, ct.name AS type_name, p.limit_minor, p.currency AS plan_currency, p.kind AS plan_kind, c.deleted_at
+  const cats = await db.all<{ id: number; name: string; emoji: string | null; type_id: number | null; type_name: string | null; limit_minor: number | null; plan_currency: string | null; plan_kind: PlanKind | null; plan_norm: string | null; deleted_at: number | null }>(
+    `SELECT c.id, c.name, c.emoji, c.type_id, ct.name AS type_name, p.limit_minor, p.currency AS plan_currency, p.kind AS plan_kind,
+        p.norm_period AS plan_norm, c.deleted_at
       FROM categories c
       LEFT JOIN category_types ct ON ct.id = c.type_id
       LEFT JOIN plan_items p ON p.category_id = c.id AND p.ym = ?`, [ym]);
@@ -408,6 +424,7 @@ export async function monthStats(year: number, month: number, currency: Currency
     categories.push({
       category_id: c.id, name: c.name, emoji: c.emoji, type_id: c.type_id, type_name: c.type_name, spent_minor: s, limit_minor: limit,
       plan_kind: limit === null ? null : c.plan_kind,
+      plan_norm: limit === null ? null : asNorm(c.plan_norm),
       color: colorOf.get(c.id) ?? NEUTRAL_COLOR, deleted: c.deleted_at !== null,
     });
   }
@@ -415,7 +432,7 @@ export async function monthStats(year: number, month: number, currency: Currency
   if (uncategorized !== 0) {
     categories.push({
       category_id: null, name: 'Без категории', emoji: null, type_id: null, type_name: null,
-      spent_minor: uncategorized, limit_minor: null, plan_kind: null, color: NEUTRAL_COLOR, deleted: false,
+      spent_minor: uncategorized, limit_minor: null, plan_kind: null, plan_norm: null, color: NEUTRAL_COLOR, deleted: false,
     });
   }
   categories.sort((a, b) => b.spent_minor - a.spent_minor || (b.limit_minor ?? 0) - (a.limit_minor ?? 0));
@@ -453,13 +470,13 @@ export async function periodStats(from: number, to: number, currency: Currency =
   const colorOf = await categoryColors();
   const categories: CategoryStat[] = cats.map((c) => ({
     category_id: c.id, name: c.name, emoji: c.emoji, type_id: c.type_id, type_name: c.type_name, spent_minor: spentBy.get(c.id)!,
-    limit_minor: null, plan_kind: null, color: colorOf.get(c.id) ?? NEUTRAL_COLOR, deleted: c.deleted_at !== null,
+    limit_minor: null, plan_kind: null, plan_norm: null, color: colorOf.get(c.id) ?? NEUTRAL_COLOR, deleted: c.deleted_at !== null,
   }));
   const none = spentBy.get(null) ?? 0;
   if (none !== 0) {
     categories.push({
       category_id: null, name: 'Без категории', emoji: null, type_id: null, type_name: null, spent_minor: none,
-      limit_minor: null, plan_kind: null, color: NEUTRAL_COLOR, deleted: false,
+      limit_minor: null, plan_kind: null, plan_norm: null, color: NEUTRAL_COLOR, deleted: false,
     });
   }
   const positive = categories.filter((c) => c.spent_minor > 0).sort((a, b) => b.spent_minor - a.spent_minor);

@@ -19,6 +19,8 @@ import PlanAmountModal, { PlanAmountTarget } from './PlanAmountModal';
 import { chart, colors } from '../theme';
 
 
+const NORM_LABELS = { day: 'норма в день', week: 'норма в неделю', '2weeks': 'норма на 2 недели', month: 'норма в месяц' } as const;
+
 /** Share of the amount to distribute, "35%"; "<1%" for tiny non-zero amounts. */
 function percentOf(part: number, whole: number): string {
   if (part <= 0 || whole <= 0) return '';
@@ -163,10 +165,12 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
               <View style={styles.nameBox}>
                 {/* the type is the section title, so just emoji + name here */}
                 <Text style={styles.name} numberOfLines={1}>{`${item.emoji || ''} ${item.name}`.trim()}</Text>
-                {item.kind === 'fixed' || (shownBudget && item.converted_minor) ? (
+                {item.kind === 'fixed' || item.norm_period !== 'day' || (shownBudget && item.converted_minor) ? (
                   <Text style={styles.percent}>
                     {[
                       item.kind === 'fixed' ? 'фиксированная трата' : '',
+                      // the norm's rhythm, when not the default "per day"
+                      item.kind === 'limit' && item.norm_period !== 'day' ? NORM_LABELS[item.norm_period] : '',
                       shownBudget && item.converted_minor ? `${percentOf(item.converted_minor, shownBudget)} дохода` : '',
                     ].filter(Boolean).join(' · ')}
                   </Text>

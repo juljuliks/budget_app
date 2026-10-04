@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Currency } from '../../db/fx';
-import { getPlanBudget, lastPlanItem, OverBudgetError, PlanKind, plannedTotal, setPlanAmount } from '../../db/plans';
+import { getPlanBudget, lastPlanItem, NormPeriod, OverBudgetError, PlanKind, plannedTotal, setPlanAmount } from '../../db/plans';
+import { Text } from 'react-native';
+import Segmented from '../Segmented';
+import { formStyles } from '../formStyles';
 import CurrencyPicker from '../CurrencyPicker';
 import { formatWithCurrency, parseAmountOrZero, toInputValue } from '../money';
 import RadioGroup from '../RadioGroup';
@@ -11,6 +14,8 @@ const KINDS = [
   ['fixed', 'Фиксированная трата', 'Аренда, кредит, подписки — сумма одна и та же каждый месяц'],
 ] as const;
 
+const NORMS = [['day', 'День'], ['week', 'Неделя'], ['2weeks', '2 недели'], ['month', 'Месяц']] as const;
+
 export type PlanAmountTarget = {
   category_id: number;
   label: string;
@@ -20,6 +25,8 @@ export type PlanAmountTarget = {
   currency: Currency;
   /** current kind; a category not in the plan yet starts as a limit */
   kind?: PlanKind;
+  /** how a flexible item's norm is counted in period stats */
+  norm_period?: NormPeriod;
 };
 
 type Props = {
@@ -40,6 +47,7 @@ export default function PlanAmountModal({ ym, target, onClose, onSaved }: Props)
   // free for this category = amount to distribute − the other categories; null = no amount set
   const [free, setFree] = useState<{ minor: number; currency: Currency } | null>(null);
   const [kind, setKind] = useState<PlanKind>('limit');
+  const [norm, setNorm] = useState<NormPeriod>('day');
   const [currency, setCurrency] = useState<Currency>('GEL');
   // the field starts with the current amount, or the category's amount from the last month that planned it
   const [initial, setInitial] = useState('');
@@ -48,6 +56,7 @@ export default function PlanAmountModal({ ym, target, onClose, onSaved }: Props)
   useEffect(() => {
     if (!target) return;
     setKind(target.kind ?? 'limit');
+    setNorm(target.norm_period ?? 'day');
     setCurrency(target.currency);
     setInitial(toInputValue(target.limit_minor));
     (async () => {
@@ -59,6 +68,7 @@ export default function PlanAmountModal({ ym, target, onClose, onSaved }: Props)
         setInitial(toInputValue(last.limit_minor));
         setCurrency(last.currency);
         if (!target.kind) setKind(last.kind);
+        if (!target.norm_period) setNorm(last.norm_period);
       }
     })().catch((e) => console.error('load plan budget failed', e));
   }, [ym, target]);
@@ -68,7 +78,7 @@ export default function PlanAmountModal({ ym, target, onClose, onSaved }: Props)
     const minor = parseAmountOrZero(text);
     if (minor === null) return 'Введите сумму, например 1500 или 12.50';
     try {
-      await setPlanAmount(ym, target.category_id, minor, kind, currency);
+      await setPlanAmount(ym, target.category_id, minor, kind, currency, norm);
     } catch (e) {
       if (!(e instanceof OverBudgetError)) throw e;
       return `Больше суммы к планированию. Свободно для этой категории: ${free ? formatWithCurrency(free.minor, free.currency) : '0'}.`;
@@ -97,6 +107,19 @@ export default function PlanAmountModal({ ym, target, onClose, onSaved }: Props)
     >
       <CurrencyPicker value={currency} onChange={setCurrency} />
       <RadioGroup options={KINDS} value={kind} onChange={setKind} />
+      {kind === 'limit' ? (
+        <>
+          {/* the rhythm the category is spent in: its norm in day / week stats is counted per this period */}
+          <Text style={formStyles.label}>Норма считается за</Text>
+          <Segmented options={NORMS} value={norm} onChange={setNorm} />
+          <Text style={formStyles.hint}>
+            {norm === 'day' ? 'Еда, транспорт — тратим понемногу каждый день.'
+              : norm === 'week' ? 'Бары, кафе — бывает раз-два в неделю.'
+                : norm === '2weeks' ? 'Траты раз в пару недель.'
+                  : 'Одежда, техника — пара покупок в месяц.'}
+          </Text>
+        </>
+      ) : null}
     </TextInputModal>
   );
 }

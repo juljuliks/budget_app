@@ -27,3 +27,20 @@ describe('period norms helpers', () => {
     expect(daysInMonth('2026-10')).toBe(31);
   });
 });
+
+describe('norm windows', () => {
+  const { normWindow, shortRange } = require('../src/ui/dateRange');
+  const day = { from: '2026-10-03', to: '2026-10-03' };
+  const week = { from: '2026-09-28', to: '2026-10-04' };
+  test('a rhythm no longer than the viewed period: the period itself', () => {
+    expect(normWindow('day', day)).toEqual(day);
+    expect(normWindow('week', week)).toEqual(week);
+  });
+  test('a longer rhythm: the week / two weeks / month so far around the period end', () => {
+    expect(normWindow('week', day)).toEqual(week);
+    expect(normWindow('2weeks', day)).toEqual({ from: '2026-09-21', to: '2026-10-04' });
+    expect(normWindow('2weeks', week)).toEqual({ from: '2026-09-21', to: '2026-10-04' });
+    expect(normWindow('month', week)).toEqual({ from: '2026-10-01', to: '2026-10-04' });
+    expect(shortRange(week)).toBe('28 сен – 4 окт');
+  });
+});
