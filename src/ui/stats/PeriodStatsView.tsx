@@ -10,7 +10,7 @@ import { InfoIcon } from '../icons';
 import Meter from '../Meter';
 import { formatShort } from '../money';
 import { plural } from '../format';
-import { colors } from '../theme';
+import { colors, meterColor } from '../theme';
 import { DonutCenter } from './StatsView';
 
 /** Periods up to this long are measured against the plan (its share for these days); longer ones aren't. */
@@ -141,6 +141,13 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                       {pct(c.spent_minor, stats.spent_minor)} всех трат за период
                       {' · '}{pct(c.spent_minor, plan.monthLimit)} плана на месяц
                     </Text>
+                    {/* the category's plan per day × days of the period (fixed payments aren't split by days) */}
+                    {plan.kind === 'limit' ? (
+                      // colored like the month's bars: green on pace, amber close to the plan, red over it
+                      <Text style={[styles.share, styles.pace, { color: meterColor(plan.norm > 0 ? c.spent_minor / plan.norm : 0) }]}>
+                        {pct(c.spent_minor, plan.norm)} от плана {normLabel} ({formatShort(Math.round(plan.norm))} {cur})
+                      </Text>
+                    ) : null}
                   </>
                 ) : (
                   <Text style={styles.share}>{pct(c.spent_minor, stats.spent_minor)} всех трат за период</Text>
@@ -173,6 +180,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
               <Text style={styles.infoText}>
                 <Text style={styles.infoBold}>Категория с планом:</Text> полоска — какая часть плана категории на месяц
                 ушла за этот период. Под ней — доля категории во всех тратах за период и доля от её плана на месяц.
+                Ниже — сколько потрачено от плана гибкой категории на эти дни (план на месяц / дни месяца × дни периода): зелёный — в рамках, жёлтый — близко, красный — больше плана.
                 Купили одежду один раз на 60% плана — вы в рамках, перерасхода нет. Если период захватывает два
                 месяца, берётся план месяца, в котором период заканчивается.
               </Text>
@@ -214,6 +222,7 @@ const styles = StyleSheet.create({
   rowTop: { flexDirection: 'row', alignItems: 'center' },
   dot: { width: 10, height: 10, borderRadius: 5, marginRight: 8 },
   name: { flex: 1, fontSize: 15, color: colors.text },
+  pace: { fontWeight: '600' },
   share: { fontSize: 13, color: colors.muted, marginTop: 4, fontVariant: ['tabular-nums'] },
   amount: { fontSize: 15, color: colors.text, fontVariant: ['tabular-nums'] },
   info: { paddingHorizontal: 20, gap: 10 },
