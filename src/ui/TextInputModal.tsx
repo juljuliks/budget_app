@@ -38,12 +38,13 @@ export default function TextInputModal({
   useEffect(() => {
     if (visible) { setValue(initialValue); setError(null); setSaving(false); }
   }, [visible, initialValue]);
-  // the keyboard opens once the sheet has slid up (autoFocus during the animation doesn't show it)
+  // an empty field gets the keyboard once the sheet has slid up (autoFocus during the animation doesn't show it);
+  // a prefilled one doesn't: the keyboard would cover the other choices (currency, kind, norm)
   useEffect(() => {
-    if (!visible) return undefined;
+    if (!visible || initialValue) return undefined;
     const t = setTimeout(() => input.current?.focus(), 300);
     return () => clearTimeout(t);
-  }, [visible]);
+  }, [visible, initialValue]);
 
   async function submit() {
     if (!value.trim() && !allowEmpty) { setError('Введите название'); return; }
