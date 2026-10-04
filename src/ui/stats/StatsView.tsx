@@ -109,7 +109,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
         ))
       )}
 
-      <RefundsRow amount={stats.refunds_unassigned_minor} currency={stats.currency} onPress={() => openTransactions(null, monthDays(ym))} />
+      <RefundsRow amount={stats.refunds_unassigned_minor} currency={stats.currency} onPress={() => openTransactions(null, monthDays(ym), ['refund'])} />
       {stats.other_currencies.length > 0 ? (
         <Text style={styles.hint}>
           {NO_RATE} {stats.other_currencies.map((o) => formatMoneyWithCurrency(o.spent_minor, o.currency)).join(', ')}
@@ -125,7 +125,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
 export function RefundsRow({ amount, currency, onPress }: { amount: number; currency: Currency; onPress: () => void }) {
   if (amount <= 0) return null;
   return (
-    <TouchableOpacity style={styles.refundsRow} onPress={onPress} accessibilityHint="Показать операции без категории">
+    <TouchableOpacity style={styles.refundsRow} onPress={onPress} accessibilityHint="Показать возвраты без категории">
       <Text style={styles.refundsLabel}>↩ Возвраты без категории</Text>
       <Text style={styles.refundsAmount}>−{formatWithCurrency(amount, currency)}</Text>
     </TouchableOpacity>

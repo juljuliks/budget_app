@@ -4,7 +4,7 @@ import { RouteProp, useFocusEffect, useNavigation, useRoute } from '@react-navig
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { HeaderBackButton } from '@react-navigation/elements';
 import {
-  categoriesWithTransactions, CategoryFilter, CategoryWithCount, isUnread, TxFilter, listTransactionsFiltered, listTransactionsPage,
+  categoriesWithTransactions, CategoryFilter, CategoryWithCount, isUnread, kindsWithTransactions, TxFilter, listTransactionsFiltered, listTransactionsPage,
   markTransactionsSeen, merchantsWithTransactions, MerchantWithCount, PageCursor, searchTransactions, TransactionRow,
 } from '../db/transactions';
 import { emitTransactionsChanged, onTransactionsChanged } from '../events';
@@ -21,7 +21,7 @@ import Fab from './Fab';
 import PushAccessBanner from './PushAccessBanner';
 import CardBalance from './CardBalance';
 import SettingsButton from './SettingsButton';
-import { dayKey, formatDay, plural } from './format';
+import { dayKey, formatDay, KIND_LABELS, plural } from './format';
 import { formatWithCurrency } from './money';
 import { formStyles } from './formStyles';
 import { ChevronRightIcon, PencilIcon, SearchIcon } from './icons';
@@ -34,21 +34,21 @@ import TransactionItem from './TransactionItem';
 const PAGE_SIZE = 50;
 
 type Filter = {
-  query: string; categories: CategoryFilter[]; merchants: string[]; range: DayRange | null;
+  query: string; categories: CategoryFilter[]; merchants: string[]; kinds: string[]; range: DayRange | null;
   /** deleting a category: only its transactions from this month on */
   from?: number;
 };
 
-/** Every filter set applies at once: text, categories (any of), merchants (any of) and dates combine. */
+/** Every filter set applies at once: text, categories (any of), merchants (any of), kinds (any of) and dates combine. */
 function isFilterActive(f: Filter): boolean {
-  return f.query.trim() !== '' || f.categories.length > 0 || f.merchants.length > 0 || f.range !== null;
+  return f.query.trim() !== '' || f.categories.length > 0 || f.merchants.length > 0 || f.kinds.length > 0 || f.range !== null;
 }
 
 async function runFilterQuery(f: Filter): Promise<TransactionRow[] | null> {
   if (!isFilterActive(f)) return null;
   const r = f.range ? rangeToUnix(f.range) : undefined;
   const from = r && f.from !== undefined ? Math.max(r.from, f.from) : r?.from ?? f.from;
-  const tx: TxFilter = { categories: f.categories, merchants: f.merchants, from, to: r?.to };
+  const tx: TxFilter = { categories: f.categories, merchants: f.merchants, kinds: f.kinds, from, to: r?.to };
   return f.query.trim() ? searchTransactions(f.query, tx) : listTransactionsFiltered(tx);
 }
 
@@ -78,12 +78,14 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
   const [query, setQuery] = useState('');
   const [categories, setCategories] = useState<CategoryFilter[]>(deleting ? [deleteCategoryId!] : []);
   const [merchants, setMerchants] = useState<string[]>([]);
+  const [kinds, setKinds] = useState<string[]>([]);
+  const [kindOptions, setKindOptions] = useState<Array<{ kind: string; count: number }>>([]);
   // which picker sheet is open
-  const [sheet, setSheet] = useState<'category' | 'date' | 'all' | null>(null);
+  const [sheet, setSheet] = useState<'category' | 'kind' | 'date' | 'all' | null>(null);
   const [range, setRange] = useState<DayRange | null>(null);
   const [categoryOptions, setCategoryOptions] = useState<CategoryWithCount[]>([]);
   const [merchantOptions, setMerchantOptions] = useState<MerchantWithCount[]>([]);
-  const filter: Filter = { query, categories, merchants, range, from: deleting ? monthStart(currentYm()) : undefined };
+  const filter: Filter = { query, categories, merchants, kinds, range, from: deleting ? monthStart(currentYm()) : undefined };
   // read by refreshAll without making it change (and re-run focus effects) on every keystroke
   const filterRef = useRef(filter);
   filterRef.current = filter;
@@ -92,17 +94,17 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
 
   // opened from the stats screen: filter by that category
   const route = useRoute<RouteProp<TabParamList, 'Transactions'>>();
-  const { category: incomingCategory, merchant: incomingMerchant, range: incomingRange, nonce, from } = route.params ?? {};
+  const { category: incomingCategory, merchant: incomingMerchant, range: incomingRange, kinds: incomingKinds, nonce, from } = route.params ?? {};
   // the other filters are cleared: only what was asked for is shown
   useEffect(() => {
     if (incomingCategory === undefined) return;
     setQuery(''); setMerchants([]);
-    setCategories([incomingCategory]); setRange(incomingRange ?? null);
+    setCategories([incomingCategory]); setRange(incomingRange ?? null); setKinds(incomingKinds ?? []);
   }, [incomingCategory, nonce]);
   // opened from a merchant's card: filter by that merchant
   useEffect(() => {
     if (incomingMerchant === undefined) return;
-    setQuery(''); setCategories([]); setRange(null);
+    setQuery(''); setCategories([]); setRange(null); setKinds([]);
     setMerchants([incomingMerchant]);
   }, [incomingMerchant, nonce]);
 
@@ -132,6 +134,7 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
   const loadCategoryOptions = useCallback(() => {
     categoriesWithTransactions().then(setCategoryOptions).catch((e) => console.error('load category filter failed', e));
     merchantsWithTransactions().then(setMerchantOptions).catch((e) => console.error('load merchant filter failed', e));
+    kindsWithTransactions().then(setKindOptions).catch((e) => console.error('load kind filter failed', e));
   }, []);
 
   const loadMore = useCallback(async () => {
@@ -168,7 +171,7 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
   }, [query, runFilter]);
   useEffect(() => {
     runFilter(filterRef.current).catch((e) => console.error('filter failed', e));
-  }, [categories, merchants, range, runFilter]);
+  }, [categories, merchants, kinds, range, runFilter]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -183,6 +186,9 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
   for (const cat of categories) {
     const c = categoryOptions.find((o) => o.category === cat);
     activeFilters.push({ key: `c${cat}`, label: c ? `${c.emoji || ''} ${c.name}`.trim() : cat === 'none' ? 'Без категории' : 'Категория', clear: () => setCategories((p) => p.filter((x) => x !== cat)) });
+  }
+  for (const k of kinds) {
+    activeFilters.push({ key: `k${k}`, label: KIND_LABELS[k] ?? k, clear: () => setKinds((p) => p.filter((x) => x !== k)) });
   }
   for (const mer of merchants) {
     const m = merchantOptions.find((o) => o.merchant === mer);
@@ -270,13 +276,14 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
     setQuery('');
     setCategories(deleting ? [deleteCategoryId!] : []);
     setMerchants([]);
+    setKinds([]);
     setRange(null);
   }
 
   // came here from another screen (not the tab bar): back returns there with the filter cleared
   function goBack() {
     const target = from;
-    tabNavigation.setParams({ from: undefined, category: undefined, merchant: undefined, range: undefined });
+    tabNavigation.setParams({ from: undefined, category: undefined, merchant: undefined, range: undefined, kinds: undefined });
     resetFilters();
     if (target) tabNavigation.navigate(target);
   }
@@ -424,6 +431,7 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
                 (it matches the merchant name); a merchant card still opens the list filtered by its merchant, shown as a chip */}
             <View style={[styles.chipsWrap, styles.activeRow, styles.filterButtons]}>
               <FilterButton label="Категория" count={categories.length} active={categories.length > 0} onPress={() => setSheet('category')} />
+              <FilterButton label="Тип" count={kinds.length} active={kinds.length > 0} onPress={() => setSheet('kind')} />
               <FilterButton label="Дата" active={range !== null} onPress={() => setSheet('date')} />
             </View>
             {activeFilters.length > 0 ? (
@@ -527,6 +535,15 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
         selected={categories}
         onToggle={(k) => setCategories((p) => toggleIn(p, k))}
         onClear={() => setCategories([])}
+        onClose={() => setSheet(null)}
+      />
+      <OptionsSheet
+        visible={sheet === 'kind'}
+        title="Тип операции"
+        options={kindOptions.map((o) => ({ key: o.kind, label: KIND_LABELS[o.kind] ?? o.kind, count: o.count }))}
+        selected={kinds}
+        onToggle={(k) => setKinds((p) => toggleIn(p, k))}
+        onClear={() => setKinds([])}
         onClose={() => setSheet(null)}
       />
       <DateSheet visible={sheet === 'date'} value={range} onChange={setRange} onClose={() => setSheet(null)} />

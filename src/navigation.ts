@@ -10,7 +10,7 @@ export type TabParamList = {
    * open filtered by a category ('none' = uncategorized), within a range (the stats month); nonce re-applies the same one.
    * from: the tab we came from (not via the tab bar) -> a back button in the header returns there.
    */
-  Transactions: { category?: number | 'none'; merchant?: string; range?: DayRange; nonce?: number; from?: keyof TabParamList } | undefined;
+  Transactions: { category?: number | 'none'; merchant?: string; range?: DayRange; kinds?: string[]; nonce?: number; from?: keyof TabParamList } | undefined;
 };
 
 /** Screens pushed over the tab bar. */
@@ -51,8 +51,8 @@ export function useRootNavigation() {
  */
 export function useOpenCategoryTransactions() {
   const navigation = useNavigation<BottomTabNavigationProp<TabParamList>>();
-  return (categoryId: number | null, range?: DayRange) =>
-    navigation.navigate('Transactions', { category: categoryId ?? 'none', range, nonce: Date.now(), from: 'Stats' });
+  return (categoryId: number | null, range?: DayRange, kinds?: string[]) =>
+    navigation.navigate('Transactions', { category: categoryId ?? 'none', range, kinds, nonce: Date.now(), from: 'Stats' });
 }
 
 /** Goes back to the previous screen, merging `params` into its params (e.g. hand back a just-created id). */

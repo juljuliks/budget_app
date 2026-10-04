@@ -35,3 +35,12 @@ test('several categories (with "Без категории") match any of them', 
   expect(amounts(await listTransactionsFiltered({ categories: [taxi, 'none'] }))).toEqual([3, 4]);
   expect(amounts(await listTransactionsFiltered({ categories: [] }))).toEqual([1, 2, 3, 4]);
 });
+
+test('kinds filter: only refunds, combined with "Без категории"', async () => {
+  await addManualTransaction({ amount_minor: 1, category_id: null, kind: 'purchase' });
+  await addManualTransaction({ amount_minor: 2, category_id: null, kind: 'refund' });
+  await addManualTransaction({ amount_minor: 3, category_id: null, kind: 'deposit' });
+  const amounts = (rows: Array<{ amount_minor: number }>) => rows.map((r) => r.amount_minor).sort((a, b) => a - b);
+  expect(amounts(await listTransactionsFiltered({ categories: ['none'], kinds: ['refund'] }))).toEqual([2]);
+  expect(amounts(await listTransactionsFiltered({ kinds: ['refund', 'deposit'] }))).toEqual([2, 3]);
+});

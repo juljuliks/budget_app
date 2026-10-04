@@ -74,6 +74,8 @@ export type TxFilter = {
   categories?: CategoryFilter[];
   /** any of these merchants */
   merchants?: string[];
+  /** any of these kinds ('purchase', 'refund', …) */
+  kinds?: string[];
   /** unix seconds, [from, to) */
   from?: number;
   to?: number;
@@ -94,6 +96,10 @@ function filterWhere(f: TxFilter): { sql: string; params: Array<number | string>
     if (ids.length) { any.push(`t.category_id IN (${ids.map(() => '?').join(',')})`); params.push(...ids); }
     if (f.categories.includes('none')) any.push('t.category_id IS NULL');
     where.push(`(${any.join(' OR ')})`);
+  }
+  if (f.kinds?.length) {
+    where.push(`t.kind IN (${f.kinds.map(() => '?').join(',')})`);
+    params.push(...f.kinds);
   }
   if (f.merchants?.length) {
     where.push(`${merchantIdSql('t')} IN (${f.merchants.map(() => '?').join(',')})`);
@@ -133,6 +139,12 @@ export async function searchTransactions(query: string, f: TxFilter = {}, limit 
     }
   }
   return out;
+}
+
+/** Kinds that occur, with their counts, for the "Тип" filter. */
+export async function kindsWithTransactions(): Promise<Array<{ kind: string; count: number }>> {
+  const db = await getDb();
+  return db.all<{ kind: string; count: number }>('SELECT kind, count(*) AS count FROM transactions GROUP BY kind ORDER BY count DESC');
 }
 
 export type CategoryWithCount = {

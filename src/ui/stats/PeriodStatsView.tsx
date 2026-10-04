@@ -227,7 +227,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
           })}
         </View>
       ))}
-      <RefundsRow amount={stats.refunds_unassigned_minor} currency={stats.currency} onPress={() => openTransactions(null, range)} />
+      <RefundsRow amount={stats.refunds_unassigned_minor} currency={stats.currency} onPress={() => openTransactions(null, range, ['refund'])} />
       {stats.other_currencies.length > 0 ? (
         <Text style={styles.hint}>
           {NO_RATE} {stats.other_currencies.map((o) => formatWithCurrency(o.spent_minor, o.currency)).join(', ')}
