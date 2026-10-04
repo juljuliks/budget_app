@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import BottomSheet from './BottomSheet';
 import { sheetAlert } from './sheetAlert';
@@ -38,15 +38,20 @@ export default function MerchantCard({ merchantId, categories, onClose, onChange
   const [renaming, setRenaming] = useState(false);
   const [excluded, setExcluded] = useState<string[]>([]);
 
+  // the parent passes onClose inline: kept in a ref so a parent re-render doesn't reset and reload the card
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
   const load = useCallback(() => {
     if (merchantId === null) return;
     getMerchant(merchantId).then((d) => {
       setM(d);
       // the group is gone (all members excluded)
-      if (!d) onClose();
+      if (!d) onCloseRef.current();
     }).catch((e) => console.error('load merchant failed', e));
-  }, [merchantId, onClose]);
+  }, [merchantId]);
 
+  // a new merchant: start clean
   useEffect(() => {
     setPicking(false);
     setExcluded([]);
