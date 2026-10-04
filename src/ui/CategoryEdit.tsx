@@ -40,6 +40,8 @@ export default function CategoryEdit({ route, navigation }: Props) {
   const [taken, setTaken] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  // the category as loaded: "Сохранить" shows only once something differs from it
+  const [original, setOriginal] = useState<{ name: string; emoji: string; typeId: number | null; color: string | null } | null>(null);
 
   useEffect(() => {
     navigation.setOptions({ title: isNew ? 'Новая категория' : 'Категория' });
@@ -50,6 +52,7 @@ export default function CategoryEdit({ route, navigation }: Props) {
       setEmoji(c.emoji ?? '');
       setTypeId(c.type_id);
       setColor(c.color);
+      setOriginal({ name: c.name, emoji: c.emoji ?? '', typeId: c.type_id, color: c.color });
     }).catch((e) => console.error('load category failed', e));
   }, [categoryId, isNew, navigation]);
 
@@ -108,6 +111,9 @@ export default function CategoryEdit({ route, navigation }: Props) {
       setSaving(false);
     }
   }
+
+  const changed = original !== null && (name.trim() !== original.name || emoji.trim() !== original.emoji.trim()
+    || typeId !== original.typeId || color !== original.color);
 
   // the type's shades first: a type reads as one color family on the charts
   const colorOptions = freeCategoryColors(types, typeId, taken, color);
@@ -173,10 +179,10 @@ export default function CategoryEdit({ route, navigation }: Props) {
       {isNew && txIds?.length ? <Text style={formStyles.hint}>Категория будет назначена выбранным операциям ({txIds.length}).</Text> : null}
       {isNew && planYm ? <Text style={formStyles.hint}>Категория будет добавлена в план этого месяца.</Text> : null}
 
-      <Button title="Сохранить" disabled={saving} onPress={save} style={styles.button} />
+      {isNew || changed ? <Button title="Сохранить" disabled={saving} onPress={save} style={styles.button} /> : null}
       {/* an existing category: deleting it first moves its operations of this month (CategoryDelete) */}
       {!isNew ? (
-        <Button title="Удалить категорию" danger disabled={saving} onPress={() => navigation.navigate('CategoryDelete', { categoryId: categoryId! })} style={styles.deleteButton} />
+        <Button title="Удалить категорию" danger disabled={saving} onPress={() => navigation.navigate('CategoryDelete', { categoryId: categoryId! })} style={changed ? styles.deleteButton : styles.button} />
       ) : null}
       <TypeEditModal
         visible={typeOpen}
