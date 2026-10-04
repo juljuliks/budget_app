@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { averageFullMonths, NormPeriod, parseYm, periodStats, PeriodStats } from '../../db/plans';
 import { useDisplayCurrency } from '../../displayCurrency';
+import { useOpenCategoryTransactions } from '../../navigation';
 import { onTransactionsChanged } from '../../events';
 import BottomSheet from '../BottomSheet';
 import Button from '../Button';
@@ -61,6 +62,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
   const [average, setAverage] = useState<{ average_minor: number; months: number } | null | undefined>(undefined);
   // the app's currency (Настройки → Валюта)
   const currency = useDisplayCurrency();
+  const openTransactions = useOpenCategoryTransactions();
   const days = rangeDays(range);
   const pace = days <= PACE_MAX_DAYS;
 
@@ -145,7 +147,13 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
             const mtd = (c.category_id !== null && norms?.monthToDate.get(c.category_id)) || 0;
             const name = `${c.emoji || ''} ${c.name}`.trim();
             return (
-              <View key={String(c.category_id)} style={styles.row}>
+              // tap: the category's operations in this period (the ⓘ line inside keeps its own tap)
+              <TouchableOpacity
+                key={String(c.category_id)}
+                style={styles.row}
+                onPress={() => openTransactions(c.category_id, range)}
+                accessibilityHint="Показать операции категории за период"
+              >
                 <View style={styles.rowTop}>
                   <View style={[styles.dot, { backgroundColor: c.color }]} />
                   <Text style={styles.name} numberOfLines={1}>{name}</Text>
@@ -184,7 +192,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                 ) : (
                   <Text style={styles.share}>{pct(c.spent_minor, stats.spent_minor)} всех трат</Text>
                 )}
-              </View>
+              </TouchableOpacity>
             );
           })}
         </View>

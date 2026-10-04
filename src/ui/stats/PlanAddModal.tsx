@@ -4,7 +4,7 @@ import BottomSheet from '../BottomSheet';
 import { Category, categoryLabel, listCategories } from '../../db/categories';
 import { Currency } from '../../db/fx';
 import { addPlanItem, getPlanBudget, lastPlanItem, PlanBudget, planConverter, PlanKind, plannedTotal, setPlanAmount } from '../../db/plans';
-import CurrencyPicker from '../CurrencyPicker';
+import CurrencyButton from '../CurrencyButton';
 import Button from '../Button';
 import Checkbox from '../Checkbox';
 import { currencySymbol, formatShort, formatWithCurrency, parseAmountOrZero } from '../money';
@@ -27,14 +27,16 @@ type Row = Category & { last: { limit_minor: number; currency: Currency; kind: P
 /**
  * "＋" on the plan: every category not in the plan yet with an amount field; several are added at once.
  * Typing an amount ticks the row; a ticked row without an amount takes last time's amount (addPlanItem).
- * Typed amounts are in the currency picked on top; the total (converted) can't go over what is still free of
- * the amount to distribute.
+ * Each row has its own currency (last time's, else the screen's); the total (converted) can't go over what is still
+ * free of the month's budget.
  */
 export default function PlanAddModal({ ym, currency: screenCurrency, visible, plannedIds, onClose, onSaved }: Props) {
   const [rows, setRows] = useState<Row[]>([]);
   const [checked, setChecked] = useState<Set<number>>(new Set());
   const [amounts, setAmounts] = useState<Record<number, string>>({});
-  const [currency, setCurrency] = useState<Currency>(screenCurrency);
+  // each row's currency, when changed from its default (last time's, else the screen's)
+  const [currencies, setCurrencies] = useState<Record<number, Currency>>({});
+  const currencyOf = (r: Row): Currency => currencies[r.id] ?? r.last?.currency ?? screenCurrency;
   // what is still free, in the amount to distribute's currency, and a converter to it
   const [budget, setBudget] = useState<PlanBudget | null>(null);
   const [free, setFree] = useState<number | null>(null);
@@ -48,7 +50,7 @@ export default function PlanAddModal({ ym, currency: screenCurrency, visible, pl
     setAmounts({});
     setError(null);
     setSaving(false);
-    setCurrency(screenCurrency);
+    setCurrencies({});
     (async () => {
       const cats = (await listCategories()).filter((c) => !plannedIds.includes(c.id));
       setRows(await Promise.all(cats.map(async (c) => ({ ...c, last: await lastPlanItem(ym, c.id) }))));
@@ -80,14 +82,14 @@ export default function PlanAddModal({ ym, currency: screenCurrency, visible, pl
   /** What each ticked row adds: its own amount in the picked currency, or last time's (what addPlanItem takes) */
   function plannedAmount(r: Row): { minor: number; currency: Currency } | null {
     const text = amounts[r.id]?.trim();
-    if (!text) return { minor: r.last?.limit_minor ?? 0, currency: r.last?.currency ?? currency };
+    if (!text) return { minor: r.last?.limit_minor ?? 0, currency: r.last?.currency ?? currencyOf(r) };
     const minor = parseAmountOrZero(text);
-    return minor === null ? null : { minor, currency };
+    return minor === null ? null : { minor, currency: currencyOf(r) };
   }
 
   const picked = rows.filter((r) => checked.has(r.id));
-  // the ticked rows' total in the amount to distribute's currency (or the picked one without it)
-  const sumCurrency = budget?.currency ?? currency;
+  // the ticked rows' total in the budget's currency (or the screen's without it)
+  const sumCurrency = budget?.currency ?? screenCurrency;
   const sum = picked.reduce((s, r) => {
     const a = plannedAmount(r);
     return s + (a ? conv(a.minor, a.currency, sumCurrency) ?? 0 : 0);
@@ -100,7 +102,7 @@ export default function PlanAddModal({ ym, currency: screenCurrency, visible, pl
     try {
       for (const r of picked) {
         const text = amounts[r.id]?.trim();
-        if (text) await setPlanAmount(ym, r.id, parseAmountOrZero(text)!, r.last?.kind, currency);
+        if (text) await setPlanAmount(ym, r.id, parseAmountOrZero(text)!, r.last?.kind, currencyOf(r));
         else await addPlanItem(ym, r.id);
       }
       onSaved();
@@ -120,8 +122,6 @@ export default function PlanAddModal({ ym, currency: screenCurrency, visible, pl
             {free !== null ? `Не распределено: ${formatWithCurrency(free, sumCurrency)}` : 'Бюджет месяца не задан'}
             {picked.length ? ` · выбрано на ${formatWithCurrency(sum, sumCurrency)}` : ''}
           </Text>
-          {/* the currency of the amounts typed below */}
-          <CurrencyPicker value={currency} onChange={setCurrency} style={styles.currency} />
         </View>
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.list}>
           {rows.map((r) => {
@@ -137,12 +137,13 @@ export default function PlanAddModal({ ym, currency: screenCurrency, visible, pl
                   value={amounts[r.id] ?? ''}
                   onChangeText={(t) => setAmount(r.id, t)}
                   // last time's amount: taken when the row is ticked without one
-                  placeholder={r.last ? `${formatShort(r.last.limit_minor)}${r.last.currency !== currency ? ` ${currencySymbol(r.last.currency)}` : ''}` : '0'}
+                  placeholder={r.last ? `${formatShort(r.last.limit_minor)}${r.last.currency !== currencyOf(r) ? ` ${currencySymbol(r.last.currency)}` : ''}` : '0'}
                   placeholderTextColor={colors.muted}
                   keyboardType="decimal-pad"
                   maxLength={12}
                   accessibilityLabel={`Сумма: ${categoryLabel(r)}`}
                 />
+                <CurrencyButton value={currencyOf(r)} onChange={(c) => setCurrencies((prev) => ({ ...prev, [r.id]: c }))} />
               </View>
             );
           })}
@@ -165,10 +166,9 @@ const styles = StyleSheet.create({
   sheet: { maxHeight: '88%', paddingBottom: 0 },
   head: { paddingHorizontal: 16, paddingBottom: 8 },
   caption: { fontSize: 13, color: colors.muted, marginTop: 4 },
-  currency: { marginTop: 10 },
   list: { paddingHorizontal: 16, paddingBottom: 8 },
   row: {
-    flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6,
+    flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 6,
     borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
   },
   rowMain: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6 },

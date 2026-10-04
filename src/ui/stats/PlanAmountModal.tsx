@@ -4,7 +4,7 @@ import { getPlanBudget, lastPlanItem, NormPeriod, OverBudgetError, PlanKind, pla
 import { Text } from 'react-native';
 import { AMOUNT_HINT, SPENDING_PATTERN } from '../strings';
 import { formStyles } from '../formStyles';
-import CurrencyPicker from '../CurrencyPicker';
+import CurrencyButton from '../CurrencyButton';
 import { formatWithCurrency, parseAmountOrZero, toInputValue } from '../money';
 import RadioGroup from '../RadioGroup';
 import TextInputModal from '../TextInputModal';
@@ -105,8 +105,8 @@ export default function PlanAmountModal({ ym, target, onClose, onSaved }: Props)
       allowEmpty
       onSubmit={save}
       onClose={onClose}
+      inputAccessory={<CurrencyButton value={currency} onChange={setCurrency} />}
     >
-      <CurrencyPicker value={currency} onChange={setCurrency} />
       <RadioGroup options={KINDS} value={kind} onChange={setKind} />
       {kind === 'limit' ? (
         <>

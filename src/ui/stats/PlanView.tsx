@@ -7,7 +7,7 @@ import {
   getPlanBudget, listPlan, monthIncome, OverBudgetError, PlanBudget, planConverter, PlanItem, removePlanItem,
   setPlanBudget, setPlanPinned,
 } from '../../db/plans';
-import CurrencyPicker from '../CurrencyPicker';
+import CurrencyButton from '../CurrencyButton';
 import Fab from '../Fab';
 import { daysInMonth } from '../dateRange';
 import { PencilIcon, PinIcon } from '../icons';
@@ -234,9 +234,8 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
         allowEmpty
         onSubmit={saveBudget}
         onClose={() => setBudgetOpen(false)}
-      >
-        <CurrencyPicker value={budgetCurrency} onChange={setBudgetCurrency} />
-      </TextInputModal>
+        inputAccessory={<CurrencyButton value={budgetCurrency} onChange={setBudgetCurrency} />}
+      />
       <PlanAmountModal ym={ym} target={editingItem} onClose={() => setEditingItem(null)} onSaved={load} />
     </ScrollView>
     {/* like the "+" on the transactions screen: several categories with amounts at once */}

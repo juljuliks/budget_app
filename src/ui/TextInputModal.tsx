@@ -20,6 +20,8 @@ type Props = {
   multiline?: boolean;
   /** extra controls under the field (e.g. the plan item kind) */
   children?: React.ReactNode;
+  /** a control right of the field (e.g. the amount's currency) */
+  inputAccessory?: React.ReactNode;
   /** returns an error message to show, or null when saved */
   onSubmit: (value: string) => Promise<string | null>;
   onClose: () => void;
@@ -28,7 +30,7 @@ type Props = {
 /** A bottom sheet with one text field (create / rename, amounts, notes). */
 export default function TextInputModal({
   visible, title, initialValue = '', placeholder, submitLabel = 'Сохранить', hint, keyboardType, maxLength = 30, allowEmpty, multiline,
-  onSubmit, onClose, children,
+  onSubmit, onClose, children, inputAccessory,
 }: Props) {
   const [value, setValue] = useState(initialValue);
   const [error, setError] = useState<string | null>(null);
@@ -58,9 +60,10 @@ export default function TextInputModal({
     <BottomSheet visible={visible} onClose={onClose} title={title}>
         <View style={styles.dialog}>
           {hint ? <Text style={styles.hint}>{hint}</Text> : null}
+          <View style={styles.inputRow}>
           <TextInput
             ref={input}
-            style={[formStyles.input, multiline && styles.multiline]}
+            style={[formStyles.input, styles.input, multiline && styles.multiline]}
             multiline={multiline}
             textAlignVertical={multiline ? 'top' : undefined}
             value={value}
@@ -72,6 +75,8 @@ export default function TextInputModal({
             returnKeyType={multiline ? 'default' : 'done'}
             onSubmitEditing={multiline ? undefined : submit}
           />
+          {inputAccessory}
+          </View>
           {children ? <View style={styles.extra}>{children}</View> : null}
           {error ? <Text style={formStyles.error}>{error}</Text> : null}
           <View style={styles.buttons}>
@@ -91,6 +96,8 @@ const styles = StyleSheet.create({
   dialog: { paddingHorizontal: 20 },
   hint: { fontSize: 14, color: colors.muted, marginBottom: 12 },
   extra: { marginTop: 12 },
+  inputRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  input: { flex: 1 },
   multiline: { minHeight: 96, maxHeight: 200 },
   buttons: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 16 },
   button: { paddingHorizontal: 12, paddingVertical: 8 },
