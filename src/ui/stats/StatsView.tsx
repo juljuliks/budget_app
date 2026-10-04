@@ -4,7 +4,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useOpenCategoryTransactions } from '../../navigation';
 import { categoryLabel } from '../../db/categories';
 import { Currency } from '../../db/fx';
-import { CategoryStat, monthStats, MonthStats, StatGroup, ymOf } from '../../db/plans';
+import { CategoryStat, currentYm, monthStats, MonthStats, StatGroup, ymOf } from '../../db/plans';
+import { daysInMonth } from '../dateRange';
 import { onTransactionsChanged } from '../../events';
 import Donut, { DonutSegment } from '../Donut';
 import Meter from '../Meter';
@@ -42,6 +43,9 @@ export default function StatsView({ year, month, currency }: { year: number; mon
   if (!stats) return <View style={styles.center}><ActivityIndicator /></View>;
 
   const remaining = stats.planned_minor - stats.spent_minor;
+  // the current month: a tick on each flexible category's bar where an even pace would be today
+  const ym = ymOf(year, month);
+  const evenPace = ym === currentYm() ? new Date().getDate() / daysInMonth(ym) : undefined;
   const picked = selected === null ? undefined : stats.categories.find((c) => String(c.category_id) === selected);
 
   return (
@@ -82,6 +86,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
                 key={String(c.category_id)}
                 stat={c}
                 currency={stats.currency}
+                evenPace={evenPace}
                 onAddToPlan={c.category_id !== null && c.limit_minor === null && !c.deleted
                   ? () => setPlanTarget({ category_id: c.category_id!, label: categoryLabel(c), limit_minor: 0, currency })
                   : undefined}
@@ -139,7 +144,7 @@ function SummaryItem({ label, value, danger }: { label: string; value: string; d
   );
 }
 
-function CategoryRow({ stat, currency, onAddToPlan }: { stat: CategoryStat; currency: Currency; onAddToPlan?: () => void }) {
+function CategoryRow({ stat, currency, evenPace, onAddToPlan }: { stat: CategoryStat; currency: Currency; evenPace?: number; onAddToPlan?: () => void }) {
   const openTransactions = useOpenCategoryTransactions();
   const { spent_minor: spent, limit_minor: limit } = stat;
   const ratio = limit ? spent / limit : 0;
@@ -168,7 +173,7 @@ function CategoryRow({ stat, currency, onAddToPlan }: { stat: CategoryStat; curr
         </View>
       ) : limit ? (
         <>
-          <Meter ratio={ratio} height={8} />
+          <Meter ratio={ratio} height={8} marker={stat.plan_norm === 'month' ? undefined : evenPace} />
           <Text style={[styles.rowStatus, ratio > 1 && styles.dangerText]}>
             {ratio > 1 ? `⚠ превышено на ${formatWithCurrency(spent - limit, currency)}` : `осталось ${formatWithCurrency(limit - spent, currency)}`}
           </Text>
