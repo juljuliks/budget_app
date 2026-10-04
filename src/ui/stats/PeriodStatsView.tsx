@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { averageFullMonths, monthStats, NormPeriod, parseYm, periodStats, PeriodStats, PlanKind } from '../../db/plans';
+import { averageFullMonths, currentYm, monthStats, NormPeriod, parseYm, periodStats, PeriodStats, PlanKind, ymOf } from '../../db/plans';
 import { useDisplayCurrency } from '../../displayCurrency';
 import { onTransactionsChanged } from '../../events';
 import BottomSheet from '../BottomSheet';
@@ -53,10 +53,39 @@ function pct(part: number, whole: number): string {
 async function loadNorms(range: DayRange, currency: Parameters<typeof monthStats>[2]): Promise<Norms> {
   const months = daysByMonth(range);
   const norms: Norms = { total: 0, byCategory: new Map(), months: [], monthToDate: new Map() };
-  for (const [ym, days] of months) {
+
+  // each month's plan amounts (converted), cached; plan months are never created from here (past or current only)
+  const monthCache = new Map<string, Map<number, number>>();
+  const thisYm = currentYm();
+  const limitsOf = async (ym: string) => {
+    if (!monthCache.has(ym)) {
+      const { year, month } = parseYm(ym);
+      const m = await monthStats(year, month, currency);
+      monthCache.set(ym, new Map(m.categories.filter((c) => c.category_id !== null && c.limit_minor).map((c) => [c.category_id!, c.limit_minor!])));
+    }
+    return monthCache.get(ym)!;
+  };
+  /**
+   * The category's plan for the month; a month without one (e.g. before planning started) borrows the nearest
+   * month that has it, so its days don't count with a zero norm.
+   */
+  const limitFor = async (id: number, ym: string): Promise<number> => {
+    const own = (await limitsOf(ym)).get(id);
+    if (own) return own;
+    const { year, month } = parseYm(ym);
+    for (let d = 1; d <= 12; d++) {
+      for (const candidate of [ymOf(year, month + d), ymOf(year, month - d)]) {
+        if (candidate > thisYm) continue;
+        const l = (await limitsOf(candidate)).get(id);
+        if (l) return l;
+      }
+    }
+    return 0;
+  };
+
+  for (const [ym] of months) {
     const { year, month } = parseYm(ym);
     const m = await monthStats(year, month, currency);
-    const share = days / daysInMonth(ym);
     // the period's days in this month and the spending on them
     const part: DayRange = {
       from: range.from > `${ym}-01` ? range.from : `${ym}-01`,
@@ -75,29 +104,24 @@ async function loadNorms(range: DayRange, currency: Parameters<typeof monthStats
       const cur = norms.byCategory.get(c.category_id) ?? {
         norm: 0, kind: c.plan_kind ?? 'limit', monthLimit: 0, rhythm, window: range, windowNorm: 0, windowSpent: 0,
       };
-      cur.norm += c.limit_minor * share;
+      cur.kind = c.plan_kind ?? 'limit';
       cur.rhythm = rhythm;
-      // the overall pace under the donut: per day, without the categories counted per month (big one-off buys)
-      if ((c.plan_kind ?? 'limit') === 'limit' && rhythm !== 'month') norms.total += c.limit_minor * share;
       // one month's plan: for a week across two months, the month it ends in (the later one overwrites)
       cur.monthLimit = c.limit_minor;
       norms.byCategory.set(c.category_id, cur);
     }
+  }
+  // the norm for the period's days: each day gets its month's plan / days in that month
+  for (const [id, cat] of norms.byCategory) {
+    for (const [ym, days] of months) cat.norm += (await limitFor(id, ym)) * days / daysInMonth(ym);
+    // the overall pace under the donut: per day, without the categories counted per month (big one-off buys)
+    if (cat.kind === 'limit' && cat.rhythm !== 'month') norms.total += cat.norm;
   }
   const lastYm = [...months.keys()][months.size - 1];
   const mtd = rangeToUnix({ from: `${lastYm}-01`, to: range.to });
   norms.monthToDate = new Map((await periodStats(mtd.from, mtd.to, currency)).categories.map((c) => [c.category_id, c.spent_minor]));
 
   // each flexible category's rhythm window: its spending there and its norm (plan / days of month × days)
-  const monthCache = new Map<string, Map<number, number>>();
-  const limitsOf = async (ym: string) => {
-    if (!monthCache.has(ym)) {
-      const { year, month } = parseYm(ym);
-      const m = await monthStats(year, month, currency);
-      monthCache.set(ym, new Map(m.categories.filter((c) => c.category_id !== null && c.limit_minor).map((c) => [c.category_id!, c.limit_minor!])));
-    }
-    return monthCache.get(ym)!;
-  };
   const spentCache = new Map<string, Map<number | null, number>>();
   for (const [id, cat] of norms.byCategory) {
     if (cat.kind !== 'limit') continue;
@@ -109,7 +133,7 @@ async function loadNorms(range: DayRange, currency: Parameters<typeof monthStats
     }
     let norm = 0;
     if (cat.rhythm === 'month') norm = cat.monthLimit;
-    else for (const [ym, d] of daysByMonth(win)) norm += ((await limitsOf(ym)).get(id) ?? 0) * d / daysInMonth(ym);
+    else for (const [ym, d] of daysByMonth(win)) norm += (await limitFor(id, ym)) * d / daysInMonth(ym);
     cat.window = win;
     cat.windowNorm = norm;
     cat.windowSpent = spentCache.get(key)!.get(id) ?? 0;
@@ -265,7 +289,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
               <Text style={styles.infoText}>
                 <Text style={styles.infoBold}>Норма</Text> — часть месячного плана, приходящаяся на эти дни: план месяца
                 делится на число дней в нём и умножается на дни периода. Например, при плане 800 {cur} на октябрь норма на
-                неделю — 800 × 7 / 31 ≈ 181 {cur}. Неделя на стыке месяцев считается по планам обоих месяцев.
+                неделю — 800 × 7 / 31 ≈ 181 {cur}. Неделя на стыке месяцев считается по планам обоих месяцев; если в одном из них у категории плана нет (например, план начали вести позже), его дни берут план ближайшего месяца.
               </Text>
               <Text style={styles.infoText}>
                 Строка под диаграммой — общий темп <Text style={styles.infoBold}>гибких трат</Text> по дням: где-то
