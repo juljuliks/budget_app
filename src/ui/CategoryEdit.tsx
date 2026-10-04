@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { NO_SECTION } from './strings';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { categoryLabel, createCategory, findCategoryByName, getCategory, moveTransactionsOutOfCategory, updateCategory } from '../db/categories';
@@ -112,6 +112,15 @@ export default function CategoryEdit({ route, navigation }: Props) {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      {!isNew ? (
+        // like a merchant's card: the Operations tab filtered by this category, back returns to the categories
+        <TouchableOpacity
+          onPress={() => navigation.navigate({ name: 'Main', params: { screen: 'Transactions', params: { category: categoryId, nonce: Date.now(), from: 'Categories' } } } as never)}
+          hitSlop={8}
+        >
+          <Text style={styles.link}>Показать операции</Text>
+        </TouchableOpacity>
+      ) : null}
       {/* types are managed in the settings; a new one can be made right here */}
       <SectionHeading title="Раздел" />
       <View style={styles.chips}>
@@ -166,6 +175,7 @@ export default function CategoryEdit({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
+  link: { fontSize: 14, color: colors.accent, marginBottom: 4 },
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { padding: 16, paddingTop: 0, paddingBottom: 32 },
   emoji: { width: 80, textAlign: 'center' },

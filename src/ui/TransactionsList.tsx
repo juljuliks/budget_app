@@ -31,7 +31,9 @@ import { colors } from './theme';
 import { confirmDeleteTransaction } from './transactionActions';
 import TransactionItem from './TransactionItem';
 
-const PAGE_SIZE = 50;
+/** The newest operations shown first; more come in pages while scrolling. */
+const FIRST_PAGE = 10;
+const PAGE_SIZE = 20;
 
 type Filter = {
   query: string; categories: CategoryFilter[]; merchants: string[]; kinds: string[]; range: DayRange | null;
@@ -90,6 +92,8 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
   const filterRef = useRef(filter);
   filterRef.current = filter;
   const [results, setResults] = useState<TransactionRow[] | null>(null); // null = no filter, normal feed
+  // how many of the filtered results are shown (lazy, like the feed)
+  const [shownResults, setShownResults] = useState(FIRST_PAGE);
   const searchId = useRef(0);
 
   // opened from the stats screen: filter by that category
@@ -117,7 +121,7 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
   // from a detail screen keeps the scroll depth instead of snapping back to 50 rows.
   const reload = useCallback(async () => {
     const id = ++requestId.current;
-    const page = await listTransactionsPage(null, Math.max(PAGE_SIZE, loadedCount.current));
+    const page = await listTransactionsPage(null, Math.max(FIRST_PAGE, loadedCount.current));
     if (id !== requestId.current) return;
     loadedCount.current = page.rows.length;
     setRows(page.rows);
@@ -138,7 +142,9 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
   }, []);
 
   const loadMore = useCallback(async () => {
-    if (!cursor || loadingMore || loading || results) return;
+    // filtered: the results are all loaded, only shown a page at a time
+    if (results) { setShownResults((n) => (n < results.length ? n + PAGE_SIZE : n)); return; }
+    if (!cursor || loadingMore || loading) return;
     setLoadingMore(true);
     const id = requestId.current;
     try {
@@ -172,6 +178,8 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
   useEffect(() => {
     runFilter(filterRef.current).catch((e) => console.error('filter failed', e));
   }, [categories, merchants, kinds, range, runFilter]);
+  // a new filter starts from its first page; a refresh (back from an operation) keeps how far it was scrolled
+  useEffect(() => { setShownResults(FIRST_PAGE); }, [query, categories, merchants, kinds, range]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -179,7 +187,7 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
     try { await reload(); } finally { setRefreshing(false); }
   }, [reload]);
 
-  const data = results ?? rows;
+  const data = results ? results.slice(0, shownResults) : rows;
 
   // the filters set, as chips to clear one by one
   const activeFilters: ActiveFilter[] = [];
@@ -285,7 +293,7 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
     const target = from;
     tabNavigation.setParams({ from: undefined, category: undefined, query: undefined, range: undefined, kinds: undefined });
     resetFilters();
-    if (target === 'Merchants') navigation.navigate('Merchants');
+    if (target === 'Merchants' || target === 'Categories') navigation.navigate(target);
     else if (target) tabNavigation.navigate(target);
   }
 

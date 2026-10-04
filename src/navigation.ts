@@ -15,8 +15,8 @@ export type TabParamList = {
     /** typed into the search field (a merchant's name from its card) */
     query?: string;
     nonce?: number;
-    /** where back returns: a tab, or the merchants screen */
-    from?: keyof TabParamList | 'Merchants';
+    /** where back returns: a tab, or the merchants / categories screen */
+    from?: keyof TabParamList | 'Merchants' | 'Categories';
   } | undefined;
 };
 
