@@ -10,6 +10,8 @@ import CategoryPicker from './CategoryPicker';
 import { formStyles } from './formStyles';
 import { parseAmountInput } from './money';
 import Segmented from './Segmented';
+import CurrencyPicker from './CurrencyPicker';
+import { Currency } from '../db/fx';
 import { colors } from './theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddTransaction'>;
@@ -22,6 +24,7 @@ type Day = typeof DAYS[number][0];
 export default function AddTransaction({ route, navigation }: Props) {
   const [amount, setAmount] = useState('');
   const [kind, setKind] = useState<Kind>('purchase');
+  const [currency, setCurrency] = useState<Currency>('GEL');
   const [description, setDescription] = useState('');
   const [day, setDay] = useState<Day>('today');
   const [categoryId, setCategoryId] = useState<number | null>(null);
@@ -43,6 +46,7 @@ export default function AddTransaction({ route, navigation }: Props) {
       if (day === 'yesterday') at.setDate(at.getDate() - 1);
       await addManualTransaction({
         amount_minor: minor,
+        currency,
         kind,
         description,
         category_id: categoryId,
@@ -62,7 +66,8 @@ export default function AddTransaction({ route, navigation }: Props) {
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <Segmented options={KINDS} value={kind} onChange={setKind} />
 
-      <Text style={formStyles.label}>Сумма, GEL</Text>
+      <Text style={formStyles.label}>Сумма</Text>
+      <CurrencyPicker value={currency} onChange={setCurrency} style={styles.currency} />
       <TextInput
         style={[formStyles.input, styles.amount]}
         value={amount}
@@ -105,5 +110,6 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { padding: 16, paddingBottom: 32 },
   amount: { fontSize: 24, fontWeight: '600' },
+  currency: { marginBottom: 8 },
   button: { marginTop: 24 },
 });

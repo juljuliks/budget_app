@@ -2,10 +2,12 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { categoryLabel } from '../../db/categories';
+import { Currency } from '../../db/fx';
 import {
-  BUDGET_CURRENCY, getPlanBudget, listPlan, monthIncome, OverBudgetError, PlanItem, removePlanItem,
+  getPlanBudget, listPlan, monthIncome, OverBudgetError, PlanBudget, planConverter, PlanItem, removePlanItem,
   setPlanBudget, setPlanPinned,
 } from '../../db/plans';
+import CurrencyPicker from '../CurrencyPicker';
 import Fab from '../Fab';
 import { PencilIcon, PinIcon } from '../icons';
 import Meter from '../Meter';
@@ -16,7 +18,6 @@ import PlanAddModal from './PlanAddModal';
 import PlanAmountModal, { PlanAmountTarget } from './PlanAmountModal';
 import { chart, colors } from '../theme';
 
-const money = (minor: number) => formatWithCurrency(minor, BUDGET_CURRENCY);
 
 /** Share of the amount to distribute, "35%"; "<1%" for tiny non-zero amounts. */
 function percentOf(part: number, whole: number): string {
@@ -25,7 +26,7 @@ function percentOf(part: number, whole: number): string {
   return p === 0 ? '<1%' : `${p}%`;
 }
 
-/** Plan items in sections by category type (listPlan returns them in type order); untyped last. */
+/** Plan items in sections by category type (listPlan returns them in type order); untyped last. Totals converted. */
 function groupByType(items: PlanItem[]): Array<{ title: string; planned: number; items: PlanItem[] }> {
   const groups: Array<{ title: string; planned: number; items: PlanItem[] }> = [];
   for (const item of items) {
@@ -33,7 +34,7 @@ function groupByType(items: PlanItem[]): Array<{ title: string; planned: number;
     let g = groups[groups.length - 1];
     if (!g || g.title !== title) { g = { title, planned: 0, items: [] }; groups.push(g); }
     g.items.push(item);
-    g.planned += item.limit_minor;
+    g.planned += item.converted_minor ?? 0;
   }
   return groups;
 }
@@ -42,37 +43,50 @@ function groupByType(items: PlanItem[]): Array<{ title: string; planned: number;
  * Plan for one month. A new month starts from the previous month's items:
  * pinned ones keep their amount, the others need a new amount (last month's is shown as a hint).
  * With an amount to distribute set, the plan can't exceed it; the rest is shown as "Свободно".
+ * Every amount has the currency it was entered in; the screen shows them in `currency` (the switch on top of
+ * the tab), with the original in brackets when it differs.
  */
-export default function PlanView({ ym }: { ym: string }) {
+export default function PlanView({ ym, currency }: { ym: string; currency: Currency }) {
   const [items, setItems] = useState<PlanItem[] | null>(null);
-  // amount to distribute (e.g. salary); null = not set (shown as 0, no cap)
-  const [budget, setBudget] = useState<number | null>(null);
+  // amount to distribute (e.g. salary) in its own currency; null = not set (shown as 0, no cap)
+  const [budget, setBudget] = useState<PlanBudget | null>(null);
+  // converts an amount to the screen's currency on the plan's rate date (null: no rate known)
+  const [toShown, setToShown] = useState<(minor: number, from: Currency) => number | null>(() => () => null);
+  const [budgetCurrency, setBudgetCurrency] = useState<Currency>(currency);
   const [income, setIncome] = useState(0);
   const [budgetOpen, setBudgetOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<PlanAmountTarget | null>(null);
   const [addOpen, setAddOpen] = useState(false);
 
   const load = useCallback(() => {
-    Promise.all([listPlan(ym), getPlanBudget(ym), monthIncome(ym)])
-      .then(([plan, b, inc]) => { setItems(plan); setBudget(b); setIncome(inc); })
+    Promise.all([listPlan(ym, currency), getPlanBudget(ym), monthIncome(ym, currency), planConverter(ym)])
+      .then(([plan, b, inc, conv]) => {
+        setItems(plan); setBudget(b); setIncome(inc);
+        setToShown(() => (minor: number, from: Currency) => conv(minor, from, currency));
+      })
       .catch((e) => console.error('load plan failed', e));
-  }, [ym]);
+  }, [ym, currency]);
 
   useFocusEffect(load);
   useEffect(load, [load]);
 
-  const total = useMemo(() => (items ?? []).reduce((sum, i) => sum + i.limit_minor, 0), [items]);
-  const free = budget === null ? null : budget - total;
+  const money = (minor: number) => formatWithCurrency(minor, currency);
+  // "(200 USD)" after an amount shown converted from another currency
+  const original = (minor: number, from: Currency) => (from === currency ? '' : ` (${formatWithCurrency(minor, from)})`);
+  const total = useMemo(() => (items ?? []).reduce((sum, i) => sum + (i.converted_minor ?? 0), 0), [items]);
+  // the amount to distribute in the screen's currency (its own one if there's no rate)
+  const shownBudget = budget === null ? null : toShown(budget.amount_minor, budget.currency) ?? budget.amount_minor;
+  const free = shownBudget === null ? null : shownBudget - total;
 
   /** Saves the amount to distribute (0 / empty = not set); returns an error to show in the dialog, or null. */
   async function saveBudget(text: string): Promise<string | null> {
     const minor = parseAmountOrZero(text);
     if (minor === null) return 'Введите сумму, например 1500 или 12.50';
     try {
-      await setPlanBudget(ym, minor === 0 ? null : minor);
+      await setPlanBudget(ym, minor === 0 ? null : minor, budgetCurrency);
     } catch (e) {
       if (!(e instanceof OverBudgetError)) throw e;
-      return `По категориям уже запланировано ${money(e.planned_minor)} — сумма не может быть меньше.`;
+      return `По категориям уже запланировано ${formatWithCurrency(e.planned_minor, e.currency)} — сумма не может быть меньше.`;
     }
     load();
     return null;
@@ -97,28 +111,31 @@ export default function PlanView({ ym }: { ym: string }) {
         <Text style={styles.caption}>Сумма к планированию</Text>
         <TouchableOpacity
           style={styles.budgetRow}
-          onPress={() => setBudgetOpen(true)}
+          onPress={() => { setBudgetCurrency(budget?.currency ?? currency); setBudgetOpen(true); }}
           accessibilityLabel="Изменить сумму к планированию"
         >
-          <Text style={styles.budgetValue}>{money(budget ?? 0)}</Text>
+          <Text style={styles.budgetValue}>{money(shownBudget ?? 0)}</Text>
           <PencilIcon color={colors.accent} size={20} />
         </TouchableOpacity>
+        {budget && budget.currency !== currency ? (
+          <Text style={styles.caption}>{original(budget.amount_minor, budget.currency).trim()}</Text>
+        ) : null}
 
         <View style={styles.summary}>
           <View style={styles.summaryItem}>
             <Text style={styles.caption}>Запланировано</Text>
             <Text style={styles.summaryValue}>{money(total)}</Text>
-            {budget ? <Text style={styles.caption}>{percentOf(total, budget) || '0%'}</Text> : null}
+            {shownBudget ? <Text style={styles.caption}>{percentOf(total, shownBudget) || '0%'}</Text> : null}
           </View>
           <View style={styles.summaryItem}>
             <Text style={styles.caption}>Свободно</Text>
             <Text style={[styles.summaryValue, free !== null && styles.freeValue]}>{free === null ? '—' : money(free)}</Text>
-            {budget ? <Text style={styles.caption}>{percentOf(free ?? 0, budget) || '0%'}</Text> : null}
+            {shownBudget ? <Text style={styles.caption}>{percentOf(free ?? 0, shownBudget) || '0%'}</Text> : null}
           </View>
         </View>
-        {budget ? (
+        {shownBudget ? (
           // share of the amount already distributed: not a spent/limit meter, so no warning colors
-          <Meter ratio={total / budget} color={chart.meterFill} />
+          <Meter ratio={total / shownBudget} color={chart.meterFill} />
         ) : (
           <Text style={styles.caption}>Укажите сумму (например, зарплату): план не сможет её превысить, а у категорий появятся доли в %</Text>
         )}
@@ -146,22 +163,30 @@ export default function PlanView({ ym }: { ym: string }) {
               <View style={styles.nameBox}>
                 {/* the type is the section title, so just emoji + name here */}
                 <Text style={styles.name} numberOfLines={1}>{`${item.emoji || ''} ${item.name}`.trim()}</Text>
-                {item.kind === 'fixed' || (budget && item.limit_minor) ? (
+                {item.kind === 'fixed' || (shownBudget && item.converted_minor) ? (
                   <Text style={styles.percent}>
                     {[
                       item.kind === 'fixed' ? 'фиксированная трата' : '',
-                      budget && item.limit_minor ? `${percentOf(item.limit_minor, budget)} дохода` : '',
+                      shownBudget && item.converted_minor ? `${percentOf(item.converted_minor, shownBudget)} дохода` : '',
                     ].filter(Boolean).join(' · ')}
                   </Text>
                 ) : null}
               </View>
               <TouchableOpacity
                 style={styles.amountButton}
+                // the amount and currency it was entered in
                 onPress={() => setEditingItem({ ...item, label: categoryLabel(item) })}
                 accessibilityLabel={`Изменить сумму: ${categoryLabel(item)}`}
               >
                 {item.limit_minor ? (
-                  <Text style={styles.amount}>{formatShort(item.limit_minor)}</Text>
+                  <View style={styles.amountBox}>
+                    <Text style={styles.amount}>
+                      {item.converted_minor !== null ? formatShort(item.converted_minor) : formatWithCurrency(item.limit_minor, item.currency)}
+                    </Text>
+                    {item.converted_minor !== null && item.currency !== currency ? (
+                      <Text style={styles.amountOriginal}>{original(item.limit_minor, item.currency).trim()}</Text>
+                    ) : null}
+                  </View>
                 ) : (
                   // carried over without an amount: last month's as a muted hint
                   <Text style={[styles.amount, styles.amountEmpty]}>
@@ -181,19 +206,22 @@ export default function PlanView({ ym }: { ym: string }) {
         visible={budgetOpen}
         title="Сумма к планированию"
         hint={budgetHint}
-        initialValue={toInputValue(budget)}
+        // the amount and currency it was entered in
+        initialValue={toInputValue(budget?.amount_minor)}
         placeholder="0"
         keyboardType="decimal-pad"
         maxLength={12}
         allowEmpty
         onSubmit={saveBudget}
         onClose={() => setBudgetOpen(false)}
-      />
+      >
+        <CurrencyPicker value={budgetCurrency} onChange={setBudgetCurrency} />
+      </TextInputModal>
       <PlanAmountModal ym={ym} target={editingItem} onClose={() => setEditingItem(null)} onSaved={load} />
     </ScrollView>
     {/* like the "+" on the transactions screen: several categories with amounts at once */}
     <Fab onPress={() => setAddOpen(true)} accessibilityLabel="Добавить категории в план" />
-    <PlanAddModal ym={ym} visible={addOpen} plannedIds={items.map((i) => i.category_id)} onClose={() => setAddOpen(false)} onSaved={load} />
+    <PlanAddModal ym={ym} currency={currency} visible={addOpen} plannedIds={items.map((i) => i.category_id)} onClose={() => setAddOpen(false)} onSaved={load} />
     </View>
   );
 }
@@ -232,5 +260,7 @@ const styles = StyleSheet.create({
   percent: { fontSize: 12, color: colors.muted, marginTop: 2, fontVariant: ['tabular-nums'] },
   amountButton: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4, paddingLeft: 8 },
   amount: { fontSize: 16, color: colors.text, fontVariant: ['tabular-nums'] },
+  amountBox: { alignItems: 'flex-end' },
+  amountOriginal: { fontSize: 12, color: colors.muted, fontVariant: ['tabular-nums'] },
   amountEmpty: { color: colors.muted, fontSize: 14 },
 });

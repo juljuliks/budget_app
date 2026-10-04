@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useOpenCategoryTransactions } from '../../navigation';
+import { Currency } from '../../db/fx';
 import { HistoryMonth, monthStats, MonthStats, parseYm, planHistory } from '../../db/plans';
 import { onTransactionsChanged } from '../../events';
 import Meter from '../Meter';
@@ -9,14 +10,14 @@ import { formatMoney, formatShort } from '../money';
 import { colors } from '../theme';
 import { monthTitle } from './months';
 
-/** Planned vs actually spent, per month and (expanded) per category. */
-export default function HistoryView() {
+/** Planned vs actually spent, per month and (expanded) per category, in `currency`. */
+export default function HistoryView({ currency }: { currency: Currency }) {
   const [months, setMonths] = useState<HistoryMonth[] | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
 
   const load = useCallback(() => {
-    planHistory().then(setMonths).catch((e) => console.error('load history failed', e));
-  }, []);
+    planHistory(undefined, currency).then(setMonths).catch((e) => console.error('load history failed', e));
+  }, [currency]);
   useFocusEffect(load);
   useEffect(() => onTransactionsChanged(load), [load]);
 
@@ -31,6 +32,7 @@ export default function HistoryView() {
       renderItem={({ item }) => (
         <MonthRow
           month={item}
+          currency={currency}
           expanded={expanded === item.ym}
           onToggle={() => setExpanded((cur) => (cur === item.ym ? null : item.ym))}
         />
@@ -39,7 +41,7 @@ export default function HistoryView() {
   );
 }
 
-function MonthRow({ month, expanded, onToggle }: { month: HistoryMonth; expanded: boolean; onToggle: () => void }) {
+function MonthRow({ month, expanded, onToggle, currency }: { month: HistoryMonth; expanded: boolean; onToggle: () => void; currency: Currency }) {
   const { year, month: m } = parseYm(month.ym);
   const { planned_minor: planned, spent_minor: spent } = month;
   const diff = planned - spent;
@@ -78,19 +80,19 @@ function MonthRow({ month, expanded, onToggle }: { month: HistoryMonth; expanded
           </View>
         ) : null}
       </TouchableOpacity>
-      {expanded ? <MonthDetails ym={month.ym} /> : null}
+      {expanded ? <MonthDetails ym={month.ym} currency={currency} /> : null}
     </View>
   );
 }
 
-function MonthDetails({ ym }: { ym: string }) {
+function MonthDetails({ ym, currency }: { ym: string; currency: Currency }) {
   // tap a category: its transactions (category filter), same as on the stats screen
   const openTransactions = useOpenCategoryTransactions();
   const [stats, setStats] = useState<MonthStats | null>(null);
   useEffect(() => {
     const { year, month } = parseYm(ym);
-    monthStats(year, month).then(setStats).catch((e) => console.error('load month failed', e));
-  }, [ym]);
+    monthStats(year, month, currency).then(setStats).catch((e) => console.error('load month failed', e));
+  }, [ym, currency]);
 
   if (!stats) return <ActivityIndicator style={styles.detailsLoading} />;
   if (stats.categories.length === 0) return <Text style={styles.hint}>Нет трат и плана.</Text>;
@@ -129,7 +131,7 @@ function MonthDetails({ ym }: { ym: string }) {
       ))}
       {stats.other_currencies.length > 0 ? (
         <Text style={styles.note}>
-          Не учтено: {stats.other_currencies.map((o) => `${formatMoney(o.spent_minor)} ${o.currency}`).join(', ')}
+          Не учтено, нет курса: {stats.other_currencies.map((o) => `${formatMoney(o.spent_minor)} ${o.currency}`).join(', ')}
         </Text>
       ) : null}
     </View>

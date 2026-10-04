@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { BUDGET_CURRENCY, periodStats, PeriodStats } from '../../db/plans';
+import { periodStats, PeriodStats } from '../../db/plans';
+import { useDisplayCurrency } from '../../displayCurrency';
 import { onTransactionsChanged } from '../../events';
 import type { RootStackParamList } from '../../navigation';
 import Donut from '../Donut';
@@ -19,6 +20,8 @@ export default function DayStats({ route, navigation }: Props) {
   const { day } = route.params;
   const [stats, setStats] = useState<PeriodStats | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
+  // the currency picked on the transactions screen
+  const currency = useDisplayCurrency('transactions');
 
   useLayoutEffect(() => {
     navigation.setOptions({ title: `Траты: ${formatDay(day).toLowerCase()}` });
@@ -28,8 +31,8 @@ export default function DayStats({ route, navigation }: Props) {
     // the day's local midnight to the next one (a DST day is 23 / 25 hours)
     const start = new Date(day * 1000);
     const next = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1).getTime() / 1000;
-    periodStats(day, next || day + DAY).then(setStats).catch((e) => console.error('load day stats failed', e));
-  }, [day]);
+    periodStats(day, next || day + DAY, currency).then(setStats).catch((e) => console.error('load day stats failed', e));
+  }, [day, currency]);
   useEffect(load, [load]);
   useEffect(() => onTransactionsChanged(load), [load]);
 
@@ -44,7 +47,7 @@ export default function DayStats({ route, navigation }: Props) {
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.donutWrap}>
         <Donut segments={segments} selectedKey={picked ? selected : null} onSelect={setSelected}>
-          <DonutCenter total={stats.spent_minor} picked={picked} />
+          <DonutCenter total={stats.spent_minor} picked={picked} currency={stats.currency} />
         </Donut>
       </View>
       {stats.categories.length === 0 ? <Text style={styles.hint}>В этот день трат нет.</Text> : null}
@@ -59,7 +62,7 @@ export default function DayStats({ route, navigation }: Props) {
               <View style={[styles.dot, { backgroundColor: c.color }]} />
               <Text style={styles.name} numberOfLines={1}>{`${c.emoji || ''} ${c.name}`.trim()}</Text>
               <Text style={styles.share}>{share(c.spent_minor)}%</Text>
-              <Text style={styles.amount}>{formatShort(c.spent_minor)} {BUDGET_CURRENCY}</Text>
+              <Text style={styles.amount}>{formatShort(c.spent_minor)} {stats.currency}</Text>
             </View>
           ))}
         </View>

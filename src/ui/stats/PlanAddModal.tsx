@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Category, categoryLabel, listCategories } from '../../db/categories';
-import { addPlanItem, BUDGET_CURRENCY, getPlanBudget, lastPlanItem, PlanKind, plannedTotal, setPlanAmount } from '../../db/plans';
+import { Currency } from '../../db/fx';
+import { addPlanItem, getPlanBudget, lastPlanItem, PlanBudget, planConverter, PlanKind, plannedTotal, setPlanAmount } from '../../db/plans';
+import CurrencyPicker from '../CurrencyPicker';
 import Button from '../Button';
 import Checkbox from '../Checkbox';
 import { formatShort, formatWithCurrency, parseAmountOrZero } from '../money';
@@ -9,6 +11,8 @@ import { colors } from '../theme';
 
 type Props = {
   ym: string;
+  /** the currency typed amounts start in (the screen's) */
+  currency: Currency;
   visible: boolean;
   /** categories already in the plan: not offered */
   plannedIds: number[];
@@ -16,20 +20,23 @@ type Props = {
   onSaved: () => void;
 };
 
-type Row = Category & { last: { limit_minor: number; kind: PlanKind } | null };
-
-const money = (minor: number) => formatWithCurrency(minor, BUDGET_CURRENCY);
+type Row = Category & { last: { limit_minor: number; currency: Currency; kind: PlanKind } | null };
 
 /**
  * "＋" on the plan: every category not in the plan yet with an amount field; several are added at once.
  * Typing an amount ticks the row; a ticked row without an amount takes last time's amount (addPlanItem).
- * The total can't go over what is still free of the amount to distribute.
+ * Typed amounts are in the currency picked on top; the total (converted) can't go over what is still free of
+ * the amount to distribute.
  */
-export default function PlanAddModal({ ym, visible, plannedIds, onClose, onSaved }: Props) {
+export default function PlanAddModal({ ym, currency: screenCurrency, visible, plannedIds, onClose, onSaved }: Props) {
   const [rows, setRows] = useState<Row[]>([]);
   const [checked, setChecked] = useState<Set<number>>(new Set());
   const [amounts, setAmounts] = useState<Record<number, string>>({});
+  const [currency, setCurrency] = useState<Currency>(screenCurrency);
+  // what is still free, in the amount to distribute's currency, and a converter to it
+  const [budget, setBudget] = useState<PlanBudget | null>(null);
   const [free, setFree] = useState<number | null>(null);
+  const [conv, setConv] = useState<(minor: number, from: Currency, to: Currency) => number | null>(() => () => null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -39,11 +46,15 @@ export default function PlanAddModal({ ym, visible, plannedIds, onClose, onSaved
     setAmounts({});
     setError(null);
     setSaving(false);
+    setCurrency(screenCurrency);
     (async () => {
       const cats = (await listCategories()).filter((c) => !plannedIds.includes(c.id));
       setRows(await Promise.all(cats.map(async (c) => ({ ...c, last: await lastPlanItem(ym, c.id) }))));
-      const budget = await getPlanBudget(ym);
-      setFree(budget === null ? null : Math.max(budget - (await plannedTotal(ym)), 0));
+      const b = await getPlanBudget(ym);
+      setBudget(b);
+      setFree(b === null ? null : Math.max(b.amount_minor - (await plannedTotal(ym, undefined, b.currency)), 0));
+      const c = await planConverter(ym);
+      setConv(() => c);
     })().catch((e) => console.error('load plan categories failed', e));
     // plannedIds only matter when opened
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -64,23 +75,30 @@ export default function PlanAddModal({ ym, visible, plannedIds, onClose, onSaved
     setError(null);
   }
 
-  /** What each ticked row adds: its own amount, or last time's (that's what addPlanItem will take) */
-  function plannedAmount(r: Row): number | null {
+  /** What each ticked row adds: its own amount in the picked currency, or last time's (what addPlanItem takes) */
+  function plannedAmount(r: Row): { minor: number; currency: Currency } | null {
     const text = amounts[r.id]?.trim();
-    return text ? parseAmountOrZero(text) : r.last?.limit_minor ?? 0;
+    if (!text) return { minor: r.last?.limit_minor ?? 0, currency: r.last?.currency ?? currency };
+    const minor = parseAmountOrZero(text);
+    return minor === null ? null : { minor, currency };
   }
 
   const picked = rows.filter((r) => checked.has(r.id));
-  const sum = picked.reduce((s, r) => s + (plannedAmount(r) ?? 0), 0);
+  // the ticked rows' total in the amount to distribute's currency (or the picked one without it)
+  const sumCurrency = budget?.currency ?? currency;
+  const sum = picked.reduce((s, r) => {
+    const a = plannedAmount(r);
+    return s + (a ? conv(a.minor, a.currency, sumCurrency) ?? 0 : 0);
+  }, 0);
 
   async function add() {
     if (picked.some((r) => plannedAmount(r) === null)) { setError('Введите сумму, например 1500 или 12.50'); return; }
-    if (free !== null && sum > free) { setError(`Больше суммы к планированию: свободно ${money(free)}.`); return; }
+    if (free !== null && sum > free) { setError(`Больше суммы к планированию: свободно ${formatWithCurrency(free, sumCurrency)}.`); return; }
     setSaving(true);
     try {
       for (const r of picked) {
         const text = amounts[r.id]?.trim();
-        if (text) await setPlanAmount(ym, r.id, parseAmountOrZero(text)!, r.last?.kind);
+        if (text) await setPlanAmount(ym, r.id, parseAmountOrZero(text)!, r.last?.kind, currency);
         else await addPlanItem(ym, r.id);
       }
       onSaved();
@@ -100,9 +118,11 @@ export default function PlanAddModal({ ym, visible, plannedIds, onClose, onSaved
         <View style={styles.head}>
           <Text style={styles.title}>Добавить в план</Text>
           <Text style={styles.caption}>
-            {free !== null ? `Свободно: ${money(free)}` : 'Сумма к планированию не задана'}
-            {picked.length ? ` · выбрано на ${money(sum)}` : ''}
+            {free !== null ? `Свободно: ${formatWithCurrency(free, sumCurrency)}` : 'Сумма к планированию не задана'}
+            {picked.length ? ` · выбрано на ${formatWithCurrency(sum, sumCurrency)}` : ''}
           </Text>
+          {/* the currency of the amounts typed below */}
+          <CurrencyPicker value={currency} onChange={setCurrency} style={styles.currency} />
         </View>
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.list}>
           {rows.map((r) => {
@@ -118,7 +138,7 @@ export default function PlanAddModal({ ym, visible, plannedIds, onClose, onSaved
                   value={amounts[r.id] ?? ''}
                   onChangeText={(t) => setAmount(r.id, t)}
                   // last time's amount: taken when the row is ticked without one
-                  placeholder={r.last ? formatShort(r.last.limit_minor) : '0'}
+                  placeholder={r.last ? `${formatShort(r.last.limit_minor)}${r.last.currency !== currency ? ` ${r.last.currency}` : ''}` : '0'}
                   placeholderTextColor={colors.muted}
                   keyboardType="decimal-pad"
                   maxLength={12}
@@ -149,6 +169,7 @@ const styles = StyleSheet.create({
   head: { padding: 16, paddingBottom: 8 },
   title: { fontSize: 18, fontWeight: '600', color: colors.text },
   caption: { fontSize: 13, color: colors.muted, marginTop: 4 },
+  currency: { marginTop: 10 },
   list: { paddingHorizontal: 16, paddingBottom: 8 },
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6,

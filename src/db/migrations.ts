@@ -217,6 +217,18 @@ export const MIGRATIONS: MigrationStep[][] = [
     )`,
     'CREATE INDEX IF NOT EXISTS merchant_group_members_group ON merchant_group_members (group_id)',
   ],
+  // 17: currencies. Official daily rates (GEL per unit, from the National Bank of Georgia, see src/db/fx.ts) for
+  // converting stats; the amount to distribute and every plan item have a currency of their own
+  [
+    `CREATE TABLE IF NOT EXISTS fx_rates (
+      date TEXT NOT NULL,
+      currency TEXT NOT NULL,
+      gel_per_unit REAL NOT NULL,
+      PRIMARY KEY (date, currency)
+    )`,
+    "ALTER TABLE plan_months ADD COLUMN budget_currency TEXT NOT NULL DEFAULT 'GEL'",
+    "ALTER TABLE plan_items ADD COLUMN currency TEXT NOT NULL DEFAULT 'GEL'",
+  ],
 ];
 
 export async function getSchemaVersion(db: Db): Promise<number> {

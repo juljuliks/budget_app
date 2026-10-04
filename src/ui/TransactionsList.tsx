@@ -9,7 +9,9 @@ import {
 } from '../db/transactions';
 import { emitTransactionsChanged, onTransactionsChanged } from '../events';
 import { Category, categoryLabel, countPastTransactionsOfCategory, deleteCategory, getCategory, moveTransactionsOutOfCategory } from '../db/categories';
-import { BUDGET_CURRENCY, currentYm, monthStart, spendingEntries } from '../db/plans';
+import { currentYm, monthStart, spendingEntries } from '../db/plans';
+import { setDisplayCurrency, useDisplayCurrency } from '../displayCurrency';
+import CurrencyPicker from './CurrencyPicker';
 import { assignCategoryToMany } from '../assign';
 import { navigationRef, TabParamList, useRootNavigation } from '../navigation';
 import Button from './Button';
@@ -202,7 +204,9 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
     return out;
   }, [data]);
 
-  // spent per day for the day headers: all of the day's transactions, not only the ones loaded or filtered
+  // spent per day for the day headers: all of the day's transactions, not only the ones loaded or filtered,
+  // converted to the currency picked on top (transactions themselves stay in their own currency)
+  const currency = useDisplayCurrency('transactions');
   const [daySpent, setDaySpent] = useState<Map<string, number>>(new Map());
   useEffect(() => {
     if (sections.length === 0) { setDaySpent(new Map()); return; }
@@ -210,14 +214,14 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
     const last = new Date(sections[0].dayStart * 1000);
     const to = new Date(last.getFullYear(), last.getMonth(), last.getDate() + 1).getTime() / 1000;
     let stale = false;
-    spendingEntries(from, to).then((rows) => {
+    spendingEntries(from, to, currency).then((rows) => {
       if (stale) return;
       const m = new Map<string, number>();
       for (const r of rows) m.set(dayKey(r.occurred_at), (m.get(dayKey(r.occurred_at)) ?? 0) + r.spent_minor);
       setDaySpent(m);
     }).catch((e) => console.error('day totals failed', e));
     return () => { stale = true; };
-  }, [sections]);
+  }, [sections, currency]);
 
   // selection lives inside edit mode
   function toggleSelectMode() {
@@ -384,7 +388,13 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
               {pastCount > 0 ? ` Прошлые месяцы (${pastCount} ${plural(pastCount, ['транзакция', 'транзакции', 'транзакций'])}) останутся в этой категории, история не изменится.` : ''}
             </Text>
           </View>
-        ) : <PushAccessBanner />}
+        ) : (
+          <>
+            <PushAccessBanner />
+            {/* the currency of the day totals (and day stats) */}
+            <CurrencyPicker value={currency} onChange={(c) => { setDisplayCurrency('transactions', c); }} style={styles.modes} />
+          </>
+        )}
         <Segmented options={MODES} value={mode} onChange={setMode} style={styles.modes} disabled={deleting ? DELETE_MODE_DISABLED : undefined} />
 
         {mode === 'text' ? (
@@ -505,7 +515,7 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
           return (
             <View style={[formStyles.sectionHeader, styles.dayHeader]}>
               <Text style={styles.dayTitle}>{section.title}</Text>
-              {spent > 0 ? <Text style={styles.daySpent}>−{formatShort(spent)} {BUDGET_CURRENCY}</Text> : null}
+              {spent > 0 ? <Text style={styles.daySpent}>−{formatShort(spent)} {currency}</Text> : null}
               <TouchableOpacity
                 onPress={() => navigation.navigate('DayStats', { day: section.dayStart })}
                 hitSlop={10}

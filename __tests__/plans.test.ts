@@ -180,7 +180,7 @@ describe('amount to distribute', () => {
     await expect(setPlanBudget(M1, 50000)).rejects.toHaveProperty('budget_minor', 50000);
     expect(await getPlanBudget(M1)).toBeNull();
     await setPlanBudget(M1, 60000);
-    expect(await getPlanBudget(M1)).toBe(60000);
+    expect(await getPlanBudget(M1)).toEqual({ amount_minor: 60000, currency: 'GEL' });
     await setPlanBudget(M1, null);
     await setPlanAmount(M1, 1, 99999999);
     expect(await getPlanBudget(M1)).toBeNull();
@@ -197,7 +197,7 @@ describe('amount to distribute', () => {
 
   test('carries over to the next month', async () => {
     await setPlanBudget(M1, 300000);
-    expect(await getPlanBudget(M2)).toBe(300000);
+    expect(await getPlanBudget(M2)).toEqual({ amount_minor: 300000, currency: 'GEL' });
   });
 
   test('month income = GEL deposits of the month', async () => {

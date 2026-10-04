@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { BUDGET_CURRENCY, getPlanBudget, lastPlanItem, OverBudgetError, PlanKind, plannedTotal, setPlanAmount } from '../../db/plans';
+import { Currency } from '../../db/fx';
+import { getPlanBudget, lastPlanItem, OverBudgetError, PlanKind, plannedTotal, setPlanAmount } from '../../db/plans';
+import CurrencyPicker from '../CurrencyPicker';
 import { formatWithCurrency, parseAmountOrZero, toInputValue } from '../money';
 import RadioGroup from '../RadioGroup';
 import TextInputModal from '../TextInputModal';
@@ -12,8 +14,10 @@ const KINDS = [
 export type PlanAmountTarget = {
   category_id: number;
   label: string;
-  /** current amount in the plan; 0 = not set / not in the plan yet */
+  /** current amount in the plan, in `currency`; 0 = not set / not in the plan yet */
   limit_minor: number;
+  /** the currency the amount was entered in; a category not in the plan yet: the screen's currency */
+  currency: Currency;
   /** current kind; a category not in the plan yet starts as a limit */
   kind?: PlanKind;
 };
@@ -27,34 +31,36 @@ type Props = {
   onSaved: () => void;
 };
 
-const money = (minor: number) => formatWithCurrency(minor, BUDGET_CURRENCY);
-
 /**
  * Dialog for one category's amount in a month's plan, shared by the plan screen (✎ on a row) and the
- * stats screen ("＋ В план"). Shows what is still free and refuses amounts over the amount to distribute.
+ * stats screen ("＋ В план"). The amount is entered in any currency (the one it was entered in comes back when
+ * editing); what is still free is shown in the amount to distribute's currency, and going over it is refused.
  */
 export default function PlanAmountModal({ ym, target, onClose, onSaved }: Props) {
   // free for this category = amount to distribute − the other categories; null = no amount set
-  const [free, setFree] = useState<number | null>(null);
+  const [free, setFree] = useState<{ minor: number; currency: Currency } | null>(null);
   const [kind, setKind] = useState<PlanKind>('limit');
+  const [currency, setCurrency] = useState<Currency>('GEL');
   // the field starts with the current amount, or the category's amount from the last month that planned it
   const [initial, setInitial] = useState('');
-  const [previous, setPrevious] = useState<number | null>(null);
+  const [previous, setPrevious] = useState<{ minor: number; currency: Currency } | null>(null);
 
   useEffect(() => {
     if (!target) return;
     setKind(target.kind ?? 'limit');
+    setCurrency(target.currency);
     setInitial(toInputValue(target.limit_minor));
-    Promise.all([getPlanBudget(ym), plannedTotal(ym, target.category_id), lastPlanItem(ym, target.category_id)])
-      .then(([budget, others, last]) => {
-        setFree(budget === null ? null : Math.max(budget - others, 0));
-        setPrevious(last?.limit_minor ?? null);
-        if (!target.limit_minor && last) {
-          setInitial(toInputValue(last.limit_minor));
-          if (!target.kind) setKind(last.kind);
-        }
-      })
-      .catch((e) => console.error('load plan budget failed', e));
+    (async () => {
+      const [budget, last] = await Promise.all([getPlanBudget(ym), lastPlanItem(ym, target.category_id)]);
+      const others = budget ? await plannedTotal(ym, target.category_id, budget.currency) : 0;
+      setFree(budget ? { minor: Math.max(budget.amount_minor - others, 0), currency: budget.currency } : null);
+      setPrevious(last ? { minor: last.limit_minor, currency: last.currency } : null);
+      if (!target.limit_minor && last) {
+        setInitial(toInputValue(last.limit_minor));
+        setCurrency(last.currency);
+        if (!target.kind) setKind(last.kind);
+      }
+    })().catch((e) => console.error('load plan budget failed', e));
   }, [ym, target]);
 
   async function save(text: string): Promise<string | null> {
@@ -62,18 +68,18 @@ export default function PlanAmountModal({ ym, target, onClose, onSaved }: Props)
     const minor = parseAmountOrZero(text);
     if (minor === null) return 'Введите сумму, например 1500 или 12.50';
     try {
-      await setPlanAmount(ym, target.category_id, minor, kind);
+      await setPlanAmount(ym, target.category_id, minor, kind, currency);
     } catch (e) {
       if (!(e instanceof OverBudgetError)) throw e;
-      return `Больше суммы к планированию. Свободно для этой категории: ${money(free ?? 0)}.`;
+      return `Больше суммы к планированию. Свободно для этой категории: ${free ? formatWithCurrency(free.minor, free.currency) : '0'}.`;
     }
     onSaved();
     return null;
   }
 
   const hint = [
-    free !== null ? `Свободно: ${money(free)}` : '',
-    previous ? `В прошлый раз: ${money(previous)}` : '',
+    free ? `Свободно: ${formatWithCurrency(free.minor, free.currency)}` : '',
+    previous ? `В прошлый раз: ${formatWithCurrency(previous.minor, previous.currency)}` : '',
   ].filter(Boolean).join('\n');
 
   return (
@@ -89,6 +95,7 @@ export default function PlanAmountModal({ ym, target, onClose, onSaved }: Props)
       onSubmit={save}
       onClose={onClose}
     >
+      <CurrencyPicker value={currency} onChange={setCurrency} />
       <RadioGroup options={KINDS} value={kind} onChange={setKind} />
     </TextInputModal>
   );

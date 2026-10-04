@@ -3,7 +3,8 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View
 import { useFocusEffect } from '@react-navigation/native';
 import { useOpenCategoryTransactions } from '../../navigation';
 import { categoryLabel } from '../../db/categories';
-import { BUDGET_CURRENCY, CategoryStat, monthStats, MonthStats, StatGroup, ymOf } from '../../db/plans';
+import { Currency } from '../../db/fx';
+import { CategoryStat, monthStats, MonthStats, StatGroup, ymOf } from '../../db/plans';
 import { onTransactionsChanged } from '../../events';
 import Donut, { DonutSegment } from '../Donut';
 import Meter from '../Meter';
@@ -21,7 +22,7 @@ function donutSegments(groups: StatGroup[]): DonutSegment[] {
     .map((c) => ({ key: String(c.category_id), value: c.spent_minor, color: c.color }));
 }
 
-export default function StatsView({ year, month }: { year: number; month: number }) {
+export default function StatsView({ year, month, currency }: { year: number; month: number; currency: Currency }) {
   const [stats, setStats] = useState<MonthStats | null>(null);
   // "＋ В план" on a category without a plan amount
   const [planTarget, setPlanTarget] = useState<PlanAmountTarget | null>(null);
@@ -29,8 +30,8 @@ export default function StatsView({ year, month }: { year: number; month: number
   const [selected, setSelected] = useState<string | null>(null);
 
   const load = useCallback(() => {
-    monthStats(year, month).then(setStats).catch((e) => console.error('load stats failed', e));
-  }, [year, month]);
+    monthStats(year, month, currency).then(setStats).catch((e) => console.error('load stats failed', e));
+  }, [year, month, currency]);
 
   useFocusEffect(load);
   useEffect(load, [load]);
@@ -47,7 +48,7 @@ export default function StatsView({ year, month }: { year: number; month: number
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.donutWrap}>
         <Donut segments={segments} selectedKey={picked ? selected : null} onSelect={setSelected}>
-          <DonutCenter total={stats.spent_minor} picked={picked} />
+          <DonutCenter total={stats.spent_minor} picked={picked} currency={stats.currency} />
         </Donut>
       </View>
 
@@ -81,7 +82,7 @@ export default function StatsView({ year, month }: { year: number; month: number
                 key={String(c.category_id)}
                 stat={c}
                 onAddToPlan={c.category_id !== null && c.limit_minor === null && !c.deleted
-                  ? () => setPlanTarget({ category_id: c.category_id!, label: categoryLabel(c), limit_minor: 0 })
+                  ? () => setPlanTarget({ category_id: c.category_id!, label: categoryLabel(c), limit_minor: 0, currency })
                   : undefined}
               />
             ))}
@@ -91,7 +92,7 @@ export default function StatsView({ year, month }: { year: number; month: number
 
       {stats.other_currencies.length > 0 ? (
         <Text style={styles.hint}>
-          Не учтено (другая валюта): {stats.other_currencies.map((o) => `${formatMoney(o.spent_minor)} ${o.currency}`).join(', ')}
+          Не учтено, нет курса (нужен интернет): {stats.other_currencies.map((o) => `${formatMoney(o.spent_minor)} ${o.currency}`).join(', ')}
         </Text>
       ) : null}
 
@@ -101,13 +102,13 @@ export default function StatsView({ year, month }: { year: number; month: number
 }
 
 /** The hole: the month's total, or the tapped category's spending and its share of the total. */
-export function DonutCenter({ total, picked }: { total: number; picked?: { name: string; emoji: string | null; spent_minor: number } }) {
+export function DonutCenter({ total, picked, currency }: { total: number; picked?: { name: string; emoji: string | null; spent_minor: number }; currency: Currency }) {
   if (!picked) {
     return (
       <>
         <Text style={styles.caption}>Потрачено</Text>
         <Text style={styles.hero}>{formatShort(total)}</Text>
-        <Text style={styles.caption}>{BUDGET_CURRENCY}</Text>
+        <Text style={styles.caption}>{currency}</Text>
       </>
     );
   }
@@ -115,7 +116,7 @@ export function DonutCenter({ total, picked }: { total: number; picked?: { name:
   return (
     <>
       <Text style={styles.pickedName} numberOfLines={2}>{`${picked.emoji || ''} ${picked.name}`.trim()}</Text>
-      <Text style={styles.pickedAmount}>{formatShort(picked.spent_minor)} {BUDGET_CURRENCY}</Text>
+      <Text style={styles.pickedAmount}>{formatShort(picked.spent_minor)} {currency}</Text>
       <Text style={styles.caption}>{share === 0 && picked.spent_minor > 0 ? '<1' : share}% всех трат</Text>
     </>
   );
