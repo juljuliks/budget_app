@@ -327,6 +327,47 @@ export async function monthStats(year: number, month: number): Promise<MonthStat
   };
 }
 
+export type PeriodStats = {
+  groups: StatGroup[];
+  spent_minor: number;
+  categories: CategoryStat[];
+};
+
+/** Spending by category for any period [from, to) (unix seconds), e.g. one day; no plan. Like monthStats. */
+export async function periodStats(from: number, to: number): Promise<PeriodStats> {
+  const db = await getDb();
+  const rows = await db.all<{ category_id: number | null; name: string | null; emoji: string | null; type_id: number | null; type_name: string | null; deleted_at: number | null; spent_minor: number }>(
+    `SELECT t.category_id, c.name, c.emoji, c.type_id, ct.name AS type_name, c.deleted_at, ${SPEND_EXPR} AS spent_minor
+      FROM transactions t
+      LEFT JOIN categories c ON c.id = t.category_id
+      LEFT JOIN category_types ct ON ct.id = c.type_id
+      WHERE t.occurred_at >= ? AND t.occurred_at < ? AND t.currency = ?
+      GROUP BY t.category_id HAVING spent_minor > 0`, [from, to, BUDGET_CURRENCY]);
+  const colorOf = await categoryColors();
+  const categories: CategoryStat[] = rows.map((r) => ({
+    category_id: r.category_id,
+    name: r.category_id === null ? 'Без категории' : r.name ?? '?',
+    emoji: r.emoji, type_id: r.type_id, type_name: r.type_name, spent_minor: r.spent_minor,
+    limit_minor: null, plan_kind: null,
+    color: r.category_id === null ? NEUTRAL_COLOR : colorOf.get(r.category_id) ?? NEUTRAL_COLOR,
+    deleted: r.deleted_at !== null,
+  })).sort((a, b) => b.spent_minor - a.spent_minor);
+  const types = await db.all<{ id: number; name: string }>('SELECT id, name FROM category_types ORDER BY sort_order, name');
+  return { groups: groupByType(categories, types), spent_minor: categories.reduce((s, c) => s + c.spent_minor, 0), categories };
+}
+
+/**
+ * Each transaction's contribution to spending in [from, to) (same rule as the stats; budget currency only),
+ * for per-day totals in the transactions list.
+ */
+export async function spendingEntries(from: number, to: number): Promise<Array<{ occurred_at: number; spent_minor: number }>> {
+  const db = await getDb();
+  return db.all(
+    `SELECT t.occurred_at, ${SPEND_EXPR} AS spent_minor FROM transactions t
+      WHERE t.occurred_at >= ? AND t.occurred_at < ? AND t.currency = ?
+      GROUP BY t.id HAVING spent_minor != 0`, [from, to, BUDGET_CURRENCY]);
+}
+
 export type HistoryMonth = {
   ym: string;
   planned_minor: number;

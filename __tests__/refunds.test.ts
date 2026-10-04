@@ -69,3 +69,17 @@ test('an uncategorized refund does not count in stats (it is settled on the purc
   expect(s.spent_minor).toBe(12000);
   expect(s.categories.map((c) => c.category_id)).toEqual([1]);
 });
+
+test('period stats and per-transaction spending: expenses count, deposits and uncategorized refunds don\'t', async () => {
+  const { periodStats, spendingEntries } = require('../src/db/plans');
+  await add('purchase', 1000, 'SPAR', NOW, 1);
+  await add('purchase', 500, 'WOLT', NOW, 2);
+  await add('deposit', 9999, 'ANNA', NOW);
+  await add('refund', 300, 'SPAR', NOW);         // not settled on a category: no effect
+  await add('purchase', 700, 'SPAR', NOW - 2 * DAY, 1); // another day
+  const s = await periodStats(NOW - 3600, NOW + 3600);
+  expect(s.spent_minor).toBe(1500);
+  expect(s.categories.map((c: { category_id: number }) => c.category_id)).toEqual([1, 2]);
+  const e = await spendingEntries(NOW - 3 * DAY, NOW + DAY);
+  expect(e.map((x: { spent_minor: number }) => x.spent_minor).sort((a: number, b: number) => a - b)).toEqual([500, 700, 1000]);
+});

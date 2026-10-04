@@ -14,6 +14,7 @@ import AddTransaction from './ui/AddTransaction';
 import RefundResolve from './ui/RefundResolve';
 import StatsHome from './ui/stats/StatsHome';
 import MerchantsScreen from './ui/MerchantsScreen';
+import DayStats from './ui/stats/DayStats';
 import SettingsMenuButton from './ui/SettingsMenuButton';
 import { HistoryIcon, StatsIcon } from './ui/icons';
 import { colors } from './ui/theme';
@@ -45,7 +46,8 @@ function useUnseenCount(): number {
 function MainTabs() {
   const unseen = useUnseenCount();
   return (
-    <Tab.Navigator screenOptions={{ tabBarActiveTintColor: colors.accent, tabBarInactiveTintColor: colors.muted }}>
+    // the app always opens on the transactions
+    <Tab.Navigator initialRouteName="Transactions" screenOptions={{ tabBarActiveTintColor: colors.accent, tabBarInactiveTintColor: colors.muted }}>
       <Tab.Screen
         name="Stats"
         component={StatsHome}
@@ -99,8 +101,9 @@ export default function App() {
         <Stack.Screen name="CategoryEdit" component={CategoryEdit} options={{ title: 'Категория' }} />
         <Stack.Screen name="Categories" component={CategoriesScreen} options={{ title: 'Категории' }} />
         <Stack.Screen name="Merchants" component={MerchantsScreen} options={{ title: 'Мерчанты' }} />
+        <Stack.Screen name="DayStats" component={DayStats} options={{ title: 'Траты за день' }} />
         <Stack.Screen name="CategoryDelete" component={CategoryDelete} options={{ title: 'Удаление категории' }} />
-        <Stack.Screen name="CategoryTypes" component={CategoryTypes} options={{ title: 'Типы категорий' }} />
+        <Stack.Screen name="CategoryTypes" component={CategoryTypes} options={{ title: 'Типы' }} />
         <Stack.Screen name="AddTransaction" component={AddTransaction} options={{ title: 'Новая транзакция' }} />
         <Stack.Screen name="RefundResolve" component={RefundResolve} options={{ title: 'Возврат' }} />
       </Stack.Navigator>

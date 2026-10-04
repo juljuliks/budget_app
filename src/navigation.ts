@@ -19,21 +19,21 @@ export type RootStackParamList = {
    * No categoryId = create. After creating, the new category is: assigned to txId (with a merchant
    * rule) / to all txIds (bulk, no rules), added to the plan of planYm. typeId: preselected type.
    * returnSelection: hand the new id back to the previous screen as `selectCategoryId`.
-   * selectTypeId: a type just created on the types screen, to select.
    */
   CategoryEdit: {
     categoryId?: number; txId?: number; txIds?: number[]; planYm?: string; typeId?: number; returnSelection?: boolean;
-    selectTypeId?: number;
     /** with txIds: they are moved out of this category being deleted (their merchants' rules follow) */
     moveFromCategoryId?: number;
   };
   Categories: undefined;
   /** Merchants with their categories; merging into groups */
   Merchants: undefined;
+  /** Stats of one day (from a day header in the transactions list): `day` = its local midnight, unix seconds */
+  DayStats: { day: number };
   /** Delete a category: first move its current-month transactions to other ones (the transactions list in a delete mode) */
   CategoryDelete: { categoryId: number };
-  /** returnSelection: a newly created type goes back to the previous screen (category editor) as `selectTypeId` */
-  CategoryTypes: { returnSelection?: boolean } | undefined;
+  /** Category types (settings → Категории → Типы) */
+  CategoryTypes: undefined;
   AddTransaction: { selectCategoryId?: number } | undefined;
   /** Settle a refund on the purchase it belongs to (reduce it or delete it) */
   RefundResolve: { refundId: number };

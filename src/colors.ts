@@ -28,9 +28,81 @@ export function isPaletteKey(v: string | null | undefined): v is PaletteKey {
   return !!v && v in PALETTES;
 }
 
-/** A type's palette: its own, or one by its position among the types. */
-export function typePalette(type: { palette: string | null }, typeIndex: number): PaletteKey {
-  return isPaletteKey(type.palette) ? type.palette : PALETTE_ORDER[typeIndex % PALETTE_ORDER.length];
+/** A palette of the user's own: its base color, '#rrggbb' (the shades are derived from it, see shadesFromBase). */
+export function isCustomPalette(v: string | null | undefined): v is string {
+  return !!v && /^#[0-9a-f]{6}$/i.test(v);
+}
+
+/**
+ * A type's palette: a preset key or a custom base color (stored on the type), otherwise a preset by its position
+ * among the types.
+ */
+export function typePalette(type: { palette: string | null }, typeIndex: number): string {
+  if (isPaletteKey(type.palette) || isCustomPalette(type.palette)) return type.palette;
+  return PALETTE_ORDER[typeIndex % PALETTE_ORDER.length];
+}
+
+/** The shades of a palette (a preset key or a custom base color). */
+export function paletteShades(palette: string): string[] {
+  return isPaletteKey(palette) ? PALETTES[palette].shades : shadesFromBase(palette);
+}
+
+// --- color math (hex <-> HSL) for custom colors and palettes ---
+
+export function hexToHsl(hex: string): [number, number, number] {
+  const n = parseInt(hex.slice(1), 16);
+  const r = ((n >> 16) & 255) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  if (max === min) return [0, 0, l * 100];
+  const d = max - min;
+  const sat = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  const h = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return [h * 60, sat * 100, l * 100];
+}
+
+export function hslToHex(h: number, sat: number, l: number): string {
+  const s1 = Math.max(0, Math.min(100, sat)) / 100, l1 = Math.max(0, Math.min(100, l)) / 100;
+  const k = (n: number) => (n + h / 30) % 12;
+  const a = s1 * Math.min(l1, 1 - l1);
+  const f = (n: number) => l1 - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+  return `#${[f(0), f(8), f(4)].map((x) => Math.round(x * 255).toString(16).padStart(2, '0')).join('')}`;
+}
+
+/** A custom color from a hue (0..360): saturated and mid-light like the presets' base shades. */
+export function colorFromHue(hue: number, lightness = 48): string {
+  return hslToHex(hue, 68, lightness);
+}
+
+/**
+ * Five shades of a base color, ordered like the presets' (base, lighter, darker, lightest, darkest) so
+ * neighbouring categories of a type differ in lightness.
+ */
+export function shadesFromBase(base: string): string[] {
+  const [h, sat, l] = hexToHsl(base);
+  return [l, l + 17, l - 13, l + 30, l - 24].map((x) => hslToHex(h, sat, Math.max(14, Math.min(88, x))));
+}
+
+/** Hue distance on the color wheel, 0..180. */
+function hueGap(a: number, b: number): number {
+  const d = Math.abs(a - b) % 360;
+  return d > 180 ? 360 - d : d;
+}
+
+/**
+ * A hue as far as possible from the (saturated) colors already used, with a little randomness so pressing
+ * "случайный" again gives another one.
+ */
+export function distinctHue(taken: Iterable<string>, random = Math.random): number {
+  const hues = [...taken].map(hexToHsl).filter(([, sat]) => sat > 15).map(([h]) => h);
+  if (hues.length === 0) return Math.floor(random() * 360);
+  let best = 0, bestGap = -1;
+  for (let i = 0; i < 36; i++) {
+    const h = (i * 10 + random() * 10) % 360;
+    const gap = Math.min(...hues.map((t) => hueGap(h, t))) + random() * 8;
+    if (gap > bestGap) { best = h; bestGap = gap; }
+  }
+  return Math.round(best);
 }
 
 /**
@@ -53,7 +125,8 @@ export function buildCategoryColors(
     seen.set(c.type_id, n + 1);
     if (c.color) { out.set(c.id, c.color); continue; }
     const palette = c.type_id !== null ? paletteOf.get(c.type_id) : undefined;
-    out.set(c.id, palette ? PALETTES[palette].shades[n % PALETTES[palette].shades.length] : untyped[n % untyped.length]);
+    const shades = palette ? paletteShades(palette) : untyped;
+    out.set(c.id, shades[n % shades.length]);
   }
   return out;
 }
@@ -78,7 +151,7 @@ export function freeCategoryColors(
   const palettes = types.map((t, i) => typePalette(t, i));
   const own = typeId === null ? null : palettes[types.findIndex((t) => t.id === typeId)] ?? null;
   const options = [
-    ...(own ? PALETTES[own].shades : []),
+    ...(own ? paletteShades(own) : []),
     ...PALETTE_ORDER.filter((k) => !palettes.includes(k)).map((k) => PALETTES[k].shades[0]),
   ].filter((c) => !taken.has(c) || c === current);
   return current && !options.includes(current) ? [current, ...options] : options;

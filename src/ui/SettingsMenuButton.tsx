@@ -4,9 +4,16 @@ import { useRootNavigation } from '../navigation';
 import { GearIcon } from './icons';
 import { colors } from './theme';
 
-const ITEMS = [['Merchants', 'Мерчанты'], ['Categories', 'Категории']] as const;
+// a heading groups the items under it (indented)
+type Item = { heading: string } | { route: 'Merchants' | 'Categories' | 'CategoryTypes'; label: string; sub?: boolean };
+const ITEMS: Item[] = [
+  { route: 'Merchants', label: 'Мерчанты' },
+  { heading: 'Категории' },
+  { route: 'Categories', label: 'Категории', sub: true },
+  { route: 'CategoryTypes', label: 'Типы', sub: true },
+];
 
-/** Gear in the tab headers: a small menu with the merchants and categories screens. */
+/** Gear in the tab headers: a small menu with the merchants, categories and category types screens. */
 export default function SettingsMenuButton() {
   const navigation = useRootNavigation();
   const [open, setOpen] = useState(false);
@@ -20,11 +27,13 @@ export default function SettingsMenuButton() {
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <Pressable style={styles.backdrop} onPress={() => setOpen(false)} accessibilityLabel="Закрыть">
           <View style={styles.menu}>
-            {ITEMS.map(([route, label]) => (
-              <TouchableOpacity key={route} style={styles.item} onPress={() => { setOpen(false); navigation.navigate(route); }}>
-                <Text style={styles.itemText}>{label}</Text>
+            {ITEMS.map((it) => ('heading' in it ? (
+              <Text key={it.heading} style={styles.heading}>{it.heading}</Text>
+            ) : (
+              <TouchableOpacity key={it.route} style={[styles.item, it.sub && styles.sub]} onPress={() => { setOpen(false); navigation.navigate(it.route); }}>
+                <Text style={styles.itemText}>{it.label}</Text>
               </TouchableOpacity>
-            ))}
+            )))}
           </View>
         </Pressable>
       </Modal>
@@ -41,5 +50,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6, elevation: 6,
   },
   item: { paddingHorizontal: 18, paddingVertical: 12 },
+  sub: { paddingLeft: 30 },
+  heading: { fontSize: 12, fontWeight: '600', color: colors.muted, textTransform: 'uppercase', paddingHorizontal: 18, paddingTop: 10, paddingBottom: 2 },
   itemText: { fontSize: 16, color: colors.text },
 });

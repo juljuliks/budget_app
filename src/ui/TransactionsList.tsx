@@ -9,7 +9,7 @@ import {
 } from '../db/transactions';
 import { emitTransactionsChanged, onTransactionsChanged } from '../events';
 import { Category, categoryLabel, countPastTransactionsOfCategory, deleteCategory, getCategory, moveTransactionsOutOfCategory } from '../db/categories';
-import { currentYm, monthStart } from '../db/plans';
+import { BUDGET_CURRENCY, currentYm, monthStart, spendingEntries } from '../db/plans';
 import { assignCategoryToMany } from '../assign';
 import { navigationRef, TabParamList, useRootNavigation } from '../navigation';
 import Button from './Button';
@@ -20,8 +20,9 @@ import Fab from './Fab';
 import PushAccessBanner from './PushAccessBanner';
 import SettingsMenuButton from './SettingsMenuButton';
 import { dayKey, formatDay, plural } from './format';
+import { formatShort } from './money';
 import { formStyles } from './formStyles';
-import { PencilIcon, SearchIcon } from './icons';
+import { InfoIcon, PencilIcon, SearchIcon } from './icons';
 import RangeCalendar, { DayRange, formatRange, rangeToUnix } from './RangeCalendar';
 import Segmented from './Segmented';
 import { colors } from './theme';
@@ -189,16 +190,34 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
   }, [data]);
 
   const sections = useMemo(() => {
-    const out: Array<{ key: string; title: string; data: TransactionRow[] }> = [];
+    const out: Array<{ key: string; title: string; dayStart: number; data: TransactionRow[] }> = [];
     for (const r of data) {
       const key = dayKey(r.occurred_at);
       if (out.length === 0 || out[out.length - 1].key !== key) {
-        out.push({ key, title: formatDay(r.occurred_at), data: [] });
+        const d = new Date(r.occurred_at * 1000);
+        out.push({ key, title: formatDay(r.occurred_at), dayStart: new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() / 1000, data: [] });
       }
       out[out.length - 1].data.push(r);
     }
     return out;
   }, [data]);
+
+  // spent per day for the day headers: all of the day's transactions, not only the ones loaded or filtered
+  const [daySpent, setDaySpent] = useState<Map<string, number>>(new Map());
+  useEffect(() => {
+    if (sections.length === 0) { setDaySpent(new Map()); return; }
+    const from = sections[sections.length - 1].dayStart;
+    const last = new Date(sections[0].dayStart * 1000);
+    const to = new Date(last.getFullYear(), last.getMonth(), last.getDate() + 1).getTime() / 1000;
+    let stale = false;
+    spendingEntries(from, to).then((rows) => {
+      if (stale) return;
+      const m = new Map<string, number>();
+      for (const r of rows) m.set(dayKey(r.occurred_at), (m.get(dayKey(r.occurred_at)) ?? 0) + r.spent_minor);
+      setDaySpent(m);
+    }).catch((e) => console.error('day totals failed', e));
+    return () => { stale = true; };
+  }, [sections]);
 
   // selection lives inside edit mode
   function toggleSelectMode() {
@@ -481,7 +500,22 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
         keyExtractor={(i) => String(i.id)}
         stickySectionHeadersEnabled
         keyboardShouldPersistTaps="handled"
-        renderSectionHeader={({ section }) => <Text style={formStyles.sectionHeader}>{section.title}</Text>}
+        renderSectionHeader={({ section }) => {
+          const spent = daySpent.get(section.key) ?? 0;
+          return (
+            <View style={[formStyles.sectionHeader, styles.dayHeader]}>
+              <Text style={styles.dayTitle}>{section.title}</Text>
+              {spent > 0 ? <Text style={styles.daySpent}>−{formatShort(spent)} {BUDGET_CURRENCY}</Text> : null}
+              <TouchableOpacity
+                onPress={() => navigation.navigate('DayStats', { day: section.dayStart })}
+                hitSlop={10}
+                accessibilityLabel={`Траты за день: ${section.title}`}
+              >
+                <InfoIcon color={colors.accent} />
+              </TouchableOpacity>
+            </View>
+          );
+        }}
         renderItem={({ item }) => {
           const open = () => navigation.navigate('TransactionDetail', { txId: item.id });
           return (
@@ -571,6 +605,9 @@ const styles = StyleSheet.create({
   },
   empty: { padding: 32, textAlign: 'center', color: colors.muted },
   merchantBox: { gap: 8 },
+  dayHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  dayTitle: { flex: 1, fontSize: 13, fontWeight: '600', color: colors.muted },
+  daySpent: { fontSize: 13, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
   deleteInfo: { paddingBottom: 10, gap: 4 },
   deleteTitle: { fontSize: 18, fontWeight: '600', color: colors.text },
   deleteHint: { fontSize: 13, color: colors.muted },

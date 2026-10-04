@@ -43,3 +43,33 @@ test('a category is offered its type shades and free palettes, minus colors othe
   // the current color stays even if taken
   expect(freeCategoryColors(types, 1, taken, PALETTES.blue.shades[0])).toContain(PALETTES.blue.shades[0]);
 });
+
+test('hex <-> HSL round trip; colors from a hue', () => {
+  const { hexToHsl, hslToHex, colorFromHue } = require('../src/colors');
+  for (const hex of ['#2a78d6', '#eb6834', '#1baf7a', '#000000', '#ffffff']) {
+    const [h, s, l] = hexToHsl(hex);
+    expect(hslToHex(h, s, l)).toBe(hex);
+  }
+  expect(Math.round(hexToHsl(colorFromHue(200))[0])).toBeGreaterThanOrEqual(199);
+});
+
+test('a custom palette: five shades of its base, used for its type\'s categories', () => {
+  const { shadesFromBase, paletteShades, typePalette, hexToHsl } = require('../src/colors');
+  const shades = shadesFromBase('#3a7bd5');
+  expect(shades).toHaveLength(5);
+  expect(new Set(shades).size).toBe(5);
+  // same hue, different lightness
+  for (const s of shades) expect(Math.abs(hexToHsl(s)[0] - hexToHsl('#3a7bd5')[0])).toBeLessThan(3);
+  expect(typePalette({ palette: '#3a7bd5' }, 0)).toBe('#3a7bd5');
+  expect(paletteShades('#3a7bd5')).toEqual(shades);
+  const colors = buildCategoryColors([{ id: 1, type_id: 9, color: null }, { id: 2, type_id: 9, color: null }], [{ id: 9, palette: '#3a7bd5' }]);
+  expect([colors.get(1), colors.get(2)]).toEqual(shades.slice(0, 2));
+});
+
+test('a distinct hue keeps away from the colors in use', () => {
+  const { distinctHue, colorFromHue } = require('../src/colors');
+  const taken = [0, 30, 60, 90, 120, 150].map((h: number) => colorFromHue(h));
+  const h = distinctHue(taken, () => 0.5);
+  expect(h).toBeGreaterThan(180);
+  expect(h).toBeLessThan(345);
+});

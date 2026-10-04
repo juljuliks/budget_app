@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { categoryLabel, createCategory, findCategoryByName, getCategory, moveTransactionsOutOfCategory, updateCategory } from '../db/categories';
@@ -11,7 +11,9 @@ import { returnToPrevious, RootStackParamList } from '../navigation';
 import Button from './Button';
 import Chip from './Chip';
 import ColorSwatches from './ColorSwatches';
-import { freeCategoryColors } from '../colors';
+import { colorFromHue, distinctHue, freeCategoryColors, hexToHsl } from '../colors';
+import HueBar from './HueBar';
+import TypeEditModal from './TypeEditModal';
 import { takenCategoryColors } from '../db/colors';
 import { formStyles } from './formStyles';
 import SectionHeading from './SectionHeading';
@@ -21,7 +23,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'CategoryEdit'>;
 
 /** Create (no categoryId) or edit a category: name, emoji, optional type. */
 export default function CategoryEdit({ route, navigation }: Props) {
-  const { categoryId, txId, txIds, planYm, typeId: initialTypeId, returnSelection, selectTypeId, moveFromCategoryId } = route.params ?? {};
+  const { categoryId, txId, txIds, planYm, typeId: initialTypeId, returnSelection, moveFromCategoryId } = route.params ?? {};
   const isNew = categoryId === undefined;
   const [name, setName] = useState('');
   const [emoji, setEmoji] = useState('');
@@ -29,6 +31,7 @@ export default function CategoryEdit({ route, navigation }: Props) {
   // own color; null = from the type's palette
   const [color, setColor] = useState<string | null>(null);
   const [types, setTypes] = useState<CategoryType[]>([]);
+  const [typeOpen, setTypeOpen] = useState(false);
   // colors other categories already have: not offered
   const [taken, setTaken] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
@@ -46,20 +49,19 @@ export default function CategoryEdit({ route, navigation }: Props) {
     }).catch((e) => console.error('load category failed', e));
   }, [categoryId, isNew, navigation]);
 
-  // a type just created on the types screen (gear next to "Тип") comes back selected
-  useEffect(() => {
-    if (selectTypeId !== undefined) setTypeId(selectTypeId);
-  }, [selectTypeId]);
-
   // on focus: types may have been edited on the types screen
-  useFocusEffect(useCallback(() => {
-    takenCategoryColors(categoryId).then(setTaken).catch((e) => console.error('load colors failed', e));
+  const loadTypes = useCallback(() => {
     listCategoryTypes().then((t) => {
       setTypes(t);
       // the selected type was deleted meanwhile
       setTypeId((cur) => (cur !== null && !t.some((x) => x.id === cur) ? null : cur));
     }).catch((e) => console.error('load types failed', e));
-  }, [categoryId]));
+  }, []);
+
+  useFocusEffect(useCallback(() => {
+    takenCategoryColors(categoryId).then(setTaken).catch((e) => console.error('load colors failed', e));
+    loadTypes();
+  }, [categoryId, loadTypes]));
 
   async function save() {
     const trimmed = name.trim();
@@ -109,11 +111,13 @@ export default function CategoryEdit({ route, navigation }: Props) {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      <SectionHeading title="Тип" onSettings={() => navigation.navigate('CategoryTypes', { returnSelection: true })} settingsLabel="Управление типами" />
+      {/* types are managed in the settings; a new one can be made right here */}
+      <SectionHeading title="Тип" />
       <View style={styles.chips}>
         {typeOptions.map(([id, label]) => (
           <Chip key={String(id)} label={label} selected={typeId === id} onPress={() => setTypeId(id)} />
         ))}
+        <Chip label="＋ Новый тип" action onPress={() => setTypeOpen(true)} />
       </View>
 
       <Text style={formStyles.label}>Название</Text>
@@ -135,6 +139,14 @@ export default function CategoryEdit({ route, navigation }: Props) {
 
       <Text style={formStyles.label}>Цвет</Text>
       <ColorSwatches options={colorOptions} value={color} onChange={setColor} />
+      {/* a color of its own: any hue on the bar, or one far from the colors in use */}
+      <View style={styles.customHead}>
+        <Text style={styles.customLabel}>Свой цвет</Text>
+        <TouchableOpacity onPress={() => setColor(colorFromHue(distinctHue(taken)))} hitSlop={8}>
+          <Text style={styles.link}>🎲 Случайный</Text>
+        </TouchableOpacity>
+      </View>
+      <HueBar hue={color ? Math.round(hexToHsl(color)[0]) : null} onChange={(h) => setColor(colorFromHue(h))} />
 
       <Text style={formStyles.label}>Эмодзи (необязательно)</Text>
       <TextInput style={[formStyles.input, styles.emoji]} value={emoji} onChangeText={setEmoji} placeholder="🏋️" maxLength={8} />
@@ -145,6 +157,13 @@ export default function CategoryEdit({ route, navigation }: Props) {
       {isNew && planYm ? <Text style={formStyles.hint}>Категория будет добавлена в план месяца.</Text> : null}
 
       <Button title="Сохранить" disabled={saving} onPress={save} style={styles.button} />
+      <TypeEditModal
+        visible={typeOpen}
+        types={types}
+        onClose={() => setTypeOpen(false)}
+        // the new type is selected for this category
+        onSaved={(id) => { setTypeOpen(false); setTypeId(id); loadTypes(); }}
+      />
     </ScrollView>
   );
 }
@@ -154,6 +173,9 @@ const styles = StyleSheet.create({
   content: { padding: 16, paddingTop: 0, paddingBottom: 32 },
   emoji: { width: 80, textAlign: 'center' },
   preview: { color: colors.muted, marginTop: 6, fontSize: 13 },
+  customHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 },
+  customLabel: { fontSize: 14, color: colors.text },
+  link: { fontSize: 14, color: colors.accent },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   button: { marginTop: 24 },
 });

@@ -25,6 +25,8 @@ export default function StatsView({ year, month }: { year: number; month: number
   const [stats, setStats] = useState<MonthStats | null>(null);
   // "＋ В план" on a category without a plan amount
   const [planTarget, setPlanTarget] = useState<PlanAmountTarget | null>(null);
+  // the donut segment tapped: its category's spending and share in the hole
+  const [selected, setSelected] = useState<string | null>(null);
 
   const load = useCallback(() => {
     monthStats(year, month).then(setStats).catch((e) => console.error('load stats failed', e));
@@ -39,14 +41,13 @@ export default function StatsView({ year, month }: { year: number; month: number
   if (!stats) return <View style={styles.center}><ActivityIndicator /></View>;
 
   const remaining = stats.planned_minor - stats.spent_minor;
+  const picked = selected === null ? undefined : stats.categories.find((c) => String(c.category_id) === selected);
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.donutWrap}>
-        <Donut segments={segments}>
-          <Text style={styles.caption}>Потрачено</Text>
-          <Text style={styles.hero}>{formatShort(stats.spent_minor)}</Text>
-          <Text style={styles.caption}>{BUDGET_CURRENCY}</Text>
+        <Donut segments={segments} selectedKey={picked ? selected : null} onSelect={setSelected}>
+          <DonutCenter total={stats.spent_minor} picked={picked} />
         </Donut>
       </View>
 
@@ -96,6 +97,27 @@ export default function StatsView({ year, month }: { year: number; month: number
 
       <PlanAmountModal ym={ymOf(year, month)} target={planTarget} onClose={() => setPlanTarget(null)} onSaved={load} />
     </ScrollView>
+  );
+}
+
+/** The hole: the month's total, or the tapped category's spending and its share of the total. */
+export function DonutCenter({ total, picked }: { total: number; picked?: { name: string; emoji: string | null; spent_minor: number } }) {
+  if (!picked) {
+    return (
+      <>
+        <Text style={styles.caption}>Потрачено</Text>
+        <Text style={styles.hero}>{formatShort(total)}</Text>
+        <Text style={styles.caption}>{BUDGET_CURRENCY}</Text>
+      </>
+    );
+  }
+  const share = total > 0 ? Math.round((picked.spent_minor / total) * 100) : 0;
+  return (
+    <>
+      <Text style={styles.pickedName} numberOfLines={2}>{`${picked.emoji || ''} ${picked.name}`.trim()}</Text>
+      <Text style={styles.pickedAmount}>{formatShort(picked.spent_minor)} {BUDGET_CURRENCY}</Text>
+      <Text style={styles.caption}>{share === 0 && picked.spent_minor > 0 ? '<1' : share}% всех трат</Text>
+    </>
   );
 }
 
@@ -154,6 +176,8 @@ const styles = StyleSheet.create({
   donutWrap: { alignItems: 'center', marginBottom: 16 },
   caption: { fontSize: 13, color: colors.muted },
   hero: { fontSize: 34, fontWeight: '700', color: colors.text },
+  pickedName: { fontSize: 15, color: colors.text, textAlign: 'center', maxWidth: 150 },
+  pickedAmount: { fontSize: 24, fontWeight: '700', color: colors.text, marginVertical: 2 },
   summary: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 16 },
   summaryItem: { alignItems: 'center' },
   summaryValue: { fontSize: 18, fontWeight: '600', color: colors.text, marginTop: 2 },
