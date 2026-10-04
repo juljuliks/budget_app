@@ -6,7 +6,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { getTransaction, markTransactionSeen, setTransactionAmount, setTransactionNote } from '../db/transactions';
 import { Currency, isCurrency } from '../db/fx';
 import CurrencyPicker from './CurrencyPicker';
-import { parseAmountInput, toInputValue } from './money';
+import { formatMoneyWithCurrency, parseAmountInput, toInputValue } from './money';
 import { assignCategory, MerchantChoice, merchantChangePreview } from '../assign';
 import { findCategoryForMerchant } from '../categorize';
 import { groupNameOf } from '../db/merchants';
@@ -83,7 +83,7 @@ export default function TransactionDetail({ route, navigation }: Props) {
     const change = await merchantChangePreview(txId, categoryId).catch((e) => { console.error('preview failed', e); return null; });
     if (!change) { await assign(categoryId); return; }
     const [from, to] = await Promise.all([getCategory(change.fromCategoryId), getCategory(categoryId!)]);
-    const sum = change.totals.map((t) => `${(t.amount_minor / 100).toFixed(2)} ${t.currency}`).join(' + ');
+    const sum = change.totals.map((t) => formatMoneyWithCurrency(t.amount_minor, t.currency)).join(' + ');
     sheetAlert(
       `Сохранить «${to ? categoryLabel(to) : '?'}» для мерчанта «${change.merchant}»?`,
       `Сейчас у мерчанта «${from ? categoryLabel(from) : '?'}». Если сохранить, категория изменится у ${change.count} ${plural(change.count, ['транзакции', 'транзакций', 'транзакций'])} на сумму ${sum}, и новые транзакции мерчанта будут получать её автоматически.`,

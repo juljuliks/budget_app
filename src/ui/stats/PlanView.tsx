@@ -12,7 +12,7 @@ import Fab from '../Fab';
 import { daysInMonth } from '../dateRange';
 import { PencilIcon, PinIcon } from '../icons';
 import Meter from '../Meter';
-import { formatShort, formatWithCurrency, parseAmountOrZero, toInputValue } from '../money';
+import { formatWithCurrency, parseAmountOrZero, toInputValue } from '../money';
 import RowActions, { ROW_ICON_SIZE } from '../RowActions';
 import TextInputModal from '../TextInputModal';
 import PlanAddModal from './PlanAddModal';
@@ -23,13 +23,13 @@ import { chart, colors } from '../theme';
 const NORM_LABELS = { day: 'в день', week: 'в неделю', '2weeks': 'за 2 недели', month: 'в месяц' } as const;
 const NORM_DAYS = { day: 1, week: 7, '2weeks': 14 } as const;
 
-/** "≈ 46 в неделю": a flexible item's amount per its norm rhythm (the month's plan / days in the month × days). */
-function normText(item: PlanItem, ym: string): string {
+/** "≈ 46 ₾ в неделю": a flexible item's amount per its norm rhythm (the month's plan / days in the month × days). */
+function normText(item: PlanItem, ym: string, currency: Currency): string {
   const amount = item.converted_minor ?? 0;
   if (!amount) return '';
-  if (item.norm_period === 'month') return `${formatShort(amount)} ${NORM_LABELS.month}`;
+  if (item.norm_period === 'month') return `${formatWithCurrency(amount, currency)} ${NORM_LABELS.month}`;
   const per = (amount / daysInMonth(ym)) * NORM_DAYS[item.norm_period];
-  return `≈ ${formatShort(Math.round(per))} ${NORM_LABELS[item.norm_period]}`;
+  return `≈ ${formatWithCurrency(Math.round(per), currency)} ${NORM_LABELS[item.norm_period]}`;
 }
 
 /** Share of the amount to distribute, "35%"; "<1%" for tiny non-zero amounts. */
@@ -84,7 +84,7 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
   useEffect(load, [load]);
 
   const money = (minor: number) => formatWithCurrency(minor, currency);
-  // "(200 USD)" after an amount shown converted from another currency
+  // "(200 $)" after an amount shown converted from another currency
   const original = (minor: number, from: Currency) => (from === currency ? '' : ` (${formatWithCurrency(minor, from)})`);
   const total = useMemo(() => (items ?? []).reduce((sum, i) => sum + (i.converted_minor ?? 0), 0), [items]);
   // the amount to distribute in the screen's currency (its own one if there's no rate)
@@ -162,7 +162,7 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
           <View style={styles.groupHeader}>
             <Text style={styles.groupTitle}>{g.title}</Text>
             <Text style={styles.groupTotal}>
-              {formatShort(g.planned)}
+              {money(g.planned)}
               {/* the type's share of the amount to distribute */}
               {shownBudget && g.planned ? <Text style={styles.groupShare}> · {percentOf(g.planned, shownBudget)}</Text> : null}
             </Text>
@@ -185,8 +185,8 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
                     {[
                       item.kind === 'fixed' ? 'фиксированная трата' : '',
                       // the norm's rhythm, when not the default "per day"
-                      // a flexible item's amount per its norm rhythm, e.g. "≈ 46 в неделю"
-                      item.kind === 'limit' ? normText(item, ym) : '',
+                      // a flexible item's amount per its norm rhythm, e.g. "≈ 46 ₾ в неделю"
+                      item.kind === 'limit' ? normText(item, ym, currency) : '',
                       shownBudget && item.converted_minor ? `${percentOf(item.converted_minor, shownBudget)} дохода` : '',
                     ].filter(Boolean).join(' · ')}
                   </Text>
@@ -201,7 +201,7 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
                 {item.limit_minor ? (
                   <View style={styles.amountBox}>
                     <Text style={styles.amount}>
-                      {item.converted_minor !== null ? formatShort(item.converted_minor) : formatWithCurrency(item.limit_minor, item.currency)}
+                      {item.converted_minor !== null ? money(item.converted_minor) : formatWithCurrency(item.limit_minor, item.currency)}
                     </Text>
                     {item.converted_minor !== null && item.currency !== currency ? (
                       <Text style={styles.amountOriginal}>{original(item.limit_minor, item.currency).trim()}</Text>
@@ -210,7 +210,7 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
                 ) : (
                   // carried over without an amount: last month's as a muted hint
                   <Text style={[styles.amount, styles.amountEmpty]}>
-                    {item.previous_minor ? `было ${formatShort(item.previous_minor)}` : '0'}
+                    {item.previous_minor ? `было ${formatWithCurrency(item.previous_minor, item.currency)}` : '0'}
                   </Text>
                 )}
                 {/* tapping the amount edits it too, so the pencil sits with it rather than in RowActions */}

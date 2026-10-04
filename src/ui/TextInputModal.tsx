@@ -10,7 +10,7 @@ type Props = {
   initialValue?: string;
   placeholder?: string;
   submitLabel?: string;
-  /** muted lines under the title (e.g. "Свободно 1 600 GEL") */
+  /** muted lines under the title (e.g. "Свободно 1 600 ₾") */
   hint?: string;
   keyboardType?: KeyboardTypeOptions;
   maxLength?: number;

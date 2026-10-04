@@ -1,3 +1,5 @@
+import { formatMoneyWithCurrency } from './money';
+
 const INCOME_KINDS = new Set(['deposit', 'refund']);
 
 /** Transaction type as the bank SMS names it ("Deposit Money", "Payment", "Money Transfer", ...). */
@@ -12,7 +14,7 @@ export const KIND_LABELS: Record<string, string> = {
 
 export function formatAmount(amountMinor: number, currency: string, kind?: string): string {
   const sign = kind && INCOME_KINDS.has(kind) ? '+' : '−';
-  return `${sign}${(amountMinor / 100).toFixed(2)} ${currency}`;
+  return `${sign}${formatMoneyWithCurrency(Math.abs(amountMinor), currency)}`;
 }
 
 export function isIncome(kind: string) {

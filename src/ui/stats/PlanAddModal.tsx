@@ -7,7 +7,7 @@ import { addPlanItem, getPlanBudget, lastPlanItem, PlanBudget, planConverter, Pl
 import CurrencyPicker from '../CurrencyPicker';
 import Button from '../Button';
 import Checkbox from '../Checkbox';
-import { formatShort, formatWithCurrency, parseAmountOrZero } from '../money';
+import { currencySymbol, formatShort, formatWithCurrency, parseAmountOrZero } from '../money';
 import { colors } from '../theme';
 
 type Props = {
@@ -136,7 +136,7 @@ export default function PlanAddModal({ ym, currency: screenCurrency, visible, pl
                   value={amounts[r.id] ?? ''}
                   onChangeText={(t) => setAmount(r.id, t)}
                   // last time's amount: taken when the row is ticked without one
-                  placeholder={r.last ? `${formatShort(r.last.limit_minor)}${r.last.currency !== currency ? ` ${r.last.currency}` : ''}` : '0'}
+                  placeholder={r.last ? `${formatShort(r.last.limit_minor)}${r.last.currency !== currency ? ` ${currencySymbol(r.last.currency)}` : ''}` : '0'}
                   placeholderTextColor={colors.muted}
                   keyboardType="decimal-pad"
                   maxLength={12}

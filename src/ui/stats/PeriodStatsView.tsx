@@ -9,7 +9,7 @@ import { DayRange, daysInMonth, normWindow, rangeDays, rangeToUnix } from '../da
 import Donut from '../Donut';
 import { InfoIcon } from '../icons';
 import Meter from '../Meter';
-import { formatShort } from '../money';
+import { currencySymbol, formatWithCurrency } from '../money';
 import { plural } from '../format';
 import { colors } from '../theme';
 import { DonutCenter } from './StatsView';
@@ -138,6 +138,8 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
   if (!stats) return <View style={styles.center}><ActivityIndicator /></View>;
   const picked = selected === null ? undefined : stats.categories.find((c) => String(c.category_id) === selected);
   const cur = stats.currency;
+  const sym = currencySymbol(cur);
+  const money = (minor: number) => formatWithCurrency(minor, cur);
   // spending of the flexible categories, compared with their norm under the donut
   const flexSpent = norms?.flexSpent ?? 0;
   const summaryLabel = normLabel;
@@ -145,11 +147,11 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
   // under the donut: the pace against the whole plan, or the average per month for a long period
   const summary = pace
     ? (norms && norms.total > 0
-      ? `Гибкие траты: ${formatShort(flexSpent)} из нормы ${formatShort(Math.round(norms.total))} ${cur} ${summaryLabel} (${pct(flexSpent, norms.total)})`
+      ? `Гибкие траты: ${money(flexSpent)} из нормы ${money(Math.round(norms.total))} ${summaryLabel} (${pct(flexSpent, norms.total)})`
       : 'Плана на эти дни нет — показана только структура трат.')
     : average === undefined ? ''
       : average === null ? 'Для среднего в месяц нужен хотя бы один полный месяц с данными.'
-        : `В среднем ${formatShort(average.average_minor)} ${cur} в месяц (${average.months} ${plural(average.months, ['полный месяц', 'полных месяца', 'полных месяцев'])})`;
+        : `В среднем ${money(average.average_minor)} в месяц (${average.months} ${plural(average.months, ['полный месяц', 'полных месяца', 'полных месяцев'])})`;
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -168,7 +170,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
         <View key={`${g.type_id}-${g.title}`} style={styles.group}>
           <View style={styles.groupHeader}>
             <Text style={styles.groupTitle}>{g.title}</Text>
-            <Text style={styles.groupTotal}>{formatShort(g.spent_minor)}</Text>
+            <Text style={styles.groupTotal}>{money(g.spent_minor)}</Text>
           </View>
           {g.categories.map((c) => {
             const plan = c.category_id === null ? undefined : norms?.byCategory.get(c.category_id);
@@ -177,7 +179,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                 <View style={styles.rowTop}>
                   <View style={[styles.dot, { backgroundColor: c.color }]} />
                   <Text style={styles.name} numberOfLines={1}>{`${c.emoji || ''} ${c.name}`.trim()}</Text>
-                  <Text style={styles.amount}>{formatShort(c.spent_minor)} {cur}</Text>
+                  <Text style={styles.amount}>{money(c.spent_minor)}</Text>
                 </View>
                 {plan ? (
                   // the period against the category's month: how much of its month's spending and of its plan
@@ -199,8 +201,8 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                       return (
                         <TouchableOpacity style={styles.paceRow} onPress={() => setInfoOpen(true)} accessibilityLabel="Что значит цвет">
                           <Text style={[styles.share, styles.pace, p === 'ok' ? styles.paceOk : p === 'ahead' ? styles.paceAhead : styles.paceOver]}>
-                            {sameWindow ? '' : `${formatShort(plan.windowSpent)} · `}
-                            {pct(plan.windowSpent, plan.windowNorm)} от плана {label} ({formatShort(Math.round(plan.windowNorm))} {cur})
+                            {sameWindow ? '' : `${money(plan.windowSpent)} · `}
+                            {pct(plan.windowSpent, plan.windowNorm)} от плана {label} ({money(Math.round(plan.windowNorm))})
                           </Text>
                           <InfoIcon color={colors.muted} size={15} />
                         </TouchableOpacity>
@@ -217,7 +219,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
       ))}
       {stats.other_currencies.length > 0 ? (
         <Text style={styles.hint}>
-          Не учтено, нет курса (нужен интернет): {stats.other_currencies.map((o) => `${formatShort(o.spent_minor)} ${o.currency}`).join(', ')}
+          Не учтено, нет курса (нужен интернет): {stats.other_currencies.map((o) => formatWithCurrency(o.spent_minor, o.currency)).join(', ')}
         </Text>
       ) : null}
 
@@ -228,8 +230,8 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
             <>
               <Text style={styles.infoText}>
                 <Text style={styles.infoBold}>Норма</Text> — часть месячного плана, приходящаяся на эти дни: план месяца
-                делится на число дней в нём и умножается на дни периода. Например, при плане 800 {cur} на октябрь норма на
-                неделю — 800 × 7 / 31 ≈ 181 {cur}. Нормы всегда считаются внутри одного месяца — того, в котором заканчивается период: неделя на стыке
+                делится на число дней в нём и умножается на дни периода. Например, при плане 800 {sym} на октябрь норма на
+                неделю — 800 × 7 / 31 ≈ 181 {sym}. Нормы всегда считаются внутри одного месяца — того, в котором заканчивается период: неделя на стыке
                 месяцев обрезается по 1-е число. Чтобы посмотреть прошлый месяц, выберите период в нём.
               </Text>
               <Text style={styles.infoText}>
@@ -245,8 +247,8 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                 <Text style={styles.infoBold}>Цветная строка</Text> — траты гибкой категории против её нормы. Норма
                 считается в ритме, заданном в плане: в день (еда), в неделю (бары), за 2 недели или в месяц (одежда).
                 Если период короче ритма, берётся неделя / 2 недели / месяц, куда он попадает, — например, для баров за
-                день видно всю неделю: «73 · 61% от плана на неделю». Неделя на стыке месяцев считается только по дням
-                текущего месяца, и норма для неё меньше: для 1–4 октября при плане 500 — 500 / 31 × 4 ≈ 64.5.
+                день видно всю неделю: «73 {sym} · 61% от плана на неделю». Неделя на стыке месяцев считается только по дням
+                текущего месяца, и норма для неё меньше: для 1–4 октября при плане 500 {sym} — 500 / 31 × 4 ≈ 64.5 {sym}.
               </Text>
               <Text style={styles.infoText}>
                 <Text style={[styles.infoBold, styles.paceOk]}>Зелёный</Text> — за период потрачено не больше плана на эти дни.
