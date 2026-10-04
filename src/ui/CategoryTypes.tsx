@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { sheetAlert } from './sheetAlert';
+import { plural } from './format';
 import { useFocusEffect } from '@react-navigation/native';
 import { CategoryType, countCategoriesOfType, deleteCategoryType, listCategoryTypes } from '../db/categoryTypes';
 import { emitTransactionsChanged } from '../events';
@@ -25,8 +26,8 @@ export default function CategoryTypes() {
   async function remove(t: CategoryType) {
     const n = await countCategoriesOfType(t.id);
     sheetAlert(
-      `Удалить тип «${t.name}»?`,
-      n > 0 ? `${n} категор. останутся без типа.` : undefined,
+      `Удалить раздел «${t.name}»?`,
+      n > 0 ? `${n} ${plural(n, ['категория останется', 'категории останутся', 'категорий останутся'])} без раздела.` : undefined,
       [
         { text: 'Отмена', style: 'cancel' },
         { text: 'Удалить', style: 'destructive', onPress: async () => { await deleteCategoryType(t.id); emitTransactionsChanged(); load(); } },
@@ -55,15 +56,15 @@ export default function CategoryTypes() {
               onEdit={() => setEditing({ type: t })}
               deleteDisabled={!!t.is_transfer}
               onDelete={() => (t.is_transfer
-                ? sheetAlert('Системный тип', `«${t.name}» нельзя удалить: по нему приложение выбирает категории для переводов. Переименовать можно.`)
+                ? sheetAlert('Системный раздел', `«${t.name}» нельзя удалить: из него приложение предлагает категории для переводов. Переименовать можно.`)
                 : remove(t))}
             />
           </View>
         )}
-        ListEmptyComponent={<Text style={styles.empty}>Типов нет. Нажмите ＋, чтобы создать.</Text>}
+        ListEmptyComponent={<Text style={styles.empty}>Разделов нет. Нажмите ＋, чтобы создать.</Text>}
       />
       {/* pinned to the bottom like the "+" on the transactions screen */}
-      <Fab onPress={() => setEditing({})} accessibilityLabel="Новый тип" />
+      <Fab onPress={() => setEditing({})} accessibilityLabel="Новый раздел" />
       <TypeEditModal
         visible={editing !== null}
         type={editing?.type}

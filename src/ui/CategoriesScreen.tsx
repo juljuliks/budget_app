@@ -1,4 +1,5 @@
 import React, { useCallback, useLayoutEffect, useState } from 'react';
+import { NO_SECTION } from './strings';
 import { SectionList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -37,7 +38,7 @@ export default function CategoriesScreen({ navigation }: Props) {
   // listCategories is ordered by type, so consecutive runs form the sections
   const sections: Array<{ title: string; data: Category[] }> = [];
   for (const c of cats) {
-    const title = c.type_name ?? 'Без типа';
+    const title = c.type_name ?? NO_SECTION;
     if (sections.length === 0 || sections[sections.length - 1].title !== title) sections.push({ title, data: [] });
     sections[sections.length - 1].data.push(c);
   }
@@ -63,8 +64,8 @@ export default function CategoriesScreen({ navigation }: Props) {
       ListHeaderComponent={
         <TouchableOpacity style={styles.typesRow} onPress={() => navigation.navigate('CategoryTypes')} accessibilityRole="button">
           <View style={styles.flex}>
-            <Text style={styles.typesTitle}>Типы</Text>
-            <Text style={styles.typesNote} numberOfLines={1}>{types.length ? types.join(', ') : 'Группы категорий со своими цветами'}</Text>
+            <Text style={styles.typesTitle}>Разделы</Text>
+            <Text style={styles.typesNote} numberOfLines={1}>{types.length ? types.join(', ') : 'Разделы объединяют категории и задают им цвета'}</Text>
           </View>
           <Text style={styles.chevron}>›</Text>
         </TouchableOpacity>

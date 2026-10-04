@@ -44,7 +44,7 @@
       <!-- Bank app push notifications; the user enables it in "Доступ к уведомлениям" -->
       <service
         android:name=".push.BankPushListener"
-        android:label="Budget: пуши банка"
+        android:label="Budget: уведомления банка"
         android:exported="true"
         android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
         <intent-filter>

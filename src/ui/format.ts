@@ -7,7 +7,7 @@ export const KIND_LABELS: Record<string, string> = {
   purchase: 'Покупка',
   payment: 'Оплата',
   transfer: 'Перевод',
-  deposit: 'Поступление',
+  deposit: 'Пополнение',
   refund: 'Возврат',
   withdrawal: 'Снятие наличных',
 };
@@ -45,11 +45,11 @@ export function formatTime(unixSeconds: number): string {
 }
 
 /**
- * Row title: the type from the SMS and the merchant / person when known — "Поступление · DEMID RIABOV",
+ * Row title: the type from the SMS and the merchant / person when known — "Пополнение · DEMID RIABOV",
  * "Оплата · TELMICO", "Перевод". A plain card purchase is just its merchant ("SPAR").
  */
 export function merchantLabel(tx: { kind: string; raw_merchant: string | null }): string {
-  const label = KIND_LABELS[tx.kind] ?? 'Транзакция';
+  const label = KIND_LABELS[tx.kind] ?? 'Операция';
   if (tx.kind === 'purchase') return tx.raw_merchant || label;
   return tx.raw_merchant ? `${label} · ${tx.raw_merchant}` : label;
 }

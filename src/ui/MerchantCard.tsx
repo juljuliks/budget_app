@@ -67,8 +67,8 @@ export default function MerchantCard({ merchantId, categories, onClose, onChange
     const label = categories.get(categoryId)?.label ?? '?';
     sheetAlert(
       `Категория «${label}» для «${m.name}»?`,
-      `Новые транзакции мерчанта будут получать её автоматически.${n > 0
-        ? ` Категория изменится у ${n} ${plural(n, ['транзакции', 'транзакций', 'транзакций'])} на сумму ${money(totals)}.`
+      `Новые операции мерчанта будут получать её автоматически.${n > 0
+        ? ` Категория изменится у ${n} ${plural(n, ['операции', 'операций', 'операций'])} на ${money(totals)}.`
         : ''} Выбранные вручную категории не изменятся.`,
       [
         { text: 'Отмена', style: 'cancel' },
@@ -84,12 +84,12 @@ export default function MerchantCard({ merchantId, categories, onClose, onChange
   function unpin() {
     if (!m) return;
     sheetAlert(
-      'Открепить категорию?',
-      `Новые транзакции «${m.name}» будут приходить без категории и спрашивать её. У уже разобранных транзакций категория останется.`,
+      'Не назначать категорию автоматически?',
+      `Новые операции «${m.name}» будут приходить без категории. У прошлых операций категория останется.`,
       [
         { text: 'Отмена', style: 'cancel' },
         {
-          text: 'Открепить', style: 'destructive', onPress: () => {
+          text: 'Не назначать', style: 'destructive', onPress: () => {
             setMerchantCategory(m.id, null).then(changed).catch((e) => console.error('unpin failed', e));
           },
         },
@@ -137,11 +137,11 @@ export default function MerchantCard({ merchantId, categories, onClose, onChange
               ) : null}
             </View>
             <Text style={styles.meta}>
-              {m.group ? 'Группа · ' : ''}{m.count} {plural(m.count, ['транзакция', 'транзакции', 'транзакций'])}
+              {m.group ? 'Группа · ' : ''}{m.count} {plural(m.count, ['операция', 'операции', 'операций'])}
               {m.totals.length ? ` · ${money(m.totals)}` : ''}
             </Text>
             <TouchableOpacity onPress={showTransactions} hitSlop={8}>
-              <Text style={styles.link}>Показать транзакции</Text>
+              <Text style={styles.link}>Показать операции</Text>
             </TouchableOpacity>
 
             <Text style={styles.heading}>Категория</Text>
@@ -160,13 +160,13 @@ export default function MerchantCard({ merchantId, categories, onClose, onChange
                     <Text style={styles.categoryText}>{category.label}</Text>
                   </View>
                 ) : (
-                  <Text style={styles.noCategory}>Нет: новые транзакции спрашивают категорию.</Text>
+                  <Text style={styles.noCategory}>Нет: новые операции приходят без категории.</Text>
                 )}
                 <View style={styles.actions}>
                   <Button title={category ? 'Сменить категорию' : 'Выбрать категорию'} onPress={() => setPicking(true)} style={styles.action} />
                   {category ? (
                     <TouchableOpacity onPress={unpin} style={styles.unpin}>
-                      <Text style={styles.unpinText}>Открепить категорию</Text>
+                      <Text style={styles.unpinText}>Не назначать автоматически</Text>
                     </TouchableOpacity>
                   ) : null}
                 </View>

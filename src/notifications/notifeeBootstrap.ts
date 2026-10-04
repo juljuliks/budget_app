@@ -5,7 +5,7 @@ export async function createNotificationChannel() {
   try {
     await notifee.createChannel({
       id: CHANNEL_ID,
-      name: 'Transactions',
+      name: 'Операции',
       importance: AndroidImportance.HIGH,
     });
   } catch (e) {

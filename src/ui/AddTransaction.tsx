@@ -9,13 +9,14 @@ import Button from './Button';
 import CategoryPicker from './CategoryPicker';
 import { formStyles } from './formStyles';
 import { parseAmountInput } from './money';
+import { AMOUNT_HINT } from './strings';
 import Segmented from './Segmented';
 import CurrencyPicker from './CurrencyPicker';
 import { Currency } from '../db/fx';
 import { colors } from './theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddTransaction'>;
-const KINDS = [['purchase', 'Расход'], ['deposit', 'Доход']] as const;
+const KINDS = [['purchase', 'Расход'], ['deposit', 'Пополнение']] as const;
 const DAYS = [['today', 'Сегодня'], ['yesterday', 'Вчера']] as const;
 type Kind = typeof KINDS[number][0];
 type Day = typeof DAYS[number][0];
@@ -39,7 +40,7 @@ export default function AddTransaction({ route, navigation }: Props) {
 
   async function save() {
     const minor = parseAmountInput(amount);
-    if (minor === null) { setError('Введите сумму, например 12.50'); return; }
+    if (minor === null) { setError(AMOUNT_HINT); return; }
     setSaving(true);
     try {
       const at = new Date();

@@ -374,7 +374,7 @@ export function groupByType(categories: CategoryStat[], types: Array<{ id: numbe
     });
   };
   for (const t of types) add(t.id, t.name, categories.filter((c) => c.type_id === t.id));
-  add(null, 'Без типа', categories.filter((c) => c.type_id === null && c.category_id !== null));
+  add(null, 'Без раздела', categories.filter((c) => c.type_id === null && c.category_id !== null));
   add(null, 'Без категории', categories.filter((c) => c.category_id === null));
   return groups;
 }

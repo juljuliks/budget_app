@@ -8,6 +8,7 @@ import CurrencyPicker from '../CurrencyPicker';
 import Button from '../Button';
 import Checkbox from '../Checkbox';
 import { currencySymbol, formatShort, formatWithCurrency, parseAmountOrZero } from '../money';
+import { AMOUNT_HINT } from '../strings';
 import { colors } from '../theme';
 
 type Props = {
@@ -93,8 +94,8 @@ export default function PlanAddModal({ ym, currency: screenCurrency, visible, pl
   }, 0);
 
   async function add() {
-    if (picked.some((r) => plannedAmount(r) === null)) { setError('Введите сумму, например 1500 или 12.50'); return; }
-    if (free !== null && sum > free) { setError(`Больше суммы к планированию: свободно ${formatWithCurrency(free, sumCurrency)}.`); return; }
+    if (picked.some((r) => plannedAmount(r) === null)) { setError(AMOUNT_HINT); return; }
+    if (free !== null && sum > free) { setError(`Больше бюджета месяца: не распределено ${formatWithCurrency(free, sumCurrency)}.`); return; }
     setSaving(true);
     try {
       for (const r of picked) {
@@ -116,7 +117,7 @@ export default function PlanAddModal({ ym, currency: screenCurrency, visible, pl
     <BottomSheet visible={visible} onClose={onClose} title="Добавить в план" style={styles.sheet}>
         <View style={styles.head}>
           <Text style={styles.caption}>
-            {free !== null ? `Свободно: ${formatWithCurrency(free, sumCurrency)}` : 'Сумма к планированию не задана'}
+            {free !== null ? `Не распределено: ${formatWithCurrency(free, sumCurrency)}` : 'Бюджет месяца не задан'}
             {picked.length ? ` · выбрано на ${formatWithCurrency(sum, sumCurrency)}` : ''}
           </Text>
           {/* the currency of the amounts typed below */}
@@ -149,7 +150,7 @@ export default function PlanAddModal({ ym, currency: screenCurrency, visible, pl
         </ScrollView>
         <View style={styles.footer}>
           {error ? <Text style={styles.error}>{error}</Text> : (
-            <Text style={styles.hint}>Без суммы подставится сумма из прошлого плана (серым в поле).</Text>
+            <Text style={styles.hint}>Без суммы подставится сумма прошлого месяца (серым в поле).</Text>
           )}
           <Button title={picked.length ? `Добавить (${picked.length})` : 'Добавить'} onPress={add} disabled={saving || picked.length === 0} />
           <TouchableOpacity style={styles.cancel} onPress={onClose}>

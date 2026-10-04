@@ -38,7 +38,7 @@ export default function CardBalance() {
     <TouchableOpacity
       style={styles.box}
       onPress={() => sheetAlert('Баланс карты', balance.pending
-        ? 'Последний баланс, который банк прислал в SMS, плюс операции после него: в SMS о пополнении баланса нет. Следующее SMS с балансом (покупка) поправит его точно.'
+        ? 'Баланс из последнего SMS банка плюс операции после него: в SMS о пополнении баланса нет. Следующее SMS с балансом (например, о покупке) уточнит его.'
         : 'Баланс, который банк прислал в последнем SMS.')}
       accessibilityLabel={`Баланс карты ${formatMoneyWithCurrency(balance.minor, balance.currency)}, ${note}`}
     >

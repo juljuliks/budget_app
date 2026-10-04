@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { NO_SECTION } from './strings';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -107,17 +108,17 @@ export default function CategoryEdit({ route, navigation }: Props) {
   // the type's shades first: a type reads as one color family on the charts
   const colorOptions = freeCategoryColors(types, typeId, taken, color);
 
-  const typeOptions: Array<[number | null, string]> = [[null, 'Без типа'], ...types.map((t): [number, string] => [t.id, t.name])];
+  const typeOptions: Array<[number | null, string]> = [[null, NO_SECTION], ...types.map((t): [number, string] => [t.id, t.name])];
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       {/* types are managed in the settings; a new one can be made right here */}
-      <SectionHeading title="Тип" />
+      <SectionHeading title="Раздел" />
       <View style={styles.chips}>
         {typeOptions.map(([id, label]) => (
           <Chip key={String(id)} label={label} selected={typeId === id} onPress={() => setTypeId(id)} />
         ))}
-        <Chip label="＋ Новый тип" action onPress={() => setTypeOpen(true)} />
+        <Chip label="＋ Новый раздел" action onPress={() => setTypeOpen(true)} />
       </View>
 
       <Text style={formStyles.label}>Название</Text>
@@ -148,9 +149,9 @@ export default function CategoryEdit({ route, navigation }: Props) {
       <TextInput style={[formStyles.input, styles.emoji]} value={emoji} onChangeText={setEmoji} placeholder="🏋️" maxLength={8} />
 
       {error ? <Text style={formStyles.error}>{error}</Text> : null}
-      {isNew && txId ? <Text style={formStyles.hint}>Категория будет назначена транзакции, а если у её мерчанта ещё нет категории — запомнена для него.</Text> : null}
-      {isNew && txIds?.length ? <Text style={formStyles.hint}>Категория будет назначена выбранным транзакциям ({txIds.length}).</Text> : null}
-      {isNew && planYm ? <Text style={formStyles.hint}>Категория будет добавлена в план месяца.</Text> : null}
+      {isNew && txId ? <Text style={formStyles.hint}>Категория будет назначена операции, а если у её мерчанта ещё нет категории — станет категорией мерчанта.</Text> : null}
+      {isNew && txIds?.length ? <Text style={formStyles.hint}>Категория будет назначена выбранным операциям ({txIds.length}).</Text> : null}
+      {isNew && planYm ? <Text style={formStyles.hint}>Категория будет добавлена в план этого месяца.</Text> : null}
 
       <Button title="Сохранить" disabled={saving} onPress={save} style={styles.button} />
       <TypeEditModal

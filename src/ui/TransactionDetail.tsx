@@ -7,6 +7,7 @@ import { getTransaction, markTransactionSeen, setTransactionAmount, setTransacti
 import { Currency, isCurrency } from '../db/fx';
 import CurrencyPicker from './CurrencyPicker';
 import { formatMoneyWithCurrency, parseAmountInput, toInputValue } from './money';
+import { AMOUNT_HINT } from './strings';
 import { assignCategory, MerchantChoice, merchantChangePreview } from '../assign';
 import { findCategoryForMerchant } from '../categorize';
 import { groupNameOf } from '../db/merchants';
@@ -85,18 +86,18 @@ export default function TransactionDetail({ route, navigation }: Props) {
     const [from, to] = await Promise.all([getCategory(change.fromCategoryId), getCategory(categoryId!)]);
     const sum = change.totals.map((t) => formatMoneyWithCurrency(t.amount_minor, t.currency)).join(' + ');
     sheetAlert(
-      `Сохранить «${to ? categoryLabel(to) : '?'}» для мерчанта «${change.merchant}»?`,
-      `Сейчас у мерчанта «${from ? categoryLabel(from) : '?'}». Если сохранить, категория изменится у ${change.count} ${plural(change.count, ['транзакции', 'транзакций', 'транзакций'])} на сумму ${sum}, и новые транзакции мерчанта будут получать её автоматически.`,
+      `Категория «${to ? categoryLabel(to) : '?'}» для мерчанта «${change.merchant}»?`,
+      `Сейчас у мерчанта «${from ? categoryLabel(from) : '?'}». Если сменить для мерчанта, категория изменится у ${change.count} ${plural(change.count, ['операции', 'операций', 'операций'])} на ${sum}, и новые операции мерчанта будут получать её автоматически.`,
       [
         { text: 'Отмена', style: 'cancel' },
-        { text: 'Только для этой транзакции', onPress: () => { assign(categoryId, 'only'); } },
-        { text: 'Сохранить для мерчанта', onPress: () => { assign(categoryId, 'merchant'); } },
+        { text: 'Только для этой операции', onPress: () => { assign(categoryId, 'only'); } },
+        { text: 'Для мерчанта', onPress: () => { assign(categoryId, 'merchant'); } },
       ]);
   }
 
   async function saveAmount(text: string): Promise<string | null> {
     const minor = parseAmountInput(text);
-    if (minor === null) return 'Введите сумму, например 12.50';
+    if (minor === null) return AMOUNT_HINT;
     await setTransactionAmount(txId, minor, amountCurrency);
     emitTransactionsChanged();
     reload();
@@ -187,7 +188,7 @@ export default function TransactionDetail({ route, navigation }: Props) {
       {/* only purchases / payments are remembered for their merchant (see assignCategory) */}
       {rememberable && merchantCategory ? (
         <Text style={styles.merchantInfo}>
-          Категория {groupName ? `группы мерчантов «${groupName}»` : `мерчанта «${merchantName}»`}: {merchantCategory}. Новые транзакции мерчанта получают её автоматически.
+          Категория {groupName ? `группы мерчантов «${groupName}»` : `мерчанта «${merchantName}»`}: {merchantCategory}. Новые операции мерчанта получают её автоматически.
         </Text>
       ) : null}
 
@@ -236,7 +237,7 @@ export default function TransactionDetail({ route, navigation }: Props) {
     </ScrollView>
       {/* pinned to the bottom, outside the scroll */}
       <View style={styles.footer}>
-        <Button title="Удалить транзакцию" danger disabled={saving} onPress={() => confirmDeleteTransaction(tx, () => navigation.goBack())} />
+        <Button title="Удалить операцию" danger disabled={saving} onPress={() => confirmDeleteTransaction(tx, () => navigation.goBack())} />
       </View>
     </View>
   );

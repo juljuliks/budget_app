@@ -13,6 +13,7 @@ import { daysInMonth } from '../dateRange';
 import { PencilIcon, PinIcon } from '../icons';
 import Meter from '../Meter';
 import { formatWithCurrency, parseAmountOrZero, toInputValue } from '../money';
+import { AMOUNT_HINT, NO_SECTION, PER_PERIOD, SPENDING_PATTERN } from '../strings';
 import RowActions, { ROW_ICON_SIZE } from '../RowActions';
 import TextInputModal from '../TextInputModal';
 import PlanAddModal from './PlanAddModal';
@@ -20,16 +21,15 @@ import PlanAmountModal, { PlanAmountTarget } from './PlanAmountModal';
 import { chart, colors } from '../theme';
 
 
-const NORM_LABELS = { day: 'в день', week: 'в неделю', '2weeks': 'за 2 недели', month: 'в месяц' } as const;
 const NORM_DAYS = { day: 1, week: 7, '2weeks': 14 } as const;
 
-/** "≈ 46 ₾ в неделю": a flexible item's amount per its norm rhythm (the month's plan / days in the month × days). */
+/** "лимит ≈ 46 ₾ в неделю": a flexible item's plan per its spending pattern (the month's plan / days in the month × days). */
 function normText(item: PlanItem, ym: string, currency: Currency): string {
   const amount = item.converted_minor ?? 0;
   if (!amount) return '';
-  if (item.norm_period === 'month') return `${formatWithCurrency(amount, currency)} ${NORM_LABELS.month}`;
+  if (item.norm_period === 'month') return SPENDING_PATTERN.month.title.toLowerCase();
   const per = (amount / daysInMonth(ym)) * NORM_DAYS[item.norm_period];
-  return `≈ ${formatWithCurrency(Math.round(per), currency)} ${NORM_LABELS[item.norm_period]}`;
+  return `лимит ≈ ${formatWithCurrency(Math.round(per), currency)} ${PER_PERIOD[item.norm_period]}`;
 }
 
 /** Share of the amount to distribute, "35%"; "<1%" for tiny non-zero amounts. */
@@ -43,7 +43,7 @@ function percentOf(part: number, whole: number): string {
 function groupByType(items: PlanItem[]): Array<{ title: string; planned: number; items: PlanItem[] }> {
   const groups: Array<{ title: string; planned: number; items: PlanItem[] }> = [];
   for (const item of items) {
-    const title = item.type_name ?? 'Без типа';
+    const title = item.type_name ?? NO_SECTION;
     let g = groups[groups.length - 1];
     if (!g || g.title !== title) { g = { title, planned: 0, items: [] }; groups.push(g); }
     g.items.push(item);
@@ -94,12 +94,12 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
   /** Saves the amount to distribute (0 / empty = not set); returns an error to show in the dialog, or null. */
   async function saveBudget(text: string): Promise<string | null> {
     const minor = parseAmountOrZero(text);
-    if (minor === null) return 'Введите сумму, например 1500 или 12.50';
+    if (minor === null) return AMOUNT_HINT;
     try {
       await setPlanBudget(ym, minor === 0 ? null : minor, budgetCurrency);
     } catch (e) {
       if (!(e instanceof OverBudgetError)) throw e;
-      return `По категориям уже запланировано ${formatWithCurrency(e.planned_minor, e.currency)} — сумма не может быть меньше.`;
+      return `По категориям уже запланировано ${formatWithCurrency(e.planned_minor, e.currency)} — бюджет не может быть меньше.`;
     }
     load();
     return null;
@@ -114,18 +114,18 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
 
   const budgetHint = [
     total > 0 ? `Уже запланировано: ${money(total)}` : '',
-    income > 0 ? `Поступления за месяц: ${money(income)}` : '',
-  ].filter(Boolean).join('\n') || 'Например, зарплата. План не сможет её превысить.';
+    income > 0 ? `Пополнения за месяц: ${money(income)}` : '',
+  ].filter(Boolean).join('\n') || 'Сколько денег на месяц, например зарплата. План не сможет его превысить.';
 
   return (
     <View style={styles.screen}>
     <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <View style={styles.budgetBox}>
-        <Text style={styles.caption}>Сумма к планированию</Text>
+        <Text style={styles.caption}>Бюджет месяца</Text>
         <TouchableOpacity
           style={styles.budgetRow}
           onPress={() => { setBudgetCurrency(budget?.currency ?? currency); setBudgetOpen(true); }}
-          accessibilityLabel="Изменить сумму к планированию"
+          accessibilityLabel="Изменить бюджет месяца"
         >
           <Text style={styles.budgetValue}>{money(shownBudget ?? 0)}</Text>
           <PencilIcon color={colors.accent} size={20} />
@@ -141,7 +141,7 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
             {shownBudget ? <Text style={styles.caption}>{percentOf(total, shownBudget) || '0%'}</Text> : null}
           </View>
           <View style={styles.summaryItem}>
-            <Text style={styles.caption}>Свободно</Text>
+            <Text style={styles.caption}>Не распределено</Text>
             <Text style={[styles.summaryValue, free !== null && styles.freeValue]}>{free === null ? '—' : money(free)}</Text>
             {shownBudget ? <Text style={styles.caption}>{percentOf(free ?? 0, shownBudget) || '0%'}</Text> : null}
           </View>
@@ -150,9 +150,9 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
           // share of the amount already distributed: not a spent/limit meter, so no warning colors
           <Meter ratio={total / shownBudget} color={chart.meterFill} />
         ) : (
-          <Text style={styles.caption}>Укажите сумму (например, зарплату): план не сможет её превысить, а у категорий появятся доли в %</Text>
+          <Text style={styles.caption}>Укажите бюджет месяца (например, зарплату): план не сможет его превысить, а у категорий появятся доли в %</Text>
         )}
-        <Text style={[styles.caption, styles.pinNote]}>📌 — пункт перейдёт в следующий месяц вместе с суммой</Text>
+        <Text style={[styles.caption, styles.pinNote]}>📌 — повторять каждый месяц: категория перейдёт в следующий месяц с той же суммой</Text>
       </View>
 
       {items.length === 0 ? <Text style={styles.hint}>План пуст. Нажмите ＋, чтобы добавить категории и суммы.</Text> : null}
@@ -172,7 +172,7 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
               <TouchableOpacity
                 onPress={() => run(setPlanPinned(ym, item.category_id, !item.pinned))}
                 hitSlop={8}
-                accessibilityLabel={item.pinned ? 'Открепить' : 'Закрепить'}
+                accessibilityLabel={item.pinned ? 'Не повторять каждый месяц' : 'Повторять каждый месяц'}
                 style={styles.pin}
               >
                 <PinIcon color={item.pinned ? colors.accent : colors.muted} filled={item.pinned} />
@@ -183,11 +183,11 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
                 {item.kind === 'fixed' || item.limit_minor || (shownBudget && item.converted_minor) ? (
                   <Text style={styles.percent}>
                     {[
-                      item.kind === 'fixed' ? 'фиксированная трата' : '',
+                      item.kind === 'fixed' ? 'обязательный платёж' : '',
                       // the norm's rhythm, when not the default "per day"
                       // a flexible item's amount per its norm rhythm, e.g. "≈ 46 ₾ в неделю"
                       item.kind === 'limit' ? normText(item, ym, currency) : '',
-                      shownBudget && item.converted_minor ? `${percentOf(item.converted_minor, shownBudget)} дохода` : '',
+                      shownBudget && item.converted_minor ? `${percentOf(item.converted_minor, shownBudget)} бюджета` : '',
                     ].filter(Boolean).join(' · ')}
                   </Text>
                 ) : null}
@@ -210,7 +210,7 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
                 ) : (
                   // carried over without an amount: last month's as a muted hint
                   <Text style={[styles.amount, styles.amountEmpty]}>
-                    {item.previous_minor ? `было ${formatWithCurrency(item.previous_minor, item.currency)}` : '0'}
+                    {item.previous_minor ? `в прошлом месяце ${formatWithCurrency(item.previous_minor, item.currency)}` : '0'}
                   </Text>
                 )}
                 {/* tapping the amount edits it too, so the pencil sits with it rather than in RowActions */}
@@ -224,7 +224,7 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
 
       <TextInputModal
         visible={budgetOpen}
-        title="Сумма к планированию"
+        title="Бюджет месяца"
         hint={budgetHint}
         // the amount and currency it was entered in
         initialValue={toInputValue(budget?.amount_minor)}

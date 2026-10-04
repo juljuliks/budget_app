@@ -21,7 +21,7 @@ export function rangeToUnix(r: DayRange): { from: number; to: number } {
 const SHORT_MONTHS = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
 export function formatRange(r: DayRange): string {
   const f = (k: DayKey) => { const d = parseDayKey(k); return `${d.getDate()} ${SHORT_MONTHS[d.getMonth()]} ${d.getFullYear()}`; };
-  return r.from === r.to ? f(r.from) : `${f(r.from)} — ${f(r.to)}`;
+  return r.from === r.to ? f(r.from) : `${f(r.from)} – ${f(r.to)}`;
 }
 
 /** What the stats cover: a calendar month (with the plan), a day, a week (Monday–Sunday), a year or any range. */

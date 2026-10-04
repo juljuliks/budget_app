@@ -79,8 +79,8 @@ export default function MergeMerchantsModal({ visible, merchants, categories, on
             <Chip label="Без категории" selected={categoryId === null} onPress={() => setCategoryId(null)} />
           </View>
           <Text style={formStyles.hint}>
-            У группы одна категория: её получают новые транзакции всех мерчантов группы и их транзакции с автоматической
-            категорией. Выбранные вручную категории не меняются.
+            У группы одна категория: её получают новые операции всех мерчантов группы и их прошлые операции с
+            автоматической категорией. Выбранные вручную категории не меняются.
           </Text>
 
           {error ? <Text style={formStyles.error}>{error}</Text> : null}

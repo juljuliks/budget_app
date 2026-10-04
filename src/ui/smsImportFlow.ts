@@ -14,7 +14,7 @@ const PERIODS: Array<{ text: string; months: number | null }> = [
 export function startSmsImport() {
   sheetAlert(
     'Импорт SMS из телефона',
-    'Транзакции из SMS банка, которые уже есть в телефоне. Уже добавленные не задвоятся. Понадобится разрешение на чтение SMS — читаются только сообщения банка.',
+    'Операции из SMS банка, которые уже есть в телефоне. Уже добавленные не повторятся. Понадобится разрешение на чтение SMS — читаются только сообщения банка.',
     [
       ...PERIODS.map((p) => ({ text: p.text, onPress: () => { run(p.months).catch((e) => fail(e)); } })),
       { text: 'Отмена', style: 'cancel' as const },
@@ -35,11 +35,11 @@ async function run(months: number | null) {
   }
   const r = await importInboxSms(messages);
   sheetAlert(
-    r.inserted > 0 ? `Добавлено ${r.inserted} ${plural(r.inserted, ['транзакция', 'транзакции', 'транзакций'])}` : 'Новых транзакций нет',
+    r.inserted > 0 ? `Добавлено ${r.inserted} ${plural(r.inserted, ['операция', 'операции', 'операций'])}` : 'Новых операций нет',
     [
       `Прочитано SMS банка: ${messages.length}.`,
       r.duplicate ? `Уже были в приложении: ${r.duplicate}.` : '',
-      r.ignored ? `Не транзакции (баланс, коды, отклонённые) или не распознаны: ${r.ignored}.` : '',
+      r.ignored ? `Не операции (баланс, коды, отклонённые) или не распознаны: ${r.ignored}.` : '',
     ].filter(Boolean).join('\n'),
   );
 }

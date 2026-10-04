@@ -7,6 +7,7 @@ import { HistoryMonth, monthStats, MonthStats, parseYm, planHistory } from '../.
 import { onTransactionsChanged } from '../../events';
 import Meter from '../Meter';
 import { formatMoneyWithCurrency, formatWithCurrency } from '../money';
+import { NO_RATE } from '../strings';
 import { colors } from '../theme';
 import { monthTitle } from './months';
 
@@ -70,10 +71,10 @@ function MonthRow({ month, expanded, onToggle, currency }: { month: HistoryMonth
         {budget !== null ? (
           // the amount to distribute: what was left unplanned, and what was not spent at all
           <View style={styles.totals}>
-            <Total label="Сумма" value={money(budget)} />
+            <Total label="Бюджет" value={money(budget)} />
             <Total label="Не распределено" value={money(Math.max(budget - planned, 0))} />
             <Total
-              label={saved >= 0 ? 'Сохранено' : 'Сверх суммы'}
+              label={saved >= 0 ? 'Сэкономлено' : 'Перерасход'}
               value={`${saved < 0 ? '⚠ ' : ''}${money(Math.abs(saved))}`}
               danger={saved < 0}
               good={saved > 0}
@@ -104,7 +105,7 @@ function MonthDetails({ ym, currency }: { ym: string; currency: Currency }) {
       <View style={styles.detailRow}>
         <Text style={[styles.detailName, styles.detailHead]}>Категория</Text>
         <Text style={[styles.detailNum, styles.detailHead]}>План</Text>
-        <Text style={[styles.detailNum, styles.detailHead]}>Факт</Text>
+        <Text style={[styles.detailNum, styles.detailHead]}>Потрачено</Text>
       </View>
       {stats.groups.map((g) => (
         <View key={`${g.type_id}-${g.title}`}>
@@ -133,7 +134,7 @@ function MonthDetails({ ym, currency }: { ym: string; currency: Currency }) {
       ))}
       {stats.other_currencies.length > 0 ? (
         <Text style={styles.note}>
-          Не учтено, нет курса: {stats.other_currencies.map((o) => formatMoneyWithCurrency(o.spent_minor, o.currency)).join(', ')}
+          {NO_RATE} {stats.other_currencies.map((o) => formatMoneyWithCurrency(o.spent_minor, o.currency)).join(', ')}
         </Text>
       ) : null}
     </View>

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Currency } from '../../db/fx';
 import { getPlanBudget, lastPlanItem, NormPeriod, OverBudgetError, PlanKind, plannedTotal, setPlanAmount } from '../../db/plans';
 import { Text } from 'react-native';
-import Segmented from '../Segmented';
+import { AMOUNT_HINT, SPENDING_PATTERN } from '../strings';
 import { formStyles } from '../formStyles';
 import CurrencyPicker from '../CurrencyPicker';
 import { formatWithCurrency, parseAmountOrZero, toInputValue } from '../money';
@@ -10,11 +10,12 @@ import RadioGroup from '../RadioGroup';
 import TextInputModal from '../TextInputModal';
 
 const KINDS = [
-  ['limit', 'Гибкая трата', 'Еда, кафе, такси — сумма меняется, следим за остатком'],
-  ['fixed', 'Фиксированная трата', 'Аренда, кредит, подписки — сумма одна и та же каждый месяц'],
+  ['limit', 'Повседневные траты', 'Еда, кафе, такси — сумма меняется, следим за остатком'],
+  ['fixed', 'Обязательный платёж', 'Аренда, кредит, подписки — одна и та же сумма каждый месяц'],
 ] as const;
 
-const NORMS = [['day', 'День'], ['week', 'Неделя'], ['2weeks', '2 недели'], ['month', 'Месяц']] as const;
+// how the category is spent: its limit in day / week stats is counted per this period
+const PATTERNS = (['day', 'week', '2weeks', 'month'] as const).map((p) => [p, SPENDING_PATTERN[p].title, SPENDING_PATTERN[p].hint] as const);
 
 export type PlanAmountTarget = {
   category_id: number;
@@ -76,20 +77,20 @@ export default function PlanAmountModal({ ym, target, onClose, onSaved }: Props)
   async function save(text: string): Promise<string | null> {
     if (!target) return null;
     const minor = parseAmountOrZero(text);
-    if (minor === null) return 'Введите сумму, например 1500 или 12.50';
+    if (minor === null) return AMOUNT_HINT;
     try {
       await setPlanAmount(ym, target.category_id, minor, kind, currency, norm);
     } catch (e) {
       if (!(e instanceof OverBudgetError)) throw e;
-      return `Больше суммы к планированию. Свободно для этой категории: ${free ? formatWithCurrency(free.minor, free.currency) : '0'}.`;
+      return `Больше бюджета месяца. Не распределено: ${free ? formatWithCurrency(free.minor, free.currency) : '0'}.`;
     }
     onSaved();
     return null;
   }
 
   const hint = [
-    free ? `Свободно: ${formatWithCurrency(free.minor, free.currency)}` : '',
-    previous ? `В прошлый раз: ${formatWithCurrency(previous.minor, previous.currency)}` : '',
+    free ? `Не распределено: ${formatWithCurrency(free.minor, free.currency)}` : '',
+    previous ? `В прошлом месяце: ${formatWithCurrency(previous.minor, previous.currency)}` : '',
   ].filter(Boolean).join('\n');
 
   return (
@@ -109,15 +110,9 @@ export default function PlanAmountModal({ ym, target, onClose, onSaved }: Props)
       <RadioGroup options={KINDS} value={kind} onChange={setKind} />
       {kind === 'limit' ? (
         <>
-          {/* the rhythm the category is spent in: its norm in day / week stats is counted per this period */}
-          <Text style={formStyles.label}>Норма считается за</Text>
-          <Segmented options={NORMS} value={norm} onChange={setNorm} />
-          <Text style={formStyles.hint}>
-            {norm === 'day' ? 'Еда, транспорт — тратим понемногу каждый день.'
-              : norm === 'week' ? 'Бары, кафе — бывает раз-два в неделю.'
-                : norm === '2weeks' ? 'Траты раз в пару недель.'
-                  : 'Одежда, техника — пара покупок в месяц.'}
-          </Text>
+          <Text style={formStyles.label}>Как тратите</Text>
+          <RadioGroup options={PATTERNS} value={norm} onChange={setNorm} />
+          <Text style={formStyles.hint}>По этому в статистике считается лимит на день или неделю.</Text>
         </>
       ) : null}
     </TextInputModal>

@@ -388,9 +388,9 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
             <Text style={styles.deleteTitle}>Удалить «{deletingCategory ? categoryLabel(deletingCategory) : '…'}»</Text>
             <Text style={styles.deleteHint}>
               {data.length > 0
-                ? 'Удалить можно категорию без транзакций. Выберите транзакции этого месяца и перенесите их в другие категории — перенесённые пропадут из списка. Правила мерчантов переходят вместе с их транзакциями.'
-                : 'В этом месяце транзакций в категории нет — её можно удалить. Оставшиеся правила мерчантов и пункт плана этого месяца тоже удалятся.'}
-              {pastCount > 0 ? ` Прошлые месяцы (${pastCount} ${plural(pastCount, ['транзакция', 'транзакции', 'транзакций'])}) останутся в этой категории, история не изменится.` : ''}
+                ? 'Удалить можно только пустую категорию. Выберите операции этого месяца и перенесите их в другие категории — перенесённые пропадут из списка. Мерчанты этих операций тоже получат новую категорию.'
+                : 'В этом месяце операций в категории нет — её можно удалить. Вместе с ней удалятся её план на этот месяц и категория у мерчантов.'}
+              {pastCount > 0 ? ` Прошлые месяцы (${pastCount} ${plural(pastCount, ['операция', 'операции', 'операций'])}) останутся в этой категории и не изменятся.` : ''}
             </Text>
           </View>
         ) : <><PushAccessBanner /><CardBalance /></>}
@@ -436,7 +436,7 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
                 />
               );
             })}
-            {categoryOptions.length === 0 ? <Text style={styles.filterHint}>Транзакций пока нет</Text> : null}
+            {categoryOptions.length === 0 ? <Text style={styles.filterHint}>Операций пока нет</Text> : null}
           </ScrollView>
         ) : null}
 
@@ -546,7 +546,7 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
         ListFooterComponent={loadingMore ? <ActivityIndicator style={styles.footer} /> : <View style={[styles.footer, editMode && styles.footerTall]} />}
         ListEmptyComponent={
           <Text style={styles.empty}>
-            {deleting ? 'Транзакций не осталось.' : results ? 'Ничего не найдено.' : mode === 'date' && !range ? 'Выберите день или период в календаре.' : 'Транзакций пока нет. Они появятся здесь после SMS от банка.'}
+            {deleting ? 'Операций не осталось.' : results ? 'Ничего не найдено.' : mode === 'date' && !range ? 'Выберите день или период в календаре.' : 'Операций пока нет. Они появятся здесь после SMS или уведомления банка, или добавьте вручную ＋.'}
           </Text>
         }
       />
@@ -555,7 +555,7 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
         <View style={[styles.bottomBar, styles.bottomBarStack]}>
           {/* the unread ones among the selected */}
           {!deleting && unreadSelected.length > 0 ? (
-            <Button title={`Прочитать (${unreadSelected.length})`} onPress={readSelected} style={styles.secondaryButton} />
+            <Button title={`Отметить просмотренными (${unreadSelected.length})`} onPress={readSelected} style={styles.secondaryButton} />
           ) : null}
           <Button title={`${deleting ? 'Перенести в категорию' : 'Изменить категорию'} (${selected.size})`} onPress={() => setBulkOpen(true)} />
         </View>
@@ -565,11 +565,11 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
         </View>
       ) : null}
       {/* hidden in edit mode: it would cover the ✎ / 🗑 of the last row */}
-      {editMode ? null : <Fab onPress={() => navigation.navigate('AddTransaction')} accessibilityLabel="Добавить транзакцию" />}
+      {editMode ? null : <Fab onPress={() => navigation.navigate('AddTransaction')} accessibilityLabel="Добавить операцию" />}
 
       <CategoryPickerModal
         visible={bulkOpen}
-        title={`Выбрано транзакций: ${selected.size}`}
+        title={`Выбрано операций: ${selected.size}`}
         // a category created from here is applied to the selection right away
         newCategory={{ txIds: [...selected], moveFromCategoryId: deleteCategoryId }}
         excludeIds={deleting ? [deleteCategoryId!] : undefined}

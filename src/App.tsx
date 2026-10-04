@@ -62,7 +62,7 @@ function MainTabs() {
         name="Transactions"
         component={TransactionsList}
         options={{
-          title: 'Транзакции',
+          title: 'Операции',
           tabBarIcon: ({ color }) => <HistoryIcon color={color} />,
           tabBarBadge: unseen > 0 ? (unseen > 99 ? '99+' : unseen) : undefined,
         }}
@@ -99,13 +99,13 @@ export default function App() {
     <NavigationContainer ref={navigationRef} onReady={flushPendingNavigation}>
       <Stack.Navigator>
         <Stack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
-        <Stack.Screen name="TransactionDetail" component={TransactionDetail} options={{ title: 'Транзакция' }} />
+        <Stack.Screen name="TransactionDetail" component={TransactionDetail} options={{ title: 'Операция' }} />
         <Stack.Screen name="CategoryEdit" component={CategoryEdit} options={{ title: 'Категория' }} />
         <Stack.Screen name="Categories" component={CategoriesScreen} options={{ title: 'Категории' }} />
         <Stack.Screen name="Merchants" component={MerchantsScreen} options={{ title: 'Мерчанты' }} />
         <Stack.Screen name="CategoryDelete" component={CategoryDelete} options={{ title: 'Удаление категории' }} />
-        <Stack.Screen name="CategoryTypes" component={CategoryTypes} options={{ title: 'Типы' }} />
-        <Stack.Screen name="AddTransaction" component={AddTransaction} options={{ title: 'Новая транзакция' }} />
+        <Stack.Screen name="CategoryTypes" component={CategoryTypes} options={{ title: 'Разделы' }} />
+        <Stack.Screen name="AddTransaction" component={AddTransaction} options={{ title: 'Новая операция' }} />
         <Stack.Screen name="RefundResolve" component={RefundResolve} options={{ title: 'Возврат' }} />
       </Stack.Navigator>
       {/* confirmations and messages (sheetAlert) */}

@@ -39,7 +39,7 @@ export async function showUncategorizedTransactionNotification(txId: number) {
     // one notification per transaction; re-showing replaces instead of stacking
     id: `tx_${txId}`,
     // "Перевод — 25.00 ₾" / "Оплата — 25.69 ₾", the merchant or person below when known
-    title: `${KIND_LABELS[tx.kind] ?? 'Транзакция'} — ${formatMoneyWithCurrency(tx.amount_minor, tx.currency)}`,
+    title: `${KIND_LABELS[tx.kind] ?? 'Операция'} — ${formatMoneyWithCurrency(tx.amount_minor, tx.currency)}`,
     body: tx.raw_merchant || ' ',
     android: {
       channelId: CHANNEL_ID,

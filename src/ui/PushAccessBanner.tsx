@@ -29,9 +29,9 @@ export default function PushAccessBanner() {
   if (!visible) return null;
   return (
     <View style={styles.box}>
-      <Text style={styles.title}>Читать пуши TBC</Text>
+      <Text style={styles.title}>Читать уведомления приложения TBC</Text>
       <Text style={styles.text}>
-        Budget может брать траты из уведомлений приложения TBC — даже без SMS. Другие уведомления не читаются и не сохраняются.
+        Тогда операции появятся, даже если SMS не пришло. Другие уведомления не читаются и не сохраняются.
       </Text>
       <View style={styles.buttons}>
         <TouchableOpacity onPress={() => { setSetting(DISMISSED_KEY, '1').then(check).catch(() => {}); }} hitSlop={8}>

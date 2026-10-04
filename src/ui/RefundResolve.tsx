@@ -35,7 +35,7 @@ export default function RefundResolve({ route, navigation }: Props) {
   if (!refund || !candidates) return <View style={styles.center}><ActivityIndicator /></View>;
 
   const money = (minor: number) => formatWithCurrency(minor, refund.currency);
-  const shop = refund.raw_merchant || 'магазин';
+  const shop = refund.raw_merchant || 'мерчант';
 
   async function settled(action: Promise<void>) {
     try {
@@ -67,7 +67,7 @@ export default function RefundResolve({ route, navigation }: Props) {
   function remove(p: RefundCandidate) {
     sheetAlert(
       'Удалить покупку?',
-      `${shop}, ${formatDay(p.occurred_at).toLowerCase()}, ${money(p.amount_minor)}.\nДеньги вернули — покупка пропадёт из истории и статистики.`,
+      `${shop}, ${formatDay(p.occurred_at).toLowerCase()}, ${money(p.amount_minor)}.\nДеньги вернули — покупка пропадёт из операций и статистики.`,
       [
         { text: 'Отмена', style: 'cancel' },
         { text: 'Удалить', style: 'destructive', onPress: () => settled(deletePurchaseByRefund(refundId, p.id)) },
@@ -97,7 +97,7 @@ export default function RefundResolve({ route, navigation }: Props) {
         </View>
       }
       ListEmptyComponent={refund.refund_settled_at ? null : (
-        <Text style={styles.hint}>Покупок в {shop} не нашлось. Возврат останется в списке транзакций и не повлияет на траты.</Text>
+        <Text style={styles.hint}>Покупок в {shop} не нашлось. Возврат останется в операциях и не повлияет на траты.</Text>
       )}
       renderItem={({ item: p }) => (
         <View style={styles.row}>

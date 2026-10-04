@@ -14,7 +14,7 @@ describe('stats periods', () => {
     expect(periodRange('day', shiftAnchor('day', d, 1)).from).toBe('2026-10-05');
     expect(periodRange('year', shiftAnchor('year', d, -1)).from).toBe('2025-01-01');
     expect(periodLabel('year', { from: '2026-01-01', to: '2026-12-31' })).toBe('2026');
-    expect(periodLabel('custom', { from: '2026-10-01', to: '2026-10-03' })).toBe('1 окт 2026 — 3 окт 2026');
+    expect(periodLabel('custom', { from: '2026-10-01', to: '2026-10-03' })).toBe('1 окт 2026 – 3 окт 2026');
   });
 });
 

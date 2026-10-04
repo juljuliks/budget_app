@@ -43,7 +43,7 @@ export default function TypeEditModal({ visible, type, types, onClose, onSaved }
   }, [visible, type?.id]);
 
   async function save(name: string): Promise<string | null> {
-    if (await findCategoryTypeByName(name, type?.id)) return 'Такой тип уже есть';
+    if (await findCategoryTypeByName(name, type?.id)) return 'Такой раздел уже есть';
     let id = type?.id;
     if (id === undefined) id = await createCategoryType(name);
     else await renameCategoryType(id, name);
@@ -63,7 +63,7 @@ export default function TypeEditModal({ visible, type, types, onClose, onSaved }
   return (
     <TextInputModal
       visible={visible}
-      title={type ? 'Тип' : 'Новый тип'}
+      title={type ? 'Раздел' : 'Новый раздел'}
       initialValue={type?.name ?? ''}
       placeholder="Например, Хобби"
       submitLabel={type ? 'Сохранить' : 'Создать'}

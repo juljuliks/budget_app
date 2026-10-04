@@ -35,7 +35,7 @@ export default function SettingsSheet({ open, onClose }: Props) {
       <View style={styles.currency}>
         <Text style={styles.label}>Валюта</Text>
         <Text style={styles.hint}>
-          Статистика, план, история и суммы за день пересчитываются в неё по курсу Нацбанка Грузии. Транзакции
+          Статистика, план, история и суммы за день пересчитываются в неё по курсу Нацбанка Грузии. Операции
           остаются в своей валюте.
         </Text>
         <CurrencyPicker value={currency} onChange={(c) => { setDisplayCurrency(c).catch((e) => console.error('save currency failed', e)); }} />

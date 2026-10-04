@@ -173,7 +173,7 @@ test('stats are grouped by type: types first, then untyped, then uncategorized',
   await tx(null, at(2026, 9), 50);
   const s = await monthStats(2026, 9);
   expect(s.groups.map((g) => [g.title, g.spent_minor])).toEqual([
-    ['Хобби', 300], ['Переводы', 500], ['Без типа', 200], ['Без категории', 50],
+    ['Хобби', 300], ['Переводы', 500], ['Без раздела', 200], ['Без категории', 50],
   ]);
   expect(ymOf(2026, 9)).toBe(NOW);
 });

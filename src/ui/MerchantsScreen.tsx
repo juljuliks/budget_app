@@ -98,7 +98,7 @@ export default function MerchantsScreen() {
                   {item.group ? <Text style={styles.groupTag}>группа</Text> : null}
                 </View>
                 <Text style={styles.meta} numberOfLines={2}>
-                  {item.group ? `${item.members.join(', ')} · ` : ''}{item.count} {plural(item.count, ['транзакция', 'транзакции', 'транзакций'])}
+                  {item.group ? `${item.members.join(', ')} · ` : ''}{item.count} {plural(item.count, ['операция', 'операции', 'операций'])}
                 </Text>
               </View>
               {cat ? (
@@ -121,7 +121,7 @@ export default function MerchantsScreen() {
           {selected.length >= 2 ? (
             <Button title={`Объединить (${selected.length})`} onPress={() => setMergeOpen(true)} />
           ) : (
-            <Text style={styles.bottomHint}>Выберите двух или больше мерчантов, чтобы объединить их в группу.</Text>
+            <Text style={styles.bottomHint}>Выберите двух или больше мерчантов, чтобы объединить их в группу мерчантов.</Text>
           )}
         </View>
       ) : null}

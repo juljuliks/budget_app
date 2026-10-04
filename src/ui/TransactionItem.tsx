@@ -29,9 +29,9 @@ export default function TransactionItem({ tx, onPress, selectable, selected, onE
       {selectable ? <View style={styles.checkbox}><Checkbox checked={!!selected} /></View> : null}
       <View style={styles.main}>
         <View style={styles.titleRow}>
-          {unread ? <View style={styles.unreadDot} accessibilityLabel="Не просмотрена" /> : null}
+          {unread ? <View style={styles.unreadDot} accessibilityLabel="Новая" /> : null}
           <Text style={[styles.merchant, unread && styles.merchantUnread]} numberOfLines={1}>{merchantLabel(tx)}</Text>
-          {auto ? <Text style={styles.auto} accessibilityLabel="Категория определена автоматически">🤖 авто</Text> : null}
+          {auto ? <Text style={styles.auto} accessibilityLabel="Категория мерчанта, назначена автоматически">🤖 авто</Text> : null}
         </View>
         {tx.kind === 'refund' && !category ? (
           // a refund is settled on its purchase instead of getting a category

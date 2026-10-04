@@ -44,7 +44,7 @@ export default function ColorSwatches({ options, value, onChange, onAuto }: Prop
           key={c}
           style={[styles.ring, value === c && styles.selected]}
           onPress={() => onChange(c)}
-          accessibilityLabel={`Цвет ${c}`}
+          accessibilityLabel={`Цвет ${options.indexOf(c) + 1} из ${options.length}`}
           accessibilityState={{ selected: value === c }}
         >
           <View style={[styles.swatch, { backgroundColor: c }]} />

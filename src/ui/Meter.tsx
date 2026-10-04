@@ -34,7 +34,7 @@ export default function Meter({ ratio, height = 6, color, marginTop = 8, base = 
       {marker !== undefined ? (
         <View
           style={[styles.marker, { height: height + 6, top: -3, left: `${clamp(marker) * 100}%` }]}
-          accessibilityLabel={`Ровный темп: ${Math.round(clamp(marker) * 100)}%`}
+          accessibilityLabel={`Отметка ровного темпа: ${Math.round(clamp(marker) * 100)}%`}
         />
       ) : null}
     </View>

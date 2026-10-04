@@ -11,6 +11,7 @@ import { onTransactionsChanged } from '../../events';
 import Donut, { DonutSegment } from '../Donut';
 import Meter from '../Meter';
 import { currencySymbol, formatMoneyWithCurrency, formatShort, formatWithCurrency } from '../money';
+import { NO_RATE, PER_PERIOD } from '../strings';
 import { colors } from '../theme';
 import PlanAmountModal, { PlanAmountTarget } from './PlanAmountModal';
 
@@ -67,7 +68,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
         <View style={styles.summary}>
           <SummaryItem label="План" value={formatWithCurrency(stats.planned_minor, stats.currency)} />
           <SummaryItem
-            label={remaining >= 0 ? 'Осталось' : 'Сверх плана'}
+            label={remaining >= 0 ? 'Осталось' : 'Перерасход'}
             value={formatWithCurrency(Math.abs(remaining), stats.currency)}
             danger={remaining < 0}
           />
@@ -108,7 +109,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
 
       {stats.other_currencies.length > 0 ? (
         <Text style={styles.hint}>
-          Не учтено, нет курса (нужен интернет): {stats.other_currencies.map((o) => formatMoneyWithCurrency(o.spent_minor, o.currency)).join(', ')}
+          {NO_RATE} {stats.other_currencies.map((o) => formatMoneyWithCurrency(o.spent_minor, o.currency)).join(', ')}
         </Text>
       ) : null}
 
@@ -154,7 +155,6 @@ function SummaryItem({ label, value, danger }: { label: string; value: string; d
   );
 }
 
-const RHYTHM_PER = { day: 'в день', week: 'в неделю', '2weeks': 'за 2 недели' } as const;
 const RHYTHM_DAYS = { day: 1, week: 7, '2weeks': 14 } as const;
 const RHYTHM_NOW = { day: 'Сегодня', week: 'На этой неделе', '2weeks': 'За эти 2 недели' } as const;
 const WEEKDAYS = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
@@ -176,7 +176,7 @@ function CategoryRow({ stat, currency, evenPace, dim, now, monthToDate, onAddToP
   const rhythm = !fixed && stat.plan_norm && stat.plan_norm !== 'month' ? stat.plan_norm : null;
 
   return (
-    <TouchableOpacity style={styles.row} onPress={() => openTransactions(stat.category_id)} accessibilityHint="Показать транзакции категории">
+    <TouchableOpacity style={styles.row} onPress={() => openTransactions(stat.category_id)} accessibilityHint="Показать операции категории">
       <View style={styles.rowTop}>
         <View style={[styles.dot, { backgroundColor: stat.color }]} />
         <Text style={styles.rowName} numberOfLines={1}>{`${stat.emoji || ''} ${stat.name}`.trim()}</Text>
@@ -198,9 +198,9 @@ function CategoryRow({ stat, currency, evenPace, dim, now, monthToDate, onAddToP
         <>
           <Meter ratio={ratio} height={8} marker={stat.plan_norm === 'month' ? undefined : evenPace} />
           <Text style={[styles.rowStatus, ratio > 1 && styles.dangerText]}>
-            {ratio > 1 ? `⚠ превышено на ${formatWithCurrency(spent - limit, currency)}` : `осталось ${formatWithCurrency(limit - spent, currency)}`}
-            {/* a flexible category with a rhythm shorter than a month: its norm per rhythm, "≈ 113 ₾ в неделю" */}
-            {rhythm ? <Text style={styles.rowStatusMuted}> · ≈ {formatWithCurrency(Math.round((limit / dim) * RHYTHM_DAYS[rhythm]), currency)} {RHYTHM_PER[rhythm]}</Text> : null}
+            {ratio > 1 ? `⚠ перерасход ${formatWithCurrency(spent - limit, currency)}` : `осталось ${formatWithCurrency(limit - spent, currency)}`}
+            {/* a category spent daily / weekly: its limit per that period, "лимит ≈ 113 ₾ в неделю" */}
+            {rhythm ? <Text style={styles.rowStatusMuted}> · лимит ≈ {formatWithCurrency(Math.round((limit / dim) * RHYTHM_DAYS[rhythm]), currency)} {PER_PERIOD[rhythm]}</Text> : null}
           </Text>
           {rhythm && now && now.rhythm === rhythm ? (() => {
             // the current month: what's left in today's / this week's window, colored by pace
