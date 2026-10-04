@@ -28,7 +28,14 @@ type Norms = {
   /** the flexible categories' norm (fixed payments come in one go and aren't split by days) */
   total: number;
   byCategory: Map<number, { norm: number; kind: PlanKind; monthLimit: number }>;
+  /**
+   * Per month of the period (two for a week across months): the category's spending on those days and its plan
+   * for that month, for "Сентябрь 100% · Октябрь 100%".
+   */
+  months: Array<{ ym: string; spent: Map<number | null, number>; limits: Map<number, number> }>;
 };
+
+const MONTH_NAMES = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
 
 /** "12%", "<1%" for a tiny non-zero share. */
 function pct(part: number, whole: number): string {
@@ -38,11 +45,23 @@ function pct(part: number, whole: number): string {
 
 async function loadNorms(range: DayRange, currency: Parameters<typeof monthStats>[2]): Promise<Norms> {
   const months = daysByMonth(range);
-  const norms: Norms = { total: 0, byCategory: new Map() };
+  const norms: Norms = { total: 0, byCategory: new Map(), months: [] };
   for (const [ym, days] of months) {
     const { year, month } = parseYm(ym);
     const m = await monthStats(year, month, currency);
     const share = days / daysInMonth(ym);
+    // the period's days in this month and the spending on them
+    const part: DayRange = {
+      from: range.from > `${ym}-01` ? range.from : `${ym}-01`,
+      to: range.to < `${ym}-${daysInMonth(ym)}` ? range.to : `${ym}-${daysInMonth(ym)}`,
+    };
+    const { from, to } = rangeToUnix(part);
+    const spentPart = await periodStats(from, to, currency);
+    norms.months.push({
+      ym,
+      spent: new Map(spentPart.categories.map((c) => [c.category_id, c.spent_minor])),
+      limits: new Map(m.categories.filter((c) => c.category_id !== null && c.limit_minor).map((c) => [c.category_id!, c.limit_minor!])),
+    });
     for (const c of m.categories) {
       if (c.category_id === null || !c.limit_minor) continue;
       const cur = norms.byCategory.get(c.category_id) ?? { norm: 0, kind: c.plan_kind ?? 'limit', monthLimit: 0 };
@@ -136,10 +155,22 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                   // the period against the category's month: how much of its month's spending and of its plan
                   // this is (no "norm" per category: one purchase a month is fine as long as the month fits)
                   <>
-                    <Meter ratio={plan.monthLimit > 0 ? c.spent_minor / plan.monthLimit : 0} height={8} color={c.color} />
+                    {/* the share of the month's plan; across two months, of the month the period ends in */}
+                    <Meter ratio={(() => {
+                      const last = norms && norms.months.length > 1 ? norms.months[norms.months.length - 1] : null;
+                      const spent = last ? last.spent.get(c.category_id) ?? 0 : c.spent_minor;
+                      return plan.monthLimit > 0 ? spent / plan.monthLimit : 0;
+                    })()} height={8} color={c.color} />
                     <Text style={styles.share}>
                       {pct(c.spent_minor, stats.spent_minor)} всех трат за период
-                      {' · '}{pct(c.spent_minor, plan.monthLimit)} плана на месяц
+                      {' · '}{norms && norms.months.length > 1
+                        // a week across two months: each month's part against that month's plan
+                        ? norms.months.map((mo) => {
+                          const lim = c.category_id === null ? undefined : mo.limits.get(c.category_id);
+                          const name = MONTH_NAMES[parseYm(mo.ym).month];
+                          return lim ? `${name} ${pct(mo.spent.get(c.category_id) ?? 0, lim)}` : `${name} без плана`;
+                        }).join(' · ') + ' плана'
+                        : `${pct(c.spent_minor, plan.monthLimit)} плана на месяц`}
                     </Text>
                     {/* the category's plan per day × days of the period (fixed payments aren't split by days) */}
                     {plan.kind === 'limit' ? (
@@ -179,7 +210,9 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
               </Text>
               <Text style={styles.infoText}>
                 <Text style={styles.infoBold}>Категория с планом:</Text> полоска — какая часть плана категории на месяц
-                ушла за этот период. Под ней — доля категории во всех тратах за период и доля от её плана на месяц.
+                ушла за этот период. Под ней — доля категории во всех тратах за период и доля от её плана на месяц. Если
+                период захватывает два месяца, доля считается отдельно для каждого: траты в днях сентября — от плана
+                сентября, в днях октября — от плана октября.
                 Ниже — сколько потрачено от плана гибкой категории на эти дни (план на месяц / дни месяца × дни периода): зелёный — в рамках, красный — больше плана.
                 Купили одежду один раз на 60% плана — вы в рамках, перерасхода нет. Если период захватывает два
                 месяца, берётся план месяца, в котором период заканчивается.
