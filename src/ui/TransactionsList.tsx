@@ -417,8 +417,8 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
               ))}
             </ScrollView>
             {activeFilters.length > 1 ? (
-              <TouchableOpacity onPress={resetFilters} hitSlop={8} accessibilityRole="button">
-                <Text style={styles.link}>Сбросить все</Text>
+              <TouchableOpacity onPress={resetFilters} hitSlop={10} accessibilityRole="button" accessibilityLabel="Сбросить все фильтры">
+                <Text style={styles.clear}>✕</Text>
               </TouchableOpacity>
             ) : null}
           </View>
