@@ -70,6 +70,10 @@ export type TxFilter = {
   category?: CategoryFilter;
   /** merchant id (merchantId.ts): a merchant_key or a group */
   merchant?: string;
+  /** any of these categories ('none' = uncategorized) */
+  categories?: CategoryFilter[];
+  /** any of these merchants */
+  merchants?: string[];
   /** unix seconds, [from, to) */
   from?: number;
   to?: number;
@@ -84,6 +88,17 @@ function filterWhere(f: TxFilter): { sql: string; params: Array<number | string>
   if (f.category === 'none') where.push('t.category_id IS NULL');
   else if (f.category !== undefined) { where.push('t.category_id = ?'); params.push(f.category); }
   if (f.merchant !== undefined) { where.push(`${merchantIdSql('t')} = ?`); params.push(f.merchant); }
+  if (f.categories?.length) {
+    const ids = f.categories.filter((c): c is number => c !== 'none');
+    const any: string[] = [];
+    if (ids.length) { any.push(`t.category_id IN (${ids.map(() => '?').join(',')})`); params.push(...ids); }
+    if (f.categories.includes('none')) any.push('t.category_id IS NULL');
+    where.push(`(${any.join(' OR ')})`);
+  }
+  if (f.merchants?.length) {
+    where.push(`${merchantIdSql('t')} IN (${f.merchants.map(() => '?').join(',')})`);
+    params.push(...f.merchants);
+  }
   if (f.from !== undefined) { where.push('t.occurred_at >= ?'); params.push(f.from); }
   if (f.to !== undefined) { where.push('t.occurred_at < ?'); params.push(f.to); }
   return { sql: where.length ? `WHERE ${where.join(' AND ')}` : '', params };

@@ -21,3 +21,17 @@ test('text, category and dates combine: all must match', async () => {
   expect(amounts(await searchTransactions('patara'))).toEqual([100, 200]);
   expect(amounts(await searchTransactions('spar', { category: bars }))).toEqual([]);
 });
+
+test('several categories (with "Без категории") match any of them', async () => {
+  const bars = await createCategory('Бары');
+  const food = await createCategory('Еда');
+  const taxi = await createCategory('Такси');
+  await addManualTransaction({ amount_minor: 1, category_id: bars });
+  await addManualTransaction({ amount_minor: 2, category_id: food });
+  await addManualTransaction({ amount_minor: 3, category_id: taxi });
+  await addManualTransaction({ amount_minor: 4, category_id: null });
+  const amounts = (rows: Array<{ amount_minor: number }>) => rows.map((r) => r.amount_minor).sort((a, b) => a - b);
+  expect(amounts(await listTransactionsFiltered({ categories: [bars, food] }))).toEqual([1, 2]);
+  expect(amounts(await listTransactionsFiltered({ categories: [taxi, 'none'] }))).toEqual([3, 4]);
+  expect(amounts(await listTransactionsFiltered({ categories: [] }))).toEqual([1, 2, 3, 4]);
+});

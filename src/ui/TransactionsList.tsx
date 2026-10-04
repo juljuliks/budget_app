@@ -5,7 +5,7 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { HeaderBackButton } from '@react-navigation/elements';
 import {
   categoriesWithTransactions, CategoryFilter, CategoryWithCount, isUnread, TxFilter, listTransactionsFiltered, listTransactionsPage,
-  markTransactionsSeen, merchantsWithTransactions, MerchantWithCount, normalizeForSearch, PageCursor, searchTransactions, TransactionRow,
+  markTransactionsSeen, merchantsWithTransactions, MerchantWithCount, PageCursor, searchTransactions, TransactionRow,
 } from '../db/transactions';
 import { emitTransactionsChanged, onTransactionsChanged } from '../events';
 import { Category, categoryLabel, countPastTransactionsOfCategory, deleteCategory, getCategory, moveTransactionsOutOfCategory } from '../db/categories';
@@ -25,37 +25,35 @@ import { dayKey, formatDay, plural } from './format';
 import { formatWithCurrency } from './money';
 import { formStyles } from './formStyles';
 import { ChevronRightIcon, PencilIcon, SearchIcon } from './icons';
-import RangeCalendar, { DayRange, formatRange, rangeToUnix } from './RangeCalendar';
-import Segmented from './Segmented';
+import { DayRange, formatRange, rangeToUnix } from './RangeCalendar';
+import { ActiveFilter, AllFiltersSheet, DateSheet, FilterButton, OptionsSheet } from './FilterSheets';
 import { colors } from './theme';
 import { confirmDeleteTransaction } from './transactionActions';
 import TransactionItem from './TransactionItem';
 
 const PAGE_SIZE = 50;
 
-type FilterMode = 'text' | 'category' | 'merchant' | 'date';
-const MODES = [['text', 'Текст'], ['category', 'Категория'], ['merchant', 'Мерчант'], ['date', 'Дата']] as const;
 type Filter = {
-  query: string; category: CategoryFilter | null; merchant: string | null; range: DayRange | null;
+  query: string; categories: CategoryFilter[]; merchants: string[]; range: DayRange | null;
   /** deleting a category: only its transactions from this month on */
   from?: number;
 };
 
-/** Every filter set applies at once: text, category, merchant and dates combine. The mode only picks which one is edited. */
+/** Every filter set applies at once: text, categories (any of), merchants (any of) and dates combine. */
 function isFilterActive(f: Filter): boolean {
-  return f.query.trim() !== '' || f.category !== null || f.merchant !== null || f.range !== null;
+  return f.query.trim() !== '' || f.categories.length > 0 || f.merchants.length > 0 || f.range !== null;
 }
 
 async function runFilterQuery(f: Filter): Promise<TransactionRow[] | null> {
   if (!isFilterActive(f)) return null;
   const r = f.range ? rangeToUnix(f.range) : undefined;
   const from = r && f.from !== undefined ? Math.max(r.from, f.from) : r?.from ?? f.from;
-  const tx: TxFilter = { category: f.category ?? undefined, merchant: f.merchant ?? undefined, from, to: r?.to };
+  const tx: TxFilter = { categories: f.categories, merchants: f.merchants, from, to: r?.to };
   return f.query.trim() ? searchTransactions(f.query, tx) : listTransactionsFiltered(tx);
 }
 
-/** Deleting a category: every mode but "Категория" and every other category are off. */
-const DELETE_MODE_DISABLED: FilterMode[] = ['text', 'merchant', 'date'];
+/** Inline: the first filters as chips, the rest behind "ещё N". */
+const SHOWN_FILTERS = 3;
 
 const SEARCH_DEBOUNCE_MS = 200;
 
@@ -79,16 +77,15 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
   const requestId = useRef(0);
   const loadedCount = useRef(0);
 
-  const [mode, setMode] = useState<FilterMode>(deleting ? 'category' : 'text');
   const [query, setQuery] = useState('');
-  const [category, setCategory] = useState<CategoryFilter | null>(deleting ? deleteCategoryId! : null);
-  const [merchant, setMerchant] = useState<string | null>(null);
-  const [merchantQuery, setMerchantQuery] = useState('');
+  const [categories, setCategories] = useState<CategoryFilter[]>(deleting ? [deleteCategoryId!] : []);
+  const [merchants, setMerchants] = useState<string[]>([]);
+  // which picker sheet is open
+  const [sheet, setSheet] = useState<'category' | 'merchant' | 'date' | 'all' | null>(null);
   const [range, setRange] = useState<DayRange | null>(null);
-  const [calendarOpen, setCalendarOpen] = useState(true);
   const [categoryOptions, setCategoryOptions] = useState<CategoryWithCount[]>([]);
   const [merchantOptions, setMerchantOptions] = useState<MerchantWithCount[]>([]);
-  const filter: Filter = { query, category, merchant, range, from: deleting ? monthStart(currentYm()) : undefined };
+  const filter: Filter = { query, categories, merchants, range, from: deleting ? monthStart(currentYm()) : undefined };
   // read by refreshAll without making it change (and re-run focus effects) on every keystroke
   const filterRef = useRef(filter);
   filterRef.current = filter;
@@ -101,14 +98,14 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
   // the other filters are cleared: only what was asked for is shown
   useEffect(() => {
     if (incomingCategory === undefined) return;
-    setQuery(''); setMerchant(null);
-    setMode('category'); setCategory(incomingCategory); setRange(incomingRange ?? null);
+    setQuery(''); setMerchants([]);
+    setCategories([incomingCategory]); setRange(incomingRange ?? null);
   }, [incomingCategory, nonce]);
   // opened from a merchant's card: filter by that merchant
   useEffect(() => {
     if (incomingMerchant === undefined) return;
-    setQuery(''); setCategory(null); setRange(null);
-    setMode('merchant'); setMerchant(incomingMerchant);
+    setQuery(''); setCategories([]); setRange(null);
+    setMerchants([incomingMerchant]);
   }, [incomingMerchant, nonce]);
 
   // edit mode: ✎ / 🗑 on every row and the selection toolbar; selectMode (inside edit mode) replaces the icons with checkboxes
@@ -166,14 +163,14 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
   useFocusEffect(refreshAll);
   useEffect(() => onTransactionsChanged(refreshAll), [refreshAll]);
 
-  // text: debounced while typing; category / date / mode switch: immediately
+  // text: debounced while typing; categories / merchants / dates: immediately
   useEffect(() => {
     const t = setTimeout(() => { runFilter(filterRef.current).catch((e) => console.error('filter failed', e)); }, SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(t);
   }, [query, runFilter]);
   useEffect(() => {
     runFilter(filterRef.current).catch((e) => console.error('filter failed', e));
-  }, [category, merchant, range, runFilter]);
+  }, [categories, merchants, range, runFilter]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -184,18 +181,18 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
   const data = results ?? rows;
 
   // the filters set, as chips to clear one by one
-  const activeFilters: Array<{ key: FilterMode; label: string; clear: () => void }> = [];
-  if (query.trim()) activeFilters.push({ key: 'text', label: `«${query.trim()}»`, clear: () => setQuery('') });
-  if (category !== null) {
-    const c = categoryOptions.find((o) => o.category === category);
-    activeFilters.push({ key: 'category', label: c ? categoryLabel(c) : category === 'none' ? 'Без категории' : 'Категория', clear: () => setCategory(null) });
+  const activeFilters: ActiveFilter[] = [];
+  for (const cat of categories) {
+    const c = categoryOptions.find((o) => o.category === cat);
+    activeFilters.push({ key: `c${cat}`, label: c ? categoryLabel(c) : cat === 'none' ? 'Без категории' : 'Категория', clear: () => setCategories((p) => p.filter((x) => x !== cat)) });
   }
-  if (merchant !== null) {
-    const m = merchantOptions.find((o) => o.merchant === merchant);
-    activeFilters.push({ key: 'merchant', label: m?.name ?? 'Мерчант', clear: () => setMerchant(null) });
+  for (const mer of merchants) {
+    const m = merchantOptions.find((o) => o.merchant === mer);
+    activeFilters.push({ key: `m${mer}`, label: m?.name ?? 'Мерчант', clear: () => setMerchants((p) => p.filter((x) => x !== mer)) });
   }
   if (range) activeFilters.push({ key: 'date', label: formatRange(range), clear: () => setRange(null) });
-  const modeOptions = MODES.map(([k, label]) => [k, activeFilters.some((f) => f.key === k) ? `${label} •` : label] as const);
+  if (query.trim()) activeFilters.push({ key: 'text', label: `«${query.trim()}»`, clear: () => setQuery('') });
+  const toggleIn = <T,>(list: T[], v: T) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 
   // "Прочитать (N)": the unread ones among the selected
   const unreadSelected = useMemo(() => data.filter((r) => selected.has(r.id) && isUnread(r)).map((r) => r.id), [data, selected]);
@@ -272,11 +269,9 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
   const tabNavigation = useNavigation<BottomTabNavigationProp<TabParamList, 'Transactions'>>();
 
   function resetFilters() {
-    setMode('text');
     setQuery('');
-    setCategory(null);
-    setMerchant(null);
-    setMerchantQuery('');
+    setCategories(deleting ? [deleteCategoryId!] : []);
+    setMerchants([]);
     setRange(null);
   }
 
@@ -384,10 +379,6 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
     }
   }
 
-  const merchantWords = normalizeForSearch(merchantQuery);
-  const shownMerchants = merchantWords
-    ? merchantOptions.filter((m) => normalizeForSearch(m.name).includes(merchantWords))
-    : merchantOptions;
 
   if (loading) {
     return <View style={styles.center}><ActivityIndicator /></View>;
@@ -407,113 +398,54 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
             </Text>
           </View>
         ) : <><PushAccessBanner /><CardBalance /></>}
-        {/* a dot on every mode whose filter is set: they all apply together */}
-        <Segmented options={modeOptions} value={mode} onChange={setMode} style={styles.modes} disabled={deleting ? DELETE_MODE_DISABLED : undefined} />
-        {!deleting && activeFilters.length > 0 ? (
-          // small chips wrapping onto the next line, the "reset all" ✕ last
+        {deleting ? (
+          // deleting a category: only its operations of this month
           <View style={[styles.chipsWrap, styles.activeRow]}>
-            {activeFilters.map((f) => (
-              <Chip key={f.key} label={`${f.label}  ✕`} selected small onPress={f.clear} />
-            ))}
-            {activeFilters.length > 1 ? (
-              <TouchableOpacity onPress={resetFilters} hitSlop={10} accessibilityRole="button" accessibilityLabel="Сбросить все фильтры" style={styles.resetAll}>
-                <Text style={styles.clear}>✕</Text>
-              </TouchableOpacity>
-            ) : null}
+            {deletingCategory ? <Chip label={`${categoryLabel(deletingCategory)} · ${data.length}`} selected small /> : null}
           </View>
-        ) : null}
-
-        {mode === 'text' ? (
-          <View style={styles.search}>
-            <SearchIcon color={colors.muted} />
-            <TextInput
-              style={styles.searchInput}
-              value={query}
-              onChangeText={setQuery}
-              placeholder="Поиск по тексту"
-              placeholderTextColor={colors.muted}
-              returnKeyType="search"
-              autoCorrect={false}
-            />
-            {query ? (
-              <TouchableOpacity onPress={() => setQuery('')} hitSlop={10} accessibilityLabel="Очистить поиск">
-                <Text style={styles.clear}>✕</Text>
-              </TouchableOpacity>
-            ) : null}
-          </View>
-        ) : null}
-
-        {mode === 'category' ? (
-          <View style={styles.chipsWrap}>
-            {deleting && deletingCategory ? (
-              // the category being deleted: its transactions of this month
-              <Chip label={`${categoryLabel(deletingCategory)} · ${data.length}`} selected small />
-            ) : null}
-            {categoryOptions.filter((c) => !deleting || c.category !== deleteCategoryId).map((c) => {
-              const on = category === c.category;
-              return (
-                <Chip
-                  small
-                  key={String(c.category)}
-                  label={`${categoryLabel(c)}${c.deleted ? ' (удалена)' : ''} · ${c.count}`}
-                  selected={on}
-                  muted={c.deleted || deleting}
-                  disabled={deleting}
-                  // tap the selected one again to clear
-                  onPress={() => setCategory(on ? null : c.category)}
-                />
-              );
-            })}
-            {categoryOptions.length === 0 ? <Text style={styles.filterHint}>Операций пока нет</Text> : null}
-          </View>
-        ) : null}
-
-        {mode === 'merchant' ? (
-          <View style={styles.merchantBox}>
+        ) : (
+          <>
             <View style={styles.search}>
               <SearchIcon color={colors.muted} />
               <TextInput
                 style={styles.searchInput}
-                value={merchantQuery}
-                onChangeText={setMerchantQuery}
-                placeholder="Найти мерчанта"
+                value={query}
+                onChangeText={setQuery}
+                placeholder="Поиск по тексту"
                 placeholderTextColor={colors.muted}
+                returnKeyType="search"
                 autoCorrect={false}
               />
-              {merchantQuery ? (
-                <TouchableOpacity onPress={() => setMerchantQuery('')} hitSlop={10} accessibilityLabel="Очистить">
+              {query ? (
+                <TouchableOpacity onPress={() => setQuery('')} hitSlop={10} accessibilityLabel="Очистить поиск">
                   <Text style={styles.clear}>✕</Text>
                 </TouchableOpacity>
               ) : null}
             </View>
-            <View style={styles.chipsWrap}>
-              {shownMerchants.map((m) => {
-                const on = merchant === m.merchant;
-                return (
-                  <Chip key={m.merchant} small label={`${m.name} · ${m.count}`} selected={on} onPress={() => setMerchant(on ? null : m.merchant)} />
-                );
-              })}
-              {shownMerchants.length === 0 ? <Text style={styles.filterHint}>{merchantQuery ? 'Не найдено' : 'Мерчантов пока нет'}</Text> : null}
+            {/* each opens its picker in a sheet; all the filters set apply together */}
+            <View style={[styles.chipsWrap, styles.activeRow]}>
+              <FilterButton label="Категория" count={categories.length} active={categories.length > 0} onPress={() => setSheet('category')} />
+              <FilterButton label="Мерчант" count={merchants.length} active={merchants.length > 0} onPress={() => setSheet('merchant')} />
+              <FilterButton label="Дата" active={range !== null} onPress={() => setSheet('date')} />
             </View>
-          </View>
-        ) : null}
-
-        {mode === 'date' ? (
-          <View>
-            <View style={styles.rangeRow}>
-              <Text style={styles.rangeText}>{range ? formatRange(range) : 'Выберите день или период'}</Text>
-              {range ? (
-                <TouchableOpacity onPress={() => setRange(null)} hitSlop={10} accessibilityLabel="Сбросить даты">
-                  <Text style={styles.clear}>✕</Text>
-                </TouchableOpacity>
-              ) : null}
-              <TouchableOpacity onPress={() => setCalendarOpen((o) => !o)} hitSlop={10} style={styles.calendarToggle}>
-                <Text style={styles.link}>{calendarOpen ? 'Скрыть календарь' : 'Календарь'}</Text>
-              </TouchableOpacity>
-            </View>
-            {calendarOpen ? <RangeCalendar value={range} onChange={setRange} /> : null}
-          </View>
-        ) : null}
+            {activeFilters.length > 0 ? (
+              // the first filters as small chips wrapping onto the next line, the rest behind "ещё N", the reset ✕ last
+              <View style={[styles.chipsWrap, styles.activeRow]}>
+                {activeFilters.slice(0, SHOWN_FILTERS).map((f) => (
+                  <Chip key={f.key} label={`${f.label}  ✕`} selected small onPress={f.clear} />
+                ))}
+                {activeFilters.length > SHOWN_FILTERS ? (
+                  <Chip small label={`ещё ${activeFilters.length - SHOWN_FILTERS}`} onPress={() => setSheet('all')} />
+                ) : null}
+                {activeFilters.length > 1 ? (
+                  <TouchableOpacity onPress={resetFilters} hitSlop={10} accessibilityRole="button" accessibilityLabel="Сбросить все фильтры" style={styles.resetAll}>
+                    <Text style={styles.clear}>✕</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            ) : null}
+          </>
+        )}
 
         {editMode ? (
           <View style={styles.toolbar}>
@@ -574,7 +506,7 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
         ListFooterComponent={loadingMore ? <ActivityIndicator style={styles.footer} /> : <View style={[styles.footer, editMode && styles.footerTall]} />}
         ListEmptyComponent={
           <Text style={styles.empty}>
-            {deleting ? 'Операций не осталось.' : results ? 'Ничего не найдено.' : mode === 'date' && !range ? 'Выберите день или период в календаре.' : 'Операций пока нет. Они появятся здесь после SMS или уведомления банка, или добавьте вручную ＋.'}
+            {deleting ? 'Операций не осталось.' : results ? 'Ничего не найдено.' : 'Операций пока нет. Они появятся здесь после SMS или уведомления банка, или добавьте вручную ＋.'}
           </Text>
         }
       />
@@ -594,6 +526,28 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
       ) : null}
       {/* hidden in edit mode: it would cover the ✎ / 🗑 of the last row */}
       {editMode ? null : <Fab onPress={() => navigation.navigate('AddTransaction')} accessibilityLabel="Добавить операцию" />}
+
+      <OptionsSheet
+        visible={sheet === 'category'}
+        title="Категории"
+        options={categoryOptions.map((c) => ({ key: c.category, label: `${categoryLabel(c)}${c.deleted ? ' (удалена)' : ''}`, count: c.count, muted: c.deleted }))}
+        selected={categories}
+        onToggle={(k) => setCategories((p) => toggleIn(p, k))}
+        onClear={() => setCategories([])}
+        onClose={() => setSheet(null)}
+      />
+      <OptionsSheet
+        visible={sheet === 'merchant'}
+        title="Мерчанты"
+        options={merchantOptions.map((m) => ({ key: m.merchant, label: m.name, count: m.count }))}
+        selected={merchants}
+        onToggle={(k) => setMerchants((p) => toggleIn(p, k))}
+        onClear={() => setMerchants([])}
+        onClose={() => setSheet(null)}
+        searchPlaceholder="Найти мерчанта"
+      />
+      <DateSheet visible={sheet === 'date'} value={range} onChange={setRange} onClose={() => setSheet(null)} />
+      <AllFiltersSheet visible={sheet === 'all'} filters={activeFilters} onReset={resetFilters} onClose={() => setSheet(null)} />
 
       <CategoryPickerModal
         visible={bulkOpen}
@@ -615,16 +569,10 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
   // close under the header title
   header: { paddingHorizontal: 16, paddingTop: 2, paddingBottom: 4, backgroundColor: colors.bg },
-  modes: { marginBottom: 8 },
   // chips (active filters, categories, merchants) wrap onto the next lines
   chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 },
   activeRow: { marginBottom: 8 },
   resetAll: { paddingHorizontal: 6 },
-  filterHint: { fontSize: 14, color: colors.muted, paddingVertical: 8 },
-  rangeRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 4 },
-  rangeText: { fontSize: 15, color: colors.text, fontWeight: '600' },
-  calendarToggle: { marginLeft: 'auto' },
-  link: { fontSize: 14, color: colors.accent },
   search: {
     flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.surface,
     borderRadius: 10, paddingHorizontal: 12,
@@ -655,7 +603,6 @@ const styles = StyleSheet.create({
   bottomBarStack: { gap: 8 },
   secondaryButton: { backgroundColor: colors.muted },
   empty: { padding: 32, textAlign: 'center', color: colors.muted },
-  merchantBox: { gap: 8 },
   dayHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   dayTitle: { flex: 1, fontSize: 13, fontWeight: '600', color: colors.muted },
   daySpent: { fontSize: 13, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
