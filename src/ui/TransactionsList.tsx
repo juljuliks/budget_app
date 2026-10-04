@@ -4,7 +4,7 @@ import { RouteProp, useFocusEffect, useNavigation, useRoute } from '@react-navig
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { HeaderBackButton } from '@react-navigation/elements';
 import {
-  categoriesWithTransactions, CategoryFilter, CategoryWithCount, isUnread, listTransactionsFiltered, listTransactionsPage,
+  categoriesWithTransactions, CategoryFilter, CategoryWithCount, isUnread, TxFilter, listTransactionsFiltered, listTransactionsPage,
   markTransactionsSeen, merchantsWithTransactions, MerchantWithCount, normalizeForSearch, PageCursor, searchTransactions, TransactionRow,
 } from '../db/transactions';
 import { emitTransactionsChanged, onTransactionsChanged } from '../events';
@@ -36,25 +36,22 @@ const PAGE_SIZE = 50;
 type FilterMode = 'text' | 'category' | 'merchant' | 'date';
 const MODES = [['text', 'Текст'], ['category', 'Категория'], ['merchant', 'Мерчант'], ['date', 'Дата']] as const;
 type Filter = {
-  mode: FilterMode; query: string; category: CategoryFilter | null; merchant: string | null; range: DayRange | null;
+  query: string; category: CategoryFilter | null; merchant: string | null; range: DayRange | null;
   /** deleting a category: only its transactions from this month on */
   from?: number;
 };
 
-/** Only the filter of the selected mode applies. */
+/** Every filter set applies at once: text, category, merchant and dates combine. The mode only picks which one is edited. */
 function isFilterActive(f: Filter): boolean {
-  if (f.mode === 'text') return f.query.trim() !== '';
-  if (f.mode === 'category') return f.category !== null;
-  if (f.mode === 'merchant') return f.merchant !== null;
-  return f.range !== null;
+  return f.query.trim() !== '' || f.category !== null || f.merchant !== null || f.range !== null;
 }
 
 async function runFilterQuery(f: Filter): Promise<TransactionRow[] | null> {
   if (!isFilterActive(f)) return null;
-  if (f.mode === 'text') return searchTransactions(f.query);
-  if (f.mode === 'category') return listTransactionsFiltered({ category: f.category!, from: f.from });
-  if (f.mode === 'merchant') return listTransactionsFiltered({ merchant: f.merchant! });
-  return listTransactionsFiltered(rangeToUnix(f.range!));
+  const r = f.range ? rangeToUnix(f.range) : undefined;
+  const from = r && f.from !== undefined ? Math.max(r.from, f.from) : r?.from ?? f.from;
+  const tx: TxFilter = { category: f.category ?? undefined, merchant: f.merchant ?? undefined, from, to: r?.to };
+  return f.query.trim() ? searchTransactions(f.query, tx) : listTransactionsFiltered(tx);
 }
 
 /** Deleting a category: every mode but "Категория" and every other category are off. */
@@ -91,7 +88,7 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
   const [calendarOpen, setCalendarOpen] = useState(true);
   const [categoryOptions, setCategoryOptions] = useState<CategoryWithCount[]>([]);
   const [merchantOptions, setMerchantOptions] = useState<MerchantWithCount[]>([]);
-  const filter: Filter = { mode, query, category, merchant, range, from: deleting ? monthStart(currentYm()) : undefined };
+  const filter: Filter = { query, category, merchant, range, from: deleting ? monthStart(currentYm()) : undefined };
   // read by refreshAll without making it change (and re-run focus effects) on every keystroke
   const filterRef = useRef(filter);
   filterRef.current = filter;
@@ -100,13 +97,18 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
 
   // opened from the stats screen: filter by that category
   const route = useRoute<RouteProp<TabParamList, 'Transactions'>>();
-  const { category: incomingCategory, merchant: incomingMerchant, nonce, from } = route.params ?? {};
+  const { category: incomingCategory, merchant: incomingMerchant, range: incomingRange, nonce, from } = route.params ?? {};
+  // the other filters are cleared: only what was asked for is shown
   useEffect(() => {
-    if (incomingCategory !== undefined) { setMode('category'); setCategory(incomingCategory); }
+    if (incomingCategory === undefined) return;
+    setQuery(''); setMerchant(null);
+    setMode('category'); setCategory(incomingCategory); setRange(incomingRange ?? null);
   }, [incomingCategory, nonce]);
   // opened from a merchant's card: filter by that merchant
   useEffect(() => {
-    if (incomingMerchant !== undefined) { setMode('merchant'); setMerchant(incomingMerchant); }
+    if (incomingMerchant === undefined) return;
+    setQuery(''); setCategory(null); setRange(null);
+    setMode('merchant'); setMerchant(incomingMerchant);
   }, [incomingMerchant, nonce]);
 
   // edit mode: ✎ / 🗑 on every row and the selection toolbar; selectMode (inside edit mode) replaces the icons with checkboxes
@@ -171,7 +173,7 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
   }, [query, runFilter]);
   useEffect(() => {
     runFilter(filterRef.current).catch((e) => console.error('filter failed', e));
-  }, [mode, category, merchant, range, runFilter]);
+  }, [category, merchant, range, runFilter]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -180,6 +182,20 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
   }, [reload]);
 
   const data = results ?? rows;
+
+  // the filters set, as chips to clear one by one
+  const activeFilters: Array<{ key: FilterMode; label: string; clear: () => void }> = [];
+  if (query.trim()) activeFilters.push({ key: 'text', label: `«${query.trim()}»`, clear: () => setQuery('') });
+  if (category !== null) {
+    const c = categoryOptions.find((o) => o.category === category);
+    activeFilters.push({ key: 'category', label: c ? categoryLabel(c) : category === 'none' ? 'Без категории' : 'Категория', clear: () => setCategory(null) });
+  }
+  if (merchant !== null) {
+    const m = merchantOptions.find((o) => o.merchant === merchant);
+    activeFilters.push({ key: 'merchant', label: m?.name ?? 'Мерчант', clear: () => setMerchant(null) });
+  }
+  if (range) activeFilters.push({ key: 'date', label: formatRange(range), clear: () => setRange(null) });
+  const modeOptions = MODES.map(([k, label]) => [k, activeFilters.some((f) => f.key === k) ? `${label} •` : label] as const);
 
   // "Прочитать (N)": the unread ones among the selected
   const unreadSelected = useMemo(() => data.filter((r) => selected.has(r.id) && isUnread(r)).map((r) => r.id), [data, selected]);
@@ -267,7 +283,7 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
   // came here from another screen (not the tab bar): back returns there with the filter cleared
   function goBack() {
     const target = from;
-    tabNavigation.setParams({ from: undefined, category: undefined, merchant: undefined });
+    tabNavigation.setParams({ from: undefined, category: undefined, merchant: undefined, range: undefined });
     resetFilters();
     if (target) tabNavigation.navigate(target);
   }
@@ -277,7 +293,6 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
     if (!from) return undefined;
     const sub = BackHandler.addEventListener('hardwareBackPress', () => { goBack(); return true; });
     return () => sub.remove();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [from]));
 
   // opening the tab from the tab bar is a normal visit: no back button
@@ -295,7 +310,6 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
     setSelectMode(false);
     setSelected(new Set());
     resetFilters();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   })), [tabNavigation, deleting]);
 
   useLayoutEffect(() => {
@@ -320,7 +334,6 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
       ),
     });
     // toggleEditMode / goBack only use state setters, navigation and `from`
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tabNavigation, editMode, from, deleting]);
 
   function toggle(id: number) {
@@ -394,7 +407,22 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
             </Text>
           </View>
         ) : <><PushAccessBanner /><CardBalance /></>}
-        <Segmented options={MODES} value={mode} onChange={setMode} style={styles.modes} disabled={deleting ? DELETE_MODE_DISABLED : undefined} />
+        {/* a dot on every mode whose filter is set: they all apply together */}
+        <Segmented options={modeOptions} value={mode} onChange={setMode} style={styles.modes} disabled={deleting ? DELETE_MODE_DISABLED : undefined} />
+        {!deleting && activeFilters.length > 0 ? (
+          <View style={styles.activeRow}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catChips} keyboardShouldPersistTaps="handled" style={styles.activeChips}>
+              {activeFilters.map((f) => (
+                <Chip key={f.key} label={`${f.label}  ✕`} selected onPress={f.clear} />
+              ))}
+            </ScrollView>
+            {activeFilters.length > 1 ? (
+              <TouchableOpacity onPress={resetFilters} hitSlop={8} accessibilityRole="button">
+                <Text style={styles.link}>Сбросить все</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        ) : null}
 
         {mode === 'text' ? (
           <View style={styles.search}>
@@ -588,6 +616,8 @@ const styles = StyleSheet.create({
   // close under the header title
   header: { paddingHorizontal: 16, paddingTop: 2, paddingBottom: 4, backgroundColor: colors.bg },
   modes: { marginBottom: 8 },
+  activeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  activeChips: { flexGrow: 0, flexShrink: 1 },
   catChips: { gap: 8, paddingVertical: 2 },
   filterHint: { fontSize: 14, color: colors.muted, paddingVertical: 8 },
   rangeRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 4 },

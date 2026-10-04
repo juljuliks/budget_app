@@ -63,29 +63,6 @@ const SEARCH_LIMIT = 500;
 /** uncategorized transactions match this phrase (what the UI calls them) */
 const UNCATEGORIZED = 'Без категории';
 
-/**
- * Transactions whose SMS text, merchant / description, category or category type contain every
- * word of the query. Newest first, at most SEARCH_LIMIT rows (a few thousand rows a year scan fast).
- */
-export async function searchTransactions(query: string, limit = SEARCH_LIMIT): Promise<TransactionRow[]> {
-  const words = normalizeForSearch(query).split(' ').filter(Boolean);
-  if (words.length === 0) return [];
-  const db = await getDb();
-  const rows = await db.all<TransactionRow & { raw_sms: string; note: string | null }>(
-    `SELECT t.raw_sms, t.note, ${TX_COLUMNS} ${FROM_TX} ${NEWEST_FIRST}`);
-  const out: TransactionRow[] = [];
-  for (const r of rows) {
-    const haystack = normalizeForSearch(
-      [r.raw_sms, r.note, r.raw_merchant, r.category_name, r.category_type_name, r.category_id === null ? UNCATEGORIZED : '']
-        .filter(Boolean).join(' '));
-    if (words.every((w) => haystack.includes(w))) {
-      out.push(r);
-      if (out.length >= limit) break;
-    }
-  }
-  return out;
-}
-
 /** Category filter: a category id, 'none' = uncategorized. */
 export type CategoryFilter = number | 'none';
 
@@ -100,8 +77,8 @@ export type TxFilter = {
 
 const FILTER_LIMIT = 2000;
 
-/** Exact filters (category, date range); newest first, no pagination (capped). */
-export async function listTransactionsFiltered(f: TxFilter, limit = FILTER_LIMIT): Promise<TransactionRow[]> {
+/** WHERE for the exact filters, combined (all must match). */
+function filterWhere(f: TxFilter): { sql: string; params: Array<number | string> } {
   const where: string[] = [];
   const params: Array<number | string> = [];
   if (f.category === 'none') where.push('t.category_id IS NULL');
@@ -109,10 +86,38 @@ export async function listTransactionsFiltered(f: TxFilter, limit = FILTER_LIMIT
   if (f.merchant !== undefined) { where.push(`${merchantIdSql('t')} = ?`); params.push(f.merchant); }
   if (f.from !== undefined) { where.push('t.occurred_at >= ?'); params.push(f.from); }
   if (f.to !== undefined) { where.push('t.occurred_at < ?'); params.push(f.to); }
+  return { sql: where.length ? `WHERE ${where.join(' AND ')}` : '', params };
+}
+
+/** Exact filters (category, merchant, date range), all combined; newest first, no pagination (capped). */
+export async function listTransactionsFiltered(f: TxFilter, limit = FILTER_LIMIT): Promise<TransactionRow[]> {
+  const { sql, params } = filterWhere(f);
   const db = await getDb();
-  return db.all<TransactionRow>(
-    `${SELECT_TX} ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ${NEWEST_FIRST} LIMIT ?`,
-    [...params, limit]);
+  return db.all<TransactionRow>(`${SELECT_TX} ${sql} ${NEWEST_FIRST} LIMIT ?`, [...params, limit]);
+}
+
+/**
+ * Transactions whose SMS text, merchant / description, category or category type contain every
+ * word of the query, among those matching the exact filters. Newest first, at most SEARCH_LIMIT rows.
+ */
+export async function searchTransactions(query: string, f: TxFilter = {}, limit = SEARCH_LIMIT): Promise<TransactionRow[]> {
+  const words = normalizeForSearch(query).split(' ').filter(Boolean);
+  if (words.length === 0) return [];
+  const { sql, params } = filterWhere(f);
+  const db = await getDb();
+  const rows = await db.all<TransactionRow & { raw_sms: string; note: string | null }>(
+    `SELECT t.raw_sms, t.note, ${TX_COLUMNS} ${FROM_TX} ${sql} ${NEWEST_FIRST}`, params);
+  const out: TransactionRow[] = [];
+  for (const r of rows) {
+    const haystack = normalizeForSearch(
+      [r.raw_sms, r.note, r.raw_merchant, r.category_name, r.category_type_name, r.category_id === null ? UNCATEGORIZED : '']
+        .filter(Boolean).join(' '));
+    if (words.every((w) => haystack.includes(w))) {
+      out.push(r);
+      if (out.length >= limit) break;
+    }
+  }
+  return out;
 }
 
 export type CategoryWithCount = {

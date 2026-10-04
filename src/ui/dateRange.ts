@@ -104,3 +104,8 @@ export function weekInMonth(anchor: Date): DayRange {
   const last = `${ym}-${String(daysInMonth(ym)).padStart(2, '0')}`;
   return { from: w.from < `${ym}-01` ? `${ym}-01` : w.from, to: w.to > last ? last : w.to };
 }
+
+/** The whole month 'YYYY-MM' as a day range: the period of the month stats. */
+export function monthDays(ym: string): DayRange {
+  return { from: `${ym}-01`, to: `${ym}-${String(daysInMonth(ym)).padStart(2, '0')}` };
+}

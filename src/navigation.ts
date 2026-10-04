@@ -1,15 +1,16 @@
 import { createNavigationContainerRef, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import type { DayRange } from './ui/dateRange';
 
 export type TabParamList = {
   /** day: open the stats of that day (a day header in the transactions list), its local midnight in unix seconds */
   Stats: { day?: number; nonce?: number } | undefined;
   /**
-   * open filtered by a category ('none' = uncategorized); nonce re-applies the same one.
+   * open filtered by a category ('none' = uncategorized), within a range (the stats month); nonce re-applies the same one.
    * from: the tab we came from (not via the tab bar) -> a back button in the header returns there.
    */
-  Transactions: { category?: number | 'none'; merchant?: string; nonce?: number; from?: keyof TabParamList } | undefined;
+  Transactions: { category?: number | 'none'; merchant?: string; range?: DayRange; nonce?: number; from?: keyof TabParamList } | undefined;
 };
 
 /** Screens pushed over the tab bar. */
@@ -44,11 +45,14 @@ export function useRootNavigation() {
   return useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 }
 
-/** From the stats tab: the Transactions tab filtered by a category (null = uncategorized), with a back button. */
+/**
+ * From the stats tab: the Transactions tab filtered by a category (null = uncategorized) and the period looked at
+ * (the month of the stats / history row), with a back button.
+ */
 export function useOpenCategoryTransactions() {
   const navigation = useNavigation<BottomTabNavigationProp<TabParamList>>();
-  return (categoryId: number | null) =>
-    navigation.navigate('Transactions', { category: categoryId ?? 'none', nonce: Date.now(), from: 'Stats' });
+  return (categoryId: number | null, range?: DayRange) =>
+    navigation.navigate('Transactions', { category: categoryId ?? 'none', range, nonce: Date.now(), from: 'Stats' });
 }
 
 /** Goes back to the previous screen, merging `params` into its params (e.g. hand back a just-created id). */

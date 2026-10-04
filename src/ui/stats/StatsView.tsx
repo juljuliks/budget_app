@@ -5,7 +5,7 @@ import { useOpenCategoryTransactions } from '../../navigation';
 import { categoryLabel } from '../../db/categories';
 import { Currency } from '../../db/fx';
 import { CategoryStat, currentYm, monthStats, MonthStats, StatGroup, ymOf } from '../../db/plans';
-import { dayKeyOf, daysInMonth } from '../dateRange';
+import { dayKeyOf, daysInMonth, monthDays } from '../dateRange';
 import { loadNorms, Norms, Pace, paceOf } from './norms';
 import { onTransactionsChanged } from '../../events';
 import Donut, { DonutSegment } from '../Donut';
@@ -96,6 +96,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
                 currency={stats.currency}
                 evenPace={evenPace}
                 dim={daysInMonth(ym)}
+                ym={ym}
                 now={c.category_id === null ? undefined : today?.byCategory.get(c.category_id)}
                 monthToDate={c.category_id === null ? 0 : today?.monthToDate.get(c.category_id) ?? 0}
                 onAddToPlan={c.category_id !== null && c.limit_minor === null && !c.deleted
@@ -161,8 +162,10 @@ const WEEKDAYS = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
 
 type NowNorm = Norms['byCategory'] extends Map<number, infer V> ? V : never;
 
-function CategoryRow({ stat, currency, evenPace, dim, now, monthToDate, onAddToPlan }: {
+function CategoryRow({ stat, currency, evenPace, dim, ym, now, monthToDate, onAddToPlan }: {
   stat: CategoryStat; currency: Currency; evenPace?: number; dim: number;
+  /** the month shown: its operations open for this period */
+  ym: string;
   /** the current month only: the norm window around today */
   now?: NowNorm; monthToDate: number;
   onAddToPlan?: () => void;
@@ -176,10 +179,16 @@ function CategoryRow({ stat, currency, evenPace, dim, now, monthToDate, onAddToP
   const rhythm = !fixed && stat.plan_norm && stat.plan_norm !== 'month' ? stat.plan_norm : null;
 
   return (
-    <TouchableOpacity style={styles.row} onPress={() => openTransactions(stat.category_id)} accessibilityHint="Показать операции категории">
+    <TouchableOpacity style={styles.row} onPress={() => openTransactions(stat.category_id, monthDays(ym))} accessibilityHint="Показать операции категории">
       <View style={styles.rowTop}>
         <View style={[styles.dot, { backgroundColor: stat.color }]} />
         <Text style={styles.rowName} numberOfLines={1}>{`${stat.emoji || ''} ${stat.name}`.trim()}</Text>
+        {/* an obligatory payment: paid this month (any spending) — a green tick, otherwise a grey circle */}
+        {limit && fixed ? (
+          <Text style={[styles.paidMark, paid ? styles.paidOn : styles.paidOff]} accessibilityLabel={paid ? 'Оплачено' : 'Не оплачено'}>
+            {paid ? '✓' : '○'}
+          </Text>
+        ) : null}
         {onAddToPlan ? (
           <TouchableOpacity style={styles.addToPlan} onPress={onAddToPlan} hitSlop={8} accessibilityLabel={`Добавить в план: ${stat.name}`}>
             <Text style={styles.addToPlanText}>＋ В план</Text>
@@ -189,12 +198,7 @@ function CategoryRow({ stat, currency, evenPace, dim, now, monthToDate, onAddToP
           {limit ? formatShort(spent) : formatWithCurrency(spent, currency)}{limit ? <Text style={styles.rowLimit}> / {formatWithCurrency(limit, currency)}{fixed ? '' : planShare(spent, limit)}</Text> : null}
         </Text>
       </View>
-      {limit && fixed ? (
-        <View style={styles.paidRow}>
-          <Text style={[styles.paidMark, paid ? styles.paidOn : styles.paidOff]}>{paid ? '✓' : '○'}</Text>
-          <Text style={[styles.rowStatus, styles.paidText, paid && styles.paidOn]}>{paid ? 'Оплачено' : 'Не оплачено'}</Text>
-        </View>
-      ) : limit ? (
+      {limit && !fixed ? (
         <>
           <Meter ratio={ratio} height={8} marker={stat.plan_norm === 'month' ? undefined : evenPace} />
           <Text style={[styles.rowStatus, ratio > 1 && styles.dangerText]}>
@@ -257,9 +261,7 @@ const styles = StyleSheet.create({
   paceOk: { color: colors.income },
   paceAhead: { color: colors.warn },
   // under the amount, on the right
-  paidRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 6 },
-  paidMark: { fontSize: 16, fontWeight: '700', marginRight: 4 },
+  paidMark: { fontSize: 16, fontWeight: '700', marginLeft: 6 },
   paidOn: { color: colors.income },
   paidOff: { color: colors.muted },
-  paidText: { marginTop: 0 },
 });

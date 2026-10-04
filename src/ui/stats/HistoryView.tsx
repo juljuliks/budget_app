@@ -7,6 +7,7 @@ import { HistoryMonth, monthStats, MonthStats, parseYm, planHistory } from '../.
 import { onTransactionsChanged } from '../../events';
 import Meter from '../Meter';
 import { formatMoneyWithCurrency, formatWithCurrency } from '../money';
+import { monthDays } from '../dateRange';
 import { NO_RATE } from '../strings';
 import { colors } from '../theme';
 import { monthTitle } from './months';
@@ -120,7 +121,7 @@ function MonthDetails({ ym, currency }: { ym: string; currency: Currency }) {
               <TouchableOpacity
                 key={String(c.category_id)}
                 style={styles.detailRow}
-                onPress={() => openTransactions(c.category_id)}
+                onPress={() => openTransactions(c.category_id, monthDays(ym))}
               >
                 <Text style={styles.detailName} numberOfLines={1}>{`${c.emoji || ''} ${c.name}`.trim()}</Text>
                 <Text style={styles.detailNum}>{c.limit_minor ? money(c.limit_minor) : '—'}</Text>
