@@ -16,6 +16,7 @@ import { NO_RATE, PER_PERIOD, SPENDING_PATTERN } from '../strings';
 import { plural } from '../format';
 import { colors } from '../theme';
 import { DonutCenter, RefundsRow } from './StatsView';
+import { useLatestRequest } from '../useLatestRequest';
 
 /** Periods up to this long are measured against the plan (its share for these days); longer ones aren't. */
 const PACE_MAX_DAYS = 31;
@@ -69,13 +70,16 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
   const days = rangeDays(range);
   const pace = days <= PACE_MAX_DAYS;
 
+  const latest = useLatestRequest();
   const load = useCallback(() => {
+    // answers of a previous period (switched quickly) are dropped
+    const keep = latest();
     const { from, to } = rangeToUnix(range);
-    periodStats(from, to, currency).then(setStats).catch((e) => console.error('load period stats failed', e));
-    if (pace) loadNorms(range, currency).then(setNorms).catch((e) => console.error('load norms failed', e));
+    periodStats(from, to, currency).then(keep(setStats)).catch((e) => console.error('load period stats failed', e));
+    if (pace) loadNorms(range, currency).then(keep(setNorms)).catch((e) => console.error('load norms failed', e));
     else setNorms(null);
-    if (!pace) averageFullMonths(range.from, range.to, currency).then(setAverage).catch((e) => console.error('load average failed', e));
-  }, [range, currency, pace]);
+    if (!pace) averageFullMonths(range.from, range.to, currency).then(keep(setAverage)).catch((e) => console.error('load average failed', e));
+  }, [range, currency, pace, latest]);
   useEffect(load, [load]);
   useEffect(() => onTransactionsChanged(load), [load]);
 

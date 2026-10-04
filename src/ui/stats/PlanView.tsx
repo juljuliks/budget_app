@@ -19,6 +19,7 @@ import TextInputModal from '../TextInputModal';
 import PlanAddModal from './PlanAddModal';
 import PlanAmountModal, { PlanAmountTarget } from './PlanAmountModal';
 import { chart, colors } from '../theme';
+import { useLatestRequest } from '../useLatestRequest';
 
 
 const NORM_DAYS = { day: 1, week: 7, '2weeks': 14 } as const;
@@ -71,14 +72,17 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
   const [editingItem, setEditingItem] = useState<PlanAmountTarget | null>(null);
   const [addOpen, setAddOpen] = useState(false);
 
+  const latest = useLatestRequest();
   const load = useCallback(() => {
+    // answers of a previous month / currency (switched quickly) are dropped
+    const keep = latest();
     Promise.all([listPlan(ym, currency), getPlanBudget(ym), monthIncome(ym, currency), planConverter(ym)])
-      .then(([plan, b, inc, conv]) => {
+      .then(keep(([plan, b, inc, conv]: [Awaited<ReturnType<typeof listPlan>>, Awaited<ReturnType<typeof getPlanBudget>>, number, Awaited<ReturnType<typeof planConverter>>]) => {
         setItems(plan); setBudget(b); setIncome(inc);
         setToShown(() => (minor: number, from: Currency) => conv(minor, from, currency));
-      })
+      }))
       .catch((e) => console.error('load plan failed', e));
-  }, [ym, currency]);
+  }, [ym, currency, latest]);
 
   // on focus, and again whenever load changes while focused (useFocusEffect re-runs on a new callback): no extra useEffect
   useFocusEffect(load);
