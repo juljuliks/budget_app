@@ -4,6 +4,7 @@ import BottomSheet from './BottomSheet';
 import { setDisplayCurrency, useDisplayCurrency } from '../displayCurrency';
 import { useRootNavigation } from '../navigation';
 import CurrencyPicker from './CurrencyPicker';
+import { startSmsImport } from './smsImportFlow';
 import { colors } from './theme';
 
 function Row({ label, onPress }: { label: string; onPress: () => void }) {
@@ -22,7 +23,7 @@ type Props = {
 
 /**
  * Настройки (the gear in the tab headers): a sheet with Валюта — the currency the app converts amounts to, switched right
- * here — then Мерчанты and Категории.
+ * here — then Мерчанты, Категории and Импорт SMS (past bank SMS from the phone).
  */
 export default function SettingsSheet({ open, onClose }: Props) {
   const navigation = useRootNavigation();
@@ -41,6 +42,8 @@ export default function SettingsSheet({ open, onClose }: Props) {
       </View>
       <Row label="Мерчанты" onPress={() => go('Merchants')} />
       <Row label="Категории" onPress={() => go('Categories')} />
+      {/* after this sheet has closed: one sheet at a time */}
+      <Row label="Импорт SMS из телефона" onPress={() => { onClose(); setTimeout(startSmsImport, 250); }} />
     </BottomSheet>
   );
 }

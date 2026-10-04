@@ -52,14 +52,16 @@ export function resolveOccurredAt(parsed: Pick<ParsedTx, 'occurred_at' | 'has_ti
 }
 
 /** Parses one SMS, stores it and applies merchant rules. Shared by the headless task and importer. */
-export async function ingestSms(sms: IncomingSms): Promise<IngestResult> {
+export async function ingestSms(sms: IncomingSms, opts: { quiet?: boolean } = {}): Promise<IngestResult> {
+  // a batch import announces the change once at the end, not per SMS
+  const changed = () => { if (!opts.quiet) emitTransactionsChanged(); };
   const parsed = parseTbc(sms.body);
   const balance = parseTbcBalance(sms.body);
   if (!parsed) {
     // a balance-only SMS ("Balance: 281.00GEL"): not a transaction, but keeps the card balance in sync
     if (balance) {
       await recordBalance({ minor: balance.minor, currency: balance.currency, at: resolveOccurredAt(balance, sms.timestamp), txId: null });
-      emitTransactionsChanged();
+      changed();
     }
     return { status: 'ignored' };
   }
@@ -115,7 +117,7 @@ export async function ingestSms(sms: IncomingSms): Promise<IngestResult> {
   // the balance after this operation, as the bank reports it
   if (balance) await recordBalance({ minor: balance.minor, currency: balance.currency, at: occurredAt, txId: lastInsertRowid });
   if (categoryId) await incrementCategoryUsage(categoryId);
-  emitTransactionsChanged();
+  changed();
 
   return { status: 'inserted', txId: lastInsertRowid, categoryId };
 }
