@@ -16,8 +16,6 @@ import { DonutCenter } from './StatsView';
 /** Periods up to this long are measured against the plan (its share for these days); longer ones aren't. */
 const PACE_MAX_DAYS = 31;
 
-const MONTHS_IN = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
-
 type Props = {
   range: DayRange;
   /** "на день" / "на неделю" / "на период" */
@@ -30,12 +28,6 @@ type Norms = {
   /** the flexible categories' norm (fixed payments come in one go and aren't split by days) */
   total: number;
   byCategory: Map<number, { norm: number; kind: PlanKind; monthLimit: number }>;
-  /** each category's spending in the whole month(s) the period falls in */
-  monthSpent: Map<number | null, number>;
-  /** "октябрь", or "сентябрь–октябрь" for a week across two months */
-  monthsLabel: string;
-  /** the month, when the whole period is in one (for "N% плана на октябрь") */
-  singleYm: string | null;
 };
 
 /** "12%", "<1%" for a tiny non-zero share. */
@@ -46,22 +38,18 @@ function pct(part: number, whole: number): string {
 
 async function loadNorms(range: DayRange, currency: Parameters<typeof monthStats>[2]): Promise<Norms> {
   const months = daysByMonth(range);
-  const names = [...months.keys()].map((ym) => MONTHS_IN[parseYm(ym).month]);
-  const norms: Norms = {
-    total: 0, byCategory: new Map(), singleYm: months.size === 1 ? [...months.keys()][0] : null,
-    monthSpent: new Map(), monthsLabel: names.length > 1 ? `${names[0]}–${names[names.length - 1]}` : names[0],
-  };
+  const norms: Norms = { total: 0, byCategory: new Map() };
   for (const [ym, days] of months) {
     const { year, month } = parseYm(ym);
     const m = await monthStats(year, month, currency);
     const share = days / daysInMonth(ym);
     for (const c of m.categories) {
-      norms.monthSpent.set(c.category_id, (norms.monthSpent.get(c.category_id) ?? 0) + c.spent_minor);
       if (c.category_id === null || !c.limit_minor) continue;
       const cur = norms.byCategory.get(c.category_id) ?? { norm: 0, kind: c.plan_kind ?? 'limit', monthLimit: 0 };
       cur.norm += c.limit_minor * share;
       if ((c.plan_kind ?? 'limit') === 'limit') norms.total += c.limit_minor * share;
-      cur.monthLimit += c.limit_minor;
+      // one month's plan: for a week across two months, the month it ends in (the later one overwrites)
+      cur.monthLimit = c.limit_minor;
       norms.byCategory.set(c.category_id, cur);
     }
   }
@@ -150,8 +138,8 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                   <>
                     <Meter ratio={plan.monthLimit > 0 ? c.spent_minor / plan.monthLimit : 0} height={8} color={c.color} />
                     <Text style={styles.share}>
-                      {pct(c.spent_minor, norms?.monthSpent.get(c.category_id) ?? 0)} трат категории за {norms?.monthsLabel}
-                      {' · '}{pct(c.spent_minor, plan.monthLimit)} плана
+                      {pct(c.spent_minor, stats.spent_minor)} всех трат за период
+                      {' · '}{pct(c.spent_minor, plan.monthLimit)} плана на месяц
                     </Text>
                   </>
                 ) : (
@@ -184,8 +172,9 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
               </Text>
               <Text style={styles.infoText}>
                 <Text style={styles.infoBold}>Категория с планом:</Text> полоска — какая часть плана категории на месяц
-                ушла за этот период. Под ней — доля от всех трат категории за месяц и доля от её плана. Купили одежду
-                один раз за месяц — это 100% трат категории за месяц, но, например, 60% плана: вы в рамках.
+                ушла за этот период. Под ней — доля категории во всех тратах за период и доля от её плана на месяц.
+                Купили одежду один раз на 60% плана — вы в рамках, перерасхода нет. Если период захватывает два
+                месяца, берётся план месяца, в котором период заканчивается.
               </Text>
               <Text style={styles.infoText}>
                 <Text style={styles.infoBold}>Без плана</Text> — только сумма и доля от всех трат за период.
