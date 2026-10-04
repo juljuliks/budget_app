@@ -121,3 +121,17 @@ test('limitChange: shown only when more than 5% off the plan\'s flat share, both
   expect(flatOf(b.windowParts)).toBeCloseTo(1000);
   expect(limitChange(b.windowNorm, flatOf(b.windowParts))).toBe('down');
 });
+
+test('effect: the limit per rhythm at the period\'s start and after it', async () => {
+  const bars = await createCategory('Бары');
+  await setPlanAmount('2025-10', bars, 31000, 'limit', 'GEL', 'week');
+  await spend(5000, bars, '2025-10-05');
+  await spend(9000, bars, '2025-10-11');
+  const b = (await loadNorms({ from: '2025-10-11', to: '2025-10-11' }, 'GEL')).byCategory.get(bars)!;
+  // before: (310 − 50) / 21 × 7; after: (310 − 140) / 20 × 7
+  expect(b.effect!.before).toBeCloseTo(((31000 - 5000) / 21) * 7);
+  expect(b.effect!.after!).toBeCloseTo(((31000 - 14000) / 20) * 7);
+  // the month's last day: nothing after it
+  const last = (await loadNorms({ from: '2025-10-31', to: '2025-10-31' }, 'GEL')).byCategory.get(bars)!;
+  expect(last.effect!.after).toBeNull();
+});

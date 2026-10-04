@@ -6,13 +6,13 @@ import { useOpenCategoryTransactions } from '../../navigation';
 import { onTransactionsChanged } from '../../events';
 import BottomSheet from '../BottomSheet';
 import Button from '../Button';
-import { DayRange, parseDayKey, rangeDays, rangeToUnix, shortRange } from '../dateRange';
+import { DayRange, daysInMonth, parseDayKey, rangeDays, rangeToUnix, shortRange } from '../dateRange';
 import { flatOf, limitChange, loadNorms, NormPart, Norms, Pace, paceOf, rhythmBar } from './norms';
 import Donut from '../Donut';
 import { InfoIcon } from '../icons';
 import Meter from '../Meter';
 import { formatWithCurrency } from '../money';
-import { NO_RATE, SPENDING_PATTERN } from '../strings';
+import { NO_RATE, PER_PERIOD, SPENDING_PATTERN } from '../strings';
 import { plural } from '../format';
 import { colors } from '../theme';
 import { DonutCenter } from './StatsView';
@@ -30,6 +30,9 @@ type Props = {
 const MONTHS_IN = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
 
 const WEEKDAYS = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+
+/** days in a rhythm window */
+const RHYTHM_LEN = { day: 1, week: 7, '2weeks': 14, month: 0 } as const;
 
 const capitalize = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 
@@ -166,8 +169,6 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                   const p = paceOf(plan.windowSpent, plan.windowNorm, mtd, plan.monthLimit);
                   const bar = rhythmBar(plan, range, c.spent_minor);
                   const left = Math.round(plan.windowNorm) - plan.windowSpent;
-                  const flat = plan.rhythm === 'month' ? plan.windowNorm : flatOf(plan.windowParts);
-                  const change = plan.rhythm === 'month' ? null : limitChange(plan.windowNorm, flat);
                   return (
                     <>
                       <Meter ratio={bar.ratio} base={bar.base} marker={bar.marker} height={8} color={c.color} />
@@ -177,10 +178,18 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                             {capitalize(windowLabel(plan))} {left < 0 ? `перерасход ${money(-left)}` : `осталось ${money(left)}`}
                           </Text>
                           {bar.end && left >= 0 ? ` · до ${until(bar.end, plan.rhythm)}` : ''}
-                          {/* the limit of this window; more than 5% off the plan's share: "лимит 113 ₾ (crossed out) → 95 ₾" */}
-                          {' · лимит '}
-                          {change ? <><Text style={styles.crossed}>{m(flat)}</Text>{' → '}</> : null}
-                          <Text style={change === 'down' ? styles.paceAhead : change === 'up' ? styles.paceOk : undefined}>{m(plan.windowNorm)}</Text>
+                          {/* how the period moved the limit: at its start (crossed out) → for the rest of the month after it */}
+                          {plan.effect && plan.rhythm !== 'month' ? (() => {
+                            const { before, after } = plan.effect;
+                            const moved = after !== null && Math.round(after) !== Math.round(before);
+                            return (
+                              <>
+                                {` · лимит ${PER_PERIOD[plan.rhythm]} `}
+                                {moved ? <><Text style={styles.crossed}>{m(before)}</Text>{' → '}</> : null}
+                                <Text style={moved ? (after! < before ? styles.paceAhead : styles.paceOk) : undefined}>{m(moved ? after! : before)}</Text>
+                              </>
+                            );
+                          })() : null}
                         </Text>
                         <InfoIcon color={colors.accent} size={INFO_SIZE} />
                       </TouchableOpacity>
@@ -257,11 +266,26 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                   <Text style={[styles.infoBold, styles.paceAhead]}>Оранжевый</Text> — больше лимита, но месяц пока укладывается в план.{'\n'}
                   <Text style={[styles.infoBold, styles.paceOver]}>Красный</Text> — план месяца превышен.
                 </Text>
+                {p.effect && p.effect.after !== null && p.rhythm !== 'month' ? (
+                  // how this period moved the limit for the rest of the month
+                  <Text style={styles.infoText}>
+                    <Text style={styles.infoBold}>После этого периода</Text> лимит {PER_PERIOD[p.rhythm]}:{' '}
+                    <Text style={styles.crossed}>{m(p.effect.before)}</Text>{' → '}
+                    <Text style={[styles.infoBold, p.effect.after < p.effect.before ? styles.paceAhead : styles.paceOk]}>{m(p.effect.after)}</Text>
+                    {p.effect.after < p.effect.before ? ' — траты периода больше лимита, на остаток месяца меньше.' : p.effect.after > p.effect.before ? ' — траты периода меньше лимита, на остаток месяца больше.' : '.'}
+                  </Text>
+                ) : null}
                 <TouchableOpacity onPress={() => setCalcOpen((v) => !v)} accessibilityRole="button" accessibilityState={{ expanded: calcOpen }}>
                   <Text style={styles.calcToggle}>{calcOpen ? 'Скрыть расчёт ⌃' : 'Как посчитано ›'}</Text>
                 </TouchableOpacity>
                 {calcOpen ? (
                   <>
+                    {p.effect && p.effect.after !== null && p.rhythm !== 'month' ? (
+                      <Text style={styles.infoText}>
+                        Лимит после периода — что осталось от плана на {monthIn} после трат с 1-го по {shortRange({ from: range.to, to: range.to })}, на
+                        оставшиеся дни: <Code>({m(p.monthLimit)} − {m(mtd)}) / {daysInMonth(norms.ym) - Number(range.to.slice(8, 10))} × {RHYTHM_LEN[p.rhythm]} = {m(p.effect.after)}</Code>.
+                      </Text>
+                    ) : null}
                     <Text style={styles.infoText}>
                       Лимит считается из плана по тому, как вы тратите («{SPENDING_PATTERN[p.rhythm].title.toLowerCase()}», задаётся в плане){p.rhythm === 'month' ? (
                         <> — весь план на {monthIn}: <Code>{m(p.monthLimit)}</Code>.</>
