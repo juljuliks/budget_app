@@ -212,6 +212,13 @@ export async function countUnseenTransactions(): Promise<number> {
     'SELECT count(*) AS n FROM transactions WHERE seen_at IS NULL AND category_id IS NULL'))!.n;
 }
 
+/** "Прочитать все": every unread transaction is marked read. */
+export async function markAllTransactionsSeen(): Promise<number> {
+  const db = await getDb();
+  const { changes } = await db.run('UPDATE transactions SET seen_at = ? WHERE seen_at IS NULL', [Math.floor(Date.now() / 1000)]);
+  return changes;
+}
+
 export async function deleteTransaction(id: number) {
   const db = await getDb();
   await db.run('DELETE FROM transactions WHERE id = ?', [id]);

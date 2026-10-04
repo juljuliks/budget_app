@@ -4,8 +4,8 @@ import { RouteProp, useFocusEffect, useNavigation, useRoute } from '@react-navig
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { HeaderBackButton } from '@react-navigation/elements';
 import {
-  categoriesWithTransactions, CategoryFilter, CategoryWithCount, listTransactionsFiltered, listTransactionsPage,
-  merchantsWithTransactions, MerchantWithCount, normalizeForSearch, PageCursor, searchTransactions, TransactionRow,
+  categoriesWithTransactions, CategoryFilter, CategoryWithCount, countUnseenTransactions, listTransactionsFiltered, listTransactionsPage,
+  markAllTransactionsSeen, merchantsWithTransactions, MerchantWithCount, normalizeForSearch, PageCursor, searchTransactions, TransactionRow,
 } from '../db/transactions';
 import { emitTransactionsChanged, onTransactionsChanged } from '../events';
 import { Category, categoryLabel, countPastTransactionsOfCategory, deleteCategory, getCategory, moveTransactionsOutOfCategory } from '../db/categories';
@@ -114,6 +114,17 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
   const [selectMode, setSelectMode] = useState(deleting);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [bulkOpen, setBulkOpen] = useState(false);
+  // unread transactions, for "Прочитать все (N)" in edit mode
+  const [unseen, setUnseen] = useState(0);
+  useEffect(() => {
+    if (!editMode || deleting) return;
+    const load = () => { countUnseenTransactions().then(setUnseen).catch((e) => console.error('count unseen failed', e)); };
+    load();
+    return onTransactionsChanged(load);
+  }, [editMode, deleting]);
+  const readAll = () => {
+    markAllTransactionsSeen().then(() => emitTransactionsChanged()).catch((e) => console.error('mark all seen failed', e));
+  };
 
   // Re-reads everything currently on screen (at least one page), so returning
   // from a detail screen keeps the scroll depth instead of snapping back to 50 rows.
@@ -538,7 +549,7 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
         onEndReachedThreshold={0.5}
         refreshing={refreshing}
         onRefresh={results ? undefined : onRefresh}
-        ListFooterComponent={loadingMore ? <ActivityIndicator style={styles.footer} /> : <View style={styles.footer} />}
+        ListFooterComponent={loadingMore ? <ActivityIndicator style={styles.footer} /> : <View style={[styles.footer, editMode && styles.footerTall]} />}
         ListEmptyComponent={
           <Text style={styles.empty}>
             {deleting ? 'Транзакций не осталось.' : results ? 'Ничего не найдено.' : mode === 'date' && !range ? 'Выберите день или период в календаре.' : 'Транзакций пока нет. Они появятся здесь после SMS от банка.'}
@@ -546,9 +557,14 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
         }
       />
 
-      {selectMode && selected.size > 0 ? (
-        <View style={styles.bottomBar}>
-          <Button title={`${deleting ? 'Перенести в категорию' : 'Изменить категорию'} (${selected.size})`} onPress={() => setBulkOpen(true)} />
+      {(editMode && !deleting && unseen > 0) || (selectMode && selected.size > 0) ? (
+        <View style={[styles.bottomBar, styles.bottomBarStack]}>
+          {editMode && !deleting && unseen > 0 ? (
+            <Button title={`Прочитать все (${unseen})`} onPress={readAll} style={selectMode && selected.size > 0 ? styles.secondaryButton : undefined} />
+          ) : null}
+          {selectMode && selected.size > 0 ? (
+            <Button title={`${deleting ? 'Перенести в категорию' : 'Изменить категорию'} (${selected.size})`} onPress={() => setBulkOpen(true)} />
+          ) : null}
         </View>
       ) : deleting && results !== null && data.length === 0 ? (
         <View style={styles.bottomBar}>
@@ -606,10 +622,14 @@ const styles = StyleSheet.create({
   editToggleText: { fontSize: 13, color: colors.accent },
   editToggleTextOn: { color: '#FFFFFF' },
   footer: { paddingVertical: 16, marginBottom: 72 },
+  // edit mode: room for two buttons in the bottom bar
+  footerTall: { marginBottom: 130 },
   bottomBar: {
     position: 'absolute', left: 0, right: 0, bottom: 0, padding: 12, backgroundColor: colors.bg,
     borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
   },
+  bottomBarStack: { gap: 8 },
+  secondaryButton: { backgroundColor: colors.muted },
   empty: { padding: 32, textAlign: 'center', color: colors.muted },
   merchantBox: { gap: 8 },
   dayHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
