@@ -424,7 +424,7 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
             </View>
             {/* each opens its picker in a sheet; all the filters set apply together. Merchants are found by the text search
                 (it matches the merchant name); a merchant card still opens the list filtered by its merchant, shown as a chip */}
-            <View style={[styles.chipsWrap, styles.activeRow]}>
+            <View style={[styles.chipsWrap, styles.activeRow, styles.filterButtons]}>
               <FilterButton label="Категория" count={categories.length} active={categories.length > 0} onPress={() => setSheet('category')} />
               <FilterButton label="Дата" active={range !== null} onPress={() => setSheet('date')} />
             </View>
@@ -562,6 +562,8 @@ const styles = StyleSheet.create({
   // chips (active filters, categories, merchants) wrap onto the next lines
   chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 },
   activeRow: { marginBottom: 8 },
+  // the Категория / Дата buttons, under the search field
+  filterButtons: { marginTop: 10 },
   resetAll: { paddingHorizontal: 6 },
   search: {
     flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.surface,
