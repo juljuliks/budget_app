@@ -3,6 +3,7 @@
 # The version goes up from the latest one already on the Desktop: budget-app-5.8.apk -> budget-app-5.9.apk.
 # Usage: ./scripts/apk_to_desktop.sh [version]   (e.g. 6.0 to set it explicitly)
 set -euo pipefail
+trap 'echo "Failed at line $LINENO: $BASH_COMMAND" >&2' ERR
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 DESKTOP="$HOME/Desktop"
@@ -18,15 +19,28 @@ if ! grep -q '^BUDGETAPP_RELEASE_STORE_FILE=' "$HOME/.gradle/gradle.properties" 
   echo "Warning: BUDGETAPP_RELEASE_* not found in ~/.gradle/gradle.properties — the APK will be signed with the debug key." >&2
 fi
 
+if [ ! -d "$DESKTOP" ] || [ ! -w "$DESKTOP" ]; then
+  echo "Can't write to $DESKTOP. On macOS: System Settings → Privacy & Security → Files and Folders → allow Desktop for your terminal." >&2
+  exit 1
+fi
+
 VERSION="${1:-}"
 if [ -z "$VERSION" ]; then
-  LAST="$(ls "$DESKTOP" 2>/dev/null | sed -n 's/^budget-app-\([0-9][0-9]*\.[0-9][0-9]*\)\.apk$/\1/p' | sort -t. -k1,1n -k2,2n | tail -1)"
+  # the highest budget-app-X.Y.apk already there; a glob, not ls: an unreadable folder must not stop the script silently
+  LAST=""
+  for f in "$DESKTOP"/budget-app-*.apk; do
+    [ -e "$f" ] || continue
+    v="${f##*/budget-app-}"; v="${v%.apk}"
+    [[ "$v" =~ ^[0-9]+\.[0-9]+$ ]] || continue
+    if [ -z "$LAST" ] || [ "$(printf '%s\n%s\n' "$LAST" "$v" | sort -t. -k1,1n -k2,2n | tail -1)" = "$v" ]; then LAST="$v"; fi
+  done
   if [ -z "$LAST" ]; then
     VERSION="1.0"
   else
     VERSION="${LAST%.*}.$(( ${LAST#*.} + 1 ))"
   fi
 fi
+echo "Version: $VERSION"
 
 echo "Building release APK..."
 (cd "$ROOT_DIR/android" && ./gradlew assembleRelease -q)
