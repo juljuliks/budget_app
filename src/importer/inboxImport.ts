@@ -20,6 +20,8 @@ export async function importInboxSms(messages: InboxSms[]): Promise<InboxImportR
         continue;
       }
       const res = await ingestSms({ sender: m.sender, body: m.body, timestamp: m.dateSent > 0 ? m.dateSent : m.date }, { quiet: true });
+      // past operations: already known to the user, no "new" mark and no unread badge
+      if (res.status === 'inserted') await db.run('UPDATE transactions SET seen_at = ? WHERE id = ? AND seen_at IS NULL', [Math.floor(Date.now() / 1000), res.txId]);
       counts[res.status]++;
     }
   } finally {

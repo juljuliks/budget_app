@@ -24,6 +24,8 @@ test('past SMS become transactions; the card balance comes with them', async () 
   expect(r).toEqual({ inserted: 3, duplicate: 0, ignored: 1 });
   expect(await count()).toBe(3);
   expect(await cardBalance()).toMatchObject({ minor: 28314, pending: 0 });
+  // imported ones are already read: no unread badge
+  expect((await (await getDb()).get<{ n: number }>('SELECT count(*) AS n FROM transactions WHERE seen_at IS NULL'))!.n).toBe(0);
 });
 
 test('importing twice, or SMS already received live, adds nothing', async () => {
