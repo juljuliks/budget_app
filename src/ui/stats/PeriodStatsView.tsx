@@ -197,7 +197,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                             const moved = after !== null && Math.round(after) !== Math.round(before);
                             return (
                               <>
-                                {` · лимит ${PER_PERIOD[plan.rhythm]} `}
+                                {moved ? '\nИзменение лимита: ' : `\nЛимит ${PER_PERIOD[plan.rhythm]} `}
                                 {moved ? <><Text style={styles.crossed}>{m(before)}</Text>{' → '}</> : null}
                                 <Text style={moved ? (after! < before ? styles.paceAhead : styles.paceOk) : undefined}>{m(moved ? after! : before)}</Text>
                               </>
