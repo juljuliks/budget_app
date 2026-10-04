@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, BackHandler, ScrollView, SectionList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, BackHandler, SectionList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { RouteProp, useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { HeaderBackButton } from '@react-navigation/elements';
@@ -410,14 +410,13 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
         {/* a dot on every mode whose filter is set: they all apply together */}
         <Segmented options={modeOptions} value={mode} onChange={setMode} style={styles.modes} disabled={deleting ? DELETE_MODE_DISABLED : undefined} />
         {!deleting && activeFilters.length > 0 ? (
-          <View style={styles.activeRow}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catChips} keyboardShouldPersistTaps="handled" style={styles.activeChips}>
-              {activeFilters.map((f) => (
-                <Chip key={f.key} label={`${f.label}  ✕`} selected onPress={f.clear} />
-              ))}
-            </ScrollView>
+          // small chips wrapping onto the next line, the "reset all" ✕ last
+          <View style={[styles.chipsWrap, styles.activeRow]}>
+            {activeFilters.map((f) => (
+              <Chip key={f.key} label={`${f.label}  ✕`} selected small onPress={f.clear} />
+            ))}
             {activeFilters.length > 1 ? (
-              <TouchableOpacity onPress={resetFilters} hitSlop={10} accessibilityRole="button" accessibilityLabel="Сбросить все фильтры">
+              <TouchableOpacity onPress={resetFilters} hitSlop={10} accessibilityRole="button" accessibilityLabel="Сбросить все фильтры" style={styles.resetAll}>
                 <Text style={styles.clear}>✕</Text>
               </TouchableOpacity>
             ) : null}
@@ -445,15 +444,16 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
         ) : null}
 
         {mode === 'category' ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catChips} keyboardShouldPersistTaps="handled">
+          <View style={styles.chipsWrap}>
             {deleting && deletingCategory ? (
               // the category being deleted: its transactions of this month
-              <Chip label={`${categoryLabel(deletingCategory)} · ${data.length}`} selected />
+              <Chip label={`${categoryLabel(deletingCategory)} · ${data.length}`} selected small />
             ) : null}
             {categoryOptions.filter((c) => !deleting || c.category !== deleteCategoryId).map((c) => {
               const on = category === c.category;
               return (
                 <Chip
+                  small
                   key={String(c.category)}
                   label={`${categoryLabel(c)}${c.deleted ? ' (удалена)' : ''} · ${c.count}`}
                   selected={on}
@@ -465,7 +465,7 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
               );
             })}
             {categoryOptions.length === 0 ? <Text style={styles.filterHint}>Операций пока нет</Text> : null}
-          </ScrollView>
+          </View>
         ) : null}
 
         {mode === 'merchant' ? (
@@ -486,15 +486,15 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
                 </TouchableOpacity>
               ) : null}
             </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catChips} keyboardShouldPersistTaps="handled">
+            <View style={styles.chipsWrap}>
               {shownMerchants.map((m) => {
                 const on = merchant === m.merchant;
                 return (
-                  <Chip key={m.merchant} label={`${m.name} · ${m.count}`} selected={on} onPress={() => setMerchant(on ? null : m.merchant)} />
+                  <Chip key={m.merchant} small label={`${m.name} · ${m.count}`} selected={on} onPress={() => setMerchant(on ? null : m.merchant)} />
                 );
               })}
               {shownMerchants.length === 0 ? <Text style={styles.filterHint}>{merchantQuery ? 'Не найдено' : 'Мерчантов пока нет'}</Text> : null}
-            </ScrollView>
+            </View>
           </View>
         ) : null}
 
@@ -616,9 +616,10 @@ const styles = StyleSheet.create({
   // close under the header title
   header: { paddingHorizontal: 16, paddingTop: 2, paddingBottom: 4, backgroundColor: colors.bg },
   modes: { marginBottom: 8 },
-  activeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-  activeChips: { flexGrow: 0, flexShrink: 1 },
-  catChips: { gap: 8, paddingVertical: 2 },
+  // chips (active filters, categories, merchants) wrap onto the next lines
+  chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 },
+  activeRow: { marginBottom: 8 },
+  resetAll: { paddingHorizontal: 6 },
   filterHint: { fontSize: 14, color: colors.muted, paddingVertical: 8 },
   rangeRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 4 },
   rangeText: { fontSize: 15, color: colors.text, fontWeight: '600' },
