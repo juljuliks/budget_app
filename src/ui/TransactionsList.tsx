@@ -94,19 +94,19 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
 
   // opened from the stats screen: filter by that category
   const route = useRoute<RouteProp<TabParamList, 'Transactions'>>();
-  const { category: incomingCategory, merchant: incomingMerchant, range: incomingRange, kinds: incomingKinds, nonce, from } = route.params ?? {};
+  const { category: incomingCategory, query: incomingQuery, range: incomingRange, kinds: incomingKinds, nonce, from } = route.params ?? {};
   // the other filters are cleared: only what was asked for is shown
   useEffect(() => {
     if (incomingCategory === undefined) return;
     setQuery(''); setMerchants([]);
     setCategories([incomingCategory]); setRange(incomingRange ?? null); setKinds(incomingKinds ?? []);
   }, [incomingCategory, nonce]);
-  // opened from a merchant's card: filter by that merchant
+  // opened from a merchant's card: its name in the search field, as if typed
   useEffect(() => {
-    if (incomingMerchant === undefined) return;
-    setQuery(''); setCategories([]); setRange(null); setKinds([]);
-    setMerchants([incomingMerchant]);
-  }, [incomingMerchant, nonce]);
+    if (incomingQuery === undefined) return;
+    setCategories([]); setMerchants([]); setRange(null); setKinds([]);
+    setQuery(incomingQuery);
+  }, [incomingQuery, nonce]);
 
   // edit mode: ✎ / 🗑 on every row and the selection toolbar; selectMode (inside edit mode) replaces the icons with checkboxes
   const [editMode, setEditMode] = useState(deleting);
@@ -283,9 +283,10 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
   // came here from another screen (not the tab bar): back returns there with the filter cleared
   function goBack() {
     const target = from;
-    tabNavigation.setParams({ from: undefined, category: undefined, merchant: undefined, range: undefined, kinds: undefined });
+    tabNavigation.setParams({ from: undefined, category: undefined, query: undefined, range: undefined, kinds: undefined });
     resetFilters();
-    if (target) tabNavigation.navigate(target);
+    if (target === 'Merchants') navigation.navigate('Merchants');
+    else if (target) tabNavigation.navigate(target);
   }
 
   // Android hardware back does the same as the header arrow

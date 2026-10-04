@@ -44,3 +44,16 @@ test('kinds filter: only refunds, combined with "Без категории"', as
   expect(amounts(await listTransactionsFiltered({ categories: ['none'], kinds: ['refund'] }))).toEqual([2]);
   expect(amounts(await listTransactionsFiltered({ kinds: ['refund', 'deposit'] }))).toEqual([2, 3]);
 });
+
+test('search finds a merchant group by its name, whatever its merchants are called', async () => {
+  const { getDb } = require('../src/db');
+  const db = await getDb();
+  const add = (key: string) => db.run(
+    `INSERT INTO transactions (bank, kind, amount_minor, currency, raw_merchant, merchant_key, occurred_at, raw_sms, sms_hash)
+      VALUES ('tbc', 'purchase', 1, 'GEL', ?, ?, 1, '', ?)`, [key, key, key]);
+  await add('SPAR VAKE');
+  await add('MINI MARKET 24');
+  await db.run("INSERT INTO merchant_groups (id, name, created_at) VALUES (1, 'Продуктовые', 0)");
+  await db.run("INSERT INTO merchant_group_members (merchant_key, group_id) VALUES ('SPAR VAKE', 1), ('MINI MARKET 24', 1)");
+  expect((await searchTransactions('продуктовые')).map((r) => r.raw_merchant).sort()).toEqual(['MINI MARKET 24', 'SPAR VAKE']);
+});

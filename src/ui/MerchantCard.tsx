@@ -117,8 +117,8 @@ export default function MerchantCard({ merchantId, categories, onClose, onChange
   function showTransactions() {
     if (!m) return;
     onClose();
-    // the Transactions tab filtered by this merchant (`as never`: a nested navigate the root types don't describe)
-    navigation.navigate({ name: 'Main', params: { screen: 'Transactions', params: { merchant: m.id, nonce: Date.now() } } } as never);
+    // the Transactions tab searching this merchant's name, back returns to the merchants (`as never`: a nested navigate the root types don't describe)
+    navigation.navigate({ name: 'Main', params: { screen: 'Transactions', params: { query: m.name, nonce: Date.now(), from: 'Merchants' } } } as never);
   }
 
   const category = m?.category_id != null ? categories.get(m.category_id) : undefined;

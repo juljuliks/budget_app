@@ -10,7 +10,14 @@ export type TabParamList = {
    * open filtered by a category ('none' = uncategorized), within a range (the stats month); nonce re-applies the same one.
    * from: the tab we came from (not via the tab bar) -> a back button in the header returns there.
    */
-  Transactions: { category?: number | 'none'; merchant?: string; range?: DayRange; kinds?: string[]; nonce?: number; from?: keyof TabParamList } | undefined;
+  Transactions: {
+    category?: number | 'none'; range?: DayRange; kinds?: string[];
+    /** typed into the search field (a merchant's name from its card) */
+    query?: string;
+    nonce?: number;
+    /** where back returns: a tab, or the merchants screen */
+    from?: keyof TabParamList | 'Merchants';
+  } | undefined;
 };
 
 /** Screens pushed over the tab bar. */

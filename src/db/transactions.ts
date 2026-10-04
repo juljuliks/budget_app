@@ -126,12 +126,16 @@ export async function searchTransactions(query: string, f: TxFilter = {}, limit 
   if (words.length === 0) return [];
   const { sql, params } = filterWhere(f);
   const db = await getDb();
-  const rows = await db.all<TransactionRow & { raw_sms: string; note: string | null }>(
-    `SELECT t.raw_sms, t.note, ${TX_COLUMNS} ${FROM_TX} ${sql} ${NEWEST_FIRST}`, params);
+  // the merchant group's name too: a group renamed "SPAR" finds all of its merchants' operations
+  const rows = await db.all<TransactionRow & { raw_sms: string; note: string | null; group_name: string | null }>(
+    `SELECT t.raw_sms, t.note, mg.name AS group_name, ${TX_COLUMNS} ${FROM_TX}
+      LEFT JOIN merchant_group_members gm ON gm.merchant_key = t.merchant_key
+      LEFT JOIN merchant_groups mg ON mg.id = gm.group_id
+      ${sql} ${NEWEST_FIRST}`, params);
   const out: TransactionRow[] = [];
   for (const r of rows) {
     const haystack = normalizeForSearch(
-      [r.raw_sms, r.note, r.raw_merchant, r.category_name, r.category_type_name, r.category_id === null ? UNCATEGORIZED : '']
+      [r.raw_sms, r.note, r.raw_merchant, r.group_name, r.category_name, r.category_type_name, r.category_id === null ? UNCATEGORIZED : '']
         .filter(Boolean).join(' '));
     if (words.every((w) => haystack.includes(w))) {
       out.push(r);
