@@ -81,7 +81,7 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
   const [categories, setCategories] = useState<CategoryFilter[]>(deleting ? [deleteCategoryId!] : []);
   const [merchants, setMerchants] = useState<string[]>([]);
   // which picker sheet is open
-  const [sheet, setSheet] = useState<'category' | 'merchant' | 'date' | 'all' | null>(null);
+  const [sheet, setSheet] = useState<'category' | 'date' | 'all' | null>(null);
   const [range, setRange] = useState<DayRange | null>(null);
   const [categoryOptions, setCategoryOptions] = useState<CategoryWithCount[]>([]);
   const [merchantOptions, setMerchantOptions] = useState<MerchantWithCount[]>([]);
@@ -411,7 +411,7 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
                 style={styles.searchInput}
                 value={query}
                 onChangeText={setQuery}
-                placeholder="Поиск по тексту"
+                placeholder="Поиск: мерчант, заметка, сумма…"
                 placeholderTextColor={colors.muted}
                 returnKeyType="search"
                 autoCorrect={false}
@@ -422,10 +422,10 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
                 </TouchableOpacity>
               ) : null}
             </View>
-            {/* each opens its picker in a sheet; all the filters set apply together */}
+            {/* each opens its picker in a sheet; all the filters set apply together. Merchants are found by the text search
+                (it matches the merchant name); a merchant card still opens the list filtered by its merchant, shown as a chip */}
             <View style={[styles.chipsWrap, styles.activeRow]}>
               <FilterButton label="Категория" count={categories.length} active={categories.length > 0} onPress={() => setSheet('category')} />
-              <FilterButton label="Мерчант" count={merchants.length} active={merchants.length > 0} onPress={() => setSheet('merchant')} />
               <FilterButton label="Дата" active={range !== null} onPress={() => setSheet('date')} />
             </View>
             {activeFilters.length > 0 ? (
@@ -535,16 +535,6 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
         onToggle={(k) => setCategories((p) => toggleIn(p, k))}
         onClear={() => setCategories([])}
         onClose={() => setSheet(null)}
-      />
-      <OptionsSheet
-        visible={sheet === 'merchant'}
-        title="Мерчанты"
-        options={merchantOptions.map((m) => ({ key: m.merchant, label: m.name, count: m.count }))}
-        selected={merchants}
-        onToggle={(k) => setMerchants((p) => toggleIn(p, k))}
-        onClear={() => setMerchants([])}
-        onClose={() => setSheet(null)}
-        searchPlaceholder="Найти мерчанта"
       />
       <DateSheet visible={sheet === 'date'} value={range} onChange={setRange} onClose={() => setSheet(null)} />
       <AllFiltersSheet visible={sheet === 'all'} filters={activeFilters} onReset={resetFilters} onClose={() => setSheet(null)} />
