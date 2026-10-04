@@ -19,7 +19,6 @@ class SmsHeadlessService : HeadlessJsTaskService() {
             putString("sender", extras.getString(EXTRA_SENDER) ?: "")
             putString("body", body)
             putDouble("timestamp", extras.getLong(EXTRA_TIMESTAMP).toDouble())
-            putString("source", extras.getString(EXTRA_SOURCE) ?: "sms")
         }
 
         return HeadlessJsTaskConfig(
@@ -36,8 +35,6 @@ class SmsHeadlessService : HeadlessJsTaskService() {
         const val EXTRA_SENDER = "sender"
         const val EXTRA_BODY = "body"
         const val EXTRA_TIMESTAMP = "timestamp"
-        /** "sms" or "push" (BankPushListener) */
-        const val EXTRA_SOURCE = "source"
         private const val TASK_TIMEOUT_MS = 15_000L
     }
 }
