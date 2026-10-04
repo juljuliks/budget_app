@@ -47,13 +47,14 @@ export default function StatsView({ year, month, currency }: { year: number; mon
   useEffect(() => onTransactionsChanged(load), [load]);
 
   const segments = useMemo(() => (stats ? donutSegments(stats.groups) : []), [stats]);
+  // hooks before the loading return: their order must not change between renders
+  const openTransactions = useOpenCategoryTransactions();
 
   if (!stats) return <View style={styles.center}><ActivityIndicator /></View>;
 
   const remaining = stats.planned_minor - stats.spent_minor;
   // the current month: a tick on each flexible category's bar where an even pace would be today
   const ym = ymOf(year, month);
-  const openTransactions = useOpenCategoryTransactions();
   const evenPace = ym === currentYm() ? new Date().getDate() / daysInMonth(ym) : undefined;
   const picked = selected === null ? undefined : stats.categories.find((c) => String(c.category_id) === selected);
 
@@ -98,6 +99,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
                 evenPace={evenPace}
                 dim={daysInMonth(ym)}
                 ym={ym}
+                openTransactions={openTransactions}
                 now={c.category_id === null ? undefined : today?.byCategory.get(c.category_id)}
                 monthToDate={c.category_id === null ? 0 : today?.monthToDate.get(c.category_id) ?? 0}
                 onAddToPlan={c.category_id !== null && c.limit_minor === null && !c.deleted
@@ -175,15 +177,15 @@ const WEEKDAYS = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
 
 type NowNorm = Norms['byCategory'] extends Map<number, infer V> ? V : never;
 
-function CategoryRow({ stat, currency, evenPace, dim, ym, now, monthToDate, onAddToPlan }: {
+function CategoryRow({ stat, currency, evenPace, dim, ym, openTransactions, now, monthToDate, onAddToPlan }: {
   stat: CategoryStat; currency: Currency; evenPace?: number; dim: number;
   /** the month shown: its operations open for this period */
   ym: string;
+  openTransactions: ReturnType<typeof useOpenCategoryTransactions>;
   /** the current month only: the norm window around today */
   now?: NowNorm; monthToDate: number;
   onAddToPlan?: () => void;
 }) {
-  const openTransactions = useOpenCategoryTransactions();
   const { spent_minor: spent, limit_minor: limit } = stat;
   const ratio = limit ? spent / limit : 0;
   // fixed payment (rent, subscription): any spending this month means it's paid
