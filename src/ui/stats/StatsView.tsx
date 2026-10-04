@@ -204,7 +204,8 @@ function CategoryRow({ stat, currency, evenPace, dim, ym, now, monthToDate, onAd
           <Text style={[styles.rowStatus, ratio > 1 && styles.dangerText]}>
             {ratio > 1 ? `⚠ перерасход ${formatWithCurrency(spent - limit, currency)}` : `осталось ${formatWithCurrency(limit - spent, currency)}`}
             {/* a category spent daily / weekly: its limit per that period, "лимит ≈ 113 ₾ в неделю" */}
-            {rhythm ? <Text style={styles.rowStatusMuted}> · лимит ≈ {formatWithCurrency(Math.round((limit / dim) * RHYTHM_DAYS[rhythm]), currency)} {PER_PERIOD[rhythm]}</Text> : null}
+            {/* the current month: this window's limit, rebalanced on what's left of the month; a past one: the plan's share */}
+            {rhythm ? <Text style={styles.rowStatusMuted}> · лимит ≈ {formatWithCurrency(Math.round(now && now.rhythm === rhythm ? now.windowNorm : (limit / dim) * RHYTHM_DAYS[rhythm]), currency)} {PER_PERIOD[rhythm]}</Text> : null}
           </Text>
           {rhythm && now && now.rhythm === rhythm ? (() => {
             // the current month: what's left in today's / this week's window, colored by pace

@@ -17,15 +17,16 @@ test('a week across two months: each month\'s days by its own plan, spending ove
   const bars = await createCategory('Бары');
   await setPlanAmount('2025-09', bars, 30000, 'limit', 'GEL', 'week');
   await setPlanAmount('2025-10', bars, 31000, 'limit', 'GEL', 'week');
+  await spend(27000, bars, '2025-09-10');
   await spend(6000, bars, '2025-09-29');
   await spend(8000, bars, '2025-10-02');
 
   const n = await loadNorms(day, 'GEL');
   const b = n.byCategory.get(bars)!;
   expect(b.window).toEqual({ from: '2025-09-29', to: '2025-10-05' });
-  expect(b.windowParts.map((p) => [p.ym, p.days, p.limit])).toEqual([['2025-09', 2, 30000], ['2025-10', 5, 31000]]);
-  // 300 / 30 × 2 + 310 / 31 × 5 = 20 + 50
-  expect(b.windowNorm).toBeCloseTo(7000);
+  expect(b.windowParts.map((p) => [p.ym, p.days, p.limit, p.spentBefore, p.daysLeft])).toEqual([['2025-09', 2, 30000, 27000, 2], ['2025-10', 5, 31000, 0, 31]]);
+  // what's left of each month over its days left: (300 − 270) / 2 × 2 + 310 / 31 × 5 = 30 + 50
+  expect(b.windowNorm).toBeCloseTo(8000);
   expect(b.windowSpent).toBe(14000);
   // the month's share and the pace are about October
   expect(b.monthLimit).toBe(31000);
@@ -48,12 +49,13 @@ test('the overall pace: a custom period across months, flexible per-day categori
   await setPlanAmount('2025-09', food, 30000, 'limit', 'GEL', 'day');
   await setPlanAmount('2025-10', food, 62000, 'limit', 'GEL', 'day');
   await setPlanAmount('2025-10', rent, 100000, 'fixed', 'GEL', 'month');
+  await spend(27000, food, '2025-09-10');
   await spend(1500, food, '2025-09-30');
   await spend(100000, rent, '2025-10-01');
 
   const n = await loadNorms({ from: '2025-09-29', to: '2025-10-01' }, 'GEL');
-  // 300 / 30 × 2 + 620 / 31 × 1 = 20 + 20
-  expect(n.total).toBeCloseTo(4000);
+  // (300 − 270) / 2 × 2 + 620 / 31 × 1 = 30 + 20
+  expect(n.total).toBeCloseTo(5000);
   expect(n.flexSpent).toBe(1500);
   expect(n.flex.map((f) => f.name)).toEqual(['Еда']);
 });
@@ -87,4 +89,20 @@ describe('rhythmBar: the bar over the category\'s own rhythm', () => {
   test('no norm (no plan in those months): spent shows as a full bar', () => {
     expect(rhythmBar({ rhythm: 'week', window: week, windowNorm: 0, windowSpent: 100 }, week, 100).ratio).toBe(1);
   });
+});
+
+test('a limit is rebalanced on what is left of the month: overspending lowers it, spending less raises it', async () => {
+  const food = await createCategory('Еда');
+  await setPlanAmount('2025-10', food, 31000, 'limit', 'GEL', 'day');
+  const oct11 = { from: '2025-10-11', to: '2025-10-11' };
+  // on pace (10 a day for 10 days): still 10 a day
+  await spend(10000, food, '2025-10-05');
+  expect(((await loadNorms(oct11, 'GEL')).byCategory.get(food)!).windowNorm).toBeCloseTo(1000);
+  // 105 more over the first 10 days: (310 − 205) / 21 = 5 a day
+  await spend(10500, food, '2025-10-06');
+  expect(((await loadNorms(oct11, 'GEL')).byCategory.get(food)!).windowNorm).toBeCloseTo(500);
+  // nothing spent before: (310 − 0) / 21 ≈ 14.76 a day
+  const other = await createCategory('Такси');
+  await setPlanAmount('2025-10', other, 31000, 'limit', 'GEL', 'day');
+  expect(((await loadNorms(oct11, 'GEL')).byCategory.get(other)!).windowNorm).toBeCloseTo(31000 / 21);
 });

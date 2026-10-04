@@ -90,10 +90,12 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
     const d = Math.round(norm) - spent;
     return d < 0 ? `перерасход ${money(-d)}` : `осталось ${money(d)}`;
   };
-  /** "500 ₾ / 30 × 3 + 500 ₾ / 31 × 4 = 50 ₾ + 64.52 ₾ = 114.52 ₾" */
+  /** "(500 ₾ − 120 ₾) / 28 × 7 = 95 ₾": what's left of the month's plan over the days left, per month part */
   const formula = (parts: NormPart[]) => {
     const total = parts.reduce((a, p) => a + p.norm, 0);
-    const terms = parts.map((p) => `${m(p.limit)} / ${p.dim} × ${p.days}`).join(' + ');
+    const terms = parts.map((p) => (p.spentBefore > 0
+      ? `(${m(p.limit)} − ${m(p.spentBefore)}) / ${p.daysLeft} × ${p.days}`
+      : `${m(p.limit)} / ${p.daysLeft} × ${p.days}`)).join(' + ');
     return parts.length > 1 ? `${terms} = ${parts.map((p) => m(p.norm)).join(' + ')} = ${m(total)}` : `${terms} = ${m(total)}`;
   };
   /** "в сентябре плана нет — его дни считаются как 0" for the parts without a plan */
@@ -253,7 +255,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                         <> — весь план на {monthIn}: <Code>{m(p.monthLimit)}</Code>.</>
                       ) : (
                         <>
-                          {' '}— план месяца / дней в месяце × дней, каждый месяц своим планом:{' '}
+                          {' '}— что осталось от плана месяца, делится на оставшиеся дни месяца и умножается на дни окна: перерасход раньше в месяце уменьшает лимит, экономия увеличивает. Каждый месяц считается своим планом:{' '}
                           <Code>{formula(p.windowParts)}</Code>.{noPlan(p.windowParts)}
                         </>
                       )}
@@ -282,8 +284,8 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                 Это общая картина: где-то больше, где-то меньше — важно, укладываетесь ли вы в сумме.
               </Text>
               <Text style={styles.infoText}>
-                Лимит — часть месячного плана каждой повседневной категории, приходящаяся на эти дни. Не входят обязательные
-                платежи, категории, которые вы тратите «крупно, раз в месяц», и категории без плана.
+                Лимит — что осталось от месячного плана каждой повседневной категории, разложенное на оставшиеся дни
+                месяца: перерасход раньше в месяце уменьшает его, экономия увеличивает. Не входят обязательные платежи, категории, которые вы тратите «крупно, раз в месяц», и категории без плана.
               </Text>
               {norms?.flex.length ? (
                 <TouchableOpacity onPress={() => setCalcOpen((v) => !v)} accessibilityRole="button" accessibilityState={{ expanded: calcOpen }}>

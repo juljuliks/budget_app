@@ -1,8 +1,19 @@
 import { currentYm, monthStats, NormPeriod, parseYm, periodStats, PlanKind } from '../../db/plans';
-import { DayKey, DayRange, daysByMonth, daysInMonth, normWindow, rangeDays, rangeToUnix } from '../dateRange';
+import { DayKey, dayKeyOf, DayRange, daysByMonth, daysInMonth, normWindow, parseDayKey, rangeDays, rangeToUnix } from '../dateRange';
 
-/** One month's share of a norm: its plan / days in it × the days that fall into it (0 when it has no plan). */
-export type NormPart = { ym: string; days: number; dim: number; limit: number; norm: number };
+/**
+ * One month's share of a limit, rebalanced on what is left: (the month's plan − spent in that month before these
+ * days) / the days left in the month from them × the days that fall into it. Overspending earlier in the month
+ * lowers it, spending less raises it; 0 when the month has no plan (or nothing is left).
+ */
+export type NormPart = {
+  ym: string; days: number; dim: number; limit: number;
+  /** spent in this month before these days */
+  spentBefore: number;
+  /** days of the month from the first of these days to its end */
+  daysLeft: number;
+  norm: number;
+};
 
 /**
  * Norms for a period. Every day gets its own month's plan / days in that month, so a period or a rhythm window
@@ -63,12 +74,19 @@ export async function loadNorms(range: DayRange, currency: Parameters<typeof mon
     }
     return plans.get(m)!;
   };
+  const dayBefore = (k: DayKey) => { const d = parseDayKey(k); return dayKeyOf(new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1)); };
   const partsOf = async (id: number, r: DayRange): Promise<NormPart[]> => {
     const out: NormPart[] = [];
     for (const [m, days] of daysByMonth(r)) {
       const limit = (await planOf(m)).get(id)?.limit ?? 0;
       const dim = daysInMonth(m);
-      out.push({ ym: m, days, dim, limit, norm: (limit * days) / dim });
+      // the first of these days in this month, and what was spent in the month before it
+      const first = r.from > `${m}-01` ? r.from : `${m}-01`;
+      const firstDay = Number(first.slice(8, 10));
+      const spentBefore = firstDay > 1 ? (await spentOver({ from: `${m}-01`, to: dayBefore(first) })).get(id) ?? 0 : 0;
+      const daysLeft = dim - firstDay + 1;
+      const norm = limit > 0 ? (Math.max(0, limit - spentBefore) * days) / daysLeft : 0;
+      out.push({ ym: m, days, dim, limit, spentBefore, daysLeft, norm });
     }
     return out;
   };
