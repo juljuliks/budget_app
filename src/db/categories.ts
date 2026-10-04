@@ -97,25 +97,25 @@ export async function countPastTransactionsOfCategory(id: number, nowYm = curren
 export async function deleteCategory(id: number, targetId: number | null, nowYm = currentYm()) {
   const db = await getDb();
   const from = monthStart(nowYm);
-  await db.transaction(async () => {
-    await db.run(
+  await db.transaction(async (tx) => {
+    await tx.run(
       `UPDATE transactions SET category_id = ?, category_source = ?
         WHERE category_id = ? AND occurred_at >= ?`,
       [targetId, targetId === null ? null : 'user', id, from]);
     if (targetId === null) {
-      await db.run('DELETE FROM merchant_rules WHERE category_id = ?', [id]);
+      await tx.run('DELETE FROM merchant_rules WHERE category_id = ?', [id]);
     } else {
-      await db.run('UPDATE merchant_rules SET category_id = ? WHERE category_id = ?', [targetId, id]);
+      await tx.run('UPDATE merchant_rules SET category_id = ? WHERE category_id = ?', [targetId, id]);
     }
-    await db.run('DELETE FROM plan_items WHERE category_id = ? AND ym >= ?', [id, nowYm]);
-    await db.run('DELETE FROM category_usage WHERE category_id = ?', [id]);
+    await tx.run('DELETE FROM plan_items WHERE category_id = ? AND ym >= ?', [id, nowYm]);
+    await tx.run('DELETE FROM category_usage WHERE category_id = ?', [id]);
 
-    const pastTx = await db.get('SELECT 1 FROM transactions WHERE category_id = ? LIMIT 1', [id]);
-    const pastPlan = await db.get('SELECT 1 FROM plan_items WHERE category_id = ? LIMIT 1', [id]);
+    const pastTx = await tx.get('SELECT 1 FROM transactions WHERE category_id = ? LIMIT 1', [id]);
+    const pastPlan = await tx.get('SELECT 1 FROM plan_items WHERE category_id = ? LIMIT 1', [id]);
     if (pastTx || pastPlan) {
-      await db.run('UPDATE categories SET deleted_at = ? WHERE id = ?', [Math.floor(Date.now() / 1000), id]);
+      await tx.run('UPDATE categories SET deleted_at = ? WHERE id = ?', [Math.floor(Date.now() / 1000), id]);
     } else {
-      await db.run('DELETE FROM categories WHERE id = ?', [id]);
+      await tx.run('DELETE FROM categories WHERE id = ?', [id]);
     }
   });
 }
@@ -128,23 +128,23 @@ export async function moveTransactionsOutOfCategory(txIds: number[], fromId: num
   if (txIds.length === 0) return;
   const db = await getDb();
   const marks = txIds.map(() => '?').join(',');
-  await db.transaction(async () => {
+  await db.transaction(async (tx) => {
     // merchant ids: a merchant in a group has the group's category
-    const keys = (await db.all<{ k: string }>(
+    const keys = (await tx.all<{ k: string }>(
       `SELECT DISTINCT ${merchantIdSql('transactions')} AS k FROM transactions
         WHERE id IN (${marks}) AND category_id = ? AND merchant_key IS NOT NULL`,
       [...txIds, fromId])).map((r) => r.k);
     // a rule-picked one keeps following its merchant (whose rule moves along); none = no source
-    await db.run(
+    await tx.run(
       `UPDATE transactions SET category_id = ?, category_source = CASE WHEN ? IS NULL THEN NULL ELSE category_source END
         WHERE id IN (${marks}) AND category_id = ?`,
       [toId, toId, ...txIds, fromId]);
     if (keys.length > 0) {
       const keyMarks = keys.map(() => '?').join(',');
       if (toId === null) {
-        await db.run(`DELETE FROM merchant_rules WHERE category_id = ? AND match_type = 'exact' AND pattern IN (${keyMarks})`, [fromId, ...keys]);
+        await tx.run(`DELETE FROM merchant_rules WHERE category_id = ? AND match_type = 'exact' AND pattern IN (${keyMarks})`, [fromId, ...keys]);
       } else {
-        await db.run(`UPDATE merchant_rules SET category_id = ? WHERE category_id = ? AND match_type = 'exact' AND pattern IN (${keyMarks})`, [toId, fromId, ...keys]);
+        await tx.run(`UPDATE merchant_rules SET category_id = ? WHERE category_id = ? AND match_type = 'exact' AND pattern IN (${keyMarks})`, [toId, fromId, ...keys]);
       }
     }
   });

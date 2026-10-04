@@ -117,24 +117,24 @@ export async function mergeMerchants(ids: string[], name: string, categoryId: nu
   const groupIds = ids.map(groupIdOf).filter((g): g is number => g !== null);
   const keys = ids.filter((id) => groupIdOf(id) === null);
   let target = groupIds[0];
-  await db.transaction(async () => {
+  await db.transaction(async (tx) => {
     if (target === undefined) {
-      const { lastInsertRowid } = await db.run('INSERT INTO merchant_groups (name, created_at) VALUES (?, ?)',
+      const { lastInsertRowid } = await tx.run('INSERT INTO merchant_groups (name, created_at) VALUES (?, ?)',
         [name.trim(), Math.floor(Date.now() / 1000)]);
       target = lastInsertRowid;
     } else {
-      await db.run('UPDATE merchant_groups SET name = ? WHERE id = ?', [name.trim(), target]);
+      await tx.run('UPDATE merchant_groups SET name = ? WHERE id = ?', [name.trim(), target]);
     }
     for (const g of groupIds.slice(1)) {
-      await db.run('UPDATE merchant_group_members SET group_id = ? WHERE group_id = ?', [target, g]);
-      await db.run('DELETE FROM merchant_groups WHERE id = ?', [g]);
+      await tx.run('UPDATE merchant_group_members SET group_id = ? WHERE group_id = ?', [target, g]);
+      await tx.run('DELETE FROM merchant_groups WHERE id = ?', [g]);
     }
     for (const k of keys) {
-      await db.run('INSERT OR REPLACE INTO merchant_group_members (merchant_key, group_id) VALUES (?, ?)', [k, target]);
+      await tx.run('INSERT OR REPLACE INTO merchant_group_members (merchant_key, group_id) VALUES (?, ?)', [k, target]);
     }
     // one category for the group: the members' and the dissolved groups' own ones go
     const oldIds = [...keys, ...groupIds.map(groupMerchantId)];
-    await db.run(`DELETE FROM merchant_rules WHERE match_type = 'exact' AND pattern IN (${oldIds.map(() => '?').join(',')})`, oldIds);
+    await tx.run(`DELETE FROM merchant_rules WHERE match_type = 'exact' AND pattern IN (${oldIds.map(() => '?').join(',')})`, oldIds);
   });
   const id = groupMerchantId(target!);
   await setMerchantCategory(id, categoryId);
@@ -156,16 +156,16 @@ export async function excludeFromGroup(id: string, keys: string[]) {
   const groupId = groupIdOf(id);
   if (groupId === null || keys.length === 0) return;
   const db = await getDb();
-  await db.transaction(async () => {
-    const rule = await db.get<{ category_id: number }>("SELECT category_id FROM merchant_rules WHERE match_type = 'exact' AND pattern = ?", [id]);
+  await db.transaction(async (tx) => {
+    const rule = await tx.get<{ category_id: number }>("SELECT category_id FROM merchant_rules WHERE match_type = 'exact' AND pattern = ?", [id]);
     for (const k of keys) {
-      await db.run('DELETE FROM merchant_group_members WHERE merchant_key = ? AND group_id = ?', [k, groupId]);
-      if (rule) await createRule('exact', k, rule.category_id);
+      await tx.run('DELETE FROM merchant_group_members WHERE merchant_key = ? AND group_id = ?', [k, groupId]);
+      if (rule) await createRule('exact', k, rule.category_id, tx);
     }
-    const left = await db.get('SELECT 1 FROM merchant_group_members WHERE group_id = ? LIMIT 1', [groupId]);
+    const left = await tx.get('SELECT 1 FROM merchant_group_members WHERE group_id = ? LIMIT 1', [groupId]);
     if (!left) {
-      await db.run('DELETE FROM merchant_groups WHERE id = ?', [groupId]);
-      await db.run("DELETE FROM merchant_rules WHERE match_type = 'exact' AND pattern = ?", [id]);
+      await tx.run('DELETE FROM merchant_groups WHERE id = ?', [groupId]);
+      await tx.run("DELETE FROM merchant_rules WHERE match_type = 'exact' AND pattern = ?", [id]);
     }
   });
 }

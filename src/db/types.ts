@@ -14,7 +14,10 @@ export interface Db {
   run(sql: string, params?: SqlParam[]): Promise<RunResult>;
   get<T = any>(sql: string, params?: SqlParam[]): Promise<T | undefined>;
   all<T = any>(sql: string, params?: SqlParam[]): Promise<T[]>;
-  /** Runs fn inside BEGIN/COMMIT; rolls back if it throws. Transactions are serialized. */
-  transaction<T>(fn: () => Promise<T>): Promise<T>;
+  /**
+   * Runs fn inside BEGIN/COMMIT with its own handle `tx`; rolls back if it throws. Every statement on the
+   * connection is queued, so nothing from elsewhere runs inside the transaction. Inside fn use only `tx`.
+   */
+  transaction<T>(fn: (tx: Db) => Promise<T>): Promise<T>;
   close(): void;
 }

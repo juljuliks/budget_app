@@ -137,10 +137,10 @@ export async function ensureMonthPlan(ym: string, nowYm = currentYm()): Promise<
   if (ym < nowYm) return;
   const db = await getDb();
   if (await db.get('SELECT 1 FROM plan_months WHERE ym = ?', [ym])) return;
-  await db.transaction(async () => {
-    const source = await db.get<{ ym: string }>('SELECT ym FROM plan_months WHERE ym < ? ORDER BY ym DESC LIMIT 1', [ym]);
+  await db.transaction(async (tx) => {
+    const source = await tx.get<{ ym: string }>('SELECT ym FROM plan_months WHERE ym < ? ORDER BY ym DESC LIMIT 1', [ym]);
     if (source) {
-      await db.run(
+      await tx.run(
         `INSERT OR IGNORE INTO plan_items (ym, category_id, limit_minor, pinned, kind, currency, norm_period)
           SELECT ?, p.category_id, CASE WHEN p.pinned = 1 THEN p.limit_minor ELSE 0 END, p.pinned, p.kind, p.currency, p.norm_period
           FROM plan_items p JOIN categories c ON c.id = p.category_id
@@ -148,7 +148,7 @@ export async function ensureMonthPlan(ym: string, nowYm = currentYm()): Promise<
         [ym, source.ym]);
     }
     // the amount to distribute (usually the salary) carries over as well, with its currency
-    await db.run(
+    await tx.run(
       `INSERT OR IGNORE INTO plan_months (ym, budget_minor, budget_currency) VALUES (?,
         (SELECT budget_minor FROM plan_months WHERE ym = ?),
         coalesce((SELECT budget_currency FROM plan_months WHERE ym = ?), ?))`,

@@ -39,12 +39,12 @@ export async function renameCategoryType(id: number, name: string) {
 /** Categories of the type become untyped. The transfer type can't be deleted (it drives transfer suggestions). */
 export async function deleteCategoryType(id: number) {
   const db = await getDb();
-  await db.transaction(async () => {
-    const t = await db.get<{ is_transfer: number }>('SELECT is_transfer FROM category_types WHERE id = ?', [id]);
+  await db.transaction(async (tx) => {
+    const t = await tx.get<{ is_transfer: number }>('SELECT is_transfer FROM category_types WHERE id = ?', [id]);
     if (!t) return;
     if (t.is_transfer) throw new Error('transfer type cannot be deleted');
-    await db.run('UPDATE categories SET type_id = NULL WHERE type_id = ?', [id]);
-    await db.run('DELETE FROM category_types WHERE id = ?', [id]);
+    await tx.run('UPDATE categories SET type_id = NULL WHERE type_id = ?', [id]);
+    await tx.run('DELETE FROM category_types WHERE id = ?', [id]);
   });
 }
 

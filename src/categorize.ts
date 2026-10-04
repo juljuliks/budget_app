@@ -1,5 +1,6 @@
 import { REMEMBERABLE_KINDS } from './types';
 import { getDb } from './db';
+import type { Db } from './db/types';
 import { merchantIdOf, merchantIdSql } from './db/merchantId';
 
 export type MatchType = 'exact' | 'prefix';
@@ -21,8 +22,9 @@ export async function findCategoryForMerchant(merchantKey: string): Promise<{ ca
   return null;
 }
 
-export async function createRule(matchType: MatchType, pattern: string, categoryId: number) {
-  const db = await getDb();
+/** `db`: the transaction's handle when called inside one (getDb() there would wait for the transaction to end). */
+export async function createRule(matchType: MatchType, pattern: string, categoryId: number, db?: Db) {
+  db ??= await getDb();
   await db.run(
     'INSERT OR REPLACE INTO merchant_rules (match_type, pattern, category_id, created_at) VALUES (?, ?, ?, ?)',
     [matchType, pattern, categoryId, Math.floor(Date.now() / 1000)]);

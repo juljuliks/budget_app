@@ -2,7 +2,7 @@
 // so SQL features (e.g. ON CONFLICT DO UPDATE) don't depend on the Android version.
 import { open } from 'react-native-quick-sqlite';
 import { Db, SqlParam } from './types';
-import { makeTransaction } from './transaction';
+import { serialized } from './transaction';
 
 export function openDatabase(name = 'app.db'): Db {
   const conn = open({ name });
@@ -17,11 +17,10 @@ export function openDatabase(name = 'app.db'): Db {
     return res.rows?._array ?? [];
   };
 
-  return {
+  return serialized({
     run,
     all,
-    get: async (sql, params) => (await all(sql, params))[0],
-    transaction: makeTransaction(run),
+    get: async (sql: string, params?: SqlParam[]) => (await all(sql, params))[0],
     close: () => conn.close(),
-  };
+  });
 }

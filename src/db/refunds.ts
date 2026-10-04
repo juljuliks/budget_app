@@ -1,4 +1,5 @@
 import { getDb } from './index';
+import type { Db } from './types';
 import { merchantIdOf, merchantIdSql } from './merchantId';
 import { REMEMBERABLE_KINDS } from '../types';
 import { findCategoryForMerchant } from '../categorize';
@@ -52,8 +53,7 @@ export async function refundCandidates(refundId: number): Promise<RefundCandidat
   return rows.map((r) => ({ ...r, same_amount: r.amount_minor === refund.amount_minor }));
 }
 
-async function markSettled(refundId: number, targetId: number) {
-  const db = await getDb();
+async function markSettled(db: Db, refundId: number, targetId: number) {
   const now = Math.floor(Date.now() / 1000);
   await db.run(
     'UPDATE transactions SET refund_settled_at = ?, refund_target_id = ?, seen_at = coalesce(seen_at, ?) WHERE id = ?',
@@ -65,21 +65,21 @@ export async function reducePurchaseByRefund(refundId: number, purchaseId: numbe
   const refund = await getRefund(refundId);
   if (!refund) throw new Error('refund not found');
   const db = await getDb();
-  await db.transaction(async () => {
-    const { changes } = await db.run(
+  await db.transaction(async (tx) => {
+    const { changes } = await tx.run(
       'UPDATE transactions SET amount_minor = amount_minor - ? WHERE id = ? AND amount_minor > ?',
       [refund.amount_minor, purchaseId, refund.amount_minor]);
     if (changes === 0) throw new Error('refund covers the whole purchase');
-    await markSettled(refundId, purchaseId);
+    await markSettled(tx, refundId, purchaseId);
   });
 }
 
 /** The whole purchase was refunded: it disappears from history and stats. */
 export async function deletePurchaseByRefund(refundId: number, purchaseId: number) {
   const db = await getDb();
-  await db.transaction(async () => {
-    await db.run('DELETE FROM transactions WHERE id = ?', [purchaseId]);
-    await markSettled(refundId, purchaseId);
+  await db.transaction(async (tx) => {
+    await tx.run('DELETE FROM transactions WHERE id = ?', [purchaseId]);
+    await markSettled(tx, refundId, purchaseId);
   });
 }
 

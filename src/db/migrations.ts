@@ -243,13 +243,13 @@ export async function getSchemaVersion(db: Db): Promise<number> {
 export async function migrate(db: Db, migrations: MigrationStep[][] = MIGRATIONS): Promise<number> {
   const current = await getSchemaVersion(db);
   for (let v = current; v < migrations.length; v++) {
-    await db.transaction(async () => {
+    await db.transaction(async (tx) => {
       for (const step of migrations[v]) {
-        if (typeof step === 'string') await db.run(step);
-        else await step(db);
+        if (typeof step === 'string') await tx.run(step);
+        else await step(tx);
       }
       // PRAGMA doesn't accept bound parameters; v is always an integer here
-      await db.run(`PRAGMA user_version = ${v + 1}`);
+      await tx.run(`PRAGMA user_version = ${v + 1}`);
     });
   }
   return migrations.length;
