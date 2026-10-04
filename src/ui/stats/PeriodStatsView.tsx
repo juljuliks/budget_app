@@ -33,6 +33,8 @@ type Norms = {
    * for that month, for "Сентябрь 100% · Октябрь 100%".
    */
   months: Array<{ ym: string; spent: Map<number | null, number>; limits: Map<number, number> }>;
+  /** spending from the 1st of the month the period ends in up to its end: can a period's overspend still fit the month? */
+  monthToDate: Map<number | null, number>;
 };
 
 const MONTH_NAMES = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
@@ -45,7 +47,7 @@ function pct(part: number, whole: number): string {
 
 async function loadNorms(range: DayRange, currency: Parameters<typeof monthStats>[2]): Promise<Norms> {
   const months = daysByMonth(range);
-  const norms: Norms = { total: 0, byCategory: new Map(), months: [] };
+  const norms: Norms = { total: 0, byCategory: new Map(), months: [], monthToDate: new Map() };
   for (const [ym, days] of months) {
     const { year, month } = parseYm(ym);
     const m = await monthStats(year, month, currency);
@@ -72,7 +74,21 @@ async function loadNorms(range: DayRange, currency: Parameters<typeof monthStats
       norms.byCategory.set(c.category_id, cur);
     }
   }
+  const lastYm = [...months.keys()][months.size - 1];
+  const mtd = rangeToUnix({ from: `${lastYm}-01`, to: range.to });
+  norms.monthToDate = new Map((await periodStats(mtd.from, mtd.to, currency)).categories.map((c) => [c.category_id, c.spent_minor]));
   return norms;
+}
+
+type Pace = 'ok' | 'ahead' | 'over';
+
+/**
+ * ok: within the plan for these days. ahead: over it, but the month so far still fits the month's plan (can be
+ * made up later). over: the month's plan is already exceeded.
+ */
+function paceOf(spent: number, norm: number, monthToDate: number, monthLimit: number): Pace {
+  if (spent <= norm) return 'ok';
+  return monthToDate <= monthLimit ? 'ahead' : 'over';
 }
 
 /**
@@ -173,12 +189,17 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                         : `${pct(c.spent_minor, plan.monthLimit)} плана на месяц`}
                     </Text>
                     {/* the category's plan per day × days of the period (fixed payments aren't split by days) */}
-                    {plan.kind === 'limit' ? (
-                      // green within the plan for these days, red over it
-                      <Text style={[styles.share, styles.pace, c.spent_minor > plan.norm ? styles.paceOver : styles.paceOk]}>
-                        {pct(c.spent_minor, plan.norm)} от плана {normLabel} ({formatShort(Math.round(plan.norm))} {cur})
-                      </Text>
-                    ) : null}
+                    {plan.kind === 'limit' ? (() => {
+                      const p = paceOf(c.spent_minor, plan.norm, norms?.monthToDate.get(c.category_id) ?? 0, plan.monthLimit);
+                      return (
+                        <TouchableOpacity style={styles.paceRow} onPress={() => setInfoOpen(true)} accessibilityLabel="Что значит цвет">
+                          <Text style={[styles.share, styles.pace, p === 'ok' ? styles.paceOk : p === 'ahead' ? styles.paceAhead : styles.paceOver]}>
+                            {pct(c.spent_minor, plan.norm)} от плана {normLabel} ({formatShort(Math.round(plan.norm))} {cur})
+                          </Text>
+                          <InfoIcon color={colors.muted} size={15} />
+                        </TouchableOpacity>
+                      );
+                    })() : null}
                   </>
                 ) : (
                   <Text style={styles.share}>{pct(c.spent_minor, stats.spent_minor)} всех трат за период</Text>
@@ -213,9 +234,20 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                 ушла за этот период. Под ней — доля категории во всех тратах за период и доля от её плана на месяц. Если
                 период захватывает два месяца, доля считается отдельно для каждого: траты в днях сентября — от плана
                 сентября, в днях октября — от плана октября.
-                Ниже — сколько потрачено от плана гибкой категории на эти дни (план на месяц / дни месяца × дни периода): зелёный — в рамках, красный — больше плана.
+                Ниже — сколько потрачено от плана гибкой категории на эти дни (план на месяц / дни месяца × дни периода).
                 Купили одежду один раз на 60% плана — вы в рамках, перерасхода нет. Если период захватывает два
                 месяца, берётся план месяца, в котором период заканчивается.
+              </Text>
+              <Text style={styles.infoText}>
+                <Text style={[styles.infoBold, styles.paceOk]}>Зелёный</Text> — за период потрачено не больше плана на эти дни.
+              </Text>
+              <Text style={styles.infoText}>
+                <Text style={[styles.infoBold, styles.paceAhead]}>Оранжевый</Text> — за период больше плана на эти дни, но с
+                начала месяца по категории потрачено не больше плана на месяц: перерасход можно отыграть в следующие дни.
+              </Text>
+              <Text style={styles.infoText}>
+                <Text style={[styles.infoBold, styles.paceOver]}>Красный</Text> — с начала месяца по категории уже потрачено
+                больше плана на месяц. Для периода на стыке месяцев — месяца, в котором период заканчивается.
               </Text>
               <Text style={styles.infoText}>
                 <Text style={styles.infoBold}>Без плана</Text> — только сумма и доля от всех трат за период.
@@ -257,7 +289,9 @@ const styles = StyleSheet.create({
   name: { flex: 1, fontSize: 15, color: colors.text },
   pace: { fontWeight: '600' },
   paceOk: { color: colors.income },
+  paceAhead: { color: colors.warn },
   paceOver: { color: colors.danger },
+  paceRow: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' },
   share: { fontSize: 13, color: colors.muted, marginTop: 4, fontVariant: ['tabular-nums'] },
   amount: { fontSize: 15, color: colors.text, fontVariant: ['tabular-nums'] },
   info: { paddingHorizontal: 20, gap: 10 },

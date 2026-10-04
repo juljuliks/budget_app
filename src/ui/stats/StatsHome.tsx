@@ -10,6 +10,7 @@ import RangeCalendar from '../RangeCalendar';
 import { dayKeyOf, DayRange, PeriodKind, periodLabel, periodRange, shiftAnchor } from '../dateRange';
 import { useDisplayCurrency } from '../../displayCurrency';
 import { colors } from '../theme';
+import { ChevronDownIcon } from '../icons';
 import PeriodStatsView from './PeriodStatsView';
 import HistoryView from './HistoryView';
 import { monthTitle } from './months';
@@ -79,7 +80,7 @@ export default function StatsHome() {
         <TouchableOpacity style={styles.titleRow} onPress={() => setMenuOpen(true)} accessibilityRole="button" accessibilityLabel="Выбрать период">
           <Text style={styles.title}>Статистика</Text>
           <Text style={styles.titlePeriod}>{PERIODS.find((p) => p[0] === kind)![2]}</Text>
-          <Text style={styles.titleArrow}>▾</Text>
+          <View style={styles.titleArrow}><ChevronDownIcon color={colors.accent} size={20} /></View>
         </TouchableOpacity>
       ) : <Text style={styles.title}>Статистика</Text>),
     });
@@ -179,10 +180,10 @@ const styles = StyleSheet.create({
   arrowDisabled: { color: colors.border },
   month: { fontSize: 17, fontWeight: '600', color: colors.text },
   body: { flex: 1 },
-  titleRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   title: { fontSize: 20, fontWeight: '500', color: colors.text },
   titlePeriod: { fontSize: 20, fontWeight: '500', color: colors.accent },
-  titleArrow: { fontSize: 16, color: colors.accent },
+  titleArrow: { marginTop: 2 },
   menuItem: {
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16,
     borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border,

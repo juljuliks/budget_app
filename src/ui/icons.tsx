@@ -79,3 +79,9 @@ export const InfoIcon = ({ color, size = 18 }: P) => (
     <Circle cx={12} cy={7.5} r={0.6} fill={color} />
   </Svg>
 );
+
+export const ChevronDownIcon = ({ color, size = 18 }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M6 9l6 6 6-6" />
+  </Svg>
+);
