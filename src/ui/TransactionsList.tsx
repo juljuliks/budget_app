@@ -22,7 +22,7 @@ import SettingsMenuButton from './SettingsMenuButton';
 import { dayKey, formatDay, plural } from './format';
 import { formatShort } from './money';
 import { formStyles } from './formStyles';
-import { InfoIcon, PencilIcon, SearchIcon } from './icons';
+import { ChevronRightIcon, PencilIcon, SearchIcon } from './icons';
 import RangeCalendar, { DayRange, formatRange, rangeToUnix } from './RangeCalendar';
 import Segmented from './Segmented';
 import { colors } from './theme';
@@ -511,7 +511,7 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
                 hitSlop={10}
                 accessibilityLabel={`Траты за день: ${section.title}`}
               >
-                <InfoIcon color={colors.accent} />
+                <ChevronRightIcon color={colors.accent} />
               </TouchableOpacity>
             </View>
           );

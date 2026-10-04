@@ -66,10 +66,8 @@ export const MinusCircleIcon = ({ color, size = 20 }: P) => (
   </Svg>
 );
 
-export const InfoIcon = ({ color, size = 18 }: P) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round">
-    <Circle cx={12} cy={12} r={9.5} />
-    <Path d="M12 11v6" />
-    <Circle cx={12} cy={7.5} r={0.6} fill={color} />
+export const ChevronRightIcon = ({ color, size = 18 }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M9 5l7 7-7 7" />
   </Svg>
 );
