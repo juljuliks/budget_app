@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { categoryLabel, createCategory, findCategoryByName, getCategory, moveTransactionsOutOfCategory, updateCategory } from '../db/categories';
@@ -138,14 +138,10 @@ export default function CategoryEdit({ route, navigation }: Props) {
       ) : null}
 
       <Text style={formStyles.label}>Цвет</Text>
-      <ColorSwatches options={colorOptions} value={color} onChange={setColor} />
-      {/* a color of its own: any hue on the bar, or one far from the colors in use */}
-      <View style={styles.customHead}>
-        <Text style={styles.customLabel}>Свой цвет</Text>
-        <TouchableOpacity onPress={() => setColor(colorFromHue(distinctHue(taken, color)))} hitSlop={8}>
-          <Text style={styles.link}>🎲 Случайный</Text>
-        </TouchableOpacity>
-      </View>
+      {/* "Авто" generates a color (another one on each press) that no other category has */}
+      <ColorSwatches options={colorOptions} value={color} onChange={setColor} onAuto={() => setColor(colorFromHue(distinctHue(taken, color)))} />
+      {/* a color of its own: any hue on the bar */}
+      <Text style={styles.customLabel}>Свой цвет</Text>
       <HueBar hue={color ? Math.round(hexToHsl(color)[0]) : null} onChange={(h) => setColor(colorFromHue(h))} />
 
       <Text style={formStyles.label}>Эмодзи (необязательно)</Text>
@@ -173,9 +169,7 @@ const styles = StyleSheet.create({
   content: { padding: 16, paddingTop: 0, paddingBottom: 32 },
   emoji: { width: 80, textAlign: 'center' },
   preview: { color: colors.muted, marginTop: 6, fontSize: 13 },
-  customHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 },
-  customLabel: { fontSize: 14, color: colors.text },
-  link: { fontSize: 14, color: colors.accent },
+  customLabel: { fontSize: 14, color: colors.text, marginTop: 12 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   button: { marginTop: 24 },
 });

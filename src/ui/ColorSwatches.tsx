@@ -9,15 +9,17 @@ type Props = {
   onChange: (color: string | null) => void;
   /** the color "Авто" resolves to, shown inside its swatch */
   autoColor?: string;
+  /** "Авто" does this instead of choosing null (e.g. generates a color) */
+  onAuto?: () => void;
 };
 
 /** Row of color circles plus "Авто"; the selected one gets a ring. */
-export default function ColorSwatches({ options, value, onChange, autoColor }: Props) {
+export default function ColorSwatches({ options, value, onChange, autoColor, onAuto }: Props) {
   return (
     <View style={styles.row}>
       <TouchableOpacity
         style={[styles.auto, value === null && styles.selected]}
-        onPress={() => onChange(null)}
+        onPress={() => (onAuto ? onAuto() : onChange(null))}
         accessibilityLabel="Цвет автоматически"
         accessibilityState={{ selected: value === null }}
       >

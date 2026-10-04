@@ -72,6 +72,10 @@ export default function TypeEditModal({ visible, type, types, onClose, onSaved }
     >
       <Text style={formStyles.label}>Цвета</Text>
       <View style={styles.presets}>
+        {/* "Авто": a generated palette (another one on each press), away from the other types' colors */}
+        <TouchableOpacity style={[styles.preset, styles.auto]} onPress={randomPalette} accessibilityLabel="Палитра автоматически">
+          <Text style={styles.autoText}>Авто</Text>
+        </TouchableOpacity>
         {presets.map((k) => (
           <TouchableOpacity
             key={k}
@@ -80,16 +84,11 @@ export default function TypeEditModal({ visible, type, types, onClose, onSaved }
             accessibilityLabel={`Палитра ${PALETTES[k].label}`}
             accessibilityState={{ selected: palette === k }}
           >
-            <PaletteStrip shades={PALETTES[k].shades} size={14} />
+            <PaletteStrip shades={PALETTES[k].shades} size={11} />
           </TouchableOpacity>
         ))}
       </View>
-      <View style={styles.customHead}>
-        <Text style={styles.customLabel}>Своя палитра</Text>
-        <TouchableOpacity onPress={randomPalette} hitSlop={8}>
-          <Text style={styles.link}>🎲 Случайная</Text>
-        </TouchableOpacity>
-      </View>
+      <Text style={styles.customLabel}>Своя палитра</Text>
       <HueBar hue={custom ? Math.round(hexToHsl(palette)[0]) : null} onChange={(h) => setPalette(colorFromHue(h))} />
       {custom ? (
         <View style={[styles.preset, styles.selected, styles.customPreview]}>
@@ -101,11 +100,15 @@ export default function TypeEditModal({ visible, type, types, onClose, onSaved }
 }
 
 const styles = StyleSheet.create({
-  presets: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  preset: { padding: 6, borderRadius: 10, borderWidth: 2, borderColor: 'transparent', backgroundColor: colors.surface },
+  // three in a row
+  presets: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  preset: {
+    width: '31.5%', alignItems: 'center', justifyContent: 'center', paddingVertical: 8,
+    borderRadius: 10, borderWidth: 2, borderColor: 'transparent', backgroundColor: colors.surface,
+  },
+  auto: { borderColor: colors.border, borderStyle: 'dashed' },
+  autoText: { fontSize: 13, color: colors.accent, fontWeight: '600' },
   selected: { borderColor: colors.accent },
-  customHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 14 },
-  customLabel: { fontSize: 14, color: colors.text },
-  link: { fontSize: 14, color: colors.accent },
-  customPreview: { alignSelf: 'flex-start', marginTop: 4 },
+  customLabel: { fontSize: 14, color: colors.text, marginTop: 14 },
+  customPreview: { alignSelf: 'flex-start', width: undefined, paddingHorizontal: 8, marginTop: 4 },
 });
