@@ -169,15 +169,27 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                   const p = paceOf(plan.windowSpent, plan.windowNorm, mtd, plan.monthLimit);
                   const bar = rhythmBar(plan, range, c.spent_minor);
                   const left = Math.round(plan.windowNorm) - plan.windowSpent;
+                  // a period shorter than the category's rhythm (a day of a weekly limit): its share of the limit, not the week's state
+                  const rhythmLen = plan.rhythm === 'month' ? daysInMonth(norms!.ym) : RHYTHM_LEN[plan.rhythm];
+                  const shorter = rangeDays(range) < rhythmLen;
+                  const ofLimit = plan.rhythm === 'month' ? plan.monthLimit : plan.effect?.before ?? plan.windowNorm;
+                  const limitName = plan.rhythm === 'month' ? `плана на ${monthIn}` : plan.rhythm === 'week' ? 'лимита на неделю' : plan.rhythm === '2weeks' ? 'лимита на 2 недели' : 'лимита на день';
                   return (
                     <>
                       <Meter ratio={bar.ratio} base={bar.base} marker={bar.marker} height={8} color={c.color} />
                       <TouchableOpacity style={styles.paceRow} onPress={() => openInfo({ id: c.category_id!, name })} accessibilityLabel="Как считается категория">
                         <Text style={[styles.share, styles.paceText]}>
-                          <Text style={[styles.pace, paceStyle(p)]}>
-                            {capitalize(windowLabel(plan))} {left < 0 ? `перерасход ${money(-left)}` : `осталось ${money(left)}`}
-                          </Text>
-                          {bar.end && left >= 0 ? ` · до ${until(bar.end, plan.rhythm)}` : ''}
+                          {shorter ? (
+                            // "За день — 72% лимита на неделю": what this period took of the limit
+                            <Text style={[styles.pace, styles.paceNeutral]}>{capitalize(normLabel.replace(/^на /, 'за '))} — {pct(c.spent_minor, ofLimit)} {limitName}</Text>
+                          ) : (
+                            <>
+                              <Text style={[styles.pace, paceStyle(p)]}>
+                                {capitalize(windowLabel(plan))} {left < 0 ? `перерасход ${money(-left)}` : `осталось ${money(left)}`}
+                              </Text>
+                              {bar.end && left >= 0 ? ` · до ${until(bar.end, plan.rhythm)}` : ''}
+                            </>
+                          )}
                           {/* how the period moved the limit: at its start (crossed out) → for the rest of the month after it */}
                           {plan.effect && plan.rhythm !== 'month' ? (() => {
                             const { before, after } = plan.effect;
@@ -390,6 +402,7 @@ const styles = StyleSheet.create({
   paceOver: { color: colors.danger },
   paceRow: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' },
   paceText: { flexShrink: 1 },
+  paceNeutral: { color: colors.text },
   share: { fontSize: 13, color: colors.muted, marginTop: 4, fontVariant: ['tabular-nums'] },
   amount: { fontSize: 15, color: colors.text, fontVariant: ['tabular-nums'] },
   info: { paddingHorizontal: 20, gap: 10, paddingBottom: 4 },
