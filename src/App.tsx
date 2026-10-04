@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { AppState } from 'react-native';
+import { AppState, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -14,8 +14,8 @@ import AddTransaction from './ui/AddTransaction';
 import RefundResolve from './ui/RefundResolve';
 import StatsHome from './ui/stats/StatsHome';
 import MerchantsScreen from './ui/MerchantsScreen';
-import SettingsSheet from './ui/SettingsSheet';
-import { GearIcon, HistoryIcon, StatsIcon } from './ui/icons';
+import SettingsButton from './ui/SettingsButton';
+import { HistoryIcon, StatsIcon } from './ui/icons';
 import { colors } from './ui/theme';
 import { createNotificationChannel } from './notifications/notifeeBootstrap';
 import { handleNotificationAction } from './notifications/notifeeIntegration';
@@ -25,6 +25,7 @@ import { onTransactionsChanged } from './events';
 import { navigationRef, flushPendingNavigation, RootStackParamList, TabParamList } from './navigation';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+const headerRightStyle = { marginRight: 16 };
 const Tab = createBottomTabNavigator<TabParamList>();
 
 /** Unread (not yet opened) transactions for the tab badge; refreshed on any data change. */
@@ -41,17 +42,11 @@ function useUnseenCount(): number {
   return count;
 }
 
-/** The "Настройки" tab only opens the settings sheet; it is never shown as a screen. */
-function NoScreen() {
-  return null;
-}
-
 function MainTabs() {
   const unseen = useUnseenCount();
-  const [settingsOpen, setSettingsOpen] = useState(false);
   return (
     <>
-    {/* the app always opens on the transactions */}
+    {/* the app always opens on the transactions; the settings gear sits in the tab headers */}
     <Tab.Navigator initialRouteName="Transactions" screenOptions={{ tabBarActiveTintColor: colors.accent, tabBarInactiveTintColor: colors.muted }}>
       <Tab.Screen
         name="Stats"
@@ -59,6 +54,7 @@ function MainTabs() {
         options={{
           title: 'Статистика',
           tabBarIcon: ({ color }) => <StatsIcon color={color} />,
+          headerRight: () => <View style={headerRightStyle}><SettingsButton /></View>,
         }}
       />
       <Tab.Screen
@@ -70,14 +66,7 @@ function MainTabs() {
           tabBarBadge: unseen > 0 ? (unseen > 99 ? '99+' : unseen) : undefined,
         }}
       />
-      <Tab.Screen
-        name="Settings"
-        component={NoScreen}
-        options={{ title: 'Настройки', tabBarIcon: ({ color }) => <GearIcon color={color} size={24} /> }}
-        listeners={{ tabPress: (e) => { e.preventDefault(); setSettingsOpen(true); } }}
-      />
     </Tab.Navigator>
-    <SettingsSheet open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </>
   );
 }

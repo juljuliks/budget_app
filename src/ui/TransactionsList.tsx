@@ -19,6 +19,7 @@ import Checkbox from './Checkbox';
 import Chip from './Chip';
 import Fab from './Fab';
 import PushAccessBanner from './PushAccessBanner';
+import SettingsButton from './SettingsButton';
 import { dayKey, formatDay, plural } from './format';
 import { formatShort } from './money';
 import { formStyles } from './formStyles';
@@ -308,6 +309,7 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
             <PencilIcon color={editMode ? '#FFFFFF' : colors.accent} size={13} />
             <Text style={[styles.editToggleText, editMode && styles.editToggleTextOn]}>{editMode ? 'Готово' : 'Редактировать'}</Text>
           </TouchableOpacity>
+          <SettingsButton />
         </View>
       ),
     });

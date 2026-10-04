@@ -34,7 +34,7 @@ type Props = {
 };
 
 /**
- * Настройки (the tab bar's gear): a sheet with Валюта — the currency the app converts amounts to, switched right
+ * Настройки (the gear in the tab headers): a sheet with Валюта — the currency the app converts amounts to, switched right
  * here — then Мерчанты and Категории.
  */
 export default function SettingsSheet({ open, onClose }: Props) {
