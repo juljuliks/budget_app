@@ -27,6 +27,7 @@ type Props = {
 
 /** The plan's share for the days of a period: each day gets its month's plan / days in that month. */
 type Norms = {
+  /** the flexible categories' norm (fixed payments come in one go and aren't split by days) */
   total: number;
   byCategory: Map<number, { norm: number; kind: PlanKind; monthLimit: number }>;
   /** the month, when the whole period is in one (for "N% плана на октябрь") */
@@ -46,11 +47,11 @@ async function loadNorms(range: DayRange, currency: Parameters<typeof monthStats
     const { year, month } = parseYm(ym);
     const m = await monthStats(year, month, currency);
     const share = days / daysInMonth(ym);
-    norms.total += m.planned_minor * share;
     for (const c of m.categories) {
       if (c.category_id === null || !c.limit_minor) continue;
       const cur = norms.byCategory.get(c.category_id) ?? { norm: 0, kind: c.plan_kind ?? 'limit', monthLimit: 0 };
       cur.norm += c.limit_minor * share;
+      if ((c.plan_kind ?? 'limit') === 'limit') norms.total += c.limit_minor * share;
       cur.monthLimit += c.limit_minor;
       norms.byCategory.set(c.category_id, cur);
     }
@@ -91,12 +92,17 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
   if (!stats) return <View style={styles.center}><ActivityIndicator /></View>;
   const picked = selected === null ? undefined : stats.categories.find((c) => String(c.category_id) === selected);
   const cur = stats.currency;
+  // spending of the flexible categories, compared with their norm under the donut
+  const flexSpent = stats.categories.reduce((sum, c) => {
+    const p = c.category_id === null ? undefined : norms?.byCategory.get(c.category_id);
+    return p && p.kind === 'limit' ? sum + c.spent_minor : sum;
+  }, 0);
   const monthName = norms?.singleYm ? MONTHS_IN[parseYm(norms.singleYm).month] : '';
 
   // under the donut: the pace against the whole plan, or the average per month for a long period
   const summary = pace
     ? (norms && norms.total > 0
-      ? `${formatShort(stats.spent_minor)} из нормы ${formatShort(Math.round(norms.total))} ${cur} ${normLabel} (${pct(stats.spent_minor, norms.total)})`
+      ? `Гибкие траты: ${formatShort(flexSpent)} из нормы ${formatShort(Math.round(norms.total))} ${cur} ${normLabel} (${pct(flexSpent, norms.total)})`
       : 'Плана на эти дни нет — показана только структура трат.')
     : average === undefined ? ''
       : average === null ? 'Для среднего в месяц нужен хотя бы один полный месяц с данными.'
@@ -176,7 +182,10 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
               <Text style={styles.infoText}>
                 <Text style={styles.infoBold}>Без плана</Text> — только сумма и доля от всех трат за период.
               </Text>
-              <Text style={styles.infoText}>Под диаграммой — то же для всего плана сразу.</Text>
+              <Text style={styles.infoText}>
+                Под диаграммой — то же для всех гибких трат вместе. Фиксированные траты и категории без плана в эту
+                строку не входят.
+              </Text>
             </>
           ) : (
             <Text style={styles.infoText}>
