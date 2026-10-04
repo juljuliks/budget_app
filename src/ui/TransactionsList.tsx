@@ -10,8 +10,7 @@ import {
 import { emitTransactionsChanged, onTransactionsChanged } from '../events';
 import { Category, categoryLabel, countPastTransactionsOfCategory, deleteCategory, getCategory, moveTransactionsOutOfCategory } from '../db/categories';
 import { currentYm, monthStart, spendingEntries } from '../db/plans';
-import { setDisplayCurrency, useDisplayCurrency } from '../displayCurrency';
-import CurrencyPicker from './CurrencyPicker';
+import { useDisplayCurrency } from '../displayCurrency';
 import { assignCategoryToMany } from '../assign';
 import { navigationRef, TabParamList, useRootNavigation } from '../navigation';
 import Button from './Button';
@@ -20,7 +19,6 @@ import Checkbox from './Checkbox';
 import Chip from './Chip';
 import Fab from './Fab';
 import PushAccessBanner from './PushAccessBanner';
-import SettingsMenuButton from './SettingsMenuButton';
 import { dayKey, formatDay, plural } from './format';
 import { formatShort } from './money';
 import { formStyles } from './formStyles';
@@ -205,8 +203,8 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
   }, [data]);
 
   // spent per day for the day headers: all of the day's transactions, not only the ones loaded or filtered,
-  // converted to the currency picked on top (transactions themselves stay in their own currency)
-  const currency = useDisplayCurrency('transactions');
+  // converted to the app's currency (Настройки → Валюта); transactions themselves stay in their own currency
+  const currency = useDisplayCurrency();
   const [daySpent, setDaySpent] = useState<Map<string, number>>(new Map());
   useEffect(() => {
     if (sections.length === 0) { setDaySpent(new Map()); return; }
@@ -310,7 +308,6 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
             <PencilIcon color={editMode ? '#FFFFFF' : colors.accent} size={16} />
             <Text style={[styles.editToggleText, editMode && styles.editToggleTextOn]}>{editMode ? 'Готово' : 'Редактировать'}</Text>
           </TouchableOpacity>
-          <SettingsMenuButton />
         </View>
       ),
     });
@@ -388,13 +385,7 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
               {pastCount > 0 ? ` Прошлые месяцы (${pastCount} ${plural(pastCount, ['транзакция', 'транзакции', 'транзакций'])}) останутся в этой категории, история не изменится.` : ''}
             </Text>
           </View>
-        ) : (
-          <>
-            <PushAccessBanner />
-            {/* the currency of the day totals (and day stats) */}
-            <CurrencyPicker value={currency} onChange={(c) => { setDisplayCurrency('transactions', c); }} style={styles.modes} />
-          </>
-        )}
+        ) : <PushAccessBanner />}
         <Segmented options={MODES} value={mode} onChange={setMode} style={styles.modes} disabled={deleting ? DELETE_MODE_DISABLED : undefined} />
 
         {mode === 'text' ? (

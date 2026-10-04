@@ -2,39 +2,37 @@ import { useEffect, useState } from 'react';
 import { getSetting, setSetting } from './db/settings';
 import { Currency, isCurrency } from './db/fx';
 
-// Currencies amounts are shown in, picked by the user and remembered: one for the Статистика tab (stats, plan,
-// history) and one for the transactions list (day totals, day stats). Every screen using one follows a change.
+// The currency amounts are converted to across the app (stats, plan, history, day totals and day stats), picked
+// in Настройки → Валюта and remembered. Every screen using it follows a change at once.
 
-export type CurrencyScope = 'stats' | 'transactions';
+const KEY = 'display_currency';
+let current: Currency = 'GEL';
+let loaded = false;
+const listeners = new Set<(c: Currency) => void>();
 
-const KEYS: Record<CurrencyScope, string> = { stats: 'stats_currency', transactions: 'transactions_currency' };
-const current: Record<CurrencyScope, Currency> = { stats: 'GEL', transactions: 'GEL' };
-const loaded = new Set<CurrencyScope>();
-const listeners: Record<CurrencyScope, Set<(c: Currency) => void>> = { stats: new Set(), transactions: new Set() };
-
-async function load(scope: CurrencyScope) {
-  if (loaded.has(scope)) return;
-  loaded.add(scope);
-  const v = await getSetting(KEYS[scope]);
-  if (isCurrency(v) && v !== current[scope]) {
-    current[scope] = v;
-    listeners[scope].forEach((fn) => fn(v));
+async function load() {
+  if (loaded) return;
+  loaded = true;
+  const v = await getSetting(KEY);
+  if (isCurrency(v) && v !== current) {
+    current = v;
+    listeners.forEach((fn) => fn(v));
   }
 }
 
-export async function setDisplayCurrency(scope: CurrencyScope, c: Currency) {
-  current[scope] = c;
-  listeners[scope].forEach((fn) => fn(c));
-  await setSetting(KEYS[scope], c);
+export async function setDisplayCurrency(c: Currency) {
+  current = c;
+  listeners.forEach((fn) => fn(c));
+  await setSetting(KEY, c);
 }
 
-export function useDisplayCurrency(scope: CurrencyScope): Currency {
-  const [c, setC] = useState<Currency>(current[scope]);
+export function useDisplayCurrency(): Currency {
+  const [c, setC] = useState<Currency>(current);
   useEffect(() => {
-    listeners[scope].add(setC);
-    load(scope).catch((e) => console.error('load display currency failed', e));
-    setC(current[scope]);
-    return () => { listeners[scope].delete(setC); };
-  }, [scope]);
+    listeners.add(setC);
+    load().catch((e) => console.error('load display currency failed', e));
+    setC(current);
+    return () => { listeners.delete(setC); };
+  }, []);
   return c;
 }

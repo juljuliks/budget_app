@@ -9,6 +9,8 @@ export type TabParamList = {
    * from: the tab we came from (not via the tab bar) -> a back button in the header returns there.
    */
   Transactions: { category?: number | 'none'; merchant?: string; nonce?: number; from?: keyof TabParamList } | undefined;
+  /** never shown: its tab button opens the settings sheet */
+  Settings: undefined;
 };
 
 /** Screens pushed over the tab bar. */

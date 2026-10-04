@@ -20,8 +20,8 @@ export default function DayStats({ route, navigation }: Props) {
   const { day } = route.params;
   const [stats, setStats] = useState<PeriodStats | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
-  // the currency picked on the transactions screen
-  const currency = useDisplayCurrency('transactions');
+  // the app's currency (Настройки → Валюта)
+  const currency = useDisplayCurrency();
 
   useLayoutEffect(() => {
     navigation.setOptions({ title: `Траты: ${formatDay(day).toLowerCase()}` });

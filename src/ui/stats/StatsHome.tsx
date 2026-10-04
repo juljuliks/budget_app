@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { currentYm, ymOf } from '../../db/plans';
 import Segmented from '../Segmented';
-import CurrencyPicker from '../CurrencyPicker';
-import { setDisplayCurrency, useDisplayCurrency } from '../../displayCurrency';
+import { useDisplayCurrency } from '../../displayCurrency';
 import { colors } from '../theme';
 import HistoryView from './HistoryView';
 import { monthTitle } from './months';
@@ -17,8 +16,8 @@ type Section = typeof SECTIONS[number][0];
 export default function StatsHome() {
   const now = new Date();
   const [section, setSection] = useState<Section>('stats');
-  // stats, plan and history are shown converted to this currency (remembered)
-  const currency = useDisplayCurrency('stats');
+  // stats, plan and history are shown converted to the app's currency (Настройки → Валюта)
+  const currency = useDisplayCurrency();
   // shared by stats and plan, so switching between them keeps the month
   const [period, setPeriod] = useState({ year: now.getFullYear(), month: now.getMonth() });
 
@@ -37,7 +36,6 @@ export default function StatsHome() {
   return (
     <View style={styles.screen}>
       <Segmented options={SECTIONS} value={section} onChange={setSection} style={styles.segmented} />
-      <CurrencyPicker value={currency} onChange={(c) => { setDisplayCurrency('stats', c); }} style={styles.currency} />
 
       {section !== 'history' ? (
         <View style={styles.monthRow}>
@@ -61,7 +59,6 @@ export default function StatsHome() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   segmented: { margin: 16, marginBottom: 8 },
-  currency: { marginHorizontal: 16, marginBottom: 8 },
   monthRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, marginBottom: 8 },
   arrow: { fontSize: 28, color: colors.accent, paddingHorizontal: 8 },
   arrowDisabled: { color: colors.border },

@@ -64,7 +64,7 @@ export default function CategoryPicker({
 
   return (
     <View>
-      {/* no gear: categories are managed only from the settings (gear in the tab headers) */}
+      {/* no gear: categories are managed only from Настройки (the tab bar) */}
       <SectionHeading title={title} />
       <View style={styles.chips}>
         {shown.map((c) => (
