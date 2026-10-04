@@ -8,7 +8,6 @@ import { categoryColors } from '../db/colors';
 import { listCategoryTypes } from '../db/categoryTypes';
 import type { RootStackParamList } from '../navigation';
 import { formStyles } from './formStyles';
-import RowActions from './RowActions';
 import { colors } from './theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Categories'>;
@@ -50,15 +49,12 @@ export default function CategoriesScreen({ navigation }: Props) {
       keyExtractor={(c) => String(c.id)}
       renderSectionHeader={({ section }) => <Text style={formStyles.sectionHeader}>{section.title}</Text>}
       renderItem={({ item }) => (
-        <View style={styles.row}>
+        // like the merchants: the row opens the category (name, section, color, operations, deleting)
+        <TouchableOpacity style={styles.row} onPress={() => navigation.navigate('CategoryEdit', { categoryId: item.id })} accessibilityRole="button">
           <View style={[styles.dot, { backgroundColor: colorOf.get(item.id) ?? colors.border }]} />
           <Text style={styles.name} numberOfLines={1}>{`${item.emoji || ''} ${item.name}`.trim()}</Text>
-          <RowActions
-            subject={item.name}
-            onEdit={() => navigation.navigate('CategoryEdit', { categoryId: item.id })}
-            onDelete={() => navigation.navigate('CategoryDelete', { categoryId: item.id })}
-          />
-        </View>
+          <Text style={styles.chevron}>›</Text>
+        </TouchableOpacity>
       )}
       // the category types live one level down from here
       ListHeaderComponent={

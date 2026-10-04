@@ -174,6 +174,10 @@ export default function CategoryEdit({ route, navigation }: Props) {
       {isNew && planYm ? <Text style={formStyles.hint}>Категория будет добавлена в план этого месяца.</Text> : null}
 
       <Button title="Сохранить" disabled={saving} onPress={save} style={styles.button} />
+      {/* an existing category: deleting it first moves its operations of this month (CategoryDelete) */}
+      {!isNew ? (
+        <Button title="Удалить категорию" danger disabled={saving} onPress={() => navigation.navigate('CategoryDelete', { categoryId: categoryId! })} style={styles.deleteButton} />
+      ) : null}
       <TypeEditModal
         visible={typeOpen}
         types={types}
@@ -187,6 +191,7 @@ export default function CategoryEdit({ route, navigation }: Props) {
 
 const styles = StyleSheet.create({
   meta: { fontSize: 14, color: colors.muted },
+  deleteButton: { marginTop: 12 },
   link: { fontSize: 14, color: colors.accent, marginTop: 6, marginBottom: 4 },
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { padding: 16, paddingTop: 0, paddingBottom: 32 },
