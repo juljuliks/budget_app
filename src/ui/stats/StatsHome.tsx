@@ -133,7 +133,12 @@ export default function StatsHome() {
 
       <View style={styles.body}>
         {section === 'stats' && byPeriod && range ? (
-          <PeriodStatsView key={`${range.from}-${range.to}`} {...rangeToUnix(range)} />
+          <PeriodStatsView
+            key={`${range.from}-${range.to}`}
+            {...rangeToUnix(range)}
+            // a day or a week is also measured against the plan of the month it starts in
+            planYm={kind === 'day' || kind === 'week' ? range.from.slice(0, 7) : undefined}
+          />
         ) : null}
         {section === 'stats' && !byPeriod ? <StatsView year={shown.year} month={shown.month} currency={currency} /> : null}
         {section === 'plan' ? <PlanView key={shownYm} ym={shownYm} currency={currency} /> : null}
