@@ -1,20 +1,20 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { monthStats, parseYm, periodStats, PeriodStats, PlanKind } from '../../db/plans';
+import { averageFullMonths, monthStats, parseYm, periodStats, PeriodStats, PlanKind } from '../../db/plans';
 import { useDisplayCurrency } from '../../displayCurrency';
 import { onTransactionsChanged } from '../../events';
 import BottomSheet from '../BottomSheet';
-import { DayRange, dayKeyOf, daysByMonth, daysInMonth, rangeDays, rangeToUnix } from '../dateRange';
+import { DayRange, daysByMonth, daysInMonth, rangeDays, rangeToUnix } from '../dateRange';
 import Donut from '../Donut';
 import { InfoIcon } from '../icons';
 import Meter from '../Meter';
 import { formatShort } from '../money';
+import { plural } from '../format';
 import { colors } from '../theme';
 import { DonutCenter } from './StatsView';
 
 /** Periods up to this long are measured against the plan (its share for these days); longer ones aren't. */
 const PACE_MAX_DAYS = 31;
-const DAYS_PER_MONTH = 365.25 / 12;
 
 const MONTHS_IN = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
 
@@ -68,6 +68,8 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
   const [norms, setNorms] = useState<Norms | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [infoOpen, setInfoOpen] = useState(false);
+  // a long period: the average over its full months with data (undefined = loading, null = none yet)
+  const [average, setAverage] = useState<{ average_minor: number; months: number } | null | undefined>(undefined);
   // the app's currency (Настройки → Валюта)
   const currency = useDisplayCurrency();
   const days = rangeDays(range);
@@ -78,6 +80,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
     periodStats(from, to, currency).then(setStats).catch((e) => console.error('load period stats failed', e));
     if (pace) loadNorms(range, currency).then(setNorms).catch((e) => console.error('load norms failed', e));
     else setNorms(null);
+    if (!pace) averageFullMonths(range.from, range.to, currency).then(setAverage).catch((e) => console.error('load average failed', e));
   }, [range, currency, pace]);
   useEffect(load, [load]);
   useEffect(() => onTransactionsChanged(load), [load]);
@@ -88,9 +91,6 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
   if (!stats) return <View style={styles.center}><ActivityIndicator /></View>;
   const picked = selected === null ? undefined : stats.categories.find((c) => String(c.category_id) === selected);
   const cur = stats.currency;
-  // the average per month counts only the days already gone (the current year isn't over)
-  const today = dayKeyOf(new Date());
-  const pastDays = range.to > today ? Math.max(rangeDays({ from: range.from, to: today }), 1) : days;
   const monthName = norms?.singleYm ? MONTHS_IN[parseYm(norms.singleYm).month] : '';
 
   // under the donut: the pace against the whole plan, or the average per month for a long period
@@ -98,7 +98,9 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
     ? (norms && norms.total > 0
       ? `${formatShort(stats.spent_minor)} из нормы ${formatShort(Math.round(norms.total))} ${cur} ${normLabel} (${pct(stats.spent_minor, norms.total)})`
       : 'Плана на эти дни нет — показана только структура трат.')
-    : `В среднем ${formatShort(Math.round((stats.spent_minor / pastDays) * DAYS_PER_MONTH))} ${cur} в месяц`;
+    : average === undefined ? ''
+      : average === null ? 'Для среднего в месяц нужен хотя бы один полный месяц с данными.'
+        : `В среднем ${formatShort(average.average_minor)} ${cur} в месяц (${average.months} ${plural(average.months, ['полный месяц', 'полных месяца', 'полных месяцев'])})`;
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -178,8 +180,10 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
             </>
           ) : (
             <Text style={styles.infoText}>
-              Период длиннее месяца с планом не сравнивается: показана структура трат по категориям и среднее в месяц
-              (траты за период / число прошедших дней × {DAYS_PER_MONTH.toFixed(1)}).
+              Период длиннее месяца с планом не сравнивается: показана структура трат по категориям и среднее в месяц.
+              Среднее считается только по полным месяцам с данными: текущий месяц ещё не закончился, а первый не
+              учитывается, если учёт начался не с 1-го числа. Так аренда в начале месяца и дни до установки
+              приложения не искажают цифру.
             </Text>
           )}
           <Text style={styles.infoText}>Все суммы — в валюте из настроек, по курсу на день каждой траты.</Text>

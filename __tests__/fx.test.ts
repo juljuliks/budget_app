@@ -102,3 +102,18 @@ test('history in another currency', async () => {
   const h = await planHistory(ym, 'USD');
   expect(h[0]).toEqual(expect.objectContaining({ ym, spent_minor: 2000, budget_minor: 5000 }));
 });
+
+test('average per month: only full months with data, not the current one nor a first partial one', async () => {
+  const { averageFullMonths } = require('../src/db/plans');
+  const now = new Date(2026, 9, 4); // 4 Oct 2026
+  // tracking starts on 15 Jul: July is partial, Aug and Sep are full, October is not over
+  await addManualTransaction({ amount_minor: 99900, category_id: 1, occurred_at: at(2026, 6, 15) });
+  await addManualTransaction({ amount_minor: 100000, category_id: 1, occurred_at: at(2026, 7, 5) });
+  await addManualTransaction({ amount_minor: 200000, category_id: 1, occurred_at: at(2026, 8, 20) });
+  await addManualTransaction({ amount_minor: 50000, category_id: 1, occurred_at: at(2026, 9, 2) });
+  expect(await averageFullMonths('2026-01-01', '2026-12-31', 'GEL', now)).toEqual({ average_minor: 150000, months: 2 });
+  // only September fully inside this range
+  expect(await averageFullMonths('2026-08-10', '2026-10-04', 'GEL', now)).toEqual({ average_minor: 200000, months: 1 });
+  // no full month yet
+  expect(await averageFullMonths('2026-09-10', '2026-10-04', 'GEL', now)).toBeNull();
+});

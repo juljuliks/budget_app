@@ -476,6 +476,37 @@ export async function spendingEntries(from: number, to: number, currency: Curren
   return items.map(({ row, value }) => ({ occurred_at: row.occurred_at, spent_minor: value }));
 }
 
+/**
+ * Average spending per month over the full months of [fromKey, toKey] ('YYYY-MM-DD') that have data: not the
+ * current month (not over yet) and not the first one if tracking started after its 1st. null = no such month yet.
+ */
+export async function averageFullMonths(fromKey: string, toKey: string, currency: Currency = BUDGET_CURRENCY, now = new Date()):
+  Promise<{ average_minor: number; months: number } | null> {
+  const db = await getDb();
+  const first = await db.get<{ at: number | null }>('SELECT min(occurred_at) AS at FROM transactions');
+  if (first?.at == null) return null;
+  const f = new Date(first.at * 1000);
+  // the first full month with data
+  let { year, month } = { year: f.getFullYear(), month: f.getMonth() + (f.getDate() > 1 ? 1 : 0) };
+  const [fy, fm] = fromKey.split('-').map(Number);
+  const startOfRange = fromKey.endsWith('-01') ? { year: fy, month: fm - 1 } : { year: fy, month: fm };
+  if (ymOf(startOfRange.year, startOfRange.month) > ymOf(year, month)) ({ year, month } = startOfRange);
+  const [ty, tm, td] = toKey.split('-').map(Number);
+  // the last month fully inside the range, and before the current one
+  const lastInRange = new Date(ty, tm - 1, td + 1).getDate() === 1 ? ymOf(ty, tm - 1) : ymOf(ty, tm - 2);
+  const lastDone = ymOf(now.getFullYear(), now.getMonth() - 1);
+  const last = lastInRange < lastDone ? lastInRange : lastDone;
+  const first_ = ymOf(year, month);
+  if (first_ > last) return null;
+  const { year: ly, month: lm } = parseYm(last);
+  const [from] = monthRange(year, month);
+  const [, to] = monthRange(ly, lm);
+  const { items } = await convertSpending(await spendRows(from, to), currency);
+  const total = items.reduce((sum, i) => sum + i.value, 0);
+  const months = (ly - year) * 12 + (lm - month) + 1;
+  return { average_minor: Math.round(total / months), months };
+}
+
 export type HistoryMonth = {
   ym: string;
   planned_minor: number;
