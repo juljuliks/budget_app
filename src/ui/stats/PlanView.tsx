@@ -9,6 +9,7 @@ import {
 } from '../../db/plans';
 import CurrencyPicker from '../CurrencyPicker';
 import Fab from '../Fab';
+import { daysInMonth } from '../dateRange';
 import { PencilIcon, PinIcon } from '../icons';
 import Meter from '../Meter';
 import { formatShort, formatWithCurrency, parseAmountOrZero, toInputValue } from '../money';
@@ -19,7 +20,17 @@ import PlanAmountModal, { PlanAmountTarget } from './PlanAmountModal';
 import { chart, colors } from '../theme';
 
 
-const NORM_LABELS = { day: 'норма в день', week: 'норма в неделю', '2weeks': 'норма на 2 недели', month: 'норма в месяц' } as const;
+const NORM_LABELS = { day: 'в день', week: 'в неделю', '2weeks': 'за 2 недели', month: 'в месяц' } as const;
+const NORM_DAYS = { day: 1, week: 7, '2weeks': 14 } as const;
+
+/** "≈ 46 в неделю": a flexible item's amount per its norm rhythm (the month's plan / days in the month × days). */
+function normText(item: PlanItem, ym: string): string {
+  const amount = item.converted_minor ?? 0;
+  if (!amount) return '';
+  if (item.norm_period === 'month') return `${formatShort(amount)} ${NORM_LABELS.month}`;
+  const per = (amount / daysInMonth(ym)) * NORM_DAYS[item.norm_period];
+  return `≈ ${formatShort(Math.round(per))} ${NORM_LABELS[item.norm_period]}`;
+}
 
 /** Share of the amount to distribute, "35%"; "<1%" for tiny non-zero amounts. */
 function percentOf(part: number, whole: number): string {
@@ -150,7 +161,11 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
         <View key={g.title} style={styles.group}>
           <View style={styles.groupHeader}>
             <Text style={styles.groupTitle}>{g.title}</Text>
-            <Text style={styles.groupTotal}>{formatShort(g.planned)}</Text>
+            <Text style={styles.groupTotal}>
+              {formatShort(g.planned)}
+              {/* the type's share of the amount to distribute */}
+              {shownBudget && g.planned ? <Text style={styles.groupShare}> · {percentOf(g.planned, shownBudget)}</Text> : null}
+            </Text>
           </View>
           {g.items.map((item) => (
             <View key={item.category_id} style={styles.row}>
@@ -165,12 +180,13 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
               <View style={styles.nameBox}>
                 {/* the type is the section title, so just emoji + name here */}
                 <Text style={styles.name} numberOfLines={1}>{`${item.emoji || ''} ${item.name}`.trim()}</Text>
-                {item.kind === 'fixed' || item.norm_period !== 'day' || (shownBudget && item.converted_minor) ? (
+                {item.kind === 'fixed' || item.limit_minor || (shownBudget && item.converted_minor) ? (
                   <Text style={styles.percent}>
                     {[
                       item.kind === 'fixed' ? 'фиксированная трата' : '',
                       // the norm's rhythm, when not the default "per day"
-                      item.kind === 'limit' && item.norm_period !== 'day' ? NORM_LABELS[item.norm_period] : '',
+                      // a flexible item's amount per its norm rhythm, e.g. "≈ 46 в неделю"
+                      item.kind === 'limit' ? normText(item, ym) : '',
                       shownBudget && item.converted_minor ? `${percentOf(item.converted_minor, shownBudget)} дохода` : '',
                     ].filter(Boolean).join(' · ')}
                   </Text>
@@ -253,6 +269,7 @@ const styles = StyleSheet.create({
     paddingBottom: 4, borderBottomWidth: 1, borderColor: colors.border,
   },
   groupTitle: { fontSize: 13, fontWeight: '600', color: colors.muted, textTransform: 'uppercase' },
+  groupShare: { color: colors.muted, fontWeight: '400' },
   groupTotal: { fontSize: 13, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
   row: {
     flexDirection: 'row', alignItems: 'center', paddingVertical: 10,

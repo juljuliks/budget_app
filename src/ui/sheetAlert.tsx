@@ -12,7 +12,7 @@ type Request = { title: string; message?: string; buttons: SheetButton[] };
 let show: ((r: Request) => void) | null = null;
 
 /** Like Alert.alert(title, message, buttons): a sheet with the buttons stacked, the cancel one last. */
-export function sheetAlert(title: string, message?: string, buttons: SheetButton[] = [{ text: 'OK' }]) {
+export function sheetAlert(title: string, message?: string, buttons: SheetButton[] = [{ text: 'Понятно' }]) {
   show?.({ title, message, buttons });
 }
 

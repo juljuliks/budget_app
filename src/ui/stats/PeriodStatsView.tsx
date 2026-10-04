@@ -4,6 +4,7 @@ import { averageFullMonths, monthStats, NormPeriod, parseYm, periodStats, Period
 import { useDisplayCurrency } from '../../displayCurrency';
 import { onTransactionsChanged } from '../../events';
 import BottomSheet from '../BottomSheet';
+import Button from '../Button';
 import { DayRange, daysByMonth, daysInMonth, normWindow, rangeDays, rangeToUnix, shortRange } from '../dateRange';
 import Donut from '../Donut';
 import { InfoIcon } from '../icons';
@@ -256,8 +257,9 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
         </Text>
       ) : null}
 
-      <BottomSheet visible={infoOpen} onClose={() => setInfoOpen(false)} title="Как считается">
-        <View style={styles.info}>
+      <BottomSheet visible={infoOpen} onClose={() => setInfoOpen(false)} title="Как считается" style={styles.infoSheet}>
+        {/* the text scrolls, "Понятно" stays at the bottom */}
+        <ScrollView style={styles.infoScroll} contentContainerStyle={styles.info}>
           {pace ? (
             <>
               <Text style={styles.infoText}>
@@ -305,7 +307,8 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
             </Text>
           )}
           <Text style={styles.infoText}>Все суммы — в валюте из настроек, по курсу на день каждой траты.</Text>
-        </View>
+        </ScrollView>
+        <Button title="Понятно" onPress={() => setInfoOpen(false)} style={styles.infoButton} />
       </BottomSheet>
     </ScrollView>
   );
@@ -337,7 +340,10 @@ const styles = StyleSheet.create({
   paceRow: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' },
   share: { fontSize: 13, color: colors.muted, marginTop: 4, fontVariant: ['tabular-nums'] },
   amount: { fontSize: 15, color: colors.text, fontVariant: ['tabular-nums'] },
-  info: { paddingHorizontal: 20, gap: 10 },
+  info: { paddingHorizontal: 20, gap: 10, paddingBottom: 4 },
   infoText: { fontSize: 15, color: colors.text, lineHeight: 21 },
   infoBold: { fontWeight: '600' },
+  infoSheet: { maxHeight: '85%' },
+  infoScroll: { flexGrow: 0, flexShrink: 1 },
+  infoButton: { marginTop: 12, marginHorizontal: 20 },
 });
