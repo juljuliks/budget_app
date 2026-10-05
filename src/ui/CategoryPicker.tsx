@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Category, categoryLabel, isTransferCategory, listCategories } from '../db/categories';
+import { Category, categoryLabel, categoryUsageCounts, isTransferCategory, listCategories } from '../db/categories';
 import { getTransferTypeId } from '../db/categoryTypes';
 import { onTransactionsChanged } from '../events';
 import CategorySheet from './CategorySheet';
@@ -20,7 +20,12 @@ type Props = {
   /** categories not to offer (already in the plan, the one being deleted, ...) */
   excludeIds?: number[];
   disabled?: boolean;
+  /** every category at once (the picker in its own sheet); otherwise the most used first, COLLAPSED of them and "Показать ещё" */
+  showAll?: boolean;
 };
+
+/** categories shown before "Показать ещё" when the picker sits right in a form */
+const COLLAPSED = 8;
 
 /**
  * The one category selector used wherever a category is set: title, category chips and
@@ -28,31 +33,38 @@ type Props = {
  * focus / changes, so a category created or edited elsewhere shows up immediately.
  */
 export default function CategoryPicker({
-  selectedId, onSelect, allowNone = false, title = 'Категория', transferFirst = false, excludeIds, disabled,
+  selectedId, onSelect, allowNone = false, title = 'Категория', transferFirst = false, excludeIds, disabled, showAll = false,
 }: Props) {
   // "+": a new category in a sheet, picked right after it is created (as if tapped in the list)
   const [creating, setCreating] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [transferTypeId, setTransferTypeId] = useState<number | null>(null);
+  const [expanded, setExpanded] = useState(false);
 
   const load = useCallback(() => {
-    Promise.all([listCategories(), getTransferTypeId()])
-      .then(([cats, transferType]) => {
-        // always all categories; for transfers the transfer-type ones go first
+    Promise.all([listCategories(), getTransferTypeId(), categoryUsageCounts()])
+      .then(([cats, transferType, usage]) => {
+        // the most used first (a stable sort keeps the usual order among equals); for transfers the transfer-type ones go first
+        const byUsage = showAll ? cats : [...cats].sort((a, b) => (usage.get(b.id) ?? 0) - (usage.get(a.id) ?? 0));
         setCategories(transferFirst
-          ? [...cats.filter(isTransferCategory), ...cats.filter((c) => !isTransferCategory(c))]
-          : cats);
+          ? [...byUsage.filter(isTransferCategory), ...byUsage.filter((c) => !isTransferCategory(c))]
+          : byUsage);
         setTransferTypeId(transferType);
       })
       .catch((e) => console.error('load categories failed', e));
-  }, [transferFirst]);
+  }, [transferFirst, showAll]);
 
   // on focus, and again whenever load changes while focused (useFocusEffect re-runs on a new callback): no extra useEffect
   useFocusEffect(load);
   useEffect(() => onTransactionsChanged(load), [load]);
 
   const excluded = new Set(excludeIds ?? []);
-  const shown = categories.filter((c) => !excluded.has(c.id));
+  const available = categories.filter((c) => !excluded.has(c.id));
+  const collapsible = !showAll && available.length > COLLAPSED + 1;
+  // collapsed: the first COLLAPSED, plus the selected one when it's further down (the choice stays visible)
+  const shown = !collapsible || expanded ? available
+    : available.filter((c, i) => i < COLLAPSED || c.id === selectedId);
+  const hidden = available.length - shown.length;
 
   return (
     <View>
@@ -64,6 +76,9 @@ export default function CategoryPicker({
         ))}
         {allowNone ? (
           <Chip label="Без категории" selected={selectedId === null} disabled={disabled} onPress={() => onSelect(null)} compact />
+        ) : null}
+        {collapsible ? (
+          <Chip label={expanded ? 'Свернуть' : `Показать ещё (${hidden})`} action compact disabled={disabled} onPress={() => setExpanded((v) => !v)} />
         ) : null}
         <Chip label="Новая категория" add compact disabled={disabled} onPress={() => setCreating(true)} />
       </View>

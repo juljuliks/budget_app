@@ -29,6 +29,7 @@ export default function CategoryPickerModal({ visible, title, selectedId, transf
             allowNone={allowNone}
             transferFirst={transferFirst}
             excludeIds={excludeIds}
+            showAll
           />
         </SheetScrollView>
         <SheetActions submit={null} onCancel={onClose} style={styles.actions} />

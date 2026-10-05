@@ -81,6 +81,7 @@ cd android && ./gradlew assembleRelease
 Собрать и положить на рабочий стол одной командой:
 
 ```bash
+./scripts/release.sh               # сборка -> ~/Desktop/budget-app-<версия>.apk + установка на эмулятор
 ./scripts/apk_to_desktop.sh        # -> ~/Desktop/budget-app-<версия>.apk
 ./scripts/apk_to_desktop.sh 6.0    # версия явно
 ```

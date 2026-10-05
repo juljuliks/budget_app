@@ -36,7 +36,8 @@ echo "Emulator $SERIAL booted."
 
 cd "$ROOT_DIR/android"
 if [ "$VARIANT" = "release" ]; then
-  ./gradlew assembleRelease -q
+  # SKIP_BUILD=1: the release APK was just built (scripts/release.sh), install it as is
+  [ "${SKIP_BUILD:-}" = "1" ] || ./gradlew assembleRelease -q
   APK=app/build/outputs/apk/release/app-release.apk
 else
   ./gradlew assembleDebug -q -PreactNativeArchitectures=arm64-v8a

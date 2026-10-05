@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Controller, useForm, useFormState, useWatch } from 'react-hook-form';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { incrementCategoryUsage } from '../db/categories';
 import { addManualTransaction } from '../db/transactions';
 import { emitTransactionsChanged } from '../events';
@@ -9,7 +9,7 @@ import { formStyles } from './formStyles';
 import { parseAmountInput } from './money';
 import { AMOUNT_HINT } from './strings';
 import Segmented from './Segmented';
-import CurrencyPicker from './CurrencyPicker';
+import CurrencyButton from './CurrencyButton';
 import { Currency } from '../db/fx';
 import { colors } from './theme';
 import { submitForm } from './form';
@@ -17,41 +17,49 @@ import { toast, toastError } from './toast';
 import BottomSheet, { SheetScrollView } from './BottomSheet';
 import { SheetActions } from './Button';
 import RangeCalendar from './RangeCalendar';
-import { DayKey, dayKeyOf, parseDayKey, shortRange } from './dateRange';
+import { DayKey, dayKeyOf, parseDayKey } from './dateRange';
+import { MONTHS_GEN } from './format';
 import { showLimitAlert } from '../notifications/notifeeIntegration';
 
 type Props = { visible: boolean; onClose: () => void };
 const KINDS = [['purchase', 'Расход'], ['deposit', 'Пополнение']] as const;
 type Kind = typeof KINDS[number][0];
-/** 'other': the day picked in the calendar (`date`) */
-type Day = 'today' | 'yesterday' | 'other';
-type Form = { amount: string; kind: Kind; currency: Currency; description: string; day: Day; date: DayKey | null; categoryId: number | null };
+type Form = { amount: string; kind: Kind; currency: Currency; description: string; date: DayKey; categoryId: number | null };
 
-const EMPTY: Form = { amount: '', kind: 'purchase', currency: 'GEL', description: '', day: 'today', date: null, categoryId: null };
+const empty = (): Form => ({ amount: '', kind: 'purchase', currency: 'GEL', description: '', date: dayKeyOf(new Date()), categoryId: null });
+
+/** "Сегодня, 5 октября" / "Вчера, 4 октября" / "28 сентября" / "28 сентября 2025" */
+function dayLabel(day: DayKey): string {
+  const now = new Date();
+  const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+  const d = parseDayKey(day);
+  const date = `${d.getDate()} ${MONTHS_GEN[d.getMonth()]}${d.getFullYear() !== now.getFullYear() ? ` ${d.getFullYear()}` : ''}`;
+  return day === dayKeyOf(now) ? `Сегодня, ${date}` : day === dayKeyOf(yesterday) ? `Вчера, ${date}` : date;
+}
 
 /** Manual entry in a sheet (the "+" on the operations): cash, or anything the bank didn't send an SMS for. */
 export default function AddTransactionSheet({ visible, onClose }: Props) {
   // a new operation: "Добавить" is always there (it creates one), the amount is checked on submit
-  const form = useForm<Form>({ defaultValues: EMPTY });
+  const form = useForm<Form>({ defaultValues: empty() });
   // a clean form each time it opens (no focus: the keyboard opens on a tap)
   useEffect(() => {
-    if (visible) form.reset(EMPTY);
+    if (visible) form.reset(empty());
   }, [visible, form]);
   const { isSubmitting: saving } = useFormState({ control: form.control });
-  // "Другая дата": the calendar sheet, with the day being picked
+  // "Изменить": the calendar sheet, with the day being picked
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [draft, setDraft] = useState<DayKey | null>(null);
   const today = dayKeyOf(new Date());
   const date = useWatch({ control: form.control, name: 'date' });
 
 
-  const save = submitForm(form, async ({ amount, kind, currency, description, day, date, categoryId }) => {
+  const save = submitForm(form, async ({ amount, kind, currency, description, date, categoryId }) => {
     const minor = parseAmountInput(amount)!;
     try {
-      // today / yesterday at this time; another day at noon
-      const at = day === 'other' && date ? parseDayKey(date) : new Date();
-      if (day === 'other' && date) at.setHours(12, 0, 0, 0);
-      if (day === 'yesterday') at.setDate(at.getDate() - 1);
+      // today: now; another day: this time of day on it (no time is picked)
+      const now = new Date();
+      const at = parseDayKey(date);
+      at.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), 0);
       await addManualTransaction({
         amount_minor: minor,
         currency,
@@ -77,7 +85,8 @@ export default function AddTransactionSheet({ visible, onClose }: Props) {
       <Controller control={form.control} name="kind" render={({ field }) => <Segmented options={KINDS} value={field.value} onChange={field.onChange} />} />
 
       <Text style={formStyles.label}>Сумма</Text>
-      <Controller control={form.control} name="currency" render={({ field }) => <CurrencyPicker value={field.value} onChange={field.onChange} style={styles.currency} />} />
+      {/* the currency right of the amount, as in the plan */}
+      <View style={styles.amountRow}>
       <Controller
         control={form.control}
         name="amount"
@@ -94,6 +103,8 @@ export default function AddTransactionSheet({ visible, onClose }: Props) {
       />
         )}
       />
+      <Controller control={form.control} name="currency" render={({ field }) => <CurrencyButton value={field.value} onChange={field.onChange} />} />
+      </View>
 
       <Text style={formStyles.label}>Описание (необязательно)</Text>
       <Controller
@@ -112,25 +123,17 @@ export default function AddTransactionSheet({ visible, onClose }: Props) {
       />
 
       <Text style={formStyles.label}>Дата</Text>
-      <Controller
-        control={form.control}
-        name="day"
-        render={({ field }) => {
-          // the third option names the picked day once there is one: "12 сен"
-          const options = [['today', 'Сегодня'], ['yesterday', 'Вчера'], ['other', field.value === 'other' && date ? shortRange({ from: date, to: date }) : 'Другая дата']] as const;
-          return (
-            <Segmented
-              options={options}
-              value={field.value}
-              onChange={(d) => {
-                if (d !== 'other') { field.onChange(d); return; }
-                setDraft(form.getValues('date'));
-                setCalendarOpen(true);
-              }}
-            />
-          );
-        }}
-      />
+      <View style={styles.dateRow}>
+        <Text style={styles.date}>{dayLabel(date)}</Text>
+        <TouchableOpacity
+          onPress={() => { setDraft(form.getValues('date')); setCalendarOpen(true); }}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Изменить дату"
+        >
+          <Text style={styles.change}>Изменить</Text>
+        </TouchableOpacity>
+      </View>
 
       <Controller
         control={form.control}
@@ -148,8 +151,7 @@ export default function AddTransactionSheet({ visible, onClose }: Props) {
               title: 'Выбрать',
               disabled: !draft,
               onPress: () => {
-                form.setValue('date', draft, { shouldDirty: true });
-                form.setValue('day', 'other', { shouldDirty: true });
+                if (draft) form.setValue('date', draft, { shouldDirty: true });
                 setCalendarOpen(false);
               },
             }}
@@ -166,7 +168,10 @@ export default function AddTransactionSheet({ visible, onClose }: Props) {
 const styles = StyleSheet.create({
   root: { maxHeight: '92%' },
   content: { paddingHorizontal: 20, paddingBottom: 8 },
-  amount: { fontSize: 24, fontWeight: '600' },
-  currency: { marginBottom: 8 },
+  amountRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  amount: { flex: 1, fontSize: 24, fontWeight: '600' },
+  dateRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  date: { fontSize: 16, color: colors.text },
+  change: { fontSize: 15, color: colors.accent },
   sheet: { paddingHorizontal: 16 },
 });
