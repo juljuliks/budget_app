@@ -7,7 +7,7 @@ import { onTransactionsChanged } from '../../events';
 import BottomSheet from '../BottomSheet';
 import Button from '../Button';
 import { DayRange, dayKeyOf, daysInMonth, parseDayKey, rangeDays, rangeToUnix, shortRange } from '../dateRange';
-import { flatOf, limitChange, loadNorms, NormPart, Norms, Pace, paceOf, rhythmBar } from './norms';
+import { flatOf, isPartOfWindow, limitChange, loadNorms, NormPart, Norms, Pace, paceOf, rhythmBar } from './norms';
 import Donut from '../Donut';
 import { InfoIcon } from '../icons';
 import Meter from '../Meter';
@@ -17,6 +17,8 @@ import { plural } from '../format';
 import { colors } from '../theme';
 import { DonutCenter, RefundsRow } from './StatsView';
 import { useLatestRequest } from '../useLatestRequest';
+import SummaryTiles, { GROUP_TITLES } from './SummaryTiles';
+import { pct, summaryGroups } from './summaryGroups';
 
 /** Periods up to this long are measured against the plan (its share for these days); longer ones aren't. */
 const PACE_MAX_DAYS = 31;
@@ -42,11 +44,6 @@ const MONTHS_PREP = ['январе', 'феврале', 'марте', 'апрел
 /** One look for every ⓘ on this screen. */
 const INFO_SIZE = 18;
 
-/** "12%", "<1%" for a tiny non-zero share. */
-function pct(part: number, whole: number): string {
-  const p = whole > 0 ? Math.round((part / whole) * 100) : 0;
-  return p === 0 && part > 0 ? '<1%' : `${p}%`;
-}
 
 /**
  * Spending of a period by category, with a donut. A short period (a day, a week, up to a month) is measured
@@ -69,8 +66,6 @@ export default function PeriodStatsView({ range, emptyText = 'За этот пе
   const openTransactions = useOpenCategoryTransactions();
   const days = rangeDays(range);
   const today = dayKeyOf(new Date());
-  /** the viewed period is a part of the category's rhythm window (a day of a weekly limit): measured as the whole window */
-  const isPartOfWindow = (p: { window: DayRange }) => p.window.from !== range.from || p.window.to !== range.to;
   const pace = days <= PACE_MAX_DAYS;
 
   const latest = useLatestRequest();
@@ -123,42 +118,11 @@ export default function PeriodStatsView({ range, emptyText = 'За этот пе
     return missing.length ? ` В ${missing.join(' и ')} у категории плана нет — эти дни считаются как 0.` : '';
   };
   const monthIn = norms ? MONTHS_IN[parseYm(norms.ym).month] : '';
-  // the summary measures what the rows measure on these days: a weekly / 2-week limit on a day (or a week part) is
-  // the whole week's business (its row), so its spending is named apart, not checked against 1/7 of the limit
-  const fit = norms ? norms.flex.filter((f) => !isPartOfWindow(norms.byCategory.get(f.id)!)) : [];
-  const fitNorm = fit.reduce((a, f) => a + f.norm, 0);
-  const flexSpent = fit.reduce((a, f) => a + f.spent, 0);
-  const byWindows = (norms?.flexSpent ?? 0) - flexSpent;
-  const windowName = norms && norms.flex.some((f) => f.spent > 0 && norms.byCategory.get(f.id)!.rhythm === '2weeks' && !fit.includes(f))
-    ? 'по недельным и двухнедельным лимитам' : 'по недельным лимитам';
-
-  // under the donut: the pace against the whole plan (three lines), or the average per month for a long period
-  const outside = stats.spent_minor - (norms?.flexSpent ?? 0);
-  const summary: React.ReactNode = pace
-    ? (norms && norms.total > 0 ? (() => {
-      const left = Math.round(fitNorm) - flexSpent;
-      const { before, after } = norms.daily;
-      const moved = after !== null && Math.round(after) !== Math.round(before);
-      const extras = [
-        byWindows > 0 ? `${money(byWindows)} ${windowName}` : null,
-        outside > 0 ? `${money(outside)} вне лимитов` : null,
-      ].filter(Boolean);
-      return (
-        <>
-          {fitNorm > 0 ? (
-            <>
-              Повседневные траты: {money(flexSpent)} из {m(fitNorm)} ({pct(flexSpent, Math.round(fitNorm))}){'\n'}
-              <Text style={left < 0 ? styles.paceAhead : styles.paceOk}>
-                {left < 0 ? `Перерасход ${money(-left)}` : range.to >= today ? `Осталось ${money(left)}` : `Сэкономлено ${money(left)}`}
-              </Text>
-              {extras.length ? ` · ещё ${extras.join(', ')}` : ''}
-            </>
-          ) : extras.length ? capitalize(extras.join(' · ')) : null}
-          {fitNorm > 0 || extras.length ? '\n' : ''}Лимит в день: {moved ? <><Text style={styles.crossed}>{m(before)}</Text>{' → '}
-            <Text style={after! < before ? styles.paceAhead : styles.paceOk}>{m(after!)}</Text></> : m(before)}
-        </>
-      );
-    })() : 'Плана на эти дни нет — показана только структура трат.')
+  // under the donut: the limits by rhythm as tiles, or the average per month for a long period
+  const groups = pace && norms ? summaryGroups(norms, range, stats.spent_minor, today) : [];
+  const limited = groups.filter((g) => g.key !== 'outside');
+  const summary = pace
+    ? (limited.length ? null : 'Плана на эти дни нет — показана только структура трат.')
     : average === undefined ? ''
       : average === null ? 'Для среднего в месяц нужен хотя бы один полный месяц с данными.'
         : `В среднем ${money(average.average_minor)} в месяц (${average.months} ${plural(average.months, ['полный месяц', 'полных месяца', 'полных месяцев'])})`;
@@ -172,10 +136,20 @@ export default function PeriodStatsView({ range, emptyText = 'За этот пе
           <DonutCenter total={stats.spent_minor} picked={picked} currency={cur} />
         </Donut>
       </View>
-      <TouchableOpacity style={styles.summaryRow} onPress={() => openInfo('summary')} accessibilityLabel="Как считаются повседневные траты">
-        <Text style={styles.summary}>{summary}</Text>
-        <InfoIcon color={colors.accent} size={INFO_SIZE} />
-      </TouchableOpacity>
+      {limited.length ? (
+        <>
+          <TouchableOpacity style={styles.tilesHeader} onPress={() => openInfo('summary')} accessibilityLabel="Как считаются лимиты">
+            <Text style={styles.tilesTitle}>Лимиты</Text>
+            <InfoIcon color={colors.accent} size={INFO_SIZE} />
+          </TouchableOpacity>
+          <SummaryTiles groups={groups} money={money} onPress={() => openInfo('summary')} />
+        </>
+      ) : (
+        <TouchableOpacity style={styles.summaryRow} onPress={() => openInfo('summary')} accessibilityLabel="Как считаются траты">
+          <Text style={styles.summary}>{summary}</Text>
+          <InfoIcon color={colors.accent} size={INFO_SIZE} />
+        </TouchableOpacity>
+      )}
 
       {stats.categories.length === 0 ? <Text style={styles.hint}>{emptyText}</Text> : null}
       {stats.groups.map((g) => (
@@ -201,14 +175,14 @@ export default function PeriodStatsView({ range, emptyText = 'За этот пе
                   <Text style={styles.name} numberOfLines={1}>{name}</Text>
                   <Text style={styles.amount}>
                     {money(c.spent_minor)}
-                    {plan?.kind === 'limit' && plan.rhythm !== 'month' && !isPartOfWindow(plan) && plan.periodNorm > 0
+                    {plan?.kind === 'limit' && plan.rhythm !== 'month' && !isPartOfWindow(plan.window, range) && plan.periodNorm > 0
                       ? <Text style={styles.ofLimit}> / {m(plan.periodNorm)} ({pct(c.spent_minor, Math.round(plan.periodNorm))})</Text> : null}
                   </Text>
                 </View>
                 {plan?.kind === 'limit' && plan.rhythm !== 'month' ? (() => {
                   // a period shorter than the category's rhythm (a day of a weekly limit) is measured as the whole rhythm
                   // window so far: a weekly category is meant to be spent unevenly, a day's share of it would read as overspend
-                  const whole = isPartOfWindow(plan);
+                  const whole = isPartOfWindow(plan.window, range);
                   const limit = Math.round(whole ? plan.windowNorm : plan.periodNorm);
                   const spent = whole ? plan.windowSpent : c.spent_minor;
                   const left = limit - spent;
@@ -300,7 +274,7 @@ export default function PeriodStatsView({ range, emptyText = 'За этот пе
       <BottomSheet
         visible={infoOpen !== null}
         onClose={() => setInfoOpen(null)}
-        title={typeof infoOpen === 'object' && infoOpen ? infoOpen.name : pace ? 'Повседневные траты' : 'Среднее в месяц'}
+        title={typeof infoOpen === 'object' && infoOpen ? infoOpen.name : pace ? 'Лимиты' : 'Среднее в месяц'}
         style={styles.infoSheet}
       >
         {/* the text scrolls, "Понятно" stays at the bottom; every calculation is set apart in a code style */}
@@ -312,7 +286,7 @@ export default function PeriodStatsView({ range, emptyText = 'За этот пе
             // a flexible category is checked over the viewed days, a month-rhythm one over the month so far
             const byMonth = p.rhythm === 'month';
             // a day of a weekly limit: the whole week
-            const byWindow = !byMonth && isPartOfWindow(p);
+            const byWindow = !byMonth && isPartOfWindow(p.window, range);
             const norm = byMonth || byWindow ? p.windowNorm : p.periodNorm;
             const spent = byMonth || byWindow ? p.windowSpent : stats.categories.find((c) => c.category_id === infoOpen.id)?.spent_minor ?? p.periodSpent;
             const parts = byMonth || byWindow ? p.windowParts : p.periodParts;
@@ -395,53 +369,39 @@ export default function PeriodStatsView({ range, emptyText = 'За этот пе
           })() : pace ? (
             <>
               <Text style={styles.infoText}>
-                {fitNorm > 0 ? (
-                  <>
-                    Лимит повседневных трат за {shortRange(range)}: <Text style={styles.infoBold}>{m(fitNorm)}</Text>. Потрачено{' '}
-                    <Text style={styles.infoBold}>{money(flexSpent)}</Text> —{' '}
-                    <Text style={styles.infoBold}>{delta(flexSpent, fitNorm)}</Text>.{' '}
-                  </>
-                ) : null}
-                Это общая картина: где-то больше, где-то меньше — важно, укладываетесь ли вы в сумме.
+                Плитки — лимиты категорий, сложенные по тому, как вы тратите (задаётся в плане). Крупно —{' '}
+                <Text style={[styles.infoBold, styles.paceOk]}>сколько осталось</Text> или{' '}
+                <Text style={[styles.infoBold, styles.paceAhead]}>перерасход</Text>, ниже — потрачено из лимита и как период
+                изменил лимит на остаток месяца.
               </Text>
-              {norms && norms.total > 0 ? (
-                <Text style={styles.infoText}>
-                  <Text style={styles.infoBold}>Вне лимитов</Text> — траты, которые в повседневные не входят: обязательные платежи, переводы
-                  и покупки «крупно, раз в месяц», категории без плана.{outside > 0 ? <> За эти дни: <Text style={styles.infoBold}>{money(outside)}</Text>.</> : null}{'\n'}
-                  {byWindows > 0 ? (
-                    <>
-                      <Text style={styles.infoBold}>По недельным лимитам</Text> — траты категорий, у которых лимит на неделю (или две), а период короче:
-                      они сравниваются с лимитом всей недели — смотрите строки категорий, а не с его седьмой частью.{'\n'}
-                    </>
-                  ) : null}
-                  <Text style={styles.infoBold}>Лимит в день</Text> — лимиты всех повседневных категорий на один день вместе (недельные — их седьмая часть):
-                  в начале периода и после него, на оставшиеся дни месяца. Перерасход его уменьшает, экономия — увеличивает.
-                </Text>
-              ) : null}
               <Text style={styles.infoText}>
-                Лимит — что осталось от месячного плана каждой повседневной категории, разложенное на оставшиеся дни
-                месяца: перерасход раньше в месяце уменьшает его, экономия увеличивает. Не входят обязательные платежи, категории, которые вы тратите «крупно, раз в месяц», и категории без плана.
+                <Text style={styles.infoBold}>Дневные</Text> — лимит на выбранные дни.{'\n'}
+                <Text style={styles.infoBold}>Недельные, двухнедельные</Text> — если период короче, считается вся неделя (или две), как
+                в строках категорий: траты в другие её дни тоже входят.{'\n'}
+                <Text style={styles.infoBold}>Месячные</Text> («крупно, раз в месяц») — план на месяц и траты с 1-го.{'\n'}
+                <Text style={styles.infoBold}>Вне лимитов</Text> — траты за период, которые в лимиты не входят: обязательные платежи,
+                переводы, категории без плана.
               </Text>
-              {fit.length ? (
+              <Text style={styles.infoText}>
+                Лимит — что осталось от месячного плана категории, разложенное на оставшиеся дни месяца: перерасход раньше в
+                месяце уменьшает его, экономия увеличивает.
+              </Text>
+              {limited.length ? (
                 <TouchableOpacity onPress={() => setCalcOpen((v) => !v)} accessibilityRole="button" accessibilityState={{ expanded: calcOpen }}>
                   <Text style={styles.calcToggle}>{calcOpen ? 'Скрыть расчёт ⌃' : 'Как посчитано ›'}</Text>
                 </TouchableOpacity>
               ) : null}
-              {calcOpen ? (
-                <>
-                  {fit.map((f) => (
-                    <Text key={f.id} style={styles.infoText}>
-                      <Text style={styles.infoBold}>{f.name}</Text>: потрачено <Code>{money(f.spent)}</Code>, лимит{' '}
-                      <Code>{formula(f.parts)}</Code>.{noPlan(f.parts)}
-                    </Text>
+              {calcOpen ? limited.map((g) => (
+                <Text key={g.key} style={styles.infoText}>
+                  <Text style={styles.infoBold}>{GROUP_TITLES[g.key]}{g.window ? ` (${shortRange(g.window)})` : ''}</Text>:{'\n'}
+                  {g.items.map((i) => (
+                    <React.Fragment key={i.id}>
+                      {i.name}: потрачено <Code>{money(i.spent)}</Code>, {g.key === 'month' ? <>план <Code>{m(i.limit)}</Code></> : <>лимит <Code>{formula(i.parts)}</Code></>}.{'\n'}
+                    </React.Fragment>
                   ))}
-                  {fit.length > 1 ? (
-                    <Text style={styles.infoText}>
-                      Итого: <Code>{fit.map((f) => m(f.norm)).join(' + ')} = {m(fitNorm)}</Code>.
-                    </Text>
-                  ) : null}
-                </>
-              ) : null}
+                  Итого: <Code>{money(g.spent)} из {m(g.limit)}</Code>.
+                </Text>
+              )) : null}
             </>
           ) : (
             <Text style={styles.infoText}>
@@ -469,6 +429,8 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 32 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
   donutWrap: { alignItems: 'center', marginBottom: 8 },
+  tilesHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4, marginBottom: 8 },
+  tilesTitle: { fontSize: 13, fontWeight: '600', color: colors.muted, textTransform: 'uppercase' },
   summaryRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 8, paddingHorizontal: 8 },
   summary: { flexShrink: 1, fontSize: 14, color: colors.text, textAlign: 'center' },
   hint: { color: colors.muted, fontSize: 14, textAlign: 'center', marginVertical: 12 },
