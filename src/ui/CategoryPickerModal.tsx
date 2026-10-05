@@ -31,6 +31,7 @@ export default function CategoryPickerModal({ visible, title, selectedId, transf
             transferFirst={transferFirst}
             newCategory={newCategory}
             excludeIds={excludeIds}
+            showAll
             // "+ Новая категория" leaves to another screen: close the sheet first
             onNavigateAway={onClose}
           />

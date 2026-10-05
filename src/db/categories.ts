@@ -159,6 +159,13 @@ export async function incrementCategoryUsage(categoryId: number, by = 1) {
     [categoryId, by]);
 }
 
+/** How many times each category was chosen (category id → count). */
+export async function categoryUsageCounts(): Promise<Map<number, number>> {
+  const db = await getDb();
+  const rows = await db.all<{ category_id: number; usage_count: number }>('SELECT category_id, usage_count FROM category_usage');
+  return new Map(rows.map((r) => [r.category_id, r.usage_count]));
+}
+
 /** Most used live categories first. */
 export async function topCategories(limit = 3): Promise<Array<Category & { usage_count: number }>> {
   const db = await getDb();

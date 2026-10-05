@@ -16,10 +16,14 @@ type Props = {
    * 1st tap: that single day. 2nd tap: range between the two days. 3rd tap starts over.
    */
   onChange: (r: DayRange) => void;
+  /** one day only: every tap picks that day */
+  single?: boolean;
+  /** days after this one can't be picked (e.g. a transaction can't be in the future) */
+  maxDay?: DayKey;
 };
 
 /** Month grid (Monday first) for picking a day or a period. */
-export default function RangeCalendar({ value, onChange }: Props) {
+export default function RangeCalendar({ value, onChange, single = false, maxDay }: Props) {
   const today = dayKeyOf(new Date());
   const initial = value ? parseDayKey(value.to) : new Date();
   const [month, setMonth] = useState({ y: initial.getFullYear(), m: initial.getMonth() });
@@ -37,6 +41,7 @@ export default function RangeCalendar({ value, onChange }: Props) {
   }, [month]);
 
   function tap(day: DayKey) {
+    if (single) { onChange({ from: day, to: day }); return; }
     if (anchor === null) {
       setAnchor(day);
       onChange({ from: day, to: day });
@@ -67,17 +72,18 @@ export default function RangeCalendar({ value, onChange }: Props) {
             if (!day) return <View key={i} style={styles.cell} />;
             const inRange = value !== null && day >= value.from && day <= value.to;
             const isEdge = value !== null && (day === value.from || day === value.to);
+            const off = maxDay !== undefined && day > maxDay;
             return (
-              <TouchableOpacity key={day} style={[styles.cell, inRange && styles.inRange, isEdge && styles.edge]} onPress={() => tap(day)}>
-                <Text style={[styles.day, day === today && styles.today, isEdge && styles.edgeText]}>{Number(day.slice(8))}</Text>
+              <TouchableOpacity key={day} style={[styles.cell, inRange && styles.inRange, isEdge && styles.edge]} onPress={() => tap(day)} disabled={off}>
+                <Text style={[styles.day, day === today && styles.today, isEdge && styles.edgeText, off && styles.off]}>{Number(day.slice(8))}</Text>
               </TouchableOpacity>
             );
           })}
         </View>
       ))}
-      <Text style={styles.hint}>
+      {single ? null : <Text style={styles.hint}>
         {anchor ? 'Выберите конец периода или оставьте один день' : 'Нажмите день; второе нажатие — конец периода'}
-      </Text>
+      </Text>}
     </View>
   );
 }
@@ -95,5 +101,6 @@ const styles = StyleSheet.create({
   day: { fontSize: 15, color: colors.text },
   today: { fontWeight: '700', color: colors.accent },
   edgeText: { color: '#FFFFFF', fontWeight: '600' },
+  off: { color: colors.border },
   hint: { fontSize: 12, color: colors.muted, textAlign: 'center', marginTop: 4 },
 });
