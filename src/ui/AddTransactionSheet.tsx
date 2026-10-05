@@ -168,7 +168,8 @@ export default function AddTransactionSheet({ visible, onClose }: Props) {
 const styles = StyleSheet.create({
   root: { maxHeight: '92%' },
   content: { paddingHorizontal: 20, paddingBottom: 8 },
-  amountRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  // stretch: the currency button as tall as the amount field
+  amountRow: { flexDirection: 'row', alignItems: 'stretch', gap: 8 },
   amount: { flex: 1, fontSize: 24, fontWeight: '600' },
   dateRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   date: { fontSize: 16, color: colors.text },
