@@ -18,7 +18,7 @@ import { colors } from '../theme';
 import { DonutCenter, RefundsRow } from './StatsView';
 import { useLatestRequest } from '../useLatestRequest';
 import SummaryTiles, { GROUP_TITLES } from './SummaryTiles';
-import { pct, summaryGroups } from './summaryGroups';
+import { pct, SummaryGroupKey, summaryGroups } from './summaryGroups';
 
 /** Periods up to this long are measured against the plan (its share for these days); longer ones aren't. */
 const PACE_MAX_DAYS = 31;
@@ -36,6 +36,18 @@ const WEEKDAYS = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
 
 /** days in a rhythm window */
 const RHYTHM_LEN = { day: 1, week: 7, '2weeks': 14, month: 0 } as const;
+
+/** what an explanation sheet is about: the line under the donut, a category, a limits block */
+type Info = 'summary' | { id: number; name: string } | { group: SummaryGroupKey };
+
+/** what a limits block counts, in plain words */
+const GROUP_ABOUT: Record<SummaryGroupKey, string> = {
+  day: 'Категории с лимитом на день: лимит на выбранные дни.',
+  week: 'Категории с лимитом на неделю. Если период короче недели, считается вся неделя, как в строках категорий: траты в другие её дни тоже входят.',
+  '2weeks': 'Категории с лимитом на 2 недели. Если период короче, считаются обе недели целиком: траты в другие их дни тоже входят.',
+  month: 'Категории, которые вы тратите «крупно, раз в месяц»: план на месяц и траты с 1-го.',
+  outside: 'Траты за период, которые в лимиты не входят: обязательные платежи, переводы, категории без плана.',
+};
 
 const capitalize = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 
@@ -55,10 +67,10 @@ export default function PeriodStatsView({ range, emptyText = 'За этот пе
   const [norms, setNorms] = useState<Norms | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   // which explanation is open: the line under the donut or a category's block
-  const [infoOpen, setInfoOpen] = useState<'summary' | { id: number; name: string } | null>(null);
+  const [infoOpen, setInfoOpen] = useState<Info | null>(null);
   // the formulas in an explanation, folded by default
   const [calcOpen, setCalcOpen] = useState(false);
-  const openInfo = (v: 'summary' | { id: number; name: string }) => { setCalcOpen(false); setInfoOpen(v); };
+  const openInfo = (v: Info) => { setCalcOpen(false); setInfoOpen(v); };
   // a long period: the average over its full months with data (undefined = loading, null = none yet)
   const [average, setAverage] = useState<{ average_minor: number; months: number } | null | undefined>(undefined);
   // the app's currency (Настройки → Валюта)
@@ -121,6 +133,18 @@ export default function PeriodStatsView({ range, emptyText = 'За этот пе
   // under the donut: the limits by rhythm as tiles, or the average per month for a long period
   const groups = pace && norms ? summaryGroups(norms, range, stats.spent_minor, today) : [];
   const limited = groups.filter((g) => g.key !== 'outside');
+  const catInfo = infoOpen && typeof infoOpen === 'object' && 'id' in infoOpen ? infoOpen : null;
+  const groupInfo = infoOpen && typeof infoOpen === 'object' && 'group' in infoOpen ? infoOpen : null;
+  const openGroup = groupInfo ? groups.find((g) => g.key === groupInfo.group) : undefined;
+  /** "Недельные лимиты · 28 сен – 4 окт" */
+  const groupTitle = (key: SummaryGroupKey) => {
+    const g = groups.find((x) => x.key === key);
+    const name = key === 'outside' ? GROUP_TITLES.outside : `${GROUP_TITLES[key]} лимиты`;
+    return g?.window && key !== 'month' ? `${name} · ${shortRange(g.window)}` : key === 'month' ? `${name} · ${monthIn}` : name;
+  };
+  // the period's spending in no limit, by category (the "Вне лимитов" block's calculation)
+  const outsideCats = stats.categories.filter((c) => c.spent_minor > 0
+    && (c.category_id === null || norms?.byCategory.get(c.category_id)?.kind !== 'limit'));
   const summary = pace
     ? (limited.length ? null : 'Плана на эти дни нет — показана только структура трат.')
     : average === undefined ? ''
@@ -138,11 +162,8 @@ export default function PeriodStatsView({ range, emptyText = 'За этот пе
       </View>
       {limited.length ? (
         <>
-          <TouchableOpacity style={styles.tilesHeader} onPress={() => openInfo('summary')} accessibilityLabel="Как считаются лимиты">
-            <Text style={styles.tilesTitle}>Лимиты</Text>
-            <InfoIcon color={colors.accent} size={INFO_SIZE} />
-          </TouchableOpacity>
-          <SummaryTiles groups={groups} money={money} onPress={() => openInfo('summary')} />
+          <Text style={styles.tilesTitle}>Лимиты</Text>
+          <SummaryTiles groups={groups} money={money} onPress={(key) => openInfo({ group: key })} />
         </>
       ) : (
         <TouchableOpacity style={styles.summaryRow} onPress={() => openInfo('summary')} accessibilityLabel="Как считаются траты">
@@ -274,24 +295,24 @@ export default function PeriodStatsView({ range, emptyText = 'За этот пе
       <BottomSheet
         visible={infoOpen !== null}
         onClose={() => setInfoOpen(null)}
-        title={typeof infoOpen === 'object' && infoOpen ? infoOpen.name : pace ? 'Лимиты' : 'Среднее в месяц'}
+        title={catInfo ? catInfo.name : groupInfo ? groupTitle(groupInfo.group) : pace ? 'Траты за период' : 'Среднее в месяц'}
         style={styles.infoSheet}
       >
         {/* the text scrolls, "Понятно" stays at the bottom; every calculation is set apart in a code style */}
         <ScrollView style={styles.infoScroll} contentContainerStyle={styles.info}>
-          {typeof infoOpen === 'object' && infoOpen && norms?.byCategory.get(infoOpen.id) ? (() => {
+          {catInfo && norms?.byCategory.get(catInfo.id) ? (() => {
             // in plain words first, this category's real numbers; the formulas under "Как посчитано"
-            const p = norms.byCategory.get(infoOpen.id)!;
-            const mtd = norms.monthToDate.get(infoOpen.id) ?? 0;
+            const p = norms.byCategory.get(catInfo.id)!;
+            const mtd = norms.monthToDate.get(catInfo.id) ?? 0;
             // a flexible category is checked over the viewed days, a month-rhythm one over the month so far
             const byMonth = p.rhythm === 'month';
             // a day of a weekly limit: the whole week
             const byWindow = !byMonth && isPartOfWindow(p.window, range);
             const norm = byMonth || byWindow ? p.windowNorm : p.periodNorm;
-            const spent = byMonth || byWindow ? p.windowSpent : stats.categories.find((c) => c.category_id === infoOpen.id)?.spent_minor ?? p.periodSpent;
+            const spent = byMonth || byWindow ? p.windowSpent : stats.categories.find((c) => c.category_id === catInfo.id)?.spent_minor ?? p.periodSpent;
             const parts = byMonth || byWindow ? p.windowParts : p.periodParts;
             const pace_ = paceOf(spent, norm, mtd, p.monthLimit);
-            const bar = rhythmBar(p, range, Math.min(p.windowSpent, stats.categories.find((c) => c.category_id === infoOpen.id)?.spent_minor ?? 0));
+            const bar = rhythmBar(p, range, Math.min(p.windowSpent, stats.categories.find((c) => c.category_id === catInfo.id)?.spent_minor ?? 0));
             // the limit vs the plan's flat share, shown when more than 5% off
             const flat = byMonth ? norm : flatOf(parts);
             const change = byMonth ? null : limitChange(norm, flat);
@@ -366,43 +387,64 @@ export default function PeriodStatsView({ range, emptyText = 'За этот пе
                 ) : null}
               </>
             );
-          })() : pace ? (
-            <>
-              <Text style={styles.infoText}>
-                Плитки — лимиты категорий, сложенные по тому, как вы тратите (задаётся в плане). Крупно —{' '}
-                <Text style={[styles.infoBold, styles.paceOk]}>сколько осталось</Text> или{' '}
-                <Text style={[styles.infoBold, styles.paceAhead]}>перерасход</Text>, ниже — потрачено из лимита и как период
-                изменил лимит на остаток месяца.
-              </Text>
-              <Text style={styles.infoText}>
-                <Text style={styles.infoBold}>Дневные</Text> — лимит на выбранные дни.{'\n'}
-                <Text style={styles.infoBold}>Недельные, двухнедельные</Text> — если период короче, считается вся неделя (или две), как
-                в строках категорий: траты в другие её дни тоже входят.{'\n'}
-                <Text style={styles.infoBold}>Месячные</Text> («крупно, раз в месяц») — план на месяц и траты с 1-го.{'\n'}
-                <Text style={styles.infoBold}>Вне лимитов</Text> — траты за период, которые в лимиты не входят: обязательные платежи,
-                переводы, категории без плана.
-              </Text>
-              <Text style={styles.infoText}>
-                Лимит — что осталось от месячного плана категории, разложенное на оставшиеся дни месяца: перерасход раньше в
-                месяце уменьшает его, экономия увеличивает.
-              </Text>
-              {limited.length ? (
-                <TouchableOpacity onPress={() => setCalcOpen((v) => !v)} accessibilityRole="button" accessibilityState={{ expanded: calcOpen }}>
-                  <Text style={styles.calcToggle}>{calcOpen ? 'Скрыть расчёт ⌃' : 'Как посчитано ›'}</Text>
-                </TouchableOpacity>
-              ) : null}
-              {calcOpen ? limited.map((g) => (
-                <Text key={g.key} style={styles.infoText}>
-                  <Text style={styles.infoBold}>{GROUP_TITLES[g.key]}{g.window ? ` (${shortRange(g.window)})` : ''}</Text>:{'\n'}
-                  {g.items.map((i) => (
-                    <React.Fragment key={i.id}>
-                      {i.name}: потрачено <Code>{money(i.spent)}</Code>, {g.key === 'month' ? <>план <Code>{m(i.limit)}</Code></> : <>лимит <Code>{formula(i.parts)}</Code></>}.{'\n'}
-                    </React.Fragment>
-                  ))}
-                  Итого: <Code>{money(g.spent)} из {m(g.limit)}</Code>.
+          })() : groupInfo && openGroup ? (() => {
+            // a limits block: its total, what it counts, how the period moved the limit, each category's numbers
+            const g = openGroup;
+            const per = g.key === 'day' || g.key === 'week' || g.key === '2weeks' ? PER_PERIOD[g.key] : '';
+            const after = g.change?.after ?? null;
+            return (
+              <>
+                <Text style={styles.infoText}>
+                  {g.key === 'outside' ? <>Потрачено <Text style={styles.infoBold}>{money(g.spent)}</Text>.</> : (
+                    <>
+                      {g.key === 'month' ? 'С 1-го потрачено' : 'Потрачено'} <Text style={styles.infoBold}>{money(g.spent)}</Text> из{' '}
+                      <Text style={styles.infoBold}>{m(g.limit)}</Text> —{' '}
+                      <Text style={[styles.infoBold, g.spent > Math.round(g.limit) ? styles.paceAhead : styles.paceOk]}>{delta(g.spent, g.limit)}</Text>.
+                    </>
+                  )}
                 </Text>
-              )) : null}
-            </>
+                <Text style={styles.infoText}>{GROUP_ABOUT[g.key]}</Text>
+                {g.change && after !== null ? (
+                  <Text style={styles.infoText}>
+                    <Text style={styles.infoBold}>После этого периода</Text> лимит {per}:{' '}
+                    <Text style={styles.crossed}>{m(g.change.before)}</Text>{' → '}
+                    <Text style={[styles.infoBold, after < g.change.before ? styles.paceAhead : styles.paceOk]}>{m(after)}</Text>
+                    {after < g.change.before ? ' — траты больше лимита, на остаток месяца меньше.' : after > g.change.before ? ' — траты меньше лимита, на остаток месяца больше.' : '.'}
+                  </Text>
+                ) : null}
+                <Text style={styles.calcTitle}>Расчёт</Text>
+                {g.key === 'outside' ? (
+                  <Text style={styles.infoText}>
+                    {outsideCats.map((c) => (
+                      <React.Fragment key={String(c.category_id)}>
+                        {`${c.emoji || ''} ${c.name}`.trim()}: <Code>{money(c.spent_minor)}</Code>{'\n'}
+                      </React.Fragment>
+                    ))}
+                  </Text>
+                ) : (
+                  <Text style={styles.infoText}>
+                    {g.items.map((i) => (
+                      <React.Fragment key={i.id}>
+                        <Text style={styles.infoBold}>{i.name}</Text>: потрачено <Code>{money(i.spent)}</Code>,{' '}
+                        {g.key === 'month' ? <>план <Code>{m(i.limit)}</Code></> : <>лимит <Code>{formula(i.parts)}</Code></>}.{noPlan(i.parts)}{'\n'}
+                      </React.Fragment>
+                    ))}
+                    {g.items.length > 1 ? <>Итого: <Code>{money(g.spent)} из {g.items.map((i) => m(i.limit)).join(' + ')} = {m(g.limit)}</Code>.</> : null}
+                  </Text>
+                )}
+                {g.key !== 'outside' && g.key !== 'month' ? (
+                  <Text style={styles.infoText}>
+                    Лимит — что осталось от месячного плана категории, разложенное на оставшиеся дни месяца: перерасход раньше в
+                    месяце уменьшает его, экономия увеличивает. Каждый месяц считается своим планом.
+                  </Text>
+                ) : null}
+              </>
+            );
+          })() : pace ? (
+            <Text style={styles.infoText}>
+              На эти дни плана нет: показана только структура трат. Задайте лимиты категорий в плане — здесь появятся
+              дневные, недельные и месячные лимиты.
+            </Text>
           ) : (
             <Text style={styles.infoText}>
               Период длиннее месяца с планом не сравнивается: показана структура трат по категориям и среднее в месяц.
@@ -429,8 +471,8 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 32 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
   donutWrap: { alignItems: 'center', marginBottom: 8 },
-  tilesHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4, marginBottom: 8 },
-  tilesTitle: { fontSize: 13, fontWeight: '600', color: colors.muted, textTransform: 'uppercase' },
+  calcTitle: { fontSize: 13, fontWeight: '600', color: colors.muted, textTransform: 'uppercase', marginTop: 4, marginBottom: 6 },
+  tilesTitle: { fontSize: 13, fontWeight: '600', color: colors.muted, textTransform: 'uppercase', marginTop: 4, marginBottom: 8 },
   summaryRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 8, paddingHorizontal: 8 },
   summary: { flexShrink: 1, fontSize: 14, color: colors.text, textAlign: 'center' },
   hint: { color: colors.muted, fontSize: 14, textAlign: 'center', marginVertical: 12 },

@@ -22,7 +22,8 @@ type Props = {
   groups: SummaryGroup[];
   /** "120 ₾" */
   money: (minor: number) => string;
-  onPress: () => void;
+  /** a block tapped: its calculation */
+  onPress: (key: SummaryGroupKey) => void;
 };
 
 /**
@@ -57,9 +58,19 @@ export default function SummaryTiles({ groups, money, onPress }: Props) {
               : 'сэкономлено';
         const moved = g.change && g.change.after !== null && Math.round(g.change.after) !== Math.round(g.change.before);
         return (
-          <TouchableOpacity key={g.key} style={[styles.tile, { width: tile }]} onPress={onPress} accessibilityLabel={`${GROUP_TITLES[g.key]}: ${caption}`}>
-            <Text style={styles.title} numberOfLines={1}>{GROUP_TITLES[g.key]}</Text>
-            {subtitle ? <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text> : null}
+          <TouchableOpacity
+            key={g.key}
+            style={[styles.tile, { width: tile }]}
+            onPress={() => onPress(g.key)}
+            accessibilityLabel={`${GROUP_TITLES[g.key]}: ${caption}`}
+            accessibilityHint="Показать расчёт"
+          >
+            <View>
+              <Text style={styles.title} numberOfLines={1}>{GROUP_TITLES[g.key]}</Text>
+              {subtitle ? <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text> : null}
+            </View>
+            {/* the numbers at the bottom: blocks of different heights keep them on one line */}
+            <View style={styles.body}>
             <Text style={[styles.big, g.key === 'outside' ? null : over ? styles.over : styles.ok]} numberOfLines={1} adjustsFontSizeToFit>
               {g.key === 'outside' ? money(g.spent) : `${over ? '−' : '+'}${money(Math.abs(left))}`}
             </Text>
@@ -84,6 +95,7 @@ export default function SummaryTiles({ groups, money, onPress }: Props) {
                 ) : `лимит ${m(g.change.before)}`} {PER_PERIOD[g.key]}
               </Text>
             ) : null}
+            </View>
           </TouchableOpacity>
         );
       })}
@@ -93,11 +105,12 @@ export default function SummaryTiles({ groups, money, onPress }: Props) {
 
 const styles = StyleSheet.create({
   strip: { marginHorizontal: -SIDE, marginBottom: 8 },
-  stripContent: { paddingHorizontal: SIDE, gap: GAP },
-  tile: { backgroundColor: colors.surface, borderRadius: 12, padding: 12 },
+  stripContent: { paddingHorizontal: SIDE, gap: GAP, alignItems: 'stretch' },
+  tile: { backgroundColor: colors.surface, borderRadius: 12, padding: 12, justifyContent: 'space-between' },
+  body: { marginTop: 6 },
   title: { fontSize: 13, fontWeight: '600', color: colors.muted },
   subtitle: { fontSize: 12, color: colors.muted },
-  big: { fontSize: 20, fontWeight: '700', color: colors.text, marginTop: 6, fontVariant: ['tabular-nums'] },
+  big: { fontSize: 20, fontWeight: '700', color: colors.text, fontVariant: ['tabular-nums'] },
   ok: { color: colors.income },
   over: { color: colors.warn },
   caption: { fontSize: 12, color: colors.muted },
