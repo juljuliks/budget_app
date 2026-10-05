@@ -4,7 +4,7 @@ import { getDb } from '../src/db';
 import { openDatabase } from '../src/db/driver';
 import { migrate, MIGRATIONS } from '../src/db/migrations';
 import {
-  addPlanItem, currentYm, ensureMonthPlan, getPlanBudget, listPlan, monthIncome, monthRange, monthStats, planHistory,
+  addPlanItem, currentYm, ensureMonthPlan, getPlanBudget, listPlan, monthIncome, monthRange, monthStats, periodStats, planHistory,
   removePlanItem, setPlanAmount, setPlanBudget, setPlanPinned, ymOf,
 } from '../src/db/plans';
 import { createCategory, deleteCategory } from '../src/db/categories';
@@ -248,4 +248,19 @@ test('migration 3 turns the old standing plan into pinned items of the current m
     { ym: NOW, category_id: 2, limit_minor: 700, pinned: 1 },
   ]);
   expect(await db.get("SELECT name FROM sqlite_master WHERE name = 'budgets'")).toBeUndefined();
+});
+
+test('period stats list the planned categories even with nothing spent, after the spent ones', async () => {
+  const bars = await createCategory('Бары');
+  const food = await createCategory('Еда');
+  const taxi = await createCategory('Такси');
+  await spend(500, food, 2025, 9, 'purchase');
+  const day = { from: at(2025, 9) - 3600, to: at(2025, 9) + 3600 };
+  const s = await periodStats(day.from, day.to, 'GEL', [taxi, bars]);
+  expect(s.categories.map((c) => [c.name, c.spent_minor])).toEqual([['Еда', 500], ['Бары', 0], ['Такси', 0]]);
+  expect(s.spent_minor).toBe(500);
+  // nothing spent at all: still the planned ones
+  const empty = await periodStats(day.from - 86400, day.from - 3600, 'GEL', [bars]);
+  expect(empty.categories.map((c) => c.name)).toEqual(['Бары']);
+  expect((await periodStats(day.from - 86400, day.from - 3600, 'GEL')).categories).toEqual([]);
 });

@@ -78,9 +78,16 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
     // answers of a previous period (switched quickly) are dropped
     const keep = latest();
     const { from, to } = rangeToUnix(range);
-    periodStats(from, to, currency).then(keep(setStats)).catch((e) => console.error('load period stats failed', e));
-    if (pace) loadNorms(range, currency).then(keep(setNorms)).catch((e) => console.error('load norms failed', e));
-    else setNorms(null);
+    if (pace) {
+      // the categories with a limit are listed even with nothing spent: an untouched limit is all saved
+      loadNorms(range, currency).then((n) => {
+        const planned = [...n.byCategory].filter(([, p]) => p.kind === 'limit' && (p.rhythm === 'month' ? p.monthLimit : p.periodNorm) > 0).map(([id]) => id);
+        return periodStats(from, to, currency, planned).then(keep((s: PeriodStats) => { setNorms(n); setStats(s); }));
+      }).catch((e) => console.error('load period stats failed', e));
+    } else {
+      setNorms(null);
+      periodStats(from, to, currency).then(keep(setStats)).catch((e) => console.error('load period stats failed', e));
+    }
     if (!pace) averageFullMonths(range.from, range.to, currency).then(keep(setAverage)).catch((e) => console.error('load average failed', e));
   }, [range, currency, pace, latest]);
   useEffect(load, [load]);

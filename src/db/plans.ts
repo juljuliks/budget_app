@@ -470,19 +470,22 @@ export type PeriodStats = {
   other_currencies: Array<{ currency: string; spent_minor: number }>;
 };
 
-/** Spending by category for any period [from, to) (unix seconds), e.g. one day, in `currency`; no plan. */
-export async function periodStats(from: number, to: number, currency: Currency = BUDGET_CURRENCY): Promise<PeriodStats> {
+/**
+ * Spending by category for any period [from, to) (unix seconds), e.g. one day, in `currency`; no plan. `planned`:
+ * categories listed even with nothing spent (0 ₾), after the ones with spending — a limit not touched is all saved.
+ */
+export async function periodStats(from: number, to: number, currency: Currency = BUDGET_CURRENCY, planned: number[] = []): Promise<PeriodStats> {
   const db = await getDb();
   const { items, missing } = await convertSpending(await spendRows(from, to), currency);
   const spentBy = sumBy(items, categoryKey);
   const refundsUnassigned = Math.max(0, -(spentBy.get(REFUND_KEY) ?? 0));
-  const ids = [...spentBy.keys()].filter((id): id is number => typeof id === 'number');
+  const ids = [...new Set([...spentBy.keys(), ...planned])].filter((id): id is number => typeof id === 'number');
   const cats = ids.length === 0 ? [] : await db.all<{ id: number; name: string; emoji: string | null; type_id: number | null; type_name: string | null; deleted_at: number | null }>(
     `SELECT c.id, c.name, c.emoji, c.type_id, ct.name AS type_name, c.deleted_at FROM categories c
       LEFT JOIN category_types ct ON ct.id = c.type_id WHERE c.id IN (${ids.map(() => '?').join(',')})`, ids);
   const colorOf = await categoryColors();
   const categories: CategoryStat[] = cats.map((c) => ({
-    category_id: c.id, name: c.name, emoji: c.emoji, type_id: c.type_id, type_name: c.type_name, spent_minor: spentBy.get(c.id)!,
+    category_id: c.id, name: c.name, emoji: c.emoji, type_id: c.type_id, type_name: c.type_name, spent_minor: spentBy.get(c.id) ?? 0,
     limit_minor: null, plan_kind: null, plan_norm: null, color: colorOf.get(c.id) ?? NEUTRAL_COLOR, deleted: c.deleted_at !== null,
   }));
   const none = spentBy.get(null) ?? 0;
@@ -493,9 +496,13 @@ export async function periodStats(from: number, to: number, currency: Currency =
     });
   }
   const positive = categories.filter((c) => c.spent_minor > 0).sort((a, b) => b.spent_minor - a.spent_minor);
+  // planned ones with nothing spent (a refund bigger than the spending counts as nothing too)
+  const untouched = categories.filter((c) => c.category_id !== null && c.spent_minor <= 0 && planned.includes(c.category_id) && !c.deleted)
+    .map((c) => ({ ...c, spent_minor: 0 })).sort((a, b) => a.name.localeCompare(b.name));
+  const listed = [...positive, ...untouched];
   const types = await db.all<{ id: number; name: string }>('SELECT id, name FROM category_types ORDER BY sort_order, name');
   return {
-    currency, groups: groupByType(positive, types), categories: positive,
+    currency, groups: groupByType(listed, types), categories: listed,
     spent_minor: positive.reduce((s, c) => s + c.spent_minor, 0) - refundsUnassigned, refunds_unassigned_minor: refundsUnassigned,
     other_currencies: missing,
   };
