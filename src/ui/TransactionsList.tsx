@@ -190,6 +190,7 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
   // memoized: sections, the selection pruning and the day totals (a DB query) depend on it, so a new array each render
   // re-ran them on every keystroke while a filter was on
   const data = useMemo(() => (results ? results.slice(0, shownResults) : rows), [results, shownResults, rows]);
+  const listKey = JSON.stringify([query.trim(), categories, merchants, kinds, range]);
 
   // the filters set, as chips to clear one by one
   const activeFilters: ActiveFilter[] = [];
@@ -476,6 +477,9 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
       </View>
 
       <SectionList
+        // a new filter remounts the list: Android sticky headers keep their old offsets when the sections
+        // change under a scrolled list and cover the rows ("Вчера" over operations)
+        key={listKey}
         style={styles.list}
         sections={sections}
         keyExtractor={(i) => String(i.id)}
