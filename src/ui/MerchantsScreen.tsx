@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SectionList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { categoryLabel, categoryLabelOf, listCategories } from '../db/categories';
@@ -9,7 +9,7 @@ import { emitTransactionsChanged, onTransactionsChanged } from '../events';
 import Button from './Button';
 import Checkbox from './Checkbox';
 import { plural } from './format';
-import { ChevronRightIcon, SearchIcon } from './icons';
+import { SearchIcon } from './icons';
 import MerchantCard from './MerchantCard';
 import { formatMoneyWithCurrency } from './money';
 import { sheetAlert } from './sheetAlert';
@@ -98,6 +98,7 @@ export default function MerchantsScreen() {
   }, [shown, words, categories, order, staleOpen]);
 
   // a long press on a merchant starts selecting several, with it selected; unselecting the last one ends it
+  const longPressed = useRef(false);
   function startSelect(id: string) {
     setSelectMode(true);
     setSelected([id]);
@@ -227,20 +228,20 @@ export default function MerchantsScreen() {
           return (
             <TouchableOpacity
               style={styles.row}
-              // one gesture, one action: › opens, a long press selects, a tap only while selecting
-              onPress={selectMode ? () => toggle(item.id) : undefined}
-              onLongPress={selectMode ? undefined : () => startSelect(item.id)}
+              // a long press starts selecting (with this one); while selecting a tap toggles, otherwise opens the card.
+              // Android also delivers a press when the finger lifts after a long press: skipped, it would unselect
+              onPress={() => {
+                if (longPressed.current) { longPressed.current = false; return; }
+                if (selectMode) toggle(item.id); else setCardId(item.id);
+              }}
+              onLongPress={selectMode ? undefined : () => { longPressed.current = true; startSelect(item.id); }}
+              onPressIn={() => { longPressed.current = false; }}
             >
               {selectMode ? <Checkbox checked={on} size={20} /> : null}
               <View style={styles.rowMain}>
                 <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
                 <Text style={styles.meta} numberOfLines={2}>{cat ? `${cat} · ` : ''}{activityText(item.activity)}</Text>
               </View>
-              {selectMode ? null : (
-                <TouchableOpacity onPress={() => setCardId(item.id)} hitSlop={12} accessibilityLabel={`Открыть: ${item.name}`}>
-                  <ChevronRightIcon color={colors.accent} />
-                </TouchableOpacity>
-              )}
             </TouchableOpacity>
           );
         }}
@@ -272,7 +273,8 @@ export default function MerchantsScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  header: { paddingHorizontal: 16, paddingTop: 12, gap: 8 },
+  // room under the search: the first section band doesn't stick to it
+  header: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, gap: 8 },
   search: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.surface, borderRadius: 10, paddingHorizontal: 12 },
   searchInput: { flex: 1, fontSize: 16, color: colors.text, paddingVertical: 8 },
   clear: { fontSize: 16, color: colors.muted },

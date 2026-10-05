@@ -101,7 +101,7 @@ export default function TransactionsList() {
     setQuery(incomingQuery);
   }, [incomingQuery, nonce]);
 
-  // edit mode: 🗑 on every row. selectMode (a long press on a row) puts checkboxes in front; › opens a row
+  // edit mode: 🗑 on every row. selectMode (a long press on a row) puts checkboxes in front; a tap opens a row
   const [editMode, setEditMode] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -465,9 +465,9 @@ export default function TransactionsList() {
           return (
             <TransactionItem
               tx={item}
-              onPress={selectMode ? () => toggle(item.id) : undefined}
+              // a long press starts selecting (with this row); while selecting a tap toggles, otherwise opens
+              onPress={selectMode ? () => toggle(item.id) : open}
               onLongPress={selectMode ? undefined : () => startSelect(item.id)}
-              onOpen={selectMode ? undefined : open}
               selectable={selectMode}
               selected={selected.has(item.id)}
               onDelete={showRowActions ? () => confirmDeleteTransaction(item) : undefined}

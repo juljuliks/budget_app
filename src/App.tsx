@@ -45,7 +45,14 @@ function MainTabs() {
   return (
     <>
     {/* the app always opens on the transactions; the settings gear sits in the tab headers */}
-    <Tab.Navigator initialRouteName="Transactions" screenOptions={{ tabBarActiveTintColor: colors.accent, tabBarInactiveTintColor: colors.muted }}>
+    <Tab.Navigator initialRouteName="Transactions" screenOptions={{
+      tabBarActiveTintColor: colors.accent,
+      tabBarInactiveTintColor: colors.muted,
+      // the label right under the icon, with room below it (the default leaves the labels at the very bottom)
+      tabBarStyle: { height: 64, paddingTop: 6, paddingBottom: 10 },
+      tabBarIconStyle: { marginBottom: -2 },
+      tabBarLabelStyle: { fontSize: 12 },
+    }}>
       <Tab.Screen
         name="Stats"
         component={StatsHome}

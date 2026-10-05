@@ -1,19 +1,16 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { txCategoryLabel } from '../db/categories';
 import { isUnread, TransactionRow } from '../db/transactions';
 import Checkbox from './Checkbox';
-import { ChevronRightIcon } from './icons';
 import { formatAmount, formatTime, isIncome, merchantLabel } from './format';
 import RowActions from './RowActions';
 import { colors } from './theme';
 
 type Props = {
   tx: TransactionRow;
-  /** the › at the end: opens the operation (one gesture, one action: a tap on the row itself only selects) */
-  onOpen?: () => void;
-  /** while selecting: the row toggles its checkbox */
-  onPress?: () => void;
+  /** a tap: opens the operation, or while selecting toggles it */
+  onPress: () => void;
   /** a long press: starts selecting several, with this one selected */
   onLongPress?: () => void;
   /** multi-select: checkbox in front */
@@ -24,13 +21,20 @@ type Props = {
 };
 
 /** One row of the transactions list: merchant (bold + blue dot when unread), category · time, amount. */
-export default function TransactionItem({ tx, onOpen, onPress, onLongPress, selectable, selected, onDelete }: Props) {
+export default function TransactionItem({ tx, onPress, onLongPress, selectable, selected, onDelete }: Props) {
+  // Android delivers a press when the finger lifts after a long press too: that one would unselect the row
+  const longPressed = useRef(false);
   const unread = isUnread(tx);
   // new and categorized by a merchant rule, not by the user: worth a glance
   const auto = tx.seen_at === null && tx.category_source === 'rule';
   const category = txCategoryLabel(tx);
   return (
-    <TouchableOpacity style={[styles.row, selected && styles.rowSelected]} onPress={onPress} onLongPress={onLongPress}>
+    <TouchableOpacity
+      style={[styles.row, selected && styles.rowSelected]}
+      onPress={() => { if (longPressed.current) longPressed.current = false; else onPress(); }}
+      onLongPress={onLongPress ? () => { longPressed.current = true; onLongPress(); } : undefined}
+      onPressIn={() => { longPressed.current = false; }}
+    >
       {selectable ? <View style={styles.checkbox}><Checkbox checked={!!selected} /></View> : null}
       <View style={styles.main}>
         <View style={styles.titleRow}>
@@ -54,17 +58,11 @@ export default function TransactionItem({ tx, onOpen, onPress, onLongPress, sele
         {formatAmount(tx.amount_minor, tx.currency, tx.kind)}
       </Text>
       {onDelete ? <RowActions onDelete={onDelete} /> : null}
-      {onOpen ? (
-        <TouchableOpacity onPress={onOpen} hitSlop={12} style={styles.open} accessibilityLabel={`Открыть: ${merchantLabel(tx)}`}>
-          <ChevronRightIcon color={colors.accent} />
-        </TouchableOpacity>
-      ) : null}
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  open: { paddingLeft: 10, paddingVertical: 4 },
   row: {
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
