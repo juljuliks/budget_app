@@ -79,7 +79,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
     const keep = latest();
     const { from, to } = rangeToUnix(range);
     if (pace) {
-      // the categories with a limit are listed even with nothing spent: an untouched limit is all saved
+      // nothing spent at all: the categories with a limit are listed instead, an untouched limit is all saved
       loadNorms(range, currency).then((n) => {
         const planned = [...n.byCategory].filter(([, p]) => p.kind === 'limit' && (p.rhythm === 'month' ? p.monthLimit : p.periodNorm) > 0).map(([id]) => id);
         return periodStats(from, to, currency, planned).then(keep((s: PeriodStats) => { setNorms(n); setStats(s); }));

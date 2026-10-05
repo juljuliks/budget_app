@@ -250,17 +250,17 @@ test('migration 3 turns the old standing plan into pinned items of the current m
   expect(await db.get("SELECT name FROM sqlite_master WHERE name = 'budgets'")).toBeUndefined();
 });
 
-test('period stats list the planned categories even with nothing spent, after the spent ones', async () => {
+test('period stats: the spent categories, or the planned ones when nothing was spent', async () => {
   const bars = await createCategory('Бары');
   const food = await createCategory('Еда');
   const taxi = await createCategory('Такси');
   await spend(500, food, 2025, 9, 'purchase');
   const day = { from: at(2025, 9) - 3600, to: at(2025, 9) + 3600 };
   const s = await periodStats(day.from, day.to, 'GEL', [taxi, bars]);
-  expect(s.categories.map((c) => [c.name, c.spent_minor])).toEqual([['Еда', 500], ['Бары', 0], ['Такси', 0]]);
+  expect(s.categories.map((c) => [c.name, c.spent_minor])).toEqual([['Еда', 500]]);
   expect(s.spent_minor).toBe(500);
-  // nothing spent at all: still the planned ones
-  const empty = await periodStats(day.from - 86400, day.from - 3600, 'GEL', [bars]);
-  expect(empty.categories.map((c) => c.name)).toEqual(['Бары']);
+  // nothing spent at all: the planned ones
+  const empty = await periodStats(day.from - 86400, day.from - 3600, 'GEL', [taxi, bars]);
+  expect(empty.categories.map((c) => [c.name, c.spent_minor])).toEqual([['Бары', 0], ['Такси', 0]]);
   expect((await periodStats(day.from - 86400, day.from - 3600, 'GEL')).categories).toEqual([]);
 });
