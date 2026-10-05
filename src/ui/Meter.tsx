@@ -18,12 +18,14 @@ type Props = {
    * over the limit faded, with a tick at the limit
    */
   over?: number;
+  /** only the tick at the limit, 0..1 (a bar scaled to the spending whose faded part is `base`) */
+  limitTick?: number;
 };
 
 const clamp = (v: number) => Math.min(Math.max(v, 0), 1);
 
 /** Thin progress bar with rounded ends; optionally a faded first part and a pace tick. */
-export default function Meter({ ratio, height = 6, color, marginTop = 8, base = 0, marker, over }: Props) {
+export default function Meter({ ratio, height = 6, color, marginTop = 8, base = 0, marker, over, limitTick }: Props) {
   const fill = { height, borderRadius: height / 2 };
   const total = clamp(ratio);
   const faded = Math.min(clamp(base), total);
@@ -37,8 +39,8 @@ export default function Meter({ ratio, height = 6, color, marginTop = 8, base = 
           {over !== undefined ? <View style={{ height, width: `${(1 - clamp(over)) * 100}%`, backgroundColor, opacity: 0.4 }} /> : null}
         </View>
       </View>
-      {over !== undefined ? (
-        <View style={[styles.marker, { height: height + 6, top: -3, left: `${clamp(over) * 100}%` }]} accessibilityLabel="Лимит" />
+      {(over ?? limitTick) !== undefined ? (
+        <View style={[styles.marker, { height: height + 6, top: -3, left: `${clamp((over ?? limitTick)!) * 100}%` }]} accessibilityLabel="Лимит" />
       ) : null}
       {marker !== undefined ? (
         <View
