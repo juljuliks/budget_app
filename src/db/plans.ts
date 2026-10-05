@@ -261,10 +261,10 @@ async function markPlanned(ym: string) {
 }
 
 /** The category's amount, currency and kind in the latest earlier month that planned it with an amount. */
-export async function lastPlanItem(ym: string, categoryId: number): Promise<{ limit_minor: number; currency: Currency; kind: PlanKind; norm_period: NormPeriod } | null> {
+export async function lastPlanItem(ym: string, categoryId: number): Promise<{ ym: string; limit_minor: number; currency: Currency; kind: PlanKind; norm_period: NormPeriod } | null> {
   const db = await getDb();
-  const row = await db.get<{ limit_minor: number; currency: string; kind: PlanKind; norm_period: string }>(
-    `SELECT limit_minor, currency, kind, norm_period FROM plan_items WHERE ym < ? AND category_id = ? AND limit_minor > 0
+  const row = await db.get<{ ym: string; limit_minor: number; currency: string; kind: PlanKind; norm_period: string }>(
+    `SELECT ym, limit_minor, currency, kind, norm_period FROM plan_items WHERE ym < ? AND category_id = ? AND limit_minor > 0
       ORDER BY ym DESC LIMIT 1`, [ym, categoryId]);
   return row ? { ...row, currency: asCurrency(row.currency), norm_period: asNorm(row.norm_period) } : null;
 }
@@ -543,6 +543,39 @@ export async function averageFullMonths(fromKey: string, toKey: string, currency
   const total = items.reduce((sum, i) => sum + i.value, 0);
   const months = (ly - year) * 12 + (lm - month) + 1;
   return { average_minor: Math.round(total / months), months };
+}
+
+/** How many full months a category's usual spending is averaged over (the latest ones). */
+export const CATEGORY_AVERAGE_MONTHS = 3;
+
+/**
+ * A category's usual spending per month: the average of the latest full months before `ym` (and before the
+ * current month), at most CATEGORY_AVERAGE_MONTHS, counted from the first full month of tracking. `from` / `to`
+ * name the months averaged ('YYYY-MM'). null = no such month yet.
+ */
+export async function categoryMonthlyAverage(categoryId: number, ym: string, currency: Currency = BUDGET_CURRENCY, now = new Date()):
+  Promise<{ average_minor: number; months: number; from: string; to: string } | null> {
+  const db = await getDb();
+  const first = await db.get<{ at: number | null }>('SELECT min(occurred_at) AS at FROM transactions');
+  if (first?.at == null) return null;
+  const f = new Date(first.at * 1000);
+  // the first full month with data
+  const firstFull = ymOf(f.getFullYear(), f.getMonth() + (f.getDate() > 1 ? 1 : 0));
+  const before = ym < currentYm(now) ? ym : currentYm(now);
+  const { year: by, month: bm } = parseYm(before);
+  const last = ymOf(by, bm - 1);
+  const { year: ly, month: lm } = parseYm(last);
+  let start = ymOf(ly, lm - (CATEGORY_AVERAGE_MONTHS - 1));
+  if (start < firstFull) start = firstFull;
+  if (start > last) return null;
+  const { year: sy, month: sm } = parseYm(start);
+  const [fromSec] = monthRange(sy, sm);
+  const [, toSec] = monthRange(ly, lm);
+  const rows = (await spendRows(fromSec, toSec)).filter((r) => r.category_id === categoryId);
+  const { items } = await convertSpending(rows, currency);
+  const total = items.reduce((sum, i) => sum + i.value, 0);
+  const months = (ly - sy) * 12 + (lm - sm) + 1;
+  return { average_minor: Math.round(total / months), months, from: start, to: last };
 }
 
 export type HistoryMonth = {

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import BottomSheet from './BottomSheet';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import BottomSheet, { SheetFlatList } from './BottomSheet';
 import Button from './Button';
 import Checkbox from './Checkbox';
 import Chip from './Chip';
@@ -53,7 +53,7 @@ export function OptionsSheet<K extends string | number>({
           ) : null}
         </View>
       ) : null}
-      <FlatList
+      <SheetFlatList
         data={shown}
         keyExtractor={(o) => String(o.key)}
         keyboardShouldPersistTaps="handled"

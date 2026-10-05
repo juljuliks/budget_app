@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Category, categoryLabel, categoryUsageCounts, isTransferCategory, listCategories } from '../db/categories';
+import { Category, categoryLabel, isTransferCategory, listCategories } from '../db/categories';
 import { getTransferTypeId } from '../db/categoryTypes';
 import { onTransactionsChanged } from '../events';
-import { RootStackParamList, useRootNavigation } from '../navigation';
+import CategorySheet from './CategorySheet';
 import Chip from './Chip';
 import SectionHeading from './SectionHeading';
 
@@ -19,17 +19,8 @@ type Props = {
   transferFirst?: boolean;
   /** categories not to offer (already in the plan, the one being deleted, ...) */
   excludeIds?: number[];
-  /** what the category editor should do with a newly created category (assign to a transaction, add to a plan, ...) */
-  newCategory?: Omit<RootStackParamList['CategoryEdit'], 'categoryId'>;
-  /** called before leaving to the category screens (e.g. to close a modal) */
-  onNavigateAway?: () => void;
   disabled?: boolean;
-  /** every category at once (the picker in its own sheet); otherwise the most used first, COLLAPSED of them and "Показать ещё" */
-  showAll?: boolean;
 };
-
-/** categories shown before "Показать ещё" when the picker sits right in a screen */
-const COLLAPSED = 8;
 
 /**
  * The one category selector used wherever a category is set: title, category chips and
@@ -37,42 +28,31 @@ const COLLAPSED = 8;
  * focus / changes, so a category created or edited elsewhere shows up immediately.
  */
 export default function CategoryPicker({
-  selectedId, onSelect, allowNone = false, title = 'Категория', transferFirst = false, excludeIds, newCategory, onNavigateAway, disabled, showAll = false,
+  selectedId, onSelect, allowNone = false, title = 'Категория', transferFirst = false, excludeIds, disabled,
 }: Props) {
-  const navigation = useRootNavigation();
+  // "+": a new category in a sheet, picked right after it is created (as if tapped in the list)
+  const [creating, setCreating] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [transferTypeId, setTransferTypeId] = useState<number | null>(null);
-  const [expanded, setExpanded] = useState(false);
 
   const load = useCallback(() => {
-    Promise.all([listCategories(), getTransferTypeId(), categoryUsageCounts()])
-      .then(([cats, transferType, usage]) => {
-        // the most used first (a stable sort keeps the usual order among equals); for transfers the transfer-type ones go first
-        const byUsage = showAll ? cats : [...cats].sort((a, b) => (usage.get(b.id) ?? 0) - (usage.get(a.id) ?? 0));
+    Promise.all([listCategories(), getTransferTypeId()])
+      .then(([cats, transferType]) => {
+        // always all categories; for transfers the transfer-type ones go first
         setCategories(transferFirst
-          ? [...byUsage.filter(isTransferCategory), ...byUsage.filter((c) => !isTransferCategory(c))]
-          : byUsage);
+          ? [...cats.filter(isTransferCategory), ...cats.filter((c) => !isTransferCategory(c))]
+          : cats);
         setTransferTypeId(transferType);
       })
       .catch((e) => console.error('load categories failed', e));
-  }, [transferFirst, showAll]);
+  }, [transferFirst]);
 
   // on focus, and again whenever load changes while focused (useFocusEffect re-runs on a new callback): no extra useEffect
   useFocusEffect(load);
   useEffect(() => onTransactionsChanged(load), [load]);
 
   const excluded = new Set(excludeIds ?? []);
-  const available = categories.filter((c) => !excluded.has(c.id));
-  const collapsible = !showAll && available.length > COLLAPSED + 1;
-  // collapsed: the first COLLAPSED, plus the selected one when it's further down (the choice stays visible)
-  const shown = !collapsible || expanded ? available
-    : available.filter((c, i) => i < COLLAPSED || c.id === selectedId);
-  const hidden = available.length - shown.length;
-
-  function go(fn: () => void) {
-    onNavigateAway?.();
-    fn();
-  }
+  const shown = categories.filter((c) => !excluded.has(c.id));
 
   return (
     <View>
@@ -80,28 +60,26 @@ export default function CategoryPicker({
       <SectionHeading title={title} />
       <View style={styles.chips}>
         {shown.map((c) => (
-          <Chip key={c.id} label={categoryLabel(c)} selected={c.id === selectedId} disabled={disabled} onPress={() => onSelect(c.id)} />
+          <Chip key={c.id} label={categoryLabel(c)} selected={c.id === selectedId} disabled={disabled} onPress={() => onSelect(c.id)} compact />
         ))}
         {allowNone ? (
-          <Chip label="Без категории" selected={selectedId === null} disabled={disabled} onPress={() => onSelect(null)} />
+          <Chip label="Без категории" selected={selectedId === null} disabled={disabled} onPress={() => onSelect(null)} compact />
         ) : null}
-        {collapsible ? (
-          <Chip label={expanded ? 'Свернуть' : `Показать ещё (${hidden})`} action disabled={disabled} onPress={() => setExpanded((v) => !v)} />
-        ) : null}
-        <Chip
-          label="＋ Новая категория"
-          action
-          disabled={disabled}
-          onPress={() => go(() => navigation.navigate('CategoryEdit', {
-            ...newCategory,
-            typeId: newCategory?.typeId ?? (transferFirst ? transferTypeId ?? undefined : undefined),
-          }))}
-        />
+        <Chip label="Новая категория" add compact disabled={disabled} onPress={() => setCreating(true)} />
       </View>
+      <CategorySheet
+        visible={creating}
+        // a new category for a transfer goes to the transfer section
+        typeId={transferFirst ? transferTypeId ?? undefined : undefined}
+        // the short form: section, emoji, name; the rest is on the categories page
+        quick
+        onClose={() => setCreating(false)}
+        onSaved={(id) => { load(); onSelect(id); }}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, alignItems: 'center' },
 });

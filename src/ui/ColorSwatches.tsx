@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleProp, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
 import { colors } from './theme';
+import PlusButton from './PlusButton';
 
 type Props = {
   options: string[];
@@ -9,6 +10,8 @@ type Props = {
   onChange: (color: string | null) => void;
   /** "Авто" does this instead of choosing null (e.g. generates a color) */
   onAuto?: () => void;
+  /** a "+" right after the colors: a color of one's own (the color picker) */
+  onCustom?: () => void;
 };
 
 /**
@@ -31,7 +34,7 @@ export function AutoButton({ onPress, selected, style, accessibilityLabel }: {
 }
 
 /** Row of color circles plus "Авто"; the selected one gets a ring. */
-export default function ColorSwatches({ options, value, onChange, onAuto }: Props) {
+export default function ColorSwatches({ options, value, onChange, onAuto, onCustom }: Props) {
   return (
     <View style={styles.row}>
       <AutoButton
@@ -50,6 +53,7 @@ export default function ColorSwatches({ options, value, onChange, onAuto }: Prop
           <View style={[styles.swatch, { backgroundColor: c }]} />
         </TouchableOpacity>
       ))}
+      {onCustom ? <PlusButton onPress={onCustom} accessibilityLabel="Свой цвет" size={34} style={styles.plus} /> : null}
     </View>
   );
 }
@@ -68,6 +72,8 @@ const styles = StyleSheet.create({
   ring: { padding: 3, borderRadius: 20, borderWidth: 2, borderColor: 'transparent' },
   selected: { borderColor: colors.accent },
   swatch: { width: 28, height: 28, borderRadius: 14 },
+  // the size of a swatch with its ring
+  plus: { margin: 2 },
   auto: {
     alignItems: 'center', justifyContent: 'center', paddingHorizontal: 14, height: 38,
     borderRadius: 10, borderWidth: 2, borderColor: colors.border, borderStyle: 'dashed',

@@ -1,4 +1,4 @@
-import React, { useCallback, useLayoutEffect, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { NO_SECTION } from './strings';
 import { SectionList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
@@ -9,6 +9,10 @@ import { listCategoryTypes } from '../db/categoryTypes';
 import type { RootStackParamList } from '../navigation';
 import { formStyles } from './formStyles';
 import { colors } from './theme';
+import { CreateButton } from './PlusButton';
+import CategorySheet from './CategorySheet';
+import { openCategoryTypes } from './modals';
+import { onTransactionsChanged } from '../events';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Categories'>;
 
@@ -17,22 +21,28 @@ export default function CategoriesScreen({ navigation }: Props) {
   const [cats, setCats] = useState<Category[]>([]);
   const [colorOf, setColorOf] = useState<Map<number, string>>(new Map());
   const [types, setTypes] = useState<string[]>([]);
+  // the category sheet: an existing one by id, 'new' for "+", null = closed
+  const [open, setOpenState] = useState<number | 'new' | null>(null);
+  // what the sheet shows: kept while it slides away (it would turn into "Новая категория" mid-animation)
+  const [shown, setShown] = useState<number | 'new'>('new');
+  const setOpen = (v: number | 'new' | null) => { setOpenState(v); if (v !== null) setShown(v); };
 
   useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <TouchableOpacity onPress={() => navigation.navigate('CategoryEdit', {})} hitSlop={12} accessibilityLabel="Новая категория">
-          <Text style={styles.headerAction}>＋</Text>
-        </TouchableOpacity>
+        <CreateButton onPress={() => setOpen('new')} accessibilityLabel="Новая категория" />
       ),
     });
   }, [navigation]);
 
-  useFocusEffect(useCallback(() => {
+  const load = useCallback(() => {
     Promise.all([listCategories(), categoryColors(), listCategoryTypes()])
       .then(([c, colorMap, t]) => { setCats(c); setColorOf(colorMap); setTypes(t.map((x) => x.name)); })
       .catch((e) => console.error('load categories failed', e));
-  }, []));
+  }, []);
+  useFocusEffect(load);
+  // a category deleted / a section edited in a sheet over this page
+  useEffect(() => onTransactionsChanged(load), [load]);
 
   // listCategories is ordered by type, so consecutive runs form the sections
   const sections: Array<{ title: string; data: Category[] }> = [];
@@ -43,14 +53,15 @@ export default function CategoriesScreen({ navigation }: Props) {
   }
 
   return (
+    <>
     <SectionList
       style={styles.list}
       sections={sections}
       keyExtractor={(c) => String(c.id)}
       renderSectionHeader={({ section }) => <Text style={formStyles.sectionHeader}>{section.title}</Text>}
       renderItem={({ item }) => (
-        // like the merchants: the row opens the category (name, section, color, operations, deleting)
-        <TouchableOpacity style={styles.row} onPress={() => navigation.navigate('CategoryEdit', { categoryId: item.id })} accessibilityRole="button">
+        // like the merchants: the row opens the category in a sheet (name, section, color, operations, deleting)
+        <TouchableOpacity style={styles.row} onPress={() => setOpen(item.id)} accessibilityRole="button">
           <View style={[styles.dot, { backgroundColor: colorOf.get(item.id) ?? colors.border }]} />
           <Text style={styles.name} numberOfLines={1}>{`${item.emoji || ''} ${item.name}`.trim()}</Text>
           <Text style={styles.chevron}>›</Text>
@@ -58,7 +69,7 @@ export default function CategoriesScreen({ navigation }: Props) {
       )}
       // the category types live one level down from here
       ListHeaderComponent={
-        <TouchableOpacity style={styles.typesRow} onPress={() => navigation.navigate('CategoryTypes')} accessibilityRole="button">
+        <TouchableOpacity style={styles.typesRow} onPress={openCategoryTypes} accessibilityRole="button">
           <View style={styles.flex}>
             <Text style={styles.typesTitle}>Разделы</Text>
             <Text style={styles.typesNote} numberOfLines={1}>{types.length ? types.join(', ') : 'Разделы объединяют категории и задают им цвета'}</Text>
@@ -66,14 +77,21 @@ export default function CategoriesScreen({ navigation }: Props) {
           <Text style={styles.chevron}>›</Text>
         </TouchableOpacity>
       }
-      ListEmptyComponent={<Text style={styles.empty}>Категорий нет. Нажмите ＋, чтобы создать.</Text>}
+      ListEmptyComponent={<Text style={styles.empty}>Категорий нет. Нажмите «Создать».</Text>}
     />
+    <CategorySheet
+      visible={open !== null}
+      categoryId={typeof shown === 'number' ? shown : undefined}
+      onClose={() => setOpen(null)}
+      onSaved={load}
+      onDeleted={load}
+    />
+    </>
   );
 }
 
 const styles = StyleSheet.create({
   list: { flex: 1, backgroundColor: colors.bg },
-  headerAction: { fontSize: 24, color: colors.accent },
   row: {
     flexDirection: 'row', alignItems: 'center', paddingLeft: 16, paddingRight: 8, paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border,

@@ -8,7 +8,6 @@ export const formStyles = StyleSheet.create({
     fontSize: 16, color: colors.text, borderWidth: 1, borderColor: colors.border,
     borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10,
   },
-  error: { color: colors.danger, marginTop: 8 },
   hint: { color: colors.muted, marginTop: 8, fontSize: 13 },
   /** list section header (day in the transactions list, type in categories) */
   sectionHeader: {

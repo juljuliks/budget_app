@@ -1,20 +1,12 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity } from 'react-native';
-import { colors } from './theme';
+import { StyleSheet } from 'react-native';
+import PlusButton from './PlusButton';
 
-/** Round "+" pinned to the bottom right corner. */
+/** The floating "+" pinned to the bottom right corner: the app's PlusButton, bigger. */
 export default function Fab({ onPress, accessibilityLabel }: { onPress: () => void; accessibilityLabel: string }) {
-  return (
-    <TouchableOpacity style={styles.fab} onPress={onPress} accessibilityLabel={accessibilityLabel} accessibilityRole="button">
-      <Text style={styles.text}>＋</Text>
-    </TouchableOpacity>
-  );
+  return <PlusButton onPress={onPress} accessibilityLabel={accessibilityLabel} size={56} style={styles.fab} />;
 }
 
 const styles = StyleSheet.create({
-  fab: {
-    position: 'absolute', right: 16, bottom: 16, width: 56, height: 56, borderRadius: 28,
-    backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', elevation: 4,
-  },
-  text: { color: '#FFFFFF', fontSize: 28, lineHeight: 32 },
+  fab: { position: 'absolute', right: 16, bottom: 16, elevation: 4 },
 });

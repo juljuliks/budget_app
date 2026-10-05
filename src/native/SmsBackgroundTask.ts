@@ -1,6 +1,6 @@
 import { ingestSms } from '../ingest';
 import { createNotificationChannel } from '../notifications/notifeeBootstrap';
-import { showUncategorizedTransactionNotification } from '../notifications/notifeeIntegration';
+import { showLimitAlert, showUncategorizedTransactionNotification } from '../notifications/notifeeIntegration';
 
 export type SmsTaskData = {
   sender: string;
@@ -20,6 +20,10 @@ export default async function SmsBackgroundTask(data: SmsTaskData): Promise<void
       // the app may never have been opened, so the channel might not exist yet
       await createNotificationChannel();
       await showUncategorizedTransactionNotification(result.txId);
+    } else if (result.status === 'inserted') {
+      // the merchant's category: maybe it is near its limit now
+      await createNotificationChannel();
+      await showLimitAlert(result.categoryId);
     }
   } catch (e) {
     // Log instead of rethrowing: a failed task must not crash the headless JS context.

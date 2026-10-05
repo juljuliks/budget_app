@@ -17,6 +17,7 @@ import Button from './Button';
 import CategoryPickerModal from './CategoryPickerModal';
 import Checkbox from './Checkbox';
 import Chip from './Chip';
+import { openAddTransaction, openTransaction } from './modals';
 import Fab from './Fab';
 import PushAccessBanner from './PushAccessBanner';
 import CardBalance from './CardBalance';
@@ -30,16 +31,14 @@ import { ActiveFilter, AllFiltersSheet, DateSheet, FilterButton, OptionsSheet } 
 import { colors } from './theme';
 import { confirmDeleteTransaction } from './transactionActions';
 import TransactionItem from './TransactionItem';
+import { toast, toastError } from './toast';
+import { showLimitAlert } from '../notifications/notifeeIntegration';
 
 /** The newest operations shown first; more come in pages while scrolling. */
 const FIRST_PAGE = 10;
 const PAGE_SIZE = 20;
 
-type Filter = {
-  query: string; categories: CategoryFilter[]; merchants: string[]; kinds: string[]; range: DayRange | null;
-  /** deleting a category: only its transactions from this month on */
-  from?: number;
-};
+type Filter = { query: string; categories: CategoryFilter[]; merchants: string[]; kinds: string[]; range: DayRange | null };
 
 /** Every filter set applies at once: text, categories (any of), merchants (any of), kinds (any of) and dates combine. */
 function isFilterActive(f: Filter): boolean {
@@ -49,24 +48,14 @@ function isFilterActive(f: Filter): boolean {
 async function runFilterQuery(f: Filter): Promise<TransactionRow[] | null> {
   if (!isFilterActive(f)) return null;
   const r = f.range ? rangeToUnix(f.range) : undefined;
-  const from = r && f.from !== undefined ? Math.max(r.from, f.from) : r?.from ?? f.from;
-  const tx: TxFilter = { categories: f.categories, merchants: f.merchants, kinds: f.kinds, from, to: r?.to };
+  const tx: TxFilter = { categories: f.categories, merchants: f.merchants, kinds: f.kinds, from: r?.from, to: r?.to };
   return f.query.trim() ? searchTransactions(f.query, tx) : listTransactionsFiltered(tx);
 }
 
 
 const SEARCH_DEBOUNCE_MS = 200;
 
-type Props = {
-  /**
-   * The list reused to delete a category (CategoryDelete): its transactions of this month, already in
-   * multi-select, are moved to other categories; the category can be deleted once none are left.
-   */
-  deleteCategoryId?: number;
-};
-
-export default function TransactionsList({ deleteCategoryId }: Props = {}) {
-  const deleting = deleteCategoryId !== undefined;
+export default function TransactionsList() {
   const navigation = useRootNavigation();
   const [rows, setRows] = useState<TransactionRow[]>([]);
   const [cursor, setCursor] = useState<PageCursor | null>(null);
@@ -78,7 +67,7 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
   const loadedCount = useRef(0);
 
   const [query, setQuery] = useState('');
-  const [categories, setCategories] = useState<CategoryFilter[]>(deleting ? [deleteCategoryId!] : []);
+  const [categories, setCategories] = useState<CategoryFilter[]>([]);
   const [merchants, setMerchants] = useState<string[]>([]);
   const [kinds, setKinds] = useState<string[]>([]);
   const [kindOptions, setKindOptions] = useState<Array<{ kind: string; count: number }>>([]);
@@ -87,7 +76,7 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
   const [range, setRange] = useState<DayRange | null>(null);
   const [categoryOptions, setCategoryOptions] = useState<CategoryWithCount[]>([]);
   const [merchantOptions, setMerchantOptions] = useState<MerchantWithCount[]>([]);
-  const filter: Filter = { query, categories, merchants, kinds, range, from: deleting ? monthStart(currentYm()) : undefined };
+  const filter: Filter = { query, categories, merchants, kinds, range };
   // read by refreshAll without making it change (and re-run focus effects) on every keystroke
   const filterRef = useRef(filter);
   filterRef.current = filter;
@@ -112,9 +101,9 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
     setQuery(incomingQuery);
   }, [incomingQuery, nonce]);
 
-  // edit mode: ✎ / 🗑 on every row and the selection toolbar; selectMode (inside edit mode) replaces the icons with checkboxes
-  const [editMode, setEditMode] = useState(deleting);
-  const [selectMode, setSelectMode] = useState(deleting);
+  // edit mode: 🗑 on every row. selectMode (a long press on a row) puts checkboxes in front; a tap opens a row
+  const [editMode, setEditMode] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [bulkOpen, setBulkOpen] = useState(false);
   // Re-reads everything currently on screen (at least one page), so returning
@@ -256,9 +245,14 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
     return () => { stale = true; };
   }, [sections, currency]);
 
-  // selection lives inside edit mode
-  function toggleSelectMode() {
-    setSelectMode((on) => !on);
+  // a long press on a row starts selecting several, with that row selected
+  function startSelect(id: number) {
+    setSelectMode(true);
+    setSelected(new Set([id]));
+  }
+
+  function endSelect() {
+    setSelectMode(false);
     setSelected(new Set());
   }
 
@@ -285,7 +279,7 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
 
   function resetFilters() {
     setQuery('');
-    setCategories(deleting ? [deleteCategoryId!] : []);
+    setCategories([]);
     setMerchants([]);
     setKinds([]);
     setRange(null);
@@ -308,24 +302,23 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
   }, [from]));
 
   // opening the tab from the tab bar is a normal visit: no back button
-  useEffect(() => (deleting ? undefined : tabNavigation.addListener('tabPress', () => {
+  useEffect(() => tabNavigation.addListener('tabPress', () => {
     if (from) tabNavigation.setParams({ from: undefined });
-  })), [tabNavigation, from, deleting]);
+  }), [tabNavigation, from]);
 
   // leaving the tab ends edit mode together with any selection
-  // Leaving for another tab starts the next visit clean: no filters, search or edit mode. Opening a
-  // transaction from here (a screen pushed over the tabs) keeps them, to come back to the same list.
-  useEffect(() => (deleting ? undefined : tabNavigation.addListener('blur', () => {
+  // Leaving for another tab starts the next visit clean: no filters, search or edit mode. A screen pushed over
+  // the tabs (merchants, categories) keeps them, to come back to the same list.
+  useEffect(() => tabNavigation.addListener('blur', () => {
     const routes = navigationRef.getRootState()?.routes;
     if (routes && routes[routes.length - 1].name !== 'Main') return;
     setEditMode(false);
     setSelectMode(false);
     setSelected(new Set());
     resetFilters();
-  })), [tabNavigation, deleting]);
+  }), [tabNavigation]);
 
   useLayoutEffect(() => {
-    if (deleting) return; // the delete screen keeps its own header
     tabNavigation.setOptions({
       headerLeft: from
         ? () => <HeaderBackButton onPress={goBack} accessibilityLabel="Назад" />
@@ -346,55 +339,35 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
       ),
     });
     // toggleEditMode / goBack only use state setters, navigation and `from`
-  }, [tabNavigation, editMode, from, deleting]);
+  }, [tabNavigation, editMode, from]);
 
+  // unselecting the last one ends the selection
   function toggle(id: number) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
+    const next = new Set(selected);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setSelected(next);
+    if (next.size === 0) setSelectMode(false);
   }
 
   async function applyBulk(categoryId: number | null) {
     setBulkOpen(false);
     try {
-      if (deleting) {
-        // moved ones leave the list (they are no longer in the category being deleted)
-        await moveTransactionsOutOfCategory([...selected], deleteCategoryId!, categoryId);
-        emitTransactionsChanged();
-        setSelected(new Set());
-        return;
-      }
       await assignCategoryToMany([...selected], categoryId);
+      showLimitAlert(categoryId);
+      const n = selected.size;
+      const c = categoryId === null ? undefined : await getCategory(categoryId);
+      toast(`${c ? `Категория «${categoryLabel(c)}» назначена` : 'Категория убрана'}: ${n} ${plural(n, ['операция', 'операции', 'операций'])}`);
       setSelected(new Set());
       setSelectMode(false);
     } catch (e) {
       console.error('bulk assign failed', e);
+      toastError('Не удалось сохранить');
     }
   }
 
   const selectedRows = data.filter((r) => selected.has(r.id));
   const showRowActions = editMode && !selectMode;
 
-  const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
-  const [pastCount, setPastCount] = useState(0);
-  useEffect(() => {
-    if (!deleting) return;
-    Promise.all([getCategory(deleteCategoryId!), countPastTransactionsOfCategory(deleteCategoryId!)])
-      .then(([c, n]) => { setDeletingCategory(c ?? null); setPastCount(n); })
-      .catch((e) => console.error('load category failed', e));
-  }, [deleting, deleteCategoryId]);
-
-  async function removeCategory() {
-    try {
-      await deleteCategory(deleteCategoryId!, null);
-      emitTransactionsChanged();
-      navigation.goBack();
-    } catch (e) {
-      console.error('delete category failed', e);
-    }
-  }
 
 
   if (loading) {
@@ -404,23 +377,9 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
   return (
     <View style={styles.list}>
       <View style={styles.header}>
-        {deleting ? (
-          <View style={styles.deleteInfo}>
-            <Text style={styles.deleteTitle}>Удалить «{deletingCategory ? categoryLabel(deletingCategory) : '…'}»</Text>
-            <Text style={styles.deleteHint}>
-              {data.length > 0
-                ? 'Удалить можно только пустую категорию. Выберите операции этого месяца и перенесите их в другие категории — перенесённые пропадут из списка. Мерчанты этих операций тоже получат новую категорию.'
-                : 'В этом месяце операций в категории нет — её можно удалить. Вместе с ней удалятся её план на этот месяц и категория у мерчантов.'}
-              {pastCount > 0 ? ` Прошлые месяцы (${pastCount} ${plural(pastCount, ['операция', 'операции', 'операций'])}) останутся в этой категории и не изменятся.` : ''}
-            </Text>
-          </View>
-        ) : <><PushAccessBanner /><CardBalance /></>}
-        {deleting ? (
-          // deleting a category: only its operations of this month
-          <View style={[styles.chipsWrap, styles.activeRow]}>
-            {deletingCategory ? <Chip label={`${categoryLabel(deletingCategory)} · ${data.length}`} selected small /> : null}
-          </View>
-        ) : (
+        <PushAccessBanner />
+        <CardBalance />
+        {(
           <>
             <View style={styles.search}>
               <SearchIcon color={colors.muted} />
@@ -460,17 +419,16 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
           </>
         )}
 
-        {editMode ? (
+        {selectMode ? (
+          // while selecting (started by a long press on a row)
           <View style={styles.toolbar}>
-            {/* deleting a category: always selecting */}
-            <TouchableOpacity style={styles.selectToggle} onPress={toggleSelectMode} disabled={deleting} accessibilityRole="checkbox" accessibilityState={{ checked: selectMode, disabled: deleting }}>
-              <Checkbox checked={selectMode} size={20} />
-              <Text style={styles.selectLabel}>Выбрать несколько</Text>
-              {selectMode && selected.size > 0 ? <Text style={styles.selectCount}>({selected.size})</Text> : null}
-            </TouchableOpacity>
+            <Text style={[styles.selectLabel, styles.flex]}>Выбрано: {selected.size}</Text>
             <TouchableOpacity style={styles.selectToggle} onPress={toggleSelectAll} accessibilityRole="checkbox" accessibilityState={{ checked: allSelected }}>
               <Checkbox checked={allSelected} size={20} />
               <Text style={styles.selectLabel}>Выбрать все</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={endSelect} hitSlop={8} accessibilityRole="button">
+              <Text style={styles.cancelSelect}>Отмена</Text>
             </TouchableOpacity>
           </View>
         ) : null}
@@ -503,14 +461,15 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
           );
         }}
         renderItem={({ item }) => {
-          const open = () => navigation.navigate('TransactionDetail', { txId: item.id });
+          const open = () => openTransaction(item.id);
           return (
             <TransactionItem
               tx={item}
+              // a long press starts selecting (with this row); while selecting a tap toggles, otherwise opens
               onPress={selectMode ? () => toggle(item.id) : open}
+              onLongPress={selectMode ? undefined : () => startSelect(item.id)}
               selectable={selectMode}
               selected={selected.has(item.id)}
-              onEdit={showRowActions ? open : undefined}
               onDelete={showRowActions ? () => confirmDeleteTransaction(item) : undefined}
             />
           );
@@ -519,10 +478,10 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
         onEndReachedThreshold={0.5}
         refreshing={refreshing}
         onRefresh={results ? undefined : onRefresh}
-        ListFooterComponent={loadingMore ? <ActivityIndicator style={styles.footer} /> : <View style={[styles.footer, editMode && styles.footerTall]} />}
+        ListFooterComponent={loadingMore ? <ActivityIndicator style={styles.footer} /> : <View style={[styles.footer, (editMode || selectMode) && styles.footerTall]} />}
         ListEmptyComponent={
           <Text style={styles.empty}>
-            {deleting ? 'Операций не осталось.' : results ? 'Ничего не найдено.' : 'Операций пока нет. Они появятся здесь после SMS или уведомления банка, или добавьте вручную ＋.'}
+            {results ? 'Ничего не найдено.' : 'Операций пока нет. Они появятся здесь после SMS или уведомления банка, или добавьте вручную ＋.'}
           </Text>
         }
       />
@@ -530,18 +489,14 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
       {selectMode && selected.size > 0 ? (
         <View style={[styles.bottomBar, styles.bottomBarStack]}>
           {/* the unread ones among the selected */}
-          {!deleting && unreadSelected.length > 0 ? (
+          {unreadSelected.length > 0 ? (
             <Button title={`Отметить просмотренными (${unreadSelected.length})`} onPress={readSelected} style={styles.secondaryButton} />
           ) : null}
-          <Button title={`${deleting ? 'Перенести в категорию' : 'Изменить категорию'} (${selected.size})`} onPress={() => setBulkOpen(true)} />
-        </View>
-      ) : deleting && results !== null && data.length === 0 ? (
-        <View style={styles.bottomBar}>
-          <Button title="Удалить категорию" danger onPress={removeCategory} />
+          <Button title={`Изменить категорию (${selected.size})`} onPress={() => setBulkOpen(true)} />
         </View>
       ) : null}
-      {/* hidden in edit mode: it would cover the ✎ / 🗑 of the last row */}
-      {editMode ? null : <Fab onPress={() => navigation.navigate('AddTransaction')} accessibilityLabel="Добавить операцию" />}
+      {/* hidden in edit mode (it would cover the ✎ / 🗑 of the last row) and while selecting (the actions bar) */}
+      {editMode || selectMode ? null : <Fab onPress={openAddTransaction} accessibilityLabel="Добавить операцию" />}
 
       <OptionsSheet
         visible={sheet === 'category'}
@@ -568,8 +523,6 @@ export default function TransactionsList({ deleteCategoryId }: Props = {}) {
         visible={bulkOpen}
         title={`Выбрано операций: ${selected.size}`}
         // a category created from here is applied to the selection right away
-        newCategory={{ txIds: [...selected], moveFromCategoryId: deleteCategoryId }}
-        excludeIds={deleting ? [deleteCategoryId!] : undefined}
         transferFirst={selectedRows.length > 0 && selectedRows.every((r) => r.kind === 'transfer')}
         allowNone
         onPick={applyBulk}
@@ -602,7 +555,8 @@ const styles = StyleSheet.create({
   toolbar: { flexDirection: 'row', alignItems: 'center', gap: 20, paddingVertical: 8 },
   selectToggle: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 },
   selectLabel: { fontSize: 15, color: colors.text },
-  selectCount: { fontSize: 13, color: colors.muted },
+  flex: { flex: 1 },
+  cancelSelect: { fontSize: 15, color: colors.accent },
   editToggle: {
     // as tall as the title text
     flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 2,

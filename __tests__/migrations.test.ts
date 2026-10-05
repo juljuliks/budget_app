@@ -88,4 +88,22 @@ describe('migrations', () => {
     expect(await getSchemaVersion(db)).toBe(MIGRATIONS.length);
     expect(await db.get("SELECT name FROM sqlite_master WHERE name = 'extra'")).toBeUndefined();
   });
+  test('migration 19: merchant groups are gone, each member keeps the group\'s category; operations stay', async () => {
+    const db = openDatabase(':memory:');
+    await migrate(db, MIGRATIONS.slice(0, 18));
+    await db.run(`INSERT INTO transactions (bank, kind, amount_minor, currency, merchant_key, category_id, category_source, occurred_at, raw_sms, sms_hash)
+      VALUES ('TBC', 'purchase', 100, 'GEL', 'SPAR VAKE', 2, 'rule', 1, '', 'a')`);
+    await db.run("INSERT INTO merchant_groups (id, name, created_at) VALUES (1, 'SPAR', 0), (2, 'NO CATEGORY', 0)");
+    await db.run("INSERT INTO merchant_group_members (merchant_key, group_id) VALUES ('SPAR VAKE', 1), ('SPAR SABURTALO', 1), ('X', 2)");
+    await db.run("INSERT INTO merchant_rules (match_type, pattern, category_id, created_at) VALUES ('exact', 'group:1', 2, 5), ('exact', 'WOLT', 3, 5)");
+    await migrate(db);
+    expect(await db.all('SELECT pattern, category_id FROM merchant_rules ORDER BY pattern')).toEqual([
+      { pattern: 'SPAR SABURTALO', category_id: 2 },
+      { pattern: 'SPAR VAKE', category_id: 2 },
+      { pattern: 'WOLT', category_id: 3 },
+    ]);
+    expect(await db.get("SELECT name FROM sqlite_master WHERE name LIKE 'merchant_group%'")).toBeUndefined();
+    expect(await db.get('SELECT merchant_key, category_id, category_source FROM transactions'))
+      .toEqual({ merchant_key: 'SPAR VAKE', category_id: 2, category_source: 'rule' });
+  });
 });

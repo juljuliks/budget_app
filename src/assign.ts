@@ -4,7 +4,6 @@ import { incrementCategoryUsage } from './db/categories';
 import { createRule, backfillRule, findCategoryForMerchant } from './categorize';
 import { emitTransactionsChanged } from './events';
 import { isRememberable, REMEMBERABLE_KINDS } from './types';
-import { groupIdOf, merchantIdOf, merchantIdSql } from './db/merchantId';
 
 /**
  * What a merchant rule is for: it picks the category of the merchant's new transactions automatically.
@@ -25,12 +24,10 @@ export async function assignCategory(txId: number, categoryId: number | null, ch
     && (choice === 'merchant' || (choice === undefined && !(await findCategoryForMerchant(key))));
 
   if (forMerchant) {
-    // keyed by the merchant id: a merchant in a group sets the group's category
-    const id = await merchantIdOf(key!);
-    await createRule('exact', id, categoryId!);
+    await createRule('exact', key!, categoryId!);
     // this one follows the merchant from now on, like the ones the rule picked
     await setTransactionCategory(txId, categoryId, 'rule');
-    await backfillRule('exact', id, categoryId!);
+    await backfillRule('exact', key!, categoryId!);
   } else {
     await setTransactionCategory(txId, categoryId, 'user');
   }
@@ -42,16 +39,17 @@ export default assignCategory;
 
 export type MerchantChange = {
   merchant: string;
-  /** the merchant's category now */
-  fromCategoryId: number;
+  /** the merchant's category now, null = none yet */
+  fromCategoryId: number | null;
   /** transactions whose category changes if the new one becomes the merchant's (this one included) */
   count: number;
   totals: Array<{ currency: string; amount_minor: number }>;
 };
 
 /**
- * Picking `categoryId` for a transaction whose merchant already has another category: what making it the
- * merchant's category would change (asked before changing). null = nothing to ask.
+ * Picking `categoryId` for a purchase / payment whose merchant has another category or none yet: what making it
+ * the merchant's category would change (asked before changing: this one only or the merchant). null = nothing to
+ * ask (no merchant, "Без категории", or already the merchant's category).
  */
 export async function merchantChangePreview(txId: number, categoryId: number | null): Promise<MerchantChange | null> {
   if (categoryId === null) return null;
@@ -60,14 +58,11 @@ export async function merchantChangePreview(txId: number, categoryId: number | n
     'SELECT kind, merchant_key, raw_merchant FROM transactions WHERE id = ?', [txId]);
   if (!tx?.merchant_key || !isRememberable(tx.kind)) return null;
   const rule = await findCategoryForMerchant(tx.merchant_key);
-  if (!rule || rule.category_id === categoryId) return null;
-  const id = await merchantIdOf(tx.merchant_key);
-  const totals = await categoryChangeTotals(id, categoryId, txId);
-  const groupId = groupIdOf(id);
-  const group = groupId === null ? undefined : await db.get<{ name: string }>('SELECT name FROM merchant_groups WHERE id = ?', [groupId]);
+  if (rule?.category_id === categoryId) return null;
+  const totals = await categoryChangeTotals(tx.merchant_key, categoryId, txId);
   return {
-    merchant: group?.name ?? (tx.raw_merchant || tx.merchant_key),
-    fromCategoryId: rule.category_id,
+    merchant: tx.raw_merchant || tx.merchant_key,
+    fromCategoryId: rule?.category_id ?? null,
     count: totals.reduce((s, t) => s + t.n, 0),
     totals: totals.map(({ currency, amount_minor }) => ({ currency, amount_minor })),
   };
@@ -77,16 +72,16 @@ export async function merchantChangePreview(txId: number, categoryId: number | n
  * What a merchant's transactions would change if `categoryId` became its category: the same rows backfillRule
  * touches (plus `alsoTxId`), only those whose category really changes. Per currency, the biggest first.
  */
-export async function categoryChangeTotals(merchantId: string, categoryId: number, alsoTxId = -1) {
+export async function categoryChangeTotals(merchantKey: string, categoryId: number, alsoTxId = -1) {
   const db = await getDb();
   return db.all<{ currency: string; amount_minor: number; n: number }>(
     `SELECT currency, sum(CASE WHEN kind = 'refund' THEN -amount_minor ELSE amount_minor END) AS amount_minor, count(*) AS n FROM transactions
-      WHERE ${merchantIdSql('transactions')} = ?
+      WHERE merchant_key = ?
         AND (kind IN (${REMEMBERABLE_KINDS.map(() => '?').join(',')}) OR (kind = 'refund' AND refund_settled_at IS NULL))
         AND (id = ? OR category_source IS NULL OR category_source = 'rule')
         AND (category_id IS NULL OR category_id != ?)
       GROUP BY currency ORDER BY sum(CASE WHEN kind = 'refund' THEN -amount_minor ELSE amount_minor END) DESC`,
-    [merchantId, ...REMEMBERABLE_KINDS, alsoTxId, categoryId]);
+    [merchantKey, ...REMEMBERABLE_KINDS, alsoTxId, categoryId]);
 }
 
 /** Same category (null = none) for several transactions (bulk edit from the list). No merchant rules: a one-off manual choice. */

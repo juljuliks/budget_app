@@ -5,17 +5,13 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import notifee, { EventType } from '@notifee/react-native';
 import TransactionsList from './ui/TransactionsList';
-import TransactionDetail from './ui/TransactionDetail';
-import CategoryEdit from './ui/CategoryEdit';
 import CategoriesScreen from './ui/CategoriesScreen';
-import CategoryDelete from './ui/CategoryDelete';
-import CategoryTypes from './ui/CategoryTypes';
-import AddTransaction from './ui/AddTransaction';
-import RefundResolve from './ui/RefundResolve';
 import StatsHome from './ui/stats/StatsHome';
 import MerchantsScreen from './ui/MerchantsScreen';
 import SettingsButton from './ui/SettingsButton';
 import { SheetAlertHost } from './ui/sheetAlert';
+import { ModalHost } from './ui/modals';
+import { ToastHost } from './ui/toast';
 import { HistoryIcon, StatsIcon } from './ui/icons';
 import { colors } from './ui/theme';
 import { createNotificationChannel } from './notifications/notifeeBootstrap';
@@ -49,7 +45,14 @@ function MainTabs() {
   return (
     <>
     {/* the app always opens on the transactions; the settings gear sits in the tab headers */}
-    <Tab.Navigator initialRouteName="Transactions" screenOptions={{ tabBarActiveTintColor: colors.accent, tabBarInactiveTintColor: colors.muted }}>
+    <Tab.Navigator initialRouteName="Transactions" screenOptions={{
+      tabBarActiveTintColor: colors.accent,
+      tabBarInactiveTintColor: colors.muted,
+      // the label right under the icon, with room below it (the default leaves the labels at the very bottom)
+      tabBarStyle: { height: 64, paddingTop: 6, paddingBottom: 10 },
+      tabBarIconStyle: { marginBottom: -2 },
+      tabBarLabelStyle: { fontSize: 12 },
+    }}>
       <Tab.Screen
         name="Stats"
         component={StatsHome}
@@ -102,17 +105,15 @@ export default function App() {
     <NavigationContainer ref={navigationRef} onReady={flushPendingNavigation}>
       <Stack.Navigator>
         <Stack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
-        <Stack.Screen name="TransactionDetail" component={TransactionDetail} options={{ title: 'Операция' }} />
-        <Stack.Screen name="CategoryEdit" component={CategoryEdit} options={{ title: 'Категория' }} />
         <Stack.Screen name="Categories" component={CategoriesScreen} options={{ title: 'Категории' }} />
         <Stack.Screen name="Merchants" component={MerchantsScreen} options={{ title: 'Мерчанты' }} />
-        <Stack.Screen name="CategoryDelete" component={CategoryDelete} options={{ title: 'Удаление категории' }} />
-        <Stack.Screen name="CategoryTypes" component={CategoryTypes} options={{ title: 'Разделы' }} />
-        <Stack.Screen name="AddTransaction" component={AddTransaction} options={{ title: 'Новая операция' }} />
-        <Stack.Screen name="RefundResolve" component={RefundResolve} options={{ title: 'Возврат' }} />
       </Stack.Navigator>
-      {/* confirmations and messages (sheetAlert) */}
+      {/* the sheets over the pages (an operation, a new one, a refund, sections, deleting a category) */}
+      <ModalHost />
+      {/* confirmations and messages (sheetAlert), over everything */}
       <SheetAlertHost />
+      {/* toasts of the pages; each sheet draws its own over itself */}
+      <ToastHost />
     </NavigationContainer>
   );
 }

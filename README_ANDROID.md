@@ -78,6 +78,18 @@ cd android && ./gradlew assembleRelease
 # -> android/app/build/outputs/apk/release/app-release.apk (JS встроен, Metro не нужен)
 ```
 
+Собрать и положить на рабочий стол одной командой:
+
+```bash
+./scripts/apk_to_desktop.sh        # -> ~/Desktop/budget-app-<версия>.apk
+./scripts/apk_to_desktop.sh 6.0    # версия явно
+```
+
+Версия по умолчанию — следующая после самой новой `budget-app-X.Y.apk` на рабочем столе (`5.8` → `5.9`, если файлов нет — `1.0`).
+Это только имя файла: `versionCode` / `versionName` в `android/app/build.gradle` не меняются.
+Скрипт сам выставляет JDK 17 и предупреждает, если нет `BUDGETAPP_RELEASE_*` (тогда APK подпишется debug-ключом и не встанет поверх установленного).
+На macOS терминалу нужен доступ к папке «Рабочий стол» (Настройки → Конфиденциальность и безопасность → Файлы и папки).
+
 Подпись: ключ `~/.android-keys/budgetapp-release.keystore`, пароли — в `~/.gradle/gradle.properties`
 (`BUDGETAPP_RELEASE_*`). Оба файла вне репозитория.
 

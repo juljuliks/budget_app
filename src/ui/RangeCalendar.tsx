@@ -16,14 +16,14 @@ type Props = {
    * 1st tap: that single day. 2nd tap: range between the two days. 3rd tap starts over.
    */
   onChange: (r: DayRange) => void;
-  /** one day only: every tap picks that day */
+  /** one day only: every tap picks that day (from = to) */
   single?: boolean;
-  /** days after this one can't be picked (e.g. a transaction can't be in the future) */
+  /** days after it can't be picked (greyed), e.g. today for an operation's date */
   maxDay?: DayKey;
 };
 
 /** Month grid (Monday first) for picking a day or a period. */
-export default function RangeCalendar({ value, onChange, single = false, maxDay }: Props) {
+export default function RangeCalendar({ value, onChange, single, maxDay }: Props) {
   const today = dayKeyOf(new Date());
   const initial = value ? parseDayKey(value.to) : new Date();
   const [month, setMonth] = useState({ y: initial.getFullYear(), m: initial.getMonth() });
@@ -81,9 +81,11 @@ export default function RangeCalendar({ value, onChange, single = false, maxDay 
           })}
         </View>
       ))}
-      {single ? null : <Text style={styles.hint}>
-        {anchor ? 'Выберите конец периода или оставьте один день' : 'Нажмите день; второе нажатие — конец периода'}
-      </Text>}
+      {single ? null : (
+        <Text style={styles.hint}>
+          {anchor ? 'Выберите конец периода или оставьте один день' : 'Нажмите день; второе нажатие — конец периода'}
+        </Text>
+      )}
     </View>
   );
 }

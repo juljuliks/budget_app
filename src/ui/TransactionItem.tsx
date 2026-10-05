@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { txCategoryLabel } from '../db/categories';
 import { isUnread, TransactionRow } from '../db/transactions';
@@ -9,23 +9,32 @@ import { colors } from './theme';
 
 type Props = {
   tx: TransactionRow;
+  /** a tap: opens the operation, or while selecting toggles it */
   onPress: () => void;
-  /** multi-select: checkbox in front, the row toggles it */
+  /** a long press: starts selecting several, with this one selected */
+  onLongPress?: () => void;
+  /** multi-select: checkbox in front */
   selectable?: boolean;
   selected?: boolean;
-  /** edit mode: ✎ / 🗑 at the end */
-  onEdit?: () => void;
+  /** edit mode: 🗑 at the end */
   onDelete?: () => void;
 };
 
 /** One row of the transactions list: merchant (bold + blue dot when unread), category · time, amount. */
-export default function TransactionItem({ tx, onPress, selectable, selected, onEdit, onDelete }: Props) {
+export default function TransactionItem({ tx, onPress, onLongPress, selectable, selected, onDelete }: Props) {
+  // Android delivers a press when the finger lifts after a long press too: that one would unselect the row
+  const longPressed = useRef(false);
   const unread = isUnread(tx);
   // new and categorized by a merchant rule, not by the user: worth a glance
   const auto = tx.seen_at === null && tx.category_source === 'rule';
   const category = txCategoryLabel(tx);
   return (
-    <TouchableOpacity style={[styles.row, selected && styles.rowSelected]} onPress={onPress}>
+    <TouchableOpacity
+      style={[styles.row, selected && styles.rowSelected]}
+      onPress={() => { if (longPressed.current) longPressed.current = false; else onPress(); }}
+      onLongPress={onLongPress ? () => { longPressed.current = true; onLongPress(); } : undefined}
+      onPressIn={() => { longPressed.current = false; }}
+    >
       {selectable ? <View style={styles.checkbox}><Checkbox checked={!!selected} /></View> : null}
       <View style={styles.main}>
         <View style={styles.titleRow}>
@@ -33,16 +42,9 @@ export default function TransactionItem({ tx, onPress, selectable, selected, onE
           <Text style={[styles.merchant, unread && styles.merchantUnread]} numberOfLines={1}>{merchantLabel(tx)}</Text>
           {auto ? <Text style={styles.auto} accessibilityLabel="Категория мерчанта, назначена автоматически">🤖 авто</Text> : null}
         </View>
-        {tx.kind === 'refund' && (tx.refund_settled_at || !category) ? (
-          // a refund settled on its purchase; one without a category (its merchant has none) can still be settled
-          tx.refund_settled_at ? (
-            <Text style={styles.meta} numberOfLines={1}>✓ учтён в покупке · {formatTime(tx.occurred_at)}</Text>
-          ) : (
-            <View style={styles.inline}>
-              <Text style={styles.badge}>Найти покупку</Text>
-              <Text style={styles.meta}> · {formatTime(tx.occurred_at)}</Text>
-            </View>
-          )
+        {tx.refund_settled_at ? (
+          // a refund settled on its purchase earlier: it no longer counts by itself
+          <Text style={styles.meta} numberOfLines={1}>✓ учтён в покупке · {formatTime(tx.occurred_at)}</Text>
         ) : category ? (
           <Text style={styles.meta} numberOfLines={1}>{category} · {formatTime(tx.occurred_at)}</Text>
         ) : (
@@ -55,7 +57,7 @@ export default function TransactionItem({ tx, onPress, selectable, selected, onE
       <Text style={[styles.amount, isIncome(tx.kind) && styles.income]}>
         {formatAmount(tx.amount_minor, tx.currency, tx.kind)}
       </Text>
-      {onDelete ? <RowActions onEdit={onEdit} onDelete={onDelete} /> : null}
+      {onDelete ? <RowActions onDelete={onDelete} /> : null}
     </TouchableOpacity>
   );
 }

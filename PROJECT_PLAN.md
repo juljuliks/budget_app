@@ -31,7 +31,8 @@ This document outlines the remaining work to finish the privacy-first SMS transa
   the SMS parser; the same operation by SMS and push within 15 min is stored once
   - [ ] Confirm the TBC app package (matched as "*tbc*" for now) and real push texts
 - Permissions & device testing
-  - [x] Runtime permissions (`RECEIVE_SMS`, `POST_NOTIFICATIONS`) requested on app start (`src/permissions.ts`); `READ_SMS` removed as unused
+  - [x] Runtime permissions (`RECEIVE_SMS`, `POST_NOTIFICATIONS`) requested on app start (`src/permissions.ts`); `READ_SMS` is not asked on start
+  - `READ_SMS` asked only for the SMS import (Настройки)
   - Background/boot behavior and battery optimizations
 
 - Parser coverage (needs real TBC SMS samples, masked)
@@ -42,27 +43,69 @@ This document outlines the remaining work to finish the privacy-first SMS transa
 
 ## Medium Priority (UX & data)
 - [x] Transactions UI (React Navigation 6 native-stack)
-  - [x] List: all transactions, keyset pagination by 50, day headers, pull-to-refresh, live refresh on new SMS
-  - [x] Detail: category chips, "remember for merchant" toggle (rule + backfill), clear category, raw SMS
-  - [x] Create category screen (from detail or notification), assigns it to the transaction
-  - [x] Category management (gear next to "Категория"): list grouped by type, ✎ edit, 🗑 delete
+  - [x] List: all transactions, day headers, pull-to-refresh, live refresh on new SMS; loads lazily — the 10 newest
+    first, then 20 more while scrolling (filtered results too, a page at a time; a refresh keeps the depth)
+  - [x] Detail: category chips, "remember for merchant" toggle (rule + backfill), clear category, raw SMS;
+    the amount (and its currency) can be corrected by tapping it
+  - [x] Four pages (Операции, Статистика, Мерчанты, Категории); everything else is a sheet (src/sheets.ts, ui/modals.tsx):
+    an operation, a new operation, a category (full form on the categories page, a short one from any "+"), the
+    sections, deleting a category (one target for this month's operations)
+  - [x] Forms on react-hook-form ("Сохранить" only once something changed); emoji picker with all emoji, groups and
+    ru/en search (emojibase-data, scripts/build_emoji.js); color picker; "Другая дата" for a new operation
+  - [x] Category management (Settings → Категории): list grouped by section; a row opens the category screen
+    (operations count and total per currency, "Показать операции" → Операции filtered by it, back returns to
+    Категории; red "Удалить категорию" at the bottom; "Сохранить" only once something changed)
   - [x] Delete = soft delete: this month's transactions move to a chosen category (rules follow), past months keep the old one
   - [x] Category types ("Хобби: Гитара"), optional; types screen (gear next to "Тип"); "Переводы" is the system transfer type
   - [x] Delete a transaction
   - [ ] Rename applies to all months (ask if past months should keep the old name)
   - [x] Add transaction manually (amount, income/expense, description, today/yesterday, category)
   - [x] Search by SMS text, merchant / description, category and type (Cyrillic case-insensitive, ё = е); edit / delete icons on results
-  - [x] Multi-select ("Выбрать несколько") -> bulk change category (existing categories, no merchant rules)
+  - [x] Multi-select (a long press on a row selects it; "Выбрано: N · Выбрать все · Отмена"; unselecting the last
+    one ends it) -> bulk change category (existing categories, no merchant rules); the same on Мерчанты
   - [x] Tap a category in Статистика / История -> Transactions with the search prefilled
-  - [x] Read state: unread = never opened and uncategorized; blue dot in the list, count badge on the tab
+  - [x] Read state: unread = never opened and uncategorized; blue dot in the list, count badge on the tab;
+    edit mode "Отметить просмотренными (N)" marks the selected ones
+  - [x] Card balance on the Операции screen: the last balance an SMS reported plus operations after it
+    (deposit SMS carry no balance); the next SMS with a balance syncs it exactly (`src/db/balance.ts`)
+  - [x] Import past bank SMS already on the phone (Настройки → Импорт SMS из телефона; 1 / 3 / 6 months or all
+    time; asks for READ_SMS only then; duplicates skipped, imported operations are marked read)
   - [x] Filter modes: По тексту / По категории (categories that have transactions, with counts) / По дате (day or period calendar)
+  - [x] "Тип" filter: operation kinds (purchase, transfer, refund, …), several at once, with counts
+  - [x] Merchant card "Показать операции" puts the merchant's name into the search field, other filters cleared, with a back arrow to Мерчанты
   - [x] "Выбрать все" selects everything shown; "Редактировать" in the tab header; "+" hidden while a filter is active
-  - [x] Refunds ("A refund of ... initiated by TEMU.COM"): notification "Найти покупку" -> purchases at that shop in
-    the last 90 days (same amount first); reduce the purchase by the refund (−) or delete it (🗑)
-  - [ ] Combine filters (e.g. category + period)
-  - [ ] Edit / delete a manual transaction; arbitrary date picker
-- [x] Bottom tabs: Статистика / Транзакции; inside Статистика: Статистика | План | История (see section below)
-- Merchant rules UI: create/edit/list and backfill
+  - [x] ~~Refunds settled on their purchase ("Найти покупку")~~ — removed: a refund is simply money back (below)
+  - [x] Refunds count in spending right away: subtracted from their merchant's category (its rule, else the latest
+    purchase / payment there within 90 days; set at ingest, `autoCategorizeRefunds()` on start and after an SMS
+    import), otherwise shown apart as "↩ Возвраты без категории +X ₾" (tap: uncategorized refunds of the period).
+    A refund can get any category in its sheet; its notification is just news. Refunds settled on a purchase
+    earlier keep counting zero ("✓ учтён в покупке"); a merchant's category also reaches its refunds
+  - [x] Combine filters: search + Категория (several) + Тип + Дата together; "Применено фильтров: N" (tap: the list,
+    each with ✕) and "Сбросить все"; merchants are found by the text search (no separate merchant picker)
+  - [ ] Edit / delete a manual transaction (amount already editable); arbitrary date picker
+- [x] Bottom tabs: Операции / Статистика (the app opens on Операции); inside Статистика: Статистика | План | История
+  (see section below); settings gear in the tab headers opens a sheet: Валюта, Мерчанты, Категории
+- [x] All dialogs are bottom sheets (one `BottomSheet`), closed by swiping down (`SheetScrollView` / `SheetFlatList`
+  for lists inside); confirmations via `sheetAlert` (buttons: filled, `secondary` outlined, `destructive`); info sheets scroll with
+  "Понятно" pinned at the bottom; the keyboard opens by itself only for an empty field
+- [x] Currencies GEL / USD / EUR: daily National Bank of Georgia rates cached on the phone (migration 17); stats,
+  plan, history and day totals in one app-wide display currency (each transaction at its day's rate); plan amounts
+  and manual transactions in any currency, the original shown in brackets; amounts carry symbols (₾ / $ / €)
+- [x] Merchant rules UI (Settings → Мерчанты): merchants listed by category ("Без категории" first, then the
+  categories' order; grey section bands "🛒 Еда · 5 мерчантов"); merchant card sets / clears the merchant's
+  category with backfill, totals, "Показать операции"; a category created from the card becomes the merchant's
+  - [x] One category for several merchants (long press to select → "Категория", preview of what changes)
+  - [x] Merchants without a purchase in the last month wait in a collapsed "Давно не было покупок (N)" section at
+    the bottom (nothing deleted; search shows them in their categories)
+  - [x] Merchant card: without a category the categories are shown right away; with one — the category and
+    "Сменить" (a sheet with the categories), as on an operation
+  - [x] Merchant groups removed (migration 19: each member keeps the group's category as its own). Branches like
+    "SPAR 1" / "SPAR 2" are one merchant already (`normalizeMerchant` drops trailing numbers and cities)
+  - [x] Rows show purchases of the last 30 days ("За последний месяц: 6 покупок на 436.40 ₾"), else all of them with dates
+  - [x] Delete merchants (select several, confirm): operations keep their categories (as their own) but lose the merchant;
+    the merchant's category goes
+  - [x] Changing an operation's category at a merchant always asks: "Только для этой операции" (primary) or
+    "Для мерчанта" (secondary, outlined), with what would change
 - Backup/export & import (JSON/CSV via SAF)
 - Locale strings (en/ka/ru)
 - Category usage analytics (local only) and suggestions
@@ -81,7 +124,31 @@ Done:
 - Plan item kind (migration 7, carries over): "Гибкая трата" = progress bar that blends green -> amber -> red towards the
   limit; "Фиксированная трата" (rent, subscriptions) = ✓ "оплачено" once anything is spent in the month
 - История: "Сумма / Не распределено / Сохранено" (amount − spent) for months with an amount set
-Remaining: tap a category -> its transactions for the month; over-limit notifications; salary-day month start (if needed).
+- Month stats: flexible categories show the share of their limit, e.g. `94.34 / 300 (31%)`; tap a category ->
+  its operations for the month
+- "Как тратите" for a flexible item (каждый день / раз в неделю / раз в 2 недели / крупно, раз в месяц;
+  migration 18): the plan becomes a limit per day / week / 2 weeks, recalculated inside the month (an earlier
+  overspend lowers it, savings raise it — `partsOf` in `src/ui/stats/norms.ts`)
+- Stats period picker in the header (день / неделя / месяц by default / год / свой период with a range calendar);
+  day headers in Операции open the stats on that day. Period stats:
+  - each flexible category is measured over its limit window: `spent / limit (%)` for the viewed days; a period
+    shorter than the window (a day of a weekly limit) shows the whole window so far ("Неделя 28 сен – 4 окт:
+    осталось X ₾ · до вс"); under the bar — перерасход / осталось / сэкономлено in money and the limit change;
+    on an overspend the bar is scaled to the spending with a tick at the limit
+  - limit color: green within the limit, orange over it but the month still fits the plan, red when the month's
+    plan is exceeded; ⓘ info sheets explain the numbers
+  - with spending, only spent categories are listed plus day / week limits untouched in the period but spent
+    earlier in the month (0 ₾, so the growing limit shows); a period without spending lists the planned categories
+  - a week across two months shows only one month's part (arrows step to the other); a month without the
+    category's plan borrows the nearest month's plan; long periods show the average per month over full months
+- Stale answers are dropped when the period / month is switched quickly (`useLatestRequest`)
+- ✅ Limit notifications (`src/limitAlerts.ts`, channel «Лимиты»): when an operation of this month gets a category
+  (SMS with the merchant's category, a category picked in a notification or in the app, a manual operation), a
+  push once the category reaches 80% / 100% of the month's plan or of its rhythm's limit (day / week / 2 weeks);
+  each threshold once per month / rhythm window (remembered in `app_settings`); only «траты с лимитом»; tap →
+  Статистика; Настройки → «Уведомлять о лимитах» (on by default).
+
+Remaining: tap a category -> its transactions for the month; salary-day month start (if needed).
 
 Original spec:
 Goal: set a monthly target amount per category and see at a glance which categories are over their limit.
@@ -99,7 +166,7 @@ Goal: set a monthly target amount per category and see at a glance which categor
   - "Без категории" row with its spend, tap → transactions list filtered to uncategorized for that month
   - Tap a category → transactions of that category for the month (reuses the list screen with filters)
 - Editing limits: tap the limit → numeric input sheet; "Скопировать лимиты" is not needed since limits are standing
-- Notifications (optional, after the tab works): when a new SMS pushes a category past 80% / 100% of its limit, show a notification once per category per month
+- ✅ Notifications (optional, after the tab works): when a new SMS pushes a category past 80% / 100% of its limit, show a notification once per category per month (done: see «Limit notifications» above)
 - Tests: monthly aggregation (month boundaries in local time, refunds, currencies, uncategorized), over-limit sorting
 
 Open questions:
@@ -127,7 +194,9 @@ and in the Telegram chat (not E2E-encrypted) — a conscious exception to the "n
 
 ## Low Priority / Optional
 - CI: GitHub Actions for JS tests and Android assemble
-- Release APK for personal install (own signing key, JS bundled — works without Metro)
+- [x] Release APK for personal install (own signing key, JS bundled — works without Metro);
+  `scripts/apk_to_desktop.sh` puts it on the Desktop as `budget-app-<version>.apk`
+- Refactoring and optimization plan: see `IMPROVEMENTS.md` ("Рефакторинг и оптимизация")
 - Crash reporting / opt-in analytics
 - Desktop import/export improvements (CSV/Google Sheets)
 

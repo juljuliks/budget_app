@@ -2,6 +2,7 @@ import { sheetAlert } from './sheetAlert';
 import { deleteTransaction } from '../db/transactions';
 import { emitTransactionsChanged } from '../events';
 import { formatAmount, merchantLabel } from './format';
+import { toast, toastError } from './toast';
 
 /** "Удалить транзакцию?" confirmation; deletes and notifies the screens, then calls onDeleted. */
 export function confirmDeleteTransaction(
@@ -15,9 +16,11 @@ export function confirmDeleteTransaction(
         try {
           await deleteTransaction(tx.id);
           emitTransactionsChanged();
+          toast('Операция удалена');
           onDeleted?.();
         } catch (e) {
           console.error('delete transaction failed', e);
+          toastError('Не удалось удалить');
         }
       },
     },

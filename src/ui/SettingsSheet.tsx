@@ -1,5 +1,6 @@
-import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { limitAlertsEnabled, setLimitAlertsEnabled } from '../limitAlerts';
 import BottomSheet from './BottomSheet';
 import { setDisplayCurrency, useDisplayCurrency } from '../displayCurrency';
 import { useRootNavigation } from '../navigation';
@@ -23,12 +24,20 @@ type Props = {
 
 /**
  * Настройки (the gear in the tab headers): a sheet with Валюта — the currency the app converts amounts to, switched right
- * here — then Мерчанты, Категории and Импорт SMS (past bank SMS from the phone).
+ * here — the limit notifications switch, then Мерчанты, Категории and Импорт SMS (past bank SMS from the phone).
  */
 export default function SettingsSheet({ open, onClose }: Props) {
   const navigation = useRootNavigation();
   const currency = useDisplayCurrency();
   const go = (route: 'Merchants' | 'Categories') => { onClose(); navigation.navigate(route); };
+  const [alerts, setAlerts] = useState(true);
+  useEffect(() => {
+    if (open) limitAlertsEnabled().then(setAlerts).catch((e) => console.error('load limit alerts setting failed', e));
+  }, [open]);
+  const toggleAlerts = (on: boolean) => {
+    setAlerts(on);
+    setLimitAlertsEnabled(on).catch((e) => console.error('save limit alerts setting failed', e));
+  };
 
   return (
     <BottomSheet visible={open} title="Настройки" onClose={onClose}>
@@ -39,6 +48,21 @@ export default function SettingsSheet({ open, onClose }: Props) {
           остаются в своей валюте.
         </Text>
         <CurrencyPicker value={currency} onChange={(c) => { setDisplayCurrency(c).catch((e) => console.error('save currency failed', e)); }} />
+      </View>
+      <View style={styles.switchRow}>
+        <View style={styles.flex}>
+          <Text style={styles.label}>Уведомлять о лимитах</Text>
+          <Text style={styles.switchHint}>
+            Когда траты категории доходят до 80% и 100% плана на месяц или лимита на день / неделю
+          </Text>
+        </View>
+        <Switch
+          value={alerts}
+          onValueChange={toggleAlerts}
+          trackColor={{ true: colors.accent, false: colors.border }}
+          thumbColor="#FFFFFF"
+          accessibilityLabel="Уведомлять о лимитах"
+        />
       </View>
       <Row label="Мерчанты" onPress={() => go('Merchants')} />
       <Row label="Категории" onPress={() => go('Categories')} />
@@ -55,6 +79,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16,
     borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
   },
+  switchRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingVertical: 14,
+    borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
+  },
+  flex: { flex: 1 },
+  switchHint: { fontSize: 13, color: colors.muted, marginTop: 2 },
   rowLabel: { flex: 1, fontSize: 16, color: colors.text },
   label: { fontSize: 16, color: colors.text },
   chevron: { fontSize: 20, color: colors.muted, width: 20, textAlign: 'right' },

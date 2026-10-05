@@ -1,16 +1,22 @@
 import React, { useEffect, useState } from 'react';
+import { Controller, useWatch } from 'react-hook-form';
 import { Currency } from '../../db/fx';
-import { getPlanBudget, lastPlanItem, NormPeriod, OverBudgetError, PlanKind, plannedTotal, setPlanAmount } from '../../db/plans';
-import { Text } from 'react-native';
+import { categoryMonthlyAverage, getPlanBudget, lastPlanItem, NormPeriod, OverBudgetError, PlanKind, planConverter, plannedTotal, setPlanAmount } from '../../db/plans';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { TrashIcon } from '../icons';
+import { colors } from '../theme';
 import { AMOUNT_HINT, SPENDING_PATTERN } from '../strings';
 import { formStyles } from '../formStyles';
 import CurrencyButton from '../CurrencyButton';
 import { formatWithCurrency, parseAmountOrZero, toInputValue } from '../money';
 import RadioGroup from '../RadioGroup';
 import TextInputModal from '../TextInputModal';
+import { useLoadedForm } from '../form';
+import { plural } from '../format';
+import { toast } from '../toast';
 
 const KINDS = [
-  ['limit', 'Повседневные траты', 'Еда, кафе, такси — сумма меняется, следим за остатком'],
+  ['limit', 'Траты с лимитом', 'Еда, кафе, одежда — сумма меняется, следим за остатком'],
   ['fixed', 'Обязательный платёж', 'Аренда, кредит, подписки — одна и та же сумма каждый месяц'],
 ] as const;
 
@@ -32,11 +38,15 @@ export type PlanAmountTarget = {
 
 type Props = {
   ym: string;
+  /** the app's currency: the hints (what is free, last month) are shown in it */
+  currency: Currency;
   /** null = closed */
   target: PlanAmountTarget | null;
   onClose: () => void;
   /** after a successful save (the item is added to the month's plan if it wasn't there) */
   onSaved: () => void;
+  /** an item in the plan: the trash right of the title removes it (the sheet closes first) */
+  onDelete?: () => void;
 };
 
 /**
@@ -44,77 +54,129 @@ type Props = {
  * stats screen ("＋ В план"). The amount is entered in any currency (the one it was entered in comes back when
  * editing); what is still free is shown in the amount to distribute's currency, and going over it is refused.
  */
-export default function PlanAmountModal({ ym, target, onClose, onSaved }: Props) {
-  // free for this category = amount to distribute − the other categories; null = no amount set
+export default function PlanAmountModal({ ym, currency: shown, target, onClose, onSaved, onDelete }: Props) {
+  // the most this category can get = amount to distribute − the other categories (null = no amount set), in the app's currency
   const [free, setFree] = useState<{ minor: number; currency: Currency } | null>(null);
-  const [kind, setKind] = useState<PlanKind>('limit');
-  const [norm, setNorm] = useState<NormPeriod>('day');
-  const [currency, setCurrency] = useState<Currency>('GEL');
-  // the field starts with the current amount, or the category's amount from the last month that planned it
-  const [initial, setInitial] = useState('');
-  const [previous, setPrevious] = useState<{ minor: number; currency: Currency } | null>(null);
+  // the saved item; a category not in the plan yet starts as a day-to-day limit in the screen's currency
+  const form = useLoadedForm<{ value: string; currency: Currency; kind: PlanKind; norm: NormPeriod }>(target ? {
+    value: toInputValue(target.limit_minor), currency: target.currency, kind: target.kind ?? 'limit', norm: target.norm_period ?? 'day',
+  } : null, target !== null);
+  const kind = useWatch({ control: form.control, name: 'kind' });
+  const [previous, setPrevious] = useState<{ minor: number; currency: Currency; ym: string } | null>(null);
+  // what the category usually takes a month (the latest full months), in the app's currency
+  const [average, setAverage] = useState<{ minor: number; months: number; from: string; to: string } | null>(null);
 
   useEffect(() => {
     if (!target) return;
-    setKind(target.kind ?? 'limit');
-    setNorm(target.norm_period ?? 'day');
-    setCurrency(target.currency);
-    setInitial(toInputValue(target.limit_minor));
     (async () => {
-      const [budget, last] = await Promise.all([getPlanBudget(ym), lastPlanItem(ym, target.category_id)]);
+      const [budget, last, conv, avg] = await Promise.all([
+        getPlanBudget(ym), lastPlanItem(ym, target.category_id), planConverter(ym), categoryMonthlyAverage(target.category_id, ym, shown)]);
       const others = budget ? await plannedTotal(ym, target.category_id, budget.currency) : 0;
-      setFree(budget ? { minor: Math.max(budget.amount_minor - others, 0), currency: budget.currency } : null);
-      setPrevious(last ? { minor: last.limit_minor, currency: last.currency } : null);
+      // in the app's currency; the original one when there is no rate
+      const inShown = (minor: number, from: Currency) => {
+        const c = conv(minor, from, shown);
+        return c === null ? { minor, currency: from } : { minor: c, currency: shown };
+      };
+      setFree(budget ? inShown(Math.max(budget.amount_minor - others, 0), budget.currency) : null);
+      setPrevious(last ? { ...inShown(last.limit_minor, last.currency), ym: last.ym } : null);
+      setAverage(avg && avg.average_minor > 0 ? { minor: avg.average_minor, months: avg.months, from: avg.from, to: avg.to } : null);
+      // not in the plan yet: last month's item is offered, ready to save as is (so it counts as a change)
       if (!target.limit_minor && last) {
-        setInitial(toInputValue(last.limit_minor));
-        setCurrency(last.currency);
-        if (!target.kind) setKind(last.kind);
-        if (!target.norm_period) setNorm(last.norm_period);
+        const dirty = { shouldDirty: true };
+        form.setValue('value', toInputValue(last.limit_minor), dirty);
+        form.setValue('currency', last.currency, dirty);
+        if (!target.kind) form.setValue('kind', last.kind, dirty);
+        if (!target.norm_period) form.setValue('norm', last.norm_period, dirty);
       }
     })().catch((e) => console.error('load plan budget failed', e));
-  }, [ym, target]);
+  }, [ym, target, form, shown]);
 
   async function save(text: string): Promise<string | null> {
     if (!target) return null;
     const minor = parseAmountOrZero(text);
     if (minor === null) return AMOUNT_HINT;
     try {
-      await setPlanAmount(ym, target.category_id, minor, kind, currency, norm);
+      const { kind: k, currency, norm } = form.getValues();
+      await setPlanAmount(ym, target.category_id, minor, k, currency, norm);
     } catch (e) {
       if (!(e instanceof OverBudgetError)) throw e;
-      return `Больше бюджета месяца. Не распределено: ${free ? formatWithCurrency(free.minor, free.currency) : '0'}.`;
+      return `Больше бюджета месяца: можно запланировать до ${free ? formatWithCurrency(free.minor, free.currency) : '0'}`;
     }
+    toast(`План «${target.label}» сохранён`);
     onSaved();
     return null;
   }
 
-  const hint = [
-    free ? `Не распределено: ${formatWithCurrency(free.minor, free.currency)}` : '',
-    previous ? `В прошлом месяце: ${formatWithCurrency(previous.minor, previous.currency)}` : '',
-  ].filter(Boolean).join('\n');
+  // what helps to pick the amount: the room in the budget, last month's plan, the usual spending
+  const facts: Array<{ label: string; value: string; note?: string }> = [];
+  // the month's budget minus the other categories' plans: not about what is spent
+  if (free) facts.push({ label: 'Можно запланировать', value: `до ${formatWithCurrency(free.minor, free.currency)}` });
+  if (previous) facts.push({ label: `В плане на ${monthName(previous.ym)}`, value: formatWithCurrency(previous.minor, previous.currency) });
+  if (average) {
+    facts.push({
+      label: `В среднем в месяц (${average.months} ${plural(average.months, ['полный месяц', 'полных месяца', 'полных месяцев'])})`,
+      value: `≈ ${formatWithCurrency(average.minor, shown)}`,
+    });
+  }
+  const hint = facts.length ? (
+    <View style={styles.facts}>
+      {facts.map((f) => (
+        <View key={f.label} style={styles.fact}>
+          <View style={styles.factLabel}>
+            <Text style={styles.label}>{f.label}</Text>
+            {f.note ? <Text style={styles.note}>{f.note}</Text> : null}
+          </View>
+          <Text style={styles.value}>{f.value}</Text>
+        </View>
+      ))}
+    </View>
+  ) : null;
 
   return (
     <TextInputModal
       visible={target !== null}
       title={target?.label ?? ''}
-      hint={hint || undefined}
-      initialValue={initial}
+      hint={hint}
+      form={form}
       placeholder="0"
       keyboardType="decimal-pad"
       maxLength={12}
       allowEmpty
       onSubmit={save}
       onClose={onClose}
-      inputAccessory={<CurrencyButton value={currency} onChange={setCurrency} />}
+      headerRight={onDelete ? (
+        <TouchableOpacity onPress={() => { onClose(); onDelete(); }} hitSlop={10} style={styles.delete} accessibilityLabel="Убрать из плана">
+          <TrashIcon color={colors.danger} size={22} />
+        </TouchableOpacity>
+      ) : undefined}
+      inputAccessory={<Controller control={form.control} name="currency" render={({ field }) => <CurrencyButton value={field.value} onChange={field.onChange} />} />}
     >
-      <RadioGroup options={KINDS} value={kind} onChange={setKind} />
+      <Controller control={form.control} name="kind" render={({ field }) => <RadioGroup options={KINDS} value={field.value} onChange={field.onChange} />} />
       {kind === 'limit' ? (
         <>
           <Text style={formStyles.label}>Как тратите</Text>
-          <RadioGroup options={PATTERNS} value={norm} onChange={setNorm} />
+          <Controller control={form.control} name="norm" render={({ field }) => <RadioGroup options={PATTERNS} value={field.value} onChange={field.onChange} />} />
           <Text style={formStyles.hint}>По этому в статистике считается лимит на день или неделю.</Text>
         </>
       ) : null}
     </TextInputModal>
   );
 }
+
+const MONTHS = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+
+/** "сентябрь", "сентябрь 2025" ('YYYY-MM'): the year only when it isn't this one. */
+function monthName(ym: string): string {
+  const [y, m] = ym.split('-').map(Number);
+  return `${MONTHS[m - 1]}${y !== new Date().getFullYear() ? ` ${y}` : ''}`;
+}
+
+const styles = StyleSheet.create({
+  delete: { padding: 8 },
+  facts: { marginBottom: 12, gap: 6 },
+  fact: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  factLabel: { flex: 1 },
+  label: { fontSize: 14, color: colors.muted },
+  note: { fontSize: 12, color: colors.muted, marginTop: 1 },
+  value: { fontSize: 14, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
+});

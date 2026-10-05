@@ -2,13 +2,16 @@ import React, { useState } from 'react';
 import { StyleProp, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
 import { Currency, CURRENCY_SYMBOLS } from '../db/fx';
 import BottomSheet from './BottomSheet';
-import { ChevronDownIcon } from './icons';
 import { CURRENCY_ORDER } from './CurrencyPicker';
+import { ChevronDownIcon } from './icons';
 import { colors } from './theme';
 
 const NAMES: Record<Currency, string> = { GEL: 'Лари', USD: 'Доллар США', EUR: 'Евро' };
 
-/** A compact currency choice next to an amount: "₾ ▾", the options in a sheet. */
+/**
+ * A compact currency choice next to an amount: "$ USD ⌄", the options in a sheet. Put it in a row with the amount field
+ * (alignItems: 'stretch'): it takes the field's height.
+ */
 export default function CurrencyButton({ value, onChange, style }: { value: Currency; onChange: (c: Currency) => void; style?: StyleProp<ViewStyle> }) {
   const [open, setOpen] = useState(false);
   return (
@@ -21,7 +24,7 @@ export default function CurrencyButton({ value, onChange, style }: { value: Curr
         hitSlop={6}
       >
         <Text style={styles.symbol}>{CURRENCY_SYMBOLS[value]}</Text>
-        {/* the same chevron as the stats period picker, sized to the symbol */}
+        <Text style={styles.code}>{value}</Text>
         <ChevronDownIcon color={colors.accent} size={14} />
       </TouchableOpacity>
       <BottomSheet visible={open} onClose={() => setOpen(false)} title="Валюта">
@@ -48,10 +51,12 @@ export default function CurrencyButton({ value, onChange, style }: { value: Curr
 
 const styles = StyleSheet.create({
   button: {
-    flexDirection: 'row', alignItems: 'center', gap: 2, paddingHorizontal: 10, paddingVertical: 8,
+    // no vertical padding of its own: as tall as the amount field next to it
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingHorizontal: 10,
     borderRadius: 8, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.bg,
   },
   symbol: { fontSize: 16, fontWeight: '600', color: colors.text },
+  code: { fontSize: 14, color: colors.muted },
   option: {
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14,
     borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border,

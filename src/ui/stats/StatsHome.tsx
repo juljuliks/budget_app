@@ -4,7 +4,7 @@ import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import type { TabParamList } from '../../navigation';
 import { currentYm, ymOf } from '../../db/plans';
 import Segmented from '../Segmented';
-import Button from '../Button';
+import { SheetActions } from '../Button';
 import BottomSheet from '../BottomSheet';
 import RangeCalendar from '../RangeCalendar';
 import { dayKeyOf, DayRange, parseDayKey, PeriodKind, periodLabel, periodRange, shiftAnchor, weekInMonth } from '../dateRange';
@@ -168,10 +168,7 @@ export default function StatsHome() {
         <View style={styles.sheet}>
           <Text style={styles.sheetHint}>{draft ? periodLabel('custom', draft) : 'Выберите день или период'}</Text>
           <RangeCalendar value={draft} onChange={setDraft} />
-          <Button title="Показать" onPress={applyRange} disabled={!draft} style={styles.sheetButton} />
-          <TouchableOpacity style={styles.sheetCancel} onPress={() => setCalendarOpen(false)}>
-            <Text style={styles.sheetCancelText}>Отмена</Text>
-          </TouchableOpacity>
+          <SheetActions submit={{ title: 'Показать', onPress: applyRange, disabled: !draft }} onCancel={() => setCalendarOpen(false)} />
         </View>
       </BottomSheet>
     </View>
@@ -201,7 +198,4 @@ const styles = StyleSheet.create({
   menuCheck: { fontSize: 16, color: colors.accent, marginLeft: 12 },
   sheet: { paddingHorizontal: 16 },
   sheetHint: { fontSize: 14, color: colors.muted, marginBottom: 8, paddingHorizontal: 4 },
-  sheetButton: { marginTop: 12 },
-  sheetCancel: { alignItems: 'center', paddingTop: 12 },
-  sheetCancelText: { fontSize: 16, color: colors.muted },
 });
