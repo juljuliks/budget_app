@@ -9,7 +9,8 @@ import Chip from './Chip';
 import { formStyles } from './formStyles';
 import type { CategoryInfo } from './MerchantsScreen';
 import { colors } from './theme';
-import { clearFormErrors, formError, useLoadedForm } from './form';
+import { submitForm, useLoadedForm } from './form';
+import { toast, toastError } from './toast';
 
 type Props = {
   visible: boolean;
@@ -32,7 +33,6 @@ export default function MergeMerchantsModal({ visible, merchants, categories, on
     visible && options ? { name: group?.name ?? top?.name ?? '', categoryId: options[0] ?? null } : null, visible);
   const categoryId = useWatch({ control: form.control, name: 'categoryId' }) ?? null;
   const { isSubmitting: saving } = useFormState({ control: form.control });
-  const error = formError(form);
 
   useEffect(() => {
     if (!visible) { setOptions(null); return; }
@@ -41,14 +41,15 @@ export default function MergeMerchantsModal({ visible, merchants, categories, on
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
-  const merge = form.handleSubmit(async (v) => {
+  const merge = submitForm(form, async (v) => {
     try {
       await mergeMerchants(merchants.map((m) => m.id), v.name, v.categoryId);
       emitTransactionsChanged();
+      toast(`Объединено в группу «${v.name.trim()}»`);
       onDone();
     } catch (e) {
       console.error('merge merchants failed', e);
-      form.setError('root.server', { message: 'Не удалось объединить' });
+      toastError('Не удалось объединить');
     }
   });
 
@@ -66,7 +67,7 @@ export default function MergeMerchantsModal({ visible, merchants, categories, on
               <TextInput
                 style={formStyles.input}
                 value={field.value}
-                onChangeText={(v) => { field.onChange(v); clearFormErrors(form); }}
+                onChangeText={field.onChange}
                 placeholder="Например, SPAR"
                 maxLength={40}
               />
@@ -85,7 +86,6 @@ export default function MergeMerchantsModal({ visible, merchants, categories, on
             автоматической категорией. Выбранные вручную категории не меняются.
           </Text>
 
-          {error ? <Text style={formStyles.error}>{error}</Text> : null}
           <SheetActions submit={{ title: 'Объединить', onPress: merge, disabled: saving }} onCancel={onClose} />
         </SheetScrollView>
     </BottomSheet>

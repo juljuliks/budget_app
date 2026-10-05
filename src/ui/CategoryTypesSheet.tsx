@@ -11,6 +11,7 @@ import { CreateButton } from './PlusButton';
 import RowActions from './RowActions';
 import TypeEditModal from './TypeEditModal';
 import { colors } from './theme';
+import { toast } from './toast';
 
 /** Category sections ("Переводы", "Хобби", ...) in a sheet: create, edit (name and colors), delete. From the categories. */
 export default function CategoryTypesSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
@@ -30,7 +31,12 @@ export default function CategoryTypesSheet({ visible, onClose }: { visible: bool
       n > 0 ? `${n} ${plural(n, ['категория останется', 'категории останутся', 'категорий останутся'])} без раздела.` : undefined,
       [
         { text: 'Отмена', style: 'cancel' },
-        { text: 'Удалить', style: 'destructive', onPress: async () => { await deleteCategoryType(t.id); emitTransactionsChanged(); load(); } },
+        { text: 'Удалить', style: 'destructive', onPress: async () => {
+          await deleteCategoryType(t.id);
+          emitTransactionsChanged();
+          load();
+          toast(`Раздел «${t.name}» удалён`);
+        } },
       ]);
   }
 

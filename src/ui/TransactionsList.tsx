@@ -31,6 +31,7 @@ import { ActiveFilter, AllFiltersSheet, DateSheet, FilterButton, OptionsSheet } 
 import { colors } from './theme';
 import { confirmDeleteTransaction } from './transactionActions';
 import TransactionItem from './TransactionItem';
+import { toast, toastError } from './toast';
 
 /** The newest operations shown first; more come in pages while scrolling. */
 const FIRST_PAGE = 10;
@@ -346,10 +347,14 @@ export default function TransactionsList() {
     setBulkOpen(false);
     try {
       await assignCategoryToMany([...selected], categoryId);
+      const n = selected.size;
+      const c = categoryId === null ? undefined : await getCategory(categoryId);
+      toast(`${c ? `Категория «${categoryLabel(c)}» назначена` : 'Категория убрана'}: ${n} ${plural(n, ['операция', 'операции', 'операций'])}`);
       setSelected(new Set());
       setSelectMode(false);
     } catch (e) {
       console.error('bulk assign failed', e);
+      toastError('Не удалось сохранить');
     }
   }
 

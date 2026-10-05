@@ -155,9 +155,13 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 16, paddingBottom: 32 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   hint: { color: colors.muted, fontSize: 14, textAlign: 'center', marginVertical: 12 },
-  month: { paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
-  monthTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  monthTitle: { fontSize: 16, fontWeight: '600', color: colors.text },
+  month: { paddingBottom: 14 },
+  // a grey band across the screen, like the days on the operations
+  monthTop: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    marginHorizontal: -16, paddingHorizontal: 16, paddingVertical: 8, backgroundColor: colors.surface, marginBottom: 4,
+  },
+  monthTitle: { fontSize: 14, fontWeight: '600', color: colors.muted },
   chevron: { fontSize: 16, color: colors.muted },
   totals: { flexDirection: 'row', marginTop: 6 },
   total: { flex: 1 },
@@ -165,14 +169,15 @@ const styles = StyleSheet.create({
   totalValue: { fontSize: 15, color: colors.text, marginTop: 2 },
   danger: { color: colors.danger },
   good: { color: colors.income },
-  details: { marginTop: 10, backgroundColor: colors.surface, borderRadius: 8, padding: 10 },
+  // white with a border: the sections are grey bands in it, like the days on the operations
+  details: { marginTop: 10, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 10, overflow: 'hidden' },
   detailsLoading: { marginTop: 10 },
   detailRow: { flexDirection: 'row', paddingVertical: 4 },
   detailHead: { fontSize: 12, color: colors.muted },
   detailName: { flex: 1, fontSize: 14, color: colors.text, marginRight: 8 },
   detailNum: { width: 92, textAlign: 'right', fontSize: 14, color: colors.text, fontVariant: ['tabular-nums'] },
   note: { fontSize: 12, color: colors.muted, marginTop: 6 },
-  groupRow: { marginTop: 6, borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border, paddingTop: 6 },
-  groupTitle: { fontSize: 12, fontWeight: '600', color: colors.muted, textTransform: 'uppercase' },
+  groupRow: { marginTop: 6, marginHorizontal: -10, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: colors.surface },
+  groupTitle: { fontSize: 12, fontWeight: '600', color: colors.muted },
 });
 

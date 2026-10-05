@@ -19,6 +19,7 @@ import { DonutCenter, RefundsRow } from './StatsView';
 import { useLatestRequest } from '../useLatestRequest';
 import SummaryTiles, { GROUP_TITLES } from './SummaryTiles';
 import { pct, SummaryGroupKey, summaryGroups } from './summaryGroups';
+import { formStyles } from '../formStyles';
 
 /** Periods up to this long are measured against the plan (its share for these days); longer ones aren't. */
 const PACE_MAX_DAYS = 31;
@@ -175,7 +176,7 @@ export default function PeriodStatsView({ range, emptyText = 'За этот пе
       {stats.categories.length === 0 ? <Text style={styles.hint}>{emptyText}</Text> : null}
       {stats.groups.map((g) => (
         <View key={`${g.type_id}-${g.title}`} style={styles.group}>
-          <View style={styles.groupHeader}>
+          <View style={[formStyles.sectionHeader, styles.groupHeader]}>
             <Text style={styles.groupTitle}>{g.title}</Text>
             <Text style={styles.groupTotal}>{money(g.spent_minor)}</Text>
           </View>
@@ -477,11 +478,9 @@ const styles = StyleSheet.create({
   summary: { flexShrink: 1, fontSize: 14, color: colors.text, textAlign: 'center' },
   hint: { color: colors.muted, fontSize: 14, textAlign: 'center', marginVertical: 12 },
   group: { marginTop: 16 },
-  groupHeader: {
-    flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between',
-    paddingBottom: 4, borderBottomWidth: 1, borderColor: colors.border,
-  },
-  groupTitle: { fontSize: 13, fontWeight: '600', color: colors.muted, textTransform: 'uppercase' },
+  // a grey band across the screen, like the days on the operations
+  groupHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginHorizontal: -16 },
+  groupTitle: { fontSize: 13, fontWeight: '600', color: colors.muted },
   groupTotal: { fontSize: 13, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
   row: { paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
   rowTop: { flexDirection: 'row', alignItems: 'center' },

@@ -14,6 +14,7 @@ import ColorPickerSheet from './ColorPickerSheet';
 import TextInputModal, { setField } from './TextInputModal';
 import { useLoadedForm } from './form';
 import { colors } from './theme';
+import { toast } from './toast';
 
 type Props = {
   visible: boolean;
@@ -49,6 +50,7 @@ export default function TypeEditModal({ visible, type, types, onClose, onSaved }
     else await renameCategoryType(id, name);
     await setCategoryTypePalette(id, form.getValues('palette'));
     emitTransactionsChanged();
+    toast(type ? `Раздел «${name}» сохранён` : `Раздел «${name}» создан`);
     onSaved(id);
     return null;
   }

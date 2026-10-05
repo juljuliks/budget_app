@@ -15,14 +15,15 @@ import Meter from '../Meter';
 import { formatWithCurrency, parseAmountOrZero, toInputValue } from '../money';
 import { AMOUNT_HINT, NO_SECTION, PER_PERIOD, SPENDING_PATTERN } from '../strings';
 import { sheetAlert } from '../sheetAlert';
-import RowActions, { ROW_ICON_SIZE } from '../RowActions';
 import { Controller } from 'react-hook-form';
 import TextInputModal from '../TextInputModal';
 import { useLoadedForm } from '../form';
+import { formStyles } from '../formStyles';
 import PlanAddModal from './PlanAddModal';
 import PlanAmountModal, { PlanAmountTarget } from './PlanAmountModal';
 import { chart, colors } from '../theme';
 import { useLatestRequest } from '../useLatestRequest';
+import { toast, toastError } from '../toast';
 
 
 const NORM_DAYS = { day: 1, week: 7, '2weeks': 14 } as const;
@@ -95,6 +96,11 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
   const money = (minor: number) => formatWithCurrency(minor, currency);
   // "(200 $)" after an amount shown converted from another currency
   const original = (minor: number, from: Currency) => (from === currency ? '' : ` (${formatWithCurrency(minor, from)})`);
+  // an amount in the screen's currency (its own one if there's no rate)
+  const inShown = (minor: number, from: Currency) => {
+    const c = from === currency ? minor : toShown(minor, from);
+    return c === null ? formatWithCurrency(minor, from) : money(c);
+  };
   const total = useMemo(() => (items ?? []).reduce((sum, i) => sum + (i.converted_minor ?? 0), 0), [items]);
   // the amount to distribute in the screen's currency (its own one if there's no rate)
   const shownBudget = budget === null ? null : toShown(budget.amount_minor, budget.currency) ?? budget.amount_minor;
@@ -110,24 +116,33 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
       if (!(e instanceof OverBudgetError)) throw e;
       return `По категориям уже запланировано ${formatWithCurrency(e.planned_minor, e.currency)} — бюджет не может быть меньше.`;
     }
+    toast(minor === 0 ? 'Бюджет месяца убран' : 'Бюджет месяца сохранён');
     load();
     return null;
   }
 
   // a category repeated every month (📌) is asked about: removing it also stops it carrying over
   function removeItem(item: PlanItem) {
-    if (!item.pinned) { run(removePlanItem(ym, item.category_id)); return; }
+    const done = `«${categoryLabel(item)}» убрана из плана`;
+    if (!item.pinned) { run(removePlanItem(ym, item.category_id), done); return; }
     sheetAlert(
       `Убрать «${categoryLabel(item)}» из плана?`,
       'Эта категория повторяется каждый месяц (📌). Она пропадёт из плана этого месяца и не перейдёт в следующие. Операции не изменятся.',
       [
         { text: 'Отмена', style: 'cancel' },
-        { text: 'Убрать из плана', style: 'destructive', onPress: () => { run(removePlanItem(ym, item.category_id)); } },
+        { text: 'Убрать из плана', style: 'destructive', onPress: () => { run(removePlanItem(ym, item.category_id), done); } },
       ]);
   }
 
-  async function run(action: Promise<unknown>) {
-    try { await action; } catch (e) { console.error('plan update failed', e); }
+  /** A change of the plan, then `done` in a toast. */
+  async function run(action: Promise<unknown>, done: string) {
+    try {
+      await action;
+      toast(done);
+    } catch (e) {
+      console.error('plan update failed', e);
+      toastError('Не удалось сохранить');
+    }
     load();
   }
 
@@ -180,7 +195,7 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
 
       {groupByType(items).map((g) => (
         <View key={g.title} style={styles.group}>
-          <View style={styles.groupHeader}>
+          <View style={[formStyles.sectionHeader, styles.groupHeader]}>
             <Text style={styles.groupTitle}>{g.title}</Text>
             <Text style={styles.groupTotal}>
               {money(g.planned)}
@@ -189,9 +204,16 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
             </Text>
           </View>
           {g.items.map((item) => (
-            <View key={item.category_id} style={styles.row}>
+            // the whole row opens the item's sheet (amount, kind; delete is in its title); the pin is its own button
+            <TouchableOpacity
+              key={item.category_id}
+              style={styles.row}
+              onPress={() => setEditingItem({ ...item, label: categoryLabel(item) })}
+              accessibilityLabel={`Изменить: ${categoryLabel(item)}`}
+            >
               <TouchableOpacity
-                onPress={() => run(setPlanPinned(ym, item.category_id, !item.pinned))}
+                onPress={() => run(setPlanPinned(ym, item.category_id, !item.pinned),
+                  item.pinned ? `«${categoryLabel(item)}» больше не повторяется` : `«${categoryLabel(item)}» будет повторяться каждый месяц`)}
                 hitSlop={8}
                 accessibilityLabel={item.pinned ? 'Не повторять каждый месяц' : 'Повторять каждый месяц'}
                 style={styles.pin}
@@ -205,7 +227,6 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
                   <Text style={styles.percent}>
                     {[
                       item.kind === 'fixed' ? 'обязательный платёж' : '',
-                      // the norm's rhythm, when not the default "per day"
                       // a flexible item's amount per its norm rhythm, e.g. "≈ 46 ₾ в неделю"
                       item.kind === 'limit' ? normText(item, ym, currency) : '',
                       shownBudget && item.converted_minor ? `${percentOf(item.converted_minor, shownBudget)} бюджета` : '',
@@ -213,32 +234,22 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
                   </Text>
                 ) : null}
               </View>
-              <TouchableOpacity
-                style={styles.amountButton}
-                // the amount and currency it was entered in
-                onPress={() => setEditingItem({ ...item, label: categoryLabel(item) })}
-                accessibilityLabel={`Изменить сумму: ${categoryLabel(item)}`}
-              >
-                {item.limit_minor ? (
-                  <View style={styles.amountBox}>
-                    <Text style={styles.amount}>
-                      {item.converted_minor !== null ? money(item.converted_minor) : formatWithCurrency(item.limit_minor, item.currency)}
-                    </Text>
-                    {item.converted_minor !== null && item.currency !== currency ? (
-                      <Text style={styles.amountOriginal}>{original(item.limit_minor, item.currency).trim()}</Text>
-                    ) : null}
-                  </View>
-                ) : (
-                  // carried over without an amount: last month's as a muted hint
-                  <Text style={[styles.amount, styles.amountEmpty]}>
-                    {item.previous_minor ? `в прошлом месяце ${formatWithCurrency(item.previous_minor, item.currency)}` : '0'}
+              {item.limit_minor ? (
+                <View style={styles.amountBox}>
+                  <Text style={styles.amount}>
+                    {item.converted_minor !== null ? money(item.converted_minor) : formatWithCurrency(item.limit_minor, item.currency)}
                   </Text>
-                )}
-                {/* tapping the amount edits it too, so the pencil sits with it rather than in RowActions */}
-                <PencilIcon color={colors.muted} size={ROW_ICON_SIZE} />
-              </TouchableOpacity>
-              <RowActions subject={categoryLabel(item)} onDelete={() => removeItem(item)} />
-            </View>
+                  {item.converted_minor !== null && item.currency !== currency ? (
+                    <Text style={styles.amountOriginal}>{original(item.limit_minor, item.currency).trim()}</Text>
+                  ) : null}
+                </View>
+              ) : (
+                // carried over without an amount: last month's as a muted hint, in the app's currency
+                <Text style={[styles.amount, styles.amountEmpty]}>
+                  {item.previous_minor ? `в прошлом месяце ${inShown(item.previous_minor, item.currency)}` : '0'}
+                </Text>
+              )}
+            </TouchableOpacity>
           ))}
         </View>
       ))}
@@ -257,7 +268,14 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
         onClose={() => setBudgetOpen(false)}
         inputAccessory={<Controller control={budgetForm.control} name="currency" render={({ field }) => <CurrencyButton value={field.value} onChange={field.onChange} />} />}
       />
-      <PlanAmountModal ym={ym} target={editingItem} onClose={() => setEditingItem(null)} onSaved={load} />
+      <PlanAmountModal
+        ym={ym}
+        currency={currency}
+        target={editingItem}
+        onClose={() => setEditingItem(null)}
+        onSaved={load}
+        onDelete={() => { const item = items.find((i) => i.category_id === editingItem?.category_id); if (item) removeItem(item); }}
+      />
     </ScrollView>
     {/* like the "+" on the transactions screen: several categories with amounts at once */}
     <Fab onPress={() => setAddOpen(true)} accessibilityLabel="Добавить категории в план" />
@@ -284,11 +302,9 @@ const styles = StyleSheet.create({
   caption: { fontSize: 13, color: colors.muted, textAlign: 'center' },
   hint: { color: colors.muted, fontSize: 14, textAlign: 'center', marginVertical: 12 },
   group: { marginTop: 12 },
-  groupHeader: {
-    flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between',
-    paddingBottom: 4, borderBottomWidth: 1, borderColor: colors.border,
-  },
-  groupTitle: { fontSize: 13, fontWeight: '600', color: colors.muted, textTransform: 'uppercase' },
+  // a grey band across the screen, like the days on the operations
+  groupHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginHorizontal: -16 },
+  groupTitle: { fontSize: 13, fontWeight: '600', color: colors.muted },
   groupShare: { color: colors.muted, fontWeight: '400' },
   groupTotal: { fontSize: 13, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
   row: {
@@ -299,9 +315,8 @@ const styles = StyleSheet.create({
   nameBox: { flex: 1, marginRight: 8 },
   name: { fontSize: 15, color: colors.text },
   percent: { fontSize: 12, color: colors.muted, marginTop: 2, fontVariant: ['tabular-nums'] },
-  amountButton: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4, paddingLeft: 8 },
   amount: { fontSize: 16, color: colors.text, fontVariant: ['tabular-nums'] },
-  amountBox: { alignItems: 'flex-end' },
+  amountBox: { alignItems: 'flex-end', paddingLeft: 8 },
   amountOriginal: { fontSize: 12, color: colors.muted, fontVariant: ['tabular-nums'] },
   amountEmpty: { color: colors.muted, fontSize: 14 },
 });

@@ -2,6 +2,7 @@ import { Category, categoryLabel, countPastTransactionsOfCategory, deleteCategor
 import { emitTransactionsChanged } from '../events';
 import { plural } from './format';
 import { sheetAlert } from './sheetAlert';
+import { toast, toastError } from './toast';
 
 /**
  * Deleting a category with no operations this month: a confirmation sheet, then the delete. Its plan of this month
@@ -17,8 +18,12 @@ export async function confirmDeleteCategory(category: Category, onDeleted: () =>
       { text: 'Отмена', style: 'cancel' },
       {
         text: 'Удалить категорию', style: 'destructive', onPress: () => {
-          deleteCategory(category.id, null).then(() => { emitTransactionsChanged(); onDeleted(); })
-            .catch((e) => console.error('delete category failed', e));
+          deleteCategory(category.id, null).then(() => {
+            emitTransactionsChanged();
+            toast(`Категория «${categoryLabel(category)}» удалена`);
+            onDeleted();
+          })
+            .catch((e) => { console.error('delete category failed', e); toastError('Не удалось удалить'); });
         },
       },
     ]);

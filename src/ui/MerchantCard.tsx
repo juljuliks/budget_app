@@ -15,6 +15,7 @@ import type { CategoryInfo } from './MerchantsScreen';
 import TextInputModal from './TextInputModal';
 import { colors } from './theme';
 import { formatMoneyWithCurrency } from './money';
+import { toast, toastError } from './toast';
 
 type Props = {
   /** null = closed */
@@ -79,8 +80,11 @@ export default function MerchantCard({ merchantId, categories, onClose, onChange
         { text: 'Отмена', style: 'cancel' },
         {
           text: 'Сохранить', onPress: () => {
-            setMerchantCategory(m.id, categoryId).then(() => { setPicking(false); changed(); })
-              .catch((e) => console.error('set merchant category failed', e));
+            setMerchantCategory(m.id, categoryId).then(() => {
+              setPicking(false);
+              changed();
+              toast(`Категория «${label}» назначена мерчанту «${m.name}»`);
+            }).catch((e) => { console.error('set merchant category failed', e); toastError('Не удалось сохранить'); });
           },
         },
       ]);
@@ -95,7 +99,8 @@ export default function MerchantCard({ merchantId, categories, onClose, onChange
         { text: 'Отмена', style: 'cancel' },
         {
           text: 'Открепить', style: 'destructive', onPress: () => {
-            setMerchantCategory(m.id, null).then(changed).catch((e) => console.error('unpin failed', e));
+            setMerchantCategory(m.id, null).then(() => { changed(); toast(`Категория откреплена от «${m.name}»`); })
+              .catch((e) => { console.error('unpin failed', e); toastError('Не удалось открепить'); });
           },
         },
       ]);
@@ -112,8 +117,11 @@ export default function MerchantCard({ merchantId, categories, onClose, onChange
         { text: 'Отмена', style: 'cancel' },
         {
           text: 'Исключить', style: 'destructive', onPress: () => {
-            excludeFromGroup(m.id, excluded).then(() => { setExcluded([]); changed(); })
-              .catch((e) => console.error('exclude failed', e));
+            excludeFromGroup(m.id, excluded).then(() => {
+              setExcluded([]);
+              changed();
+              toast(all ? `Группа «${m.name}» удалена` : `Исключено из группы «${m.name}»`);
+            }).catch((e) => { console.error('exclude failed', e); toastError('Не удалось исключить'); });
           },
         },
       ]);
@@ -219,6 +227,7 @@ export default function MerchantCard({ merchantId, categories, onClose, onChange
           await renameMerchantGroup(m.id, name);
           setRenaming(false);
           changed();
+          toast(`Группа переименована в «${name}»`);
           return null;
         }}
         onClose={() => setRenaming(false)}

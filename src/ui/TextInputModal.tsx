@@ -1,9 +1,10 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { KeyboardTypeOptions, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Controller, FieldValues, Path, PathValue, useFormState, UseFormReturn } from 'react-hook-form';
 import BottomSheet from './BottomSheet';
 import { SheetActions } from './Button';
-import { clearFormErrors, formError, useLoadedForm } from './form';
+import { submitForm, useLoadedForm } from './form';
+import { toastError } from './toast';
 import { formStyles } from './formStyles';
 import { colors } from './theme';
 
@@ -23,7 +24,7 @@ type Props<V extends TextFormValues & FieldValues> = {
   placeholder?: string;
   submitLabel?: string;
   /** muted lines under the title (e.g. "Свободно 1 600 ₾") */
-  hint?: string;
+  hint?: React.ReactNode;
   keyboardType?: KeyboardTypeOptions;
   maxLength?: number;
   /** empty input is submitted (as '') instead of "Введите название" */
@@ -32,6 +33,8 @@ type Props<V extends TextFormValues & FieldValues> = {
   multiline?: boolean;
   /** extra controls under the field (e.g. the plan item kind) */
   children?: React.ReactNode;
+  /** a control right of the title (e.g. delete) */
+  headerRight?: React.ReactNode;
   /** a control right of the field (e.g. the amount's currency) */
   inputAccessory?: React.ReactNode;
   /** returns an error message to show, or null when saved */
@@ -45,32 +48,27 @@ type Props<V extends TextFormValues & FieldValues> = {
  */
 export default function TextInputModal<V extends TextFormValues & FieldValues = TextFormValues>({
   visible, title, initialValue = '', form: outer, placeholder, submitLabel = 'Сохранить', hint, keyboardType, maxLength = 30,
-  allowEmpty, multiline, onSubmit, onClose, children, inputAccessory,
+  allowEmpty, multiline, onSubmit, onClose, children, inputAccessory, headerRight,
 }: Props<V>) {
   // used only without a form of the caller's (a hook can't be skipped)
   const own = useLoadedForm<TextFormValues>(outer ? null : { value: initialValue }, visible);
   const form = (outer ?? own) as unknown as UseFormReturn<TextFormValues>;
   const { isDirty, isSubmitting } = useFormState({ control: form.control });
-  const error = formError(form);
 
-  const input = useRef<TextInput>(null);
-  // an empty field gets the keyboard once the sheet has slid up (autoFocus during the animation doesn't show it);
-  // a prefilled one doesn't: the keyboard would cover the other choices (currency, kind, norm)
-  useEffect(() => {
-    if (!visible) return undefined;
-    const t = setTimeout(() => { if (!form.getValues('value')) input.current?.focus(); }, 300);
-    return () => clearTimeout(t);
-  }, [visible, form]);
-
-  const submit = form.handleSubmit(async ({ value }) => {
-    const err = await onSubmit(value.trim());
-    if (err) form.setError('root.server', { message: err }); else onClose();
+  const submit = submitForm(form, async ({ value }) => {
+    try {
+      const err = await onSubmit(value.trim());
+      if (err) toastError(err); else onClose();
+    } catch (e) {
+      console.error('save failed', e);
+      toastError('Не удалось сохранить');
+    }
   });
 
   return (
-    <BottomSheet visible={visible} onClose={onClose} title={title}>
+    <BottomSheet visible={visible} onClose={onClose} title={title} headerRight={headerRight}>
         <View style={styles.dialog}>
-          {hint ? <Text style={styles.hint}>{hint}</Text> : null}
+          {typeof hint === 'string' ? <Text style={styles.hint}>{hint}</Text> : hint ?? null}
           <View style={styles.inputRow}>
           <Controller
             control={form.control}
@@ -78,12 +76,11 @@ export default function TextInputModal<V extends TextFormValues & FieldValues = 
             rules={{ validate: (v) => allowEmpty || !!v.trim() || 'Введите название' }}
             render={({ field }) => (
               <TextInput
-                ref={input}
                 style={[formStyles.input, styles.input, multiline && styles.multiline]}
                 multiline={multiline}
                 textAlignVertical={multiline ? 'top' : undefined}
                 value={field.value}
-                onChangeText={(v) => { field.onChange(v); clearFormErrors(form); }}
+                onChangeText={field.onChange}
                 placeholder={placeholder}
                 placeholderTextColor={colors.muted}
                 keyboardType={keyboardType}
@@ -96,7 +93,6 @@ export default function TextInputModal<V extends TextFormValues & FieldValues = 
           {inputAccessory}
           </View>
           {children ? <View style={styles.extra}>{children}</View> : null}
-          {error ? <Text style={formStyles.error}>{error}</Text> : null}
           {/* the submit button only once something changed: nothing to save otherwise */}
           <SheetActions submit={isDirty ? { title: submitLabel, onPress: submit, disabled: isSubmitting } : null} onCancel={onClose} />
         </View>

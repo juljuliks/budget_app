@@ -117,3 +117,23 @@ test('average per month: only full months with data, not the current one nor a f
   // no full month yet
   expect(await averageFullMonths('2026-09-10', '2026-10-04', 'GEL', now)).toBeNull();
 });
+
+test("a category's usual spending: the latest full months (up to 3) before the plan month", async () => {
+  const { categoryMonthlyAverage } = require('../src/db/plans');
+  const now = new Date(2026, 9, 4); // 4 Oct 2026
+  // tracking starts on 15 May: May is partial; Jun–Sep are full
+  await addManualTransaction({ amount_minor: 99900, category_id: 1, occurred_at: at(2026, 4, 15) });
+  await addManualTransaction({ amount_minor: 90000, category_id: 1, occurred_at: at(2026, 5, 5) });
+  await addManualTransaction({ amount_minor: 30000, category_id: 1, occurred_at: at(2026, 6, 5) });
+  await addManualTransaction({ amount_minor: 60000, category_id: 1, occurred_at: at(2026, 7, 5) });
+  await addManualTransaction({ amount_minor: 90000, category_id: 1, occurred_at: at(2026, 8, 5) });
+  await addManualTransaction({ amount_minor: 70000, category_id: 2, occurred_at: at(2026, 8, 6) });
+  await addManualTransaction({ amount_minor: 50000, category_id: 1, occurred_at: at(2026, 9, 2) });
+  // October's plan (and November's: the current month isn't over): Jul–Sep, only this category
+  expect(await categoryMonthlyAverage(1, '2026-10', 'GEL', now)).toEqual({ average_minor: 60000, months: 3, from: '2026-07', to: '2026-09' });
+  expect(await categoryMonthlyAverage(1, '2026-11', 'GEL', now)).toEqual({ average_minor: 60000, months: 3, from: '2026-07', to: '2026-09' });
+  // August's plan: Jun–Jul (May is partial)
+  expect(await categoryMonthlyAverage(1, '2026-08', 'GEL', now)).toEqual({ average_minor: 60000, months: 2, from: '2026-06', to: '2026-07' });
+  // June's plan: no full month before it
+  expect(await categoryMonthlyAverage(1, '2026-06', 'GEL', now)).toBeNull();
+});

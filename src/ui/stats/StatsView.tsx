@@ -15,6 +15,7 @@ import { NO_RATE, PER_PERIOD } from '../strings';
 import { colors } from '../theme';
 import PlanAmountModal, { PlanAmountTarget } from './PlanAmountModal';
 import { useLatestRequest } from '../useLatestRequest';
+import { formStyles } from '../formStyles';
 
 /**
  * Donut: one segment per category with spending, in section order, so a type's categories sit next to
@@ -88,7 +89,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
       ) : (
         stats.groups.map((g) => (
           <View key={`${g.type_id}-${g.title}`} style={styles.group}>
-            <View style={styles.groupHeader}>
+            <View style={[formStyles.sectionHeader, styles.groupHeader]}>
               <Text style={styles.groupTitle}>{g.title}</Text>
               <Text style={styles.groupTotal}>
                 {g.planned_minor ? formatShort(g.spent_minor) : formatWithCurrency(g.spent_minor, stats.currency)}
@@ -122,7 +123,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
         </Text>
       ) : null}
 
-      <PlanAmountModal ym={ymOf(year, month)} target={planTarget} onClose={() => setPlanTarget(null)} onSaved={load} />
+      <PlanAmountModal ym={ymOf(year, month)} currency={currency} target={planTarget} onClose={() => setPlanTarget(null)} onSaved={load} />
     </ScrollView>
   );
 }
@@ -273,11 +274,9 @@ const styles = StyleSheet.create({
   dangerText: { color: colors.danger },
   hint: { color: colors.muted, fontSize: 14, textAlign: 'center', marginVertical: 12 },
   group: { marginTop: 16 },
-  groupHeader: {
-    flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between',
-    paddingBottom: 4, borderBottomWidth: 1, borderColor: colors.border,
-  },
-  groupTitle: { fontSize: 13, fontWeight: '600', color: colors.muted, textTransform: 'uppercase' },
+  // a grey band across the screen, like the days on the operations
+  groupHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginHorizontal: -16 },
+  groupTitle: { fontSize: 13, fontWeight: '600', color: colors.muted },
   groupTotal: { fontSize: 13, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
   row: { paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
   rowTop: { flexDirection: 'row', alignItems: 'center' },

@@ -1,14 +1,17 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import {
-  Animated, Easing, FlatList, FlatListProps, KeyboardAvoidingView, LayoutChangeEvent, Modal, NativeScrollEvent, NativeSyntheticEvent, PanResponder,
+  Animated, Easing, FlatList, FlatListProps, Keyboard, LayoutChangeEvent, Modal, NativeScrollEvent, NativeSyntheticEvent, PanResponder,
   Pressable, ScrollView, ScrollViewProps, StyleProp, StyleSheet, Text, View, ViewStyle,
 } from 'react-native';
 import { colors } from './theme';
+import { SHEET_INSET, ToastHost } from './toast';
 
 type Props = {
   visible: boolean;
   onClose: () => void;
   title?: string;
+  /** a control right of the title (e.g. delete) */
+  headerRight?: React.ReactNode;
   children: React.ReactNode;
   /** extra style of the sheet (e.g. a max height) */
   style?: StyleProp<ViewStyle>;
@@ -59,7 +62,7 @@ const FLICK_VY = 0.8;
  * Modal itself isn't animated: with animationType="slide" the backdrop would slide up with the sheet). Closed by
  * tapping the backdrop, the back button or swiping the sheet down; it stays mounted until the closing animation ends.
  */
-export default function BottomSheet({ visible, onClose, title, children, style }: Props) {
+export default function BottomSheet({ visible, onClose, title, headerRight, children, style }: Props) {
   const [mounted, setMounted] = useState(visible);
   const progress = useRef(new Animated.Value(0)).current;
   const [height, setHeight] = useState(800);
@@ -102,6 +105,16 @@ export default function BottomSheet({ visible, onClose, title, children, style }
     }
   }, [visible, progress, drag]);
 
+  // the keyboard's height while it is open: the sheet stands on it. Measured by hand: KeyboardAvoidingView in a
+  // Modal kept its padding after the keyboard closed, and the sheet hung above the bottom of the screen
+  const [keyboard, setKeyboard] = useState(0);
+  useEffect(() => {
+    if (!mounted) return undefined;
+    const show = Keyboard.addListener('keyboardDidShow', (e) => setKeyboard(e.endCoordinates.height));
+    const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboard(0));
+    return () => { show.remove(); hide.remove(); setKeyboard(0); };
+  }, [mounted]);
+
   const translateY = Animated.add(progress.interpolate({ inputRange: [0, 1], outputRange: [height, 0] }), drag);
 
   return (
@@ -110,7 +123,7 @@ export default function BottomSheet({ visible, onClose, title, children, style }
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Закрыть" />
       </Animated.View>
       {/* the sheet rises above the keyboard */}
-      <KeyboardAvoidingView style={styles.wrap} behavior="padding" pointerEvents="box-none">
+      <View style={[styles.wrap, { paddingBottom: keyboard }]} pointerEvents="box-none">
         <Animated.View
           style={[styles.sheet, style, { transform: [{ translateY }] }]}
           onLayout={(e) => setHeight(e.nativeEvent.layout.height + 40)}
@@ -119,11 +132,18 @@ export default function BottomSheet({ visible, onClose, title, children, style }
           {/* the handle and the title start a drag right away, even over a list */}
           <View {...headerPan.panHandlers}>
             <View style={styles.handleZone}><View style={styles.handle} /></View>
-            {title ? <Text style={styles.title}>{title}</Text> : null}
+            {title || headerRight ? (
+              <View style={styles.titleRow}>
+                <Text style={styles.title}>{title}</Text>
+                {headerRight}
+              </View>
+            ) : null}
           </View>
           <ScrollTopContext.Provider value={setAtTop}>{children}</ScrollTopContext.Provider>
         </Animated.View>
-      </KeyboardAvoidingView>
+      </View>
+      {/* toasts over this sheet (a closing one hands them back to the window below) */}
+      {visible ? <ToastHost inset={SHEET_INSET} /> : null}
     </Modal>
   );
 }
@@ -138,5 +158,6 @@ const styles = StyleSheet.create({
   // a taller touch zone around the handle, easier to grab
   handleZone: { paddingTop: 8, paddingBottom: 8, marginBottom: -8 },
   handle: { alignSelf: 'center', width: 36, height: 4, borderRadius: 2, backgroundColor: colors.border },
-  title: { fontSize: 18, fontWeight: '600', color: colors.text, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', paddingRight: 12 },
+  title: { flex: 1, fontSize: 18, fontWeight: '600', color: colors.text, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8 },
 });

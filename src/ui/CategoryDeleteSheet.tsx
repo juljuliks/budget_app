@@ -11,6 +11,7 @@ import { plural } from './format';
 import { formatMoneyWithCurrency } from './money';
 import { colors } from './theme';
 import { useLast } from './useLast';
+import { toast, toastError } from './toast';
 
 type Props = {
   /** the category being deleted; null = closed */
@@ -48,9 +49,11 @@ export default function CategoryDeleteSheet({ categoryId: openId, onClose }: Pro
     try {
       await deleteCategory(categoryId, target);
       emitTransactionsChanged();
+      toast(`Категория «${category ? categoryLabel(category) : ''}» удалена`);
       onClose();
     } catch (e) {
       console.error('delete category failed', e);
+      toastError('Не удалось удалить');
       setSaving(false);
     }
   }

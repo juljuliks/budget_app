@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { DefaultValues, FieldValues, useForm, UseFormReturn } from 'react-hook-form';
+import { DefaultValues, FieldValues, SubmitHandler, useForm, UseFormReturn } from 'react-hook-form';
+import { toastError } from './toast';
 
 // Forms: every form keeps its values in react-hook-form (not useState), validates through its rules and knows
 // whether anything changed (formState.isDirty) — "Сохранить" shows only then.
@@ -24,28 +25,24 @@ export function useLoadedForm<V extends FieldValues>(defaults: V | null, open = 
   return form;
 }
 
-/** The first error message of a form (shown under it): a field's, or one set with setError('root.server', …) on save. */
-export function formError<V extends FieldValues>(form: UseFormReturn<V>): string | null {
-  const find = (node: unknown): string | null => {
-    if (!node || typeof node !== 'object') return null;
-    const m = (node as { message?: unknown }).message;
-    if (typeof m === 'string' && m) return m;
-    // `ref` is the field's component: never walked
-    for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
-      if (k !== 'ref' && v && typeof v === 'object') {
-        const found = find(v);
-        if (found) return found;
-      }
+/** The first error message among a form's errors (`ref` is a field's component: never walked). */
+function firstMessage(node: unknown): string | null {
+  if (!node || typeof node !== 'object') return null;
+  const m = (node as { message?: unknown }).message;
+  if (typeof m === 'string' && m) return m;
+  for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
+    if (k !== 'ref' && v && typeof v === 'object') {
+      const found = firstMessage(v);
+      if (found) return found;
     }
-    return null;
-  };
-  return find(form.formState.errors);
+  }
+  return null;
 }
 
 /**
- * Clears the form's errors once the user edits it — only when there are any: an extra form-state update on every
- * keystroke makes a controlled TextInput drop fast typing.
+ * The form's submit: `onValid` with its values, or — when a rule fails — the rule's message in a red toast
+ * ("Введите сумму"). Errors are never shown in the form itself; a save that fails calls toastError() too.
  */
-export function clearFormErrors<V extends FieldValues>(form: UseFormReturn<V>) {
-  if (Object.keys(form.formState.errors).length) form.clearErrors();
+export function submitForm<V extends FieldValues>(form: UseFormReturn<V>, onValid: SubmitHandler<V>) {
+  return form.handleSubmit(onValid, (errors) => toastError(firstMessage(errors) ?? 'Проверьте форму'));
 }

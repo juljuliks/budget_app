@@ -11,7 +11,9 @@ import Checkbox from '../Checkbox';
 import { currencySymbol, formatShort, formatWithCurrency, parseAmountOrZero } from '../money';
 import { AMOUNT_HINT } from '../strings';
 import { colors } from '../theme';
-import { clearFormErrors, formError, useLoadedForm } from '../form';
+import { submitForm, useLoadedForm } from '../form';
+import { plural } from '../format';
+import { toast, toastError } from '../toast';
 
 type Props = {
   ym: string;
@@ -48,10 +50,8 @@ export default function PlanAddModal({ ym, currency: screenCurrency, visible, pl
   const currencyOf = (r: Row): Currency => item(r).currency;
   const setItem = (r: Row, patch: Partial<Item>) => {
     form.setValue(`items.${keyOf(r.id)}`, { ...item(r), ...patch }, { shouldDirty: true });
-    clearFormErrors(form);
   };
   const { isSubmitting: saving } = useFormState({ control: form.control });
-  const error = formError(form);
   // what is still free, in the amount to distribute's currency, and a converter to it
   const [budget, setBudget] = useState<PlanBudget | null>(null);
   const [free, setFree] = useState<number | null>(null);
@@ -97,10 +97,10 @@ export default function PlanAddModal({ ym, currency: screenCurrency, visible, pl
     return s + (a ? conv(a.minor, a.currency, sumCurrency) ?? 0 : 0);
   }, 0);
 
-  const add = form.handleSubmit(async () => {
-    if (picked.some((r) => plannedAmount(r) === null)) { form.setError('root.server', { message: AMOUNT_HINT }); return; }
+  const add = submitForm(form, async () => {
+    if (picked.some((r) => plannedAmount(r) === null)) { toastError(AMOUNT_HINT); return; }
     if (free !== null && sum > free) {
-      form.setError('root.server', { message: `Больше бюджета месяца: не распределено ${formatWithCurrency(free, sumCurrency)}.` });
+      toastError(`Больше бюджета месяца: не распределено ${formatWithCurrency(free, sumCurrency)}`);
       return;
     }
     try {
@@ -109,11 +109,12 @@ export default function PlanAddModal({ ym, currency: screenCurrency, visible, pl
         if (text) await setPlanAmount(ym, r.id, parseAmountOrZero(text)!, r.last?.kind, currencyOf(r));
         else await addPlanItem(ym, r.id);
       }
+      toast(picked.length === 1 ? `«${categoryLabel(picked[0])}» добавлена в план` : `Добавлено в план: ${picked.length} ${plural(picked.length, ['категория', 'категории', 'категорий'])}`);
       onSaved();
       onClose();
     } catch (e) {
       console.error('add to plan failed', e);
-      form.setError('root.server', { message: 'Не удалось добавить' });
+      toastError('Не удалось добавить');
       onSaved(); // some may have been added
     }
   });
@@ -156,9 +157,7 @@ export default function PlanAddModal({ ym, currency: screenCurrency, visible, pl
           {rows?.length === 0 ? <Text style={styles.empty}>Все категории уже в плане.</Text> : null}
         </SheetScrollView>
         <View style={styles.footer}>
-          {error ? <Text style={styles.error}>{error}</Text> : (
-            <Text style={styles.hint}>Без суммы подставится сумма прошлого месяца (серым в поле).</Text>
-          )}
+          <Text style={styles.hint}>Без суммы подставится сумма прошлого месяца (серым в поле).</Text>
           <SheetActions
             submit={{ title: picked.length ? `Добавить (${picked.length})` : 'Добавить', onPress: add, disabled: saving || picked.length === 0 }}
             onCancel={onClose}
@@ -188,6 +187,5 @@ const styles = StyleSheet.create({
   empty: { color: colors.muted, textAlign: 'center', paddingVertical: 16 },
   footer: { padding: 16, paddingTop: 8, borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
   hint: { fontSize: 12, color: colors.muted, marginBottom: 8 },
-  error: { fontSize: 13, color: colors.danger, marginBottom: 8 },
   actions: { marginTop: 8 },
 });

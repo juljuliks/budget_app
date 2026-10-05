@@ -11,6 +11,7 @@ import { findCategoryForMerchant } from '../categorize';
 import { groupNameOf } from '../db/merchants';
 import { emitTransactionsChanged, onTransactionsChanged } from '../events';
 import { formatAmount, formatDay, formatTime, isIncome, merchantLabel, plural } from './format';
+import { toast, toastError } from './toast';
 import BottomSheet, { SheetScrollView } from './BottomSheet';
 import { SheetActions } from './Button';
 import CategoryPicker from './CategoryPicker';
@@ -88,9 +89,14 @@ export default function TransactionSheet({ txId: openId, onClose }: Props) {
     setSaving(true);
     try {
       await assignCategory(txId, categoryId, choice);
+      const c = categoryId === null ? undefined : await getCategory(categoryId);
+      if (!c) toast('Категория убрана');
+      else if (choice === 'merchant' && tx) toast(`Категория «${categoryLabel(c)}» назначена мерчанту «${groupName ?? merchantLabel(tx)}»`);
+      else toast(`Категория «${categoryLabel(c)}» назначена`);
       onClose();
     } catch (e) {
       console.error('assign category failed', e);
+      toastError('Не удалось сохранить');
       setSaving(false);
     }
   }
@@ -119,6 +125,7 @@ export default function TransactionSheet({ txId: openId, onClose }: Props) {
     if (minor === null) return AMOUNT_HINT;
     await setTransactionAmount(txId, minor, amountForm.getValues('currency'));
     emitTransactionsChanged();
+    toast('Сумма изменена');
     reload();
     return null;
   }
@@ -126,6 +133,7 @@ export default function TransactionSheet({ txId: openId, onClose }: Props) {
   async function saveNote(text: string): Promise<string | null> {
     await setTransactionNote(txId, text);
     emitTransactionsChanged();
+    toast(text ? 'Заметка сохранена' : 'Заметка удалена');
     reload();
     return null;
   }

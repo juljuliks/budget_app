@@ -16,7 +16,8 @@ import Chip from './Chip';
 import ColorPickerSheet from './ColorPickerSheet';
 import ColorSwatches from './ColorSwatches';
 import EmojiPicker from './EmojiPicker';
-import { clearFormErrors, formError, useLoadedForm } from './form';
+import { submitForm, useLoadedForm } from './form';
+import { toast, toastError } from './toast';
 import { formStyles } from './formStyles';
 import { plural } from './format';
 import { formatMoneyWithCurrency } from './money';
@@ -61,8 +62,7 @@ export default function CategorySheet({ visible, categoryId, typeId: initialType
   const form = useLoadedForm<CategoryForm>(saved, visible);
   const { isDirty, isSubmitting } = useFormState({ control: form.control });
   const { name = '', emoji = '', typeId = null, color = null } = useWatch({ control: form.control });
-  const set = <K extends Path<CategoryForm>>(k: K, v: PathValue<CategoryForm, K>) => { setField(form, k, v); clearFormErrors(form); };
-  const error = formError(form);
+  const set = <K extends Path<CategoryForm>>(k: K, v: PathValue<CategoryForm, K>) => setField(form, k, v);
   const [types, setTypes] = useState<CategoryType[]>([]);
   const [typeOpen, setTypeOpen] = useState(false);
   const [emojiOpen, setEmojiOpen] = useState(false);
@@ -93,22 +93,24 @@ export default function CategorySheet({ visible, categoryId, typeId: initialType
     categorySummary(categoryId).then(setSummary).catch((e) => console.error('load category summary failed', e));
   }, [visible, categoryId, isNew, initialTypeId, loadTypes]);
 
-  const save = form.handleSubmit(async (v) => {
+  const save = submitForm(form, async (v) => {
     const trimmed = v.name.trim();
     try {
       if (await findCategoryByName(trimmed, v.typeId, categoryId)) {
-        form.setError('name', { message: 'Такая категория уже есть' });
+        toastError('Такая категория уже есть');
         return;
       }
       let id = categoryId;
       if (id === undefined) id = await createCategory(trimmed, v.emoji, v.typeId, v.color);
       else await updateCategory(id, { name: trimmed, emoji: v.emoji, typeId: v.typeId, color: v.color });
       emitTransactionsChanged();
+      const label = categoryLabel({ name: trimmed, emoji: v.emoji || null });
+      toast(isNew ? `Категория «${label}» создана` : `Категория «${label}» сохранена`);
       onClose();
       onSaved?.(id, isNew);
     } catch (e) {
       console.error('save category failed', e);
-      form.setError('root.server', { message: 'Не удалось сохранить' });
+      toastError('Не удалось сохранить');
     }
   });
 
@@ -178,7 +180,7 @@ export default function CategorySheet({ visible, categoryId, typeId: initialType
               <TextInput
                 style={[formStyles.input, styles.name]}
                 value={field.value}
-                onChangeText={(v) => { field.onChange(v); clearFormErrors(form); }}
+                onChangeText={field.onChange}
                 placeholder="Например, Спорт"
                 placeholderTextColor={colors.muted}
                 maxLength={40}
@@ -211,7 +213,6 @@ export default function CategorySheet({ visible, categoryId, typeId: initialType
           </>
         )}
 
-        {error ? <Text style={formStyles.error}>{error}</Text> : null}
         <SheetActions
           // a new category: always (it's created); an existing one: only once something changed
           submit={isNew || isDirty ? { title: isNew ? 'Создать' : 'Сохранить', onPress: save, disabled: isSubmitting } : null}

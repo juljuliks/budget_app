@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Controller, useForm, useFormState, useWatch } from 'react-hook-form';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { incrementCategoryUsage } from '../db/categories';
@@ -12,7 +12,8 @@ import Segmented from './Segmented';
 import CurrencyPicker from './CurrencyPicker';
 import { Currency } from '../db/fx';
 import { colors } from './theme';
-import { clearFormErrors, formError } from './form';
+import { submitForm } from './form';
+import { toast, toastError } from './toast';
 import BottomSheet, { SheetScrollView } from './BottomSheet';
 import { SheetActions } from './Button';
 import RangeCalendar from './RangeCalendar';
@@ -31,16 +32,11 @@ const EMPTY: Form = { amount: '', kind: 'purchase', currency: 'GEL', description
 export default function AddTransactionSheet({ visible, onClose }: Props) {
   // a new operation: "Добавить" is always there (it creates one), the amount is checked on submit
   const form = useForm<Form>({ defaultValues: EMPTY });
-  const amountInput = useRef<TextInput>(null);
-  // a clean form each time it opens; the keyboard once the sheet has slid up
+  // a clean form each time it opens (no focus: the keyboard opens on a tap)
   useEffect(() => {
-    if (!visible) return undefined;
-    form.reset(EMPTY);
-    const t = setTimeout(() => amountInput.current?.focus(), 300);
-    return () => clearTimeout(t);
+    if (visible) form.reset(EMPTY);
   }, [visible, form]);
   const { isSubmitting: saving } = useFormState({ control: form.control });
-  const error = formError(form);
   // "Другая дата": the calendar sheet, with the day being picked
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [draft, setDraft] = useState<DayKey | null>(null);
@@ -48,7 +44,7 @@ export default function AddTransactionSheet({ visible, onClose }: Props) {
   const date = useWatch({ control: form.control, name: 'date' });
 
 
-  const save = form.handleSubmit(async ({ amount, kind, currency, description, day, date, categoryId }) => {
+  const save = submitForm(form, async ({ amount, kind, currency, description, day, date, categoryId }) => {
     const minor = parseAmountInput(amount)!;
     try {
       // today / yesterday at this time; another day at noon
@@ -65,10 +61,11 @@ export default function AddTransactionSheet({ visible, onClose }: Props) {
       });
       if (categoryId !== null) await incrementCategoryUsage(categoryId);
       emitTransactionsChanged();
+      toast('Операция добавлена');
       onClose();
     } catch (e) {
       console.error('add transaction failed', e);
-      form.setError('root.server', { message: 'Не удалось сохранить' });
+      toastError('Не удалось сохранить');
     }
   });
 
@@ -82,13 +79,12 @@ export default function AddTransactionSheet({ visible, onClose }: Props) {
       <Controller
         control={form.control}
         name="amount"
-        rules={{ validate: (v) => parseAmountInput(v) !== null || AMOUNT_HINT }}
+        rules={{ validate: (v) => (!v.trim() ? 'Введите сумму' : parseAmountInput(v) !== null || AMOUNT_HINT) }}
         render={({ field }) => (
       <TextInput
-        ref={amountInput}
         style={[formStyles.input, styles.amount]}
         value={field.value}
-        onChangeText={(v) => { field.onChange(v); clearFormErrors(form); }}
+        onChangeText={field.onChange}
         placeholder="0.00"
         placeholderTextColor={colors.muted}
         keyboardType="decimal-pad"
@@ -142,7 +138,6 @@ export default function AddTransactionSheet({ visible, onClose }: Props) {
         )}
       />
 
-      {error ? <Text style={formStyles.error}>{error}</Text> : null}
       <BottomSheet visible={calendarOpen} onClose={() => setCalendarOpen(false)} title="Дата операции">
         <View style={styles.sheet}>
           <RangeCalendar value={draft ? { from: draft, to: draft } : null} onChange={(r) => setDraft(r.from)} single maxDay={today} />

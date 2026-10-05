@@ -15,6 +15,7 @@ import { formatMoneyWithCurrency } from './money';
 import { sheetAlert } from './sheetAlert';
 import MergeMerchantsModal from './MergeMerchantsModal';
 import { colors } from './theme';
+import { toast, toastError } from './toast';
 
 export type CategoryInfo = { label: string; color: string };
 
@@ -101,7 +102,10 @@ export default function MerchantsScreen() {
             setSelectMode(false);
             setSelected([]);
             emitTransactionsChanged();
-          }).catch((e) => console.error('delete merchants failed', e));
+            toast(onlyGroups ? (groups.length === 1 ? `Группа «${groups[0].name}» разгруппирована` : 'Группы разгруппированы')
+              : picked.length === 1 ? `Мерчант «${picked[0].name}» удалён`
+              : groups.length ? 'Мерчанты удалены, группы разгруппированы' : `Удалено мерчантов: ${singles.length}`);
+          }).catch((e) => { console.error('delete merchants failed', e); toastError('Не удалось удалить'); });
         },
       },
     ]);

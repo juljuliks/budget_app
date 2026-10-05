@@ -11,6 +11,7 @@ import MerchantsScreen from './ui/MerchantsScreen';
 import SettingsButton from './ui/SettingsButton';
 import { SheetAlertHost } from './ui/sheetAlert';
 import { ModalHost } from './ui/modals';
+import { ToastHost } from './ui/toast';
 import { HistoryIcon, StatsIcon } from './ui/icons';
 import { colors } from './ui/theme';
 import { createNotificationChannel } from './notifications/notifeeBootstrap';
@@ -104,6 +105,8 @@ export default function App() {
       <ModalHost />
       {/* confirmations and messages (sheetAlert), over everything */}
       <SheetAlertHost />
+      {/* toasts of the pages; each sheet draws its own over itself */}
+      <ToastHost />
     </NavigationContainer>
   );
 }
