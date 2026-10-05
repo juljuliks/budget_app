@@ -79,9 +79,11 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
     const keep = latest();
     const { from, to } = rangeToUnix(range);
     if (pace) {
-      // nothing spent at all: the categories with a limit are listed instead, an untouched limit is all saved
+      // a day / week / 2-week limit not touched in the period but spent earlier in the month is listed too (0 ₾):
+      // to see its limit grow after a day without spending
       loadNorms(range, currency).then((n) => {
-        const planned = [...n.byCategory].filter(([, p]) => p.kind === 'limit' && (p.rhythm === 'month' ? p.monthLimit : p.periodNorm) > 0).map(([id]) => id);
+        const planned = [...n.byCategory].filter(([id, p]) => p.kind === 'limit' && p.rhythm !== 'month' && p.periodNorm > 0
+          && (n.monthToDate.get(id) ?? 0) > 0).map(([id]) => id);
         return periodStats(from, to, currency, planned).then(keep((s: PeriodStats) => { setNorms(n); setStats(s); }));
       }).catch((e) => console.error('load period stats failed', e));
     } else {

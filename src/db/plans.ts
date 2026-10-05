@@ -472,7 +472,7 @@ export type PeriodStats = {
 
 /**
  * Spending by category for any period [from, to) (unix seconds), e.g. one day, in `currency`; no plan. `planned`:
- * categories listed with 0 ₾ when nothing was spent in the period at all — a limit not touched is all saved.
+ * categories listed even with nothing spent in the period (0 ₾), after the ones with spending.
  */
 export async function periodStats(from: number, to: number, currency: Currency = BUDGET_CURRENCY, planned: number[] = []): Promise<PeriodStats> {
   const db = await getDb();
@@ -499,8 +499,7 @@ export async function periodStats(from: number, to: number, currency: Currency =
   // planned ones with nothing spent (a refund bigger than the spending counts as nothing too)
   const untouched = categories.filter((c) => c.category_id !== null && c.spent_minor <= 0 && planned.includes(c.category_id) && !c.deleted)
     .map((c) => ({ ...c, spent_minor: 0 })).sort((a, b) => a.name.localeCompare(b.name));
-  // with spending, only the spent ones; nothing spent at all — the planned ones (their limits all saved)
-  const listed = positive.length > 0 ? positive : untouched;
+  const listed = [...positive, ...untouched];
   const types = await db.all<{ id: number; name: string }>('SELECT id, name FROM category_types ORDER BY sort_order, name');
   return {
     currency, groups: groupByType(listed, types), categories: listed,
