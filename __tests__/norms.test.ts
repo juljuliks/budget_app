@@ -135,3 +135,22 @@ test('effect: the limit per rhythm at the period\'s start and after it', async (
   const last = (await loadNorms({ from: '2025-10-31', to: '2025-10-31' }, 'GEL')).byCategory.get(bars)!;
   expect(last.effect!.after).toBeNull();
 });
+
+test('the limit for the viewed days: a share of a weekly limit, the days of a daily one, by each month\'s plan', async () => {
+  const bars = await createCategory('Бары');
+  const food = await createCategory('Еда');
+  await setPlanAmount('2025-10', bars, 31000, 'limit', 'GEL', 'week');
+  await setPlanAmount('2025-09', food, 30000, 'limit', 'GEL', 'day');
+  await setPlanAmount('2025-10', food, 62000, 'limit', 'GEL', 'day');
+  await spend(4000, bars, '2025-10-02');
+  await spend(27000, food, '2025-09-10');
+
+  // Oct 1–4 of a weekly limit: 310 / 31 × 4, not the whole week's 70
+  const week = await loadNorms({ from: '2025-10-01', to: '2025-10-04' }, 'GEL');
+  expect(week.byCategory.get(bars)!.periodNorm).toBeCloseTo(4000);
+  expect(week.byCategory.get(bars)!.periodSpent).toBe(4000);
+  // Sep 29 – Oct 1 of a daily one: (300 − 270) / 2 × 2 + 620 / 31 × 1
+  const across = await loadNorms({ from: '2025-09-29', to: '2025-10-01' }, 'GEL');
+  expect(across.byCategory.get(food)!.periodParts.map((p) => p.ym)).toEqual(['2025-09', '2025-10']);
+  expect(across.byCategory.get(food)!.periodNorm).toBeCloseTo(5000);
+});

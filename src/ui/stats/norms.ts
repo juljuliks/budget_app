@@ -40,6 +40,11 @@ export type Norms = {
     /** the norm checked over the category's own rhythm window (see normWindow), across months if it spans two */
     rhythm: NormPeriod; window: DayRange; windowParts: NormPart[]; windowNorm: number; windowSpent: number;
     /**
+     * The limit for the viewed days themselves, as it was at their start (a share of the rhythm's limit when the period is
+     * shorter: a day of a weekly limit is 1/7 of it), and the spending in them. Empty / 0 for fixed and month-rhythm ones.
+     */
+    periodParts: NormPart[]; periodNorm: number; periodSpent: number;
+    /**
      * How the period moved the limit per the category's rhythm (a day / week / 2 weeks) in the month it ends in:
      * what's left of the month's plan over the days left, at the period's start and after its end. null for a
      * month rhythm; `after` null on the month's last day (no days left).
@@ -119,8 +124,9 @@ export async function loadNorms(range: DayRange, currency: Parameters<typeof mon
   };
   for (const [id, { name, kind, rhythm }] of items) {
     // the overall pace under the donut: per day, without fixed and month-rhythm categories (one-off buys)
+    const periodParts = kind === 'limit' && rhythm !== 'month' ? await partsOf(id, range) : [];
     if (kind === 'limit' && rhythm !== 'month') {
-      const parts = await partsOf(id, range);
+      const parts = periodParts;
       const spent = periodSpent.get(id) ?? 0;
       norms.flex.push({ id, name, parts, norm: sum(parts), spent });
       norms.total += sum(parts);
@@ -141,6 +147,7 @@ export async function loadNorms(range: DayRange, currency: Parameters<typeof mon
       kind, monthLimit, spent: partSpent.get(id) ?? 0, rhythm, window: win, windowParts,
       windowNorm: rhythm === 'month' ? monthLimit : sum(windowParts),
       windowSpent: (await spentOver(win)).get(id) ?? 0,
+      periodParts, periodNorm: sum(periodParts), periodSpent: periodSpent.get(id) ?? 0,
       effect,
     });
   }

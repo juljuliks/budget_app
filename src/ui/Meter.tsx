@@ -13,12 +13,17 @@ type Props = {
   base?: number;
   /** a thin tick at this point, 0..1: where the spending should be by now at an even pace */
   marker?: number;
+  /**
+   * an overspend, 0..1: where the limit is on a bar scaled to the spending — the fill up to it is solid, the part
+   * over the limit faded, with a tick at the limit
+   */
+  over?: number;
 };
 
 const clamp = (v: number) => Math.min(Math.max(v, 0), 1);
 
 /** Thin progress bar with rounded ends; optionally a faded first part and a pace tick. */
-export default function Meter({ ratio, height = 6, color, marginTop = 8, base = 0, marker }: Props) {
+export default function Meter({ ratio, height = 6, color, marginTop = 8, base = 0, marker, over }: Props) {
   const fill = { height, borderRadius: height / 2 };
   const total = clamp(ratio);
   const faded = Math.min(clamp(base), total);
@@ -29,8 +34,12 @@ export default function Meter({ ratio, height = 6, color, marginTop = 8, base = 
         <View style={[styles.fills, { width: `${total * 100}%` }]}>
           {faded > 0 ? <View style={{ height, width: `${(faded / total) * 100}%`, backgroundColor, opacity: 0.4 }} /> : null}
           <View style={{ height, flex: 1, backgroundColor }} />
+          {over !== undefined ? <View style={{ height, width: `${(1 - clamp(over)) * 100}%`, backgroundColor, opacity: 0.4 }} /> : null}
         </View>
       </View>
+      {over !== undefined ? (
+        <View style={[styles.marker, { height: height + 6, top: -3, left: `${clamp(over) * 100}%` }]} accessibilityLabel="Лимит" />
+      ) : null}
       {marker !== undefined ? (
         <View
           style={[styles.marker, { height: height + 6, top: -3, left: `${clamp(marker) * 100}%` }]}
