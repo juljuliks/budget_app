@@ -4,7 +4,7 @@ import { getDb } from '../src/db';
 import { ingestSms } from '../src/ingest';
 import { assignCategory, categoryChangeTotals, merchantChangePreview } from '../src/assign';
 import {
-  categoriesOfMerchants, excludeFromGroup, getMerchant, listMerchants, mergeMerchants, renameMerchantGroup, setMerchantCategory,
+  categoriesOfMerchants, deleteMerchants, excludeFromGroup, getMerchant, listMerchants, mergeMerchants, renameMerchantGroup, setMerchantCategory,
 } from '../src/db/merchants';
 import { listTransactionsFiltered, merchantsWithTransactions } from '../src/db/transactions';
 import { refundCandidates } from '../src/db/refunds';
@@ -132,4 +132,68 @@ test('category change totals: refunds subtract, ordered by the signed sum', asyn
     { currency: 'GEL', amount_minor: 1000, n: 1 },
     { currency: 'USD', amount_minor: -9500, n: 2 },
   ]);
+});
+
+/** "dd/mm/yy 12:00" `days` days ago */
+const daysAgo = (days: number) => {
+  const d = new Date(Date.now() - days * 86400_000);
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getFullYear()).slice(2)} 12:00`;
+};
+async function smsOn(merchant: string, amount: string, days: number) {
+  const r = await ingestSms({ sender: 'TBC SMS', body: `${amount}GEL\n(*XXXX)\n${merchant}\n${daysAgo(days)}`, timestamp: ts++ });
+  if (r.status !== 'inserted') throw new Error(`not inserted: ${r.status}`);
+  return r.txId;
+}
+
+test('activity: the last month if anything was bought then, otherwise everything with its dates', async () => {
+  await smsOn('SPAR', '10.00', 2);
+  await smsOn('SPAR', '5.50', 10);
+  await smsOn('SPAR', '100.00', 60); // older: not in the last month
+  await smsOn('WOLT', '7.00', 90);
+  await smsOn('WOLT', '3.00', 45);
+  const byId = new Map((await listMerchants()).map((m) => [m.id, m.activity]));
+  expect(byId.get('SPAR')).toEqual(expect.objectContaining({ recent: true, count: 2, totals: [{ currency: 'GEL', amount_minor: 1550 }] }));
+  const wolt = byId.get('WOLT')!;
+  expect(wolt).toEqual(expect.objectContaining({ recent: false, count: 2, totals: [{ currency: 'GEL', amount_minor: 1000 }] }));
+  expect(wolt.to - wolt.from).toBeGreaterThan(40 * 86400);
+});
+
+test('deleting merchants: operations keep their categories (as their own), lose the merchant; a group is only ungrouped', async () => {
+  const a = await sms('SPAR VAKE');
+  const b = await sms('SPAR SABURTALO');
+  const w = await sms('WOLT');
+  const w2 = await sms('WOLT');
+  const keep = await sms('GLOVO');
+  await assignCategory(w, 1);          // WOLT -> 1, w2 follows
+  await assignCategory(w2, 3, 'only'); // a manual choice
+  await assignCategory(keep, 1);
+  const group = await mergeMerchants(['SPAR VAKE', 'SPAR SABURTALO'], 'SPAR', 2);
+  expect(await deleteMerchants([group, 'WOLT'])).toBe(2);
+
+  const db = await getDb();
+  const rows = await db.all<{ merchant_key: string | null; category_id: number | null; category_source: string | null }>(
+    'SELECT merchant_key, category_id, category_source FROM transactions WHERE id IN (?, ?, ?, ?) ORDER BY id', [a, b, w, w2]);
+  expect(rows).toEqual([
+    { merchant_key: 'SPAR VAKE', category_id: 2, category_source: 'rule' },
+    { merchant_key: 'SPAR SABURTALO', category_id: 2, category_source: 'rule' },
+    { merchant_key: null, category_id: 1, category_source: 'user' },
+    { merchant_key: null, category_id: 3, category_source: 'user' },
+  ]);
+  // the group's merchants are separate ones with its category
+  const list = await listMerchants();
+  expect(list.map((m) => [m.id, m.category_id]).sort()).toEqual([['GLOVO', 1], ['SPAR SABURTALO', 2], ['SPAR VAKE', 2]]);
+  expect(await db.all('SELECT * FROM merchant_groups')).toEqual([]);
+
+  // a new SMS of a deleted shop creates it again, without a category
+  const again = await sms('WOLT');
+  expect(await categoryOf(again)).toBeNull();
+});
+
+test('a merchant without a category: picking one asks "this operation or the merchant"', async () => {
+  const a = await sms('BOLT');
+  const b = await sms('BOLT');
+  await assignCategory(a, 2, 'only');
+  expect(await merchantChangePreview(b, 1)).toEqual(expect.objectContaining({ merchant: 'BOLT', fromCategoryId: null, count: 1 }));
+  await assignCategory(b, 1, 'only');
+  expect(await findCategoryForMerchant('BOLT')).toBeNull();
 });

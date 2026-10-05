@@ -42,16 +42,17 @@ export default assignCategory;
 
 export type MerchantChange = {
   merchant: string;
-  /** the merchant's category now */
-  fromCategoryId: number;
+  /** the merchant's category now, null = none yet */
+  fromCategoryId: number | null;
   /** transactions whose category changes if the new one becomes the merchant's (this one included) */
   count: number;
   totals: Array<{ currency: string; amount_minor: number }>;
 };
 
 /**
- * Picking `categoryId` for a transaction whose merchant already has another category: what making it the
- * merchant's category would change (asked before changing). null = nothing to ask.
+ * Picking `categoryId` for a purchase / payment whose merchant has another category or none yet: what making it
+ * the merchant's category would change (asked before changing: this one only or the merchant). null = nothing to
+ * ask (no merchant, "Без категории", or already the merchant's category).
  */
 export async function merchantChangePreview(txId: number, categoryId: number | null): Promise<MerchantChange | null> {
   if (categoryId === null) return null;
@@ -60,14 +61,14 @@ export async function merchantChangePreview(txId: number, categoryId: number | n
     'SELECT kind, merchant_key, raw_merchant FROM transactions WHERE id = ?', [txId]);
   if (!tx?.merchant_key || !isRememberable(tx.kind)) return null;
   const rule = await findCategoryForMerchant(tx.merchant_key);
-  if (!rule || rule.category_id === categoryId) return null;
+  if (rule?.category_id === categoryId) return null;
   const id = await merchantIdOf(tx.merchant_key);
   const totals = await categoryChangeTotals(id, categoryId, txId);
   const groupId = groupIdOf(id);
   const group = groupId === null ? undefined : await db.get<{ name: string }>('SELECT name FROM merchant_groups WHERE id = ?', [groupId]);
   return {
     merchant: group?.name ?? (tx.raw_merchant || tx.merchant_key),
-    fromCategoryId: rule.category_id,
+    fromCategoryId: rule?.category_id ?? null,
     count: totals.reduce((s, t) => s + t.n, 0),
     totals: totals.map(({ currency, amount_minor }) => ({ currency, amount_minor })),
   };

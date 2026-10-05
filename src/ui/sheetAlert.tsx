@@ -6,7 +6,8 @@ import { colors } from './theme';
 // Confirmations and messages as bottom sheets, called like Alert.alert. <SheetAlertHost /> (mounted once in App)
 // shows them.
 
-export type SheetButton = { text: string; style?: 'cancel' | 'destructive' | 'default'; onPress?: () => void };
+/** 'secondary': outlined, for the less usual choice next to a filled one */
+export type SheetButton = { text: string; style?: 'cancel' | 'destructive' | 'secondary' | 'default'; onPress?: () => void };
 type Request = { title: string; message?: string; buttons: SheetButton[] };
 
 let show: ((r: Request) => void) | null = null;
@@ -36,10 +37,10 @@ export function SheetAlertHost() {
         {actions.map((b) => (
           <TouchableOpacity
             key={b.text}
-            style={[styles.button, b.style === 'destructive' ? styles.danger : styles.primary]}
+            style={[styles.button, b.style === 'destructive' ? styles.danger : b.style === 'secondary' ? styles.secondary : styles.primary]}
             onPress={() => { close(); b.onPress?.(); }}
           >
-            <Text style={styles.buttonText}>{b.text}</Text>
+            <Text style={[styles.buttonText, b.style === 'secondary' && styles.secondaryText]}>{b.text}</Text>
           </TouchableOpacity>
         ))}
         {cancel ? (
@@ -58,7 +59,9 @@ const styles = StyleSheet.create({
   button: { borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
   primary: { backgroundColor: colors.accent },
   danger: { backgroundColor: colors.danger },
+  secondary: { borderWidth: 1, borderColor: colors.accent, paddingVertical: 13 },
   buttonText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
+  secondaryText: { color: colors.accent },
   cancel: { alignItems: 'center', paddingVertical: 10 },
   cancelText: { fontSize: 16, color: colors.muted },
 });

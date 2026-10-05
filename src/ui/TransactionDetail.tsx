@@ -77,21 +77,22 @@ export default function TransactionDetail({ route, navigation }: Props) {
     }
   }
 
-  // The merchant already has another category: ask whether the new one becomes the merchant's (with what
-  // that changes), is for this transaction only, or nothing changes
+  // A purchase / payment at a merchant with another category or none: ask whether the new one is for this
+  // operation only (the usual choice) or becomes the merchant's (with what that changes), or nothing changes
   async function choose(categoryId: number | null) {
     if (saving) return;
     const change = await merchantChangePreview(txId, categoryId).catch((e) => { console.error('preview failed', e); return null; });
     if (!change) { await assign(categoryId); return; }
-    const [from, to] = await Promise.all([getCategory(change.fromCategoryId), getCategory(categoryId!)]);
+    const [from, to] = await Promise.all([change.fromCategoryId === null ? null : getCategory(change.fromCategoryId), getCategory(categoryId!)]);
     const sum = change.totals.map((t) => formatMoneyWithCurrency(t.amount_minor, t.currency)).join(' + ');
+    const now = from ? `Сейчас у мерчанта «${categoryLabel(from)}». ` : 'У мерчанта пока нет категории. ';
     sheetAlert(
-      `Категория «${to ? categoryLabel(to) : '?'}» для мерчанта «${change.merchant}»?`,
-      `Сейчас у мерчанта «${from ? categoryLabel(from) : '?'}». Если сменить для мерчанта, категория изменится у ${change.count} ${plural(change.count, ['операции', 'операций', 'операций'])} на ${sum}, и новые операции мерчанта будут получать её автоматически.`,
+      `Категория «${to ? categoryLabel(to) : '?'}» — для этой операции или для мерчанта «${change.merchant}»?`,
+      `${now}Для мерчанта: категория изменится у ${change.count} ${plural(change.count, ['операции', 'операций', 'операций'])} на ${sum}, и новые операции мерчанта будут получать её автоматически. Выбранные вручную категории не изменятся.`,
       [
         { text: 'Отмена', style: 'cancel' },
         { text: 'Только для этой операции', onPress: () => { assign(categoryId, 'only'); } },
-        { text: 'Для мерчанта', onPress: () => { assign(categoryId, 'merchant'); } },
+        { text: 'Для мерчанта', style: 'secondary', onPress: () => { assign(categoryId, 'merchant'); } },
       ]);
   }
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import BottomSheet from './BottomSheet';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import BottomSheet, { SheetScrollView } from './BottomSheet';
 import { categoriesOfMerchants, mergeMerchants, MerchantRow } from '../db/merchants';
 import { emitTransactionsChanged } from '../events';
 import Button from './Button';
@@ -59,7 +59,7 @@ export default function MergeMerchantsModal({ visible, merchants, categories, on
 
   return (
     <BottomSheet visible={visible} onClose={onClose} title="Объединить в группу">
-        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
+        <SheetScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
           <Text style={styles.members}>{merchants.map((m) => (m.group ? `${m.name} (${m.members.join(', ')})` : m.name)).join(', ')}</Text>
 
           <Text style={formStyles.label}>Название группы</Text>
@@ -88,7 +88,7 @@ export default function MergeMerchantsModal({ visible, merchants, categories, on
           <TouchableOpacity style={styles.cancel} onPress={onClose}>
             <Text style={styles.cancelText}>Отмена</Text>
           </TouchableOpacity>
-        </ScrollView>
+        </SheetScrollView>
     </BottomSheet>
   );
 }

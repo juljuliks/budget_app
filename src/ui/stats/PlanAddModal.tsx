@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import BottomSheet from '../BottomSheet';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import BottomSheet, { SheetScrollView } from '../BottomSheet';
 import { Category, categoryLabel, listCategories } from '../../db/categories';
 import { Currency } from '../../db/fx';
 import { addPlanItem, getPlanBudget, lastPlanItem, PlanBudget, planConverter, PlanKind, plannedTotal, setPlanAmount } from '../../db/plans';
@@ -123,7 +123,7 @@ export default function PlanAddModal({ ym, currency: screenCurrency, visible, pl
             {picked.length ? ` · выбрано на ${formatWithCurrency(sum, sumCurrency)}` : ''}
           </Text>
         </View>
-        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.list}>
+        <SheetScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.list}>
           {rows.map((r) => {
             const on = checked.has(r.id);
             return (
@@ -148,7 +148,7 @@ export default function PlanAddModal({ ym, currency: screenCurrency, visible, pl
             );
           })}
           {rows.length === 0 ? <Text style={styles.empty}>Все категории уже в плане.</Text> : null}
-        </ScrollView>
+        </SheetScrollView>
         <View style={styles.footer}>
           {error ? <Text style={styles.error}>{error}</Text> : (
             <Text style={styles.hint}>Без суммы подставится сумма прошлого месяца (серым в поле).</Text>

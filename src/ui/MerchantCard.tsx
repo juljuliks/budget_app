@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import BottomSheet from './BottomSheet';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import BottomSheet, { SheetScrollView } from './BottomSheet';
 import { sheetAlert } from './sheetAlert';
 import { useNavigation } from '@react-navigation/native';
 import { categoryChangeTotals } from '../assign';
@@ -132,7 +132,7 @@ export default function MerchantCard({ merchantId, categories, onClose, onChange
     <>
     <BottomSheet visible={merchantId !== null} onClose={onClose} style={styles.sheet}>
         {!m ? null : (
-          <ScrollView contentContainerStyle={styles.content}>
+          <SheetScrollView contentContainerStyle={styles.content}>
             <View style={styles.titleRow}>
               <Text style={styles.title}>{m.name}</Text>
               {m.group ? (
@@ -152,7 +152,7 @@ export default function MerchantCard({ merchantId, categories, onClose, onChange
             <Text style={styles.heading}>Категория</Text>
             {picking ? (
               <>
-                <CategoryPicker title="Выберите категорию" selectedId={m.category_id} onSelect={pick} onNavigateAway={onClose} />
+                <CategoryPicker title="Выберите категорию" selectedId={m.category_id} onSelect={pick} newCategory={{ merchantId: m.id }} onNavigateAway={onClose} />
                 <TouchableOpacity onPress={() => setPicking(false)} style={styles.inlineCancel}>
                   <Text style={styles.cancelText}>Отмена</Text>
                 </TouchableOpacity>
@@ -170,7 +170,7 @@ export default function MerchantCard({ merchantId, categories, onClose, onChange
                 <View style={styles.actions}>
                   <Button title={category ? 'Сменить категорию' : 'Выбрать категорию'} onPress={() => setPicking(true)} style={styles.action} />
                   {category ? (
-                    <TouchableOpacity onPress={unpin} style={styles.unpin}>
+                    <TouchableOpacity onPress={unpin} style={styles.unpin} accessibilityRole="button">
                       <Text style={styles.unpinText}>Не назначать автоматически</Text>
                     </TouchableOpacity>
                   ) : null}
@@ -205,10 +205,7 @@ export default function MerchantCard({ merchantId, categories, onClose, onChange
               </>
             ) : null}
 
-            <TouchableOpacity style={styles.close} onPress={onClose}>
-              <Text style={styles.cancelText}>Закрыть</Text>
-            </TouchableOpacity>
-          </ScrollView>
+          </SheetScrollView>
         )}
     </BottomSheet>
       <TextInputModal
@@ -231,7 +228,7 @@ export default function MerchantCard({ merchantId, categories, onClose, onChange
 
 const styles = StyleSheet.create({
   sheet: { maxHeight: '85%', minHeight: 200, paddingBottom: 0 },
-  content: { padding: 16, paddingBottom: 8 },
+  content: { padding: 16, paddingBottom: 24 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   title: { fontSize: 20, fontWeight: '600', color: colors.text, flexShrink: 1 },
   meta: { fontSize: 14, color: colors.muted, marginTop: 4 },
@@ -243,8 +240,9 @@ const styles = StyleSheet.create({
   noCategory: { fontSize: 14, color: colors.muted },
   actions: { marginTop: 12, gap: 4 },
   action: { marginTop: 8 },
-  unpin: { alignItems: 'center', paddingVertical: 12 },
-  unpinText: { fontSize: 15, color: colors.danger },
+  // an outlined button under the filled 'Сменить категорию': same height and corners, red border and text
+  unpin: { alignItems: 'center', paddingVertical: 12, marginTop: 8, borderWidth: 1, borderColor: colors.danger, borderRadius: 8 },
+  unpinText: { fontSize: 16, fontWeight: '600', color: colors.danger },
   memberRow: {
     flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
@@ -253,6 +251,5 @@ const styles = StyleSheet.create({
   memberCount: { fontSize: 13, color: colors.muted },
   hint: { fontSize: 13, color: colors.muted, marginTop: 8 },
   inlineCancel: { alignItems: 'center', paddingVertical: 10 },
-  close: { alignItems: 'center', paddingVertical: 14, marginTop: 8 },
   cancelText: { fontSize: 16, color: colors.muted },
 });

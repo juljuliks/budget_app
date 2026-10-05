@@ -33,10 +33,13 @@ export type RootStackParamList = {
     categoryId?: number; txId?: number; txIds?: number[]; planYm?: string; typeId?: number; returnSelection?: boolean;
     /** with txIds: they are moved out of this category being deleted (their merchants' rules follow) */
     moveFromCategoryId?: number;
+    /** created from a merchant's card: becomes that merchant's category, then the card opens again */
+    merchantId?: string;
   };
   Categories: undefined;
   /** Merchants with their categories; merging into groups */
-  Merchants: undefined;
+  /** openMerchantId: open that merchant's card (back from creating a category for it); nonce: open it again */
+  Merchants: { openMerchantId?: string; nonce?: number } | undefined;
   /** Delete a category: first move its current-month transactions to other ones (the transactions list in a delete mode) */
   CategoryDelete: { categoryId: number };
   /** Category types (settings → Категории → Типы) */

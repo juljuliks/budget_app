@@ -9,6 +9,7 @@ import { formatMoneyWithCurrency } from './money';
 import { CategoryType, listCategoryTypes } from '../db/categoryTypes';
 import { assignCategory, assignCategoryToMany } from '../assign';
 import { addPlanItem } from '../db/plans';
+import { setMerchantCategory } from '../db/merchants';
 import { emitTransactionsChanged } from '../events';
 import { returnToPrevious, RootStackParamList } from '../navigation';
 import Button from './Button';
@@ -26,7 +27,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'CategoryEdit'>;
 
 /** Create (no categoryId) or edit a category: name, emoji, optional type. */
 export default function CategoryEdit({ route, navigation }: Props) {
-  const { categoryId, txId, txIds, planYm, typeId: initialTypeId, returnSelection, moveFromCategoryId } = route.params ?? {};
+  const { categoryId, txId, txIds, planYm, typeId: initialTypeId, returnSelection, moveFromCategoryId, merchantId } = route.params ?? {};
   const isNew = categoryId === undefined;
   const [summary, setSummary] = useState<{ count: number; totals: Array<{ currency: string; amount_minor: number }> } | null>(null);
   const [name, setName] = useState('');
@@ -93,6 +94,7 @@ export default function CategoryEdit({ route, navigation }: Props) {
           await assignCategoryToMany(txIds, id);
         }
         if (planYm) await addPlanItem(planYm, id);
+        if (merchantId) await setMerchantCategory(merchantId, id);
         emitTransactionsChanged();
       } else {
         await updateCategory(categoryId, { name: trimmed, emoji, typeId, color });
@@ -103,6 +105,8 @@ export default function CategoryEdit({ route, navigation }: Props) {
       const prev = routes[routes.length - 2];
       if (isNew && txId && prev?.name === 'TransactionDetail') navigation.pop(2);
       // back to the screen we came from, with the new category selected there
+      // back to the merchants with the card open again, showing its new category
+      else if (createdId !== null && merchantId) returnToPrevious(navigation, { openMerchantId: merchantId, nonce: Date.now() });
       else if (createdId !== null && returnSelection) returnToPrevious(navigation, { selectCategoryId: createdId });
       else navigation.goBack();
     } catch (e) {
@@ -177,6 +181,7 @@ export default function CategoryEdit({ route, navigation }: Props) {
       {error ? <Text style={formStyles.error}>{error}</Text> : null}
       {isNew && txId ? <Text style={formStyles.hint}>Категория будет назначена операции, а если у её мерчанта ещё нет категории — станет категорией мерчанта.</Text> : null}
       {isNew && txIds?.length ? <Text style={formStyles.hint}>Категория будет назначена выбранным операциям ({txIds.length}).</Text> : null}
+      {isNew && merchantId ? <Text style={formStyles.hint}>Категория станет категорией мерчанта: новые операции будут получать её автоматически. Выбранные вручную категории не изменятся.</Text> : null}
       {isNew && planYm ? <Text style={formStyles.hint}>Категория будет добавлена в план этого месяца.</Text> : null}
 
       {isNew || changed ? <Button title="Сохранить" disabled={saving} onPress={save} style={styles.button} /> : null}

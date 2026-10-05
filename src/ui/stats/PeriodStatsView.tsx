@@ -4,7 +4,7 @@ import { averageFullMonths, parseYm, periodStats, PeriodStats } from '../../db/p
 import { useDisplayCurrency } from '../../displayCurrency';
 import { useOpenCategoryTransactions } from '../../navigation';
 import { onTransactionsChanged } from '../../events';
-import BottomSheet from '../BottomSheet';
+import BottomSheet, { SheetScrollView } from '../BottomSheet';
 import Button from '../Button';
 import { DayRange, dayKeyOf, daysInMonth, parseDayKey, rangeDays, rangeToUnix, shortRange } from '../dateRange';
 import { flatOf, isPartOfWindow, limitChange, loadNorms, NormPart, Norms, Pace, paceOf, rhythmBar } from './norms';
@@ -299,7 +299,7 @@ export default function PeriodStatsView({ range, emptyText = 'За этот пе
         style={styles.infoSheet}
       >
         {/* the text scrolls, "Понятно" stays at the bottom; every calculation is set apart in a code style */}
-        <ScrollView style={styles.infoScroll} contentContainerStyle={styles.info}>
+        <SheetScrollView style={styles.infoScroll} contentContainerStyle={styles.info}>
           {catInfo && norms?.byCategory.get(catInfo.id) ? (() => {
             // in plain words first, this category's real numbers; the formulas under "Как посчитано"
             const p = norms.byCategory.get(catInfo.id)!;
@@ -454,7 +454,7 @@ export default function PeriodStatsView({ range, emptyText = 'За этот пе
             </Text>
           )}
           <Text style={styles.infoText}>Все суммы — в валюте из настроек, по курсу на день каждой траты.</Text>
-        </ScrollView>
+        </SheetScrollView>
         <Button title="Понятно" onPress={() => setInfoOpen(null)} style={styles.infoButton} />
       </BottomSheet>
     </ScrollView>

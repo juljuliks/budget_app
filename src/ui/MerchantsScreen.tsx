@@ -1,20 +1,43 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { RouteProp, useFocusEffect, useRoute } from '@react-navigation/native';
 import { categoryLabel, listCategories } from '../db/categories';
 import { categoryColors } from '../db/colors';
-import { listMerchants, MerchantRow } from '../db/merchants';
+import { deleteMerchants, listMerchants, MerchantActivity, MerchantRow } from '../db/merchants';
 import { normalizeForSearch } from '../db/transactions';
-import { onTransactionsChanged } from '../events';
+import { emitTransactionsChanged, onTransactionsChanged } from '../events';
 import Button from './Button';
 import Checkbox from './Checkbox';
 import { plural } from './format';
 import { SearchIcon } from './icons';
 import MerchantCard from './MerchantCard';
+import { formatMoneyWithCurrency } from './money';
+import { sheetAlert } from './sheetAlert';
 import MergeMerchantsModal from './MergeMerchantsModal';
 import { colors } from './theme';
+import type { RootStackParamList } from '../navigation';
 
 export type CategoryInfo = { label: string; color: string };
+
+const SHORT_MONTHS = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+
+/** "12 мая", with the year when it isn't this one: "12 мая 2025". */
+function shortDate(unix: number, now = new Date()): string {
+  const d = new Date(unix * 1000);
+  return `${d.getDate()} ${SHORT_MONTHS[d.getMonth()]}${d.getFullYear() === now.getFullYear() ? '' : ` ${d.getFullYear()}`}`;
+}
+
+/**
+ * "За последний месяц: 3 покупки на 45.20 ₾", or without any then, all of them with their dates:
+ * "5 покупок на 120 ₾ · 12 мая – 20 авг".
+ */
+function activityText(a: MerchantActivity): string {
+  if (a.count === 0) return 'Покупок нет';
+  const what = `${a.count} ${plural(a.count, ['покупка', 'покупки', 'покупок'])} на ${a.totals.map((t) => formatMoneyWithCurrency(t.amount_minor, t.currency)).join(' + ')}`;
+  if (a.recent) return `За последний месяц: ${what}`;
+  const from = shortDate(a.from), to = shortDate(a.to);
+  return `${what} · ${from === to ? from : `${from} – ${to}`}`;
+}
 
 /** Merchants (and groups) with their categories; tap opens the card, "Выбрать несколько" merges into a group. */
 export default function MerchantsScreen() {
@@ -25,6 +48,12 @@ export default function MerchantsScreen() {
   const [selected, setSelected] = useState<string[]>([]);
   const [mergeOpen, setMergeOpen] = useState(false);
   const [cardId, setCardId] = useState<string | null>(null);
+
+  // back from creating a category for a merchant: its card opens again
+  const { openMerchantId, nonce } = useRoute<RouteProp<RootStackParamList, 'Merchants'>>().params ?? {};
+  useEffect(() => {
+    if (openMerchantId) setCardId(openMerchantId);
+  }, [openMerchantId, nonce]);
 
   const load = useCallback(() => {
     Promise.all([listMerchants(), listCategories(), categoryColors()]).then(([m, cats, colorOf]) => {
@@ -47,6 +76,42 @@ export default function MerchantsScreen() {
 
   function toggle(id: string) {
     setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
+
+  // a merchant: its operations stay with their categories, without the merchant; a group is only ungrouped
+  function confirmDelete() {
+    const picked = merchants.filter((m) => selected.includes(m.id));
+    const singles = picked.filter((m) => !m.group);
+    const groups = picked.filter((m) => m.group);
+    const n = singles.reduce((a, m) => a + m.count, 0);
+    const onlyGroups = singles.length === 0;
+    const ungroup = groups.length === 1 ? `разгруппировать «${groups[0].name}»` : `разгруппировать группы (${groups.length})`;
+    const remove = singles.length === 1 ? `удалить мерчанта «${singles[0].name}»` : `удалить мерчантов (${singles.length})`;
+    const sentence = (t: string) => `${t[0].toUpperCase()}${t.slice(1)}?`;
+    const title = sentence(onlyGroups ? ungroup : groups.length ? `${remove} и ${ungroup}` : remove);
+    const parts: string[] = [];
+    if (singles.length) {
+      parts.push(`${n} ${plural(n, ['покупка останется', 'покупки останутся', 'покупок останутся'])} в операциях со своими категориями, но без мерчанта. `
+        + `Новые операции ${singles.length === 1 ? 'этого мерчанта' : 'этих мерчантов'} не будут получать категорию автоматически. `
+        + `Новые SMS от ${singles.length === 1 ? 'него снова создадут мерчанта' : 'них снова создадут мерчантов'}.`);
+    }
+    for (const g of groups) {
+      parts.push(`Группа «${g.name}» не удаляется, а распадается: ${g.members.join(', ')} станут отдельными мерчантами с её категорией. Операции не изменятся.`);
+    }
+    sheetAlert(title, parts.join('\n\n'), [
+      { text: 'Отмена', style: 'cancel' },
+      {
+        text: onlyGroups ? 'Разгруппировать' : groups.length ? 'Удалить и разгруппировать' : singles.length === 1 ? 'Удалить мерчанта' : `Удалить (${singles.length})`,
+        style: 'destructive',
+        onPress: () => {
+          deleteMerchants(picked.map((m) => m.id)).then(() => {
+            setSelectMode(false);
+            setSelected([]);
+            emitTransactionsChanged();
+          }).catch((e) => console.error('delete merchants failed', e));
+        },
+      },
+    ]);
   }
 
   function merged() {
@@ -98,7 +163,7 @@ export default function MerchantsScreen() {
                   {item.group ? <Text style={styles.groupTag}>группа</Text> : null}
                 </View>
                 <Text style={styles.meta} numberOfLines={2}>
-                  {item.group ? `${item.members.join(', ')} · ` : ''}{item.count} {plural(item.count, ['операция', 'операции', 'операций'])}
+                  {item.group ? `${item.members.join(', ')} · ` : ''}{activityText(item.activity)}
                 </Text>
               </View>
               {cat ? (
@@ -118,10 +183,18 @@ export default function MerchantsScreen() {
 
       {selectMode ? (
         <View style={styles.bottomBar}>
-          {selected.length >= 2 ? (
-            <Button title={`Объединить (${selected.length})`} onPress={() => setMergeOpen(true)} />
+          {selected.length === 0 ? (
+            <Text style={styles.bottomHint}>Выберите мерчантов, чтобы удалить их, или двух и больше, чтобы объединить в группу.</Text>
           ) : (
-            <Text style={styles.bottomHint}>Выберите двух или больше мерчантов, чтобы объединить их в группу мерчантов.</Text>
+            <View style={styles.bottomActions}>
+              <Button
+                title={selected.length >= 2 ? `Объединить (${selected.length})` : 'Объединить'}
+                disabled={selected.length < 2}
+                onPress={() => setMergeOpen(true)}
+                style={styles.bottomButton}
+              />
+              <Button title={`Удалить (${selected.length})`} danger onPress={confirmDelete} style={styles.bottomButton} />
+            </View>
           )}
         </View>
       ) : null}
@@ -166,5 +239,7 @@ const styles = StyleSheet.create({
     position: 'absolute', left: 0, right: 0, bottom: 0, padding: 12, backgroundColor: colors.bg,
     borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
   },
+  bottomActions: { flexDirection: 'row', gap: 10 },
+  bottomButton: { flex: 1 },
   bottomHint: { fontSize: 14, color: colors.muted, textAlign: 'center', paddingVertical: 8 },
 });
