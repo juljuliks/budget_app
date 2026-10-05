@@ -51,6 +51,11 @@ export type Norms = {
      */
     effect: { before: number; after: number | null } | null;
   }>;
+  /**
+   * The flexible categories' limits per day together, at the period's start and after it (each category's what's
+   * left of the plan / days left): how the period moved the everyday limit. `after` null on the month's last day.
+   */
+  daily: { before: number; after: number | null };
   /** spending from the 1st of the month up to the period's end: can a period's overspend still fit the month? */
   monthToDate: Map<number | null, number>;
 };
@@ -119,7 +124,7 @@ export async function loadNorms(range: DayRange, currency: Parameters<typeof mon
   const beforePeriod = periodStartInMonth > monthStart ? await spentOver({ from: monthStart, to: dayBefore(periodStartInMonth) }) : new Map<number | null, number>();
   const partSpent = await spentOver({ from: range.from > monthStart ? range.from : monthStart, to: range.to });
   const norms: Norms = {
-    ym, total: 0, flexSpent: 0, flex: [], byCategory: new Map(),
+    ym, total: 0, flexSpent: 0, flex: [], byCategory: new Map(), daily: { before: 0, after: Number(range.to.slice(8, 10)) < daysInMonth(ym) ? 0 : null },
     monthToDate: await spentOver({ from: monthStart, to: range.to }),
   };
   for (const [id, { name, kind, rhythm }] of items) {
@@ -143,6 +148,11 @@ export async function loadNorms(range: DayRange, currency: Parameters<typeof mon
       before: perRhythm(beforePeriod.get(id) ?? 0, Number(periodStartInMonth.slice(8, 10))),
       after: lastDay < dim ? perRhythm(norms.monthToDate.get(id) ?? 0, lastDay + 1) : null,
     };
+    if (effect && kind === 'limit') {
+      const perDay = RHYTHM_DAYS[rhythm as Exclude<NormPeriod, 'month'>];
+      norms.daily.before += effect.before / perDay;
+      if (norms.daily.after !== null && effect.after !== null) norms.daily.after += effect.after / perDay;
+    }
     norms.byCategory.set(id, {
       kind, monthLimit, spent: partSpent.get(id) ?? 0, rhythm, window: win, windowParts,
       windowNorm: rhythm === 'month' ? monthLimit : sum(windowParts),

@@ -23,8 +23,8 @@ const PACE_MAX_DAYS = 31;
 
 type Props = {
   range: DayRange;
-  /** "на день" / "на неделю" / "на период" */
-  normLabel: string;
+  /** "на день" / "на неделю" / "на период" (no longer shown: the summary names the days by numbers) */
+  normLabel?: string;
   emptyText?: string;
 };
 
@@ -53,7 +53,7 @@ function pct(part: number, whole: number): string {
  * against the plan's norm for these days: are we on pace? A long one (a year) shows the structure and the
  * average per month.
  */
-export default function PeriodStatsView({ range, normLabel, emptyText = 'За этот период трат нет.' }: Props) {
+export default function PeriodStatsView({ range, emptyText = 'За этот период трат нет.' }: Props) {
   const [stats, setStats] = useState<PeriodStats | null>(null);
   const [norms, setNorms] = useState<Norms | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
@@ -125,11 +125,26 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
   const monthIn = norms ? MONTHS_IN[parseYm(norms.ym).month] : '';
   const flexSpent = norms?.flexSpent ?? 0;
 
-  // under the donut: the pace against the whole plan, or the average per month for a long period
-  const summary = pace
-    ? (norms && norms.total > 0
-      ? `Повседневные траты: ${money(flexSpent)} из ${m(norms.total)} ${normLabel} · ${delta(flexSpent, norms.total)}`
-      : 'Плана на эти дни нет — показана только структура трат.')
+  // under the donut: the pace against the whole plan (three lines), or the average per month for a long period
+  const outside = stats.spent_minor - flexSpent;
+  const summary: React.ReactNode = pace
+    ? (norms && norms.total > 0 ? (() => {
+      const left = Math.round(norms.total) - flexSpent;
+      const { before, after } = norms.daily;
+      const moved = after !== null && Math.round(after) !== Math.round(before);
+      return (
+        <>
+          Повседневные траты: {money(flexSpent)} из {m(norms.total)} ({pct(flexSpent, Math.round(norms.total))})
+          {'\n'}
+          <Text style={left < 0 ? styles.paceAhead : styles.paceOk}>
+            {left < 0 ? `Перерасход ${money(-left)}` : range.to >= today ? `Осталось ${money(left)}` : `Сэкономлено ${money(left)}`}
+          </Text>
+          {outside > 0 ? ` · ещё ${money(outside)} вне лимитов` : ''}
+          {'\n'}Лимит в день: {moved ? <><Text style={styles.crossed}>{m(before)}</Text>{' → '}
+            <Text style={after! < before ? styles.paceAhead : styles.paceOk}>{m(after!)}</Text></> : m(before)}
+        </>
+      );
+    })() : 'Плана на эти дни нет — показана только структура трат.')
     : average === undefined ? ''
       : average === null ? 'Для среднего в месяц нужен хотя бы один полный месяц с данными.'
         : `В среднем ${money(average.average_minor)} в месяц (${average.months} ${plural(average.months, ['полный месяц', 'полных месяца', 'полных месяцев'])})`;
@@ -375,6 +390,14 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                 ) : null}
                 Это общая картина: где-то больше, где-то меньше — важно, укладываетесь ли вы в сумме.
               </Text>
+              {norms && norms.total > 0 ? (
+                <Text style={styles.infoText}>
+                  <Text style={styles.infoBold}>Вне лимитов</Text> — траты, которые в повседневные не входят: обязательные платежи, переводы
+                  и покупки «крупно, раз в месяц», категории без плана.{outside > 0 ? <> За эти дни: <Text style={styles.infoBold}>{money(outside)}</Text>.</> : null}{'\n'}
+                  <Text style={styles.infoBold}>Лимит в день</Text> — лимиты всех повседневных категорий на один день вместе (недельные — их седьмая часть):
+                  в начале периода и после него, на оставшиеся дни месяца. Перерасход его уменьшает, экономия — увеличивает.
+                </Text>
+              ) : null}
               <Text style={styles.infoText}>
                 Лимит — что осталось от месячного плана каждой повседневной категории, разложенное на оставшиеся дни
                 месяца: перерасход раньше в месяце уменьшает его, экономия увеличивает. Не входят обязательные платежи, категории, которые вы тратите «крупно, раз в месяц», и категории без плана.

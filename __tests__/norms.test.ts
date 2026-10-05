@@ -154,3 +154,18 @@ test('the limit for the viewed days: a share of a weekly limit, the days of a da
   expect(across.byCategory.get(food)!.periodParts.map((p) => p.ym)).toEqual(['2025-09', '2025-10']);
   expect(across.byCategory.get(food)!.periodNorm).toBeCloseTo(5000);
 });
+
+test('the everyday limit per day: every flexible category\'s per day together, before and after the period', async () => {
+  const food = await createCategory('Еда');
+  const bars = await createCategory('Бары');
+  await setPlanAmount('2025-10', food, 31000, 'limit', 'GEL', 'day');
+  await setPlanAmount('2025-10', bars, 62000, 'limit', 'GEL', 'week');
+  await spend(5000, food, '2025-10-01');
+  await spend(2000, food, '2025-10-02');
+  const n = await loadNorms(day, 'GEL');
+  // Oct 2 starts with 31 − 5 = 26 ₾ of food over 30 days and 62 ₾ of bars over 30 days (a week's 7 days → per day)
+  expect(n.daily.before).toBeCloseTo((26000 + 62000) / 30);
+  // after it: 24 + 62 over the 29 days left
+  expect(n.daily.after).toBeCloseTo((24000 + 62000) / 29);
+  expect((await loadNorms({ from: '2025-10-31', to: '2025-10-31' }, 'GEL')).daily.after).toBeNull();
+});
