@@ -4,13 +4,12 @@ import { buildCategorySuggestions } from './notifyHelper';
 import { categoryLabel } from '../db/categories';
 import { getDb } from '../db';
 import { assignCategory } from '../assign';
-import { navigateWhenReady } from '../navigation';
+import { openTransaction } from '../sheets';
 import { KIND_LABELS } from '../ui/format';
 import { formatMoneyWithCurrency } from '../ui/money';
 
 export const CHANNEL_ID = 'transactions';
 export const ALL_CATEGORIES_ACTION = 'all_categories';
-export const REFUND_ACTION = 'refund_resolve';
 // shown on notifications posted by older versions; handled like ALL_CATEGORIES_ACTION
 const LEGACY_CREATE_CATEGORY_ACTION = 'create_new';
 // Android shows at most 3 action buttons; the last one is always "all categories"
@@ -53,18 +52,20 @@ export async function showUncategorizedTransactionNotification(txId: number) {
   });
 }
 
-/** A refund doesn't get a category: it is settled on its purchase (RefundResolve). */
+/**
+ * A refund whose merchant has no category: money back, counted in the stats as "Возвраты без категории". Just
+ * news, no buttons; tapping it opens the operation (a category can be picked there).
+ */
 async function showRefundNotification(txId: number, tx: { amount_minor: number; currency: string; raw_merchant: string | null }) {
   await notifee.displayNotification({
     id: `tx_${txId}`,
     title: `Возврат — ${formatMoneyWithCurrency(tx.amount_minor, tx.currency)}`,
-    body: tx.raw_merchant ? `${tx.raw_merchant}: найдите покупку и уменьшите её сумму` : 'Найдите покупку и уменьшите её сумму',
+    body: tx.raw_merchant ? `${tx.raw_merchant} · без категории` : 'Без категории',
     android: {
       channelId: CHANNEL_ID,
       smallIcon: 'ic_notification',
       importance: AndroidImportance.HIGH,
-      pressAction: { id: REFUND_ACTION, launchActivity: 'default' },
-      actions: [{ title: '🔎 Найти покупку', pressAction: { id: REFUND_ACTION, launchActivity: 'default' } }],
+      pressAction: { id: 'default', launchActivity: 'default' },
     },
     data: { txId: String(txId), merchant_key: '' },
   });
@@ -81,14 +82,10 @@ export async function handleNotificationAction(event: ActionEvent) {
   const txId = Number(event.notification?.data?.txId);
   if (!txId || !id) return;
 
-  if (id === REFUND_ACTION) {
-    navigateWhenReady({ name: 'RefundResolve', params: { refundId: txId } });
-    return; // RefundResolve removes the notification once the refund is settled
-  }
   if (id.startsWith('suggest_')) {
     await assignCategory(txId, Number(id.slice('suggest_'.length)));
   } else if (id === 'default' || id === ALL_CATEGORIES_ACTION || id === LEGACY_CREATE_CATEGORY_ACTION) {
-    navigateWhenReady({ name: 'TransactionDetail', params: { txId } });
+    openTransaction(txId);
     return; // keep the notification until a category is chosen
   } else {
     return;

@@ -127,13 +127,13 @@ export default function StatsView({ year, month, currency }: { year: number; mon
   );
 }
 
-/** "↩ Возвраты без категории −25 ₾": refunds whose merchant has no category, subtracted from the total. */
+/** "↩ Возвраты без категории +25 ₾": money back from merchants without a category (subtracted from the total). */
 export function RefundsRow({ amount, currency, onPress }: { amount: number; currency: Currency; onPress: () => void }) {
   if (amount <= 0) return null;
   return (
     <TouchableOpacity style={styles.refundsRow} onPress={onPress} accessibilityHint="Показать возвраты без категории">
       <Text style={styles.refundsLabel}>↩ Возвраты без категории</Text>
-      <Text style={styles.refundsAmount}>−{formatWithCurrency(amount, currency)}</Text>
+      <Text style={styles.refundsAmount}>+{formatWithCurrency(amount, currency)}</Text>
     </TouchableOpacity>
   );
 }

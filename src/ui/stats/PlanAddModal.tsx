@@ -1,15 +1,17 @@
 import React, { useEffect, useState } from 'react';
+import { useFormState, useWatch } from 'react-hook-form';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import BottomSheet, { SheetScrollView } from '../BottomSheet';
 import { Category, categoryLabel, listCategories } from '../../db/categories';
 import { Currency } from '../../db/fx';
 import { addPlanItem, getPlanBudget, lastPlanItem, PlanBudget, planConverter, PlanKind, plannedTotal, setPlanAmount } from '../../db/plans';
 import CurrencyButton from '../CurrencyButton';
-import Button from '../Button';
+import { SheetActions } from '../Button';
 import Checkbox from '../Checkbox';
 import { currencySymbol, formatShort, formatWithCurrency, parseAmountOrZero } from '../money';
 import { AMOUNT_HINT } from '../strings';
 import { colors } from '../theme';
+import { clearFormErrors, formError, useLoadedForm } from '../form';
 
 type Props = {
   ym: string;
@@ -22,6 +24,12 @@ type Props = {
   onSaved: () => void;
 };
 
+/** one row of the form: ticked, its amount, its currency (last time's, else the screen's) */
+type Item = { checked: boolean; amount: string; currency: Currency };
+/** keyed 'c<category id>': a bare number would make the form treat the path as an array index */
+type Form = { items: Record<string, Item> };
+const keyOf = (id: number) => `c${id}`;
+
 type Row = Category & { last: { limit_minor: number; currency: Currency; kind: PlanKind } | null };
 
 /**
@@ -31,26 +39,26 @@ type Row = Category & { last: { limit_minor: number; currency: Currency; kind: P
  * free of the month's budget.
  */
 export default function PlanAddModal({ ym, currency: screenCurrency, visible, plannedIds, onClose, onSaved }: Props) {
-  const [rows, setRows] = useState<Row[]>([]);
-  const [checked, setChecked] = useState<Set<number>>(new Set());
-  const [amounts, setAmounts] = useState<Record<number, string>>({});
-  // each row's currency, when changed from its default (last time's, else the screen's)
-  const [currencies, setCurrencies] = useState<Record<number, Currency>>({});
-  const currencyOf = (r: Row): Currency => currencies[r.id] ?? r.last?.currency ?? screenCurrency;
+  const [rows, setRows] = useState<Row[] | null>(null);
+  const form = useLoadedForm<Form>(visible && rows ? {
+    items: Object.fromEntries(rows.map((r) => [keyOf(r.id), { checked: false, amount: '', currency: r.last?.currency ?? screenCurrency }])),
+  } : null, visible);
+  const items = useWatch({ control: form.control, name: 'items' }) ?? {};
+  const item = (r: Row): Item => items[keyOf(r.id)] ?? { checked: false, amount: '', currency: r.last?.currency ?? screenCurrency };
+  const currencyOf = (r: Row): Currency => item(r).currency;
+  const setItem = (r: Row, patch: Partial<Item>) => {
+    form.setValue(`items.${keyOf(r.id)}`, { ...item(r), ...patch }, { shouldDirty: true });
+    clearFormErrors(form);
+  };
+  const { isSubmitting: saving } = useFormState({ control: form.control });
+  const error = formError(form);
   // what is still free, in the amount to distribute's currency, and a converter to it
   const [budget, setBudget] = useState<PlanBudget | null>(null);
   const [free, setFree] = useState<number | null>(null);
   const [conv, setConv] = useState<(minor: number, from: Currency, to: Currency) => number | null>(() => () => null);
-  const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!visible) return;
-    setChecked(new Set());
-    setAmounts({});
-    setError(null);
-    setSaving(false);
-    setCurrencies({});
+    if (!visible) { setRows(null); return; }
     (async () => {
       const cats = (await listCategories()).filter((c) => !plannedIds.includes(c.id));
       setRows(await Promise.all(cats.map(async (c) => ({ ...c, last: await lastPlanItem(ym, c.id) }))));
@@ -64,30 +72,24 @@ export default function PlanAddModal({ ym, currency: screenCurrency, visible, pl
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, ym]);
 
-  function toggle(id: number) {
-    setChecked((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-    setError(null);
+  function toggle(r: Row) {
+    setItem(r, { checked: !item(r).checked });
   }
 
-  function setAmount(id: number, text: string) {
-    setAmounts((prev) => ({ ...prev, [id]: text }));
-    if (text.trim()) setChecked((prev) => new Set(prev).add(id));
-    setError(null);
+  function setAmount(r: Row, text: string) {
+    // typing an amount ticks the row
+    setItem(r, text.trim() ? { amount: text, checked: true } : { amount: text });
   }
 
   /** What each ticked row adds: its own amount in the picked currency, or last time's (what addPlanItem takes) */
   function plannedAmount(r: Row): { minor: number; currency: Currency } | null {
-    const text = amounts[r.id]?.trim();
+    const text = item(r).amount.trim();
     if (!text) return { minor: r.last?.limit_minor ?? 0, currency: r.last?.currency ?? currencyOf(r) };
     const minor = parseAmountOrZero(text);
     return minor === null ? null : { minor, currency: currencyOf(r) };
   }
 
-  const picked = rows.filter((r) => checked.has(r.id));
+  const picked = (rows ?? []).filter((r) => item(r).checked);
   // the ticked rows' total in the budget's currency (or the screen's without it)
   const sumCurrency = budget?.currency ?? screenCurrency;
   const sum = picked.reduce((s, r) => {
@@ -95,13 +97,15 @@ export default function PlanAddModal({ ym, currency: screenCurrency, visible, pl
     return s + (a ? conv(a.minor, a.currency, sumCurrency) ?? 0 : 0);
   }, 0);
 
-  async function add() {
-    if (picked.some((r) => plannedAmount(r) === null)) { setError(AMOUNT_HINT); return; }
-    if (free !== null && sum > free) { setError(`Больше бюджета месяца: не распределено ${formatWithCurrency(free, sumCurrency)}.`); return; }
-    setSaving(true);
+  const add = form.handleSubmit(async () => {
+    if (picked.some((r) => plannedAmount(r) === null)) { form.setError('root.server', { message: AMOUNT_HINT }); return; }
+    if (free !== null && sum > free) {
+      form.setError('root.server', { message: `Больше бюджета месяца: не распределено ${formatWithCurrency(free, sumCurrency)}.` });
+      return;
+    }
     try {
       for (const r of picked) {
-        const text = amounts[r.id]?.trim();
+        const text = item(r).amount.trim();
         if (text) await setPlanAmount(ym, r.id, parseAmountOrZero(text)!, r.last?.kind, currencyOf(r));
         else await addPlanItem(ym, r.id);
       }
@@ -109,11 +113,10 @@ export default function PlanAddModal({ ym, currency: screenCurrency, visible, pl
       onClose();
     } catch (e) {
       console.error('add to plan failed', e);
-      setError('Не удалось добавить');
-      setSaving(false);
+      form.setError('root.server', { message: 'Не удалось добавить' });
       onSaved(); // some may have been added
     }
-  }
+  });
 
   return (
     <BottomSheet visible={visible} onClose={onClose} title="Добавить в план" style={styles.sheet}>
@@ -124,18 +127,20 @@ export default function PlanAddModal({ ym, currency: screenCurrency, visible, pl
           </Text>
         </View>
         <SheetScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.list}>
-          {rows.map((r) => {
-            const on = checked.has(r.id);
+          {(rows ?? []).map((r) => {
+            const on = item(r).checked;
             return (
               <View key={r.id} style={styles.row}>
-                <TouchableOpacity style={styles.rowMain} onPress={() => toggle(r.id)} accessibilityRole="checkbox" accessibilityState={{ checked: on }}>
+                <TouchableOpacity style={styles.rowMain} onPress={() => toggle(r)} accessibilityRole="checkbox" accessibilityState={{ checked: on }}>
                   <Checkbox checked={on} size={20} />
                   <Text style={styles.name} numberOfLines={1}>{categoryLabel(r)}</Text>
                 </TouchableOpacity>
+                {/* the amount and its currency, the same height */}
+                <View style={styles.amountRow}>
                 <TextInput
                   style={styles.amount}
-                  value={amounts[r.id] ?? ''}
-                  onChangeText={(t) => setAmount(r.id, t)}
+                  value={item(r).amount}
+                  onChangeText={(t) => setAmount(r, t)}
                   // last time's amount: taken when the row is ticked without one
                   placeholder={r.last ? `${formatShort(r.last.limit_minor)}${r.last.currency !== currencyOf(r) ? ` ${currencySymbol(r.last.currency)}` : ''}` : '0'}
                   placeholderTextColor={colors.muted}
@@ -143,20 +148,22 @@ export default function PlanAddModal({ ym, currency: screenCurrency, visible, pl
                   maxLength={12}
                   accessibilityLabel={`Сумма: ${categoryLabel(r)}`}
                 />
-                <CurrencyButton value={currencyOf(r)} onChange={(c) => setCurrencies((prev) => ({ ...prev, [r.id]: c }))} />
+                <CurrencyButton value={currencyOf(r)} onChange={(c) => setItem(r, { currency: c })} />
+                </View>
               </View>
             );
           })}
-          {rows.length === 0 ? <Text style={styles.empty}>Все категории уже в плане.</Text> : null}
+          {rows?.length === 0 ? <Text style={styles.empty}>Все категории уже в плане.</Text> : null}
         </SheetScrollView>
         <View style={styles.footer}>
           {error ? <Text style={styles.error}>{error}</Text> : (
             <Text style={styles.hint}>Без суммы подставится сумма прошлого месяца (серым в поле).</Text>
           )}
-          <Button title={picked.length ? `Добавить (${picked.length})` : 'Добавить'} onPress={add} disabled={saving || picked.length === 0} />
-          <TouchableOpacity style={styles.cancel} onPress={onClose}>
-            <Text style={styles.cancelText}>Отмена</Text>
-          </TouchableOpacity>
+          <SheetActions
+            submit={{ title: picked.length ? `Добавить (${picked.length})` : 'Добавить', onPress: add, disabled: saving || picked.length === 0 }}
+            onCancel={onClose}
+            style={styles.actions}
+          />
         </View>
     </BottomSheet>
   );
@@ -173,14 +180,14 @@ const styles = StyleSheet.create({
   },
   rowMain: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6 },
   name: { flex: 1, fontSize: 15, color: colors.text },
+  amountRow: { flexDirection: 'row', alignItems: 'stretch', gap: 8 },
   amount: {
-    width: 96, textAlign: 'right', fontSize: 16, color: colors.text, paddingVertical: 6, paddingHorizontal: 10,
+    width: 80, textAlign: 'right', fontSize: 16, color: colors.text, paddingVertical: 6, paddingHorizontal: 10,
     borderWidth: 1, borderColor: colors.border, borderRadius: 8, fontVariant: ['tabular-nums'],
   },
   empty: { color: colors.muted, textAlign: 'center', paddingVertical: 16 },
   footer: { padding: 16, paddingTop: 8, borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
   hint: { fontSize: 12, color: colors.muted, marginBottom: 8 },
   error: { fontSize: 13, color: colors.danger, marginBottom: 8 },
-  cancel: { alignItems: 'center', paddingTop: 12 },
-  cancelText: { fontSize: 16, color: colors.muted },
+  actions: { marginTop: 8 },
 });

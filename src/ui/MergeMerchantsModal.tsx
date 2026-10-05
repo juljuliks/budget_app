@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
+import { Controller, useFormState, useWatch } from 'react-hook-form';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import BottomSheet, { SheetScrollView } from './BottomSheet';
 import { categoriesOfMerchants, mergeMerchants, MerchantRow } from '../db/merchants';
 import { emitTransactionsChanged } from '../events';
-import Button from './Button';
+import { SheetActions } from './Button';
 import Chip from './Chip';
 import { formStyles } from './formStyles';
 import type { CategoryInfo } from './MerchantsScreen';
 import { colors } from './theme';
+import { clearFormErrors, formError, useLoadedForm } from './form';
 
 type Props = {
   visible: boolean;
@@ -22,40 +24,33 @@ type Props = {
  * selected group's) and its one category (one of those the merchants have, or none).
  */
 export default function MergeMerchantsModal({ visible, merchants, categories, onDone, onClose }: Props) {
-  const [name, setName] = useState('');
-  const [options, setOptions] = useState<number[]>([]);
-  const [categoryId, setCategoryId] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [options, setOptions] = useState<number[] | null>(null);
+  // the group's name (the selected group's, else the most frequent merchant's) and the most used category
+  const group = merchants.find((m) => m.group);
+  const top = [...merchants].sort((a, b) => b.count - a.count)[0];
+  const form = useLoadedForm<{ name: string; categoryId: number | null }>(
+    visible && options ? { name: group?.name ?? top?.name ?? '', categoryId: options[0] ?? null } : null, visible);
+  const categoryId = useWatch({ control: form.control, name: 'categoryId' }) ?? null;
+  const { isSubmitting: saving } = useFormState({ control: form.control });
+  const error = formError(form);
 
   useEffect(() => {
-    if (!visible) return;
-    const group = merchants.find((m) => m.group);
-    const top = [...merchants].sort((a, b) => b.count - a.count)[0];
-    setName(group?.name ?? top?.name ?? '');
-    setError(null);
-    setSaving(false);
-    categoriesOfMerchants(merchants.map((m) => m.id)).then((ids) => {
-      setOptions(ids);
-      setCategoryId(ids[0] ?? null);
-    }).catch((e) => console.error('load merchant categories failed', e));
+    if (!visible) { setOptions(null); return; }
+    categoriesOfMerchants(merchants.map((m) => m.id)).then(setOptions).catch((e) => console.error('load merchant categories failed', e));
     // only when opened: the selection doesn't change while the dialog is up
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
-  async function merge() {
-    if (!name.trim()) { setError('Введите название группы'); return; }
-    setSaving(true);
+  const merge = form.handleSubmit(async (v) => {
     try {
-      await mergeMerchants(merchants.map((m) => m.id), name, categoryId);
+      await mergeMerchants(merchants.map((m) => m.id), v.name, v.categoryId);
       emitTransactionsChanged();
       onDone();
     } catch (e) {
       console.error('merge merchants failed', e);
-      setError('Не удалось объединить');
-      setSaving(false);
+      form.setError('root.server', { message: 'Не удалось объединить' });
     }
-  }
+  });
 
   return (
     <BottomSheet visible={visible} onClose={onClose} title="Объединить в группу">
@@ -63,20 +58,27 @@ export default function MergeMerchantsModal({ visible, merchants, categories, on
           <Text style={styles.members}>{merchants.map((m) => (m.group ? `${m.name} (${m.members.join(', ')})` : m.name)).join(', ')}</Text>
 
           <Text style={formStyles.label}>Название группы</Text>
-          <TextInput
-            style={formStyles.input}
-            value={name}
-            onChangeText={(v) => { setName(v); setError(null); }}
-            placeholder="Например, SPAR"
-            maxLength={40}
+          <Controller
+            control={form.control}
+            name="name"
+            rules={{ validate: (v) => !!v?.trim() || 'Введите название группы' }}
+            render={({ field }) => (
+              <TextInput
+                style={formStyles.input}
+                value={field.value}
+                onChangeText={(v) => { field.onChange(v); clearFormErrors(form); }}
+                placeholder="Например, SPAR"
+                maxLength={40}
+              />
+            )}
           />
 
           <Text style={formStyles.label}>Категория группы</Text>
           <View style={styles.chips}>
-            {options.map((id) => (
-              <Chip key={id} label={categories.get(id)?.label ?? '?'} selected={categoryId === id} onPress={() => setCategoryId(id)} />
+            {(options ?? []).map((id) => (
+              <Chip key={id} label={categories.get(id)?.label ?? '?'} selected={categoryId === id} onPress={() => form.setValue('categoryId', id, { shouldDirty: true })} />
             ))}
-            <Chip label="Без категории" selected={categoryId === null} onPress={() => setCategoryId(null)} />
+            <Chip label="Без категории" selected={categoryId === null} onPress={() => form.setValue('categoryId', null, { shouldDirty: true })} />
           </View>
           <Text style={formStyles.hint}>
             У группы одна категория: её получают новые операции всех мерчантов группы и их прошлые операции с
@@ -84,10 +86,7 @@ export default function MergeMerchantsModal({ visible, merchants, categories, on
           </Text>
 
           {error ? <Text style={formStyles.error}>{error}</Text> : null}
-          <Button title="Объединить" onPress={merge} disabled={saving} style={styles.button} />
-          <TouchableOpacity style={styles.cancel} onPress={onClose}>
-            <Text style={styles.cancelText}>Отмена</Text>
-          </TouchableOpacity>
+          <SheetActions submit={{ title: 'Объединить', onPress: merge, disabled: saving }} onCancel={onClose} />
         </SheetScrollView>
     </BottomSheet>
   );
@@ -97,7 +96,4 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 20 },
   members: { fontSize: 14, color: colors.muted },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  button: { marginTop: 20 },
-  cancel: { alignItems: 'center', paddingVertical: 14 },
-  cancelText: { fontSize: 16, color: colors.muted },
 });

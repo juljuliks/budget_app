@@ -1,13 +1,25 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { KeyboardTypeOptions, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { KeyboardTypeOptions, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Controller, FieldValues, Path, PathValue, useFormState, UseFormReturn } from 'react-hook-form';
 import BottomSheet from './BottomSheet';
+import { SheetActions } from './Button';
+import { clearFormErrors, formError, useLoadedForm } from './form';
 import { formStyles } from './formStyles';
 import { colors } from './theme';
 
-type Props = {
+/** The field this sheet edits; a form passed in may hold more (the amount's currency, the plan item kind, …). */
+export type TextFormValues = { value: string };
+
+type Props<V extends TextFormValues & FieldValues> = {
   visible: boolean;
   title: string;
+  /** the saved value (ignored with `form`: its defaults hold it) */
   initialValue?: string;
+  /**
+   * a form of the caller's with `value` and its other fields, already reset to what is saved (useLoadedForm):
+   * "Сохранить" shows once any of them changed. Without it the sheet keeps `value` in a form of its own.
+   */
+  form?: UseFormReturn<V>;
   placeholder?: string;
   submitLabel?: string;
   /** muted lines under the title (e.g. "Свободно 1 600 ₾") */
@@ -27,81 +39,82 @@ type Props = {
   onClose: () => void;
 };
 
-/** A bottom sheet with one text field (create / rename, amounts, notes). */
-export default function TextInputModal({
-  visible, title, initialValue = '', placeholder, submitLabel = 'Сохранить', hint, keyboardType, maxLength = 30, allowEmpty, multiline,
-  onSubmit, onClose, children, inputAccessory,
-}: Props) {
-  const [value, setValue] = useState(initialValue);
-  const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+/**
+ * A bottom sheet with one text field (create / rename, amounts, notes). Its submit button shows only once
+ * something in the form changed.
+ */
+export default function TextInputModal<V extends TextFormValues & FieldValues = TextFormValues>({
+  visible, title, initialValue = '', form: outer, placeholder, submitLabel = 'Сохранить', hint, keyboardType, maxLength = 30,
+  allowEmpty, multiline, onSubmit, onClose, children, inputAccessory,
+}: Props<V>) {
+  // used only without a form of the caller's (a hook can't be skipped)
+  const own = useLoadedForm<TextFormValues>(outer ? null : { value: initialValue }, visible);
+  const form = (outer ?? own) as unknown as UseFormReturn<TextFormValues>;
+  const { isDirty, isSubmitting } = useFormState({ control: form.control });
+  const error = formError(form);
 
   const input = useRef<TextInput>(null);
-  useEffect(() => {
-    if (visible) { setValue(initialValue); setError(null); setSaving(false); }
-  }, [visible, initialValue]);
   // an empty field gets the keyboard once the sheet has slid up (autoFocus during the animation doesn't show it);
   // a prefilled one doesn't: the keyboard would cover the other choices (currency, kind, norm)
   useEffect(() => {
-    if (!visible || initialValue) return undefined;
-    const t = setTimeout(() => input.current?.focus(), 300);
+    if (!visible) return undefined;
+    const t = setTimeout(() => { if (!form.getValues('value')) input.current?.focus(); }, 300);
     return () => clearTimeout(t);
-  }, [visible, initialValue]);
+  }, [visible, form]);
 
-  async function submit() {
-    if (!value.trim() && !allowEmpty) { setError('Введите название'); return; }
-    setSaving(true);
+  const submit = form.handleSubmit(async ({ value }) => {
     const err = await onSubmit(value.trim());
-    setSaving(false);
-    if (err) setError(err); else onClose();
-  }
+    if (err) form.setError('root.server', { message: err }); else onClose();
+  });
 
   return (
     <BottomSheet visible={visible} onClose={onClose} title={title}>
         <View style={styles.dialog}>
           {hint ? <Text style={styles.hint}>{hint}</Text> : null}
           <View style={styles.inputRow}>
-          <TextInput
-            ref={input}
-            style={[formStyles.input, styles.input, multiline && styles.multiline]}
-            multiline={multiline}
-            textAlignVertical={multiline ? 'top' : undefined}
-            value={value}
-            onChangeText={(v) => { setValue(v); setError(null); }}
-            placeholder={placeholder}
-            placeholderTextColor={colors.muted}
-            keyboardType={keyboardType}
-            maxLength={maxLength}
-            returnKeyType={multiline ? 'default' : 'done'}
-            onSubmitEditing={multiline ? undefined : submit}
+          <Controller
+            control={form.control}
+            name="value"
+            rules={{ validate: (v) => allowEmpty || !!v.trim() || 'Введите название' }}
+            render={({ field }) => (
+              <TextInput
+                ref={input}
+                style={[formStyles.input, styles.input, multiline && styles.multiline]}
+                multiline={multiline}
+                textAlignVertical={multiline ? 'top' : undefined}
+                value={field.value}
+                onChangeText={(v) => { field.onChange(v); clearFormErrors(form); }}
+                placeholder={placeholder}
+                placeholderTextColor={colors.muted}
+                keyboardType={keyboardType}
+                maxLength={maxLength}
+                returnKeyType={multiline ? 'default' : 'done'}
+                onSubmitEditing={multiline || !isDirty ? undefined : submit}
+              />
+            )}
           />
           {inputAccessory}
           </View>
           {children ? <View style={styles.extra}>{children}</View> : null}
           {error ? <Text style={formStyles.error}>{error}</Text> : null}
-          <View style={styles.buttons}>
-            <TouchableOpacity style={styles.button} onPress={onClose}>
-              <Text style={styles.cancel}>Отмена</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.button} onPress={submit} disabled={saving}>
-              <Text style={[styles.submit, saving && styles.disabled]}>{submitLabel}</Text>
-            </TouchableOpacity>
-          </View>
+          {/* the submit button only once something changed: nothing to save otherwise */}
+          <SheetActions submit={isDirty ? { title: submitLabel, onPress: submit, disabled: isSubmitting } : null} onCancel={onClose} />
         </View>
     </BottomSheet>
   );
+}
+
+/** Sets a field of a sheet's form from a control (currency, kind, …), marking the form changed. */
+export function setField<V extends FieldValues, K extends Path<V>>(form: UseFormReturn<V>, name: K, value: PathValue<V, K>) {
+  form.setValue(name, value, { shouldDirty: true });
 }
 
 const styles = StyleSheet.create({
   dialog: { paddingHorizontal: 20 },
   hint: { fontSize: 14, color: colors.muted, marginBottom: 12 },
   extra: { marginTop: 12 },
-  inputRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  // the field and its accessory (the currency) the same height
+  inputRow: { flexDirection: 'row', alignItems: 'stretch', gap: 8 },
   input: { flex: 1 },
   multiline: { minHeight: 96, maxHeight: 200 },
-  buttons: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 16 },
-  button: { paddingHorizontal: 12, paddingVertical: 8 },
-  cancel: { fontSize: 16, color: colors.muted },
-  submit: { fontSize: 16, fontWeight: '600', color: colors.accent },
-  disabled: { opacity: 0.5 },
 });

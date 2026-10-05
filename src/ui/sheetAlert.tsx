@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import BottomSheet from './BottomSheet';
+import Button, { SheetActions } from './Button';
 import { colors } from './theme';
 
 // Confirmations and messages as bottom sheets, called like Alert.alert. <SheetAlertHost /> (mounted once in App)
@@ -34,20 +35,17 @@ export function SheetAlertHost() {
     <BottomSheet visible={visible} onClose={() => { close(); cancel?.onPress?.(); }} title={req?.title}>
       <View style={styles.body}>
         {req?.message ? <Text style={styles.message}>{req.message}</Text> : null}
+        {/* the same buttons as every sheet (SheetActions): filled, outlined for 'secondary', red for 'destructive' */}
         {actions.map((b) => (
-          <TouchableOpacity
+          <Button
             key={b.text}
-            style={[styles.button, b.style === 'destructive' ? styles.danger : b.style === 'secondary' ? styles.secondary : styles.primary]}
+            title={b.text}
+            danger={b.style === 'destructive'}
+            outline={b.style === 'secondary'}
             onPress={() => { close(); b.onPress?.(); }}
-          >
-            <Text style={[styles.buttonText, b.style === 'secondary' && styles.secondaryText]}>{b.text}</Text>
-          </TouchableOpacity>
+          />
         ))}
-        {cancel ? (
-          <TouchableOpacity style={styles.cancel} onPress={() => { close(); cancel.onPress?.(); }}>
-            <Text style={styles.cancelText}>{cancel.text}</Text>
-          </TouchableOpacity>
-        ) : null}
+        {cancel ? <SheetActions submit={null} cancelTitle={cancel.text} onCancel={() => { close(); cancel.onPress?.(); }} style={styles.cancelRow} /> : null}
       </View>
     </BottomSheet>
   );
@@ -56,12 +54,5 @@ export function SheetAlertHost() {
 const styles = StyleSheet.create({
   body: { paddingHorizontal: 20, gap: 10 },
   message: { fontSize: 15, color: colors.text, lineHeight: 21, marginBottom: 6 },
-  button: { borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
-  primary: { backgroundColor: colors.accent },
-  danger: { backgroundColor: colors.danger },
-  secondary: { borderWidth: 1, borderColor: colors.accent, paddingVertical: 13 },
-  buttonText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
-  secondaryText: { color: colors.accent },
-  cancel: { alignItems: 'center', paddingVertical: 10 },
-  cancelText: { fontSize: 16, color: colors.muted },
+  cancelRow: { marginTop: 0 },
 });

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Controller, useWatch } from 'react-hook-form';
 import { Currency } from '../../db/fx';
 import { getPlanBudget, lastPlanItem, NormPeriod, OverBudgetError, PlanKind, plannedTotal, setPlanAmount } from '../../db/plans';
 import { Text } from 'react-native';
@@ -8,9 +9,10 @@ import CurrencyButton from '../CurrencyButton';
 import { formatWithCurrency, parseAmountOrZero, toInputValue } from '../money';
 import RadioGroup from '../RadioGroup';
 import TextInputModal from '../TextInputModal';
+import { useLoadedForm } from '../form';
 
 const KINDS = [
-  ['limit', 'Повседневные траты', 'Еда, кафе, такси — сумма меняется, следим за остатком'],
+  ['limit', 'Траты с лимитом', 'Еда, кафе, одежда — сумма меняется, следим за остатком'],
   ['fixed', 'Обязательный платёж', 'Аренда, кредит, подписки — одна и та же сумма каждый месяц'],
 ] as const;
 
@@ -47,39 +49,38 @@ type Props = {
 export default function PlanAmountModal({ ym, target, onClose, onSaved }: Props) {
   // free for this category = amount to distribute − the other categories; null = no amount set
   const [free, setFree] = useState<{ minor: number; currency: Currency } | null>(null);
-  const [kind, setKind] = useState<PlanKind>('limit');
-  const [norm, setNorm] = useState<NormPeriod>('day');
-  const [currency, setCurrency] = useState<Currency>('GEL');
-  // the field starts with the current amount, or the category's amount from the last month that planned it
-  const [initial, setInitial] = useState('');
+  // the saved item; a category not in the plan yet starts as a day-to-day limit in the screen's currency
+  const form = useLoadedForm<{ value: string; currency: Currency; kind: PlanKind; norm: NormPeriod }>(target ? {
+    value: toInputValue(target.limit_minor), currency: target.currency, kind: target.kind ?? 'limit', norm: target.norm_period ?? 'day',
+  } : null, target !== null);
+  const kind = useWatch({ control: form.control, name: 'kind' });
   const [previous, setPrevious] = useState<{ minor: number; currency: Currency } | null>(null);
 
   useEffect(() => {
     if (!target) return;
-    setKind(target.kind ?? 'limit');
-    setNorm(target.norm_period ?? 'day');
-    setCurrency(target.currency);
-    setInitial(toInputValue(target.limit_minor));
     (async () => {
       const [budget, last] = await Promise.all([getPlanBudget(ym), lastPlanItem(ym, target.category_id)]);
       const others = budget ? await plannedTotal(ym, target.category_id, budget.currency) : 0;
       setFree(budget ? { minor: Math.max(budget.amount_minor - others, 0), currency: budget.currency } : null);
       setPrevious(last ? { minor: last.limit_minor, currency: last.currency } : null);
+      // not in the plan yet: last month's item is offered, ready to save as is (so it counts as a change)
       if (!target.limit_minor && last) {
-        setInitial(toInputValue(last.limit_minor));
-        setCurrency(last.currency);
-        if (!target.kind) setKind(last.kind);
-        if (!target.norm_period) setNorm(last.norm_period);
+        const dirty = { shouldDirty: true };
+        form.setValue('value', toInputValue(last.limit_minor), dirty);
+        form.setValue('currency', last.currency, dirty);
+        if (!target.kind) form.setValue('kind', last.kind, dirty);
+        if (!target.norm_period) form.setValue('norm', last.norm_period, dirty);
       }
     })().catch((e) => console.error('load plan budget failed', e));
-  }, [ym, target]);
+  }, [ym, target, form]);
 
   async function save(text: string): Promise<string | null> {
     if (!target) return null;
     const minor = parseAmountOrZero(text);
     if (minor === null) return AMOUNT_HINT;
     try {
-      await setPlanAmount(ym, target.category_id, minor, kind, currency, norm);
+      const { kind: k, currency, norm } = form.getValues();
+      await setPlanAmount(ym, target.category_id, minor, k, currency, norm);
     } catch (e) {
       if (!(e instanceof OverBudgetError)) throw e;
       return `Больше бюджета месяца. Не распределено: ${free ? formatWithCurrency(free.minor, free.currency) : '0'}.`;
@@ -98,20 +99,20 @@ export default function PlanAmountModal({ ym, target, onClose, onSaved }: Props)
       visible={target !== null}
       title={target?.label ?? ''}
       hint={hint || undefined}
-      initialValue={initial}
+      form={form}
       placeholder="0"
       keyboardType="decimal-pad"
       maxLength={12}
       allowEmpty
       onSubmit={save}
       onClose={onClose}
-      inputAccessory={<CurrencyButton value={currency} onChange={setCurrency} />}
+      inputAccessory={<Controller control={form.control} name="currency" render={({ field }) => <CurrencyButton value={field.value} onChange={field.onChange} />} />}
     >
-      <RadioGroup options={KINDS} value={kind} onChange={setKind} />
+      <Controller control={form.control} name="kind" render={({ field }) => <RadioGroup options={KINDS} value={field.value} onChange={field.onChange} />} />
       {kind === 'limit' ? (
         <>
           <Text style={formStyles.label}>Как тратите</Text>
-          <RadioGroup options={PATTERNS} value={norm} onChange={setNorm} />
+          <Controller control={form.control} name="norm" render={({ field }) => <RadioGroup options={PATTERNS} value={field.value} onChange={field.onChange} />} />
           <Text style={formStyles.hint}>По этому в статистике считается лимит на день или неделю.</Text>
         </>
       ) : null}

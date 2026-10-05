@@ -6,7 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 import { categoryChangeTotals } from '../assign';
 import { excludeFromGroup, getMerchant, MerchantDetails, renameMerchantGroup, setMerchantCategory } from '../db/merchants';
 import { emitTransactionsChanged } from '../events';
-import Button from './Button';
+import Button, { SheetActions } from './Button';
 import CategoryPicker from './CategoryPicker';
 import Checkbox from './Checkbox';
 import { plural } from './format';
@@ -89,12 +89,12 @@ export default function MerchantCard({ merchantId, categories, onClose, onChange
   function unpin() {
     if (!m) return;
     sheetAlert(
-      'Не назначать категорию автоматически?',
+      `Открепить категорию от «${m.name}»?`,
       `Новые операции «${m.name}» будут приходить без категории. У прошлых операций категория останется.`,
       [
         { text: 'Отмена', style: 'cancel' },
         {
-          text: 'Не назначать', style: 'destructive', onPress: () => {
+          text: 'Открепить', style: 'destructive', onPress: () => {
             setMerchantCategory(m.id, null).then(changed).catch((e) => console.error('unpin failed', e));
           },
         },
@@ -141,21 +141,24 @@ export default function MerchantCard({ merchantId, categories, onClose, onChange
                 </TouchableOpacity>
               ) : null}
             </View>
-            <Text style={styles.meta}>
-              {m.group ? 'Группа · ' : ''}{m.count} {plural(m.count, ['операция', 'операции', 'операций'])}
-              {m.totals.length ? ` · ${money(m.totals)}` : ''}
-            </Text>
-            <TouchableOpacity onPress={showTransactions} hitSlop={8}>
-              <Text style={styles.link}>Показать операции</Text>
-            </TouchableOpacity>
+            {/* like a category's sheet: how many operations and how much; with some, a link to them on the right */}
+            <View style={styles.summaryRow}>
+              <Text style={styles.meta} numberOfLines={1}>
+                {m.group ? 'Группа · ' : ''}{m.count} {plural(m.count, ['операция', 'операции', 'операций'])}
+                {m.totals.length ? ` · ${money(m.totals)}` : ''}
+              </Text>
+              {m.count > 0 ? (
+                <TouchableOpacity onPress={showTransactions} hitSlop={8} accessibilityRole="link">
+                  <Text style={styles.link}>Показать операции ›</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
 
             <Text style={styles.heading}>Категория</Text>
             {picking ? (
               <>
-                <CategoryPicker title="Выберите категорию" selectedId={m.category_id} onSelect={pick} newCategory={{ merchantId: m.id }} onNavigateAway={onClose} />
-                <TouchableOpacity onPress={() => setPicking(false)} style={styles.inlineCancel}>
-                  <Text style={styles.cancelText}>Отмена</Text>
-                </TouchableOpacity>
+                <CategoryPicker title="Выберите категорию" selectedId={m.category_id} onSelect={pick} />
+                <SheetActions submit={null} onCancel={() => setPicking(false)} />
               </>
             ) : (
               <>
@@ -170,9 +173,7 @@ export default function MerchantCard({ merchantId, categories, onClose, onChange
                 <View style={styles.actions}>
                   <Button title={category ? 'Сменить категорию' : 'Выбрать категорию'} onPress={() => setPicking(true)} style={styles.action} />
                   {category ? (
-                    <TouchableOpacity onPress={unpin} style={styles.unpin} accessibilityRole="button">
-                      <Text style={styles.unpinText}>Не назначать автоматически</Text>
-                    </TouchableOpacity>
+                    <Button title="Открепить категорию" danger outline onPress={unpin} style={styles.action} />
                   ) : null}
                 </View>
               </>
@@ -231,8 +232,9 @@ const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 24 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   title: { fontSize: 20, fontWeight: '600', color: colors.text, flexShrink: 1 },
-  meta: { fontSize: 14, color: colors.muted, marginTop: 4 },
-  link: { fontSize: 14, color: colors.accent, marginTop: 8 },
+  summaryRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 4 },
+  meta: { fontSize: 14, color: colors.muted, flexShrink: 1 },
+  link: { fontSize: 14, color: colors.accent },
   heading: { fontSize: 13, fontWeight: '600', color: colors.muted, textTransform: 'uppercase', marginTop: 20, marginBottom: 8 },
   categoryRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   dot: { width: 10, height: 10, borderRadius: 5 },
@@ -240,9 +242,6 @@ const styles = StyleSheet.create({
   noCategory: { fontSize: 14, color: colors.muted },
   actions: { marginTop: 12, gap: 4 },
   action: { marginTop: 8 },
-  // an outlined button under the filled 'Сменить категорию': same height and corners, red border and text
-  unpin: { alignItems: 'center', paddingVertical: 12, marginTop: 8, borderWidth: 1, borderColor: colors.danger, borderRadius: 8 },
-  unpinText: { fontSize: 16, fontWeight: '600', color: colors.danger },
   memberRow: {
     flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
@@ -250,6 +249,4 @@ const styles = StyleSheet.create({
   memberName: { flex: 1, fontSize: 15, color: colors.text },
   memberCount: { fontSize: 13, color: colors.muted },
   hint: { fontSize: 13, color: colors.muted, marginTop: 8 },
-  inlineCancel: { alignItems: 'center', paddingVertical: 10 },
-  cancelText: { fontSize: 16, color: colors.muted },
 });

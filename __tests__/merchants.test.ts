@@ -7,7 +7,6 @@ import {
   categoriesOfMerchants, deleteMerchants, excludeFromGroup, getMerchant, listMerchants, mergeMerchants, renameMerchantGroup, setMerchantCategory,
 } from '../src/db/merchants';
 import { listTransactionsFiltered, merchantsWithTransactions } from '../src/db/transactions';
-import { refundCandidates } from '../src/db/refunds';
 import { findCategoryForMerchant } from '../src/categorize';
 import { freshDb } from './helpers';
 
@@ -102,20 +101,6 @@ test('excluding from a group: the merchant keeps the group category as its own; 
   expect(await getMerchant(id)).toBeNull();
   expect((await listMerchants()).map((m) => m.id).sort()).toEqual(['X1', 'X2']);
   expect(await (await getDb()).get("SELECT 1 FROM merchant_rules WHERE pattern = ?", [id])).toBeUndefined();
-});
-
-test('a refund finds purchases at any merchant of its group', async () => {
-  const p = await sms('TEMU COM', '20.00');
-  const refund = await ingestSms({
-    sender: 'TBC SMS', timestamp: ts++,
-    body: 'A refund of 20.00 GEL has been initiated by TEMU.COM INT to your MC GOLD (*1834). The amount will be credited to your account within 2–5 days.',
-  });
-  if (refund.status !== 'inserted') throw new Error('refund not inserted');
-  const key = (await (await getDb()).get<{ merchant_key: string }>('SELECT merchant_key FROM transactions WHERE id = ?', [refund.txId]))!.merchant_key;
-  expect(key).not.toBe('TEMU COM');
-  expect(await refundCandidates(refund.txId)).toEqual([]);
-  await mergeMerchants(['TEMU COM', key], 'TEMU', null);
-  expect((await refundCandidates(refund.txId)).map((c) => c.id)).toEqual([p]);
 });
 
 test('category change totals: refunds subtract, ordered by the signed sum', async () => {

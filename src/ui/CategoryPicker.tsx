@@ -4,7 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Category, categoryLabel, isTransferCategory, listCategories } from '../db/categories';
 import { getTransferTypeId } from '../db/categoryTypes';
 import { onTransactionsChanged } from '../events';
-import { RootStackParamList, useRootNavigation } from '../navigation';
+import CategorySheet from './CategorySheet';
 import Chip from './Chip';
 import SectionHeading from './SectionHeading';
 
@@ -19,10 +19,6 @@ type Props = {
   transferFirst?: boolean;
   /** categories not to offer (already in the plan, the one being deleted, ...) */
   excludeIds?: number[];
-  /** what the category editor should do with a newly created category (assign to a transaction, add to a plan, ...) */
-  newCategory?: Omit<RootStackParamList['CategoryEdit'], 'categoryId'>;
-  /** called before leaving to the category screens (e.g. to close a modal) */
-  onNavigateAway?: () => void;
   disabled?: boolean;
 };
 
@@ -32,9 +28,10 @@ type Props = {
  * focus / changes, so a category created or edited elsewhere shows up immediately.
  */
 export default function CategoryPicker({
-  selectedId, onSelect, allowNone = false, title = 'Категория', transferFirst = false, excludeIds, newCategory, onNavigateAway, disabled,
+  selectedId, onSelect, allowNone = false, title = 'Категория', transferFirst = false, excludeIds, disabled,
 }: Props) {
-  const navigation = useRootNavigation();
+  // "+": a new category in a sheet, picked right after it is created (as if tapped in the list)
+  const [creating, setCreating] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [transferTypeId, setTransferTypeId] = useState<number | null>(null);
 
@@ -57,36 +54,32 @@ export default function CategoryPicker({
   const excluded = new Set(excludeIds ?? []);
   const shown = categories.filter((c) => !excluded.has(c.id));
 
-  function go(fn: () => void) {
-    onNavigateAway?.();
-    fn();
-  }
-
   return (
     <View>
       {/* no gear: categories are managed only from Настройки (the gear in the tab headers) */}
       <SectionHeading title={title} />
       <View style={styles.chips}>
         {shown.map((c) => (
-          <Chip key={c.id} label={categoryLabel(c)} selected={c.id === selectedId} disabled={disabled} onPress={() => onSelect(c.id)} />
+          <Chip key={c.id} label={categoryLabel(c)} selected={c.id === selectedId} disabled={disabled} onPress={() => onSelect(c.id)} compact />
         ))}
         {allowNone ? (
-          <Chip label="Без категории" selected={selectedId === null} disabled={disabled} onPress={() => onSelect(null)} />
+          <Chip label="Без категории" selected={selectedId === null} disabled={disabled} onPress={() => onSelect(null)} compact />
         ) : null}
-        <Chip
-          label="＋ Новая категория"
-          action
-          disabled={disabled}
-          onPress={() => go(() => navigation.navigate('CategoryEdit', {
-            ...newCategory,
-            typeId: newCategory?.typeId ?? (transferFirst ? transferTypeId ?? undefined : undefined),
-          }))}
-        />
+        <Chip label="Новая категория" add compact disabled={disabled} onPress={() => setCreating(true)} />
       </View>
+      <CategorySheet
+        visible={creating}
+        // a new category for a transfer goes to the transfer section
+        typeId={transferFirst ? transferTypeId ?? undefined : undefined}
+        // the short form: section, emoji, name; the rest is on the categories page
+        quick
+        onClose={() => setCreating(false)}
+        onSaved={(id) => { load(); onSelect(id); }}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, alignItems: 'center' },
 });

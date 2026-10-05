@@ -1,19 +1,19 @@
-import React, { useCallback, useState } from 'react';
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { sheetAlert } from './sheetAlert';
 import { plural } from './format';
-import { useFocusEffect } from '@react-navigation/native';
 import { CategoryType, countCategoriesOfType, deleteCategoryType, listCategoryTypes } from '../db/categoryTypes';
 import { emitTransactionsChanged } from '../events';
 import { paletteShades, typePalette } from '../colors';
 import { PaletteStrip } from './ColorSwatches';
-import Fab from './Fab';
+import BottomSheet, { SheetFlatList } from './BottomSheet';
+import { CreateButton } from './PlusButton';
 import RowActions from './RowActions';
 import TypeEditModal from './TypeEditModal';
 import { colors } from './theme';
 
-/** Category types ("Переводы", "Хобби", ...): create, edit (name and colors), delete. Opened from the settings. */
-export default function CategoryTypes() {
+/** Category sections ("Переводы", "Хобби", ...) in a sheet: create, edit (name and colors), delete. From the categories. */
+export default function CategoryTypesSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const [types, setTypes] = useState<CategoryType[]>([]);
   // null = closed; { type: undefined } = create
   const [editing, setEditing] = useState<{ type?: CategoryType } | null>(null);
@@ -21,7 +21,7 @@ export default function CategoryTypes() {
   const load = useCallback(() => {
     listCategoryTypes().then(setTypes).catch((e) => console.error('load types failed', e));
   }, []);
-  useFocusEffect(load);
+  useEffect(() => { if (visible) load(); }, [visible, load]);
 
   async function remove(t: CategoryType) {
     const n = await countCategoriesOfType(t.id);
@@ -35,8 +35,11 @@ export default function CategoryTypes() {
   }
 
   return (
-    <View style={styles.screen}>
-      <FlatList
+    <BottomSheet visible={visible} onClose={onClose} title="Разделы" style={styles.sheet}>
+      <View style={styles.top}>
+        <CreateButton onPress={() => setEditing({})} accessibilityLabel="Новый раздел" />
+      </View>
+      <SheetFlatList
         data={types}
         keyExtractor={(t) => String(t.id)}
         contentContainerStyle={styles.content}
@@ -61,10 +64,8 @@ export default function CategoryTypes() {
             />
           </View>
         )}
-        ListEmptyComponent={<Text style={styles.empty}>Разделов нет. Нажмите ＋, чтобы создать.</Text>}
+        ListEmptyComponent={<Text style={styles.empty}>Разделов нет. Нажмите «Создать».</Text>}
       />
-      {/* pinned to the bottom like the "+" on the transactions screen */}
-      <Fab onPress={() => setEditing({})} accessibilityLabel="Новый раздел" />
       <TypeEditModal
         visible={editing !== null}
         type={editing?.type}
@@ -72,12 +73,14 @@ export default function CategoryTypes() {
         onClose={() => setEditing(null)}
         onSaved={load}
       />
-    </View>
+    </BottomSheet>
   );
 }
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: 16, paddingBottom: 96 },
+  sheet: { maxHeight: '85%' },
+  // "+ Создать" at the top right, under the title
+  top: { position: 'absolute', top: 14, right: 20 },
+  content: { paddingHorizontal: 20, paddingBottom: 16 },
   row: {
     flexDirection: 'row', alignItems: 'center', paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border,

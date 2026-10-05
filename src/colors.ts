@@ -170,3 +170,24 @@ export function freeCategoryColors(
   ].filter((c) => !taken.has(c) || c === current);
   return current && !options.includes(current) ? [current, ...options] : options;
 }
+
+// --- HSV for the color picker (a saturation / brightness square over a hue) ---
+
+/** h 0..360, s and v 0..100 → '#rrggbb' */
+export function hsvToHex(h: number, s: number, v: number): string {
+  const s1 = Math.max(0, Math.min(100, s)) / 100, v1 = Math.max(0, Math.min(100, v)) / 100;
+  const f = (n: number) => {
+    const k = (n + h / 60) % 6;
+    return v1 - v1 * s1 * Math.max(0, Math.min(k, 4 - k, 1));
+  };
+  return `#${[f(5), f(3), f(1)].map((x) => Math.round(x * 255).toString(16).padStart(2, '0')).join('')}`;
+}
+
+/** '#rrggbb' → [h 0..360, s 0..100, v 0..100] */
+export function hexToHsv(hex: string): [number, number, number] {
+  const n = parseInt(hex.slice(1), 16);
+  const r = ((n >> 16) & 255) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+  const h = d === 0 ? 0 : max === r ? ((g - b) / d + 6) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return [h * 60, max === 0 ? 0 : (d / max) * 100, max * 100];
+}

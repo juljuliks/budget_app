@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { RouteProp, useFocusEffect, useRoute } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import { categoryLabel, listCategories } from '../db/categories';
 import { categoryColors } from '../db/colors';
 import { deleteMerchants, listMerchants, MerchantActivity, MerchantRow } from '../db/merchants';
@@ -15,7 +15,6 @@ import { formatMoneyWithCurrency } from './money';
 import { sheetAlert } from './sheetAlert';
 import MergeMerchantsModal from './MergeMerchantsModal';
 import { colors } from './theme';
-import type { RootStackParamList } from '../navigation';
 
 export type CategoryInfo = { label: string; color: string };
 
@@ -48,12 +47,6 @@ export default function MerchantsScreen() {
   const [selected, setSelected] = useState<string[]>([]);
   const [mergeOpen, setMergeOpen] = useState(false);
   const [cardId, setCardId] = useState<string | null>(null);
-
-  // back from creating a category for a merchant: its card opens again
-  const { openMerchantId, nonce } = useRoute<RouteProp<RootStackParamList, 'Merchants'>>().params ?? {};
-  useEffect(() => {
-    if (openMerchantId) setCardId(openMerchantId);
-  }, [openMerchantId, nonce]);
 
   const load = useCallback(() => {
     Promise.all([listMerchants(), listCategories(), categoryColors()]).then(([m, cats, colorOf]) => {

@@ -44,9 +44,9 @@ export function SheetScrollView(props: ScrollViewProps) {
 }
 
 /** A FlatList inside a sheet, see SheetScrollView. */
-export function SheetFlatList<T>(props: FlatListProps<T>) {
-  return <FlatList {...props} {...useSheetScroll({ ...props, onScroll: props.onScroll ?? undefined })} />;
-}
+export const SheetFlatList = React.forwardRef(function SheetFlatList<T>(props: FlatListProps<T>, ref: React.ForwardedRef<FlatList<T>>) {
+  return <FlatList ref={ref} {...props} {...useSheetScroll({ ...props, onScroll: props.onScroll ?? undefined })} />;
+}) as <T>(props: FlatListProps<T> & { ref?: React.Ref<FlatList<T>> }) => React.ReactElement;
 
 const OPEN_MS = 240;
 const CLOSE_MS = 200;

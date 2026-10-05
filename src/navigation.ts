@@ -23,30 +23,9 @@ export type TabParamList = {
 /** Screens pushed over the tab bar. */
 export type RootStackParamList = {
   Main: undefined;
-  TransactionDetail: { txId: number };
-  /**
-   * No categoryId = create. After creating, the new category is: assigned to txId (with a merchant
-   * rule) / to all txIds (bulk, no rules), added to the plan of planYm. typeId: preselected type.
-   * returnSelection: hand the new id back to the previous screen as `selectCategoryId`.
-   */
-  CategoryEdit: {
-    categoryId?: number; txId?: number; txIds?: number[]; planYm?: string; typeId?: number; returnSelection?: boolean;
-    /** with txIds: they are moved out of this category being deleted (their merchants' rules follow) */
-    moveFromCategoryId?: number;
-    /** created from a merchant's card: becomes that merchant's category, then the card opens again */
-    merchantId?: string;
-  };
   Categories: undefined;
   /** Merchants with their categories; merging into groups */
-  /** openMerchantId: open that merchant's card (back from creating a category for it); nonce: open it again */
-  Merchants: { openMerchantId?: string; nonce?: number } | undefined;
-  /** Delete a category: first move its current-month transactions to other ones (the transactions list in a delete mode) */
-  CategoryDelete: { categoryId: number };
-  /** Category types (settings → Категории → Типы) */
-  CategoryTypes: undefined;
-  AddTransaction: { selectCategoryId?: number } | undefined;
-  /** Settle a refund on the purchase it belongs to (reduce it or delete it) */
-  RefundResolve: { refundId: number };
+  Merchants: undefined;
 };
 
 export const navigationRef = createNavigationContainerRef<RootStackParamList>();
@@ -63,15 +42,6 @@ export function useOpenCategoryTransactions() {
   const navigation = useNavigation<BottomTabNavigationProp<TabParamList>>();
   return (categoryId: number | null, range?: DayRange, kinds?: string[]) =>
     navigation.navigate('Transactions', { category: categoryId ?? 'none', range, kinds, nonce: Date.now(), from: 'Stats' });
-}
-
-/** Goes back to the previous screen, merging `params` into its params (e.g. hand back a just-created id). */
-export function returnToPrevious(navigation: NativeStackNavigationProp<RootStackParamList>, params: object) {
-  const { routes } = navigation.getState();
-  const prev = routes[routes.length - 2];
-  if (!prev) { navigation.goBack(); return; }
-  // `as never`: TS can't match a dynamic route name against navigate's overloads
-  navigation.navigate({ name: prev.name, params: { ...prev.params, ...params }, merge: true } as never);
 }
 
 type Route = { [K in keyof RootStackParamList]: { name: K; params: RootStackParamList[K] } }[keyof RootStackParamList];

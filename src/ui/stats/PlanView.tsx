@@ -14,8 +14,11 @@ import { PencilIcon, PinIcon } from '../icons';
 import Meter from '../Meter';
 import { formatWithCurrency, parseAmountOrZero, toInputValue } from '../money';
 import { AMOUNT_HINT, NO_SECTION, PER_PERIOD, SPENDING_PATTERN } from '../strings';
+import { sheetAlert } from '../sheetAlert';
 import RowActions, { ROW_ICON_SIZE } from '../RowActions';
+import { Controller } from 'react-hook-form';
 import TextInputModal from '../TextInputModal';
+import { useLoadedForm } from '../form';
 import PlanAddModal from './PlanAddModal';
 import PlanAmountModal, { PlanAmountTarget } from './PlanAmountModal';
 import { chart, colors } from '../theme';
@@ -66,9 +69,11 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
   const [budget, setBudget] = useState<PlanBudget | null>(null);
   // converts an amount to the screen's currency on the plan's rate date (null: no rate known)
   const [toShown, setToShown] = useState<(minor: number, from: Currency) => number | null>(() => () => null);
-  const [budgetCurrency, setBudgetCurrency] = useState<Currency>(currency);
   const [income, setIncome] = useState(0);
   const [budgetOpen, setBudgetOpen] = useState(false);
+  // the budget sheet: the amount and the currency it was entered in
+  const budgetForm = useLoadedForm<{ value: string; currency: Currency }>(
+    budgetOpen && items ? { value: toInputValue(budget?.amount_minor), currency: budget?.currency ?? currency } : null, budgetOpen);
   const [editingItem, setEditingItem] = useState<PlanAmountTarget | null>(null);
   const [addOpen, setAddOpen] = useState(false);
 
@@ -100,13 +105,25 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
     const minor = parseAmountOrZero(text);
     if (minor === null) return AMOUNT_HINT;
     try {
-      await setPlanBudget(ym, minor === 0 ? null : minor, budgetCurrency);
+      await setPlanBudget(ym, minor === 0 ? null : minor, budgetForm.getValues('currency'));
     } catch (e) {
       if (!(e instanceof OverBudgetError)) throw e;
       return `По категориям уже запланировано ${formatWithCurrency(e.planned_minor, e.currency)} — бюджет не может быть меньше.`;
     }
     load();
     return null;
+  }
+
+  // a category repeated every month (📌) is asked about: removing it also stops it carrying over
+  function removeItem(item: PlanItem) {
+    if (!item.pinned) { run(removePlanItem(ym, item.category_id)); return; }
+    sheetAlert(
+      `Убрать «${categoryLabel(item)}» из плана?`,
+      'Эта категория повторяется каждый месяц (📌). Она пропадёт из плана этого месяца и не перейдёт в следующие. Операции не изменятся.',
+      [
+        { text: 'Отмена', style: 'cancel' },
+        { text: 'Убрать из плана', style: 'destructive', onPress: () => { run(removePlanItem(ym, item.category_id)); } },
+      ]);
   }
 
   async function run(action: Promise<unknown>) {
@@ -128,7 +145,7 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
         <Text style={styles.caption}>Бюджет месяца</Text>
         <TouchableOpacity
           style={styles.budgetRow}
-          onPress={() => { setBudgetCurrency(budget?.currency ?? currency); setBudgetOpen(true); }}
+          onPress={() => setBudgetOpen(true)}
           accessibilityLabel="Изменить бюджет месяца"
         >
           <Text style={styles.budgetValue}>{money(shownBudget ?? 0)}</Text>
@@ -220,7 +237,7 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
                 {/* tapping the amount edits it too, so the pencil sits with it rather than in RowActions */}
                 <PencilIcon color={colors.muted} size={ROW_ICON_SIZE} />
               </TouchableOpacity>
-              <RowActions subject={categoryLabel(item)} onDelete={() => run(removePlanItem(ym, item.category_id))} />
+              <RowActions subject={categoryLabel(item)} onDelete={() => removeItem(item)} />
             </View>
           ))}
         </View>
@@ -231,14 +248,14 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
         title="Бюджет месяца"
         hint={budgetHint}
         // the amount and currency it was entered in
-        initialValue={toInputValue(budget?.amount_minor)}
+        form={budgetForm}
         placeholder="0"
         keyboardType="decimal-pad"
         maxLength={12}
         allowEmpty
         onSubmit={saveBudget}
         onClose={() => setBudgetOpen(false)}
-        inputAccessory={<CurrencyButton value={budgetCurrency} onChange={setBudgetCurrency} />}
+        inputAccessory={<Controller control={budgetForm.control} name="currency" render={({ field }) => <CurrencyButton value={field.value} onChange={field.onChange} />} />}
       />
       <PlanAmountModal ym={ym} target={editingItem} onClose={() => setEditingItem(null)} onSaved={load} />
     </ScrollView>

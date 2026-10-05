@@ -12,8 +12,10 @@ jest.mock('@notifee/react-native', () => ({
   AndroidImportance: { HIGH: 4 },
   EventType: { ACTION_PRESS: 2 },
 }), { virtual: true });
-const navigateWhenReady = jest.fn();
-jest.mock('../src/navigation', () => ({ navigateWhenReady: (...a: any[]) => navigateWhenReady(...a) }));
+jest.mock('../src/navigation', () => ({ navigateWhenReady: jest.fn() }));
+// notification actions open sheets (an operation, a refund)
+const openTransaction = jest.fn();
+jest.mock('../src/sheets', () => ({ openTransaction: (id: number) => openTransaction(id) }));
 
 import SmsBackgroundTask from '../src/native/SmsBackgroundTask';
 import { handleNotificationAction } from '../src/notifications/notifeeIntegration';
@@ -33,7 +35,7 @@ beforeEach(async () => {
   await freshDb();
   displayNotification.mockReset();
   cancelNotification.mockReset();
-  navigateWhenReady.mockReset();
+  openTransaction.mockReset();
 });
 
 test('new uncategorized transaction is stored and a notification with suggestions is shown', async () => {
@@ -116,7 +118,7 @@ test('"К категориям" opens the transaction with the category list and
   // also the "new category" button of notifications posted by older versions
   for (const id of ['all_categories', 'create_new']) {
     await handleNotificationAction({ id, notification: { id: n.id, data: n.data } });
-    expect(navigateWhenReady).toHaveBeenLastCalledWith({ name: 'TransactionDetail', params: { txId: Number(n.data.txId) } });
+    expect(openTransaction).toHaveBeenLastCalledWith(Number(n.data.txId));
   }
   expect(cancelNotification).not.toHaveBeenCalled();
 });
@@ -125,7 +127,7 @@ test('tapping the notification body opens the transaction and keeps the notifica
   await SmsBackgroundTask(SPAR_1);
   const n = displayNotification.mock.calls[0][0];
   await handleNotificationAction({ id: 'default', notification: { id: n.id, data: n.data } });
-  expect(navigateWhenReady).toHaveBeenCalledWith({ name: 'TransactionDetail', params: { txId: Number(n.data.txId) } });
+  expect(openTransaction).toHaveBeenCalledWith(Number(n.data.txId));
   expect(cancelNotification).not.toHaveBeenCalled();
 });
 
@@ -150,14 +152,14 @@ test('the same operation by SMS and by bank push is stored once; two real purcha
   expect((await tx('SELECT count(*) AS n FROM transactions')).n).toBe(2);
 });
 
-test('a refund asks to find its purchase instead of a category', async () => {
+test('a refund without a category: just news (no buttons), tapping it opens the operation', async () => {
   await SmsBackgroundTask({ sender: 'TBC SMS', body: 'A refund of 94.78 GEL has been initiated by TEMU.COM to your MC GOLD (*1834). The amount will be credited to your account within 2–5 days.', timestamp: 1 });
   const n = displayNotification.mock.calls[0][0];
   expect(n.title).toBe('Возврат — 94.78\u00a0₾');
-  expect(n.android.actions.map((a: any) => a.pressAction.id)).toEqual(['refund_resolve']);
-  await handleNotificationAction({ id: 'refund_resolve', notification: { id: n.id, data: n.data } });
-  expect(navigateWhenReady).toHaveBeenLastCalledWith({ name: 'RefundResolve', params: { refundId: Number(n.data.txId) } });
-  expect(cancelNotification).not.toHaveBeenCalled();
+  expect(n.body).toBe('TEMU.COM · без категории');
+  expect(n.android.actions).toBeUndefined();
+  await handleNotificationAction({ id: 'default', notification: { id: n.id, data: n.data } });
+  expect(openTransaction).toHaveBeenLastCalledWith(Number(n.data.txId));
 });
 
 test('the merchant has a category: another one for this transaction only leaves the merchant alone', async () => {
