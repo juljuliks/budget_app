@@ -1,5 +1,4 @@
 import { getDb } from './index';
-import { merchantIdSql } from './merchantId';
 
 export type CategorySource = 'user' | 'rule';
 
@@ -68,7 +67,7 @@ export type CategoryFilter = number | 'none';
 
 export type TxFilter = {
   category?: CategoryFilter;
-  /** merchant id (merchantId.ts): a merchant_key or a group */
+  /** a merchant_key */
   merchant?: string;
   /** any of these categories ('none' = uncategorized) */
   categories?: CategoryFilter[];
@@ -89,7 +88,7 @@ function filterWhere(f: TxFilter): { sql: string; params: Array<number | string>
   const params: Array<number | string> = [];
   if (f.category === 'none') where.push('t.category_id IS NULL');
   else if (f.category !== undefined) { where.push('t.category_id = ?'); params.push(f.category); }
-  if (f.merchant !== undefined) { where.push(`${merchantIdSql('t')} = ?`); params.push(f.merchant); }
+  if (f.merchant !== undefined) { where.push('t.merchant_key = ?'); params.push(f.merchant); }
   if (f.categories?.length) {
     const ids = f.categories.filter((c): c is number => c !== 'none');
     const any: string[] = [];
@@ -102,7 +101,7 @@ function filterWhere(f: TxFilter): { sql: string; params: Array<number | string>
     params.push(...f.kinds);
   }
   if (f.merchants?.length) {
-    where.push(`${merchantIdSql('t')} IN (${f.merchants.map(() => '?').join(',')})`);
+    where.push(`t.merchant_key IN (${f.merchants.map(() => '?').join(',')})`);
     params.push(...f.merchants);
   }
   if (f.from !== undefined) { where.push('t.occurred_at >= ?'); params.push(f.from); }
@@ -126,16 +125,12 @@ export async function searchTransactions(query: string, f: TxFilter = {}, limit 
   if (words.length === 0) return [];
   const { sql, params } = filterWhere(f);
   const db = await getDb();
-  // the merchant group's name too: a group renamed "SPAR" finds all of its merchants' operations
-  const rows = await db.all<TransactionRow & { raw_sms: string; note: string | null; group_name: string | null }>(
-    `SELECT t.raw_sms, t.note, mg.name AS group_name, ${TX_COLUMNS} ${FROM_TX}
-      LEFT JOIN merchant_group_members gm ON gm.merchant_key = t.merchant_key
-      LEFT JOIN merchant_groups mg ON mg.id = gm.group_id
-      ${sql} ${NEWEST_FIRST}`, params);
+  const rows = await db.all<TransactionRow & { raw_sms: string; note: string | null }>(
+    `SELECT t.raw_sms, t.note, ${TX_COLUMNS} ${FROM_TX} ${sql} ${NEWEST_FIRST}`, params);
   const out: TransactionRow[] = [];
   for (const r of rows) {
     const haystack = normalizeForSearch(
-      [r.raw_sms, r.note, r.raw_merchant, r.group_name, r.category_name, r.category_type_name, r.category_id === null ? UNCATEGORIZED : '']
+      [r.raw_sms, r.note, r.raw_merchant, r.category_name, r.category_type_name, r.category_id === null ? UNCATEGORIZED : '']
         .filter(Boolean).join(' '));
     if (words.every((w) => haystack.includes(w))) {
       out.push(r);
@@ -182,17 +177,13 @@ export async function categoriesWithTransactions(): Promise<CategoryWithCount[]>
 
 export type MerchantWithCount = { merchant: string; name: string; count: number };
 
-/**
- * Merchants that have transactions (shops, people of deposits), a group as one: the most frequent first.
- * `merchant` is the merchant id (merchantId.ts).
- */
+/** Merchants that have transactions (shops, people of deposits): the most frequent first. `merchant` is the merchant_key. */
 export async function merchantsWithTransactions(): Promise<MerchantWithCount[]> {
   const db = await getDb();
-  // a group by its name, a merchant by its name in the newest SMS
+  // a merchant by its name in the newest SMS
   const rows = await db.all<{ mid: string; name: string | null; n: number }>(
-    `SELECT ${merchantIdSql('t')} AS mid, coalesce(
-        (SELECT g.name FROM merchant_group_members gm JOIN merchant_groups g ON g.id = gm.group_id WHERE gm.merchant_key = t.merchant_key),
-        (SELECT raw_merchant FROM transactions x WHERE x.merchant_key = t.merchant_key ORDER BY x.occurred_at DESC LIMIT 1)) AS name,
+    `SELECT t.merchant_key AS mid,
+        (SELECT raw_merchant FROM transactions x WHERE x.merchant_key = t.merchant_key ORDER BY x.occurred_at DESC LIMIT 1) AS name,
         count(*) AS n
       FROM transactions t WHERE t.merchant_key IS NOT NULL
       GROUP BY mid ORDER BY n DESC, name`);

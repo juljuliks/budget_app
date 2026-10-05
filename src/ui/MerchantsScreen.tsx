@@ -1,19 +1,21 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SectionList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { categoryLabel, listCategories } from '../db/categories';
+import { categoryLabel, categoryLabelOf, listCategories } from '../db/categories';
 import { categoryColors } from '../db/colors';
-import { deleteMerchants, listMerchants, MerchantActivity, MerchantRow } from '../db/merchants';
+import { deleteMerchants, listMerchants, MerchantActivity, merchantsCategoryPreview, MerchantRow, setMerchantsCategory } from '../db/merchants';
 import { normalizeForSearch } from '../db/transactions';
 import { emitTransactionsChanged, onTransactionsChanged } from '../events';
 import Button from './Button';
 import Checkbox from './Checkbox';
 import { plural } from './format';
-import { SearchIcon } from './icons';
+import { ChevronRightIcon, SearchIcon } from './icons';
 import MerchantCard from './MerchantCard';
 import { formatMoneyWithCurrency } from './money';
 import { sheetAlert } from './sheetAlert';
-import MergeMerchantsModal from './MergeMerchantsModal';
+import CategoryPickerModal from './CategoryPickerModal';
+import { formStyles } from './formStyles';
+import { NO_CATEGORY } from './strings';
 import { colors } from './theme';
 import { toast, toastError } from './toast';
 
@@ -39,19 +41,29 @@ function activityText(a: MerchantActivity): string {
   return `${what} · ${from === to ? from : `${from} – ${to}`}`;
 }
 
-/** Merchants (and groups) with their categories; tap opens the card, "Выбрать несколько" merges into a group. */
+/** `count`: the section's merchants (a collapsed one shows none of them); `stale`: the "давно не было покупок" one */
+type Section = { key: string; title: string; count: number; stale?: boolean; data: MerchantRow[] };
+
+/**
+ * Merchants by their category: "Без категории" first (what needs a category), then the categories in the
+ * categories' order; the most frequent merchants first. Tap opens the card; a long press selects several, to give
+ * them one category or delete them.
+ */
 export default function MerchantsScreen() {
   const [merchants, setMerchants] = useState<MerchantRow[]>([]);
   const [categories, setCategories] = useState<Map<number, CategoryInfo>>(new Map());
+  // the categories' order (as on the categories screen)
+  const [order, setOrder] = useState<number[]>([]);
   const [query, setQuery] = useState('');
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
-  const [mergeOpen, setMergeOpen] = useState(false);
+  const [pickOpen, setPickOpen] = useState(false);
   const [cardId, setCardId] = useState<string | null>(null);
 
   const load = useCallback(() => {
     Promise.all([listMerchants(), listCategories(), categoryColors()]).then(([m, cats, colorOf]) => {
       setMerchants(m);
+      setOrder(cats.map((c) => c.id));
       setCategories(new Map(cats.map((c) => [c.id, { label: categoryLabel(c), color: colorOf.get(c.id) ?? colors.border }])));
     }).catch((e) => console.error('load merchants failed', e));
   }, []);
@@ -60,62 +72,103 @@ export default function MerchantsScreen() {
 
   const words = normalizeForSearch(query);
   const shown = useMemo(() => (words
-    ? merchants.filter((m) => normalizeForSearch([m.name, ...m.members].join(' ')).includes(words))
+    ? merchants.filter((m) => normalizeForSearch(m.name).includes(words))
     : merchants), [merchants, words]);
 
-  function toggleSelectMode() {
-    setSelectMode((on) => !on);
-    setSelected([]);
+  // one section per category with merchants bought at in the last month (RECENT_DAYS); a merchant whose category is
+  // gone counts as without one. The others (a shop visited once long ago) wait collapsed at the bottom: nothing is
+  // deleted, a search shows them all in their categories, and a new purchase brings one back
+  const [staleOpen, setStaleOpen] = useState(false);
+  const sections = useMemo<Section[]>(() => {
+    const by = new Map<number | null, MerchantRow[]>();
+    const stale: MerchantRow[] = [];
+    for (const m of shown) {
+      if (!words && !m.activity.recent) { stale.push(m); continue; }
+      const c = m.category_id !== null && categories.has(m.category_id) ? m.category_id : null;
+      by.set(c, [...(by.get(c) ?? []), m]);
+    }
+    const out: Section[] = [null, ...order].filter((c) => by.has(c)).map((c) => ({
+      key: String(c),
+      title: c === null ? NO_CATEGORY : categories.get(c)!.label,
+      count: by.get(c)!.length,
+      data: by.get(c)!,
+    }));
+    if (stale.length) out.push({ key: 'stale', title: 'Давно не было покупок', count: stale.length, stale: true, data: staleOpen ? stale : [] });
+    return out;
+  }, [shown, words, categories, order, staleOpen]);
+
+  // a long press on a merchant starts selecting several, with it selected; unselecting the last one ends it
+  function startSelect(id: string) {
+    setSelectMode(true);
+    setSelected([id]);
   }
 
   function toggle(id: string) {
-    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+    const next = selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id];
+    setSelected(next);
+    if (next.length === 0) setSelectMode(false);
   }
 
-  // a merchant: its operations stay with their categories, without the merchant; a group is only ungrouped
+  // a merchant: its operations stay with their categories, without the merchant
   function confirmDelete() {
     const picked = merchants.filter((m) => selected.includes(m.id));
-    const singles = picked.filter((m) => !m.group);
-    const groups = picked.filter((m) => m.group);
-    const n = singles.reduce((a, m) => a + m.count, 0);
-    const onlyGroups = singles.length === 0;
-    const ungroup = groups.length === 1 ? `разгруппировать «${groups[0].name}»` : `разгруппировать группы (${groups.length})`;
-    const remove = singles.length === 1 ? `удалить мерчанта «${singles[0].name}»` : `удалить мерчантов (${singles.length})`;
-    const sentence = (t: string) => `${t[0].toUpperCase()}${t.slice(1)}?`;
-    const title = sentence(onlyGroups ? ungroup : groups.length ? `${remove} и ${ungroup}` : remove);
-    const parts: string[] = [];
-    if (singles.length) {
-      parts.push(`${n} ${plural(n, ['покупка останется', 'покупки останутся', 'покупок останутся'])} в операциях со своими категориями, но без мерчанта. `
-        + `Новые операции ${singles.length === 1 ? 'этого мерчанта' : 'этих мерчантов'} не будут получать категорию автоматически. `
-        + `Новые SMS от ${singles.length === 1 ? 'него снова создадут мерчанта' : 'них снова создадут мерчантов'}.`);
-    }
-    for (const g of groups) {
-      parts.push(`Группа «${g.name}» не удаляется, а распадается: ${g.members.join(', ')} станут отдельными мерчантами с её категорией. Операции не изменятся.`);
-    }
-    sheetAlert(title, parts.join('\n\n'), [
-      { text: 'Отмена', style: 'cancel' },
-      {
-        text: onlyGroups ? 'Разгруппировать' : groups.length ? 'Удалить и разгруппировать' : singles.length === 1 ? 'Удалить мерчанта' : `Удалить (${singles.length})`,
-        style: 'destructive',
-        onPress: () => {
-          deleteMerchants(picked.map((m) => m.id)).then(() => {
-            setSelectMode(false);
-            setSelected([]);
-            emitTransactionsChanged();
-            toast(onlyGroups ? (groups.length === 1 ? `Группа «${groups[0].name}» разгруппирована` : 'Группы разгруппированы')
-              : picked.length === 1 ? `Мерчант «${picked[0].name}» удалён`
-              : groups.length ? 'Мерчанты удалены, группы разгруппированы' : `Удалено мерчантов: ${singles.length}`);
-          }).catch((e) => { console.error('delete merchants failed', e); toastError('Не удалось удалить'); });
+    const n = picked.reduce((a, m) => a + m.count, 0);
+    const one = picked.length === 1;
+    sheetAlert(
+      one ? `Удалить мерчанта «${picked[0].name}»?` : `Удалить мерчантов (${picked.length})?`,
+      `${n} ${plural(n, ['покупка останется', 'покупки останутся', 'покупок останутся'])} в операциях со своими категориями, но без мерчанта. `
+        + `Новые операции ${one ? 'этого мерчанта' : 'этих мерчантов'} не будут получать категорию автоматически. `
+        + `Новые SMS от ${one ? 'него снова создадут мерчанта' : 'них снова создадут мерчантов'}.`,
+      [
+        { text: 'Отмена', style: 'cancel' },
+        {
+          text: one ? 'Удалить мерчанта' : `Удалить (${picked.length})`,
+          style: 'destructive',
+          onPress: () => {
+            deleteMerchants(picked.map((m) => m.id)).then(() => {
+              done();
+              emitTransactionsChanged();
+              toast(one ? `Мерчант «${picked[0].name}» удалён` : `Удалено мерчантов: ${picked.length}`);
+            }).catch((e) => { console.error('delete merchants failed', e); toastError('Не удалось удалить'); });
+          },
         },
-      },
-    ]);
+      ]);
   }
 
-  function merged() {
-    setMergeOpen(false);
+  // one category for the selected merchants: what it changes, then save
+  async function pickCategory(categoryId: number | null) {
+    setPickOpen(false);
+    if (categoryId === null) return;
+    const picked = merchants.filter((m) => selected.includes(m.id));
+    // a category just created from the picker isn't in the list yet
+    const label = categories.get(categoryId)?.label ?? await categoryLabelOf(categoryId);
+    const change = await merchantsCategoryPreview(picked.map((m) => m.id), categoryId)
+      .catch((e) => { console.error('preview failed', e); return null; });
+    const n = picked.length;
+    const who = `${n} ${plural(n, ['мерчанта', 'мерчантов', 'мерчантов'])}`;
+    sheetAlert(
+      `Категория «${label}» для ${who}?`,
+      `Новые операции ${n === 1 ? 'мерчанта' : 'этих мерчантов'} будут получать её автоматически.${change && change.count > 0
+        ? ` Категория изменится у ${change.count} ${plural(change.count, ['операции', 'операций', 'операций'])} на ${change.totals.map((t) => formatMoneyWithCurrency(t.amount_minor, t.currency)).join(' + ')}.`
+        : ''} Выбранные вручную категории не изменятся.`,
+      [
+        { text: 'Отмена', style: 'cancel' },
+        {
+          text: 'Сохранить', onPress: () => {
+            setMerchantsCategory(picked.map((m) => m.id), categoryId).then(() => {
+              done();
+              emitTransactionsChanged();
+              toast(`Категория «${label}» назначена: ${n} ${plural(n, ['мерчант', 'мерчанта', 'мерчантов'])}`);
+            }).catch((e) => { console.error('set merchants category failed', e); toastError('Не удалось сохранить'); });
+          },
+        },
+      ]);
+  }
+
+  /** After a bulk action: out of the selection, the list reloads (onTransactionsChanged). */
+  function done() {
     setSelectMode(false);
     setSelected([]);
-    load();
   }
 
   return (
@@ -137,39 +190,56 @@ export default function MerchantsScreen() {
             </TouchableOpacity>
           ) : null}
         </View>
-        <TouchableOpacity style={styles.selectToggle} onPress={toggleSelectMode} accessibilityRole="checkbox" accessibilityState={{ checked: selectMode }}>
-          <Checkbox checked={selectMode} size={20} />
-          <Text style={styles.selectLabel}>Выбрать несколько</Text>
-          {selectMode && selected.length > 0 ? <Text style={styles.selectCount}>({selected.length})</Text> : null}
-        </TouchableOpacity>
+        {selectMode ? (
+          <View style={styles.selectBar}>
+            <Text style={styles.selectLabel}>Выбрано: {selected.length}</Text>
+            <TouchableOpacity onPress={done} hitSlop={8} accessibilityRole="button">
+              <Text style={styles.cancelSelect}>Отмена</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
       </View>
 
-      <FlatList
-        data={shown}
+      <SectionList
+        sections={sections}
         keyExtractor={(m) => m.id}
         keyboardShouldPersistTaps="handled"
-        renderItem={({ item }) => {
-          const cat = item.category_id !== null ? categories.get(item.category_id) : undefined;
+        stickySectionHeadersEnabled
+        renderSectionHeader={({ section }) => {
+          // a grey band, like the days on the operations: "🛒 Еда · 5 мерчантов"
+          const title = `${section.title} · ${section.count} ${plural(section.count, ['мерчант', 'мерчанта', 'мерчантов'])}`;
+          return section.stale ? (
+            <TouchableOpacity
+              style={[formStyles.sectionHeader, styles.staleHeader]}
+              onPress={() => setStaleOpen((o) => !o)}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: staleOpen }}
+            >
+              <Text style={styles.staleTitle}>{title}</Text>
+              <Text style={styles.staleToggle}>{staleOpen ? 'Свернуть' : 'Показать'}</Text>
+            </TouchableOpacity>
+          ) : <Text style={formStyles.sectionHeader}>{title}</Text>;
+        }}
+        renderItem={({ item, section }) => {
           const on = selected.includes(item.id);
+          // the stale section mixes categories: each row names its own
+          const cat = section.stale ? (item.category_id !== null ? categories.get(item.category_id)?.label : undefined) ?? NO_CATEGORY : null;
           return (
-            <TouchableOpacity style={styles.row} onPress={() => (selectMode ? toggle(item.id) : setCardId(item.id))}>
+            <TouchableOpacity
+              style={styles.row}
+              // one gesture, one action: › opens, a long press selects, a tap only while selecting
+              onPress={selectMode ? () => toggle(item.id) : undefined}
+              onLongPress={selectMode ? undefined : () => startSelect(item.id)}
+            >
               {selectMode ? <Checkbox checked={on} size={20} /> : null}
               <View style={styles.rowMain}>
-                <View style={styles.nameRow}>
-                  <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
-                  {item.group ? <Text style={styles.groupTag}>группа</Text> : null}
-                </View>
-                <Text style={styles.meta} numberOfLines={2}>
-                  {item.group ? `${item.members.join(', ')} · ` : ''}{activityText(item.activity)}
-                </Text>
+                <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
+                <Text style={styles.meta} numberOfLines={2}>{cat ? `${cat} · ` : ''}{activityText(item.activity)}</Text>
               </View>
-              {cat ? (
-                <View style={styles.category}>
-                  <View style={[styles.dot, { backgroundColor: cat.color }]} />
-                  <Text style={styles.categoryText} numberOfLines={1}>{cat.label}</Text>
-                </View>
-              ) : (
-                <Text style={styles.noCategory}>Без категории</Text>
+              {selectMode ? null : (
+                <TouchableOpacity onPress={() => setCardId(item.id)} hitSlop={12} accessibilityLabel={`Открыть: ${item.name}`}>
+                  <ChevronRightIcon color={colors.accent} />
+                </TouchableOpacity>
               )}
             </TouchableOpacity>
           );
@@ -180,28 +250,20 @@ export default function MerchantsScreen() {
 
       {selectMode ? (
         <View style={styles.bottomBar}>
-          {selected.length === 0 ? (
-            <Text style={styles.bottomHint}>Выберите мерчантов, чтобы удалить их, или двух и больше, чтобы объединить в группу.</Text>
-          ) : (
+          {selected.length === 0 ? null : (
             <View style={styles.bottomActions}>
-              <Button
-                title={selected.length >= 2 ? `Объединить (${selected.length})` : 'Объединить'}
-                disabled={selected.length < 2}
-                onPress={() => setMergeOpen(true)}
-                style={styles.bottomButton}
-              />
+              <Button title={`Категория (${selected.length})`} onPress={() => setPickOpen(true)} style={styles.bottomButton} />
               <Button title={`Удалить (${selected.length})`} danger onPress={confirmDelete} style={styles.bottomButton} />
             </View>
           )}
         </View>
       ) : null}
 
-      <MergeMerchantsModal
-        visible={mergeOpen}
-        merchants={merchants.filter((m) => selected.includes(m.id))}
-        categories={categories}
-        onDone={merged}
-        onClose={() => setMergeOpen(false)}
+      <CategoryPickerModal
+        visible={pickOpen}
+        title={`Категория для мерчантов (${selected.length})`}
+        onPick={pickCategory}
+        onClose={() => setPickOpen(false)}
       />
       <MerchantCard merchantId={cardId} categories={categories} onClose={() => setCardId(null)} onChanged={load} />
     </View>
@@ -214,22 +276,19 @@ const styles = StyleSheet.create({
   search: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.surface, borderRadius: 10, paddingHorizontal: 12 },
   searchInput: { flex: 1, fontSize: 16, color: colors.text, paddingVertical: 8 },
   clear: { fontSize: 16, color: colors.muted },
-  selectToggle: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8 },
+  selectBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8 },
   selectLabel: { fontSize: 15, color: colors.text },
-  selectCount: { fontSize: 13, color: colors.muted },
+  cancelSelect: { fontSize: 15, color: colors.accent },
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
   },
   rowMain: { flex: 1, minWidth: 0 },
-  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  name: { fontSize: 16, color: colors.text, flexShrink: 1 },
-  groupTag: { fontSize: 11, color: colors.accent, borderWidth: 1, borderColor: colors.accent, borderRadius: 8, paddingHorizontal: 6 },
+  name: { fontSize: 16, color: colors.text },
   meta: { fontSize: 13, color: colors.muted, marginTop: 2 },
-  category: { flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: '45%' },
-  dot: { width: 8, height: 8, borderRadius: 4 },
-  categoryText: { fontSize: 14, color: colors.text, flexShrink: 1 },
-  noCategory: { fontSize: 13, color: colors.muted },
+  staleHeader: { flexDirection: 'row', alignItems: 'center' },
+  staleTitle: { flex: 1, fontSize: 13, fontWeight: '600', color: colors.muted },
+  staleToggle: { fontSize: 13, color: colors.accent },
   empty: { padding: 32, textAlign: 'center', color: colors.muted },
   footer: { height: 88 },
   bottomBar: {
@@ -238,5 +297,4 @@ const styles = StyleSheet.create({
   },
   bottomActions: { flexDirection: 'row', gap: 10 },
   bottomButton: { flex: 1 },
-  bottomHint: { fontSize: 14, color: colors.muted, textAlign: 'center', paddingVertical: 8 },
 });

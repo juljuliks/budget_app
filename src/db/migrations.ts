@@ -233,6 +233,16 @@ export const MIGRATIONS: MigrationStep[][] = [
   [
     "ALTER TABLE plan_items ADD COLUMN norm_period TEXT NOT NULL DEFAULT 'day' CHECK (norm_period IN ('day', 'week', '2weeks', 'month'))",
   ],
+  // 19: no more merchant groups (the merchants screen lists them by category instead). Each member becomes a
+  // merchant of its own with the group's category; operations don't change.
+  [
+    `INSERT OR REPLACE INTO merchant_rules (match_type, pattern, category_id, created_at)
+      SELECT 'exact', gm.merchant_key, r.category_id, r.created_at FROM merchant_group_members gm
+        JOIN merchant_rules r ON r.match_type = 'exact' AND r.pattern = 'group:' || gm.group_id`,
+    "DELETE FROM merchant_rules WHERE match_type = 'exact' AND pattern LIKE 'group:%'",
+    'DROP TABLE IF EXISTS merchant_group_members',
+    'DROP TABLE IF EXISTS merchant_groups',
+  ],
 ];
 
 export async function getSchemaVersion(db: Db): Promise<number> {

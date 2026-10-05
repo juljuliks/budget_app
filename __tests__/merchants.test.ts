@@ -4,9 +4,8 @@ import { getDb } from '../src/db';
 import { ingestSms } from '../src/ingest';
 import { assignCategory, categoryChangeTotals, merchantChangePreview } from '../src/assign';
 import {
-  categoriesOfMerchants, deleteMerchants, excludeFromGroup, getMerchant, listMerchants, mergeMerchants, renameMerchantGroup, setMerchantCategory,
+  deleteMerchants, listMerchants, merchantsCategoryPreview, setMerchantCategory, setMerchantsCategory,
 } from '../src/db/merchants';
-import { listTransactionsFiltered, merchantsWithTransactions } from '../src/db/transactions';
 import { findCategoryForMerchant } from '../src/categorize';
 import { freshDb } from './helpers';
 
@@ -44,63 +43,20 @@ test('setting / removing a merchant category: followers change, manual choices s
   expect(await categoryOf(c)).toBeNull(); // arrives without a category again
 });
 
-test('merging: one merchant with one category; new SMS of any member get it; filter and chip show the group', async () => {
-  const vake = await sms('SPAR VAKE');
-  const sab = await sms('SPAR SABURTALO');
+test('one category for several merchants: their followers change, manual choices stay; the preview counts what changes', async () => {
+  const vake = await sms('SPAR VAKE', '10.00');
+  const sab = await sms('SPAR SABURTALO', '4.00');
+  const own = await sms('SPAR SABURTALO', '2.00');
   await sms('WOLT');
-  await assignCategory(vake, 1);
-  await assignCategory(sab, 2);
-  expect(await categoriesOfMerchants(['SPAR VAKE', 'SPAR SABURTALO'])).toEqual(expect.arrayContaining([1, 2]));
+  await assignCategory(own, 3, 'only'); // a manual choice
+  expect(await merchantsCategoryPreview(['SPAR VAKE', 'SPAR SABURTALO'], 2))
+    .toEqual({ count: 2, totals: [{ currency: 'GEL', amount_minor: 1400 }] });
 
-  const id = await mergeMerchants(['SPAR VAKE', 'SPAR SABURTALO'], 'SPAR', 2);
-  // the members' own categories are gone, their followers follow the group
-  expect([await categoryOf(vake), await categoryOf(sab)]).toEqual([2, 2]);
-  const rules = await (await getDb()).all('SELECT pattern, category_id FROM merchant_rules ORDER BY pattern');
-  expect(rules).toEqual([{ pattern: id, category_id: 2 }]);
-
-  const next = await sms('SPAR VAKE', '1.00');
-  expect(await categoryOf(next)).toBe(2);
-
-  const g = (await listMerchants()).find((m) => m.id === id)!;
-  expect(g).toEqual(expect.objectContaining({ name: 'SPAR', group: true, count: 3, category_id: 2 }));
-  expect(g.members.sort()).toEqual(['SPAR SABURTALO', 'SPAR VAKE']);
-  expect((await merchantsWithTransactions()).find((m) => m.merchant === id)).toEqual({ merchant: id, name: 'SPAR', count: 3 });
-  expect((await listTransactionsFiltered({ merchant: id })).length).toBe(3);
-
-  // changing a member transaction's category asks about the group
-  expect(await merchantChangePreview(next, 1)).toEqual(expect.objectContaining({ merchant: 'SPAR', fromCategoryId: 2, count: 3 }));
-  await assignCategory(next, 1, 'merchant');
-  expect([await categoryOf(vake), await categoryOf(sab), await categoryOf(next)]).toEqual([1, 1, 1]);
-});
-
-test('merging a group with another merchant adds it to the group; two groups become one', async () => {
-  await sms('A1'); await sms('A2'); await sms('B1'); await sms('B2'); await sms('C');
-  const a = await mergeMerchants(['A1', 'A2'], 'A', null);
-  const b = await mergeMerchants(['B1', 'B2'], 'B', 3);
-  const merged = await mergeMerchants([a, b, 'C'], 'ABC', 4);
-  expect(merged).toBe(a);
-  const g = (await getMerchant(merged))!;
-  expect(g.memberRows.map((m) => m.key).sort()).toEqual(['A1', 'A2', 'B1', 'B2', 'C']);
-  expect((await listMerchants()).map((m) => m.id)).toEqual([merged]);
-  expect(await (await getDb()).all('SELECT pattern, category_id FROM merchant_rules')).toEqual([{ pattern: merged, category_id: 4 }]);
-});
-
-test('excluding from a group: the merchant keeps the group category as its own; an emptied group is removed', async () => {
-  const x = await sms('X1');
-  await sms('X2');
-  const id = await mergeMerchants(['X1', 'X2'], 'X', 2);
-  await renameMerchantGroup(id, 'Икс');
-  expect((await getMerchant(id))!.name).toBe('Икс');
-
-  await excludeFromGroup(id, ['X1']);
-  expect(await findCategoryForMerchant('X1')).toEqual({ category_id: 2, source: 'rule' });
-  expect(await categoryOf(x)).toBe(2);
-  expect((await getMerchant(id))!.memberRows.map((m) => m.key)).toEqual(['X2']);
-
-  await excludeFromGroup(id, ['X2']);
-  expect(await getMerchant(id)).toBeNull();
-  expect((await listMerchants()).map((m) => m.id).sort()).toEqual(['X1', 'X2']);
-  expect(await (await getDb()).get("SELECT 1 FROM merchant_rules WHERE pattern = ?", [id])).toBeUndefined();
+  await setMerchantsCategory(['SPAR VAKE', 'SPAR SABURTALO'], 2);
+  expect([await categoryOf(vake), await categoryOf(sab), await categoryOf(own)]).toEqual([2, 2, 3]);
+  expect(await findCategoryForMerchant('SPAR VAKE')).toEqual({ category_id: 2, source: 'rule' });
+  expect(await categoryOf(await sms('SPAR SABURTALO', '1.00'))).toBe(2);
+  expect((await listMerchants()).map((m) => [m.id, m.category_id]).sort()).toEqual([['SPAR SABURTALO', 2], ['SPAR VAKE', 2], ['WOLT', null]]);
 });
 
 test('category change totals: refunds subtract, ordered by the signed sum', async () => {
@@ -143,31 +99,23 @@ test('activity: the last month if anything was bought then, otherwise everything
   expect(wolt.to - wolt.from).toBeGreaterThan(40 * 86400);
 });
 
-test('deleting merchants: operations keep their categories (as their own), lose the merchant; a group is only ungrouped', async () => {
-  const a = await sms('SPAR VAKE');
-  const b = await sms('SPAR SABURTALO');
+test('deleting merchants: operations keep their categories (as their own), lose the merchant', async () => {
   const w = await sms('WOLT');
   const w2 = await sms('WOLT');
   const keep = await sms('GLOVO');
   await assignCategory(w, 1);          // WOLT -> 1, w2 follows
   await assignCategory(w2, 3, 'only'); // a manual choice
   await assignCategory(keep, 1);
-  const group = await mergeMerchants(['SPAR VAKE', 'SPAR SABURTALO'], 'SPAR', 2);
-  expect(await deleteMerchants([group, 'WOLT'])).toBe(2);
+  expect(await deleteMerchants(['WOLT'])).toBe(2);
 
   const db = await getDb();
   const rows = await db.all<{ merchant_key: string | null; category_id: number | null; category_source: string | null }>(
-    'SELECT merchant_key, category_id, category_source FROM transactions WHERE id IN (?, ?, ?, ?) ORDER BY id', [a, b, w, w2]);
+    'SELECT merchant_key, category_id, category_source FROM transactions WHERE id IN (?, ?) ORDER BY id', [w, w2]);
   expect(rows).toEqual([
-    { merchant_key: 'SPAR VAKE', category_id: 2, category_source: 'rule' },
-    { merchant_key: 'SPAR SABURTALO', category_id: 2, category_source: 'rule' },
     { merchant_key: null, category_id: 1, category_source: 'user' },
     { merchant_key: null, category_id: 3, category_source: 'user' },
   ]);
-  // the group's merchants are separate ones with its category
-  const list = await listMerchants();
-  expect(list.map((m) => [m.id, m.category_id]).sort()).toEqual([['GLOVO', 1], ['SPAR SABURTALO', 2], ['SPAR VAKE', 2]]);
-  expect(await db.all('SELECT * FROM merchant_groups')).toEqual([]);
+  expect((await listMerchants()).map((m) => [m.id, m.category_id])).toEqual([['GLOVO', 1]]);
 
   // a new SMS of a deleted shop creates it again, without a category
   const again = await sms('WOLT');

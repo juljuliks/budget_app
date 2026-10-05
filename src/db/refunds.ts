@@ -1,5 +1,4 @@
 import { getDb } from './index';
-import { merchantIdOf, merchantIdSql } from './merchantId';
 import { REMEMBERABLE_KINDS } from '../types';
 import { findCategoryForMerchant } from '../categorize';
 
@@ -36,10 +35,10 @@ export async function refundCategory(merchantKey: string | null | undefined, occ
   const db = await getDb();
   const last = await db.get<{ category_id: number }>(
     `SELECT category_id FROM transactions
-      WHERE ${merchantIdSql('transactions')} = ? AND kind IN (${REMEMBERABLE_KINDS.map((k) => `'${k}'`).join(',')})
+      WHERE merchant_key = ? AND kind IN (${REMEMBERABLE_KINDS.map((k) => `'${k}'`).join(',')})
         AND category_id IS NOT NULL AND occurred_at >= ? AND occurred_at <= ?
       ORDER BY occurred_at DESC, id DESC LIMIT 1`,
-    [await merchantIdOf(merchantKey), occurredAt - REFUND_LOOKBACK_DAYS * 86400, occurredAt]);
+    [merchantKey, occurredAt - REFUND_LOOKBACK_DAYS * 86400, occurredAt]);
   return last?.category_id ?? null;
 }
 

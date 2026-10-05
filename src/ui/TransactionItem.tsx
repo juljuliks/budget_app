@@ -3,29 +3,34 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { txCategoryLabel } from '../db/categories';
 import { isUnread, TransactionRow } from '../db/transactions';
 import Checkbox from './Checkbox';
+import { ChevronRightIcon } from './icons';
 import { formatAmount, formatTime, isIncome, merchantLabel } from './format';
 import RowActions from './RowActions';
 import { colors } from './theme';
 
 type Props = {
   tx: TransactionRow;
-  onPress: () => void;
-  /** multi-select: checkbox in front, the row toggles it */
+  /** the › at the end: opens the operation (one gesture, one action: a tap on the row itself only selects) */
+  onOpen?: () => void;
+  /** while selecting: the row toggles its checkbox */
+  onPress?: () => void;
+  /** a long press: starts selecting several, with this one selected */
+  onLongPress?: () => void;
+  /** multi-select: checkbox in front */
   selectable?: boolean;
   selected?: boolean;
-  /** edit mode: ✎ / 🗑 at the end */
-  onEdit?: () => void;
+  /** edit mode: 🗑 at the end */
   onDelete?: () => void;
 };
 
 /** One row of the transactions list: merchant (bold + blue dot when unread), category · time, amount. */
-export default function TransactionItem({ tx, onPress, selectable, selected, onEdit, onDelete }: Props) {
+export default function TransactionItem({ tx, onOpen, onPress, onLongPress, selectable, selected, onDelete }: Props) {
   const unread = isUnread(tx);
   // new and categorized by a merchant rule, not by the user: worth a glance
   const auto = tx.seen_at === null && tx.category_source === 'rule';
   const category = txCategoryLabel(tx);
   return (
-    <TouchableOpacity style={[styles.row, selected && styles.rowSelected]} onPress={onPress}>
+    <TouchableOpacity style={[styles.row, selected && styles.rowSelected]} onPress={onPress} onLongPress={onLongPress}>
       {selectable ? <View style={styles.checkbox}><Checkbox checked={!!selected} /></View> : null}
       <View style={styles.main}>
         <View style={styles.titleRow}>
@@ -48,12 +53,18 @@ export default function TransactionItem({ tx, onPress, selectable, selected, onE
       <Text style={[styles.amount, isIncome(tx.kind) && styles.income]}>
         {formatAmount(tx.amount_minor, tx.currency, tx.kind)}
       </Text>
-      {onDelete ? <RowActions onEdit={onEdit} onDelete={onDelete} /> : null}
+      {onDelete ? <RowActions onDelete={onDelete} /> : null}
+      {onOpen ? (
+        <TouchableOpacity onPress={onOpen} hitSlop={12} style={styles.open} accessibilityLabel={`Открыть: ${merchantLabel(tx)}`}>
+          <ChevronRightIcon color={colors.accent} />
+        </TouchableOpacity>
+      ) : null}
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
+  open: { paddingLeft: 10, paddingVertical: 4 },
   row: {
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border,

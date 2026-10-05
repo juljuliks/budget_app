@@ -61,7 +61,8 @@ This document outlines the remaining work to finish the privacy-first SMS transa
   - [ ] Rename applies to all months (ask if past months should keep the old name)
   - [x] Add transaction manually (amount, income/expense, description, today/yesterday, category)
   - [x] Search by SMS text, merchant / description, category and type (Cyrillic case-insensitive, ё = е); edit / delete icons on results
-  - [x] Multi-select ("Выбрать несколько") -> bulk change category (existing categories, no merchant rules)
+  - [x] Multi-select (a long press on a row selects it; "Выбрано: N · Выбрать все · Отмена"; unselecting the last
+    one ends it) -> bulk change category (existing categories, no merchant rules); the same on Мерчанты
   - [x] Tap a category in Статистика / История -> Transactions with the search prefilled
   - [x] Read state: unread = never opened and uncategorized; blue dot in the list, count badge on the tab;
     edit mode "Отметить просмотренными (N)" marks the selected ones
@@ -71,8 +72,7 @@ This document outlines the remaining work to finish the privacy-first SMS transa
     time; asks for READ_SMS only then; duplicates skipped, imported operations are marked read)
   - [x] Filter modes: По тексту / По категории (categories that have transactions, with counts) / По дате (day or period calendar)
   - [x] "Тип" filter: operation kinds (purchase, transfer, refund, …), several at once, with counts
-  - [x] Search also matches a merchant group's name; merchant card "Показать операции" puts the merchant's (group's)
-    name into the search field, other filters cleared, with a back arrow to Мерчанты
+  - [x] Merchant card "Показать операции" puts the merchant's name into the search field, other filters cleared, with a back arrow to Мерчанты
   - [x] "Выбрать все" selects everything shown; "Редактировать" in the tab header; "+" hidden while a filter is active
   - [x] ~~Refunds settled on their purchase ("Найти покупку")~~ — removed: a refund is simply money back (below)
   - [x] Refunds count in spending right away: subtracted from their merchant's category (its rule, else the latest
@@ -91,12 +91,19 @@ This document outlines the remaining work to finish the privacy-first SMS transa
 - [x] Currencies GEL / USD / EUR: daily National Bank of Georgia rates cached on the phone (migration 17); stats,
   plan, history and day totals in one app-wide display currency (each transaction at its day's rate); plan amounts
   and manual transactions in any currency, the original shown in brackets; amounts carry symbols (₾ / $ / €)
-- [x] Merchant rules UI (Settings → Мерчанты): merchant card sets / clears the merchant's category with backfill,
-  merchant groups (rename, exclude), totals, "Показать операции"; a category created from the card becomes the
-  merchant's and the card opens again
+- [x] Merchant rules UI (Settings → Мерчанты): merchants listed by category ("Без категории" first, then the
+  categories' order; grey section bands "🛒 Еда · 5 мерчантов"); merchant card sets / clears the merchant's
+  category with backfill, totals, "Показать операции"; a category created from the card becomes the merchant's
+  - [x] One category for several merchants (long press to select → "Категория", preview of what changes)
+  - [x] Merchants without a purchase in the last month wait in a collapsed "Давно не было покупок (N)" section at
+    the bottom (nothing deleted; search shows them in their categories)
+  - [x] Merchant card: without a category the categories are shown right away; with one — the category and
+    "Сменить" (a sheet with the categories), as on an operation
+  - [x] Merchant groups removed (migration 19: each member keeps the group's category as its own). Branches like
+    "SPAR 1" / "SPAR 2" are one merchant already (`normalizeMerchant` drops trailing numbers and cities)
   - [x] Rows show purchases of the last 30 days ("За последний месяц: 6 покупок на 436.40 ₾"), else all of them with dates
   - [x] Delete merchants (select several, confirm): operations keep their categories (as their own) but lose the merchant;
-    the merchant's category goes. A selected group is only ungrouped (its merchants keep the group's category)
+    the merchant's category goes
   - [x] Changing an operation's category at a merchant always asks: "Только для этой операции" (primary) or
     "Для мерчанта" (secondary, outlined), with what would change
 - Backup/export & import (JSON/CSV via SAF)

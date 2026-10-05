@@ -101,7 +101,7 @@ export default function TransactionsList() {
     setQuery(incomingQuery);
   }, [incomingQuery, nonce]);
 
-  // edit mode: ✎ / 🗑 on every row and the selection toolbar; selectMode (inside edit mode) replaces the icons with checkboxes
+  // edit mode: 🗑 on every row. selectMode (a long press on a row) puts checkboxes in front; › opens a row
   const [editMode, setEditMode] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -245,9 +245,14 @@ export default function TransactionsList() {
     return () => { stale = true; };
   }, [sections, currency]);
 
-  // selection lives inside edit mode
-  function toggleSelectMode() {
-    setSelectMode((on) => !on);
+  // a long press on a row starts selecting several, with that row selected
+  function startSelect(id: number) {
+    setSelectMode(true);
+    setSelected(new Set([id]));
+  }
+
+  function endSelect() {
+    setSelectMode(false);
     setSelected(new Set());
   }
 
@@ -336,12 +341,12 @@ export default function TransactionsList() {
     // toggleEditMode / goBack only use state setters, navigation and `from`
   }, [tabNavigation, editMode, from]);
 
+  // unselecting the last one ends the selection
   function toggle(id: number) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
+    const next = new Set(selected);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setSelected(next);
+    if (next.size === 0) setSelectMode(false);
   }
 
   async function applyBulk(categoryId: number | null) {
@@ -414,16 +419,16 @@ export default function TransactionsList() {
           </>
         )}
 
-        {editMode ? (
+        {selectMode ? (
+          // while selecting (started by a long press on a row)
           <View style={styles.toolbar}>
-            <TouchableOpacity style={styles.selectToggle} onPress={toggleSelectMode} accessibilityRole="checkbox" accessibilityState={{ checked: selectMode }}>
-              <Checkbox checked={selectMode} size={20} />
-              <Text style={styles.selectLabel}>Выбрать несколько</Text>
-              {selectMode && selected.size > 0 ? <Text style={styles.selectCount}>({selected.size})</Text> : null}
-            </TouchableOpacity>
+            <Text style={[styles.selectLabel, styles.flex]}>Выбрано: {selected.size}</Text>
             <TouchableOpacity style={styles.selectToggle} onPress={toggleSelectAll} accessibilityRole="checkbox" accessibilityState={{ checked: allSelected }}>
               <Checkbox checked={allSelected} size={20} />
               <Text style={styles.selectLabel}>Выбрать все</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={endSelect} hitSlop={8} accessibilityRole="button">
+              <Text style={styles.cancelSelect}>Отмена</Text>
             </TouchableOpacity>
           </View>
         ) : null}
@@ -460,10 +465,11 @@ export default function TransactionsList() {
           return (
             <TransactionItem
               tx={item}
-              onPress={selectMode ? () => toggle(item.id) : open}
+              onPress={selectMode ? () => toggle(item.id) : undefined}
+              onLongPress={selectMode ? undefined : () => startSelect(item.id)}
+              onOpen={selectMode ? undefined : open}
               selectable={selectMode}
               selected={selected.has(item.id)}
-              onEdit={showRowActions ? open : undefined}
               onDelete={showRowActions ? () => confirmDeleteTransaction(item) : undefined}
             />
           );
@@ -472,7 +478,7 @@ export default function TransactionsList() {
         onEndReachedThreshold={0.5}
         refreshing={refreshing}
         onRefresh={results ? undefined : onRefresh}
-        ListFooterComponent={loadingMore ? <ActivityIndicator style={styles.footer} /> : <View style={[styles.footer, editMode && styles.footerTall]} />}
+        ListFooterComponent={loadingMore ? <ActivityIndicator style={styles.footer} /> : <View style={[styles.footer, (editMode || selectMode) && styles.footerTall]} />}
         ListEmptyComponent={
           <Text style={styles.empty}>
             {results ? 'Ничего не найдено.' : 'Операций пока нет. Они появятся здесь после SMS или уведомления банка, или добавьте вручную ＋.'}
@@ -489,8 +495,8 @@ export default function TransactionsList() {
           <Button title={`Изменить категорию (${selected.size})`} onPress={() => setBulkOpen(true)} />
         </View>
       ) : null}
-      {/* hidden in edit mode: it would cover the ✎ / 🗑 of the last row */}
-      {editMode ? null : <Fab onPress={openAddTransaction} accessibilityLabel="Добавить операцию" />}
+      {/* hidden in edit mode (it would cover the ✎ / 🗑 of the last row) and while selecting (the actions bar) */}
+      {editMode || selectMode ? null : <Fab onPress={openAddTransaction} accessibilityLabel="Добавить операцию" />}
 
       <OptionsSheet
         visible={sheet === 'category'}
@@ -549,7 +555,8 @@ const styles = StyleSheet.create({
   toolbar: { flexDirection: 'row', alignItems: 'center', gap: 20, paddingVertical: 8 },
   selectToggle: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 },
   selectLabel: { fontSize: 15, color: colors.text },
-  selectCount: { fontSize: 13, color: colors.muted },
+  flex: { flex: 1 },
+  cancelSelect: { fontSize: 15, color: colors.accent },
   editToggle: {
     // as tall as the title text
     flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 2,

@@ -8,7 +8,6 @@ import { formatMoneyWithCurrency, parseAmountInput, toInputValue } from './money
 import { AMOUNT_HINT } from './strings';
 import { assignCategory, MerchantChoice, merchantChangePreview } from '../assign';
 import { findCategoryForMerchant } from '../categorize';
-import { groupNameOf } from '../db/merchants';
 import { emitTransactionsChanged, onTransactionsChanged } from '../events';
 import { formatAmount, formatDay, formatTime, isIncome, merchantLabel, plural } from './format';
 import { toast, toastError } from './toast';
@@ -56,8 +55,6 @@ export default function TransactionSheet({ txId: openId, onClose }: Props) {
 
   // the merchant's category (its rule): new transactions of the merchant get it automatically
   const [merchantCategory, setMerchantCategory] = useState<string | null>(null);
-  // the merchant's group, shown as the merchant
-  const [groupName, setGroupName] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const t = await getTransaction(txId);
@@ -65,7 +62,6 @@ export default function TransactionSheet({ txId: openId, onClose }: Props) {
     const rule = t?.merchant_key && isRememberable(t.kind) ? await findCategoryForMerchant(t.merchant_key) : null;
     const c = rule ? await getCategory(rule.category_id) : undefined;
     setMerchantCategory(c ? categoryLabel(c) : null);
-    setGroupName(t?.merchant_key ? await groupNameOf(t.merchant_key) : null);
     return t;
   }, [txId]);
 
@@ -93,7 +89,7 @@ export default function TransactionSheet({ txId: openId, onClose }: Props) {
       showLimitAlert(categoryId);
       const c = categoryId === null ? undefined : await getCategory(categoryId);
       if (!c) toast('Категория убрана');
-      else if (choice === 'merchant' && tx) toast(`Категория «${categoryLabel(c)}» назначена мерчанту «${groupName ?? merchantLabel(tx)}»`);
+      else if (choice === 'merchant' && tx) toast(`Категория «${categoryLabel(c)}» назначена мерчанту «${merchantLabel(tx)}»`);
       else toast(`Категория «${categoryLabel(c)}» назначена`);
       onClose();
     } catch (e) {
@@ -199,7 +195,9 @@ export default function TransactionSheet({ txId: openId, onClose }: Props) {
           />
         </>
       ) : (
+        // none yet: the categories right away
         <CategoryPicker
+          title="Выберите категорию"
           selectedId={tx.category_id}
           onSelect={choose}
           allowNone
@@ -212,7 +210,7 @@ export default function TransactionSheet({ txId: openId, onClose }: Props) {
       {/* only purchases / payments are remembered for their merchant (see assignCategory) */}
       {rememberable && merchantCategory ? (
         <Text style={styles.merchantInfo}>
-          Категория {groupName ? `группы мерчантов «${groupName}»` : `мерчанта «${merchantName}»`}: {merchantCategory}. Новые операции мерчанта получают её автоматически.
+          Категория мерчанта «{merchantName}»: {merchantCategory}. Новые операции мерчанта получают её автоматически.
         </Text>
       ) : null}
 
