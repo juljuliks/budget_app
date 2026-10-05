@@ -135,7 +135,13 @@ Done:
   - a week across two months shows only one month's part (arrows step to the other); a month without the
     category's plan borrows the nearest month's plan; long periods show the average per month over full months
 - Stale answers are dropped when the period / month is switched quickly (`useLatestRequest`)
-Remaining: tap a category -> its transactions for the month; over-limit notifications; salary-day month start (if needed).
+- ✅ Limit notifications (`src/limitAlerts.ts`, channel «Лимиты»): when an operation of this month gets a category
+  (SMS with the merchant's category, a category picked in a notification or in the app, a manual operation), a
+  push once the category reaches 80% / 100% of the month's plan or of its rhythm's limit (day / week / 2 weeks);
+  each threshold once per month / rhythm window (remembered in `app_settings`); only «траты с лимитом»; tap →
+  Статистика; Настройки → «Уведомлять о лимитах» (on by default).
+
+Remaining: tap a category -> its transactions for the month; salary-day month start (if needed).
 
 Original spec:
 Goal: set a monthly target amount per category and see at a glance which categories are over their limit.
@@ -153,7 +159,7 @@ Goal: set a monthly target amount per category and see at a glance which categor
   - "Без категории" row with its spend, tap → transactions list filtered to uncategorized for that month
   - Tap a category → transactions of that category for the month (reuses the list screen with filters)
 - Editing limits: tap the limit → numeric input sheet; "Скопировать лимиты" is not needed since limits are standing
-- Notifications (optional, after the tab works): when a new SMS pushes a category past 80% / 100% of its limit, show a notification once per category per month
+- ✅ Notifications (optional, after the tab works): when a new SMS pushes a category past 80% / 100% of its limit, show a notification once per category per month (done: see «Limit notifications» above)
 - Tests: monthly aggregation (month boundaries in local time, refunds, currencies, uncategorized), over-limit sorting
 
 Open questions:

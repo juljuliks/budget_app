@@ -18,6 +18,7 @@ import BottomSheet, { SheetScrollView } from './BottomSheet';
 import { SheetActions } from './Button';
 import RangeCalendar from './RangeCalendar';
 import { DayKey, dayKeyOf, parseDayKey, shortRange } from './dateRange';
+import { showLimitAlert } from '../notifications/notifeeIntegration';
 
 type Props = { visible: boolean; onClose: () => void };
 const KINDS = [['purchase', 'Расход'], ['deposit', 'Пополнение']] as const;
@@ -60,6 +61,7 @@ export default function AddTransactionSheet({ visible, onClose }: Props) {
         occurred_at: Math.floor(at.getTime() / 1000),
       });
       if (categoryId !== null) await incrementCategoryUsage(categoryId);
+      showLimitAlert(categoryId);
       emitTransactionsChanged();
       toast('Операция добавлена');
       onClose();

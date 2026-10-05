@@ -1,5 +1,5 @@
 import notifee, { AndroidImportance, EventType } from '@notifee/react-native';
-import { handleNotificationAction, CHANNEL_ID } from './notifeeIntegration';
+import { handleNotificationAction, CHANNEL_ID, LIMITS_CHANNEL_ID } from './notifeeIntegration';
 
 export async function createNotificationChannel() {
   try {
@@ -7,6 +7,12 @@ export async function createNotificationChannel() {
       id: CHANNEL_ID,
       name: 'Операции',
       importance: AndroidImportance.HIGH,
+    });
+    // can be muted on its own in the phone's settings
+    await notifee.createChannel({
+      id: LIMITS_CHANNEL_ID,
+      name: 'Лимиты',
+      importance: AndroidImportance.DEFAULT,
     });
   } catch (e) {
     // ignore on non-Android or if not available during tests

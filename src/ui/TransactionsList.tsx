@@ -32,6 +32,7 @@ import { colors } from './theme';
 import { confirmDeleteTransaction } from './transactionActions';
 import TransactionItem from './TransactionItem';
 import { toast, toastError } from './toast';
+import { showLimitAlert } from '../notifications/notifeeIntegration';
 
 /** The newest operations shown first; more come in pages while scrolling. */
 const FIRST_PAGE = 10;
@@ -347,6 +348,7 @@ export default function TransactionsList() {
     setBulkOpen(false);
     try {
       await assignCategoryToMany([...selected], categoryId);
+      showLimitAlert(categoryId);
       const n = selected.size;
       const c = categoryId === null ? undefined : await getCategory(categoryId);
       toast(`${c ? `Категория «${categoryLabel(c)}» назначена` : 'Категория убрана'}: ${n} ${plural(n, ['операция', 'операции', 'операций'])}`);

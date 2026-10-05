@@ -27,6 +27,7 @@ import TextInputModal from './TextInputModal';
 import { useLoadedForm } from './form';
 import { confirmDeleteTransaction } from './transactionActions';
 import { useLast } from './useLast';
+import { showLimitAlert } from '../notifications/notifeeIntegration';
 
 type Tx = NonNullable<Awaited<ReturnType<typeof getTransaction>>>;
 
@@ -89,6 +90,7 @@ export default function TransactionSheet({ txId: openId, onClose }: Props) {
     setSaving(true);
     try {
       await assignCategory(txId, categoryId, choice);
+      showLimitAlert(categoryId);
       const c = categoryId === null ? undefined : await getCategory(categoryId);
       if (!c) toast('Категория убрана');
       else if (choice === 'merchant' && tx) toast(`Категория «${categoryLabel(c)}» назначена мерчанту «${groupName ?? merchantLabel(tx)}»`);

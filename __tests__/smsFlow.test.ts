@@ -74,6 +74,26 @@ test('merchant rule categorizes on arrival, no notification', async () => {
   expect(displayNotification).not.toHaveBeenCalled();
 });
 
+test('an SMS that brings its merchant\'s category over the month\'s plan: a limit notification; tapping it opens the stats', async () => {
+  const { currentYm, setPlanAmount } = require('../src/db/plans');
+  const { navigateWhenReady } = require('../src/navigation');
+  const d = new Date(Date.now() - 60_000);
+  const p2 = (n: number) => String(n).padStart(2, '0');
+  const when = `${p2(d.getDate())}/${p2(d.getMonth() + 1)}/${String(d.getFullYear()).slice(2)} ${p2(d.getHours())}:${p2(d.getMinutes())}`;
+  await setPlanAmount(currentYm(), 3, 1000, 'limit', 'GEL', 'month');
+  await createRule('prefix', 'SP', 3);
+  await SmsBackgroundTask({ sender: 'TBC SMS', body: `12.50GEL\n(*XXXX)\nSPAR\nBalance: 100.00GEL\n${when}`, timestamp: d.getTime() });
+
+  expect(displayNotification).toHaveBeenCalledTimes(1);
+  const n = displayNotification.mock.calls[0][0];
+  expect(n.id).toBe('limit_3');
+  expect(n.title).toMatch(/превышен$/);
+  expect(n.android.channelId).toBe('limits');
+
+  await handleNotificationAction({ id: n.android.pressAction.id, notification: n });
+  expect(navigateWhenReady).toHaveBeenCalledWith({ name: 'Main', params: { screen: 'Stats' } });
+});
+
 test('picking a suggestion assigns the category, creates a rule and backfills same merchant', async () => {
   await SmsBackgroundTask(SPAR_1);
   await SmsBackgroundTask(SPAR_2);
