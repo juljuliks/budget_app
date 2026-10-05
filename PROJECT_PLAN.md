@@ -47,7 +47,11 @@ This document outlines the remaining work to finish the privacy-first SMS transa
     first, then 20 more while scrolling (filtered results too, a page at a time; a refresh keeps the depth)
   - [x] Detail: category chips, "remember for merchant" toggle (rule + backfill), clear category, raw SMS;
     the amount (and its currency) can be corrected by tapping it
-  - [x] Create category screen (from detail or notification), assigns it to the transaction
+  - [x] Four pages (Операции, Статистика, Мерчанты, Категории); everything else is a sheet (src/sheets.ts, ui/modals.tsx):
+    an operation, a new operation, a category (full form on the categories page, a short one from any "+"), the
+    sections, deleting a category (one target for this month's operations)
+  - [x] Forms on react-hook-form ("Сохранить" only once something changed); emoji picker with all emoji, groups and
+    ru/en search (emojibase-data, scripts/build_emoji.js); color picker; "Другая дата" for a new operation
   - [x] Category management (Settings → Категории): list grouped by section; a row opens the category screen
     (operations count and total per currency, "Показать операции" → Операции filtered by it, back returns to
     Категории; red "Удалить категорию" at the bottom; "Сохранить" only once something changed)
@@ -70,13 +74,12 @@ This document outlines the remaining work to finish the privacy-first SMS transa
   - [x] Search also matches a merchant group's name; merchant card "Показать операции" puts the merchant's (group's)
     name into the search field, other filters cleared, with a back arrow to Мерчанты
   - [x] "Выбрать все" selects everything shown; "Редактировать" in the tab header; "+" hidden while a filter is active
-  - [x] Refunds ("A refund of ... initiated by TEMU.COM"): notification "Найти покупку" -> purchases at that shop in
-    the last 90 days (same amount first); reduce the purchase by the refund (−) or delete it (🗑)
+  - [x] ~~Refunds settled on their purchase ("Найти покупку")~~ — removed: a refund is simply money back (below)
   - [x] Refunds count in spending right away: subtracted from their merchant's category (its rule, else the latest
     purchase / payment there within 90 days; set at ingest, `autoCategorizeRefunds()` on start and after an SMS
-    import), otherwise shown apart as "↩ Возвраты без категории −X ₾" (tap: uncategorized refunds of the period).
-    A refund settled on its purchase no longer counts ("✓ учтён в покупке"); a merchant's category also reaches
-    its open refunds (manual choices stay); merchant totals subtract open refunds
+    import), otherwise shown apart as "↩ Возвраты без категории +X ₾" (tap: uncategorized refunds of the period).
+    A refund can get any category in its sheet; its notification is just news. Refunds settled on a purchase
+    earlier keep counting zero ("✓ учтён в покупке"); a merchant's category also reaches its refunds
   - [x] Combine filters: search + Категория (several) + Тип + Дата together; "Применено фильтров: N" (tap: the list,
     each with ✕) and "Сбросить все"; merchants are found by the text search (no separate merchant picker)
   - [ ] Edit / delete a manual transaction (amount already editable); arbitrary date picker
