@@ -19,10 +19,8 @@ import PlanAmountModal, { PlanAmountTarget } from './PlanAmountModal';
 import { useLatestRequest } from '../useLatestRequest';
 import { formStyles } from '../formStyles';
 import { FoldHeader, useFolded } from '../fold';
-import { LimitsAccordion } from './SummaryTiles';
 import { pct } from './summaryGroups';
 import { MonthReportRow } from './MonthReport';
-import { summaryGroups } from './summaryGroups';
 import { splitUnplanned, unplannedShare } from './unplanned';
 
 /**
@@ -80,9 +78,6 @@ export default function StatsView({ year, month, currency }: { year: number; mon
   const ym = ymOf(year, month);
   const evenPace = ym === currentYm() ? new Date().getDate() / daysInMonth(ym) : undefined;
   const picked = selected === null ? undefined : stats.categories.find((c) => String(c.category_id) === selected);
-  const todayKey = dayKeyOf(new Date());
-  // 'outside' needs today's spending outside the limits: not a month figure, left out here
-  const limitGroups = today ? summaryGroups(today, { from: todayKey, to: todayKey }, 0, todayKey).filter((g) => g.key !== 'outside') : [];
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -107,8 +102,6 @@ export default function StatsView({ year, month, currency }: { year: number; mon
         <Text style={styles.hint}>Составьте план на месяц во вкладке «План», чтобы видеть остаток по категориям.</Text>
       )}
 
-      {/* the current month: the limits now (today, this week, the month), folded */}
-      {limitGroups.length ? <LimitsAccordion key={ym} defaultOpen={false} foldKey="month" groups={limitGroups} money={(v) => formatWithCurrency(v, stats.currency)} /> : null}
 
       {stats.categories.length === 0 ? (
         <Text style={styles.hint}>В этом месяце трат нет.</Text>
