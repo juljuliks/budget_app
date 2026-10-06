@@ -117,13 +117,11 @@ export default function StatsView({ year, month, currency }: { year: number; mon
           <View key={`${g.type_id}-${g.title}`} style={styles.group}>
             <FoldHeader style={[formStyles.sectionHeader, styles.groupHeader]} folded={fold.is(g.title)} onToggle={() => fold.toggle(g.title)}>
               <Text style={styles.groupTitle}>{g.title}</Text>
-              {/* "Скрыть суммы": no spent / plan in the section headers */}
-              {hidden ? null : (
-                <MaskedTotal style={styles.groupTotal} hiddenText={shareOfAll(g.spent_minor, stats.spent_minor)}>
-                  {g.planned_minor ? formatShort(g.spent_minor) : formatWithCurrency(g.spent_minor, stats.currency)}
-                  {g.planned_minor ? <Text style={styles.rowLimit}> / {formatWithCurrency(g.planned_minor, stats.currency)}</Text> : null}
-                </MaskedTotal>
-              )}
+              {/* "fact / plan ₾ (%)", as in the period stats; "Скрыть суммы" leaves just the % */}
+              <MaskedTotal style={styles.groupTotal} hiddenText={g.planned_minor ? pct(g.spent_minor, g.planned_minor) : shareOfAll(g.spent_minor, stats.spent_minor)}>
+                {g.planned_minor ? formatShort(g.spent_minor) : formatWithCurrency(g.spent_minor, stats.currency)}
+                {g.planned_minor ? <Text style={styles.rowLimit}> / {formatWithCurrency(g.planned_minor, stats.currency)} ({pct(g.spent_minor, g.planned_minor)})</Text> : null}
+              </MaskedTotal>
             </FoldHeader>
             {fold.is(g.title) ? null : g.categories.map((c) => (
               <CategoryRow
@@ -150,12 +148,10 @@ export default function StatsView({ year, month, currency }: { year: number; mon
         <View style={styles.group}>
           <FoldHeader style={[formStyles.sectionHeader, styles.groupHeader]} folded={fold.is(UNPLANNED)} onToggle={() => fold.toggle(UNPLANNED)}>
             <Text style={styles.groupTitle}>{UNPLANNED}</Text>
-            {hidden ? null : (
-              <MaskedTotal style={styles.groupTotal} hiddenText={shareOfAll(split.spent, stats.spent_minor)}>
-                {share ? formatShort(split.spent) : formatWithCurrency(split.spent, stats.currency)}
-                {share ? <Text style={styles.rowLimit}> / {formatWithCurrency(share, stats.currency)}{planShare(split.spent, share)}</Text> : null}
-              </MaskedTotal>
-            )}
+            <MaskedTotal style={styles.groupTotal} hiddenText={share ? pct(split.spent, share) : shareOfAll(split.spent, stats.spent_minor)}>
+              {share ? formatShort(split.spent) : formatWithCurrency(split.spent, stats.currency)}
+              {share ? <Text style={styles.rowLimit}> / {formatWithCurrency(share, stats.currency)} ({pct(split.spent, share)})</Text> : null}
+            </MaskedTotal>
           </FoldHeader>
           {fold.is(UNPLANNED) ? null : (
             <>

@@ -91,7 +91,9 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
   const fold = useFolded('stats-period');
   const days = rangeDays(range);
   const today = dayKeyOf(new Date());
-  const pace = days <= PACE_MAX_DAYS;
+  // measured against the plan only within one month: a period across months (or a year) is just its categories
+  const sameMonth = range.from.slice(0, 7) === range.to.slice(0, 7);
+  const pace = days <= PACE_MAX_DAYS && sameMonth;
 
   const latest = useLatestRequest();
   const load = useCallback(() => {
@@ -256,13 +258,14 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
   const monthEndShort = norms ? shortRange({ from: `${norms.ym}-${daysInMonth(norms.ym)}`, to: `${norms.ym}-${daysInMonth(norms.ym)}` }) : '';
   /** a section's header: "spent in the period / its categories' plans for the month на октябрь", or just the spent */
   const SectionTotal = ({ spent, planned }: { spent: number; planned: number }) => (
-    <MaskedTotal style={styles.groupTotal} hiddenText={pct(spent, stats.spent_minor)}>
-      {/* as in the month stats: the spending black without ₾, "/ plan ₾" muted */}
-      {planned > 0 && shorterThanMonth ? formatShort(spent) : money(spent)}
-      {/* a period shorter than the month: the spending's days and the plan's month named */}
-      {planned > 0 && shorterThanMonth ? <Text style={styles.groupPlan}> {spentFor} / {money(planned)} на {monthIn}{spent > 0 ? ` (${pct(spent, Math.round(planned))})` : ''}</Text> : null}
+    <MaskedTotal style={styles.groupTotal} hiddenText={headerPct(spent, planned)}>
+      {/* as in the month stats: "fact / plan ₾ (%)", the fact black without ₾, the rest muted */}
+      {planned > 0 ? formatShort(spent) : money(spent)}
+      {planned > 0 ? <Text style={styles.groupPlan}> / {money(planned)} ({pct(spent, Math.round(planned))})</Text> : null}
     </MaskedTotal>
   );
+  /** a header's % with the amounts hidden: of its plan, or of all the spending without one */
+  const headerPct = (spent: number, planned: number) => (planned > 0 ? pct(spent, Math.round(planned)) : pct(spent, stats.spent_minor));
 
   /** a row's "% плана" (its limit as on the right) or "% трат", while the amounts are hidden */
   const hiddenShare = (c: CategoryStat, plan: ReturnType<NonNullable<typeof norms>['byCategory']['get']>) => {
@@ -418,7 +421,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
           <DonutCenter total={stats.spent_minor} picked={picked} currency={cur} />
         </Donut>
       </View>
-      {byLimits ? null : limited.length ? (
+      {byLimits || (!pace && days <= PACE_MAX_DAYS) ? null : limited.length ? (
         <LimitsAccordion defaultOpen foldKey="period" groups={groups} money={money} onPress={(key) => openInfo({ group: key })} />
       ) : (
         <TouchableOpacity style={styles.summaryRow} onPress={() => openInfo('summary')} accessibilityLabel="Как считаются траты">
@@ -437,9 +440,9 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
           <View key={key} style={styles.group}>
             <FoldHeader style={[formStyles.sectionHeader, styles.groupHeader]} folded={fold.is(`limit:${key}`)} onToggle={() => fold.toggle(`limit:${key}`)}>
               <Text style={styles.groupTitle}>{title}</Text>
-              <MaskedTotal style={styles.groupTotal} hiddenText={pct(cats.reduce((a, c) => a + c.spent_minor, 0), stats.spent_minor)}>
+              <MaskedTotal style={styles.groupTotal} hiddenText={g && g.limit > 0 ? headerPct(g.spent, g.limit) : headerPct(cats.reduce((a, c) => a + c.spent_minor, 0), 0)}>
                 {g && g.limit > 0 ? formatShort(Math.round(g.spent)) : money(g ? g.spent : cats.reduce((a, c) => a + c.spent_minor, 0))}
-                {g && g.limit > 0 ? <Text style={styles.groupPlan}> / {m(g.limit)}{g.spent > 0 ? ` (${pct(g.spent, Math.round(g.limit))})` : ''}</Text> : null}
+                {g && g.limit > 0 ? <Text style={styles.groupPlan}> / {m(g.limit)} ({pct(g.spent, Math.round(g.limit))})</Text> : null}
               </MaskedTotal>
             </FoldHeader>
             {fold.is(`limit:${key}`) ? null : (
@@ -467,9 +470,9 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
             {/* like the limits' headers: the month's spending outside the plan / its share (%) — the share is a month's,
                 as an obligatory payment's plan is */}
             {byLimits && month.share > 0 ? (
-              <MaskedTotal style={styles.groupTotal} hiddenText={pct(split.spent, stats.spent_minor)}>
+              <MaskedTotal style={styles.groupTotal} hiddenText={headerPct(month.spent, month.share)}>
                 {formatShort(month.spent)}
-                <Text style={styles.groupPlan}> / {m(month.share)}{month.spent > 0 ? ` (${pct(month.spent, Math.round(month.share))})` : ''}</Text>
+                <Text style={styles.groupPlan}> / {m(month.share)} ({pct(month.spent, Math.round(month.share))})</Text>
               </MaskedTotal>
             ) : <SectionTotal spent={split.spent} planned={month.share} />}
           </FoldHeader>
