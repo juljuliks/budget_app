@@ -395,6 +395,8 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
             {plan.monthLimit > 0 && !noBar ? (mtd > plan.monthLimit
               ? <Meter ratio={1} over={plan.monthLimit / mtd} height={8} color={c.color} />
               : <Meter ratio={mtd / plan.monthLimit} height={8} color={c.color} />) : null}
+            {/* nothing to add to "paid / plan" on the right (and no overspend): no line, no lone ⓘ */}
+            {plan.monthLimit > 0 && ofLimitOf(c, plan) && mtd <= plan.monthLimit ? null : (
             <TouchableOpacity style={styles.paceRow} onPress={() => openInfo({ id: c.category_id!, name })} accessibilityLabel="Как считается категория">
               <Text style={styles.share}>
                 {/* "paid / plan" is on the right already; here only what it doesn't say */}
@@ -407,6 +409,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
               </Text>
               <InfoIcon color={colors.accent} size={INFO_SIZE} />
             </TouchableOpacity>
+            )}
           </>
         ) : (
           <Text style={styles.share}>{pct(c.spent_minor, stats.spent_minor)} всех трат</Text>
@@ -721,7 +724,8 @@ const styles = StyleSheet.create({
   paceText: { flexShrink: 1 },
   paceNeutral: { color: colors.text },
   share: { fontSize: 13, color: colors.muted, marginTop: 4, fontVariant: ['tabular-nums'] },
-  amount: { fontSize: 13, color: colors.text, fontVariant: ['tabular-nums'] },
+  // the amount never wraps ("0 /" with the limit cut off): the name gives way
+  amount: { flexShrink: 0, marginLeft: 8, fontSize: 13, color: colors.text, fontVariant: ['tabular-nums'] },
   // "/ plan" like the spending before it: one amount pair
   ofLimit: { color: colors.muted },
   info: { paddingHorizontal: 20, gap: 10, paddingBottom: 4 },
