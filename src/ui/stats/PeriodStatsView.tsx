@@ -669,6 +669,17 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                     {g.items.length > 1 ? <>Итого: <Code>{money(g.spent)} из {g.items.map((i) => m(i.limit)).join(' + ')} = {m(g.limit)}</Code>.</> : null}
                   </Text>
                 )}
+                {g.overspent?.length ? (
+                  // their month's plan is overspent: no limit left, every lari would read as this block's overspend
+                  <Text style={styles.infoText}>
+                    Не входят — план месяца уже превышен, лимита не осталось:{'\n'}
+                    {g.overspent.map((o) => (
+                      <React.Fragment key={o.id}>
+                        <Text style={styles.infoBold}>{o.name}</Text>: <Text style={styles.paceAhead}>перерасход на {monthIn} {money(o.over)}</Text>{'\n'}
+                      </React.Fragment>
+                    ))}
+                  </Text>
+                ) : null}
                 {g.key === 'day' || g.key === 'week' || g.key === '2weeks' ? (
                   <Text style={styles.infoText}>
                     Лимит — что осталось от месячного плана категории, разложенное на оставшиеся дни месяца: перерасход раньше в

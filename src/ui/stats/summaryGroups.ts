@@ -22,6 +22,11 @@ export type SummaryGroup = {
   change: { before: number; after: number | null } | null;
   /** the categories, for the explanation */
   items: Array<{ id: number; name: string; spent: number; limit: number; parts: NormPart[] }>;
+  /**
+   * day / week / 2-week: categories left out — their month's plan is already overspent (by the period's end), so
+   * their limit is 0 and every lari would count as the block's overspend; `over` is the month's overspend
+   */
+  overspent?: Array<{ id: number; name: string; over: number }>;
 };
 
 const RHYTHMS: Array<Exclude<NormPeriod, 'month'>> = ['day', 'week', '2weeks'];
@@ -44,8 +49,14 @@ export type UnplannedMonth = { planned: Set<number>; spent: number; share: numbe
 export function summaryGroups(norms: Norms, range: DayRange, totalSpent: number, today: DayKey, unplanned?: UnplannedMonth): SummaryGroup[] {
   const cats = [...norms.byCategory].filter(([, p]) => p.kind === 'limit' && (p.monthLimit > 0 || p.periodNorm > 0));
   const out: SummaryGroup[] = [];
+  const monthOver = (id: number, p: { monthLimit: number }) => p.monthLimit > 0 && (norms.monthToDate.get(id) ?? 0) > p.monthLimit;
   for (const rhythm of RHYTHMS) {
-    const group = cats.filter(([, p]) => p.rhythm === rhythm);
+    const all = cats.filter(([, p]) => p.rhythm === rhythm);
+    if (all.length === 0) continue;
+    // a category over its month's plan has no limit left: out of the block, named apart (its row says the overspend)
+    const overspent = all.filter(([id, p]) => monthOver(id, p))
+      .map(([id, p]) => ({ id, name: p.name, over: (norms.monthToDate.get(id) ?? 0) - p.monthLimit }));
+    const group = all.filter(([id, p]) => !monthOver(id, p));
     if (group.length === 0) continue;
     // every category of a rhythm has the same window (it depends on the rhythm and the period only)
     const window = isPartOfWindow(group[0][1].window, range) ? group[0][1].window : undefined;
@@ -58,7 +69,7 @@ export function summaryGroups(norms: Norms, range: DayRange, totalSpent: number,
     const effects = group.map(([, p]) => p.effect).filter((e): e is NonNullable<typeof e> => e !== null);
     const end = window ? window.to : range.to;
     out.push({
-      key: rhythm, window, end, ongoing: end >= today, items,
+      key: rhythm, window, end, ongoing: end >= today, items, overspent,
       spent: items.reduce((a, i) => a + i.spent, 0),
       limit: items.reduce((a, i) => a + i.limit, 0),
       change: effects.length === 0 ? null : {

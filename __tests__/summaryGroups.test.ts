@@ -90,3 +90,14 @@ test('outside the plan with the month known: against its share, the period\'s ow
   const o = g.find((x) => x.key === 'outside')!;
   expect([o.spent, o.limit, o.periodSpent]).toEqual([1200, 5000, 700]);
 });
+
+test('a category over its month\'s plan leaves its rhythm block, named apart', async () => {
+  const { bars } = await setup();
+  // bars: 310 ₾ a month (weekly); 400 ₾ spent by the 2nd — over the month's plan
+  await spend(36000, bars, '2025-10-02');
+  const day = { from: '2025-10-02', to: '2025-10-02' };
+  const g = summaryGroups(await loadNorms(day, 'GEL'), day, 0, LATER);
+  expect(g.find((x) => x.key === 'week')).toBeUndefined();
+  const food = summaryGroups(await loadNorms(day, 'GEL'), day, 0, LATER).find((x) => x.key === 'day')!;
+  expect(food.overspent).toEqual([]);
+});

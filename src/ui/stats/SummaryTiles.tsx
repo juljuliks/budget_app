@@ -128,6 +128,12 @@ export default function SummaryTiles({ groups, money, onPress }: Props) {
                 ) : null}
               </>
             ) : null}
+            {/* categories left out: their month's plan is overspent, no limit left (the sheet names them) */}
+            {g.overspent?.length ? (
+              <Text style={styles.change} numberOfLines={1}>
+                {`без ${g.overspent.length} в перерасходе месяца`}
+              </Text>
+            ) : null}
             {g.change && (g.key === 'day' || g.key === 'week' || g.key === '2weeks') ? (
               <Text style={styles.change} numberOfLines={2}>
                 {moved ? (
