@@ -85,3 +85,29 @@ export const ChevronDownIcon = ({ color, size = 18 }: P) => (
     <Path d="M6 9l6 6 6-6" />
   </Svg>
 );
+
+/** "Show amounts" (after Lucide "eye", ISC license). */
+export const EyeIcon = ({ color, size = 22 }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0" />
+    <Circle cx={12} cy={12} r={3} />
+  </Svg>
+);
+
+/** "Hide amounts" (after Lucide "eye-off", ISC license). */
+export const EyeOffIcon = ({ color, size = 22 }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c4.29 0 7.84 2.62 9.94 6.65a1 1 0 0 1 0 .7 10.74 10.74 0 0 1-1.44 2.49" />
+    <Path d="M14.08 14.16a3 3 0 0 1-4.24-4.24" />
+    <Path d="M17.48 17.5a10.75 10.75 0 0 1-15.42-5.15 1 1 0 0 1 0-.7 10.75 10.75 0 0 1 4.45-5.14" />
+    <Path d="m2 2 20 20" />
+  </Svg>
+);
+
+/** Locked for savings (after Lucide "lock", ISC license). */
+export const LockIcon = ({ color, size = 14 }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M5 11h14v10H5z" />
+    <Path d="M8 11V7a4 4 0 0 1 8 0v4" />
+  </Svg>
+);

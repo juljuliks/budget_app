@@ -4,6 +4,7 @@ import AddTransactionSheet from './AddTransactionSheet';
 import CategoryDeleteSheet from './CategoryDeleteSheet';
 import CategoryTypesSheet from './CategoryTypesSheet';
 import TransactionSheet from './TransactionSheet';
+import { MonthReportSheet } from './stats/MonthReport';
 
 export { openAddTransaction, openCategoryDelete, openCategoryTypes, openTransaction } from '../sheets';
 
@@ -23,6 +24,7 @@ export function ModalHost() {
       <AddTransactionSheet visible={state.addTransaction} onClose={() => close({ addTransaction: false })} />
       <CategoryTypesSheet visible={state.categoryTypes} onClose={() => close({ categoryTypes: false })} />
       <CategoryDeleteSheet categoryId={state.categoryDelete} onClose={() => close({ categoryDelete: null })} />
+      <MonthReportSheet ym={state.monthReport} onClose={() => close({ monthReport: null })} />
     </>
   );
 }

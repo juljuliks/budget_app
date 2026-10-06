@@ -1,6 +1,7 @@
 import { ingestSms } from '../ingest';
 import { createNotificationChannel } from '../notifications/notifeeBootstrap';
 import { showLimitAlert, showUncategorizedTransactionNotification } from '../notifications/notifeeIntegration';
+import { scheduleMonthReports } from '../notifications/monthReportNotice';
 
 export type SmsTaskData = {
   sender: string;
@@ -25,6 +26,8 @@ export default async function SmsBackgroundTask(data: SmsTaskData): Promise<void
       await createNotificationChannel();
       await showLimitAlert(result.categoryId);
     }
+    // the month's report on the 1st, with what is put aside after this operation
+    if (result.status === 'inserted') await scheduleMonthReports();
   } catch (e) {
     // Log instead of rethrowing: a failed task must not crash the headless JS context.
     console.error('SmsBackgroundTask failed', e);

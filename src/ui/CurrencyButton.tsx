@@ -56,7 +56,7 @@ const styles = StyleSheet.create({
     borderRadius: 8, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.bg,
   },
   symbol: { fontSize: 16, fontWeight: '600', color: colors.text },
-  code: { fontSize: 14, color: colors.muted },
+  code: { fontSize: 16, color: colors.text },
   option: {
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14,
     borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border,

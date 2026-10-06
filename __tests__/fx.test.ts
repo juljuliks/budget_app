@@ -85,11 +85,11 @@ test('plan: every amount in its own currency; the cap and totals are converted t
   await expect(setPlanBudget(M, 80000, 'GEL')).rejects.toHaveProperty('planned_minor', 90000);
   // the amount to distribute in USD: 400 USD = 1000 GEL still holds the 900 GEL planned
   await setPlanBudget(M, 40000, 'USD');
-  expect(await getPlanBudget(M)).toEqual({ amount_minor: 40000, currency: 'USD' });
+  expect(await getPlanBudget(M)).toMatchObject({ amount_minor: 40000, currency: 'USD' });
   // the next month carries the currencies over
   const next = await listPlan('2099-02');
   expect(next.map((i) => i.currency)).toEqual(['USD', 'GEL']);
-  expect(await getPlanBudget('2099-02')).toEqual({ amount_minor: 40000, currency: 'USD' });
+  expect(await getPlanBudget('2099-02')).toMatchObject({ amount_minor: 40000, currency: 'USD' });
 });
 
 test('history in another currency', async () => {

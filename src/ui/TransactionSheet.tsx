@@ -3,7 +3,7 @@ import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'rea
 import { sheetAlert } from './sheetAlert';
 import { getTransaction, markTransactionSeen, setTransactionAmount, setTransactionNote } from '../db/transactions';
 import { Currency, isCurrency } from '../db/fx';
-import CurrencyPicker from './CurrencyPicker';
+import CurrencyButton from './CurrencyButton';
 import { formatMoneyWithCurrency, parseAmountInput, toInputValue } from './money';
 import { AMOUNT_HINT } from './strings';
 import { assignCategory, MerchantChoice, merchantChangePreview } from '../assign';
@@ -241,9 +241,8 @@ export default function TransactionSheet({ txId: openId, onClose }: Props) {
         maxLength={12}
         onSubmit={saveAmount}
         onClose={() => setAmountOpen(false)}
-      >
-        <Controller control={amountForm.control} name="currency" render={({ field }) => <CurrencyPicker value={field.value} onChange={field.onChange} />} />
-      </TextInputModal>
+        inputAccessory={<Controller control={amountForm.control} name="currency" render={({ field }) => <CurrencyButton value={field.value} onChange={field.onChange} />} />}
+      />
       <TextInputModal
         visible={noteOpen}
         title="Заметка"

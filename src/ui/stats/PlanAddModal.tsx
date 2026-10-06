@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useFormState, useWatch } from 'react-hook-form';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import BottomSheet, { SheetScrollView } from '../BottomSheet';
-import { Category, categoryLabel, listCategories } from '../../db/categories';
+import { Category, categoryLabel, isSavings, listCategories } from '../../db/categories';
 import { Currency } from '../../db/fx';
 import { addPlanItem, getPlanBudget, lastPlanItem, PlanBudget, planConverter, PlanKind, plannedTotal, setPlanAmount } from '../../db/plans';
 import CurrencyButton from '../CurrencyButton';
@@ -60,11 +60,13 @@ export default function PlanAddModal({ ym, currency: screenCurrency, visible, pl
   useEffect(() => {
     if (!visible) { setRows(null); return; }
     (async () => {
-      const cats = (await listCategories()).filter((c) => !plannedIds.includes(c.id));
+      // "Сбережения" isn't planned: it gets what the budget leaves
+      const cats = (await listCategories()).filter((c) => !plannedIds.includes(c.id) && !isSavings(c));
       setRows(await Promise.all(cats.map(async (c) => ({ ...c, last: await lastPlanItem(ym, c.id) }))));
       const b = await getPlanBudget(ym);
       setBudget(b);
-      setFree(b === null ? null : Math.max(b.amount_minor - (await plannedTotal(ym, undefined, b.currency)), 0));
+      // the unplanned share is not for the plan
+      setFree(b === null ? null : Math.max(b.plannable_minor - (await plannedTotal(ym, undefined, b.currency)), 0));
       const c = await planConverter(ym);
       setConv(() => c);
     })().catch((e) => console.error('load plan categories failed', e));

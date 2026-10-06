@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { openMonthReport } from '../../sheets';
 import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useOpenCategoryTransactions } from '../../navigation';
 import { Currency } from '../../db/fx';
-import { HistoryMonth, monthStats, MonthStats, parseYm, planHistory } from '../../db/plans';
+import { currentYm, HistoryMonth, monthStats, MonthStats, parseYm, planHistory } from '../../db/plans';
 import { onTransactionsChanged } from '../../events';
 import Meter from '../Meter';
 import { formatMoneyWithCurrency, formatWithCurrency } from '../money';
@@ -83,6 +84,12 @@ function MonthRow({ month, expanded, onToggle, currency }: { month: HistoryMonth
           </View>
         ) : null}
       </TouchableOpacity>
+      {/* a month that is over: its report (what was put aside, what kept more from it) */}
+      {month.ym < currentYm() ? (
+        <TouchableOpacity style={styles.reportLink} onPress={() => openMonthReport(month.ym)} hitSlop={6}>
+          <Text style={styles.reportText}>Отчёт за месяц ›</Text>
+        </TouchableOpacity>
+      ) : null}
       {expanded ? <MonthDetails ym={month.ym} currency={currency} /> : null}
     </View>
   );
@@ -152,6 +159,8 @@ function Total({ label, value, danger, good }: { label: string; value: string; d
 }
 
 const styles = StyleSheet.create({
+  reportLink: { alignSelf: 'flex-start', marginTop: 8 },
+  reportText: { fontSize: 14, color: colors.accent },
   content: { paddingHorizontal: 16, paddingBottom: 32 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   hint: { color: colors.muted, fontSize: 14, textAlign: 'center', marginVertical: 12 },

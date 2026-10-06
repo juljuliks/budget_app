@@ -9,13 +9,18 @@ import { dayKeyOf, daysInMonth, monthDays } from '../dateRange';
 import { flatOf, limitChange, loadNorms, Norms, Pace, paceOf } from './norms';
 import { onTransactionsChanged } from '../../events';
 import Donut, { DonutSegment } from '../Donut';
+import Masked from '../Masked';
 import Meter from '../Meter';
-import { currencySymbol, formatMoneyWithCurrency, formatShort, formatWithCurrency } from '../money';
+import { formatMoneyWithCurrency, formatShort, formatWithCurrency } from '../money';
 import { NO_RATE, PER_PERIOD } from '../strings';
 import { colors } from '../theme';
 import PlanAmountModal, { PlanAmountTarget } from './PlanAmountModal';
 import { useLatestRequest } from '../useLatestRequest';
 import { formStyles } from '../formStyles';
+import { FoldHeader, useFolded } from '../fold';
+import { LimitsAccordion } from './SummaryTiles';
+import { MonthReportRow } from './MonthReport';
+import { summaryGroups } from './summaryGroups';
 
 /**
  * Donut: one segment per category with spending, in section order, so a type's categories sit next to
@@ -54,6 +59,8 @@ export default function StatsView({ year, month, currency }: { year: number; mon
   const segments = useMemo(() => (stats ? donutSegments(stats.groups) : []), [stats]);
   // hooks before the loading return: their order must not change between renders
   const openTransactions = useOpenCategoryTransactions();
+  // folded sections, remembered
+  const fold = useFolded('stats-month');
 
   if (!stats) return <View style={styles.center}><ActivityIndicator /></View>;
 
@@ -62,9 +69,14 @@ export default function StatsView({ year, month, currency }: { year: number; mon
   const ym = ymOf(year, month);
   const evenPace = ym === currentYm() ? new Date().getDate() / daysInMonth(ym) : undefined;
   const picked = selected === null ? undefined : stats.categories.find((c) => String(c.category_id) === selected);
+  const todayKey = dayKeyOf(new Date());
+  // 'outside' needs today's spending outside the limits: not a month figure, left out here
+  const limitGroups = today ? summaryGroups(today, { from: todayKey, to: todayKey }, 0, todayKey).filter((g) => g.key !== 'outside') : [];
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+      {/* a month that is over: its report on top */}
+      {ym < currentYm() ? <View style={styles.report}><MonthReportRow ym={ym} /></View> : null}
       <View style={styles.donutWrap}>
         <Donut segments={segments} selectedKey={picked ? selected : null} onSelect={setSelected}>
           <DonutCenter total={stats.spent_minor} picked={picked} currency={stats.currency} />
@@ -84,19 +96,22 @@ export default function StatsView({ year, month, currency }: { year: number; mon
         <Text style={styles.hint}>Составьте план на месяц во вкладке «План», чтобы видеть остаток по категориям.</Text>
       )}
 
+      {/* the current month: the limits now (today, this week, the month), folded */}
+      {limitGroups.length ? <LimitsAccordion key={ym} defaultOpen={false} foldKey="month" groups={limitGroups} money={(v) => formatWithCurrency(v, stats.currency)} /> : null}
+
       {stats.categories.length === 0 ? (
         <Text style={styles.hint}>В этом месяце трат нет.</Text>
       ) : (
         stats.groups.map((g) => (
           <View key={`${g.type_id}-${g.title}`} style={styles.group}>
-            <View style={[formStyles.sectionHeader, styles.groupHeader]}>
+            <FoldHeader style={[formStyles.sectionHeader, styles.groupHeader]} folded={fold.is(g.title)} onToggle={() => fold.toggle(g.title)}>
               <Text style={styles.groupTitle}>{g.title}</Text>
               <Text style={styles.groupTotal}>
                 {g.planned_minor ? formatShort(g.spent_minor) : formatWithCurrency(g.spent_minor, stats.currency)}
                 {g.planned_minor ? <Text style={styles.rowLimit}> / {formatWithCurrency(g.planned_minor, stats.currency)}</Text> : null}
               </Text>
-            </View>
-            {g.categories.map((c) => (
+            </FoldHeader>
+            {fold.is(g.title) ? null : g.categories.map((c) => (
               <CategoryRow
                 key={String(c.category_id)}
                 stat={c}
@@ -145,8 +160,8 @@ export function DonutCenter({ total, picked, currency }: { total: number; picked
     return (
       <>
         <Text style={styles.caption}>Потрачено</Text>
-        <Text style={styles.hero}>{formatShort(total)}</Text>
-        <Text style={styles.caption}>{currencySymbol(currency)}</Text>
+        {/* the currency on the amount's line, as for a tapped segment */}
+        <Text style={styles.hero} numberOfLines={1} adjustsFontSizeToFit>{formatWithCurrency(total, currency)}</Text>
       </>
     );
   }
@@ -171,7 +186,7 @@ function SummaryItem({ label, value, danger }: { label: string; value: string; d
   return (
     <View style={styles.summaryItem}>
       <Text style={styles.caption}>{label}</Text>
-      <Text style={[styles.summaryValue, danger && styles.dangerText]}>{danger ? '⚠ ' : ''}{value}</Text>
+      <Masked style={[styles.summaryValue, danger && styles.dangerText]}>{danger ? '⚠ ' : ''}{value}</Masked>
     </View>
   );
 }
@@ -260,6 +275,7 @@ function CategoryRow({ stat, currency, evenPace, dim, ym, openTransactions, now,
 }
 
 const styles = StyleSheet.create({
+  report: { marginTop: 4 },
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { paddingHorizontal: 16, paddingBottom: 32 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },

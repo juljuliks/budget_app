@@ -1,30 +1,42 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { categoryLabel } from '../../db/categories';
 import { Currency } from '../../db/fx';
 import {
-  getPlanBudget, listPlan, monthIncome, OverBudgetError, PlanBudget, planConverter, PlanItem, removePlanItem,
+  currentYm, getPlanBudget, listPlan, unplannedOf, monthIncome, monthStats, OverBudgetError, parseYm, PlanBudget, planConverter, PlanItem, removePlanItem,
+  unplannedSpent,
   setPlanBudget, setPlanPinned,
 } from '../../db/plans';
 import CurrencyButton from '../CurrencyButton';
 import Fab from '../Fab';
 import { daysInMonth } from '../dateRange';
-import { PencilIcon, PinIcon } from '../icons';
-import Meter from '../Meter';
+import { LockIcon, PencilIcon, PinIcon } from '../icons';
+import Masked from '../Masked';
+import StepSlider from '../StepSlider';
+import Segmented from '../Segmented';
 import { formatWithCurrency, parseAmountOrZero, toInputValue } from '../money';
 import { AMOUNT_HINT, NO_SECTION, PER_PERIOD, SPENDING_PATTERN } from '../strings';
 import { sheetAlert } from '../sheetAlert';
-import { Controller } from 'react-hook-form';
+import { Controller, useWatch } from 'react-hook-form';
 import TextInputModal from '../TextInputModal';
 import { useLoadedForm } from '../form';
 import { formStyles } from '../formStyles';
+import { FoldHeader, useFolded } from '../fold';
 import PlanAddModal from './PlanAddModal';
 import PlanAmountModal, { PlanAmountTarget } from './PlanAmountModal';
 import { chart, colors } from '../theme';
 import { useLatestRequest } from '../useLatestRequest';
 import { toast, toastError } from '../toast';
 
+
+const RING_FREE = colors.income;
+/** "Сбережения" in place of "Не распределено" */
+const RING_SAVINGS = '#5eead4';
+/** 🔒 locked for savings: the darker part of the savings */
+const RING_LOCKED = '#0f766e';
+/** the share set aside for spending outside the plan */
+const RING_UNPLANNED = '#eda100';
 
 const NORM_DAYS = { day: 1, week: 7, '2weeks': 14 } as const;
 
@@ -73,18 +85,30 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
   const [income, setIncome] = useState(0);
   const [budgetOpen, setBudgetOpen] = useState(false);
   // the budget sheet: the amount and the currency it was entered in
-  const budgetForm = useLoadedForm<{ value: string; currency: Currency }>(
-    budgetOpen && items ? { value: toInputValue(budget?.amount_minor), currency: budget?.currency ?? currency } : null, budgetOpen);
+  const budgetForm = useLoadedForm<BudgetForm>(
+    budgetOpen && items ? {
+      value: toInputValue(budget?.amount_minor), currency: budget?.currency ?? currency,
+      unplanned: budget && unplannedOf(budget) ? toInputValue(unplannedOf(budget)) : '',
+      toSavings: budget?.to_savings ?? true, locked: budget?.locked_minor ? toInputValue(budget.locked_minor) : '',
+    } : null, budgetOpen);
+  // spent outside the plan this month, in the screen's currency
+  const [unplannedSpentMinor, setUnplannedSpent] = useState(0);
+  // the month's spending by category (the savings forecast) and in all, in the screen's currency
+  const [spentBy, setSpentBy] = useState<{ byCategory: Map<number, number>; total: number }>({ byCategory: new Map(), total: 0 });
   const [editingItem, setEditingItem] = useState<PlanAmountTarget | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  // folded sections, remembered
+  const fold = useFolded('plan');
 
   const latest = useLatestRequest();
   const load = useCallback(() => {
     // answers of a previous month / currency (switched quickly) are dropped
     const keep = latest();
-    Promise.all([listPlan(ym, currency), getPlanBudget(ym), monthIncome(ym, currency), planConverter(ym)])
-      .then(keep(([plan, b, inc, conv]: [Awaited<ReturnType<typeof listPlan>>, Awaited<ReturnType<typeof getPlanBudget>>, number, Awaited<ReturnType<typeof planConverter>>]) => {
-        setItems(plan); setBudget(b); setIncome(inc);
+    const { year, month } = parseYm(ym);
+    Promise.all([listPlan(ym, currency), getPlanBudget(ym), monthIncome(ym, currency), planConverter(ym), monthStats(year, month, currency)])
+      .then(keep(([plan, b, inc, conv, stats]: [Awaited<ReturnType<typeof listPlan>>, Awaited<ReturnType<typeof getPlanBudget>>, number, Awaited<ReturnType<typeof planConverter>>, Awaited<ReturnType<typeof monthStats>>]) => {
+        setItems(plan); setBudget(b); setIncome(inc); setUnplannedSpent(unplannedSpent(stats));
+        setSpentBy({ byCategory: new Map(stats.categories.filter((c) => c.category_id !== null).map((c) => [c.category_id!, c.spent_minor])), total: stats.spent_minor });
         setToShown(() => (minor: number, from: Currency) => conv(minor, from, currency));
       }))
       .catch((e) => console.error('load plan failed', e));
@@ -104,17 +128,92 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
   const total = useMemo(() => (items ?? []).reduce((sum, i) => sum + (i.converted_minor ?? 0), 0), [items]);
   // the amount to distribute in the screen's currency (its own one if there's no rate)
   const shownBudget = budget === null ? null : toShown(budget.amount_minor, budget.currency) ?? budget.amount_minor;
-  const free = shownBudget === null ? null : shownBudget - total;
+  // the share set aside for spending outside the plan, then what nothing claims yet
+  const unplanned = shownBudget === null || !budget ? 0 : toShown(unplannedOf(budget), budget.currency) ?? unplannedOf(budget);
+  // locked for savings right away (🔒), in the screen's currency
+  const locked = !budget || !budget.locked_minor ? 0 : toShown(budget.locked_minor, budget.currency) ?? budget.locked_minor;
+  const free = shownBudget === null ? null : shownBudget - total - unplanned - locked;
+  // "Сбережения" instead of "Не распределено": what the budget leaves goes there
+  const toSavings = !!budget?.to_savings && shownBudget !== null;
+  const timing = ym < currentYm() ? 'past' : ym === currentYm() ? 'current' : 'future';
+  // savings at the month's end if the rest is spent by plan: every category takes its plan (or what it already took,
+  // if more), spending outside the plan its share (or more); a past month: what was actually left
+  const savingsEnd = shownBudget === null ? null : timing === 'past' ? shownBudget - spentBy.total
+    : timing === 'current'
+      ? shownBudget - items!.reduce((a, i) => a + Math.max(i.converted_minor ?? 0, spentBy.byCategory.get(i.category_id) ?? 0), 0)
+        - Math.max(unplanned, unplannedSpentMinor)
+      : (free ?? 0) + locked;
+
+  // the bar's parts, left to right; "Не распределено" becomes "Сбережения" when the leftover goes there
+  const parts: Array<{ key: string; label: string; value: number; color: string; note: string; valueStyle?: object; noteStyle?: object }> = shownBudget ? [
+    { key: 'planned', label: 'План', value: total, color: chart.meterFill, note: percentOf(total, shownBudget) || '0%' },
+    // what is left of the share big (spent outside the plan from it), the share itself small; a coming month: the share
+    timing === 'future' ? { key: 'unplanned', label: 'Вне плана', value: unplanned, color: RING_UNPLANNED, note: percentOf(unplanned, shownBudget) || '0%' }
+      : {
+        key: 'unplanned', label: 'Вне плана', value: Math.abs(unplanned - unplannedSpentMinor), color: RING_UNPLANNED,
+        note: `${unplannedSpentMinor > unplanned ? 'перерасход ' : ''}из ${money(Math.round(unplanned / 100) * 100)} · ${percentOf(unplanned, shownBudget) || '0%'}`,
+        valueStyle: unplannedSpentMinor > unplanned ? styles.overText : undefined,
+        noteStyle: unplannedSpentMinor > unplanned ? styles.overText : undefined,
+      },
+    toSavings && timing === 'past'
+      ? {
+        key: 'free', label: 'Сбережения', value: Math.abs(savingsEnd ?? 0), color: RING_SAVINGS,
+        note: (savingsEnd ?? 0) < 0 ? 'бюджет превышен' : 'сэкономлено',
+        valueStyle: (savingsEnd ?? 0) < 0 ? styles.overText : styles.savingsValue, noteStyle: (savingsEnd ?? 0) < 0 ? styles.overText : undefined,
+      }
+      : toSavings
+        ? {
+          // the locked part and the leftover together: one savings column
+          key: 'free', label: 'Сбережения', value: Math.max(0, free ?? 0) + locked, color: RING_SAVINGS,
+          note: locked > 0 ? `🔒 ${money(locked)}${(free ?? 0) > 0 ? ` + ${money(free!)}` : ''}` : percentOf(free ?? 0, shownBudget) || '0%',
+          valueStyle: styles.savingsValue,
+        }
+        : { key: 'free', label: 'Не распределено', value: Math.max(0, free ?? 0), color: RING_FREE, note: percentOf(free ?? 0, shownBudget) || '0%', valueStyle: styles.freeValue },
+    // the locked part apart when the leftover doesn't go to savings
+    ...(!toSavings && locked > 0 ? [{ key: 'locked', label: 'Отложено', value: locked, color: RING_LOCKED, note: percentOf(locked, shownBudget) || '0%', valueStyle: styles.lockedValue }] : []),
+  ] : [];
+  const notes: Array<{ text: string; warn?: boolean }> = [];
+  // overspent already: less will be saved by the month's end (a difference under 1% of the budget is noise)
+  if (toSavings && timing === 'current' && savingsEnd !== null && (free ?? 0) + locked - savingsEnd >= shownBudget! / 100) {
+    notes.push({ text: savingsEnd > 0 ? `Сбережения к концу месяца ≈ ${money(savingsEnd)}, если тратить по плану` : 'Перерасход съел сбережения месяца', warn: true });
+  }
+
+  // the plan's system sections: savings (🔒 locked + 🌊 floating: what the plan leaves) and the share outside it
+  const systemGroups: Array<{ title: string; rows: Array<{ key: string; name: string; note: string; value: number; style?: object }> }> = [];
+  if (shownBudget) {
+    const savingsRows = [
+      ...(locked > 0 ? [{ key: 'locked', name: '🔒 Сразу', note: 'заблокировано в начале месяца', value: locked, style: styles.lockedValue }] : []),
+      ...(toSavings && (free ?? 0) > 0 ? [{ key: 'floating', name: '🌊 Из остатка', note: 'что не запланировано, плюс сэкономленное', value: free!, style: styles.savingsValue }] : []),
+    ];
+    if (savingsRows.length) systemGroups.push({ title: 'Сбережения', rows: savingsRows });
+    if (unplanned > 0) {
+      systemGroups.push({
+        title: 'Вне плана',
+        rows: [{
+          key: 'unplanned', name: '🎲 Незапланированные траты', value: unplanned,
+          note: timing === 'future' ? 'категории без плана и без категории' : `потрачено ${money(unplannedSpentMinor)}`,
+          style: timing !== 'future' && unplannedSpentMinor > unplanned ? styles.overText : undefined,
+        }],
+      });
+    }
+  }
 
   /** Saves the amount to distribute (0 / empty = not set); returns an error to show in the dialog, or null. */
   async function saveBudget(text: string): Promise<string | null> {
     const minor = parseAmountOrZero(text);
     if (minor === null) return AMOUNT_HINT;
+    const { unplanned: shareText, toSavings: savings, currency: cur, locked: lockedText } = budgetForm.getValues();
+    const lockedMinor = parseAmountOrZero(lockedText ?? '');
+    const shareMinor = parseAmountOrZero(shareText ?? '');
+    if (lockedMinor === null || shareMinor === null) return AMOUNT_HINT;
+    // a share right on a stop is kept as a % (it follows the budget), any other as the amount
+    const pct = SHARE_STOPS.find((p) => Math.round((minor * p) / 100) === shareMinor);
     try {
-      await setPlanBudget(ym, minor === 0 ? null : minor, budgetForm.getValues('currency'));
+      await setPlanBudget(ym, minor === 0 ? null : minor, cur, pct ?? 0, savings, lockedMinor, pct === undefined ? shareMinor : null);
     } catch (e) {
       if (!(e instanceof OverBudgetError)) throw e;
-      return `По категориям уже запланировано ${formatWithCurrency(e.planned_minor, e.currency)} — бюджет не может быть меньше.`;
+      return `По категориям уже запланировано ${formatWithCurrency(e.planned_minor, e.currency)} — `
+        + (shareMinor || lockedMinor ? 'вместе с отложенным и долей вне плана это больше бюджета.' : 'бюджет не может быть меньше.');
     }
     toast(minor === 0 ? 'Бюджет месяца убран' : 'Бюджет месяца сохранён');
     load();
@@ -157,53 +256,98 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
     <View style={styles.screen}>
     <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <View style={styles.budgetBox}>
-        <Text style={styles.caption}>Бюджет месяца</Text>
-        <TouchableOpacity
-          style={styles.budgetRow}
-          onPress={() => setBudgetOpen(true)}
-          accessibilityLabel="Изменить бюджет месяца"
-        >
-          <Text style={styles.budgetValue}>{money(shownBudget ?? 0)}</Text>
-          <PencilIcon color={colors.accent} size={20} />
-        </TouchableOpacity>
-        {budget && budget.currency !== currency ? (
-          <Text style={styles.caption}>{original(budget.amount_minor, budget.currency).trim()}</Text>
-        ) : null}
-
-        <View style={styles.summary}>
-          <View style={styles.summaryItem}>
-            <Text style={styles.caption}>Запланировано</Text>
-            <Text style={styles.summaryValue}>{money(total)}</Text>
-            {shownBudget ? <Text style={styles.caption}>{percentOf(total, shownBudget) || '0%'}</Text> : null}
-          </View>
-          <View style={styles.summaryItem}>
-            <Text style={styles.caption}>Не распределено</Text>
-            <Text style={[styles.summaryValue, free !== null && styles.freeValue]}>{free === null ? '—' : money(free)}</Text>
-            {shownBudget ? <Text style={styles.caption}>{percentOf(free ?? 0, shownBudget) || '0%'}</Text> : null}
-          </View>
+        {/* the budget in one line, then its split as one bar: planned / for spending outside the plan / savings
+            (or not distributed), each part's amount under it in its color */}
+        <View style={styles.budgetHead}>
+          <Text style={styles.caption}>Бюджет месяца</Text>
+          <TouchableOpacity style={styles.budgetRow} onPress={() => setBudgetOpen(true)} accessibilityLabel="Изменить бюджет месяца">
+            {/* the amount it was entered in, just the number, right under the converted one */}
+            <View style={styles.budgetAmounts}>
+              <Masked style={styles.budgetValue}>{money(shownBudget ?? 0)}</Masked>
+              {budget && budget.currency !== currency ? (
+                <Masked style={styles.budgetOriginal}>{formatWithCurrency(budget.amount_minor, budget.currency)}</Masked>
+              ) : null}
+            </View>
+            <View style={styles.pencil}><PencilIcon color={colors.accent} size={18} /></View>
+          </TouchableOpacity>
         </View>
+
         {shownBudget ? (
-          // share of the amount already distributed: not a spent/limit meter, so no warning colors
-          <Meter ratio={total / shownBudget} color={chart.meterFill} />
+          <>
+            <View style={styles.bar} accessibilityLabel={`Запланировано ${percentOf(total, shownBudget) || '0%'} бюджета`}>
+              {/* the savings part: the leftover light, the locked part dark with 🔒 at the end */}
+              {parts.filter((p) => p.key !== 'locked').map((p) => (p.key === 'free' && toSavings && timing !== 'past' ? (
+                <React.Fragment key={p.key}>
+                  {(free ?? 0) > 0 ? <View style={{ flex: free!, backgroundColor: p.color }} /> : null}
+                  {locked > 0 ? <View style={[styles.lockedPart, { flex: locked }]}><LockIcon color="#FFFFFF" size={9} /></View> : null}
+                </React.Fragment>
+              ) : p.value > 0 ? <View key={p.key} style={{ flex: p.value, backgroundColor: p.color }} /> : null))}
+              {!toSavings && locked > 0 ? <View style={[styles.lockedPart, { flex: locked }]}><LockIcon color="#FFFFFF" size={9} /></View> : null}
+            </View>
+            <View style={styles.parts}>
+              {/* no share for spending outside the plan: no column for it */}
+              {parts.filter((p) => p.key !== 'unplanned' || unplanned > 0).map((p) => (
+                <View key={p.key} style={styles.part}>
+                  <View style={styles.legend}>
+                    <View style={[styles.legendDot, { backgroundColor: p.color }]} />
+                    <Text style={styles.partLabel} numberOfLines={1}>{p.label}</Text>
+                  </View>
+                  <Masked style={[styles.partValue, p.valueStyle]}>{money(p.value)}</Masked>
+                  <Text style={[styles.partNote, p.noteStyle]} numberOfLines={2}>{p.note}</Text>
+                </View>
+              ))}
+            </View>
+            {/* under the bar only the savings forecast, once an overspend makes it smaller */}
+            {notes.map((n) => <Text key={n.text} style={[styles.note, n.warn && styles.overText]}>{n.text}</Text>)}
+          </>
         ) : (
-          <Text style={styles.caption}>Укажите бюджет месяца (например, зарплату): план не сможет его превысить, а у категорий появятся доли в %</Text>
+          <Text style={[styles.caption, styles.left]}>
+            {total > 0 ? `Запланировано ${money(total)}. ` : ''}Укажите бюджет месяца (например, зарплату): план не сможет его превысить, а у категорий появятся доли в %
+          </Text>
         )}
-        <Text style={[styles.caption, styles.pinNote]}>📌 — повторять каждый месяц: категория перейдёт в следующий месяц с той же суммой</Text>
       </View>
+      <Text style={styles.pinNote}>📌 — переходит в следующий месяц с той же суммой</Text>
 
       {items.length === 0 ? <Text style={styles.hint}>План пуст. Нажмите ＋, чтобы добавить категории и суммы.</Text> : null}
 
+      {/* system "categories" first: what the budget sets apart before the plan — savings (locked and floating) and the
+          share outside the plan; like the plan's sections, with their share of the budget; a tap opens the budget */}
+      {shownBudget ? systemGroups.map((g) => (
+        <View key={g.title} style={styles.group}>
+          <FoldHeader style={[formStyles.sectionHeader, styles.groupHeader]} folded={fold.is(g.title)} onToggle={() => fold.toggle(g.title)}>
+            <Text style={styles.groupTitle}>{g.title}</Text>
+            <Text style={styles.groupTotal}>
+              {money(g.rows.reduce((a, r) => a + r.value, 0))}
+              <Text style={styles.groupShare}> · {percentOf(g.rows.reduce((a, r) => a + r.value, 0), shownBudget) || '0%'}</Text>
+            </Text>
+          </FoldHeader>
+          {fold.is(g.title) ? null : g.rows.map((r) => (
+            <TouchableOpacity key={r.key} style={styles.row} onPress={() => setBudgetOpen(true)} accessibilityLabel={`Изменить: ${r.name}`}>
+              {/* system: no pin, a lock in its place */}
+              <View style={styles.pin}><LockIcon color={colors.muted} size={20} /></View>
+              <View style={styles.nameBox}>
+                <Text style={styles.name} numberOfLines={1}>{r.name}</Text>
+                <Text style={styles.percent}>{[r.note, `${percentOf(r.value, shownBudget) || '0%'} бюджета`].filter(Boolean).join(' · ')}</Text>
+              </View>
+              <View style={styles.amountBox}>
+                <Masked style={[styles.amount, r.style]}>{money(r.value)}</Masked>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )) : null}
+
       {groupByType(items).map((g) => (
         <View key={g.title} style={styles.group}>
-          <View style={[formStyles.sectionHeader, styles.groupHeader]}>
+          <FoldHeader style={[formStyles.sectionHeader, styles.groupHeader]} folded={fold.is(g.title)} onToggle={() => fold.toggle(g.title)}>
             <Text style={styles.groupTitle}>{g.title}</Text>
             <Text style={styles.groupTotal}>
               {money(g.planned)}
               {/* the type's share of the amount to distribute */}
               {shownBudget && g.planned ? <Text style={styles.groupShare}> · {percentOf(g.planned, shownBudget)}</Text> : null}
             </Text>
-          </View>
-          {g.items.map((item) => (
+          </FoldHeader>
+          {fold.is(g.title) ? null : g.items.map((item) => (
             // the whole row opens the item's sheet (amount, kind; delete is in its title); the pin is its own button
             <TouchableOpacity
               key={item.category_id}
@@ -267,7 +411,22 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
         onSubmit={saveBudget}
         onClose={() => setBudgetOpen(false)}
         inputAccessory={<Controller control={budgetForm.control} name="currency" render={({ field }) => <CurrencyButton value={field.value} onChange={field.onChange} />} />}
-      />
+      >
+        {/* how much of the budget goes to spending outside the plan: the plan can't take it */}
+        <ShareField
+          form={budgetForm} name="locked" other="unplanned" planned={total} toShown={toShown} screen={currency}
+          title="Отложить сразу" icon color={RING_LOCKED}
+          hint={(v, cur) => (v > 0 ? `${formatWithCurrency(v, cur)} сразу в сбережения: план и траты вне плана их не займут.`
+            : 'Сколько бюджета сразу заблокировать для сбережений: план и траты вне плана их не займут.')}
+        />
+        <ShareField
+          form={budgetForm} name="unplanned" other="locked" planned={total} toShown={toShown} screen={currency}
+          title="На незапланированные траты" color={RING_UNPLANNED}
+          hint={(v, cur) => (v > 0 ? `${formatWithCurrency(v, cur)} на траты вне плана — план их не займёт.`
+            : 'Сколько бюджета оставить на траты вне плана. Предупреждение в статистике — только если они больше.')}
+        />
+        <SavingsSwitch form={budgetForm} />
+      </TextInputModal>
       <PlanAmountModal
         ym={ym}
         currency={currency}
@@ -285,20 +444,43 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
 }
 
 const styles = StyleSheet.create({
+  share: { marginTop: 4 },
+  lockTitle: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12 },
+  lockMode: { marginLeft: 'auto', width: 120 },
+  lockLabel: { marginBottom: 0, marginTop: 0, flexShrink: 1 },
+  lockRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 },
+  lockOwn: { fontSize: 14, color: colors.muted },
+  lockInput: { flex: 1, paddingVertical: 6 },
+  switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 },
+  switchLabel: { fontSize: 15, color: colors.text, flex: 1 },
   screen: { flex: 1 },
   // room under the last row for the "+"
   content: { paddingHorizontal: 16, paddingBottom: 88 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  budgetBox: {
-    alignItems: 'center', marginBottom: 12, padding: 16, borderRadius: 12, backgroundColor: colors.surface,
-  },
-  budgetRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4, paddingVertical: 4, paddingHorizontal: 8 },
-  budgetValue: { fontSize: 26, fontWeight: '700', color: colors.text, fontVariant: ['tabular-nums'] },
-  summary: { flexDirection: 'row', alignSelf: 'stretch', marginTop: 14 },
-  summaryItem: { flex: 1, alignItems: 'center' },
-  summaryValue: { fontSize: 18, fontWeight: '600', color: colors.text, marginVertical: 2, fontVariant: ['tabular-nums'] },
+  budgetBox: { marginBottom: 8, padding: 14, borderRadius: 12, backgroundColor: colors.surface },
+  budgetHead: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
+  // the pencil at the top, by the amount (not between it and the original one under it)
+  budgetRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, paddingVertical: 2 },
+  pencil: { marginTop: 5 },
+  budgetValue: { fontSize: 22, fontWeight: '700', color: colors.text, fontVariant: ['tabular-nums'] },
+  left: { textAlign: 'left' },
+  budgetAmounts: { alignItems: 'flex-end' },
+  budgetOriginal: { fontSize: 13, color: colors.muted, fontVariant: ['tabular-nums'] },
+  bar: { flexDirection: 'row', height: 12, borderRadius: 5, overflow: 'hidden', gap: 2, marginTop: 10, backgroundColor: chart.track },
+  parts: { flexDirection: 'row', gap: 8, marginTop: 10 },
+  part: { flex: 1 },
+  legend: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  legendDot: { width: 8, height: 8, borderRadius: 4 },
+  partLabel: { fontSize: 12, color: colors.muted, flexShrink: 1 },
+  partValue: { fontSize: 15, fontWeight: '600', color: colors.text, marginTop: 2, fontVariant: ['tabular-nums'] },
+  partNote: { fontSize: 12, color: colors.muted, fontVariant: ['tabular-nums'] },
+  note: { fontSize: 12, color: colors.muted, marginTop: 8 },
+  overText: { color: colors.warn },
+  savingsValue: { color: RING_LOCKED },
+  lockedValue: { color: RING_LOCKED },
+  lockedPart: { backgroundColor: RING_LOCKED, alignItems: 'center', justifyContent: 'center' },
   freeValue: { color: colors.income },
-  pinNote: { marginTop: 10 },
+  pinNote: { fontSize: 12, color: colors.muted, marginBottom: 4 },
   caption: { fontSize: 13, color: colors.muted, textAlign: 'center' },
   hint: { color: colors.muted, fontSize: 14, textAlign: 'center', marginVertical: 12 },
   group: { marginTop: 12 },
@@ -320,3 +502,106 @@ const styles = StyleSheet.create({
   amountOriginal: { fontSize: 12, color: colors.muted, fontVariant: ['tabular-nums'] },
   amountEmpty: { color: colors.muted, fontSize: 14 },
 });
+
+/** The budget sheet's slider: the share of the budget for spending outside the plan, up to what the plan leaves. */
+type BudgetForm = { value: string; currency: Currency; toSavings: boolean; locked: string; unplanned: string };
+
+/** the slider's stops, % of the budget */
+const SHARE_STOPS = [0, 10, 20, 30, 40, 50];
+
+/**
+ * A part of the budget the plan can't take — "🔒 Отложить сразу", "На незапланированные траты": a % by the slider or an
+ * amount of one's own, switched by "% | USD". Kept in the form as an amount in the budget's currency; can't take what is
+ * planned or the other part.
+ */
+function ShareField({ form, name, other, planned, toShown, screen, title, icon, color, hint }: {
+  form: ReturnType<typeof useLoadedForm<BudgetForm>>;
+  name: 'locked' | 'unplanned';
+  other: 'locked' | 'unplanned';
+  /** what is planned, in the screen's currency */
+  planned: number;
+  toShown: (minor: number, from: Currency) => number | null;
+  screen: Currency;
+  title: string;
+  /** 🔒 before the title */
+  icon?: boolean;
+  color: string;
+  hint: (minor: number, currency: Currency) => string;
+}) {
+  const [value, cur, own, otherText] = useWatch({ control: form.control, name: ['value', 'currency', name, other] });
+  const amount = parseAmountOrZero(value ?? '') ?? 0;
+  const mine = parseAmountOrZero(own ?? '') ?? 0;
+  // what is free for this part, in the budget's currency (the plan: screen → budget by the amount's own rate)
+  const inScreen = cur === screen ? amount : toShown(amount, cur) ?? amount;
+  const plannedInBudget = inScreen > 0 ? Math.round((planned * amount) / inScreen) : planned;
+  const room = Math.max(0, amount - plannedInBudget - (parseAmountOrZero(otherText ?? '') ?? 0));
+  const stopOf = (p: number) => Math.round((amount * p) / 100);
+  const stop = amount > 0 ? SHARE_STOPS.find((p) => stopOf(p) === mine) : 0;
+  const maxStop = amount > 0 ? SHARE_STOPS.filter((p) => stopOf(p) <= room).pop() ?? 0 : 50;
+  const set = (minor: number) => form.setValue(name, minor ? toInputValue(minor) : '', { shouldDirty: true });
+  // an amount between the stops opens as an amount
+  const [mode, setMode] = useState<'pct' | 'amount'>(stop === undefined ? 'amount' : 'pct');
+  function switchMode(m: 'pct' | 'amount') {
+    // to the slider: the nearest stop that fits
+    if (m === 'pct' && stop === undefined && amount > 0) {
+      const near = SHARE_STOPS.reduce((b, p) => (Math.abs(stopOf(p) - mine) < Math.abs(stopOf(b) - mine) ? p : b), 0);
+      set(stopOf(Math.min(near, maxStop)));
+    }
+    setMode(m);
+  }
+  return (
+    <View style={styles.share}>
+      <View style={styles.lockTitle}>
+        {icon ? <LockIcon color={color} size={14} /> : null}
+        <Text style={[formStyles.label, styles.lockLabel]}>{title}</Text>
+        <Segmented options={[['pct', '%'], ['amount', cur]] as const} value={mode} onChange={switchMode} style={styles.lockMode} />
+      </View>
+      {mode === 'pct' ? (
+        <StepSlider values={SHARE_STOPS} value={stop ?? -1} onChange={(p) => set(stopOf(p))} max={maxStop} label={(v) => `${v}%`} color={color} />
+      ) : (
+        <View style={styles.lockRow}>
+          <Controller
+            control={form.control}
+            name={name}
+            render={({ field }) => (
+              <TextInput
+                style={[formStyles.input, styles.lockInput]}
+                value={field.value}
+                onChangeText={field.onChange}
+                placeholder="0"
+                placeholderTextColor={colors.muted}
+                keyboardType="decimal-pad"
+                maxLength={12}
+              />
+            )}
+          />
+          <Text style={styles.lockOwn}>{cur}</Text>
+        </View>
+      )}
+      <Text style={[formStyles.hint, mine > room && styles.overText]}>
+        {mine > room
+          ? `Не помещается: свободно ${formatWithCurrency(room, cur)} — остальное занято планом${other === 'locked' ? ' и отложенным' : ' и долей вне плана'}.`
+          : hint(mine, cur)}
+      </Text>
+    </View>
+  );
+}
+
+/** "Остаток — в сбережения": the budget sheet's switch, remembered for the next months. */
+function SavingsSwitch({ form }: { form: ReturnType<typeof useLoadedForm<BudgetForm>> }) {
+  return (
+    <View style={styles.share}>
+      <Controller
+        control={form.control}
+        name="toSavings"
+        render={({ field }) => (
+          <View style={styles.switchRow}>
+            <Text style={styles.switchLabel}>Остаток — в сбережения</Text>
+            <Switch value={field.value} onValueChange={field.onChange} trackColor={{ true: RING_SAVINGS, false: colors.border }} thumbColor={colors.bg} />
+          </View>
+        )}
+      />
+      <Text style={formStyles.hint}>Что не запланировано и не потрачено, откладывается в категорию «Сбережения». Запоминается на следующие месяцы.</Text>
+    </View>
+  );
+}

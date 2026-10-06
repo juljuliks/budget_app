@@ -1,5 +1,6 @@
 import notifee, { AndroidImportance, EventType } from '@notifee/react-native';
 import { handleNotificationAction, CHANNEL_ID, LIMITS_CHANNEL_ID } from './notifeeIntegration';
+import { REPORTS_CHANNEL_ID } from './monthReportNotice';
 
 export async function createNotificationChannel() {
   try {
@@ -12,6 +13,11 @@ export async function createNotificationChannel() {
     await notifee.createChannel({
       id: LIMITS_CHANNEL_ID,
       name: 'Лимиты',
+      importance: AndroidImportance.DEFAULT,
+    });
+    await notifee.createChannel({
+      id: REPORTS_CHANNEL_ID,
+      name: 'Отчёт за месяц',
       importance: AndroidImportance.DEFAULT,
     });
   } catch (e) {

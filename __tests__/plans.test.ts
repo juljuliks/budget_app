@@ -180,7 +180,7 @@ describe('amount to distribute', () => {
     await expect(setPlanBudget(M1, 50000)).rejects.toHaveProperty('budget_minor', 50000);
     expect(await getPlanBudget(M1)).toBeNull();
     await setPlanBudget(M1, 60000);
-    expect(await getPlanBudget(M1)).toEqual({ amount_minor: 60000, currency: 'GEL' });
+    expect(await getPlanBudget(M1)).toMatchObject({ amount_minor: 60000, currency: 'GEL' });
     await setPlanBudget(M1, null);
     await setPlanAmount(M1, 1, 99999999);
     expect(await getPlanBudget(M1)).toBeNull();
@@ -197,7 +197,7 @@ describe('amount to distribute', () => {
 
   test('carries over to the next month', async () => {
     await setPlanBudget(M1, 300000);
-    expect(await getPlanBudget(M2)).toEqual({ amount_minor: 300000, currency: 'GEL' });
+    expect(await getPlanBudget(M2)).toMatchObject({ amount_minor: 300000, currency: 'GEL' });
   });
 
   test('month income = GEL deposits of the month', async () => {
@@ -263,4 +263,81 @@ test('period stats list the planned categories even with nothing spent, after th
   const empty = await periodStats(day.from - 86400, day.from - 3600, 'GEL', [taxi, bars]);
   expect(empty.categories.map((c) => [c.name, c.spent_minor])).toEqual([['Бары', 0], ['Такси', 0]]);
   expect((await periodStats(day.from - 86400, day.from - 3600, 'GEL')).categories).toEqual([]);
+});
+
+describe('the unplanned share of the budget', () => {
+  const { getPlanBudget, setPlanBudget, setPlanAmount, ensureMonthPlan } = require('../src/db/plans');
+  const { getDb } = require('../src/db');
+  const cat = async (name: string) => (await (await getDb()).run('INSERT INTO categories (name) VALUES (?)', [name])).lastInsertRowid;
+
+  test('the plan can take only the budget minus the share; the share carries over', async () => {
+    const food = await cat('Еда');
+    await setPlanBudget('2026-10', 100000, 'GEL', 20);
+    expect(await getPlanBudget('2026-10')).toMatchObject({ amount_minor: 100000, unplanned_pct: 20, plannable_minor: 80000 });
+    await setPlanAmount('2026-10', food, 80000);
+    await expect(setPlanAmount('2026-10', food, 80001)).rejects.toHaveProperty('budget_minor', 80000);
+    // more share than the plan leaves: refused
+    await expect(setPlanBudget('2026-10', 100000, 'GEL', 30)).rejects.toHaveProperty('budget_minor', 70000);
+    // the amount changed without a share: the stored one is kept
+    await setPlanBudget('2026-10', 110000, 'GEL');
+    expect(await getPlanBudget('2026-10')).toMatchObject({ unplanned_pct: 20, plannable_minor: 88000 });
+    await ensureMonthPlan('2026-11', '2026-10');
+    expect(await getPlanBudget('2026-11')).toMatchObject({ amount_minor: 110000, unplanned_pct: 20 });
+  });
+});
+
+describe('savings', () => {
+  const { monthStats, getPlanBudget, setPlanBudget, ensureMonthPlan } = require('../src/db/plans');
+  const { savingsCategoryId, deleteCategory, updateCategory, getCategory } = require('../src/db/categories');
+  const { addManualTransaction } = require('../src/db/transactions');
+
+  test('an operation in "Сбережения" is money put aside, not spending', async () => {
+    const savings = await savingsCategoryId();
+    expect(savings).not.toBeNull();
+    const at = Math.floor(new Date('2026-10-03T12:00:00').getTime() / 1000);
+    await addManualTransaction({ amount_minor: 5000, category_id: savings, occurred_at: at });
+    await addManualTransaction({ amount_minor: 1000, category_id: null, occurred_at: at });
+    const stats = await monthStats(2026, 9, 'GEL');
+    expect(stats.spent_minor).toBe(1000);
+  });
+
+  test('the system category keeps its name and cannot be deleted', async () => {
+    const savings = await savingsCategoryId();
+    await updateCategory(savings, { name: 'Другое имя', emoji: '💰', typeId: null });
+    expect(await getCategory(savings)).toMatchObject({ name: 'Сбережения', emoji: '💰' });
+    await expect(deleteCategory(savings, null)).rejects.toThrow();
+  });
+
+  test('the leftover goes to savings by default; the choice carries over', async () => {
+    await setPlanBudget('2026-10', 100000, 'GEL');
+    expect(await getPlanBudget('2026-10')).toMatchObject({ to_savings: true });
+    await setPlanBudget('2026-10', 100000, 'GEL', 0, false);
+    await ensureMonthPlan('2026-11', '2026-10');
+    expect(await getPlanBudget('2026-11')).toMatchObject({ to_savings: false });
+  });
+});
+
+describe('locked for savings', () => {
+  const { getPlanBudget, setPlanBudget, setPlanAmount, ensureMonthPlan } = require('../src/db/plans');
+  const { getDb } = require('../src/db');
+  test('the plan can take neither the share outside it nor what is locked; the lock carries over', async () => {
+    const food = (await (await getDb()).run("INSERT INTO categories (name) VALUES ('Еда')")).lastInsertRowid;
+    await setPlanBudget('2026-10', 100000, 'GEL', 10, true, 20000);
+    expect(await getPlanBudget('2026-10')).toMatchObject({ locked_minor: 20000, plannable_minor: 70000 });
+    await setPlanAmount('2026-10', food, 70000);
+    await expect(setPlanAmount('2026-10', food, 70001)).rejects.toHaveProperty('budget_minor', 70000);
+    await expect(setPlanBudget('2026-10', 100000, 'GEL', 10, true, 20001)).rejects.toHaveProperty('planned_minor', 70000);
+    await ensureMonthPlan('2026-11', '2026-10');
+    expect(await getPlanBudget('2026-11')).toMatchObject({ locked_minor: 20000 });
+  });
+});
+
+test('the share outside the plan as an amount of one\'s own', async () => {
+  const { getPlanBudget, setPlanBudget, unplannedOf } = require('../src/db/plans');
+  await setPlanBudget('2026-10', 100000, 'GEL', 0, true, 0, 12345);
+  const b = await getPlanBudget('2026-10');
+  expect(unplannedOf(b)).toBe(12345);
+  expect(b.plannable_minor).toBe(100000 - 12345);
+  await setPlanBudget('2026-10', 100000, 'GEL', 20, true, 0, null);
+  expect(unplannedOf(await getPlanBudget('2026-10'))).toBe(20000);
 });

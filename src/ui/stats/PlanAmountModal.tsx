@@ -5,7 +5,8 @@ import { categoryMonthlyAverage, getPlanBudget, lastPlanItem, NormPeriod, OverBu
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { TrashIcon } from '../icons';
 import { colors } from '../theme';
-import { AMOUNT_HINT, SPENDING_PATTERN } from '../strings';
+import { AMOUNT_HINT, PER_PERIOD, SPENDING_PATTERN } from '../strings';
+import { daysInMonth } from '../dateRange';
 import { formStyles } from '../formStyles';
 import CurrencyButton from '../CurrencyButton';
 import { formatWithCurrency, parseAmountOrZero, toInputValue } from '../money';
@@ -21,7 +22,17 @@ const KINDS = [
 ] as const;
 
 // how the category is spent: its limit in day / week stats is counted per this period
-const PATTERNS = (['day', 'week', '2weeks', 'month'] as const).map((p) => [p, SPENDING_PATTERN[p].title, SPENDING_PATTERN[p].hint] as const);
+const PATTERN_KEYS = ['day', 'week', '2weeks', 'month'] as const;
+const PATTERN_DAYS = { day: 1, week: 7, '2weeks': 14 } as const;
+
+/** The patterns, each with what the entered amount makes per its period: "Каждый день · ≈ 15 ₾ в день". */
+function patterns(minor: number | null, currency: Currency, ym: string) {
+  return PATTERN_KEYS.map((p) => {
+    const per = !minor ? null : p === 'month' ? minor : Math.round((minor / daysInMonth(ym)) * PATTERN_DAYS[p]);
+    const title = per === null ? SPENDING_PATTERN[p].title : `${SPENDING_PATTERN[p].title} · ${p === 'month' ? '' : '≈ '}${formatWithCurrency(per, currency)} ${PER_PERIOD[p]}`;
+    return [p, title, SPENDING_PATTERN[p].hint] as const;
+  });
+}
 
 export type PlanAmountTarget = {
   category_id: number;
@@ -62,6 +73,7 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
     value: toInputValue(target.limit_minor), currency: target.currency, kind: target.kind ?? 'limit', norm: target.norm_period ?? 'day',
   } : null, target !== null);
   const kind = useWatch({ control: form.control, name: 'kind' });
+  const [entered, enteredCurrency] = useWatch({ control: form.control, name: ['value', 'currency'] });
   const [previous, setPrevious] = useState<{ minor: number; currency: Currency; ym: string } | null>(null);
   // what the category usually takes a month (the latest full months), in the app's currency
   const [average, setAverage] = useState<{ minor: number; months: number; from: string; to: string } | null>(null);
@@ -77,7 +89,8 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
         const c = conv(minor, from, shown);
         return c === null ? { minor, currency: from } : { minor: c, currency: shown };
       };
-      setFree(budget ? inShown(Math.max(budget.amount_minor - others, 0), budget.currency) : null);
+      // the unplanned share is not for the plan
+      setFree(budget ? inShown(Math.max(budget.plannable_minor - others, 0), budget.currency) : null);
       setPrevious(last ? { ...inShown(last.limit_minor, last.currency), ym: last.ym } : null);
       setAverage(avg && avg.average_minor > 0 ? { minor: avg.average_minor, months: avg.months, from: avg.from, to: avg.to } : null);
       // not in the plan yet: last month's item is offered, ready to save as is (so it counts as a change)
@@ -155,7 +168,7 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
       {kind === 'limit' ? (
         <>
           <Text style={formStyles.label}>Как тратите</Text>
-          <Controller control={form.control} name="norm" render={({ field }) => <RadioGroup options={PATTERNS} value={field.value} onChange={field.onChange} />} />
+          <Controller control={form.control} name="norm" render={({ field }) => <RadioGroup options={patterns(parseAmountOrZero(entered ?? ''), enteredCurrency, ym)} value={field.value} onChange={field.onChange} />} />
           <Text style={formStyles.hint}>По этому в статистике считается лимит на день или неделю.</Text>
         </>
       ) : null}

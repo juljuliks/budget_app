@@ -8,6 +8,7 @@ import { openTransaction } from '../sheets';
 import { KIND_LABELS } from '../ui/format';
 import { formatMoneyWithCurrency } from '../ui/money';
 import { limitAlertFor } from '../limitAlerts';
+import { REPORT_ACTION } from './monthReportNotice';
 
 export const CHANNEL_ID = 'transactions';
 /** «Лимиты»: a category near / over its plan or its rhythm's limit (src/limitAlerts.ts) */
@@ -114,6 +115,14 @@ export async function handleNotificationAction(event: ActionEvent) {
   if (id === LIMITS_ACTION) {
     const { navigateWhenReady } = require('../navigation') as typeof import('../navigation');
     navigateWhenReady({ name: 'Main', params: { screen: 'Stats' } } as never);
+    return;
+  }
+  // the month's report: the stats with the report over them
+  if (id === REPORT_ACTION) {
+    const ym = String(event.notification?.data?.ym ?? '');
+    const { navigateWhenReady } = require('../navigation') as typeof import('../navigation');
+    navigateWhenReady({ name: 'Main', params: { screen: 'Stats' } } as never);
+    if (ym) require('../sheets').openMonthReport(ym);
     return;
   }
   const txId = Number(event.notification?.data?.txId);
