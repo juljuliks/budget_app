@@ -5,7 +5,7 @@ import { useOpenCategoryTransactions } from '../../navigation';
 import { categoryLabel } from '../../db/categories';
 import { Currency } from '../../db/fx';
 import { CategoryStat, currentYm, monthStats, MonthStats, StatGroup, ymOf } from '../../db/plans';
-import { dayKeyOf, daysInMonth, monthDays } from '../dateRange';
+import { dayKeyOf, daysInMonth, monthDays, shortRange } from '../dateRange';
 import { flatOf, limitChange, loadNorms, Norms, Pace, paceOf } from './norms';
 import { onTransactionsChanged } from '../../events';
 import Donut, { DonutSegment } from '../Donut';
@@ -89,16 +89,33 @@ export default function StatsView({ year, month, currency }: { year: number; mon
         </Donut>
       </View>
 
-      {plannedAll > 0 ? (
-        <View style={styles.summary}>
-          <SummaryItem label="План" value={formatWithCurrency(plannedAll, stats.currency)} />
-          <SummaryItem
-            label={remaining >= 0 ? 'Осталось' : 'Перерасход'}
-            value={formatWithCurrency(Math.abs(remaining), stats.currency)}
-            danger={remaining < 0}
-          />
-        </View>
-      ) : (
+      {plannedAll > 0 ? (() => {
+        // the month against its whole plan (the categories' plan and the share outside it) as one bar, like a
+        // section's: the current month with a tick where an even pace would be today
+        const left = Math.round(plannedAll) - stats.spent_minor;
+        const lastDay = `${ym}-${String(daysInMonth(ym)).padStart(2, '0')}`;
+        return (
+          <View style={styles.monthBox}>
+            <Text style={styles.monthLine}>
+              {'Потрачено '}
+              <MaskedTotal style={styles.groupTotal} hiddenText={pct(stats.spent_minor, plannedAll)}>
+                {formatShort(stats.spent_minor)}
+                <Text style={styles.rowLimit}> / {formatWithCurrency(Math.round(plannedAll), stats.currency)}{stats.spent_minor > 0 ? ` (${pct(stats.spent_minor, plannedAll)})` : ''}</Text>
+              </MaskedTotal>
+            </Text>
+            {left < 0
+              ? <Meter ratio={1} over={plannedAll / stats.spent_minor} height={8} color={chart.meterFill} />
+              : <Meter ratio={stats.spent_minor / plannedAll} height={8} color={chart.meterFill} marker={evenPace} />}
+            <Text style={styles.rowStatus}>
+              {left < 0
+                ? <Text style={styles.overLine}>Перерасход <Masked style={styles.overLine}>{formatWithCurrency(-left, stats.currency)}</Masked></Text>
+                : ym < currentYm()
+                  ? <>Сэкономлено <Masked style={styles.rowStatus}>{formatWithCurrency(left, stats.currency)}</Masked></>
+                  : <>Осталось <Masked style={styles.rowStatus}>{formatWithCurrency(left, stats.currency)}</Masked> · до {shortRange({ from: lastDay, to: lastDay })}</>}
+            </Text>
+          </View>
+        );
+      })() : (
         <Text style={styles.hint}>Составьте план на месяц во вкладке «План», чтобы видеть остаток по категориям.</Text>
       )}
 
@@ -255,15 +272,6 @@ function planShare(spent: number, limit: number): string {
   return ` (${p === 0 ? '<1' : p}%)`;
 }
 
-function SummaryItem({ label, value, danger }: { label: string; value: string; danger?: boolean }) {
-  return (
-    <View style={styles.summaryItem}>
-      <Text style={styles.caption}>{label}</Text>
-      <Masked style={[styles.summaryValue, danger && styles.dangerText]}>{danger ? '⚠ ' : ''}{value}</Masked>
-    </View>
-  );
-}
-
 const RHYTHM_DAYS = { day: 1, week: 7, '2weeks': 14 } as const;
 const RHYTHM_NOW = { day: 'Сегодня', week: 'На этой неделе', '2weeks': 'За эти 2 недели' } as const;
 const WEEKDAYS = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
@@ -377,9 +385,8 @@ const styles = StyleSheet.create({
   hero: { fontSize: 34, fontWeight: '700', color: colors.text },
   pickedName: { fontSize: 15, color: colors.text, textAlign: 'center', maxWidth: 150 },
   pickedAmount: { fontSize: 24, fontWeight: '700', color: colors.text, marginVertical: 2 },
-  summary: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 16 },
-  summaryItem: { alignItems: 'center' },
-  summaryValue: { fontSize: 18, fontWeight: '600', color: colors.text, marginTop: 2 },
+  monthBox: { marginBottom: 16 },
+  monthLine: { fontSize: 13, color: colors.muted },
   dangerText: { color: colors.danger },
   hint: { color: colors.muted, fontSize: 14, textAlign: 'center', marginVertical: 12 },
   group: { marginTop: 16 },
