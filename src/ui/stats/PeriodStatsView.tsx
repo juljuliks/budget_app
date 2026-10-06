@@ -323,12 +323,25 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
   const rightSpent = (c: CategoryStat, plan: ReturnType<NonNullable<typeof norms>['byCategory']['get']>) =>
     (plan?.kind === 'limit' && plan.rhythm !== 'month' ? limitPair(plan, c).spent : c.spent_minor);
 
+  /** a row with just the name and the period's spending (no limit to judge it by): tap opens its operations */
+  const plainRow = (c: CategoryStat) => (
+    <TouchableOpacity key={String(c.category_id)} style={styles.row} onPress={() => openTransactions(c.category_id, range)} accessibilityHint="Показать операции категории за период">
+      <View style={styles.rowTop}>
+        <View style={[styles.dot, { backgroundColor: c.color }]} />
+        <Text style={styles.name} numberOfLines={1}>{`${c.emoji || ''} ${c.name}`.trim()}</Text>
+        <Text style={[styles.amount, styles.amountPad]}>{hidden ? headerPct(c.spent_minor, 0) : money(c.spent_minor)}</Text>
+      </View>
+    </TouchableOpacity>
+  );
+
   /** a category's row: tap opens its operations in the period; a limit's line has its ⓘ */
-  const rowOf = (c: CategoryStat, _i?: number, _all?: CategoryStat[], noBar = false) => {
+  const rowOf = (c: CategoryStat, _i?: number, _all?: CategoryStat[], noBar = false, plainAmount = false) => {
     // noBar: in a limits section of several categories the section's bar shows them all
+    // plainAmount: outside the period's own limit sections (a month's overspend) — just the spending on the right
     const plan = c.category_id === null ? undefined : norms?.byCategory.get(c.category_id);
     const mtd = (c.category_id !== null && norms?.monthToDate.get(c.category_id)) || 0;
     const name = `${c.emoji || ''} ${c.name}`.trim();
+    const ofLimit = plainAmount ? null : ofLimitOf(c, plan);
     return (
       // tap: the category's operations in this period (the ⓘ line inside keeps its own tap)
       <TouchableOpacity
@@ -346,8 +359,8 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
               nested text was cut short on Android ("0 /", "0 / 106.8…") */}
           {hidden ? <Text style={styles.amount} numberOfLines={1}>{hiddenShare(c, plan)}</Text> : (
             <View style={styles.amountBox}>
-              <Text style={styles.amountText}>{ofLimitOf(c, plan) ? formatShort(rightSpent(c, plan)) : money(c.spent_minor)}</Text>
-              {ofLimitOf(c, plan) ? <Text style={[styles.amountText, styles.ofLimit]}>{ofLimitOf(c, plan)}</Text> : null}
+              <Text style={styles.amountText}>{ofLimit ? formatShort(rightSpent(c, plan)) : money(c.spent_minor)}</Text>
+              {ofLimit ? <Text style={[styles.amountText, styles.ofLimit]}>{ofLimit}</Text> : null}
             </View>
           )}
         </View>
@@ -509,7 +522,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
               {money(overspentCats.reduce((a, c) => a + c.spent_minor, 0))}
             </MaskedTotal>
           </FoldHeader>
-          {fold.is(OVERSPENT) ? null : overspentCats.map((c, i) => rowOf(c, i, overspentCats, false))}
+          {fold.is(OVERSPENT) ? null : overspentCats.map((c, i) => rowOf(c, i, overspentCats, false, true))}
         </View>
       )] : []).concat(otherCats.length ? [(
         // limits these days can't measure (a weekly one on a day, the month's, obligatory payments): just the spending
@@ -520,15 +533,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
               {money(otherCats.reduce((a, c) => a + c.spent_minor, 0))}
             </MaskedTotal>
           </FoldHeader>
-          {fold.is(OTHER) ? null : otherCats.map((c) => (
-            <TouchableOpacity key={String(c.category_id)} style={styles.row} onPress={() => openTransactions(c.category_id, range)} accessibilityHint="Показать операции категории за период">
-              <View style={styles.rowTop}>
-                <View style={[styles.dot, { backgroundColor: c.color }]} />
-                <Text style={styles.name} numberOfLines={1}>{`${c.emoji || ''} ${c.name}`.trim()}</Text>
-                {hidden ? <Text style={styles.amount}>{headerPct(c.spent_minor, 0)}</Text> : <Text style={styles.amount}>{money(c.spent_minor)}</Text>}
-              </View>
-            </TouchableOpacity>
-          ))}
+          {fold.is(OTHER) ? null : otherCats.map(plainRow)}
         </View>
       )] : []) : split.groups.map((g) => (
         <View key={`${g.type_id}-${g.title}`} style={styles.group}>
@@ -573,7 +578,8 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                   </View>
                 );
               })() : null}
-              {split.unplanned.map(rowOf)}
+              {/* just the spending: no "% всех трат" line under each */}
+              {byLimits ? split.unplanned.map(plainRow) : split.unplanned.map(rowOf)}
             </>
           )}
         </View>
@@ -810,7 +816,9 @@ const styles = StyleSheet.create({
   // no tabular-nums here: Android under-measures such text and cut "0 / 106.81 ₾" to "0 /"
   amount: { flexShrink: 0, marginLeft: 8, fontSize: 13, color: colors.text },
   amountBox: { flexShrink: 0, flexDirection: 'row', alignItems: 'baseline', marginLeft: 8 },
-  amountText: { fontSize: 13, color: colors.text },
+  // a bit of room after the last glyph: "₾" comes from a fallback font Android doesn't measure, and was cut off
+  amountText: { fontSize: 13, color: colors.text, paddingRight: 2 },
+  amountPad: { paddingRight: 2 },
   // "/ plan" like the spending before it: one amount pair
   ofLimit: { color: colors.muted },
   info: { paddingHorizontal: 20, gap: 10, paddingBottom: 4 },
