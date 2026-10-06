@@ -243,7 +243,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                 {/* "старый → новый": no "Лимит" word, it's plain what it is */}
                 {moved ? <><Text style={styles.crossed}>{m(g.change.before)}</Text>{' → '}</> : 'Лимит '}
                 <Text style={moved ? (g.change.after! < g.change.before ? styles.paceAhead : styles.paceOk) : undefined}>{m(moved ? g.change.after! : g.change.before)}</Text>
-                {` ${PER_PERIOD[g.key as 'day']}\n`}
+                {/* no "в неделю": the section says which limit it is */}{'\n'}
               </>
             ) : null}
             {g.window && rhythm ? windowLabel(g.key as NormPeriod, g.window) : !rhythm ? `${capitalize(monthIn)}: ` : ''}
@@ -386,7 +386,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                         {/* "старый → новый": no "Лимит" word, it's plain what it is */}
                         {moved ? <><Text style={styles.crossed}>{m(before)}</Text>{' → '}</> : 'Лимит '}
                         <Text style={moved ? (after! < before ? styles.paceAhead : styles.paceOk) : undefined}>{m(moved ? after! : before)}</Text>
-                        {` ${PER_PERIOD[plan.rhythm]}\n`}
+                        {/* no "в неделю": the section says which limit it is */}{'\n'}
                       </>
                     );
                   })() : null}

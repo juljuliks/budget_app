@@ -141,7 +141,7 @@ export default function SummaryTiles({ groups, money, onPress }: Props) {
                     <Text style={styles.crossed}>{m(g.change.before)}</Text>{' → '}
                     <Text style={g.change.after! < g.change.before ? styles.over : styles.ok}>{m(g.change.after!)}</Text>
                   </>
-                ) : `лимит ${m(g.change.before)}`} {PER_PERIOD[g.key]}
+                ) : `лимит ${m(g.change.before)}`}
               </Text>
             ) : null}
             </View>
