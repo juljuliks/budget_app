@@ -539,24 +539,22 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
           {fold.is(g.title) ? null : g.categories.map(rowOf)}
         </View>
       ))}
-      {month && (split.unplanned.length || month.share > 0) ? (
+      {/* shorter than a month: the share is the month's limit, these days can't measure it — just the spending */}
+      {month && (split.unplanned.length || (month.share > 0 && !byLimits)) ? (
         <View style={styles.group}>
           <FoldHeader style={[formStyles.sectionHeader, styles.groupHeader]} folded={fold.is(UNPLANNED)} onToggle={() => fold.toggle(UNPLANNED)}>
             <Text style={styles.groupTitle}>{UNPLANNED}</Text>
             {/* like the limits' headers: the month's spending outside the plan / its share (%) — the share is a month's,
                 as an obligatory payment's plan is */}
-            {byLimits && month.share > 0 ? (
-              <MaskedTotal style={styles.groupTotal} hiddenText={headerPct(month.spent, month.share)}>
-                {formatShort(month.spent)}
-                <Text style={styles.groupPlan}> / {m(month.share)} ({pct(month.spent, Math.round(month.share))})</Text>
-              </MaskedTotal>
+            {byLimits ? (
+              <MaskedTotal style={styles.groupTotal} hiddenText={headerPct(split.spent, 0)}>{money(split.spent)}</MaskedTotal>
             ) : <SectionTotal spent={split.spent} planned={month.share} />}
           </FoldHeader>
           {fold.is(UNPLANNED) ? null : (
             <>
               {/* the share is a month's limit, drawn like a "крупно, раз в месяц" category's: the month so far, the
                   other days faded, an overspend scaled to the spending with a tick at the share */}
-              {month.share > 0 ? (() => {
+              {month.share > 0 && !byLimits ? (() => {
                 const left = Math.round(month.share) - month.spent;
                 const others = Math.max(0, month.spent - split.spent);
                 return (
