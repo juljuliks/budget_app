@@ -10,6 +10,7 @@ import { flatOf, limitChange, loadNorms, Norms, Pace, paceOf } from './norms';
 import { onTransactionsChanged } from '../../events';
 import Donut, { DonutSegment } from '../Donut';
 import Masked from '../Masked';
+import { useHideAmounts } from '../../hideAmounts';
 import Meter from '../Meter';
 import { formatMoneyWithCurrency, formatShort, formatWithCurrency } from '../money';
 import { NO_RATE, PER_PERIOD } from '../strings';
@@ -34,6 +35,7 @@ function donutSegments(groups: StatGroup[]): DonutSegment[] {
 
 export default function StatsView({ year, month, currency }: { year: number; month: number; currency: Currency }) {
   const [stats, setStats] = useState<MonthStats | null>(null);
+  const hidden = useHideAmounts();
   // "＋ В план" on a category without a plan amount
   const [planTarget, setPlanTarget] = useState<PlanAmountTarget | null>(null);
   // the donut segment tapped: its category's spending and share in the hole
@@ -106,10 +108,13 @@ export default function StatsView({ year, month, currency }: { year: number; mon
           <View key={`${g.type_id}-${g.title}`} style={styles.group}>
             <FoldHeader style={[formStyles.sectionHeader, styles.groupHeader]} folded={fold.is(g.title)} onToggle={() => fold.toggle(g.title)}>
               <Text style={styles.groupTitle}>{g.title}</Text>
-              <Text style={styles.groupTotal}>
-                {g.planned_minor ? formatShort(g.spent_minor) : formatWithCurrency(g.spent_minor, stats.currency)}
-                {g.planned_minor ? <Text style={styles.rowLimit}> / {formatWithCurrency(g.planned_minor, stats.currency)}</Text> : null}
-              </Text>
+              {/* "Скрыть суммы": no spent / plan in the section headers */}
+              {hidden ? null : (
+                <Text style={styles.groupTotal}>
+                  {g.planned_minor ? formatShort(g.spent_minor) : formatWithCurrency(g.spent_minor, stats.currency)}
+                  {g.planned_minor ? <Text style={styles.rowLimit}> / {formatWithCurrency(g.planned_minor, stats.currency)}</Text> : null}
+                </Text>
+              )}
             </FoldHeader>
             {fold.is(g.title) ? null : g.categories.map((c) => (
               <CategoryRow
@@ -208,9 +213,10 @@ function CategoryRow({ stat, currency, evenPace, dim, ym, openTransactions, now,
 }) {
   const { spent_minor: spent, limit_minor: limit } = stat;
   const ratio = limit ? spent / limit : 0;
-  // fixed payment (rent, subscription): any spending this month means it's paid
+  // fixed payment (rent, subscription): paid once this month's spending covers its plan; until then — how much of it
   const fixed = stat.plan_kind === 'fixed';
-  const paid = spent > 0;
+  const paid = !!limit && spent >= limit;
+  const paidPct = limit ? Math.min(99, Math.floor((Math.max(0, spent) / limit) * 100)) : 0;
   const rhythm = !fixed && stat.plan_norm && stat.plan_norm !== 'month' ? stat.plan_norm : null;
 
   return (
@@ -218,10 +224,13 @@ function CategoryRow({ stat, currency, evenPace, dim, ym, openTransactions, now,
       <View style={styles.rowTop}>
         <View style={[styles.dot, { backgroundColor: stat.color }]} />
         <Text style={styles.rowName} numberOfLines={1}>{`${stat.emoji || ''} ${stat.name}`.trim()}</Text>
-        {/* an obligatory payment: paid this month (any spending) — a green tick, otherwise a grey circle */}
+        {/* an obligatory payment: all paid — a green tick, partly — the paid share, nothing yet — a grey circle */}
         {limit && fixed ? (
-          <Text style={[styles.paidMark, paid ? styles.paidOn : styles.paidOff]} accessibilityLabel={paid ? 'Оплачено' : 'Не оплачено'}>
-            {paid ? '✓' : '○'}
+          <Text
+            style={[paid || paidPct === 0 ? styles.paidMark : styles.paidPct, paid ? styles.paidOn : styles.paidOff]}
+            accessibilityLabel={paid ? 'Оплачено' : paidPct > 0 ? `Оплачено ${paidPct}%` : 'Не оплачено'}
+          >
+            {paid ? '✓' : paidPct > 0 ? `${paidPct}%` : '○'}
           </Text>
         ) : null}
         {onAddToPlan ? (
@@ -319,6 +328,7 @@ const styles = StyleSheet.create({
   refundsAmount: { fontSize: 15, color: colors.income, fontVariant: ['tabular-nums'] },
   // under the amount, on the right
   paidMark: { fontSize: 16, fontWeight: '700', marginLeft: 6 },
+  paidPct: { fontSize: 13, fontWeight: '600', marginLeft: 6, fontVariant: ['tabular-nums'] },
   paidOn: { color: colors.income },
   paidOff: { color: colors.muted },
 });

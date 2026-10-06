@@ -13,6 +13,7 @@ import Fab from '../Fab';
 import { daysInMonth } from '../dateRange';
 import { LockIcon, PencilIcon, PinIcon } from '../icons';
 import Masked from '../Masked';
+import { useHideAmounts } from '../../hideAmounts';
 import StepSlider from '../StepSlider';
 import Segmented from '../Segmented';
 import { formatWithCurrency, parseAmountOrZero, toInputValue } from '../money';
@@ -77,6 +78,7 @@ function groupByType(items: PlanItem[]): Array<{ title: string; planned: number;
  * the tab), with the original in brackets when it differs.
  */
 export default function PlanView({ ym, currency }: { ym: string; currency: Currency }) {
+  const hidden = useHideAmounts();
   const [items, setItems] = useState<PlanItem[] | null>(null);
   // amount to distribute (e.g. salary) in its own currency; null = not set (shown as 0, no cap)
   const [budget, setBudget] = useState<PlanBudget | null>(null);
@@ -165,7 +167,8 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
         ? {
           // the locked part and the leftover together: one savings column
           key: 'free', label: 'Сбережения', value: Math.max(0, free ?? 0) + locked, color: RING_SAVINGS,
-          note: locked > 0 ? `🔒 ${money(locked)}${(free ?? 0) > 0 ? ` + ${money(free!)}` : ''}` : percentOf(free ?? 0, shownBudget) || '0%',
+          // just the sum and its share: what it's made of (🔒 + 🌊) is in the "Сбережения" section below
+          note: percentOf(Math.max(0, free ?? 0) + locked, shownBudget) || '0%',
           valueStyle: styles.savingsValue,
         }
         : { key: 'free', label: 'Не распределено', value: Math.max(0, free ?? 0), color: RING_FREE, note: percentOf(free ?? 0, shownBudget) || '0%', valueStyle: styles.freeValue },
@@ -268,7 +271,7 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
                 <Masked style={styles.budgetOriginal}>{formatWithCurrency(budget.amount_minor, budget.currency)}</Masked>
               ) : null}
             </View>
-            <View style={styles.pencil}><PencilIcon color={colors.accent} size={18} /></View>
+            {hidden ? null : <View style={styles.pencil}><PencilIcon color={colors.accent} size={18} /></View>}
           </TouchableOpacity>
         </View>
 
@@ -316,9 +319,10 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
         <View key={g.title} style={styles.group}>
           <FoldHeader style={[formStyles.sectionHeader, styles.groupHeader]} folded={fold.is(g.title)} onToggle={() => fold.toggle(g.title)}>
             <Text style={styles.groupTitle}>{g.title}</Text>
+            {/* "Скрыть суммы": the share only */}
             <Text style={styles.groupTotal}>
-              {money(g.rows.reduce((a, r) => a + r.value, 0))}
-              <Text style={styles.groupShare}> · {percentOf(g.rows.reduce((a, r) => a + r.value, 0), shownBudget) || '0%'}</Text>
+              {hidden ? null : money(g.rows.reduce((a, r) => a + r.value, 0))}
+              <Text style={styles.groupShare}>{hidden ? '' : ' · '}{percentOf(g.rows.reduce((a, r) => a + r.value, 0), shownBudget) || '0%'}</Text>
             </Text>
           </FoldHeader>
           {fold.is(g.title) ? null : g.rows.map((r) => (
@@ -341,10 +345,10 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
         <View key={g.title} style={styles.group}>
           <FoldHeader style={[formStyles.sectionHeader, styles.groupHeader]} folded={fold.is(g.title)} onToggle={() => fold.toggle(g.title)}>
             <Text style={styles.groupTitle}>{g.title}</Text>
+            {/* the type's share of the amount to distribute; "Скрыть суммы": the share only */}
             <Text style={styles.groupTotal}>
-              {money(g.planned)}
-              {/* the type's share of the amount to distribute */}
-              {shownBudget && g.planned ? <Text style={styles.groupShare}> · {percentOf(g.planned, shownBudget)}</Text> : null}
+              {hidden && shownBudget ? null : money(g.planned)}
+              {shownBudget && g.planned ? <Text style={styles.groupShare}>{hidden ? '' : ' · '}{percentOf(g.planned, shownBudget)}</Text> : null}
             </Text>
           </FoldHeader>
           {fold.is(g.title) ? null : g.items.map((item) => (
