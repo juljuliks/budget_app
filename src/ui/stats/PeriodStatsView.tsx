@@ -49,7 +49,8 @@ const GROUP_ABOUT: Record<SummaryGroupKey, string> = {
   week: 'Категории с лимитом на неделю. Если период короче недели, считается вся неделя, как в строках категорий: траты в другие её дни тоже входят.',
   '2weeks': 'Категории с лимитом на 2 недели. Если период короче, считаются обе недели целиком: траты в другие их дни тоже входят.',
   month: 'Категории, которые вы тратите «крупно, раз в месяц»: план на месяц и траты с 1-го.',
-  outside: 'Траты за период, которые в лимиты не входят: обязательные платежи, переводы, категории без плана.',
+  fixed: 'Аренда, подписки, кредит: оплачено с 1-го числа против плана месяца. Остаток — сколько ещё предстоит оплатить, это не свободные деньги. Переплата — перерасход.',
+  outside: 'Категории без плана в этом месяце и траты без категории. Доля на них задаётся в бюджете месяца — она как месячный лимит: траты с 1-го против неё.',
 };
 
 /** the bottom section of the categories without a plan (as in the plan and the month) */
@@ -143,20 +144,21 @@ export default function PeriodStatsView({ range, emptyText = 'За этот пе
   };
   const monthIn = norms ? MONTHS_IN[parseYm(norms.ym).month] : '';
   // under the donut: the limits by rhythm as tiles, or the average per month for a long period
-  const groups = pace && norms ? summaryGroups(norms, range, stats.spent_minor, today) : [];
+  const groups = pace && norms ? summaryGroups(norms, range, stats.spent_minor, today, month ?? undefined) : [];
   const limited = groups.filter((g) => g.key !== 'outside');
   const catInfo = infoOpen && typeof infoOpen === 'object' && 'id' in infoOpen ? infoOpen : null;
   const groupInfo = infoOpen && typeof infoOpen === 'object' && 'group' in infoOpen ? infoOpen : null;
   const openGroup = groupInfo ? groups.find((g) => g.key === groupInfo.group) : undefined;
-  /** "Недельные лимиты · 28 сен – 4 окт" */
+  /** "Недельные лимиты · 28 сен – 4 окт", "Обязательные платежи · октябрь" */
   const groupTitle = (key: SummaryGroupKey) => {
     const g = groups.find((x) => x.key === key);
-    const name = key === 'outside' ? GROUP_TITLES.outside : `${GROUP_TITLES[key]} лимиты`;
-    return g?.window && key !== 'month' ? `${name} · ${shortRange(g.window)}` : key === 'month' ? `${name} · ${monthIn}` : name;
+    const name = key === 'outside' ? GROUP_TITLES.outside : key === 'fixed' ? 'Обязательные платежи' : `${GROUP_TITLES[key]} лимиты`;
+    const byMonth = key === 'month' || key === 'fixed' || (key === 'outside' && !!g?.limit);
+    return byMonth ? `${name} · ${monthIn}` : g?.window ? `${name} · ${shortRange(g.window)}` : name;
   };
-  // the period's spending in no limit, by category (the "Вне лимитов" block's calculation)
+  // the period's spending outside the plan, by category (the "Вне плана" block's calculation)
   const outsideCats = stats.categories.filter((c) => c.spent_minor > 0
-    && (c.category_id === null || norms?.byCategory.get(c.category_id)?.kind !== 'limit'));
+    && (c.category_id === null || (month ? !month.planned.has(c.category_id) : norms?.byCategory.get(c.category_id) === undefined)));
   const summary = pace
     ? (limited.length ? null : 'Плана на эти дни нет — показана только структура трат.')
     : average === undefined ? ''
@@ -446,9 +448,10 @@ export default function PeriodStatsView({ range, emptyText = 'За этот пе
             return (
               <>
                 <Text style={styles.infoText}>
-                  {g.key === 'outside' ? <>Потрачено <Text style={styles.infoBold}>{money(g.spent)}</Text>.</> : (
+                  {g.key === 'outside' && !g.limit ? <>Потрачено <Text style={styles.infoBold}>{money(g.spent)}</Text>.</> : (
                     <>
-                      {g.key === 'month' ? 'С 1-го потрачено' : 'Потрачено'} <Text style={styles.infoBold}>{money(g.spent)}</Text> из{' '}
+                      {g.key === 'outside' && g.periodSpent !== undefined ? <>За выбранные дни <Text style={styles.infoBold}>{money(g.periodSpent)}</Text>. </> : null}
+                      {g.key === 'fixed' ? 'С 1-го оплачено' : g.key === 'month' || g.key === 'outside' ? 'С 1-го потрачено' : 'Потрачено'} <Text style={styles.infoBold}>{money(g.spent)}</Text> из{' '}
                       <Text style={styles.infoBold}>{m(g.limit)}</Text> —{' '}
                       <Text style={[styles.infoBold, g.spent > Math.round(g.limit) ? styles.paceAhead : styles.paceOk]}>{delta(g.spent, g.limit)}</Text>.
                     </>
@@ -476,14 +479,16 @@ export default function PeriodStatsView({ range, emptyText = 'За этот пе
                   <Text style={styles.infoText}>
                     {g.items.map((i) => (
                       <React.Fragment key={i.id}>
-                        <Text style={styles.infoBold}>{i.name}</Text>: потрачено <Code>{money(i.spent)}</Code>,{' '}
-                        {g.key === 'month' ? <>план <Code>{m(i.limit)}</Code></> : <>лимит <Code>{formula(i.parts)}</Code></>}.{noPlan(i.parts)}{'\n'}
+                        {g.key === 'fixed' ? `${i.spent >= i.limit ? '✓' : '○'} ` : ''}
+                        <Text style={styles.infoBold}>{i.name}</Text>: {g.key === 'fixed' ? 'оплачено' : 'потрачено'} <Code>{money(i.spent)}</Code>,{' '}
+                        {g.key === 'month' || g.key === 'fixed' ? <>план <Code>{m(i.limit)}</Code></> : <>лимит <Code>{formula(i.parts)}</Code></>}
+                        {g.key === 'fixed' && i.spent > i.limit ? <Text style={styles.paceAhead}> — перерасход {money(i.spent - i.limit)}</Text> : null}.{noPlan(i.parts)}{'\n'}
                       </React.Fragment>
                     ))}
                     {g.items.length > 1 ? <>Итого: <Code>{money(g.spent)} из {g.items.map((i) => m(i.limit)).join(' + ')} = {m(g.limit)}</Code>.</> : null}
                   </Text>
                 )}
-                {g.key !== 'outside' && g.key !== 'month' ? (
+                {g.key === 'day' || g.key === 'week' || g.key === '2weeks' ? (
                   <Text style={styles.infoText}>
                     Лимит — что осталось от месячного плана категории, разложенное на оставшиеся дни месяца: перерасход раньше в
                     месяце уменьшает его, экономия увеличивает. Каждый месяц считается своим планом.

@@ -2,7 +2,7 @@ import { NormPeriod } from '../../db/plans';
 import { DayKey, DayRange, daysInMonth } from '../dateRange';
 import { isPartOfWindow, NormPart, Norms } from './norms';
 
-export type SummaryGroupKey = NormPeriod | 'outside';
+export type SummaryGroupKey = NormPeriod | 'fixed' | 'outside';
 
 /** One tile under the donut: the categories of one rhythm together (or the spending outside any limit). */
 export type SummaryGroup = {
@@ -10,8 +10,10 @@ export type SummaryGroup = {
   /** the days measured when not the viewed period: the whole week of a weekly limit on a day, the month so far */
   window?: DayRange;
   spent: number;
-  /** 0 for 'outside' */
+  /** 'outside': the month's share for spending outside the plan (0 without one) */
   limit: number;
+  /** 'outside' with a share: the period's own spending outside the plan (`spent` is the month's so far) */
+  periodSpent?: number;
   /** the measured days go on after today: "осталось", else "сэкономлено" */
   ongoing: boolean;
   /** last day of the measured days ("до вс") */
@@ -30,12 +32,16 @@ export function pct(part: number, whole: number): string {
   return p === 0 && part > 0 ? '<1%' : `${p}%`;
 }
 
+/** The month the period ends in, outside the plan: which categories have a plan, its spending so far and its share. */
+export type UnplannedMonth = { planned: Set<number>; spent: number; share: number };
+
 /**
  * The tiles of the period stats: day / week / 2-week limits measured like their category rows (a weekly one on a day
- * over its whole week), the month-rhythm ones over the month so far, and what was spent outside any limit. Only
- * groups with planned categories (and 'outside' with spending).
+ * over its whole week), the month-rhythm ones and the obligatory payments over the month so far, and the spending
+ * outside the plan (against its month's share, with `unplanned`). Only groups with planned categories (and 'outside'
+ * with spending or a share).
  */
-export function summaryGroups(norms: Norms, range: DayRange, totalSpent: number, today: DayKey): SummaryGroup[] {
+export function summaryGroups(norms: Norms, range: DayRange, totalSpent: number, today: DayKey, unplanned?: UnplannedMonth): SummaryGroup[] {
   const cats = [...norms.byCategory].filter(([, p]) => p.kind === 'limit' && (p.monthLimit > 0 || p.periodNorm > 0));
   const out: SummaryGroup[] = [];
   for (const rhythm of RHYTHMS) {
@@ -71,9 +77,30 @@ export function summaryGroups(norms: Norms, range: DayRange, totalSpent: number,
       limit: items.reduce((a, i) => a + i.limit, 0),
     });
   }
-  // the period's spending in no limit: fixed payments, transfers, categories without a plan
-  const inLimits = [...norms.byCategory].filter(([, p]) => p.kind === 'limit').reduce((a, [, p]) => a + p.periodSpent, 0);
-  const outside = totalSpent - inLimits;
-  if (outside > 0) out.push({ key: 'outside', spent: outside, limit: 0, end: range.to, ongoing: range.to >= today, change: null, items: [] });
+  const monthEnd = `${norms.ym}-${String(daysInMonth(norms.ym)).padStart(2, '0')}`;
+  const soFar = { from: `${norms.ym}-01`, to: range.to };
+  // obligatory payments: paid from the 1st up to the period's end against the month's plan
+  const fixed = [...norms.byCategory].filter(([, p]) => p.kind === 'fixed' && p.monthLimit > 0);
+  if (fixed.length > 0) {
+    const items = fixed.map(([id, p]) => ({ id, name: p.name, spent: norms.monthToDate.get(id) ?? 0, limit: p.monthLimit, parts: [] }));
+    out.push({
+      key: 'fixed', window: soFar, end: monthEnd, ongoing: monthEnd >= today, items, change: null,
+      spent: items.reduce((a, i) => a + i.spent, 0),
+      limit: items.reduce((a, i) => a + i.limit, 0),
+    });
+  }
+  // outside the plan: the period's spending in categories without the month's plan and without a category;
+  // with the month known, against its share like a month's limit
+  const isPlanned = (id: number, p: { kind: string; monthLimit: number }) => (unplanned ? unplanned.planned.has(id) : p.kind === 'fixed' || p.kind === 'limit');
+  const inPlan = [...norms.byCategory].filter(([id, p]) => isPlanned(id, p)).reduce((a, [, p]) => a + p.periodSpent, 0);
+  const outsidePeriod = Math.max(0, totalSpent - inPlan);
+  if (unplanned && unplanned.share > 0) {
+    out.push({
+      key: 'outside', window: soFar, end: monthEnd, ongoing: monthEnd >= today, change: null, items: [],
+      spent: unplanned.spent, limit: unplanned.share, periodSpent: outsidePeriod,
+    });
+  } else if (outsidePeriod > 0) {
+    out.push({ key: 'outside', spent: outsidePeriod, limit: 0, end: range.to, ongoing: range.to >= today, change: null, items: [] });
+  }
   return out;
 }

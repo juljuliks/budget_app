@@ -11,14 +11,14 @@ import { colors } from '../theme';
 import { pct, SummaryGroup, SummaryGroupKey } from './summaryGroups';
 
 export const GROUP_TITLES: Record<SummaryGroupKey, string> = {
-  day: 'Дневные', week: 'Недельные', '2weeks': 'Двухнедельные', month: 'Месячные', outside: 'Вне лимитов',
+  day: 'Дневные', week: 'Недельные', '2weeks': 'Двухнедельные', month: 'Месячные', fixed: 'Обязательные', outside: 'Вне плана',
 };
 const WEEKDAYS = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
 const MONTHS = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
 const GAP = 8;
 
 /** "вс" for a week's last day, "31 окт" for the month's */
-const until = (g: SummaryGroup) => (g.key === 'month' ? shortRange({ from: g.end, to: g.end }) : WEEKDAYS[parseDayKey(g.end).getDay()]);
+const until = (g: SummaryGroup) => (g.key === 'month' || g.key === 'fixed' || g.key === 'outside' ? shortRange({ from: g.end, to: g.end }) : WEEKDAYS[parseDayKey(g.end).getDay()]);
 /** the screen's side padding (styles.content of the stats) */
 const SIDE = 16;
 
@@ -40,7 +40,8 @@ export function LimitsAccordion({ defaultOpen, foldKey, ...props }: Props & { de
   const fold = useFolded('limits', defaults);
   const open = !fold.is(foldKey);
   const setOpen = () => fold.toggle(foldKey);
-  const over = props.groups.filter((g) => g.key !== 'outside' && g.spent > Math.round(g.limit)).length;
+  // an outside-the-plan block without a share has no limit to be over
+  const over = props.groups.filter((g) => g.limit > 0 && g.spent > Math.round(g.limit)).length;
   return (
     <View>
       <TouchableOpacity
@@ -82,10 +83,15 @@ export default function SummaryTiles({ groups, money, onPress }: Props) {
       {groups.map((g) => {
         const limit = Math.round(g.limit);
         const left = limit - g.spent;
-        const over = g.key !== 'outside' && left < 0;
-        const subtitle = g.key === 'month' ? MONTHS[parseDayKey(g.end).getMonth()] : g.window ? shortRange(g.window) : null;
-        const caption = g.key === 'outside' ? 'обязательные, переводы, без плана'
+        // outside the plan without a share: just its spending, no limit
+        const plain = g.key === 'outside' && limit === 0;
+        const over = !plain && left < 0;
+        const byMonth = g.key === 'month' || g.key === 'fixed' || g.key === 'outside';
+        const subtitle = byMonth && !plain ? MONTHS[parseDayKey(g.end).getMonth()] : g.window ? shortRange(g.window) : null;
+        const paid = g.items.filter((i) => i.spent >= i.limit).length;
+        const caption = plain ? 'категории без плана'
           : over ? 'перерасход'
+            : g.key === 'fixed' ? (left > 0 ? 'осталось оплатить' : 'всё оплачено')
             // "до вс" when the measured days go on past the viewed period (a weekly limit's week, the month)
             : g.ongoing ? `осталось${g.window ? ` · до ${until(g)}` : ''}`
               : 'сэкономлено';
@@ -105,13 +111,16 @@ export default function SummaryTiles({ groups, money, onPress }: Props) {
             </View>
             {/* the numbers at the bottom: blocks of different heights keep them on one line */}
             <View style={styles.body}>
-            <Text style={[styles.big, g.key === 'outside' ? null : over ? styles.over : styles.ok]} numberOfLines={1} adjustsFontSizeToFit>
-              {g.key === 'outside' ? money(g.spent) : `${over ? '−' : '+'}${money(Math.abs(left))}`}
+            {/* obligatory payments: what's still to pay is not free money — grey, no "+" */}
+            <Text style={[styles.big, plain ? null : over ? styles.over : g.key === 'fixed' ? styles.due : styles.ok]} numberOfLines={1} adjustsFontSizeToFit>
+              {plain ? money(g.spent) : g.key === 'fixed' && !over ? (left > 0 ? money(left) : '✓') : `${over ? '−' : '+'}${money(Math.abs(left))}`}
             </Text>
             <Text style={styles.caption} numberOfLines={2}>{caption}</Text>
-            {g.key !== 'outside' ? (
+            {!plain ? (
               <>
-                <Text style={styles.ofLimit} numberOfLines={1}>{money(g.spent)} из {m(g.limit)} ({pct(g.spent, limit)})</Text>
+                <Text style={styles.ofLimit} numberOfLines={1}>
+                  {g.key === 'fixed' ? `${paid} из ${g.items.length} оплачены` : `${money(g.spent)} из ${m(g.limit)} (${pct(g.spent, limit)})`}
+                </Text>
                 {limit > 0 ? (
                   g.spent > limit
                     ? <Meter ratio={1} over={limit / g.spent} height={6} color={colors.warn} />
@@ -119,7 +128,7 @@ export default function SummaryTiles({ groups, money, onPress }: Props) {
                 ) : null}
               </>
             ) : null}
-            {g.change && g.key !== 'month' && g.key !== 'outside' ? (
+            {g.change && (g.key === 'day' || g.key === 'week' || g.key === '2weeks') ? (
               <Text style={styles.change} numberOfLines={2}>
                 {moved ? (
                   <>
@@ -150,6 +159,7 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 12, color: colors.muted },
   big: { fontSize: 20, fontWeight: '700', color: colors.text, fontVariant: ['tabular-nums'] },
   ok: { color: colors.income },
+  due: { color: colors.text },
   over: { color: colors.warn },
   caption: { fontSize: 12, color: colors.muted },
   ofLimit: { fontSize: 12, color: colors.text, marginTop: 6, fontVariant: ['tabular-nums'] },
