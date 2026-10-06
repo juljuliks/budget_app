@@ -91,6 +91,23 @@ cd android && ./gradlew assembleRelease
 Скрипт сам выставляет JDK 17 и предупреждает, если нет `BUDGETAPP_RELEASE_*` (тогда APK подпишется debug-ключом и не встанет поверх установленного).
 На macOS терминалу нужен доступ к папке «Рабочий стол» (Настройки → Конфиденциальность и безопасность → Файлы и папки).
 
+### Сборка без компьютера (GitHub Actions)
+
+Каждый пуш в `main` собирает release-APK, подписанный тем же ключом, и публикует его в **Releases** репозитория
+(«Сборка N», файл `budget-app-N.apk`) — скачать и поставить поверх можно прямо с телефона. Вручную: Actions →
+«Android release APK» → Run workflow.
+
+Один раз добавить секреты (Settings → Secrets and variables → Actions → New repository secret):
+
+| Секрет | Откуда |
+|---|---|
+| `BUDGETAPP_KEYSTORE_BASE64` | `base64 -i <путь к keystore> \| pbcopy` (путь — `BUDGETAPP_RELEASE_STORE_FILE` из `~/.gradle/gradle.properties`) |
+| `BUDGETAPP_RELEASE_STORE_PASSWORD` | `~/.gradle/gradle.properties` |
+| `BUDGETAPP_RELEASE_KEY_ALIAS` | `~/.gradle/gradle.properties` |
+| `BUDGETAPP_RELEASE_KEY_PASSWORD` | `~/.gradle/gradle.properties` |
+
+Без них сборка останавливается: APK с другой подписью не встанет поверх установленного.
+
 Подпись: ключ `~/.android-keys/budgetapp-release.keystore`, пароли — в `~/.gradle/gradle.properties`
 (`BUDGETAPP_RELEASE_*`). Оба файла вне репозитория.
 
