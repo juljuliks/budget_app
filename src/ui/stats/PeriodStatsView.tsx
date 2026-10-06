@@ -337,7 +337,8 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
   /** a category's row: tap opens its operations in the period; a limit's line has its ⓘ */
   const rowOf = (c: CategoryStat, _i?: number, _all?: CategoryStat[], noBar = false, plainAmount = false) => {
     // noBar: in a limits section of several categories the section's bar shows them all
-    // plainAmount: outside the period's own limit sections (a month's overspend) — just the spending on the right
+    // plainAmount: outside the period's own limit sections (a month's overspend) — just the spending on the right, and
+    // no bar either (no limit left to draw it against)
     const plan = c.category_id === null ? undefined : norms?.byCategory.get(c.category_id);
     const mtd = (c.category_id !== null && norms?.monthToDate.get(c.category_id)) || 0;
     const name = `${c.emoji || ''} ${c.name}`.trim();
@@ -522,7 +523,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
               {money(overspentCats.reduce((a, c) => a + c.spent_minor, 0))}
             </MaskedTotal>
           </FoldHeader>
-          {fold.is(OVERSPENT) ? null : overspentCats.map((c, i) => rowOf(c, i, overspentCats, false, true))}
+          {fold.is(OVERSPENT) ? null : overspentCats.map((c, i) => rowOf(c, i, overspentCats, true, true))}
         </View>
       )] : []).concat(otherCats.length ? [(
         // limits these days can't measure (a weekly one on a day, the month's, obligatory payments): just the spending
