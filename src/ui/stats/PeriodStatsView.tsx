@@ -406,8 +406,8 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
           }
           return (
             <>
-              {/* the bar is scaled to the bigger of the two: an overspend shows how far past the limit */}
-              {limit > 0 && !noBar ? (
+              {/* the bar is scaled to the bigger of the two: an overspend shows how far past the limit; nothing spent: no bar */}
+              {limit > 0 && !noBar && spent > 0 ? (
                 spent <= limit ? <Meter ratio={spent / limit} base={others / limit} height={8} color={c.color} />
                   : whole ? <Meter ratio={1} base={others / spent} limitTick={limit / spent} height={8} color={c.color} />
                     : <Meter ratio={1} over={limit / spent} height={8} color={c.color} />
@@ -449,7 +449,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
           const bar = rhythmBar(plan, range, c.spent_minor);
           return (
             <>
-              {noBar ? null : <Meter ratio={bar.ratio} base={bar.base} height={8} color={c.color} />}
+              {noBar || bar.ratio <= 0 ? null : <Meter ratio={bar.ratio} base={bar.base} height={8} color={c.color} />}
               <TouchableOpacity style={styles.paceRow} onPress={() => openInfo({ id: c.category_id!, name })} accessibilityLabel="Как считается категория">
                 <Text style={[styles.share, styles.paceText]}>
                   <Text style={[styles.pace, paceStyle(p)]}>
@@ -464,7 +464,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
           // a fixed payment: the month's plan, not split by days
           <>
             {/* paid more than planned: an overspend like a limit's — the bar scaled to the spending, a tick at the plan */}
-            {plan.monthLimit > 0 && !noBar ? (mtd > plan.monthLimit
+            {plan.monthLimit > 0 && !noBar && mtd > 0 ? (mtd > plan.monthLimit
               ? <Meter ratio={1} over={plan.monthLimit / mtd} height={8} color={c.color} />
               : <Meter ratio={mtd / plan.monthLimit} height={8} color={c.color} />) : null}
             <TouchableOpacity style={styles.paceRow} onPress={() => openInfo({ id: c.category_id!, name })} accessibilityLabel="Как считается категория">

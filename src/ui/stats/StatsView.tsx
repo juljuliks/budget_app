@@ -341,7 +341,8 @@ function CategoryRow({ stat, total, currency, evenPace, dim, ym, openTransaction
         <>
           {ratio > 1
             ? <Meter ratio={1} over={limit / spent} height={8} color={stat.color} />
-            : <Meter ratio={ratio} height={8} marker={stat.plan_norm === 'month' ? undefined : evenPace} />}
+            // nothing spent yet: no empty bar, "осталось" says it
+            : ratio > 0 ? <Meter ratio={ratio} height={8} marker={stat.plan_norm === 'month' ? undefined : evenPace} /> : null}
           <Text style={styles.rowStatus}>
             {ratio > 1
               ? <Text style={styles.overLine}>Перерасход {formatWithCurrency(spent - limit, currency)}</Text>
