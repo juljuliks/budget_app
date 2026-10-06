@@ -149,15 +149,8 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
   // the bar's parts, left to right; "Не распределено" becomes "Сбережения" when the leftover goes there
   const parts: Array<{ key: string; label: string; value: number; color: string; note: string; valueStyle?: object; noteStyle?: object }> = shownBudget ? [
     { key: 'planned', label: 'План', value: total, color: chart.meterFill, note: percentOf(total, shownBudget) || '0%' },
-    // what is left of the share big (spent outside the plan from it), the share itself small; a coming month: the share
-    timing === 'future' ? { key: 'unplanned', label: 'Вне плана', value: unplanned, color: RING_UNPLANNED, note: percentOf(unplanned, shownBudget) || '0%' }
-      : {
-        key: 'unplanned', label: 'Вне плана', value: Math.abs(unplanned - unplannedSpentMinor), color: RING_UNPLANNED,
-        note: hidden ? percentOf(unplanned, shownBudget) || '0%'
-          : `${unplannedSpentMinor > unplanned ? 'перерасход ' : ''}из ${money(Math.round(unplanned / 100) * 100)} · ${percentOf(unplanned, shownBudget) || '0%'}`,
-        valueStyle: unplannedSpentMinor > unplanned ? styles.overText : undefined,
-        noteStyle: unplannedSpentMinor > unplanned ? styles.overText : undefined,
-      },
+    // the plan shows what is set aside, not what is left of it (that's the stats' job)
+    { key: 'unplanned', label: 'Вне плана', value: unplanned, color: RING_UNPLANNED, note: percentOf(unplanned, shownBudget) || '0%' },
     toSavings && timing === 'past'
       ? {
         key: 'free', label: 'Сбережения', value: Math.abs(savingsEnd ?? 0), color: RING_SAVINGS,
@@ -199,9 +192,8 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
       systemGroups.push({
         title: 'Вне плана',
         rows: [{
-          key: 'unplanned', name: '🎲 Незапланированные траты', value: unplanned,
-          note: timing === 'future' || hidden ? 'категории без плана и без категории' : `потрачено ${money(unplannedSpentMinor)}`,
-          style: timing !== 'future' && unplannedSpentMinor > unplanned ? styles.overText : undefined,
+          // the share set aside only: the spending against it is in the stats
+          key: 'unplanned', name: '🎲 Незапланированные траты', value: unplanned, note: 'категории без плана и без категории',
         }],
       });
     }

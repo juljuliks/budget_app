@@ -157,12 +157,18 @@ export default function StatsView({ year, month, currency }: { year: number; mon
             <>
               {/* the share as a limit: an overspend scales the bar to the spending, a tick at the share */}
               {/* nothing spent outside the plan yet: no empty bar, just the hint below */}
-              {share > 0 && split.spent > 0 ? (
-                // on the header's grey band: the section's total apart from its categories
+              {share > 0 ? (
+                // on the header's grey band: the section's total apart from its categories, and what's left of the
+                // share for the month — worded like a month limit's row
                 <View style={styles.sectionBand}>
-                  {split.spent > share
+                  {split.spent > 0 ? (split.spent > share
                     ? <Meter ratio={1} over={share / split.spent} height={6} color={colors.warn} />
-                    : <Meter ratio={split.spent / share} height={6} color={chart.meterFill} />}
+                    : <Meter ratio={split.spent / share} height={6} color={chart.meterFill} />) : null}
+                  <Text style={styles.rowStatus}>
+                    {split.spent > share
+                      ? <Text style={styles.overLine}>Перерасход <Masked style={styles.overLine}>{formatWithCurrency(split.spent - share, stats.currency)}</Masked></Text>
+                      : <>осталось <Masked style={styles.rowStatus}>{formatWithCurrency(share - split.spent, stats.currency)}</Masked></>}
+                  </Text>
                 </View>
               ) : null}
               {split.unplanned.length === 0 ? <Text style={styles.hint}>Трат вне плана пока не было.</Text> : null}
