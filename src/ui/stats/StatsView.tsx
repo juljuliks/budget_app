@@ -287,6 +287,10 @@ function CategoryRow({ stat, currency, evenPace, dim, ym, openTransactions, now,
           {limit ? formatShort(spent) : formatWithCurrency(spent, currency)}{limit ? <Text style={styles.rowLimit}> / {formatWithCurrency(limit, currency)}{planShare(spent, limit)}</Text> : null}
         </Text>
       </View>
+      {/* an obligatory payment paid more than planned: an overspend like a limit's */}
+      {limit && fixed && spent > limit ? (
+        <Text style={[styles.rowStatus, styles.dangerText]}>⚠ перерасход {formatWithCurrency(spent - limit, currency)}</Text>
+      ) : null}
       {limit && !fixed ? (
         <>
           <Meter ratio={ratio} height={8} marker={stat.plan_norm === 'month' ? undefined : evenPace} />

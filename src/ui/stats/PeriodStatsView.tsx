@@ -261,10 +261,14 @@ export default function PeriodStatsView({ range, emptyText = 'За этот пе
         })() : plan ? (
           // a fixed payment: the month's plan, not split by days
           <>
-            {plan.monthLimit > 0 ? <Meter ratio={mtd / plan.monthLimit} height={8} color={c.color} /> : null}
+            {/* paid more than planned: an overspend like a limit's — the bar scaled to the spending, a tick at the plan */}
+            {plan.monthLimit > 0 ? (mtd > plan.monthLimit
+              ? <Meter ratio={1} over={plan.monthLimit / mtd} height={8} color={c.color} />
+              : <Meter ratio={mtd / plan.monthLimit} height={8} color={c.color} />) : null}
             <TouchableOpacity style={styles.paceRow} onPress={() => openInfo({ id: c.category_id!, name })} accessibilityLabel="Как считается категория">
               <Text style={styles.share}>
                 {plan.monthLimit > 0 ? `${money(mtd)} из ${money(plan.monthLimit)} на ${monthIn}` : `в ${MONTHS_PREP[parseYm(norms!.ym).month]} плана нет`}
+                {plan.monthLimit > 0 && mtd > plan.monthLimit ? <Text style={[styles.pace, styles.paceAhead]}> · перерасход {money(mtd - plan.monthLimit)}</Text> : null}
               </Text>
               <InfoIcon color={colors.accent} size={INFO_SIZE} />
             </TouchableOpacity>
