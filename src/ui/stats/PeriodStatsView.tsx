@@ -323,7 +323,6 @@ export default function PeriodStatsView({ range, emptyText = 'За этот пе
                       <Text style={[styles.pace, left < 0 ? styles.paceAhead : styles.paceOk]}>
                         На {monthIn} {left < 0 ? `перерасход ${money(-left)}` : `осталось ${money(left)}`}
                       </Text>
-                      {` · ${money(month.spent)} из ${money(month.share)}`}
                     </Text>
                   </>
                 );
