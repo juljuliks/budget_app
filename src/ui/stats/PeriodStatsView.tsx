@@ -28,7 +28,7 @@ const PACE_MAX_DAYS = 31;
 
 type Props = {
   range: DayRange;
-  /** "на день" / "на неделю" / "на период" (no longer shown: the summary names the days by numbers) */
+  /** "на день" / "на неделю" / "на период": the period's kind, for the section headers ("за неделю") */
   normLabel?: string;
   emptyText?: string;
 };
@@ -69,7 +69,7 @@ const INFO_SIZE = 18;
  * against the plan's norm for these days: are we on pace? A long one (a year) shows the structure and the
  * average per month.
  */
-export default function PeriodStatsView({ range, emptyText = 'За этот период трат нет.' }: Props) {
+export default function PeriodStatsView({ range, normLabel, emptyText = 'За этот период трат нет.' }: Props) {
   const [stats, setStats] = useState<PeriodStats | null>(null);
   const [norms, setNorms] = useState<Norms | null>(null);
   // the month the period ends in: which categories have a plan, the spending outside it and its share (a day / week only)
@@ -171,13 +171,17 @@ export default function PeriodStatsView({ range, emptyText = 'За этот пе
   const split = month ? splitUnplanned(stats.groups, (c) => month.planned.has(c.category_id!)) : { groups: stats.groups, unplanned: [], spent: 0 };
 
   const shorterThanMonth = !!norms && days < daysInMonth(norms.ym);
+  // what the spending in a section's header is for: "за день", "за неделю", "с 28 сен по 4 окт"
+  const spentFor = normLabel === 'на день' ? 'за день' : normLabel === 'на неделю' ? 'за неделю'
+    : `с ${shortRange({ from: range.from, to: range.from })} по ${shortRange({ from: range.to, to: range.to })}`;
   /** "31 окт": the month's last day, what the month's shares run until */
   const monthEndShort = norms ? shortRange({ from: `${norms.ym}-${daysInMonth(norms.ym)}`, to: `${norms.ym}-${daysInMonth(norms.ym)}` }) : '';
   /** a section's header: "spent in the period / its categories' plans for the month на октябрь", or just the spent */
   const SectionTotal = ({ spent, planned }: { spent: number; planned: number }) => (
     <Text style={styles.groupTotal}>
       {money(spent)}
-      {/* a period shorter than the month: the plan is the month's, named as such */}
+      {/* a period shorter than the month: the spending's days and the plan's month named */}
+      {planned > 0 && shorterThanMonth ? <Text style={styles.groupPlan}> {spentFor}</Text> : null}
       {planned > 0 && shorterThanMonth ? <Text style={styles.groupPlan}> / {money(planned)} на {monthIn}</Text> : null}
     </Text>
   );
