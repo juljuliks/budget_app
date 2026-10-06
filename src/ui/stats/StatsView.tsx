@@ -129,10 +129,11 @@ export default function StatsView({ year, month, currency }: { year: number; mon
             <FoldHeader style={[formStyles.sectionHeader, styles.groupHeader]} folded={fold.is(g.title)} onToggle={() => fold.toggle(g.title)}>
               <Text style={styles.groupTitle}>{g.title}</Text>
               {/* "fact / plan ₾ (%)", as in the period stats; "Скрыть суммы" leaves just the % */}
-              <MaskedTotal style={styles.groupTotal} hiddenText={g.planned_minor ? pct(g.spent_minor, g.planned_minor) : shareOfAll(g.spent_minor, stats.spent_minor)}>
-                {g.planned_minor ? <Text style={overStyle(g.spent_minor, g.planned_minor)}>{formatShort(g.spent_minor)}</Text> : formatWithCurrency(g.spent_minor, stats.currency)}
-                {g.planned_minor ? <Text style={styles.rowLimit}> / {formatWithCurrency(g.planned_minor, stats.currency)}</Text> : null}
-                {g.planned_minor ? <Text style={[styles.rowLimit, overStyle(g.spent_minor, g.planned_minor)]}> ({pct(g.spent_minor, g.planned_minor)})</Text> : null}
+              {/* with one category its row says "fact / plan (%)": the header just sums */}
+              <MaskedTotal style={styles.groupTotal} hiddenText={g.planned_minor && g.categories.length > 1 ? pct(g.spent_minor, g.planned_minor) : shareOfAll(g.spent_minor, stats.spent_minor)}>
+                {g.planned_minor && g.categories.length > 1 ? <Text style={overStyle(g.spent_minor, g.planned_minor)}>{formatShort(g.spent_minor)}</Text> : formatWithCurrency(g.spent_minor, stats.currency)}
+                {g.planned_minor && g.categories.length > 1 ? <Text style={styles.rowLimit}> / {formatWithCurrency(g.planned_minor, stats.currency)}</Text> : null}
+                {g.planned_minor && g.categories.length > 1 ? <Text style={[styles.rowLimit, overStyle(g.spent_minor, g.planned_minor)]}> ({pct(g.spent_minor, g.planned_minor)})</Text> : null}
               </MaskedTotal>
             </FoldHeader>
             {fold.is(g.title) ? null : g.categories.map((c) => (
