@@ -240,8 +240,8 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
             {/* as in the category rows: the limit first, then what's left */}
             {g.change && rhythm ? (
               <>
-                {'Лимит '}
-                {moved ? <><Text style={styles.crossed}>{m(g.change.before)}</Text>{' → '}</> : null}
+                {/* "старый → новый": no "Лимит" word, it's plain what it is */}
+                {moved ? <><Text style={styles.crossed}>{m(g.change.before)}</Text>{' → '}</> : 'Лимит '}
                 <Text style={moved ? (g.change.after! < g.change.before ? styles.paceAhead : styles.paceOk) : undefined}>{m(moved ? g.change.after! : g.change.before)}</Text>
                 {` ${PER_PERIOD[g.key as 'day']}\n`}
               </>
@@ -330,16 +330,15 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
           <View style={[styles.dot, { backgroundColor: c.color }]} />
           <Text style={styles.name} numberOfLines={1}>{name}</Text>
           {/* one line, never wrapped: a wrapped "0 / 106.81 ₾" showed just "0 /" (its second line hidden) */}
-          <Text style={styles.amount} numberOfLines={1}>
-            {/* as in the month stats: with a limit the spending without ₾, "/ limit ₾ (%)" muted */}
-            {/* "Скрыть суммы": just the % — of its limit, or of all spending without one */}
-            {hidden ? hiddenShare(c, plan) : (
-              <>
-                {ofLimitOf(c, plan) ? formatShort(rightSpent(c, plan)) : money(c.spent_minor)}
-                {ofLimitOf(c, plan)}
-              </>
-            )}
-          </Text>
+          {/* as in the month stats: with a limit the spending without ₾, "/ limit ₾ (%)" muted; "Скрыть суммы": just the
+              % — of its limit, or of all spending without one. Separate texts in a row, each measured on its own: one
+              nested text was cut short on Android ("0 /", "0 / 106.8…") */}
+          {hidden ? <Text style={styles.amount} numberOfLines={1}>{hiddenShare(c, plan)}</Text> : (
+            <View style={styles.amountBox}>
+              <Text style={styles.amountText}>{ofLimitOf(c, plan) ? formatShort(rightSpent(c, plan)) : money(c.spent_minor)}</Text>
+              {ofLimitOf(c, plan) ? <Text style={[styles.amountText, styles.ofLimit]}>{ofLimitOf(c, plan)}</Text> : null}
+            </View>
+          )}
         </View>
         {plan?.kind === 'limit' && plan.rhythm !== 'month' ? (() => {
           // a period shorter than the category's rhythm (a day of a weekly limit) is measured as the whole rhythm
@@ -384,8 +383,8 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                     const moved = after !== null && Math.round(after) !== Math.round(before);
                     return (
                       <>
-                        {'Лимит '}
-                        {moved ? <><Text style={styles.crossed}>{m(before)}</Text>{' → '}</> : null}
+                        {/* "старый → новый": no "Лимит" word, it's plain what it is */}
+                        {moved ? <><Text style={styles.crossed}>{m(before)}</Text>{' → '}</> : 'Лимит '}
                         <Text style={moved ? (after! < before ? styles.paceAhead : styles.paceOk) : undefined}>{m(moved ? after! : before)}</Text>
                         {` ${PER_PERIOD[plan.rhythm]}\n`}
                       </>
@@ -782,6 +781,8 @@ const styles = StyleSheet.create({
   // the amount never wraps ("0 /" with the limit cut off): the name gives way
   // no tabular-nums here: Android under-measures such text and cut "0 / 106.81 ₾" to "0 /"
   amount: { flexShrink: 0, marginLeft: 8, fontSize: 13, color: colors.text },
+  amountBox: { flexShrink: 0, flexDirection: 'row', alignItems: 'baseline', marginLeft: 8 },
+  amountText: { fontSize: 13, color: colors.text },
   // "/ plan" like the spending before it: one amount pair
   ofLimit: { color: colors.muted },
   info: { paddingHorizontal: 20, gap: 10, paddingBottom: 4 },

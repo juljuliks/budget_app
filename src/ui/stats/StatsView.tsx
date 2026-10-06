@@ -347,7 +347,8 @@ function CategoryRow({ stat, total, currency, evenPace, dim, ym, openTransaction
               const change = limitChange(value, flat);
               return (
                 <Text style={styles.rowStatusMuted}>
-                  {' · лимит '}
+                  {/* "старый → новый": no "лимит" word, it's plain what it is */}
+                  {change ? ' · ' : ' · лимит '}
                   {change ? <Text style={styles.crossed}>{formatWithCurrency(Math.round(flat), currency)}</Text> : '≈ '}
                   {change ? ' → ' : ''}
                   <Text style={change === 'down' ? styles.paceAhead : change === 'up' ? styles.paceOk : undefined}>{formatWithCurrency(Math.round(value), currency)}</Text>
