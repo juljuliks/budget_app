@@ -34,7 +34,10 @@ describe('serialized connection', () => {
 
   it('a failed statement does not block the queue', async () => {
     const d = await db();
-    await expect(d.run('INSERT INTO missing VALUES (1)')).rejects.toThrow();
+    // not rejects.toThrow(): better-sqlite3's SqliteError comes from another realm than the test's Error, and Jest's
+    // instance check then sometimes reads the rejection as "did not throw"
+    const failed = await d.run('INSERT INTO missing VALUES (1)').then(() => null, (e: unknown) => String((e as Error)?.message ?? e));
+    expect(failed).toMatch(/no such table/);
     await d.run('INSERT INTO t VALUES (4)');
     expect(await values(d)).toEqual([4]);
   });
