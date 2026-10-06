@@ -338,7 +338,8 @@ function CategoryRow({ stat, total, currency, evenPace, dim, ym, openTransaction
               : `осталось ${formatWithCurrency(limit - spent, currency)}`}
             {/* a category spent daily / weekly: its limit per that period, "лимит ≈ 113 ₾ в неделю" */}
             {/* the current month: this window's limit, rebalanced on what's left of the month; a past one: the plan's share */}
-            {rhythm ? (() => {
+            {/* the month's plan overspent: no limits any more, just the overspend */}
+            {rhythm && ratio <= 1 ? (() => {
               const current = now && now.rhythm === rhythm ? now : undefined;
               const flat = current ? flatOf(current.windowParts) : (limit / dim) * RHYTHM_DAYS[rhythm];
               const value = current ? current.windowNorm : flat;
@@ -355,7 +356,7 @@ function CategoryRow({ stat, total, currency, evenPace, dim, ym, openTransaction
               );
             })() : null}
           </Text>
-          {rhythm && now && now.rhythm === rhythm ? (() => {
+          {rhythm && ratio <= 1 && now && now.rhythm === rhythm ? (() => {
             // the current month: what's left in today's / this week's window, colored by pace
             const left = Math.round(now.windowNorm) - now.windowSpent;
             const p: Pace = paceOf(now.windowSpent, now.windowNorm, monthToDate, now.monthLimit);

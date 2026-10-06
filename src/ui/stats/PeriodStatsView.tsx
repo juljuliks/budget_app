@@ -332,6 +332,20 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
           const ongoing = end >= today;
           // the other days of the window, drawn faded before this period's part
           const others = whole ? Math.max(0, spent - Math.min(c.spent_minor, spent)) : 0;
+          // the month's plan already overspent (by the period's end): no limits any more, just that overspend
+          if (plan.monthLimit > 0 && mtd > plan.monthLimit) {
+            return (
+              <>
+                {noBar ? null : <Meter ratio={1} over={plan.monthLimit / mtd} height={8} color={c.color} />}
+                <TouchableOpacity style={styles.paceRow} onPress={() => openInfo({ id: c.category_id!, name })} accessibilityLabel="Как считается категория">
+                  <Text style={[styles.share, styles.paceText]}>
+                    <Text style={[styles.pace, styles.paceAhead]}>Перерасход на {monthIn} {money(mtd - plan.monthLimit)}</Text>
+                  </Text>
+                  <InfoIcon color={colors.accent} size={INFO_SIZE} />
+                </TouchableOpacity>
+              </>
+            );
+          }
           return (
             <>
               {/* the bar is scaled to the bigger of the two: an overspend shows how far past the limit */}
