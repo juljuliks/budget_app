@@ -99,8 +99,9 @@ export default function StatsView({ year, month, currency }: { year: number; mon
             <Text style={styles.monthLine}>
               {'Потрачено '}
               <MaskedTotal style={styles.groupTotal} hiddenText={pct(stats.spent_minor, plannedAll)}>
-                {formatShort(stats.spent_minor)}
-                <Text style={styles.rowLimit}> / {formatWithCurrency(Math.round(plannedAll), stats.currency)}{stats.spent_minor > 0 ? ` (${pct(stats.spent_minor, plannedAll)})` : ''}</Text>
+                <Text style={overStyle(stats.spent_minor, plannedAll)}>{formatShort(stats.spent_minor)}</Text>
+                <Text style={styles.rowLimit}> / {formatWithCurrency(Math.round(plannedAll), stats.currency)}</Text>
+                {stats.spent_minor > 0 ? <Text style={[styles.rowLimit, overStyle(stats.spent_minor, plannedAll)]}>{` (${pct(stats.spent_minor, plannedAll)})`}</Text> : null}
               </MaskedTotal>
             </Text>
             {left < 0
@@ -129,8 +130,9 @@ export default function StatsView({ year, month, currency }: { year: number; mon
               <Text style={styles.groupTitle}>{g.title}</Text>
               {/* "fact / plan ₾ (%)", as in the period stats; "Скрыть суммы" leaves just the % */}
               <MaskedTotal style={styles.groupTotal} hiddenText={g.planned_minor ? pct(g.spent_minor, g.planned_minor) : shareOfAll(g.spent_minor, stats.spent_minor)}>
-                {g.planned_minor ? formatShort(g.spent_minor) : formatWithCurrency(g.spent_minor, stats.currency)}
-                {g.planned_minor ? <Text style={styles.rowLimit}> / {formatWithCurrency(g.planned_minor, stats.currency)} ({pct(g.spent_minor, g.planned_minor)})</Text> : null}
+                {g.planned_minor ? <Text style={overStyle(g.spent_minor, g.planned_minor)}>{formatShort(g.spent_minor)}</Text> : formatWithCurrency(g.spent_minor, stats.currency)}
+                {g.planned_minor ? <Text style={styles.rowLimit}> / {formatWithCurrency(g.planned_minor, stats.currency)}</Text> : null}
+                {g.planned_minor ? <Text style={[styles.rowLimit, overStyle(g.spent_minor, g.planned_minor)]}> ({pct(g.spent_minor, g.planned_minor)})</Text> : null}
               </MaskedTotal>
             </FoldHeader>
             {fold.is(g.title) ? null : g.categories.map((c) => (
@@ -159,8 +161,9 @@ export default function StatsView({ year, month, currency }: { year: number; mon
           <FoldHeader style={[formStyles.sectionHeader, styles.groupHeader]} folded={fold.is(UNPLANNED)} onToggle={() => fold.toggle(UNPLANNED)}>
             <Text style={styles.groupTitle}>{UNPLANNED}</Text>
             <MaskedTotal style={styles.groupTotal} hiddenText={share ? pct(split.spent, share) : shareOfAll(split.spent, stats.spent_minor)}>
-              {share ? formatShort(split.spent) : formatWithCurrency(split.spent, stats.currency)}
-              {share ? <Text style={styles.rowLimit}> / {formatWithCurrency(share, stats.currency)} ({pct(split.spent, share)})</Text> : null}
+              {share ? <Text style={overStyle(split.spent, share)}>{formatShort(split.spent)}</Text> : formatWithCurrency(split.spent, stats.currency)}
+              {share ? <Text style={styles.rowLimit}> / {formatWithCurrency(share, stats.currency)}</Text> : null}
+              {share ? <Text style={[styles.rowLimit, overStyle(split.spent, share)]}> ({pct(split.spent, share)})</Text> : null}
             </MaskedTotal>
           </FoldHeader>
           {fold.is(UNPLANNED) ? null : (
@@ -262,6 +265,9 @@ export function DonutCenter({ total, picked, currency }: { total: number; picked
   );
 }
 
+/** "spent" and its "(%)" in a "spent / limit (%)" turn orange once over the limit (the limit itself stays muted) */
+const overStyle = (spent: number, limit: number) => (limit > 0 && spent > Math.round(limit) ? styles.overNum : undefined);
+
 /** the bottom section of the categories without a plan (as in the plan) */
 const UNPLANNED = 'Вне плана';
 
@@ -317,7 +323,7 @@ function CategoryRow({ stat, total, currency, evenPace, dim, ym, openTransaction
         <Text style={styles.rowAmount}>
           {/* "Скрыть суммы": just the % — of its plan, or of all spending without one */}
           {hidden ? (limit ? `${pct(spent, limit)} плана` : `${shareOfAll(spent, total)} трат`)
-            : <>{limit ? formatShort(spent) : formatWithCurrency(spent, currency)}{limit ? <Text style={styles.rowLimit}> / {formatWithCurrency(limit, currency)}{planShare(spent, limit)}</Text> : null}</>}
+            : <>{limit ? <Text style={overStyle(spent, limit)}>{formatShort(spent)}</Text> : formatWithCurrency(spent, currency)}{limit ? <Text style={styles.rowLimit}> / {formatWithCurrency(limit, currency)}</Text> : null}{limit ? <Text style={[styles.rowLimit, overStyle(spent, limit)]}>{planShare(spent, limit)}</Text> : null}</>}
         </Text>
       </View>
       {/* an obligatory payment paid more than planned: an overspend like a limit's */}
@@ -411,6 +417,7 @@ const styles = StyleSheet.create({
   // an overspend, the same on every screen: bold orange, no ⚠
   sectionBand: { marginHorizontal: -16, paddingHorizontal: 16, paddingTop: 2, paddingBottom: 10, backgroundColor: colors.surface },
   overLine: { color: colors.warn, fontWeight: '600' },
+  overNum: { color: colors.warn },
   paceOk: { color: colors.income },
   paceAhead: { color: colors.warn },
   crossed: { textDecorationLine: 'line-through' },

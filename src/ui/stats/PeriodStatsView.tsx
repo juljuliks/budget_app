@@ -55,6 +55,9 @@ const GROUP_ABOUT: Record<SummaryGroupKey, string> = {
   outside: 'Категории без плана в этом месяце и траты без категории. Доля на них задаётся в бюджете месяца — она как месячный лимит: траты с 1-го против неё.',
 };
 
+/** "spent" and its "(%)" in a "spent / limit (%)" turn orange once over the limit (the limit itself stays muted) */
+const overStyle = (spent: number, limit: number) => (limit > 0 && spent > Math.round(limit) ? styles.overNum : undefined);
+
 /** the bottom section of the categories without a plan (as in the plan and the month) */
 const UNPLANNED = 'Вне плана';
 /** planned categories whose limit these days can't measure: just their spending */
@@ -281,8 +284,9 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
   const SectionTotal = ({ spent, planned }: { spent: number; planned: number }) => (
     <MaskedTotal style={styles.groupTotal} hiddenText={headerPct(spent, planned)}>
       {/* as in the month stats: "fact / plan ₾ (%)", the fact black without ₾, the rest muted */}
-      {planned > 0 ? formatShort(spent) : money(spent)}
-      {planned > 0 ? <Text style={styles.groupPlan}> / {money(planned)} ({pct(spent, Math.round(planned))})</Text> : null}
+      {planned > 0 ? <Text style={overStyle(spent, planned)}>{formatShort(spent)}</Text> : money(spent)}
+      {planned > 0 ? <Text style={styles.groupPlan}> / {money(planned)}</Text> : null}
+      {planned > 0 ? <Text style={[styles.groupPlan, overStyle(spent, planned)]}> ({pct(spent, Math.round(planned))})</Text> : null}
     </MaskedTotal>
   );
   /** a header's % with the amounts hidden: of its plan, or of all the spending without one */
@@ -303,13 +307,13 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
     if (plan?.kind === 'fixed') {
       const paid = (c.category_id !== null && norms?.monthToDate.get(c.category_id)) || 0;
       if (plan.monthLimit <= 0 || Math.round(paid) === Math.round(plan.monthLimit) || paid !== c.spent_minor) return null;
-      return <Text style={styles.ofLimit}>{'\u00a0/\u00a0'}{m(plan.monthLimit)}{c.spent_minor > 0 ? ` (${pct(c.spent_minor, Math.round(plan.monthLimit))})` : ''}</Text>;
+      return <Text style={styles.ofLimit}>{'\u00a0/\u00a0'}{m(plan.monthLimit)}{c.spent_minor > 0 ? <Text style={overStyle(c.spent_minor, plan.monthLimit)}>{` (${pct(c.spent_minor, Math.round(plan.monthLimit))})`}</Text> : null}</Text>;
     }
     if (plan?.kind !== 'limit' || plan.rhythm === 'month') return null;
     const { spent, limit: lim } = limitPair(plan, c);
     if (lim <= 0) return null;
     // no "(0%)" while nothing is spent
-    return <Text style={styles.ofLimit}>{'\u00a0/\u00a0'}{m(lim)}{spent > 0 ? ` (${pct(spent, Math.round(lim))})` : ''}</Text>;
+    return <Text style={styles.ofLimit}>{'\u00a0/\u00a0'}{m(lim)}{spent > 0 ? <Text style={overStyle(spent, lim)}>{` (${pct(spent, Math.round(lim))})`}</Text> : null}</Text>;
   };
   /**
    * What a day / week limit's "spent / limit" on the right is measured over: the period itself, or — a day of a
@@ -319,6 +323,9 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
     const whole = isPartOfWindow(plan.window, range);
     return whole ? { spent: plan.windowSpent, limit: plan.windowNorm } : { spent: c.spent_minor, limit: plan.periodNorm };
   };
+  /** the limit on the right: a fixed payment's month plan, a day / week limit's own (see limitPair) */
+  const rightLimit = (c: CategoryStat, plan: ReturnType<NonNullable<typeof norms>['byCategory']['get']>) =>
+    (!plan ? 0 : plan.kind === 'fixed' ? plan.monthLimit : plan.kind === 'limit' && plan.rhythm !== 'month' ? limitPair(plan, c).limit : 0);
   /** the spending on the right: the limit's own (a week's on a day of a weekly limit), else the period's */
   const rightSpent = (c: CategoryStat, plan: ReturnType<NonNullable<typeof norms>['byCategory']['get']>) =>
     (plan?.kind === 'limit' && plan.rhythm !== 'month' ? limitPair(plan, c).spent : c.spent_minor);
@@ -360,7 +367,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
               nested text was cut short on Android ("0 /", "0 / 106.8…") */}
           {hidden ? <Text style={styles.amount} numberOfLines={1}>{hiddenShare(c, plan)}</Text> : (
             <View style={styles.amountBox}>
-              <Text style={styles.amountText}>{ofLimit ? formatShort(rightSpent(c, plan)) : money(c.spent_minor)}</Text>
+              <Text style={[styles.amountText, ofLimit ? overStyle(rightSpent(c, plan), rightLimit(c, plan)) : null]}>{ofLimit ? formatShort(rightSpent(c, plan)) : money(c.spent_minor)}</Text>
               {ofLimit ? <Text style={[styles.amountText, styles.ofLimit]}>{ofLimit}</Text> : null}
             </View>
           )}
@@ -501,8 +508,9 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
             <FoldHeader style={[formStyles.sectionHeader, styles.groupHeader]} folded={fold.is(`limit:${key}`)} onToggle={() => fold.toggle(`limit:${key}`)}>
               <Text style={styles.groupTitle}>{title}</Text>
               <MaskedTotal style={styles.groupTotal} hiddenText={g && g.limit > 0 ? headerPct(g.spent, g.limit) : headerPct(cats.reduce((a, c) => a + c.spent_minor, 0), 0)}>
-                {g && g.limit > 0 ? formatShort(Math.round(g.spent)) : money(g ? g.spent : cats.reduce((a, c) => a + c.spent_minor, 0))}
-                {g && g.limit > 0 ? <Text style={styles.groupPlan}> / {m(g.limit)} ({pct(g.spent, Math.round(g.limit))})</Text> : null}
+                {g && g.limit > 0 ? <Text style={overStyle(g.spent, g.limit)}>{formatShort(Math.round(g.spent))}</Text> : money(g ? g.spent : cats.reduce((a, c) => a + c.spent_minor, 0))}
+                {g && g.limit > 0 ? <Text style={styles.groupPlan}> / {m(g.limit)}</Text> : null}
+                {g && g.limit > 0 ? <Text style={[styles.groupPlan, overStyle(g.spent, g.limit)]}> ({pct(g.spent, Math.round(g.limit))})</Text> : null}
               </MaskedTotal>
             </FoldHeader>
             {fold.is(`limit:${key}`) ? null : (
@@ -822,6 +830,7 @@ const styles = StyleSheet.create({
   amountPad: { paddingRight: 2 },
   // "/ plan" like the spending before it: one amount pair
   ofLimit: { color: colors.muted },
+  overNum: { color: colors.warn },
   info: { paddingHorizontal: 20, gap: 10, paddingBottom: 4 },
   infoText: { fontSize: 15, color: colors.text, lineHeight: 21 },
   infoBold: { fontWeight: '600' },
