@@ -503,18 +503,20 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
       {byLimits ? limitSections.map(({ key, cats }) => {
         const g = groups.find((x) => x.key === key);
         const title = GROUP_TITLES[key] === GROUP_TITLES.fixed ? 'Обязательные платежи' : `${GROUP_TITLES[key]} лимиты`;
-        // "spent / limit (%)" only over several categories: with one its row says it, the header just sums
-        const vsLimit = !!g && g.limit > 0 && cats.length > 1;
+        const vsLimit = !!g && g.limit > 0;
         const total = g ? g.spent : cats.reduce((a, c) => a + c.spent_minor, 0);
         return (
           <View key={key} style={styles.group}>
             <FoldHeader style={[formStyles.sectionHeader, styles.groupHeader]} folded={fold.is(`limit:${key}`)} onToggle={() => fold.toggle(`limit:${key}`)}>
               <Text style={styles.groupTitle}>{title}</Text>
+              {/* one category: its row says it all, the header just names the section */}
+              {cats.length > 1 ? (
               <MaskedTotal style={styles.groupTotal} hiddenText={vsLimit ? headerPct(g!.spent, g!.limit) : headerPct(total, 0)}>
                 {vsLimit ? <Text style={overStyle(g!.spent, g!.limit)}>{formatShort(Math.round(g!.spent))}</Text> : money(total)}
                 {vsLimit ? <Text style={styles.groupPlan}> / {m(g!.limit)}</Text> : null}
                 {vsLimit ? <Text style={[styles.groupPlan, overStyle(g!.spent, g!.limit)]}> ({pct(g!.spent, Math.round(g!.limit))})</Text> : null}
               </MaskedTotal>
+              ) : null}
             </FoldHeader>
             {fold.is(`limit:${key}`) ? null : (
               <>
