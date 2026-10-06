@@ -170,6 +170,18 @@ export default function PeriodStatsView({ range, emptyText = 'За этот пе
   // a day / week: the categories without a plan this month and the uncategorized in one "Вне плана" section at the bottom
   const split = month ? splitUnplanned(stats.groups, (c) => month.planned.has(c.category_id!)) : { groups: stats.groups, unplanned: [], spent: 0 };
 
+  const shorterThanMonth = !!norms && days < daysInMonth(norms.ym);
+  /** "31 окт": the month's last day, what the month's shares run until */
+  const monthEndShort = norms ? shortRange({ from: `${norms.ym}-${daysInMonth(norms.ym)}`, to: `${norms.ym}-${daysInMonth(norms.ym)}` }) : '';
+  /** a section's header: "spent in the period / its categories' plans for the month на октябрь", or just the spent */
+  const SectionTotal = ({ spent, planned }: { spent: number; planned: number }) => (
+    <Text style={styles.groupTotal}>
+      {money(spent)}
+      {/* a period shorter than the month: the plan is the month's, named as such */}
+      {planned > 0 && shorterThanMonth ? <Text style={styles.groupPlan}> / {money(planned)} на {monthIn}</Text> : null}
+    </Text>
+  );
+
   /** a category's row: tap opens its operations in the period; a limit's line has its ⓘ */
   const rowOf = (c: CategoryStat) => {
     const plan = c.category_id === null ? undefined : norms?.byCategory.get(c.category_id);
@@ -189,7 +201,8 @@ export default function PeriodStatsView({ range, emptyText = 'За этот пе
           <Text style={styles.amount}>
             {money(c.spent_minor)}
             {plan?.kind === 'limit' && plan.rhythm !== 'month' && !isPartOfWindow(plan.window, range) && plan.periodNorm > 0
-              ? <Text style={styles.ofLimit}> / {m(plan.periodNorm)} ({pct(c.spent_minor, Math.round(plan.periodNorm))})</Text> : null}
+              // no "(0%)" while nothing is spent
+              ? <Text style={styles.ofLimit}> / {m(plan.periodNorm)}{c.spent_minor > 0 ? ` (${pct(c.spent_minor, Math.round(plan.periodNorm))})` : ''}</Text> : null}
           </Text>
         </View>
         {plan?.kind === 'limit' && plan.rhythm !== 'month' ? (() => {
@@ -302,7 +315,7 @@ export default function PeriodStatsView({ range, emptyText = 'За этот пе
         <View key={`${g.type_id}-${g.title}`} style={styles.group}>
           <FoldHeader style={[formStyles.sectionHeader, styles.groupHeader]} folded={fold.is(g.title)} onToggle={() => fold.toggle(g.title)}>
             <Text style={styles.groupTitle}>{g.title}</Text>
-            <Text style={styles.groupTotal}>{money(g.spent_minor)}</Text>
+            <SectionTotal spent={g.spent_minor} planned={g.categories.reduce((a, c) => a + ((c.category_id !== null && norms?.byCategory.get(c.category_id)?.monthLimit) || 0), 0)} />
           </FoldHeader>
           {fold.is(g.title) ? null : g.categories.map(rowOf)}
         </View>
@@ -311,7 +324,7 @@ export default function PeriodStatsView({ range, emptyText = 'За этот пе
         <View style={styles.group}>
           <FoldHeader style={[formStyles.sectionHeader, styles.groupHeader]} folded={fold.is(UNPLANNED)} onToggle={() => fold.toggle(UNPLANNED)}>
             <Text style={styles.groupTitle}>{UNPLANNED}</Text>
-            <Text style={styles.groupTotal}>{money(split.spent)}</Text>
+            <SectionTotal spent={split.spent} planned={month.share} />
           </FoldHeader>
           {fold.is(UNPLANNED) ? null : (
             <>
@@ -327,8 +340,9 @@ export default function PeriodStatsView({ range, emptyText = 'За этот пе
                       : <Meter ratio={month.spent / month.share} base={others / month.share} height={8} color={colors.income} />}
                     <Text style={[styles.share, styles.paceText]}>
                       <Text style={[styles.pace, left < 0 ? styles.paceAhead : styles.paceOk]}>
-                        На {monthIn} {left < 0 ? `перерасход ${money(-left)}` : `осталось ${money(left)}`}
+                        {left < 0 ? `Перерасход ${money(-left)}` : `Осталось ${money(left)}`}
                       </Text>
+                      {left >= 0 ? ` · до ${monthEndShort}` : ''}
                     </Text>
                   </>
                 );
@@ -535,6 +549,7 @@ const styles = StyleSheet.create({
   // a grey band across the screen, like the days on the operations
   groupHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginHorizontal: -16 },
   groupTitle: { fontSize: 13, fontWeight: '600', color: colors.muted },
+  groupPlan: { color: colors.muted, fontWeight: '400' },
   groupTotal: { fontSize: 13, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
   row: { paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
   rowTop: { flexDirection: 'row', alignItems: 'center' },
