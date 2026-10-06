@@ -111,3 +111,12 @@ export const LockIcon = ({ color, size = 14 }: P) => (
     <Path d="M8 11V7a4 4 0 0 1 8 0v4" />
   </Svg>
 );
+
+/** An overspend inside a bar: a filled triangle with a white "!". */
+export const WarnTriangleIcon = ({ color, size = 12 }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24">
+    <Path d="M12 2.5 23 21.5H1z" fill={color} stroke="#FFFFFF" strokeWidth={1.5} strokeLinejoin="round" />
+    <Path d="M12 9.5v5.5" stroke="#FFFFFF" strokeWidth={2.6} strokeLinecap="round" />
+    <Circle cx={12} cy={18.2} r={1.4} fill="#FFFFFF" />
+  </Svg>
+);
