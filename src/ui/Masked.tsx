@@ -21,3 +21,17 @@ export default function Masked({ style, children }: { style?: StyleProp<TextStyl
     </Text>
   );
 }
+
+/**
+ * A section header's "spent / plan (%)": "Скрыть суммы" leaves it out (not blurred).
+ */
+export function MaskedTotal({ style, hiddenText, children }: {
+  style?: StyleProp<TextStyle>;
+  /** shown instead when hidden: what tells nothing of the amounts, e.g. the section's share of the spending "34%" */
+  hiddenText?: string;
+  children: React.ReactNode;
+}) {
+  const hidden = useHideAmounts();
+  if (!hidden) return <Text style={style}>{children}</Text>;
+  return hiddenText ? <Text style={style}>{hiddenText}</Text> : null;
+}

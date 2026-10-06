@@ -9,7 +9,7 @@ import { dayKeyOf, daysInMonth, monthDays } from '../dateRange';
 import { flatOf, limitChange, loadNorms, Norms, Pace, paceOf } from './norms';
 import { onTransactionsChanged } from '../../events';
 import Donut, { DonutSegment } from '../Donut';
-import Masked from '../Masked';
+import Masked, { MaskedTotal } from '../Masked';
 import { useHideAmounts } from '../../hideAmounts';
 import Meter from '../Meter';
 import { formatMoneyWithCurrency, formatShort, formatWithCurrency } from '../money';
@@ -20,6 +20,7 @@ import { useLatestRequest } from '../useLatestRequest';
 import { formStyles } from '../formStyles';
 import { FoldHeader, useFolded } from '../fold';
 import { LimitsAccordion } from './SummaryTiles';
+import { pct } from './summaryGroups';
 import { MonthReportRow } from './MonthReport';
 import { summaryGroups } from './summaryGroups';
 import { splitUnplanned, unplannedShare } from './unplanned';
@@ -118,16 +119,17 @@ export default function StatsView({ year, month, currency }: { year: number; mon
               <Text style={styles.groupTitle}>{g.title}</Text>
               {/* "Скрыть суммы": no spent / plan in the section headers */}
               {hidden ? null : (
-                <Text style={styles.groupTotal}>
+                <MaskedTotal style={styles.groupTotal} hiddenText={shareOfAll(g.spent_minor, stats.spent_minor)}>
                   {g.planned_minor ? formatShort(g.spent_minor) : formatWithCurrency(g.spent_minor, stats.currency)}
                   {g.planned_minor ? <Text style={styles.rowLimit}> / {formatWithCurrency(g.planned_minor, stats.currency)}</Text> : null}
-                </Text>
+                </MaskedTotal>
               )}
             </FoldHeader>
             {fold.is(g.title) ? null : g.categories.map((c) => (
               <CategoryRow
                 key={String(c.category_id)}
                 stat={c}
+                total={stats.spent_minor}
                 currency={stats.currency}
                 evenPace={evenPace}
                 dim={daysInMonth(ym)}
@@ -149,10 +151,10 @@ export default function StatsView({ year, month, currency }: { year: number; mon
           <FoldHeader style={[formStyles.sectionHeader, styles.groupHeader]} folded={fold.is(UNPLANNED)} onToggle={() => fold.toggle(UNPLANNED)}>
             <Text style={styles.groupTitle}>{UNPLANNED}</Text>
             {hidden ? null : (
-              <Text style={styles.groupTotal}>
+              <MaskedTotal style={styles.groupTotal} hiddenText={shareOfAll(split.spent, stats.spent_minor)}>
                 {share ? formatShort(split.spent) : formatWithCurrency(split.spent, stats.currency)}
                 {share ? <Text style={styles.rowLimit}> / {formatWithCurrency(share, stats.currency)}{planShare(split.spent, share)}</Text> : null}
-              </Text>
+              </MaskedTotal>
             )}
           </FoldHeader>
           {fold.is(UNPLANNED) ? null : (
@@ -172,6 +174,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
                 <CategoryRow
                   key={String(c.category_id)}
                   stat={c}
+                total={stats.spent_minor}
                   currency={stats.currency}
                   evenPace={evenPace}
                   dim={daysInMonth(ym)}
@@ -222,13 +225,18 @@ function fitSize(text: string, max: number): number {
   return Math.min(max, Math.floor(HOLE_TEXT_WIDTH / (text.length * CHAR_WIDTH)));
 }
 
+/** "34%": a part of the spending, for headers and rows while the amounts are hidden */
+function shareOfAll(part: number, whole: number): string {
+  return pct(part, whole);
+}
+
 export function DonutCenter({ total, picked, currency }: { total: number; picked?: { name: string; emoji: string | null; spent_minor: number }; currency: Currency }) {
   if (!picked) {
     return (
       <>
         <Text style={styles.caption}>Потрачено</Text>
         {/* the currency on the amount's line, as for a tapped segment */}
-        <Text style={[styles.hero, { fontSize: fitSize(formatWithCurrency(total, currency), 34) }]} numberOfLines={1}>{formatWithCurrency(total, currency)}</Text>
+        <Masked style={[styles.hero, { fontSize: fitSize(formatWithCurrency(total, currency), 34) }]}>{formatWithCurrency(total, currency)}</Masked>
       </>
     );
   }
@@ -236,7 +244,7 @@ export function DonutCenter({ total, picked, currency }: { total: number; picked
   return (
     <>
       <Text style={styles.pickedName} numberOfLines={2}>{`${picked.emoji || ''} ${picked.name}`.trim()}</Text>
-      <Text style={[styles.pickedAmount, { fontSize: fitSize(formatWithCurrency(picked.spent_minor, currency), 24) }]} numberOfLines={1}>{formatWithCurrency(picked.spent_minor, currency)}</Text>
+      <Masked style={[styles.pickedAmount, { fontSize: fitSize(formatWithCurrency(picked.spent_minor, currency), 24) }]}>{formatWithCurrency(picked.spent_minor, currency)}</Masked>
       <Text style={styles.caption}>{share === 0 && picked.spent_minor > 0 ? '<1' : share}% всех трат</Text>
     </>
   );
@@ -267,8 +275,11 @@ const WEEKDAYS = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
 
 type NowNorm = Norms['byCategory'] extends Map<number, infer V> ? V : never;
 
-function CategoryRow({ stat, currency, evenPace, dim, ym, openTransactions, now, monthToDate, onAddToPlan }: {
-  stat: CategoryStat; currency: Currency; evenPace?: number; dim: number;
+function CategoryRow({ stat, total, currency, evenPace, dim, ym, openTransactions, now, monthToDate, onAddToPlan }: {
+  stat: CategoryStat;
+  /** the month's spending: a row's share of it when the amounts are hidden */
+  total: number;
+  currency: Currency; evenPace?: number; dim: number;
   /** the month shown: its operations open for this period */
   ym: string;
   openTransactions: ReturnType<typeof useOpenCategoryTransactions>;
@@ -277,6 +288,7 @@ function CategoryRow({ stat, currency, evenPace, dim, ym, openTransactions, now,
   onAddToPlan?: () => void;
 }) {
   const { spent_minor: spent, limit_minor: limit } = stat;
+  const hidden = useHideAmounts();
   const ratio = limit ? spent / limit : 0;
   // fixed payment (rent, subscription): paid once this month's spending covers its plan (the share is by the amount)
   const fixed = stat.plan_kind === 'fixed';
@@ -300,7 +312,9 @@ function CategoryRow({ stat, currency, evenPace, dim, ym, openTransactions, now,
           </TouchableOpacity>
         ) : null}
         <Text style={styles.rowAmount}>
-          {limit ? formatShort(spent) : formatWithCurrency(spent, currency)}{limit ? <Text style={styles.rowLimit}> / {formatWithCurrency(limit, currency)}{planShare(spent, limit)}</Text> : null}
+          {/* "Скрыть суммы": just the % — of its plan, or of all spending without one */}
+          {hidden ? (limit ? `${pct(spent, limit)} плана` : `${shareOfAll(spent, total)} трат`)
+            : <>{limit ? formatShort(spent) : formatWithCurrency(spent, currency)}{limit ? <Text style={styles.rowLimit}> / {formatWithCurrency(limit, currency)}{planShare(spent, limit)}</Text> : null}</>}
         </Text>
       </View>
       {/* an obligatory payment paid more than planned: an overspend like a limit's */}
@@ -385,7 +399,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed',
   },
   addToPlanText: { fontSize: 12, color: colors.accent },
-  rowAmount: { marginLeft: 'auto', paddingLeft: 8, fontSize: 15, color: colors.text, fontVariant: ['tabular-nums'] },
+  rowAmount: { marginLeft: 'auto', paddingLeft: 8, fontSize: 13, color: colors.text, fontVariant: ['tabular-nums'] },
   rowLimit: { color: colors.muted },
   rowStatus: { fontSize: 13, color: colors.muted, marginTop: 4 },
   rowStatusMuted: { color: colors.muted },

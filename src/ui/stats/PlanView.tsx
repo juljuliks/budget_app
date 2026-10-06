@@ -153,7 +153,8 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
     timing === 'future' ? { key: 'unplanned', label: 'Вне плана', value: unplanned, color: RING_UNPLANNED, note: percentOf(unplanned, shownBudget) || '0%' }
       : {
         key: 'unplanned', label: 'Вне плана', value: Math.abs(unplanned - unplannedSpentMinor), color: RING_UNPLANNED,
-        note: `${unplannedSpentMinor > unplanned ? 'перерасход ' : ''}из ${money(Math.round(unplanned / 100) * 100)} · ${percentOf(unplanned, shownBudget) || '0%'}`,
+        note: hidden ? percentOf(unplanned, shownBudget) || '0%'
+          : `${unplannedSpentMinor > unplanned ? 'перерасход ' : ''}из ${money(Math.round(unplanned / 100) * 100)} · ${percentOf(unplanned, shownBudget) || '0%'}`,
         valueStyle: unplannedSpentMinor > unplanned ? styles.overText : undefined,
         noteStyle: unplannedSpentMinor > unplanned ? styles.overText : undefined,
       },
@@ -178,7 +179,12 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
   const notes: Array<{ text: string; warn?: boolean }> = [];
   // overspent already: less will be saved by the month's end (a difference under 1% of the budget is noise)
   if (toSavings && timing === 'current' && savingsEnd !== null && (free ?? 0) + locked - savingsEnd >= shownBudget! / 100) {
-    notes.push({ text: savingsEnd > 0 ? `Сбережения к концу месяца ≈ ${money(savingsEnd)}, если тратить по плану` : 'Перерасход съел сбережения месяца', warn: true });
+    notes.push({
+      text: savingsEnd <= 0 ? 'Перерасход съел сбережения месяца'
+        : hidden ? 'Сбережения к концу месяца будут меньше из-за перерасхода'
+          : `Сбережения к концу месяца ≈ ${money(savingsEnd)}, если тратить по плану`,
+      warn: true,
+    });
   }
 
   // the plan's system sections: savings (🔒 locked + 🌊 floating: what the plan leaves) and the share outside it
@@ -194,7 +200,7 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
         title: 'Вне плана',
         rows: [{
           key: 'unplanned', name: '🎲 Незапланированные траты', value: unplanned,
-          note: timing === 'future' ? 'категории без плана и без категории' : `потрачено ${money(unplannedSpentMinor)}`,
+          note: timing === 'future' || hidden ? 'категории без плана и без категории' : `потрачено ${money(unplannedSpentMinor)}`,
           style: timing !== 'future' && unplannedSpentMinor > unplanned ? styles.overText : undefined,
         }],
       });
@@ -333,9 +339,11 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
                 <Text style={styles.name} numberOfLines={1}>{r.name}</Text>
                 <Text style={styles.percent}>{[r.note, `${percentOf(r.value, shownBudget) || '0%'} бюджета`].filter(Boolean).join(' · ')}</Text>
               </View>
-              <View style={styles.amountBox}>
-                <Masked style={[styles.amount, r.style]}>{money(r.value)}</Masked>
-              </View>
+              {hidden ? null : (
+                <View style={styles.amountBox}>
+                  <Text style={[styles.amount, r.style]}>{money(r.value)}</Text>
+                </View>
+              )}
             </TouchableOpacity>
           ))}
         </View>
@@ -376,13 +384,14 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
                     {[
                       item.kind === 'fixed' ? 'обязательный платёж' : '',
                       // a flexible item's amount per its norm rhythm, e.g. "≈ 46 ₾ в неделю"
-                      item.kind === 'limit' ? normText(item, ym, currency) : '',
+                      item.kind === 'limit' && !hidden ? normText(item, ym, currency) : '',
                       shownBudget && item.converted_minor ? `${percentOf(item.converted_minor, shownBudget)} бюджета` : '',
                     ].filter(Boolean).join(' · ')}
                   </Text>
                 ) : null}
               </View>
-              {item.limit_minor ? (
+              {/* "Скрыть суммы": the amounts left out (the % of the budget stays in the line under the name) */}
+              {hidden ? null : item.limit_minor ? (
                 <View style={styles.amountBox}>
                   <Text style={styles.amount}>
                     {item.converted_minor !== null ? money(item.converted_minor) : formatWithCurrency(item.limit_minor, item.currency)}

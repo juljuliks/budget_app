@@ -10,8 +10,10 @@ import { DayRange, dayKeyOf, daysInMonth, parseDayKey, rangeDays, rangeToUnix, s
 import { flatOf, isPartOfWindow, limitChange, loadNorms, NormPart, Norms, Pace, paceOf, rhythmBar } from './norms';
 import Donut from '../Donut';
 import { InfoIcon } from '../icons';
+import { MaskedTotal } from '../Masked';
+import { useHideAmounts } from '../../hideAmounts';
 import Meter from '../Meter';
-import { formatWithCurrency } from '../money';
+import { formatShort, formatWithCurrency } from '../money';
 import { NO_RATE, PER_PERIOD, SPENDING_PATTERN } from '../strings';
 import { plural } from '../format';
 import { chart, colors } from '../theme';
@@ -118,6 +120,8 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
   const segments = useMemo(() => (stats?.groups ?? []).flatMap((g) => g.categories)
     .map((c) => ({ key: String(c.category_id), value: c.spent_minor, color: c.color })), [stats]);
 
+  // hooks before the loading return: their order must not change between renders
+  const hidden = useHideAmounts();
   if (!stats) return <View style={styles.center}><ActivityIndicator /></View>;
   const picked = selected === null ? undefined : stats.categories.find((c) => String(c.category_id) === selected);
   const cur = stats.currency;
@@ -252,14 +256,38 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
   const monthEndShort = norms ? shortRange({ from: `${norms.ym}-${daysInMonth(norms.ym)}`, to: `${norms.ym}-${daysInMonth(norms.ym)}` }) : '';
   /** a section's header: "spent in the period / its categories' plans for the month на октябрь", or just the spent */
   const SectionTotal = ({ spent, planned }: { spent: number; planned: number }) => (
-    <Text style={styles.groupTotal}>
-      {money(spent)}
+    <MaskedTotal style={styles.groupTotal} hiddenText={pct(spent, stats.spent_minor)}>
+      {/* as in the month stats: the spending black without ₾, "/ plan ₾" muted */}
+      {planned > 0 && shorterThanMonth ? formatShort(spent) : money(spent)}
       {/* a period shorter than the month: the spending's days and the plan's month named */}
-      {planned > 0 && shorterThanMonth ? <Text style={styles.groupPlan}> {spentFor}</Text> : null}
-      {/* the plan's amount looks like the spending's; only the words around them are muted */}
-      {planned > 0 && shorterThanMonth ? <> / {money(planned)}<Text style={styles.groupPlan}> на {monthIn}</Text></> : null}
-    </Text>
+      {planned > 0 && shorterThanMonth ? <Text style={styles.groupPlan}> {spentFor} / {money(planned)} на {monthIn}{spent > 0 ? ` (${pct(spent, Math.round(planned))})` : ''}</Text> : null}
+    </MaskedTotal>
   );
+
+  /** a row's "% плана" (its limit as on the right) or "% трат", while the amounts are hidden */
+  const hiddenShare = (c: CategoryStat, plan: ReturnType<NonNullable<typeof norms>['byCategory']['get']>) => {
+    const lim = !plan ? 0 : plan.kind === 'fixed' ? plan.monthLimit
+      : plan.rhythm === 'month' ? 0 : isPartOfWindow(plan.window, range) ? plan.windowNorm : plan.periodNorm;
+    return lim > 0 ? `${pct(c.spent_minor, Math.round(lim))} плана` : `${pct(c.spent_minor, stats.spent_minor)} трат`;
+  };
+
+  /** "/ limit ₾ (%)" after a category's spending, or null */
+  const ofLimitOf = (c: CategoryStat, plan: ReturnType<NonNullable<typeof norms>['byCategory']['get']>) => {
+    // "/ limit (%)": the period's own limit; a rhythm's window (a cut week) too when its spending is just this
+    // period's — measured over other days it would read against the wrong amount
+    // an obligatory payment: its month's plan, when what was paid differs from it
+    if (plan?.kind === 'fixed') {
+      const paid = (c.category_id !== null && norms?.monthToDate.get(c.category_id)) || 0;
+      if (plan.monthLimit <= 0 || Math.round(paid) === Math.round(plan.monthLimit) || paid !== c.spent_minor) return null;
+      return <Text style={styles.ofLimit}> / {m(plan.monthLimit)}{c.spent_minor > 0 ? ` (${pct(c.spent_minor, Math.round(plan.monthLimit))})` : ''}</Text>;
+    }
+    if (plan?.kind !== 'limit' || plan.rhythm === 'month') return null;
+    const whole = isPartOfWindow(plan.window, range);
+    const lim = whole ? plan.windowNorm : plan.periodNorm;
+    if (lim <= 0 || (whole && plan.windowSpent !== c.spent_minor)) return null;
+    // no "(0%)" while nothing is spent
+    return <Text style={styles.ofLimit}> / {m(lim)}{c.spent_minor > 0 ? ` (${pct(c.spent_minor, Math.round(lim))})` : ''}</Text>;
+  };
 
   /** a category's row: tap opens its operations in the period; a limit's line has its ⓘ */
   const rowOf = (c: CategoryStat, _i?: number, _all?: CategoryStat[], noBar = false) => {
@@ -279,10 +307,14 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
           <View style={[styles.dot, { backgroundColor: c.color }]} />
           <Text style={styles.name} numberOfLines={1}>{name}</Text>
           <Text style={styles.amount}>
-            {money(c.spent_minor)}
-            {plan?.kind === 'limit' && plan.rhythm !== 'month' && !isPartOfWindow(plan.window, range) && plan.periodNorm > 0
-              // no "(0%)" while nothing is spent
-              ? <Text style={styles.ofLimit}> / {m(plan.periodNorm)}{c.spent_minor > 0 ? ` (${pct(c.spent_minor, Math.round(plan.periodNorm))})` : ''}</Text> : null}
+            {/* as in the month stats: with a limit the spending without ₾, "/ limit ₾ (%)" muted */}
+            {/* "Скрыть суммы": just the % — of its limit, or of all spending without one */}
+            {hidden ? hiddenShare(c, plan) : (
+              <>
+                {ofLimitOf(c, plan) ? formatShort(c.spent_minor) : money(c.spent_minor)}
+                {ofLimitOf(c, plan)}
+              </>
+            )}
           </Text>
         </View>
         {plan?.kind === 'limit' && plan.rhythm !== 'month' ? (() => {
@@ -362,9 +394,13 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
               : <Meter ratio={mtd / plan.monthLimit} height={8} color={c.color} />) : null}
             <TouchableOpacity style={styles.paceRow} onPress={() => openInfo({ id: c.category_id!, name })} accessibilityLabel="Как считается категория">
               <Text style={styles.share}>
-                {plan.monthLimit > 0 ? `${money(mtd)} из ${money(plan.monthLimit)} на ${monthIn}` : `в ${MONTHS_PREP[parseYm(norms!.ym).month]} плана нет`}
-                {/* an overspend on its own line, as in every other row */}
-                {plan.monthLimit > 0 && mtd > plan.monthLimit ? <Text style={[styles.pace, styles.paceAhead]}>{`\nПерерасход ${money(mtd - plan.monthLimit)}`}</Text> : null}
+                {/* "paid / plan" is on the right already; here only what it doesn't say */}
+                {plan.monthLimit <= 0 ? `в ${MONTHS_PREP[parseYm(norms!.ym).month]} плана нет`
+                  : ofLimitOf(c, plan) ? null
+                    : Math.round(mtd) === Math.round(plan.monthLimit) ? `Оплачено · ${monthIn}`
+                      : `${money(mtd)} из ${money(plan.monthLimit)} на ${monthIn}`}
+                {/* an overspend, as in every other row */}
+                {plan.monthLimit > 0 && mtd > plan.monthLimit ? <Text style={[styles.pace, styles.paceAhead]}>{`${ofLimitOf(c, plan) ? '' : '\n'}Перерасход ${money(mtd - plan.monthLimit)}`}</Text> : null}
               </Text>
               <InfoIcon color={colors.accent} size={INFO_SIZE} />
             </TouchableOpacity>
@@ -401,10 +437,10 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
           <View key={key} style={styles.group}>
             <FoldHeader style={[formStyles.sectionHeader, styles.groupHeader]} folded={fold.is(`limit:${key}`)} onToggle={() => fold.toggle(`limit:${key}`)}>
               <Text style={styles.groupTitle}>{title}</Text>
-              <Text style={styles.groupTotal}>
-                {money(g ? g.spent : cats.reduce((a, c) => a + c.spent_minor, 0))}
-                {g && g.limit > 0 ? <Text style={styles.groupPlan}> / {m(g.limit)}</Text> : null}
-              </Text>
+              <MaskedTotal style={styles.groupTotal} hiddenText={pct(cats.reduce((a, c) => a + c.spent_minor, 0), stats.spent_minor)}>
+                {g && g.limit > 0 ? formatShort(Math.round(g.spent)) : money(g ? g.spent : cats.reduce((a, c) => a + c.spent_minor, 0))}
+                {g && g.limit > 0 ? <Text style={styles.groupPlan}> / {m(g.limit)}{g.spent > 0 ? ` (${pct(g.spent, Math.round(g.limit))})` : ''}</Text> : null}
+              </MaskedTotal>
             </FoldHeader>
             {fold.is(`limit:${key}`) ? null : (
               <>
@@ -428,7 +464,14 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
         <View style={styles.group}>
           <FoldHeader style={[formStyles.sectionHeader, styles.groupHeader]} folded={fold.is(UNPLANNED)} onToggle={() => fold.toggle(UNPLANNED)}>
             <Text style={styles.groupTitle}>{UNPLANNED}</Text>
-            <SectionTotal spent={split.spent} planned={month.share} />
+            {/* like the limits' headers: the month's spending outside the plan / its share (%) — the share is a month's,
+                as an obligatory payment's plan is */}
+            {byLimits && month.share > 0 ? (
+              <MaskedTotal style={styles.groupTotal} hiddenText={pct(split.spent, stats.spent_minor)}>
+                {formatShort(month.spent)}
+                <Text style={styles.groupPlan}> / {m(month.share)}{month.spent > 0 ? ` (${pct(month.spent, Math.round(month.share))})` : ''}</Text>
+              </MaskedTotal>
+            ) : <SectionTotal spent={split.spent} planned={month.share} />}
           </FoldHeader>
           {fold.is(UNPLANNED) ? null : (
             <>
@@ -655,7 +698,7 @@ const styles = StyleSheet.create({
   // a grey band across the screen, like the days on the operations
   groupHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginHorizontal: -16 },
   groupTitle: { fontSize: 13, fontWeight: '600', color: colors.muted },
-  groupPlan: { color: colors.muted, fontWeight: '400' },
+  groupPlan: { color: colors.muted },
   groupTotal: { fontSize: 13, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
   row: { paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
   rowTop: { flexDirection: 'row', alignItems: 'center' },
@@ -675,8 +718,9 @@ const styles = StyleSheet.create({
   paceText: { flexShrink: 1 },
   paceNeutral: { color: colors.text },
   share: { fontSize: 13, color: colors.muted, marginTop: 4, fontVariant: ['tabular-nums'] },
-  amount: { fontSize: 15, color: colors.text, fontVariant: ['tabular-nums'] },
-  ofLimit: { fontSize: 13, color: colors.muted },
+  amount: { fontSize: 13, color: colors.text, fontVariant: ['tabular-nums'] },
+  // "/ plan" like the spending before it: one amount pair
+  ofLimit: { color: colors.muted },
   info: { paddingHorizontal: 20, gap: 10, paddingBottom: 4 },
   infoText: { fontSize: 15, color: colors.text, lineHeight: 21 },
   infoBold: { fontWeight: '600' },
