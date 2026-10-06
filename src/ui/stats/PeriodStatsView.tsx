@@ -311,9 +311,8 @@ export default function PeriodStatsView({ range, emptyText = 'За этот пе
             <>
               {/* the share is the month's: not split by days; how much of it the month took so far */}
               {month.share > 0 ? (
-                <Text style={[styles.share, month.spent > month.share && styles.paceAhead]}>
-                  В {MONTHS_PREP[parseYm(norms!.ym).month]}: {money(month.spent)} из {money(month.share)} ({pct(month.spent, month.share)})
-                </Text>
+                // like an obligatory payment's line: "130 ₾ из 200 ₾ на октябрь"
+                <Text style={styles.share}>{money(month.spent)} из {money(month.share)} на {monthIn}</Text>
               ) : null}
               {split.unplanned.map(rowOf)}
             </>
