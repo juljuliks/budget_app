@@ -184,7 +184,8 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
       {money(spent)}
       {/* a period shorter than the month: the spending's days and the plan's month named */}
       {planned > 0 && shorterThanMonth ? <Text style={styles.groupPlan}> {spentFor}</Text> : null}
-      {planned > 0 && shorterThanMonth ? <Text style={styles.groupPlan}> / {money(planned)} на {monthIn}</Text> : null}
+      {/* the plan's amount looks like the spending's; only the words around them are muted */}
+      {planned > 0 && shorterThanMonth ? <> / {money(planned)}<Text style={styles.groupPlan}> на {monthIn}</Text></> : null}
     </Text>
   );
 
