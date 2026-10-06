@@ -295,12 +295,22 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
       return <Text style={styles.ofLimit}> / {m(plan.monthLimit)}{c.spent_minor > 0 ? ` (${pct(c.spent_minor, Math.round(plan.monthLimit))})` : ''}</Text>;
     }
     if (plan?.kind !== 'limit' || plan.rhythm === 'month') return null;
-    const whole = isPartOfWindow(plan.window, range);
-    const lim = whole ? plan.windowNorm : plan.periodNorm;
-    if (lim <= 0 || (whole && plan.windowSpent !== c.spent_minor)) return null;
+    const { spent, limit: lim } = limitPair(plan, c);
+    if (lim <= 0) return null;
     // no "(0%)" while nothing is spent
-    return <Text style={styles.ofLimit}> / {m(lim)}{c.spent_minor > 0 ? ` (${pct(c.spent_minor, Math.round(lim))})` : ''}</Text>;
+    return <Text style={styles.ofLimit}> / {m(lim)}{spent > 0 ? ` (${pct(spent, Math.round(lim))})` : ''}</Text>;
   };
+  /**
+   * What a day / week limit's "spent / limit" on the right is measured over: the period itself, or — a day of a
+   * weekly limit — its whole week so far, as the line under it ("Неделя 5 – 11 окт: осталось …")
+   */
+  const limitPair = (plan: NonNullable<ReturnType<NonNullable<typeof norms>['byCategory']['get']>>, c: CategoryStat) => {
+    const whole = isPartOfWindow(plan.window, range);
+    return whole ? { spent: plan.windowSpent, limit: plan.windowNorm } : { spent: c.spent_minor, limit: plan.periodNorm };
+  };
+  /** the spending on the right: the limit's own (a week's on a day of a weekly limit), else the period's */
+  const rightSpent = (c: CategoryStat, plan: ReturnType<NonNullable<typeof norms>['byCategory']['get']>) =>
+    (plan?.kind === 'limit' && plan.rhythm !== 'month' ? limitPair(plan, c).spent : c.spent_minor);
 
   /** a category's row: tap opens its operations in the period; a limit's line has its ⓘ */
   const rowOf = (c: CategoryStat, _i?: number, _all?: CategoryStat[], noBar = false) => {
@@ -324,7 +334,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
             {/* "Скрыть суммы": just the % — of its limit, or of all spending without one */}
             {hidden ? hiddenShare(c, plan) : (
               <>
-                {ofLimitOf(c, plan) ? formatShort(c.spent_minor) : money(c.spent_minor)}
+                {ofLimitOf(c, plan) ? formatShort(rightSpent(c, plan)) : money(c.spent_minor)}
                 {ofLimitOf(c, plan)}
               </>
             )}
@@ -769,7 +779,8 @@ const styles = StyleSheet.create({
   paceNeutral: { color: colors.text },
   share: { fontSize: 13, color: colors.muted, marginTop: 4, fontVariant: ['tabular-nums'] },
   // the amount never wraps ("0 /" with the limit cut off): the name gives way
-  amount: { flexShrink: 0, marginLeft: 8, fontSize: 13, color: colors.text, fontVariant: ['tabular-nums'] },
+  // no tabular-nums here: Android under-measures such text and cut "0 / 106.81 ₾" to "0 /"
+  amount: { flexShrink: 0, marginLeft: 8, fontSize: 13, color: colors.text },
   // "/ plan" like the spending before it: one amount pair
   ofLimit: { color: colors.muted },
   info: { paddingHorizontal: 20, gap: 10, paddingBottom: 4 },
