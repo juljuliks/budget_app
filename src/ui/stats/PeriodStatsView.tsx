@@ -35,6 +35,12 @@ type Props = {
   emptyText?: string;
 };
 
+/**
+ * After a "₾" that ends a line: Android takes the sign's width from the main font though it comes from a fallback one,
+ * and cut it off ("0 / 106.81" without "₾"); a no-break space after it is what gets cut instead.
+ */
+const GLYPH_ROOM = '\u00a0';
+
 const MONTHS_IN = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
 
 const WEEKDAYS = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
@@ -307,13 +313,13 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
     if (plan?.kind === 'fixed') {
       const paid = (c.category_id !== null && norms?.monthToDate.get(c.category_id)) || 0;
       if (plan.monthLimit <= 0 || Math.round(paid) === Math.round(plan.monthLimit) || paid !== c.spent_minor) return null;
-      return <Text style={styles.ofLimit}>{'\u00a0/\u00a0'}{m(plan.monthLimit)}{c.spent_minor > 0 ? <Text style={overStyle(c.spent_minor, plan.monthLimit)}>{` (${pct(c.spent_minor, Math.round(plan.monthLimit))})`}</Text> : null}</Text>;
+      return <Text style={styles.ofLimit}>{'\u00a0/\u00a0'}{m(plan.monthLimit)}{c.spent_minor > 0 ? <Text style={overStyle(c.spent_minor, plan.monthLimit)}>{` (${pct(c.spent_minor, Math.round(plan.monthLimit))})`}</Text> : GLYPH_ROOM}</Text>;
     }
     if (plan?.kind !== 'limit' || plan.rhythm === 'month') return null;
     const { spent, limit: lim } = limitPair(plan, c);
     if (lim <= 0) return null;
     // no "(0%)" while nothing is spent
-    return <Text style={styles.ofLimit}>{'\u00a0/\u00a0'}{m(lim)}{spent > 0 ? <Text style={overStyle(spent, lim)}>{` (${pct(spent, Math.round(lim))})`}</Text> : null}</Text>;
+    return <Text style={styles.ofLimit}>{'\u00a0/\u00a0'}{m(lim)}{spent > 0 ? <Text style={overStyle(spent, lim)}>{` (${pct(spent, Math.round(lim))})`}</Text> : GLYPH_ROOM}</Text>;
   };
   /**
    * What a day / week limit's "spent / limit" on the right is measured over: the period itself, or — a day of a
@@ -336,7 +342,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
       <View style={styles.rowTop}>
         <View style={[styles.dot, { backgroundColor: c.color }]} />
         <Text style={styles.name} numberOfLines={1}>{`${c.emoji || ''} ${c.name}`.trim()}</Text>
-        <Text style={[styles.amount, styles.amountPad]}>{hidden ? headerPct(c.spent_minor, 0) : money(c.spent_minor)}</Text>
+        <Text style={[styles.amount, styles.amountPad]}>{hidden ? headerPct(c.spent_minor, 0) : `${money(c.spent_minor)}${GLYPH_ROOM}`}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -367,7 +373,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
               nested text was cut short on Android ("0 /", "0 / 106.8…") */}
           {hidden ? <Text style={styles.amount} numberOfLines={1}>{hiddenShare(c, plan)}</Text> : (
             <View style={styles.amountBox}>
-              <Text style={[styles.amountText, ofLimit ? overStyle(rightSpent(c, plan), rightLimit(c, plan)) : null]}>{ofLimit ? formatShort(rightSpent(c, plan)) : money(c.spent_minor)}</Text>
+              <Text style={[styles.amountText, ofLimit ? overStyle(rightSpent(c, plan), rightLimit(c, plan)) : null]}>{ofLimit ? formatShort(rightSpent(c, plan)) : `${money(c.spent_minor)}${GLYPH_ROOM}`}</Text>
               {ofLimit ? <Text style={[styles.amountText, styles.ofLimit]}>{ofLimit}</Text> : null}
             </View>
           )}
