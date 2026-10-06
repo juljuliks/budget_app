@@ -57,6 +57,8 @@ const GROUP_ABOUT: Record<SummaryGroupKey, string> = {
 
 /** the bottom section of the categories without a plan (as in the plan and the month) */
 const UNPLANNED = 'Вне плана';
+/** planned categories whose limit these days can't measure: just their spending */
+const OTHER = 'Другие траты';
 /** day / week categories over their month's plan: no limit left, a section of their own */
 const OVERSPENT = 'Перерасход плана месяца';
 
@@ -193,7 +195,12 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
   };
   // shorter than a month: grouped by the limit's rhythm (the planned categories; the rest stay in "Вне плана")
   const byLimits = shorterThanMonth && !!month;
-  const LIMIT_ORDER: SummaryGroupKey[] = ['day', 'week', '2weeks', 'month', 'fixed'];
+  // only the limits this period measures: a day — the daily ones; a week — daily and weekly; two weeks — also the
+  // 2-week ones. A longer rhythm (a weekly limit on a day, the month's, obligatory payments) can't be judged by these
+  // days: such categories go to "Другие траты" with just their spending
+  const fitting = (rhythm: string) => rhythm === 'day' || (rhythm === 'week' && (normLabel === 'на неделю' || days >= 7))
+    || (rhythm === '2weeks' && days >= 14);
+  const LIMIT_ORDER: SummaryGroupKey[] = ['day', 'week', '2weeks'];
   // a day / week / 2-week category over its month's plan (by the period's end) has no limit left: out of its
   // limit's section (whose total leaves it out too), into its own one after them
   const monthOver = (c: CategoryStat) => {
@@ -201,7 +208,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
     return !!p && p.kind === 'limit' && p.rhythm !== 'month' && p.monthLimit > 0 && (norms!.monthToDate.get(c.category_id!) ?? 0) > p.monthLimit;
   };
   const planned = split.groups.flatMap((g) => g.categories);
-  const limitSections = byLimits ? LIMIT_ORDER.map((key) => ({
+  const limitSections = byLimits ? LIMIT_ORDER.filter(fitting).map((key) => ({
     key,
     cats: planned.filter((c) => {
       const p = c.category_id === null ? undefined : norms?.byCategory.get(c.category_id);
@@ -209,6 +216,10 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
     }).sort((a, b) => b.spent_minor - a.spent_minor),
   })).filter((x) => x.cats.length > 0) : [];
   const overspentCats = byLimits ? planned.filter(monthOver).sort((a, b) => b.spent_minor - a.spent_minor) : [];
+  const otherCats = byLimits ? planned.filter((c) => {
+    const p = c.category_id === null ? undefined : norms?.byCategory.get(c.category_id);
+    return !monthOver(c) && !(p && p.kind === 'limit' && fitting(p.rhythm)) && c.spent_minor > 0;
+  }).sort((a, b) => b.spent_minor - a.spent_minor) : [];
 
   /** A limits section's total, as its tile had it: the bar, what's left or the overspend, how the period moved the limit. */
   const LimitSummary = ({ g }: { g: (typeof groups)[number] }) => {
@@ -499,6 +510,25 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
             </MaskedTotal>
           </FoldHeader>
           {fold.is(OVERSPENT) ? null : overspentCats.map((c, i) => rowOf(c, i, overspentCats, false))}
+        </View>
+      )] : []).concat(otherCats.length ? [(
+        // limits these days can't measure (a weekly one on a day, the month's, obligatory payments): just the spending
+        <View key="other" style={styles.group}>
+          <FoldHeader style={[formStyles.sectionHeader, styles.groupHeader]} folded={fold.is(OTHER)} onToggle={() => fold.toggle(OTHER)}>
+            <Text style={styles.groupTitle}>{OTHER}</Text>
+            <MaskedTotal style={styles.groupTotal} hiddenText={headerPct(otherCats.reduce((a, c) => a + c.spent_minor, 0), 0)}>
+              {money(otherCats.reduce((a, c) => a + c.spent_minor, 0))}
+            </MaskedTotal>
+          </FoldHeader>
+          {fold.is(OTHER) ? null : otherCats.map((c) => (
+            <TouchableOpacity key={String(c.category_id)} style={styles.row} onPress={() => openTransactions(c.category_id, range)} accessibilityHint="Показать операции категории за период">
+              <View style={styles.rowTop}>
+                <View style={[styles.dot, { backgroundColor: c.color }]} />
+                <Text style={styles.name} numberOfLines={1}>{`${c.emoji || ''} ${c.name}`.trim()}</Text>
+                {hidden ? <Text style={styles.amount}>{headerPct(c.spent_minor, 0)}</Text> : <Text style={styles.amount}>{money(c.spent_minor)}</Text>}
+              </View>
+            </TouchableOpacity>
+          ))}
         </View>
       )] : []) : split.groups.map((g) => (
         <View key={`${g.type_id}-${g.title}`} style={styles.group}>
