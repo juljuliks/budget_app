@@ -395,13 +395,12 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
             {plan.monthLimit > 0 && !noBar ? (mtd > plan.monthLimit
               ? <Meter ratio={1} over={plan.monthLimit / mtd} height={8} color={c.color} />
               : <Meter ratio={mtd / plan.monthLimit} height={8} color={c.color} />) : null}
-            {/* nothing to add to "paid / plan" on the right (and no overspend): no line, no lone ⓘ */}
-            {plan.monthLimit > 0 && ofLimitOf(c, plan) && mtd <= plan.monthLimit ? null : (
             <TouchableOpacity style={styles.paceRow} onPress={() => openInfo({ id: c.category_id!, name })} accessibilityLabel="Как считается категория">
               <Text style={styles.share}>
                 {/* "paid / plan" is on the right already; here only what it doesn't say */}
                 {plan.monthLimit <= 0 ? `в ${MONTHS_PREP[parseYm(norms!.ym).month]} плана нет`
-                  : ofLimitOf(c, plan) ? null
+                  // "paid / plan" on the right: what's still to pay this month, like a limit's "осталось"
+                  : ofLimitOf(c, plan) ? (mtd < plan.monthLimit ? <>Осталось оплатить {money(plan.monthLimit - mtd)}<Text> · до {monthEndShort}</Text></> : null)
                     : Math.round(mtd) === Math.round(plan.monthLimit) ? `Оплачено · ${monthIn}`
                       : `${money(mtd)} из ${money(plan.monthLimit)} на ${monthIn}`}
                 {/* an overspend, as in every other row */}
@@ -409,7 +408,6 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
               </Text>
               <InfoIcon color={colors.accent} size={INFO_SIZE} />
             </TouchableOpacity>
-            )}
           </>
         ) : (
           <Text style={styles.share}>{pct(c.spent_minor, stats.spent_minor)} всех трат</Text>
