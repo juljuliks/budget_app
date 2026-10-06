@@ -84,10 +84,73 @@ export async function categoryChangeTotals(merchantKey: string, categoryId: numb
     [merchantKey, ...REMEMBERABLE_KINDS, alsoTxId, categoryId]);
 }
 
-/** Same category (null = none) for several transactions (bulk edit from the list). No merchant rules: a one-off manual choice. */
-export async function assignCategoryToMany(txIds: number[], categoryId: number | null) {
-  if (txIds.length === 0) return;
+/** The merchants of these transactions whose category `categoryId` would change (purchases / payments only). */
+async function merchantsToChange(txIds: number[], categoryId: number): Promise<Array<{ key: string; name: string }>> {
+  if (txIds.length === 0) return [];
+  const db = await getDb();
+  const rows = await db.all<{ kind: string; merchant_key: string | null; raw_merchant: string | null }>(
+    `SELECT kind, merchant_key, raw_merchant FROM transactions WHERE id IN (${txIds.map(() => '?').join(',')})`, txIds);
+  const out = new Map<string, string>();
+  for (const r of rows) {
+    if (!r.merchant_key || !isRememberable(r.kind) || out.has(r.merchant_key)) continue;
+    const rule = await findCategoryForMerchant(r.merchant_key);
+    if (rule?.category_id !== categoryId) out.set(r.merchant_key, r.raw_merchant || r.merchant_key);
+  }
+  return [...out].map(([key, name]) => ({ key, name }));
+}
+
+export type MerchantsChange = {
+  merchants: string[];
+  /** transactions whose category changes if it becomes those merchants' (the selected ones included) */
+  count: number;
+  totals: Array<{ currency: string; amount_minor: number }>;
+};
+
+/**
+ * Bulk edit: what making `categoryId` the category of the selected transactions' merchants would change — asked
+ * like for one transaction (these only or the merchants too). null = nothing to ask (no merchant to change).
+ */
+export async function merchantsChangePreview(txIds: number[], categoryId: number | null): Promise<MerchantsChange | null> {
+  if (categoryId === null) return null;
+  const merchants = await merchantsToChange(txIds, categoryId);
+  if (merchants.length === 0) return null;
+  const sums = new Map<string, number>();
+  let count = 0;
+  for (const m of merchants) {
+    for (const t of await categoryChangeTotals(m.key, categoryId)) {
+      sums.set(t.currency, (sums.get(t.currency) ?? 0) + t.amount_minor);
+      count += t.n;
+    }
+  }
+  return {
+    merchants: merchants.map((m) => m.name),
+    count,
+    totals: [...sums].map(([currency, amount_minor]) => ({ currency, amount_minor })).sort((a, b) => b.amount_minor - a.amount_minor),
+  };
+}
+
+/**
+ * Same category (null = none) for several transactions (bulk edit from the list). By default a one-off manual
+ * choice; 'merchant' also makes it their merchants' category (rule + the merchants' transactions that follow it),
+ * the selected ones of those merchants then follow it too. Returns how many merchants got it.
+ */
+export async function assignCategoryToMany(txIds: number[], categoryId: number | null, choice?: MerchantChoice): Promise<number> {
+  if (txIds.length === 0) return 0;
+  const merchants = categoryId !== null && choice === 'merchant' ? await merchantsToChange(txIds, categoryId) : [];
   await setCategoryForTransactions(txIds, categoryId);
+  for (const m of merchants) {
+    await createRule('exact', m.key, categoryId!);
+    await backfillRule('exact', m.key, categoryId!);
+  }
+  if (merchants.length > 0) {
+    // the selected ones of these merchants follow them from now on, like the ones the rule picked
+    const db = await getDb();
+    await db.run(
+      `UPDATE transactions SET category_source = 'rule' WHERE id IN (${txIds.map(() => '?').join(',')})
+        AND merchant_key IN (${merchants.map(() => '?').join(',')}) AND kind IN (${REMEMBERABLE_KINDS.map(() => '?').join(',')})`,
+      [...txIds, ...merchants.map((m) => m.key), ...REMEMBERABLE_KINDS]);
+  }
   if (categoryId !== null) await incrementCategoryUsage(categoryId);
   emitTransactionsChanged();
+  return merchants.length;
 }

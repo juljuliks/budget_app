@@ -11,7 +11,8 @@ import { emitTransactionsChanged, onTransactionsChanged } from '../events';
 import { Category, categoryLabel, countPastTransactionsOfCategory, deleteCategory, getCategory, moveTransactionsOutOfCategory } from '../db/categories';
 import { currentYm, monthStart, spendingEntries } from '../db/plans';
 import { useDisplayCurrency } from '../displayCurrency';
-import { assignCategoryToMany } from '../assign';
+import { assignCategoryToMany, MerchantChoice, merchantsChangePreview } from '../assign';
+import { sheetAlert } from './sheetAlert';
 import { navigationRef, TabParamList, useRootNavigation } from '../navigation';
 import Button from './Button';
 import CategoryPickerModal from './CategoryPickerModal';
@@ -23,7 +24,7 @@ import PushAccessBanner from './PushAccessBanner';
 import CardBalance from './CardBalance';
 import SettingsButton from './SettingsButton';
 import { dayKey, formatDay, KIND_LABELS, plural } from './format';
-import { formatWithCurrency } from './money';
+import { formatMoneyWithCurrency, formatWithCurrency } from './money';
 import { formStyles } from './formStyles';
 import { ChevronRightIcon, PencilIcon, SearchIcon } from './icons';
 import { DayRange, formatRange, rangeToUnix } from './RangeCalendar';
@@ -349,20 +350,42 @@ export default function TransactionsList() {
     if (next.size === 0) setSelectMode(false);
   }
 
-  async function applyBulk(categoryId: number | null) {
-    setBulkOpen(false);
+  async function assignBulk(categoryId: number | null, choice?: MerchantChoice) {
     try {
-      await assignCategoryToMany([...selected], categoryId);
+      const merchants = await assignCategoryToMany([...selected], categoryId, choice);
       showLimitAlert(categoryId);
       const n = selected.size;
       const c = categoryId === null ? undefined : await getCategory(categoryId);
-      toast(`${c ? `Категория «${categoryLabel(c)}» назначена` : 'Категория убрана'}: ${n} ${plural(n, ['операция', 'операции', 'операций'])}`);
+      const ops = `${n} ${plural(n, ['операция', 'операции', 'операций'])}`;
+      toast(c
+        ? `Категория «${categoryLabel(c)}» назначена: ${ops}${merchants ? ` и ${merchants} ${plural(merchants, ['мерчанту', 'мерчантам', 'мерчантам'])}` : ''}`
+        : `Категория убрана: ${ops}`);
       setSelected(new Set());
       setSelectMode(false);
     } catch (e) {
       console.error('bulk assign failed', e);
       toastError('Не удалось сохранить');
     }
+  }
+
+  // like for one operation: if the selected ones have merchants with another category (or none), ask whether the
+  // new one is for the selected operations only or becomes those merchants' too (with what that changes)
+  async function applyBulk(categoryId: number | null) {
+    setBulkOpen(false);
+    const change = await merchantsChangePreview([...selected], categoryId).catch((e) => { console.error('preview failed', e); return null; });
+    if (!change) { await assignBulk(categoryId); return; }
+    const to = await getCategory(categoryId!);
+    const names = change.merchants.length > 3 ? `${change.merchants.slice(0, 2).join(', ')} и ещё ${change.merchants.length - 2}` : change.merchants.join(', ');
+    const sum = change.totals.map((t) => formatMoneyWithCurrency(t.amount_minor, t.currency)).join(' + ');
+    const one = change.merchants.length === 1;
+    sheetAlert(
+      `Категория «${to ? categoryLabel(to) : '?'}» — только для выбранных операций или и для ${one ? 'мерчанта' : 'мерчантов'}?`,
+      `${one ? `Для мерчанта «${names}»` : `Для мерчантов (${names})`}: категория изменится у ${change.count} ${plural(change.count, ['операции', 'операций', 'операций'])} на ${sum}, и новые операции будут получать её автоматически. Выбранные вручную категории не изменятся.`,
+      [
+        { text: 'Отмена', style: 'cancel' },
+        { text: `Только для выбранных (${selected.size})`, onPress: () => { assignBulk(categoryId, 'only'); } },
+        { text: one ? 'И для мерчанта' : 'И для мерчантов', style: 'secondary', onPress: () => { assignBulk(categoryId, 'merchant'); } },
+      ]);
   }
 
   const selectedRows = data.filter((r) => selected.has(r.id));

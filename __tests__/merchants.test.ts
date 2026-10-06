@@ -130,3 +130,40 @@ test('a merchant without a category: picking one asks "this operation or the mer
   await assignCategory(b, 1, 'only');
   expect(await findCategoryForMerchant('BOLT')).toBeNull();
 });
+
+describe('bulk category change: the selected operations only, or their merchants too', () => {
+  test('"и для мерчантов": both merchants get the rule, their other followers move, manual choices stay', async () => {
+    const { assignCategoryToMany, merchantsChangePreview } = await import('../src/assign');
+    const a = await sms('SPAR');
+    const b = await sms('SPAR');
+    const c = await sms('WOLT');
+    const manual = await sms('SPAR');
+    await assignCategory(manual, 3, 'only');
+    const preview = await merchantsChangePreview([a, c], 2);
+    expect(preview?.merchants.sort()).toEqual(['SPAR', 'WOLT']);
+    // a, b and c follow (manual stays)
+    expect(preview?.count).toBe(3);
+    expect(await assignCategoryToMany([a, c], 2, 'merchant')).toBe(2);
+    expect([await categoryOf(a), await categoryOf(b), await categoryOf(c), await categoryOf(manual)]).toEqual([2, 2, 2, 3]);
+    expect((await findCategoryForMerchant('SPAR'))?.category_id).toBe(2);
+    expect((await findCategoryForMerchant('WOLT'))?.category_id).toBe(2);
+    // already their category: nothing to ask
+    expect(await merchantsChangePreview([a, c], 2)).toBeNull();
+  });
+
+  test('"только для выбранных": no rules, the others stay', async () => {
+    const { assignCategoryToMany } = await import('../src/assign');
+    const a = await sms('SPAR');
+    const b = await sms('SPAR');
+    expect(await assignCategoryToMany([a], 2, 'only')).toBe(0);
+    expect([await categoryOf(a), await categoryOf(b)]).toEqual([2, null]);
+    expect(await findCategoryForMerchant('SPAR')).toBeNull();
+  });
+
+  test('no merchant to ask about: "Без категории" or no merchants', async () => {
+    const { merchantsChangePreview } = await import('../src/assign');
+    const a = await sms('SPAR');
+    expect(await merchantsChangePreview([a], null)).toBeNull();
+    expect(await merchantsChangePreview([], 2)).toBeNull();
+  });
+});
