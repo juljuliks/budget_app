@@ -23,6 +23,8 @@ type Props = {
 };
 
 const clamp = (v: number) => Math.min(Math.max(v, 0), 1);
+/** a limit tick this close to the bar's end isn't drawn */
+const TICK_AT_END = 0.97;
 
 /** Thin progress bar with rounded ends; optionally a faded first part and a pace tick. */
 export default function Meter({ ratio, height = 6, color, marginTop = 8, base = 0, marker, over, limitTick }: Props) {
@@ -39,7 +41,8 @@ export default function Meter({ ratio, height = 6, color, marginTop = 8, base = 
           {over !== undefined ? <View style={{ height, width: `${(1 - clamp(over)) * 100}%`, backgroundColor, opacity: 0.4 }} /> : null}
         </View>
       </View>
-      {(over ?? limitTick) !== undefined ? (
+      {/* the limit's tick, unless it is at the bar's very end (a tiny overspend): there it only looks like the bar's edge */}
+      {(over ?? limitTick) !== undefined && clamp((over ?? limitTick)!) < TICK_AT_END ? (
         <View style={[styles.marker, { height: height + 6, top: -3, left: `${clamp((over ?? limitTick)!) * 100}%` }]} accessibilityLabel="Лимит" />
       ) : null}
       {marker !== undefined ? (

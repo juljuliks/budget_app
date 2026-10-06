@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { averageFullMonths, CategoryStat, parseYm, periodStats, PeriodStats } from '../../db/plans';
+import { averageFullMonths, NormPeriod, CategoryStat, parseYm, periodStats, PeriodStats } from '../../db/plans';
 import { useDisplayCurrency } from '../../displayCurrency';
 import { useOpenCategoryTransactions } from '../../navigation';
 import { onTransactionsChanged } from '../../events';
@@ -14,7 +14,7 @@ import Meter from '../Meter';
 import { formatWithCurrency } from '../money';
 import { NO_RATE, PER_PERIOD, SPENDING_PATTERN } from '../strings';
 import { plural } from '../format';
-import { colors } from '../theme';
+import { chart, colors } from '../theme';
 import { DonutCenter, RefundsRow } from './StatsView';
 import { useLatestRequest } from '../useLatestRequest';
 import { GROUP_TITLES, LimitsAccordion } from './SummaryTiles';
@@ -171,6 +171,78 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
   const split = month ? splitUnplanned(stats.groups, (c) => month.planned.has(c.category_id!)) : { groups: stats.groups, unplanned: [], spent: 0 };
 
   const shorterThanMonth = !!norms && days < daysInMonth(norms.ym);
+  /**
+   * "Неделя 5 – 11 окт: " before what a weekly limit has left: its days in this month only (a week across months is cut
+   * at the month's edge, as its limit is); nothing when those days are just the viewed period.
+   */
+  const windowLabel = (rhythm: NormPeriod, w: DayRange) => {
+    if (!norms) return '';
+    const first = `${norms.ym}-01`;
+    const last = `${norms.ym}-${String(daysInMonth(norms.ym)).padStart(2, '0')}`;
+    const part = { from: w.from < first ? first : w.from, to: w.to > last ? last : w.to };
+    if (part.from === range.from && part.to === range.to) return '';
+    return `${rhythm === 'week' ? 'Неделя' : '2 недели'} ${shortRange(part)}: `;
+  };
+  // shorter than a month: grouped by the limit's rhythm (the planned categories; the rest stay in "Вне плана")
+  const byLimits = shorterThanMonth && !!month;
+  const LIMIT_ORDER: SummaryGroupKey[] = ['day', 'week', '2weeks', 'month', 'fixed'];
+  const limitSections = byLimits ? LIMIT_ORDER.map((key) => ({
+    key,
+    cats: split.groups.flatMap((g) => g.categories).filter((c) => {
+      const p = c.category_id === null ? undefined : norms?.byCategory.get(c.category_id);
+      return p ? (p.kind === 'fixed' ? 'fixed' : p.rhythm) === key : false;
+    }).sort((a, b) => b.spent_minor - a.spent_minor),
+  })).filter((x) => x.cats.length > 0) : [];
+
+  /** A limits section's total, as its tile had it: the bar, what's left or the overspend, how the period moved the limit. */
+  const LimitSummary = ({ g }: { g: (typeof groups)[number] }) => {
+    const limit = Math.round(g.limit);
+    if (limit <= 0) return null;
+    const left = limit - g.spent;
+    const over = left < 0;
+    const paid = g.items.filter((i) => i.spent >= i.limit).length;
+    const rhythm = g.key === 'day' || g.key === 'week' || g.key === '2weeks';
+    // a rhythm's days end on a weekday ("до вс"), the month's on its last day
+    const until = rhythm ? WEEKDAYS[parseDayKey(g.end).getDay()] : monthEndShort;
+    const moved = g.change && g.change.after !== null && Math.round(g.change.after) !== Math.round(g.change.before);
+    return (
+      <View style={styles.limitSummary}>
+        {/* each category's spending in its own color; past the limit the bar is the spending, a tick at the limit */}
+        {/* the tick stands out of the bar like a category's: the bar clips its segments, not the tick */}
+        <View style={styles.stackWrap}>
+          <View style={styles.stack}>
+            {g.items.filter((i) => i.spent > 0).map((i) => (
+              <View key={i.id} style={{ flex: i.spent, backgroundColor: stats.categories.find((c) => c.category_id === i.id)?.color ?? colors.muted }} />
+            ))}
+            {!over && limit - g.spent > 0 ? <View style={[styles.stackRest, { flex: limit - g.spent }]} /> : null}
+          </View>
+          {/* as on every bar: no tick at the very end */}
+          {over && limit / g.spent < 0.97 ? <View style={[styles.stackTick, { left: `${(limit / g.spent) * 100}%` }]} /> : null}
+        </View>
+        <TouchableOpacity style={styles.paceRow} onPress={() => openInfo({ group: g.key })} accessibilityLabel="Как считается раздел">
+          <Text style={[styles.share, styles.paceText]}>
+            {/* as in the category rows: the limit first, then what's left */}
+            {g.change && rhythm ? (
+              <>
+                {'Лимит '}
+                {moved ? <><Text style={styles.crossed}>{m(g.change.before)}</Text>{' → '}</> : null}
+                <Text style={moved ? (g.change.after! < g.change.before ? styles.paceAhead : styles.paceOk) : undefined}>{m(moved ? g.change.after! : g.change.before)}</Text>
+                {` ${PER_PERIOD[g.key as 'day']}\n`}
+              </>
+            ) : null}
+            {g.window && rhythm ? windowLabel(g.key as NormPeriod, g.window) : !rhythm ? `${capitalize(monthIn)}: ` : ''}
+            <Text style={[styles.pace, over ? styles.paceAhead : g.key === 'fixed' ? undefined : styles.paceOk]}>
+              {(over ? `перерасход ${money(-left)}` : g.key === 'fixed' ? (left > 0 ? `осталось оплатить ${money(left)}` : 'всё оплачено')
+                : g.ongoing ? `осталось ${money(left)}` : `сэкономлено ${money(left)}`).replace(/^./, (ch) => ((g.window && windowLabel(g.key as NormPeriod, g.window)) || !rhythm ? ch : ch.toUpperCase()))}
+            </Text>
+            {!over && g.ongoing && g.key !== 'fixed' && (g.key !== 'day' || days > 1) ? ` · до ${until}` : ''}
+            {g.key === 'fixed' ? ` · ${paid} из ${g.items.length} оплачены` : ''}
+          </Text>
+          <InfoIcon color={colors.accent} size={INFO_SIZE} />
+        </TouchableOpacity>
+      </View>
+    );
+  };
   // what the spending in a section's header is for: "за день", "за неделю", "за 1–4 окт", "с 28 сен по 4 окт"
   const spentFor = normLabel === 'на день' ? 'за день' : normLabel === 'на неделю' && days === 7 ? 'за неделю'
     // a week cut by the month's edge: "за 1–4 окт" — tight, so the " / " after it stays the visible separator
@@ -190,7 +262,8 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
   );
 
   /** a category's row: tap opens its operations in the period; a limit's line has its ⓘ */
-  const rowOf = (c: CategoryStat) => {
+  const rowOf = (c: CategoryStat, _i?: number, _all?: CategoryStat[], noBar = false) => {
+    // noBar: in a limits section of several categories the section's bar shows them all
     const plan = c.category_id === null ? undefined : norms?.byCategory.get(c.category_id);
     const mtd = (c.category_id !== null && norms?.monthToDate.get(c.category_id)) || 0;
     const name = `${c.emoji || ''} ${c.name}`.trim();
@@ -227,7 +300,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
           return (
             <>
               {/* the bar is scaled to the bigger of the two: an overspend shows how far past the limit */}
-              {limit > 0 ? (
+              {limit > 0 && !noBar ? (
                 spent <= limit ? <Meter ratio={spent / limit} base={others / limit} height={8} color={c.color} />
                   : whole ? <Meter ratio={1} base={others / spent} limitTick={limit / spent} height={8} color={c.color} />
                     : <Meter ratio={1} over={limit / spent} height={8} color={c.color} />
@@ -248,15 +321,15 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                       </>
                     );
                   })() : null}
-                  {whole ? `${plan.rhythm === 'week' ? 'Неделя' : '2 недели'} ${shortRange(plan.window)}: ` : ''}
+                  {whole ? windowLabel(plan.rhythm, plan.window) : ''}
                   {limit > 0 ? (
                     <>
                       <Text style={[styles.pace, paceStyle(p)]}>
-                        {(left < 0 ? `перерасход ${money(-left)}` : ongoing ? `осталось ${money(left)}` : `сэкономлено ${money(left)}`).replace(/^./, (ch) => (whole ? ch : ch.toUpperCase()))}
+                        {(left < 0 ? `перерасход ${money(-left)}` : ongoing ? `осталось ${money(left)}` : `сэкономлено ${money(left)}`).replace(/^./, (ch) => (whole && windowLabel(plan.rhythm, plan.window) ? ch : ch.toUpperCase()))}
                       </Text>
                       {left >= 0 && ongoing && rangeDays({ from: whole ? plan.window.from : range.from, to: end }) > 1 ? ` · до ${WEEKDAYS[parseDayKey(end).getDay()]}` : ''}
                     </>
-                  ) : `${whole ? 'п' : 'П'}лана нет`}
+                  ) : `${whole && windowLabel(plan.rhythm, plan.window) ? 'п' : 'П'}лана нет`}
                 </Text>
                 <InfoIcon color={colors.accent} size={INFO_SIZE} />
               </TouchableOpacity>
@@ -269,7 +342,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
           const bar = rhythmBar(plan, range, c.spent_minor);
           return (
             <>
-              <Meter ratio={bar.ratio} base={bar.base} height={8} color={c.color} />
+              {noBar ? null : <Meter ratio={bar.ratio} base={bar.base} height={8} color={c.color} />}
               <TouchableOpacity style={styles.paceRow} onPress={() => openInfo({ id: c.category_id!, name })} accessibilityLabel="Как считается категория">
                 <Text style={[styles.share, styles.paceText]}>
                   <Text style={[styles.pace, paceStyle(p)]}>
@@ -284,13 +357,14 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
           // a fixed payment: the month's plan, not split by days
           <>
             {/* paid more than planned: an overspend like a limit's — the bar scaled to the spending, a tick at the plan */}
-            {plan.monthLimit > 0 ? (mtd > plan.monthLimit
+            {plan.monthLimit > 0 && !noBar ? (mtd > plan.monthLimit
               ? <Meter ratio={1} over={plan.monthLimit / mtd} height={8} color={c.color} />
               : <Meter ratio={mtd / plan.monthLimit} height={8} color={c.color} />) : null}
             <TouchableOpacity style={styles.paceRow} onPress={() => openInfo({ id: c.category_id!, name })} accessibilityLabel="Как считается категория">
               <Text style={styles.share}>
                 {plan.monthLimit > 0 ? `${money(mtd)} из ${money(plan.monthLimit)} на ${monthIn}` : `в ${MONTHS_PREP[parseYm(norms!.ym).month]} плана нет`}
-                {plan.monthLimit > 0 && mtd > plan.monthLimit ? <Text style={[styles.pace, styles.paceAhead]}> · перерасход {money(mtd - plan.monthLimit)}</Text> : null}
+                {/* an overspend on its own line, as in every other row */}
+                {plan.monthLimit > 0 && mtd > plan.monthLimit ? <Text style={[styles.pace, styles.paceAhead]}>{`\nПерерасход ${money(mtd - plan.monthLimit)}`}</Text> : null}
               </Text>
               <InfoIcon color={colors.accent} size={INFO_SIZE} />
             </TouchableOpacity>
@@ -308,7 +382,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
           <DonutCenter total={stats.spent_minor} picked={picked} currency={cur} />
         </Donut>
       </View>
-      {limited.length ? (
+      {byLimits ? null : limited.length ? (
         <LimitsAccordion defaultOpen foldKey="period" groups={groups} money={money} onPress={(key) => openInfo({ group: key })} />
       ) : (
         <TouchableOpacity style={styles.summaryRow} onPress={() => openInfo('summary')} accessibilityLabel="Как считаются траты">
@@ -318,7 +392,30 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
       )}
 
       {stats.categories.length === 0 ? <Text style={styles.hint}>{emptyText}</Text> : null}
-      {split.groups.map((g) => (
+      {/* shorter than a month: the categories by their limit (daily, weekly, …, obligatory), each section with its total
+          as the limits' tiles had it; longer: by their sections */}
+      {byLimits ? limitSections.map(({ key, cats }) => {
+        const g = groups.find((x) => x.key === key);
+        const title = GROUP_TITLES[key] === GROUP_TITLES.fixed ? 'Обязательные платежи' : `${GROUP_TITLES[key]} лимиты`;
+        return (
+          <View key={key} style={styles.group}>
+            <FoldHeader style={[formStyles.sectionHeader, styles.groupHeader]} folded={fold.is(`limit:${key}`)} onToggle={() => fold.toggle(`limit:${key}`)}>
+              <Text style={styles.groupTitle}>{title}</Text>
+              <Text style={styles.groupTotal}>
+                {money(g ? g.spent : cats.reduce((a, c) => a + c.spent_minor, 0))}
+                {g && g.limit > 0 ? <Text style={styles.groupPlan}> / {m(g.limit)}</Text> : null}
+              </Text>
+            </FoldHeader>
+            {fold.is(`limit:${key}`) ? null : (
+              <>
+                {/* the section's total only over several categories: with one it repeats its row */}
+                {g && cats.length > 1 ? <LimitSummary g={g} /> : null}
+                {cats.map((c, i) => rowOf(c, i, cats, cats.length > 1))}
+              </>
+            )}
+          </View>
+        );
+      }) : split.groups.map((g) => (
         <View key={`${g.type_id}-${g.title}`} style={styles.group}>
           <FoldHeader style={[formStyles.sectionHeader, styles.groupHeader]} folded={fold.is(g.title)} onToggle={() => fold.toggle(g.title)}>
             <Text style={styles.groupTitle}>{g.title}</Text>
@@ -341,8 +438,10 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                 const left = Math.round(month.share) - month.spent;
                 const others = Math.max(0, month.spent - split.spent);
                 return (
-                  <>
-                    {month.spent > month.share
+                  // on the header's grey band, like a limits section's total
+                  <View style={styles.limitSummary}>
+                    {/* nothing spent outside the plan this month: no empty bar */}
+                    {month.spent <= 0 ? null : month.spent > month.share
                       ? <Meter ratio={1} base={others / month.spent} limitTick={month.share / month.spent} height={8} color={colors.warn} />
                       : <Meter ratio={month.spent / month.share} base={others / month.share} height={8} color={colors.income} />}
                     <Text style={[styles.share, styles.paceText]}>
@@ -351,7 +450,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                       </Text>
                       {left >= 0 ? ` · до ${monthEndShort}` : ''}
                     </Text>
-                  </>
+                  </View>
                 );
               })() : null}
               {split.unplanned.map(rowOf)}
@@ -566,6 +665,12 @@ const styles = StyleSheet.create({
   paceOk: { color: colors.income },
   paceAhead: { color: colors.warn },
   paceOver: { color: colors.danger },
+  // the section's total under its title, on the same grey band: apart from the category rows below
+  limitSummary: { gap: 2, marginHorizontal: -16, paddingHorizontal: 16, paddingTop: 2, paddingBottom: 10, backgroundColor: colors.surface },
+  stackWrap: { marginTop: 6, marginBottom: 4 },
+  stack: { flexDirection: 'row', height: 8, borderRadius: 4, overflow: 'hidden', gap: 1 },
+  stackRest: { backgroundColor: chart.meterTrack },
+  stackTick: { position: 'absolute', top: -4, bottom: -4, width: 2, marginLeft: -1, borderRadius: 1, backgroundColor: colors.text },
   paceRow: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' },
   paceText: { flexShrink: 1 },
   paceNeutral: { color: colors.text },

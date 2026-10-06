@@ -158,9 +158,15 @@ export default function StatsView({ year, month, currency }: { year: number; mon
           {fold.is(UNPLANNED) ? null : (
             <>
               {/* the share as a limit: an overspend scales the bar to the spending, a tick at the share */}
-              {share > 0 ? (split.spent > share
-                ? <Meter ratio={1} over={share / split.spent} height={6} color={colors.warn} />
-                : <Meter ratio={split.spent / share} height={6} color={chart.meterFill} />) : null}
+              {/* nothing spent outside the plan yet: no empty bar, just the hint below */}
+              {share > 0 && split.spent > 0 ? (
+                // on the header's grey band: the section's total apart from its categories
+                <View style={styles.sectionBand}>
+                  {split.spent > share
+                    ? <Meter ratio={1} over={share / split.spent} height={6} color={colors.warn} />
+                    : <Meter ratio={split.spent / share} height={6} color={chart.meterFill} />}
+                </View>
+              ) : null}
               {split.unplanned.length === 0 ? <Text style={styles.hint}>Трат вне плана пока не было.</Text> : null}
               {split.unplanned.map((c) => (
                 <CategoryRow
@@ -206,13 +212,23 @@ export function RefundsRow({ amount, currency, onPress }: { amount: number; curr
 }
 
 /** The hole: the month's total, or the tapped category's spending and its share of the total. */
+/** the hole's width the amount may take: the ring's inner diameter (220 − 2 × 22) minus some air */
+const HOLE_TEXT_WIDTH = 150;
+/** a bold digit is about this share of the font size wide */
+const CHAR_WIDTH = 0.6;
+
+/** The amount's font size so it fits the hole's width: `max` for a short one, smaller as it gets longer. */
+function fitSize(text: string, max: number): number {
+  return Math.min(max, Math.floor(HOLE_TEXT_WIDTH / (text.length * CHAR_WIDTH)));
+}
+
 export function DonutCenter({ total, picked, currency }: { total: number; picked?: { name: string; emoji: string | null; spent_minor: number }; currency: Currency }) {
   if (!picked) {
     return (
       <>
         <Text style={styles.caption}>Потрачено</Text>
         {/* the currency on the amount's line, as for a tapped segment */}
-        <Text style={styles.hero} numberOfLines={1} adjustsFontSizeToFit>{formatWithCurrency(total, currency)}</Text>
+        <Text style={[styles.hero, { fontSize: fitSize(formatWithCurrency(total, currency), 34) }]} numberOfLines={1}>{formatWithCurrency(total, currency)}</Text>
       </>
     );
   }
@@ -220,7 +236,7 @@ export function DonutCenter({ total, picked, currency }: { total: number; picked
   return (
     <>
       <Text style={styles.pickedName} numberOfLines={2}>{`${picked.emoji || ''} ${picked.name}`.trim()}</Text>
-      <Text style={styles.pickedAmount}>{formatWithCurrency(picked.spent_minor, currency)}</Text>
+      <Text style={[styles.pickedAmount, { fontSize: fitSize(formatWithCurrency(picked.spent_minor, currency), 24) }]} numberOfLines={1}>{formatWithCurrency(picked.spent_minor, currency)}</Text>
       <Text style={styles.caption}>{share === 0 && picked.spent_minor > 0 ? '<1' : share}% всех трат</Text>
     </>
   );
@@ -289,13 +305,21 @@ function CategoryRow({ stat, currency, evenPace, dim, ym, openTransactions, now,
       </View>
       {/* an obligatory payment paid more than planned: an overspend like a limit's */}
       {limit && fixed && spent > limit ? (
-        <Text style={[styles.rowStatus, styles.dangerText]}>⚠ перерасход {formatWithCurrency(spent - limit, currency)}</Text>
+        <>
+          {/* as everywhere: the bar scaled to the spending, a tick at the plan; the overspend bold orange */}
+          <Meter ratio={1} over={limit / spent} height={8} color={stat.color} />
+          <Text style={[styles.rowStatus, styles.overLine]}>Перерасход {formatWithCurrency(spent - limit, currency)}</Text>
+        </>
       ) : null}
       {limit && !fixed ? (
         <>
-          <Meter ratio={ratio} height={8} marker={stat.plan_norm === 'month' ? undefined : evenPace} />
-          <Text style={[styles.rowStatus, ratio > 1 && styles.dangerText]}>
-            {ratio > 1 ? `⚠ перерасход ${formatWithCurrency(spent - limit, currency)}` : `осталось ${formatWithCurrency(limit - spent, currency)}`}
+          {ratio > 1
+            ? <Meter ratio={1} over={limit / spent} height={8} color={stat.color} />
+            : <Meter ratio={ratio} height={8} marker={stat.plan_norm === 'month' ? undefined : evenPace} />}
+          <Text style={styles.rowStatus}>
+            {ratio > 1
+              ? <Text style={styles.overLine}>Перерасход {formatWithCurrency(spent - limit, currency)}</Text>
+              : `осталось ${formatWithCurrency(limit - spent, currency)}`}
             {/* a category spent daily / weekly: its limit per that period, "лимит ≈ 113 ₾ в неделю" */}
             {/* the current month: this window's limit, rebalanced on what's left of the month; a past one: the plan's share */}
             {rhythm ? (() => {
@@ -366,6 +390,9 @@ const styles = StyleSheet.create({
   rowStatus: { fontSize: 13, color: colors.muted, marginTop: 4 },
   rowStatusMuted: { color: colors.muted },
   paceLine: { fontWeight: '600' },
+  // an overspend, the same on every screen: bold orange, no ⚠
+  sectionBand: { marginHorizontal: -16, paddingHorizontal: 16, paddingTop: 2, paddingBottom: 10, backgroundColor: colors.surface },
+  overLine: { color: colors.warn, fontWeight: '600' },
   paceOk: { color: colors.income },
   paceAhead: { color: colors.warn },
   crossed: { textDecorationLine: 'line-through' },
