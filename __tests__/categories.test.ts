@@ -86,7 +86,7 @@ describe('names', () => {
 
   test('new categories go before "Другое"', async () => {
     await createCategory('Спорт', '🏋️');
-    const names = (await listCategories()).filter((c) => !c.type_id).map((c) => c.name);
+    const names = (await listCategories()).filter((c) => !c.type_id && !c.system).map((c) => c.name);
     expect(names.slice(-2)).toEqual(['Спорт', 'Другое']);
   });
 });

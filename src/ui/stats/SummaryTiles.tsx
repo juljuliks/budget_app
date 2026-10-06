@@ -1,6 +1,10 @@
 import React from 'react';
+import { useFolded } from '../fold';
+
+const NO_DEFAULTS: string[] = [];
 import { ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { parseDayKey, shortRange } from '../dateRange';
+import { ChevronDownIcon } from '../icons';
 import Meter from '../Meter';
 import { PER_PERIOD } from '../strings';
 import { colors } from '../theme';
@@ -22,9 +26,38 @@ type Props = {
   groups: SummaryGroup[];
   /** "120 ₾" */
   money: (minor: number) => string;
-  /** a block tapped: its calculation */
-  onPress: (key: SummaryGroupKey) => void;
+  /** a block tapped: its calculation; none = the tiles only show */
+  onPress?: (key: SummaryGroupKey) => void;
 };
+
+/**
+ * "ЛИМИТЫ ⌄": the tiles folded under a header, opened by a tap. The period stats start it open, the month dashboard
+ * folded; "N в перерасходе" on the header says whether opening it is worth it.
+ */
+export function LimitsAccordion({ defaultOpen, foldKey, ...props }: Props & { defaultOpen: boolean; /** remembered under this key */ foldKey: string }) {
+  // folded or not, remembered per screen; the default until the user taps
+  const defaults = React.useMemo(() => (defaultOpen ? NO_DEFAULTS : [foldKey]), [defaultOpen, foldKey]);
+  const fold = useFolded('limits', defaults);
+  const open = !fold.is(foldKey);
+  const setOpen = () => fold.toggle(foldKey);
+  const over = props.groups.filter((g) => g.key !== 'outside' && g.spent > Math.round(g.limit)).length;
+  return (
+    <View>
+      <TouchableOpacity
+        style={styles.header}
+        onPress={setOpen}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        accessibilityLabel={open ? 'Свернуть лимиты' : 'Показать лимиты'}
+      >
+        <Text style={styles.headerTitle}>Лимиты</Text>
+        {over > 0 ? <Text style={styles.headerOver}>{over} в перерасходе</Text> : null}
+        <View style={open ? styles.chevronOpen : undefined}><ChevronDownIcon color={colors.muted} size={16} /></View>
+      </TouchableOpacity>
+      {open ? <SummaryTiles {...props} /> : null}
+    </View>
+  );
+}
 
 /**
  * The limits of the period by rhythm, as tiles under the donut: what's left / the overspend big, spent of the limit,
@@ -61,9 +94,10 @@ export default function SummaryTiles({ groups, money, onPress }: Props) {
           <TouchableOpacity
             key={g.key}
             style={[styles.tile, { width: tile }]}
-            onPress={() => onPress(g.key)}
+            onPress={onPress ? () => onPress(g.key) : undefined}
+            disabled={!onPress}
             accessibilityLabel={`${GROUP_TITLES[g.key]}: ${caption}`}
-            accessibilityHint="Показать расчёт"
+            accessibilityHint={onPress ? 'Показать расчёт' : undefined}
           >
             <View>
               <Text style={styles.title} numberOfLines={1}>{GROUP_TITLES[g.key]}</Text>
@@ -104,6 +138,10 @@ export default function SummaryTiles({ groups, money, onPress }: Props) {
 }
 
 const styles = StyleSheet.create({
+  header: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingTop: 4, paddingBottom: 8 },
+  headerTitle: { fontSize: 13, fontWeight: '600', color: colors.muted, textTransform: 'uppercase' },
+  headerOver: { fontSize: 13, color: colors.warn },
+  chevronOpen: { transform: [{ rotate: '180deg' }] },
   strip: { marginHorizontal: -SIDE, marginBottom: 8 },
   stripContent: { paddingHorizontal: SIDE, gap: GAP, alignItems: 'stretch' },
   tile: { backgroundColor: colors.surface, borderRadius: 12, padding: 12, justifyContent: 'space-between' },

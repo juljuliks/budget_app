@@ -243,6 +243,36 @@ export const MIGRATIONS: MigrationStep[][] = [
     'DROP TABLE IF EXISTS merchant_group_members',
     'DROP TABLE IF EXISTS merchant_groups',
   ],
+  // 20: the share of the amount to distribute set aside for spending outside the plan (0–50%): the plan can't take it
+  [
+    'ALTER TABLE plan_months ADD COLUMN unplanned_pct INTEGER NOT NULL DEFAULT 0 CHECK (unplanned_pct BETWEEN 0 AND 100)',
+  ],
+  // 21: savings. A system category (categories.system = 'savings', one, can't be deleted or renamed): what the budget
+  // leaves (not planned, not spent) goes there, and an operation in it is money put aside, not spending. A category
+  // already named "Сбережения" becomes it. Whether the month's leftover goes to savings: plan_months.to_savings
+  [
+    'ALTER TABLE categories ADD COLUMN system TEXT',
+    async (db) => {
+      const own = await db.get<{ id: number }>(
+        "SELECT id FROM categories WHERE deleted_at IS NULL AND lower(name) IN ('сбережения', 'накопления') ORDER BY id LIMIT 1");
+      if (own) await db.run("UPDATE categories SET system = 'savings' WHERE id = ?", [own.id]);
+      else {
+        await db.run(
+          `INSERT INTO categories (name, emoji, system, sort_order)
+            VALUES ('Сбережения', '🏦', 'savings', 100)`); // last, after the seeded "Другое" (99)
+      }
+    },
+    'CREATE UNIQUE INDEX IF NOT EXISTS categories_system ON categories(system) WHERE system IS NOT NULL',
+    'ALTER TABLE plan_months ADD COLUMN to_savings INTEGER NOT NULL DEFAULT 1',
+  ],
+  // 22: money locked for savings right away, in the budget's currency: neither the plan nor the share outside it can take it
+  [
+    'ALTER TABLE plan_months ADD COLUMN locked_minor INTEGER NOT NULL DEFAULT 0 CHECK (locked_minor >= 0)',
+  ],
+  // 23: the share outside the plan as an amount of one's own (in the budget's currency) instead of a % of it; null = by %
+  [
+    'ALTER TABLE plan_months ADD COLUMN unplanned_minor INTEGER CHECK (unplanned_minor >= 0)',
+  ],
 ];
 
 export async function getSchemaVersion(db: Db): Promise<number> {

@@ -17,9 +17,10 @@ import { plural } from '../format';
 import { colors } from '../theme';
 import { DonutCenter, RefundsRow } from './StatsView';
 import { useLatestRequest } from '../useLatestRequest';
-import SummaryTiles, { GROUP_TITLES } from './SummaryTiles';
+import { GROUP_TITLES, LimitsAccordion } from './SummaryTiles';
 import { pct, SummaryGroupKey, summaryGroups } from './summaryGroups';
 import { formStyles } from '../formStyles';
+import { FoldHeader, useFolded } from '../fold';
 
 /** Periods up to this long are measured against the plan (its share for these days); longer ones aren't. */
 const PACE_MAX_DAYS = 31;
@@ -77,6 +78,8 @@ export default function PeriodStatsView({ range, emptyText = 'За этот пе
   // the app's currency (Настройки → Валюта)
   const currency = useDisplayCurrency();
   const openTransactions = useOpenCategoryTransactions();
+  // folded sections, remembered
+  const fold = useFolded('stats-period');
   const days = rangeDays(range);
   const today = dayKeyOf(new Date());
   const pace = days <= PACE_MAX_DAYS;
@@ -162,10 +165,7 @@ export default function PeriodStatsView({ range, emptyText = 'За этот пе
         </Donut>
       </View>
       {limited.length ? (
-        <>
-          <Text style={styles.tilesTitle}>Лимиты</Text>
-          <SummaryTiles groups={groups} money={money} onPress={(key) => openInfo({ group: key })} />
-        </>
+        <LimitsAccordion defaultOpen foldKey="period" groups={groups} money={money} onPress={(key) => openInfo({ group: key })} />
       ) : (
         <TouchableOpacity style={styles.summaryRow} onPress={() => openInfo('summary')} accessibilityLabel="Как считаются траты">
           <Text style={styles.summary}>{summary}</Text>
@@ -176,11 +176,11 @@ export default function PeriodStatsView({ range, emptyText = 'За этот пе
       {stats.categories.length === 0 ? <Text style={styles.hint}>{emptyText}</Text> : null}
       {stats.groups.map((g) => (
         <View key={`${g.type_id}-${g.title}`} style={styles.group}>
-          <View style={[formStyles.sectionHeader, styles.groupHeader]}>
+          <FoldHeader style={[formStyles.sectionHeader, styles.groupHeader]} folded={fold.is(g.title)} onToggle={() => fold.toggle(g.title)}>
             <Text style={styles.groupTitle}>{g.title}</Text>
             <Text style={styles.groupTotal}>{money(g.spent_minor)}</Text>
-          </View>
-          {g.categories.map((c) => {
+          </FoldHeader>
+          {fold.is(g.title) ? null : g.categories.map((c) => {
             const plan = c.category_id === null ? undefined : norms?.byCategory.get(c.category_id);
             const mtd = (c.category_id !== null && norms?.monthToDate.get(c.category_id)) || 0;
             const name = `${c.emoji || ''} ${c.name}`.trim();
@@ -223,6 +223,20 @@ export default function PeriodStatsView({ range, emptyText = 'За этот пе
                       ) : null}
                       <TouchableOpacity style={styles.paceRow} onPress={() => openInfo({ id: c.category_id!, name })} accessibilityLabel="Как считается категория">
                         <Text style={[styles.share, styles.paceText]}>
+                          {/* as in the month stats: the limit first — how the period moved it: at its start (crossed out) → for
+                              the rest of the month after it — then what's left */}
+                          {plan.effect ? (() => {
+                            const { before, after } = plan.effect;
+                            const moved = after !== null && Math.round(after) !== Math.round(before);
+                            return (
+                              <>
+                                {'Лимит '}
+                                {moved ? <><Text style={styles.crossed}>{m(before)}</Text>{' → '}</> : null}
+                                <Text style={moved ? (after! < before ? styles.paceAhead : styles.paceOk) : undefined}>{m(moved ? after! : before)}</Text>
+                                {` ${PER_PERIOD[plan.rhythm]}\n`}
+                              </>
+                            );
+                          })() : null}
                           {whole ? `${plan.rhythm === 'week' ? 'Неделя' : '2 недели'} ${shortRange(plan.window)}: ` : ''}
                           {limit > 0 ? (
                             <>
@@ -232,18 +246,6 @@ export default function PeriodStatsView({ range, emptyText = 'За этот пе
                               {left >= 0 && ongoing && rangeDays({ from: whole ? plan.window.from : range.from, to: end }) > 1 ? ` · до ${WEEKDAYS[parseDayKey(end).getDay()]}` : ''}
                             </>
                           ) : `${whole ? 'п' : 'П'}лана нет`}
-                          {/* how the period moved the limit: at its start (crossed out) → for the rest of the month after it */}
-                          {plan.effect ? (() => {
-                            const { before, after } = plan.effect;
-                            const moved = after !== null && Math.round(after) !== Math.round(before);
-                            const unit = PER_PERIOD[plan.rhythm];
-                            return moved ? (
-                              <>
-                                {'\nИзменение лимита: '}<Text style={styles.crossed}>{m(before)}</Text>{' → '}
-                                <Text style={after! < before ? styles.paceAhead : styles.paceOk}>{m(after!)}</Text> {unit}
-                              </>
-                            ) : `\nЛимит ${unit} ${m(before)}`;
-                          })() : null}
                         </Text>
                         <InfoIcon color={colors.accent} size={INFO_SIZE} />
                       </TouchableOpacity>
@@ -473,7 +475,6 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
   donutWrap: { alignItems: 'center', marginBottom: 8 },
   calcTitle: { fontSize: 13, fontWeight: '600', color: colors.muted, textTransform: 'uppercase', marginTop: 4, marginBottom: 6 },
-  tilesTitle: { fontSize: 13, fontWeight: '600', color: colors.muted, textTransform: 'uppercase', marginTop: 4, marginBottom: 8 },
   summaryRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 8, paddingHorizontal: 8 },
   summary: { flexShrink: 1, fontSize: 14, color: colors.text, textAlign: 'center' },
   hint: { color: colors.muted, fontSize: 14, textAlign: 'center', marginVertical: 12 },

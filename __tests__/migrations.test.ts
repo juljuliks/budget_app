@@ -7,7 +7,7 @@ describe('migrations', () => {
     await migrate(db);
     expect(await getSchemaVersion(db)).toBe(MIGRATIONS.length);
     const { n } = (await db.get<{ n: number }>('SELECT count(*) AS n FROM categories'))!;
-    expect(n).toBe(12);
+    expect(n).toBe(13); // with the system "Сбережения"
     const tables = (await db.all<{ name: string }>("SELECT name FROM sqlite_master WHERE type = 'table'")).map((r) => r.name);
     expect(tables).toEqual(expect.arrayContaining(['categories', 'merchant_rules', 'transactions', 'category_usage']));
   });
@@ -17,7 +17,7 @@ describe('migrations', () => {
     await migrate(db);
     await migrate(db);
     const { n } = (await db.get<{ n: number }>('SELECT count(*) AS n FROM categories'))!;
-    expect(n).toBe(12);
+    expect(n).toBe(13); // with the system "Сбережения"
   });
 
   test('upgrades a legacy DB created from the old schema.sql (user_version 0, no category_usage)', async () => {
@@ -26,7 +26,7 @@ describe('migrations', () => {
     await db.run("INSERT INTO categories (name, emoji, sort_order) VALUES ('Продукты', '🛒', 1)");
     await migrate(db);
     const { n } = (await db.get<{ n: number }>('SELECT count(*) AS n FROM categories'))!;
-    expect(n).toBe(12);
+    expect(n).toBe(13); // with the system "Сбережения"
     expect(await db.get("SELECT name FROM sqlite_master WHERE name = 'category_usage'")).toBeDefined();
   });
 

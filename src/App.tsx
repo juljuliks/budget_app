@@ -8,6 +8,7 @@ import TransactionsList from './ui/TransactionsList';
 import CategoriesScreen from './ui/CategoriesScreen';
 import StatsHome from './ui/stats/StatsHome';
 import MerchantsScreen from './ui/MerchantsScreen';
+import HideAmountsButton from './ui/HideAmountsButton';
 import SettingsButton from './ui/SettingsButton';
 import { SheetAlertHost } from './ui/sheetAlert';
 import { ModalHost } from './ui/modals';
@@ -15,6 +16,7 @@ import { ToastHost } from './ui/toast';
 import { HistoryIcon, StatsIcon } from './ui/icons';
 import { colors } from './ui/theme';
 import { createNotificationChannel } from './notifications/notifeeBootstrap';
+import { scheduleMonthReports } from './notifications/monthReportNotice';
 import { handleNotificationAction } from './notifications/notifeeIntegration';
 import { requestAppPermissions } from './permissions';
 import { countUnseenTransactions } from './db/transactions';
@@ -24,6 +26,7 @@ import { navigationRef, flushPendingNavigation, RootStackParamList, TabParamList
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const headerRightStyle = { marginRight: 16 };
+const statsHeaderRight = { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 14 };
 const Tab = createBottomTabNavigator<TabParamList>();
 
 /** Unread (not yet opened) transactions for the tab badge; refreshed on any data change. */
@@ -59,7 +62,8 @@ function MainTabs() {
         options={{
           title: 'Статистика',
           tabBarIcon: ({ color }) => <StatsIcon color={color} />,
-          headerRight: () => <View style={headerRightStyle}><SettingsButton /></View>,
+          // the eye blurs the budget and plan totals, e.g. to show the stats to someone
+          headerRight: () => <View style={[headerRightStyle, statsHeaderRight]}><HideAmountsButton /><SettingsButton /></View>,
         }}
       />
       <Tab.Screen
@@ -95,10 +99,14 @@ export default function App() {
       }
     });
 
+    // the month's report on the 1st: scheduled now and re-scheduled after every change of the operations
+    scheduleMonthReports();
+    const offReport = onTransactionsChanged(() => { scheduleMonthReports(); });
+
     // a press handled by the background handler may have queued a screen while we were in background
     const appState = AppState.addEventListener('change', (s) => { if (s === 'active') flushPendingNavigation(); });
 
-    return () => { unsubscribe(); appState.remove(); };
+    return () => { unsubscribe(); appState.remove(); offReport(); };
   }, []);
 
   return (

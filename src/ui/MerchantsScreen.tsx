@@ -14,6 +14,7 @@ import MerchantCard from './MerchantCard';
 import { formatMoneyWithCurrency } from './money';
 import { sheetAlert } from './sheetAlert';
 import CategoryPickerModal from './CategoryPickerModal';
+import { FilterButton, OptionsSheet } from './FilterSheets';
 import { formStyles } from './formStyles';
 import { NO_CATEGORY } from './strings';
 import { colors } from './theme';
@@ -55,6 +56,9 @@ export default function MerchantsScreen() {
   // the categories' order (as on the categories screen)
   const [order, setOrder] = useState<number[]>([]);
   const [query, setQuery] = useState('');
+  // the categories filter, as on the operations ('none' = without a category)
+  const [catFilter, setCatFilter] = useState<Array<number | 'none'>>([]);
+  const [catSheetOpen, setCatSheetOpen] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [pickOpen, setPickOpen] = useState(false);
@@ -71,9 +75,19 @@ export default function MerchantsScreen() {
   useEffect(() => onTransactionsChanged(load), [load]);
 
   const words = normalizeForSearch(query);
-  const shown = useMemo(() => (words
-    ? merchants.filter((m) => normalizeForSearch(m.name).includes(words))
-    : merchants), [merchants, words]);
+  // a merchant whose category is gone counts as without one
+  const catOf = useCallback((m: MerchantRow): number | 'none' => (m.category_id !== null && categories.has(m.category_id) ? m.category_id : 'none'), [categories]);
+  const shown = useMemo(() => merchants.filter((m) => (!words || normalizeForSearch(m.name).includes(words))
+    && (catFilter.length === 0 || catFilter.includes(catOf(m)))), [merchants, words, catFilter, catOf]);
+  // a search or a filter shows the long-unvisited ones too, in their categories
+  const filtering = !!words || catFilter.length > 0;
+  // the filter's options: "Без категории" first, then the categories in their order, each with its merchants
+  const catOptions = useMemo(() => {
+    const count = new Map<number | 'none', number>();
+    for (const m of merchants) count.set(catOf(m), (count.get(catOf(m)) ?? 0) + 1);
+    return (['none', ...order] as Array<number | 'none'>).filter((c) => count.has(c))
+      .map((c) => ({ key: c, label: c === 'none' ? NO_CATEGORY : categories.get(c)!.label, count: count.get(c)! }));
+  }, [merchants, order, categories, catOf]);
 
   // one section per category with merchants bought at in the last month (RECENT_DAYS); a merchant whose category is
   // gone counts as without one. The others (a shop visited once long ago) wait collapsed at the bottom: nothing is
@@ -83,7 +97,7 @@ export default function MerchantsScreen() {
     const by = new Map<number | null, MerchantRow[]>();
     const stale: MerchantRow[] = [];
     for (const m of shown) {
-      if (!words && !m.activity.recent) { stale.push(m); continue; }
+      if (!filtering && !m.activity.recent) { stale.push(m); continue; }
       const c = m.category_id !== null && categories.has(m.category_id) ? m.category_id : null;
       by.set(c, [...(by.get(c) ?? []), m]);
     }
@@ -95,7 +109,7 @@ export default function MerchantsScreen() {
     }));
     if (stale.length) out.push({ key: 'stale', title: 'Давно не было покупок', count: stale.length, stale: true, data: staleOpen ? stale : [] });
     return out;
-  }, [shown, words, categories, order, staleOpen]);
+  }, [shown, filtering, categories, order, staleOpen]);
 
   // a long press on a merchant starts selecting several, with it selected; unselecting the last one ends it
   const longPressed = useRef(false);
@@ -191,6 +205,9 @@ export default function MerchantsScreen() {
             </TouchableOpacity>
           ) : null}
         </View>
+        <View style={styles.filters}>
+          <FilterButton label="Категория" count={catFilter.length} active={catFilter.length > 0} onPress={() => setCatSheetOpen(true)} />
+        </View>
         {selectMode ? (
           <View style={styles.selectBar}>
             <Text style={styles.selectLabel}>Выбрано: {selected.length}</Text>
@@ -201,6 +218,15 @@ export default function MerchantsScreen() {
         ) : null}
       </View>
 
+      <OptionsSheet
+        visible={catSheetOpen}
+        title="Категории"
+        options={catOptions}
+        selected={catFilter}
+        onToggle={(k) => setCatFilter((p) => (p.includes(k) ? p.filter((x) => x !== k) : [...p, k]))}
+        onClear={() => setCatFilter([])}
+        onClose={() => setCatSheetOpen(false)}
+      />
       <SectionList
         sections={sections}
         keyExtractor={(m) => m.id}
@@ -245,7 +271,7 @@ export default function MerchantsScreen() {
             </TouchableOpacity>
           );
         }}
-        ListEmptyComponent={<Text style={styles.empty}>{query ? 'Не найдено.' : 'Мерчанты появятся после первых покупок.'}</Text>}
+        ListEmptyComponent={<Text style={styles.empty}>{filtering ? 'Не найдено.' : 'Мерчанты появятся после первых покупок.'}</Text>}
         ListFooterComponent={<View style={styles.footer} />}
       />
 
@@ -278,6 +304,7 @@ const styles = StyleSheet.create({
   search: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.surface, borderRadius: 10, paddingHorizontal: 12 },
   searchInput: { flex: 1, fontSize: 16, color: colors.text, paddingVertical: 8 },
   clear: { fontSize: 16, color: colors.muted },
+  filters: { flexDirection: 'row', gap: 8 },
   selectBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8 },
   selectLabel: { fontSize: 15, color: colors.text },
   cancelSelect: { fontSize: 15, color: colors.accent },

@@ -67,7 +67,8 @@ async function spendRows(from: number, to: number): Promise<SpendRow[]> {
   const db = await getDb();
   return db.all<SpendRow>(
     `SELECT id, category_id, kind, amount_minor, currency, occurred_at, refund_settled_at FROM transactions
-      WHERE occurred_at >= ? AND occurred_at < ? AND kind IN (${[...EXPENSE_KINDS, 'refund'].map((k) => `'${k}'`).join(',')})`,
+      WHERE occurred_at >= ? AND occurred_at < ? AND kind IN (${[...EXPENSE_KINDS, 'refund'].map((k) => `'${k}'`).join(',')})
+        AND category_id IS NOT (SELECT id FROM categories WHERE system = 'savings')`,
     [from, to]);
 }
 
@@ -126,7 +127,24 @@ export type PlanItem = {
 };
 
 /** The month's amount to distribute and its currency. */
-export type PlanBudget = { amount_minor: number; currency: Currency };
+export type PlanBudget = {
+  amount_minor: number;
+  currency: Currency;
+  /** the share set aside for spending outside the plan, 0–50 (%) */
+  unplanned_pct: number;
+  /** that share as an amount of one's own, in the budget's currency (instead of the %); null = by the % */
+  unplanned_minor: number | null;
+  /** locked for savings right away (🔒), in the budget's currency */
+  locked_minor: number;
+  /** what the plan can take: the amount minus the unplanned share and the locked savings */
+  plannable_minor: number;
+  /** what the budget leaves (not planned, not spent) goes to "Сбережения" */
+  to_savings: boolean;
+};
+
+/** The unplanned share of a budget, in its currency. */
+export const unplannedOf = (b: Pick<PlanBudget, 'amount_minor' | 'unplanned_pct' | 'unplanned_minor'>) =>
+  b.unplanned_minor ?? b.amount_minor - plannableOf(b.amount_minor, b.unplanned_pct);
 
 /**
  * Creates the month's plan on first access by carrying items over from the latest earlier
@@ -147,20 +165,36 @@ export async function ensureMonthPlan(ym: string, nowYm = currentYm()): Promise<
           WHERE p.ym = ? AND c.deleted_at IS NULL`,
         [ym, source.ym]);
     }
-    // the amount to distribute (usually the salary) carries over as well, with its currency
+    // the amount to distribute (usually the salary) carries over as well, with its currency, unplanned share, savings choice
+    // and what is locked for savings
     await tx.run(
-      `INSERT OR IGNORE INTO plan_months (ym, budget_minor, budget_currency) VALUES (?,
+      `INSERT OR IGNORE INTO plan_months (ym, budget_minor, budget_currency, unplanned_pct, to_savings, locked_minor, unplanned_minor) VALUES (?,
         (SELECT budget_minor FROM plan_months WHERE ym = ?),
-        coalesce((SELECT budget_currency FROM plan_months WHERE ym = ?), ?))`,
-      [ym, source?.ym ?? '', source?.ym ?? '', BUDGET_CURRENCY]);
+        coalesce((SELECT budget_currency FROM plan_months WHERE ym = ?), ?),
+        coalesce((SELECT unplanned_pct FROM plan_months WHERE ym = ?), 0),
+        coalesce((SELECT to_savings FROM plan_months WHERE ym = ?), 1),
+        coalesce((SELECT locked_minor FROM plan_months WHERE ym = ?), 0),
+        (SELECT unplanned_minor FROM plan_months WHERE ym = ?))`,
+      [ym, source?.ym ?? '', source?.ym ?? '', BUDGET_CURRENCY, source?.ym ?? '', source?.ym ?? '', source?.ym ?? '', source?.ym ?? '']);
   });
 }
 
 async function storedBudget(ym: string): Promise<PlanBudget | null> {
   const db = await getDb();
-  const row = await db.get<{ budget_minor: number | null; budget_currency: string | null }>(
-    'SELECT budget_minor, budget_currency FROM plan_months WHERE ym = ?', [ym]);
-  return row?.budget_minor == null ? null : { amount_minor: row.budget_minor, currency: asCurrency(row.budget_currency) };
+  const row = await db.get<{ budget_minor: number | null; budget_currency: string | null; unplanned_pct: number; to_savings: number; locked_minor: number; unplanned_minor: number | null }>(
+    'SELECT budget_minor, budget_currency, unplanned_pct, to_savings, locked_minor, unplanned_minor FROM plan_months WHERE ym = ?', [ym]);
+  if (row?.budget_minor == null) return null;
+  const share = unplannedOf({ amount_minor: row.budget_minor, unplanned_pct: row.unplanned_pct, unplanned_minor: row.unplanned_minor });
+  return {
+    amount_minor: row.budget_minor, currency: asCurrency(row.budget_currency), unplanned_pct: row.unplanned_pct,
+    unplanned_minor: row.unplanned_minor, locked_minor: row.locked_minor,
+    plannable_minor: row.budget_minor - share - row.locked_minor, to_savings: row.to_savings === 1,
+  };
+}
+
+/** What the plan can take of `amount` with `pct`% set aside for spending outside it. */
+export function plannableOf(amount: number, pct: number): number {
+  return Math.round((amount * (100 - pct)) / 100);
 }
 
 /** The month's amount to distribute; null = not set (no cap, no percentages). */
@@ -242,16 +276,32 @@ export class OverBudgetError extends Error {
   }
 }
 
-/** null clears the amount. Refused (OverBudgetError) if it is less than what is already planned (converted). */
-export async function setPlanBudget(ym: string, budgetMinor: number | null, currency: Currency = BUDGET_CURRENCY) {
+/**
+ * null clears the amount. `unplannedPct`: the share set aside for spending outside the plan; `toSavings`: the leftover
+ * goes to "Сбережения"; `lockedMinor`: locked for savings right away, in `currency`; `unplannedMinor`: the share as an amount
+ * instead of the % (null = by the %). All kept when omitted.
+ * Refused (OverBudgetError, its budget_minor = what the plan can take) if what is already planned (converted) doesn't fit.
+ */
+export async function setPlanBudget(
+  ym: string, budgetMinor: number | null, currency: Currency = BUDGET_CURRENCY, unplannedPct?: number, toSavings?: boolean, lockedMinor?: number,
+  unplannedMinor?: number | null,
+) {
   await ensureMonthPlan(ym);
+  const db = await getDb();
+  const stored = await db.get<{ p: number; s: number; l: number; u: number | null }>(
+    'SELECT unplanned_pct AS p, to_savings AS s, locked_minor AS l, unplanned_minor AS u FROM plan_months WHERE ym = ?', [ym]);
+  const own = unplannedMinor === undefined ? stored?.u ?? null : unplannedMinor === null ? null : Math.max(0, unplannedMinor);
+  const pct = unplannedPct ?? stored?.p ?? 0;
+  const savings = toSavings ?? (stored ? stored.s === 1 : true);
+  const locked = Math.max(0, lockedMinor ?? stored?.l ?? 0);
   if (budgetMinor !== null) {
     const planned = await plannedTotal(ym, undefined, currency);
-    if (budgetMinor < planned) throw new OverBudgetError(budgetMinor, planned, currency);
+    const plannable = budgetMinor - unplannedOf({ amount_minor: budgetMinor, unplanned_pct: pct, unplanned_minor: own }) - locked;
+    if (plannable < planned) throw new OverBudgetError(plannable, planned, currency);
   }
-  const db = await getDb();
   await db.run('INSERT OR IGNORE INTO plan_months (ym) VALUES (?)', [ym]);
-  await db.run('UPDATE plan_months SET budget_minor = ?, budget_currency = ? WHERE ym = ?', [budgetMinor, currency, ym]);
+  await db.run('UPDATE plan_months SET budget_minor = ?, budget_currency = ?, unplanned_pct = ?, to_savings = ?, locked_minor = ?, unplanned_minor = ? WHERE ym = ?',
+    [budgetMinor, currency, pct, savings ? 1 : 0, budgetMinor === null ? 0 : locked, budgetMinor === null ? null : own, ym]);
 }
 
 async function markPlanned(ym: string) {
@@ -277,7 +327,8 @@ async function fits(ym: string, categoryId: number, minor: number, currency: Cur
   const own = conv(minor, currency, budget.currency);
   if (own === null) return null; // no rate at all: can't check
   const planned = (await plannedTotal(ym, categoryId, budget.currency)) + own;
-  return planned > budget.amount_minor ? new OverBudgetError(budget.amount_minor, planned, budget.currency) : null;
+  // the unplanned share isn't for the plan
+  return planned > budget.plannable_minor ? new OverBudgetError(budget.plannable_minor, planned, budget.currency) : null;
 }
 
 /**
@@ -398,6 +449,11 @@ export type MonthStats = {
   /** spending that couldn't be converted yet (no rate known: offline), not in the totals */
   other_currencies: Array<{ currency: string; spent_minor: number }>;
 };
+
+/** Spending outside the plan: categories without a plan amount, and spending without a category (transfers too). */
+export function unplannedSpent(stats: MonthStats): number {
+  return stats.categories.filter((c) => c.limit_minor === null).reduce((a, c) => a + Math.max(0, c.spent_minor), 0);
+}
 
 function sumBy<K>(items: Converted['items'], key: (r: SpendRow) => K): Map<K, number> {
   const m = new Map<K, number>();

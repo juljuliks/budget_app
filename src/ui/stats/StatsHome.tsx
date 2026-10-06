@@ -14,6 +14,7 @@ import { ChevronDownIcon } from '../icons';
 import PeriodStatsView from './PeriodStatsView';
 import HistoryView from './HistoryView';
 import { monthTitle } from './months';
+import PlanAlert from './PlanAlert';
 import PlanView from './PlanView';
 import StatsView from './StatsView';
 
@@ -112,6 +113,7 @@ export default function StatsHome() {
   return (
     <View style={styles.screen}>
       <Segmented options={SECTIONS} value={section} onChange={setSection} style={styles.segmented} />
+      {section === 'stats' ? <PlanAlert currency={currency} /> : null}
 
       {section === 'history' ? null : byPeriod && range ? (
         <View style={styles.monthRow}>

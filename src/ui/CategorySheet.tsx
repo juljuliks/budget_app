@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Controller, Path, PathValue, useFormState, useWatch } from 'react-hook-form';
 import {
-  categoryLabel, categorySummary, createCategory, currentTransactionsOfCategory, findCategoryByName, getCategory, updateCategory,
+  categoryLabel, categorySummary, createCategory, currentTransactionsOfCategory, findCategoryByName, getCategory, isSavings, updateCategory,
 } from '../db/categories';
 import { CategoryType, listCategoryTypes } from '../db/categoryTypes';
 import { takenCategoryColors } from '../db/colors';
@@ -69,6 +69,8 @@ export default function CategorySheet({ visible, categoryId, typeId: initialType
   const [pickerOpen, setPickerOpen] = useState(false);
   // colors other categories already have: not offered
   const [taken, setTaken] = useState<Set<string>>(new Set());
+  // "Сбережения": a system category, its name stays and it can't be deleted
+  const [system, setSystem] = useState(false);
 
   const loadTypes = useCallback(() => {
     listCategoryTypes().then((t) => {
@@ -86,9 +88,10 @@ export default function CategorySheet({ visible, categoryId, typeId: initialType
     setSummary(null);
     loadTypes();
     takenCategoryColors(categoryId).then(setTaken).catch((e) => console.error('load colors failed', e));
+    setSystem(false);
     if (isNew) { setSaved({ name: '', emoji: '', typeId: initialTypeId ?? null, color: null }); return; }
     getCategory(categoryId).then((c) => {
-      if (c) setSaved({ name: c.name, emoji: c.emoji ?? '', typeId: c.type_id, color: c.color });
+      if (c) { setSaved({ name: c.name, emoji: c.emoji ?? '', typeId: c.type_id, color: c.color }); setSystem(isSavings(c)); }
     }).catch((e) => console.error('load category failed', e));
     categorySummary(categoryId).then(setSummary).catch((e) => console.error('load category summary failed', e));
   }, [visible, categoryId, isNew, initialTypeId, loadTypes]);
@@ -184,12 +187,19 @@ export default function CategorySheet({ visible, categoryId, typeId: initialType
                 placeholder="Например, Спорт"
                 placeholderTextColor={colors.muted}
                 maxLength={40}
+                editable={!system}
                 returnKeyType="done"
                 onSubmitEditing={isNew || isDirty ? save : undefined}
               />
             )}
           />
         </View>
+        {system ? (
+          <Text style={styles.quickHint}>
+            Системная категория: сюда уходит то, что бюджет месяца оставил (не запланировано и не потрачено). Операции в
+            ней — отложенные деньги, не траты. Название не меняется, удалить её нельзя.
+          </Text>
+        ) : null}
         {name.trim() ? (
           <Text style={styles.preview}>
             Будет выглядеть так: {categoryLabel({ emoji, name: name.trim(), type_name: types.find((t) => t.id === typeId)?.name })}
@@ -216,7 +226,7 @@ export default function CategorySheet({ visible, categoryId, typeId: initialType
         <SheetActions
           // a new category: always (it's created); an existing one: only once something changed
           submit={isNew || isDirty ? { title: isNew ? 'Создать' : 'Сохранить', onPress: save, disabled: isSubmitting } : null}
-          extra={isNew ? undefined : [{ title: 'Удалить категорию', onPress: remove, danger: true }]}
+          extra={isNew || system ? undefined : [{ title: 'Удалить категорию', onPress: remove, danger: true }]}
           onCancel={onClose}
         />
       </SheetScrollView>
