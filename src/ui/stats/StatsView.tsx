@@ -213,10 +213,9 @@ function CategoryRow({ stat, currency, evenPace, dim, ym, openTransactions, now,
 }) {
   const { spent_minor: spent, limit_minor: limit } = stat;
   const ratio = limit ? spent / limit : 0;
-  // fixed payment (rent, subscription): paid once this month's spending covers its plan; until then — how much of it
+  // fixed payment (rent, subscription): paid once this month's spending covers its plan (the share is by the amount)
   const fixed = stat.plan_kind === 'fixed';
   const paid = !!limit && spent >= limit;
-  const paidPct = limit ? Math.min(99, Math.floor((Math.max(0, spent) / limit) * 100)) : 0;
   const rhythm = !fixed && stat.plan_norm && stat.plan_norm !== 'month' ? stat.plan_norm : null;
 
   return (
@@ -224,13 +223,10 @@ function CategoryRow({ stat, currency, evenPace, dim, ym, openTransactions, now,
       <View style={styles.rowTop}>
         <View style={[styles.dot, { backgroundColor: stat.color }]} />
         <Text style={styles.rowName} numberOfLines={1}>{`${stat.emoji || ''} ${stat.name}`.trim()}</Text>
-        {/* an obligatory payment: all paid — a green tick, partly — the paid share, nothing yet — a grey circle */}
+        {/* an obligatory payment: all paid — a green tick, otherwise (partly too) a grey circle */}
         {limit && fixed ? (
-          <Text
-            style={[paid || paidPct === 0 ? styles.paidMark : styles.paidPct, paid ? styles.paidOn : styles.paidOff]}
-            accessibilityLabel={paid ? 'Оплачено' : paidPct > 0 ? `Оплачено ${paidPct}%` : 'Не оплачено'}
-          >
-            {paid ? '✓' : paidPct > 0 ? `${paidPct}%` : '○'}
+          <Text style={[styles.paidMark, paid ? styles.paidOn : styles.paidOff]} accessibilityLabel={paid ? 'Оплачено' : 'Не оплачено'}>
+            {paid ? '✓' : '○'}
           </Text>
         ) : null}
         {onAddToPlan ? (
@@ -239,7 +235,7 @@ function CategoryRow({ stat, currency, evenPace, dim, ym, openTransactions, now,
           </TouchableOpacity>
         ) : null}
         <Text style={styles.rowAmount}>
-          {limit ? formatShort(spent) : formatWithCurrency(spent, currency)}{limit ? <Text style={styles.rowLimit}> / {formatWithCurrency(limit, currency)}{fixed ? '' : planShare(spent, limit)}</Text> : null}
+          {limit ? formatShort(spent) : formatWithCurrency(spent, currency)}{limit ? <Text style={styles.rowLimit}> / {formatWithCurrency(limit, currency)}{planShare(spent, limit)}</Text> : null}
         </Text>
       </View>
       {limit && !fixed ? (
@@ -328,7 +324,6 @@ const styles = StyleSheet.create({
   refundsAmount: { fontSize: 15, color: colors.income, fontVariant: ['tabular-nums'] },
   // under the amount, on the right
   paidMark: { fontSize: 16, fontWeight: '700', marginLeft: 6 },
-  paidPct: { fontSize: 13, fontWeight: '600', marginLeft: 6, fontVariant: ['tabular-nums'] },
   paidOn: { color: colors.income },
   paidOff: { color: colors.muted },
 });
