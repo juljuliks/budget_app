@@ -171,10 +171,10 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
   const split = month ? splitUnplanned(stats.groups, (c) => month.planned.has(c.category_id!)) : { groups: stats.groups, unplanned: [], spent: 0 };
 
   const shorterThanMonth = !!norms && days < daysInMonth(norms.ym);
-  // what the spending in a section's header is for: "за день", "за неделю", "1 – 4 окт", "с 28 сен по 4 окт"
+  // what the spending in a section's header is for: "за день", "за неделю", "за 1–4 окт", "с 28 сен по 4 окт"
   const spentFor = normLabel === 'на день' ? 'за день' : normLabel === 'на неделю' && days === 7 ? 'за неделю'
-    // a week cut by the month's edge: just its days, "1 – 4 окт"
-    : normLabel === 'на неделю' ? shortRange(range)
+    // a week cut by the month's edge: "за 1–4 окт" — tight, so the " / " after it stays the visible separator
+    : normLabel === 'на неделю' ? `за ${shortRange(range).replace(' – ', '–')}`
       : `с ${shortRange({ from: range.from, to: range.from })} по ${shortRange({ from: range.to, to: range.to })}`;
   /** "31 окт": the month's last day, what the month's shares run until */
   const monthEndShort = norms ? shortRange({ from: `${norms.ym}-${daysInMonth(norms.ym)}`, to: `${norms.ym}-${daysInMonth(norms.ym)}` }) : '';
