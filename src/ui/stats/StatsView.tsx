@@ -92,8 +92,8 @@ export default function StatsView({ year, month, currency }: { year: number; mon
             <View style={[formStyles.sectionHeader, styles.groupHeader]}>
               <Text style={styles.groupTitle}>{g.title}</Text>
               <Text style={styles.groupTotal}>
-                {/* the section's spending only: its plan is on the plan tab */}
-                {formatWithCurrency(g.spent_minor, stats.currency)}
+                {g.planned_minor ? formatShort(g.spent_minor) : formatWithCurrency(g.spent_minor, stats.currency)}
+                {g.planned_minor ? <Text style={styles.rowLimit}> / {formatWithCurrency(g.planned_minor, stats.currency)}</Text> : null}
               </Text>
             </View>
             {g.categories.map((c) => (
