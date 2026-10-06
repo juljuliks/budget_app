@@ -309,11 +309,25 @@ export default function PeriodStatsView({ range, emptyText = 'За этот пе
           </FoldHeader>
           {fold.is(UNPLANNED) ? null : (
             <>
-              {/* the share is the month's: not split by days; how much of it the month took so far */}
-              {month.share > 0 ? (
-                // like an obligatory payment's line: "130 ₾ из 200 ₾ на октябрь"
-                <Text style={styles.share}>{money(month.spent)} из {money(month.share)} на {monthIn}</Text>
-              ) : null}
+              {/* the share is a month's limit, drawn like a "крупно, раз в месяц" category's: the month so far, the
+                  other days faded, an overspend scaled to the spending with a tick at the share */}
+              {month.share > 0 ? (() => {
+                const left = Math.round(month.share) - month.spent;
+                const others = Math.max(0, month.spent - split.spent);
+                return (
+                  <>
+                    {month.spent > month.share
+                      ? <Meter ratio={1} base={others / month.spent} limitTick={month.share / month.spent} height={8} color={colors.warn} />
+                      : <Meter ratio={month.spent / month.share} base={others / month.share} height={8} color={colors.income} />}
+                    <Text style={[styles.share, styles.paceText]}>
+                      <Text style={[styles.pace, left < 0 ? styles.paceAhead : styles.paceOk]}>
+                        На {monthIn} {left < 0 ? `перерасход ${money(-left)}` : `осталось ${money(left)}`}
+                      </Text>
+                      {` · ${money(month.spent)} из ${money(month.share)}`}
+                    </Text>
+                  </>
+                );
+              })() : null}
               {split.unplanned.map(rowOf)}
             </>
           )}
