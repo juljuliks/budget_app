@@ -14,7 +14,7 @@ import { useHideAmounts } from '../../hideAmounts';
 import Meter from '../Meter';
 import { formatMoneyWithCurrency, formatShort, formatWithCurrency } from '../money';
 import { NO_RATE, PER_PERIOD } from '../strings';
-import { colors } from '../theme';
+import { chart, colors } from '../theme';
 import PlanAmountModal, { PlanAmountTarget } from './PlanAmountModal';
 import { useLatestRequest } from '../useLatestRequest';
 import { formStyles } from '../formStyles';
@@ -22,6 +22,7 @@ import { FoldHeader, useFolded } from '../fold';
 import { LimitsAccordion } from './SummaryTiles';
 import { MonthReportRow } from './MonthReport';
 import { summaryGroups } from './summaryGroups';
+import { splitUnplanned, unplannedShare } from './unplanned';
 
 /**
  * Donut: one segment per category with spending, in section order, so a type's categories sit next to
@@ -35,6 +36,8 @@ function donutSegments(groups: StatGroup[]): DonutSegment[] {
 
 export default function StatsView({ year, month, currency }: { year: number; month: number; currency: Currency }) {
   const [stats, setStats] = useState<MonthStats | null>(null);
+  // the month's share for spending outside the plan (0 without a budget)
+  const [share, setShare] = useState(0);
   const hidden = useHideAmounts();
   // "＋ В план" on a category without a plan amount
   const [planTarget, setPlanTarget] = useState<PlanAmountTarget | null>(null);
@@ -48,6 +51,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
     // answers of a previous month (switched quickly) are dropped
     const keep = latest();
     monthStats(year, month, currency).then(keep(setStats)).catch((e) => console.error('load stats failed', e));
+    unplannedShare(ymOf(year, month), currency).then(keep(setShare)).catch((e) => console.error('load unplanned share failed', e));
     if (ymOf(year, month) === currentYm()) {
       const d = dayKeyOf(new Date());
       loadNorms({ from: d, to: d }, currency).then(keep(setToday)).catch((e) => console.error('load norms failed', e));
@@ -66,7 +70,11 @@ export default function StatsView({ year, month, currency }: { year: number; mon
 
   if (!stats) return <View style={styles.center}><ActivityIndicator /></View>;
 
-  const remaining = stats.planned_minor - stats.spent_minor;
+  // the categories without a plan and the uncategorized: one "Вне плана" section at the bottom, with the budget's share
+  const split = splitUnplanned(stats.groups, (c) => c.limit_minor !== null);
+  // the plan's categories and the share outside them: what's left of both (an overspend outside the plan too)
+  const plannedAll = stats.planned_minor + share;
+  const remaining = plannedAll - stats.spent_minor;
   // the current month: a tick on each flexible category's bar where an even pace would be today
   const ym = ymOf(year, month);
   const evenPace = ym === currentYm() ? new Date().getDate() / daysInMonth(ym) : undefined;
@@ -85,9 +93,9 @@ export default function StatsView({ year, month, currency }: { year: number; mon
         </Donut>
       </View>
 
-      {stats.planned_minor > 0 ? (
+      {plannedAll > 0 ? (
         <View style={styles.summary}>
-          <SummaryItem label="План" value={formatWithCurrency(stats.planned_minor, stats.currency)} />
+          <SummaryItem label="План" value={formatWithCurrency(plannedAll, stats.currency)} />
           <SummaryItem
             label={remaining >= 0 ? 'Осталось' : 'Перерасход'}
             value={formatWithCurrency(Math.abs(remaining), stats.currency)}
@@ -104,7 +112,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
       {stats.categories.length === 0 ? (
         <Text style={styles.hint}>В этом месяце трат нет.</Text>
       ) : (
-        stats.groups.map((g) => (
+        split.groups.map((g) => (
           <View key={`${g.type_id}-${g.title}`} style={styles.group}>
             <FoldHeader style={[formStyles.sectionHeader, styles.groupHeader]} folded={fold.is(g.title)} onToggle={() => fold.toggle(g.title)}>
               <Text style={styles.groupTitle}>{g.title}</Text>
@@ -135,6 +143,44 @@ export default function StatsView({ year, month, currency }: { year: number; mon
           </View>
         ))
       )}
+
+      {split.unplanned.length || share > 0 ? (
+        <View style={styles.group}>
+          <FoldHeader style={[formStyles.sectionHeader, styles.groupHeader]} folded={fold.is(UNPLANNED)} onToggle={() => fold.toggle(UNPLANNED)}>
+            <Text style={styles.groupTitle}>{UNPLANNED}</Text>
+            {hidden ? null : (
+              <Text style={styles.groupTotal}>
+                {share ? formatShort(split.spent) : formatWithCurrency(split.spent, stats.currency)}
+                {share ? <Text style={styles.rowLimit}> / {formatWithCurrency(share, stats.currency)}{planShare(split.spent, share)}</Text> : null}
+              </Text>
+            )}
+          </FoldHeader>
+          {fold.is(UNPLANNED) ? null : (
+            <>
+              {/* the share as a limit: an overspend scales the bar to the spending, a tick at the share */}
+              {share > 0 ? (split.spent > share
+                ? <Meter ratio={1} over={share / split.spent} height={6} color={colors.warn} />
+                : <Meter ratio={split.spent / share} height={6} color={chart.meterFill} />) : null}
+              {split.unplanned.length === 0 ? <Text style={styles.hint}>Трат вне плана пока не было.</Text> : null}
+              {split.unplanned.map((c) => (
+                <CategoryRow
+                  key={String(c.category_id)}
+                  stat={c}
+                  currency={stats.currency}
+                  evenPace={evenPace}
+                  dim={daysInMonth(ym)}
+                  ym={ym}
+                  openTransactions={openTransactions}
+                  monthToDate={0}
+                  onAddToPlan={c.category_id !== null && !c.deleted
+                    ? () => setPlanTarget({ category_id: c.category_id!, label: categoryLabel(c), limit_minor: 0, currency })
+                    : undefined}
+                />
+              ))}
+            </>
+          )}
+        </View>
+      ) : null}
 
       <RefundsRow amount={stats.refunds_unassigned_minor} currency={stats.currency} onPress={() => openTransactions(null, monthDays(ym), ['refund'])} />
       {stats.other_currencies.length > 0 ? (
@@ -179,6 +225,9 @@ export function DonutCenter({ total, picked, currency }: { total: number; picked
     </>
   );
 }
+
+/** the bottom section of the categories without a plan (as in the plan) */
+const UNPLANNED = 'Вне плана';
 
 /** " (50%)" after "spent / limit" of a flexible category; nothing while nothing is spent. */
 function planShare(spent: number, limit: number): string {

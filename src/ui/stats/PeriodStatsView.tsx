@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { averageFullMonths, parseYm, periodStats, PeriodStats } from '../../db/plans';
+import { averageFullMonths, CategoryStat, parseYm, periodStats, PeriodStats } from '../../db/plans';
 import { useDisplayCurrency } from '../../displayCurrency';
 import { useOpenCategoryTransactions } from '../../navigation';
 import { onTransactionsChanged } from '../../events';
@@ -20,6 +20,7 @@ import { useLatestRequest } from '../useLatestRequest';
 import { GROUP_TITLES, LimitsAccordion } from './SummaryTiles';
 import { pct, SummaryGroupKey, summaryGroups } from './summaryGroups';
 import { formStyles } from '../formStyles';
+import { splitUnplanned, unplannedMonth } from './unplanned';
 import { FoldHeader, useFolded } from '../fold';
 
 /** Periods up to this long are measured against the plan (its share for these days); longer ones aren't. */
@@ -51,6 +52,9 @@ const GROUP_ABOUT: Record<SummaryGroupKey, string> = {
   outside: 'Траты за период, которые в лимиты не входят: обязательные платежи, переводы, категории без плана.',
 };
 
+/** the bottom section of the categories without a plan (as in the plan and the month) */
+const UNPLANNED = 'Вне плана';
+
 const capitalize = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 
 const MONTHS_PREP = ['январе', 'феврале', 'марте', 'апреле', 'мае', 'июне', 'июле', 'августе', 'сентябре', 'октябре', 'ноябре', 'декабре'];
@@ -67,6 +71,8 @@ const INFO_SIZE = 18;
 export default function PeriodStatsView({ range, emptyText = 'За этот период трат нет.' }: Props) {
   const [stats, setStats] = useState<PeriodStats | null>(null);
   const [norms, setNorms] = useState<Norms | null>(null);
+  // the month the period ends in: which categories have a plan, the spending outside it and its share (a day / week only)
+  const [month, setMonth] = useState<Awaited<ReturnType<typeof unplannedMonth>> | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   // which explanation is open: the line under the donut or a category's block
   const [infoOpen, setInfoOpen] = useState<Info | null>(null);
@@ -95,10 +101,12 @@ export default function PeriodStatsView({ range, emptyText = 'За этот пе
       loadNorms(range, currency).then((n) => {
         const planned = [...n.byCategory].filter(([id, p]) => p.kind === 'limit' && p.rhythm !== 'month' && p.periodNorm > 0
           && (n.monthToDate.get(id) ?? 0) > 0).map(([id]) => id);
-        return periodStats(from, to, currency, planned).then(keep((s: PeriodStats) => { setNorms(n); setStats(s); }));
+        return Promise.all([periodStats(from, to, currency, planned), unplannedMonth(n.ym, currency)])
+          .then(keep(([s, u]: [PeriodStats, Awaited<ReturnType<typeof unplannedMonth>>]) => { setNorms(n); setMonth(u); setStats(s); }));
       }).catch((e) => console.error('load period stats failed', e));
     } else {
       setNorms(null);
+      setMonth(null);
       periodStats(from, to, currency).then(keep(setStats)).catch((e) => console.error('load period stats failed', e));
     }
     if (!pace) averageFullMonths(range.from, range.to, currency).then(keep(setAverage)).catch((e) => console.error('load average failed', e));
@@ -157,6 +165,116 @@ export default function PeriodStatsView({ range, emptyText = 'За этот пе
 
   const paceStyle = (p: Pace) => (p === 'ok' ? styles.paceOk : p === 'ahead' ? styles.paceAhead : styles.paceOver);
   const paceName = (p: Pace) => (p === 'ok' ? 'зелёный' : p === 'ahead' ? 'оранжевый' : 'красный');
+  // a day / week: the categories without a plan this month and the uncategorized in one "Вне плана" section at the bottom
+  const split = month ? splitUnplanned(stats.groups, (c) => month.planned.has(c.category_id!)) : { groups: stats.groups, unplanned: [], spent: 0 };
+
+  /** a category's row: tap opens its operations in the period; a limit's line has its ⓘ */
+  const rowOf = (c: CategoryStat) => {
+    const plan = c.category_id === null ? undefined : norms?.byCategory.get(c.category_id);
+    const mtd = (c.category_id !== null && norms?.monthToDate.get(c.category_id)) || 0;
+    const name = `${c.emoji || ''} ${c.name}`.trim();
+    return (
+      // tap: the category's operations in this period (the ⓘ line inside keeps its own tap)
+      <TouchableOpacity
+        key={String(c.category_id)}
+        style={styles.row}
+        onPress={() => openTransactions(c.category_id, range)}
+        accessibilityHint="Показать операции категории за период"
+      >
+        <View style={styles.rowTop}>
+          <View style={[styles.dot, { backgroundColor: c.color }]} />
+          <Text style={styles.name} numberOfLines={1}>{name}</Text>
+          <Text style={styles.amount}>
+            {money(c.spent_minor)}
+            {plan?.kind === 'limit' && plan.rhythm !== 'month' && !isPartOfWindow(plan.window, range) && plan.periodNorm > 0
+              ? <Text style={styles.ofLimit}> / {m(plan.periodNorm)} ({pct(c.spent_minor, Math.round(plan.periodNorm))})</Text> : null}
+          </Text>
+        </View>
+        {plan?.kind === 'limit' && plan.rhythm !== 'month' ? (() => {
+          // a period shorter than the category's rhythm (a day of a weekly limit) is measured as the whole rhythm
+          // window so far: a weekly category is meant to be spent unevenly, a day's share of it would read as overspend
+          const whole = isPartOfWindow(plan.window, range);
+          const limit = Math.round(whole ? plan.windowNorm : plan.periodNorm);
+          const spent = whole ? plan.windowSpent : c.spent_minor;
+          const left = limit - spent;
+          const p = paceOf(spent, limit, mtd, plan.monthLimit);
+          const end = whole ? plan.window.to : range.to;
+          const ongoing = end >= today;
+          // the other days of the window, drawn faded before this period's part
+          const others = whole ? Math.max(0, spent - Math.min(c.spent_minor, spent)) : 0;
+          return (
+            <>
+              {/* the bar is scaled to the bigger of the two: an overspend shows how far past the limit */}
+              {limit > 0 ? (
+                spent <= limit ? <Meter ratio={spent / limit} base={others / limit} height={8} color={c.color} />
+                  : whole ? <Meter ratio={1} base={others / spent} limitTick={limit / spent} height={8} color={c.color} />
+                    : <Meter ratio={1} over={limit / spent} height={8} color={c.color} />
+              ) : null}
+              <TouchableOpacity style={styles.paceRow} onPress={() => openInfo({ id: c.category_id!, name })} accessibilityLabel="Как считается категория">
+                <Text style={[styles.share, styles.paceText]}>
+                  {/* as in the month stats: the limit first — how the period moved it: at its start (crossed out) → for
+                      the rest of the month after it — then what's left */}
+                  {plan.effect ? (() => {
+                    const { before, after } = plan.effect;
+                    const moved = after !== null && Math.round(after) !== Math.round(before);
+                    return (
+                      <>
+                        {'Лимит '}
+                        {moved ? <><Text style={styles.crossed}>{m(before)}</Text>{' → '}</> : null}
+                        <Text style={moved ? (after! < before ? styles.paceAhead : styles.paceOk) : undefined}>{m(moved ? after! : before)}</Text>
+                        {` ${PER_PERIOD[plan.rhythm]}\n`}
+                      </>
+                    );
+                  })() : null}
+                  {whole ? `${plan.rhythm === 'week' ? 'Неделя' : '2 недели'} ${shortRange(plan.window)}: ` : ''}
+                  {limit > 0 ? (
+                    <>
+                      <Text style={[styles.pace, paceStyle(p)]}>
+                        {(left < 0 ? `перерасход ${money(-left)}` : ongoing ? `осталось ${money(left)}` : `сэкономлено ${money(left)}`).replace(/^./, (ch) => (whole ? ch : ch.toUpperCase()))}
+                      </Text>
+                      {left >= 0 && ongoing && rangeDays({ from: whole ? plan.window.from : range.from, to: end }) > 1 ? ` · до ${WEEKDAYS[parseDayKey(end).getDay()]}` : ''}
+                    </>
+                  ) : `${whole ? 'п' : 'П'}лана нет`}
+                </Text>
+                <InfoIcon color={colors.accent} size={INFO_SIZE} />
+              </TouchableOpacity>
+            </>
+          );
+        })() : plan?.kind === 'limit' ? (() => {
+          // "крупно, раз в месяц": not split by days, the month's plan so far
+          const left = Math.round(plan.windowNorm) - plan.windowSpent;
+          const p = paceOf(plan.windowSpent, plan.windowNorm, mtd, plan.monthLimit);
+          const bar = rhythmBar(plan, range, c.spent_minor);
+          return (
+            <>
+              <Meter ratio={bar.ratio} base={bar.base} height={8} color={c.color} />
+              <TouchableOpacity style={styles.paceRow} onPress={() => openInfo({ id: c.category_id!, name })} accessibilityLabel="Как считается категория">
+                <Text style={[styles.share, styles.paceText]}>
+                  <Text style={[styles.pace, paceStyle(p)]}>
+                    На {monthIn} {left < 0 ? `перерасход ${money(-left)}` : `осталось ${money(left)}`}
+                  </Text>
+                </Text>
+                <InfoIcon color={colors.accent} size={INFO_SIZE} />
+              </TouchableOpacity>
+            </>
+          );
+        })() : plan ? (
+          // a fixed payment: the month's plan, not split by days
+          <>
+            {plan.monthLimit > 0 ? <Meter ratio={mtd / plan.monthLimit} height={8} color={c.color} /> : null}
+            <TouchableOpacity style={styles.paceRow} onPress={() => openInfo({ id: c.category_id!, name })} accessibilityLabel="Как считается категория">
+              <Text style={styles.share}>
+                {plan.monthLimit > 0 ? `${money(mtd)} из ${money(plan.monthLimit)} на ${monthIn}` : `в ${MONTHS_PREP[parseYm(norms!.ym).month]} плана нет`}
+              </Text>
+              <InfoIcon color={colors.accent} size={INFO_SIZE} />
+            </TouchableOpacity>
+          </>
+        ) : (
+          <Text style={styles.share}>{pct(c.spent_minor, stats.spent_minor)} всех трат</Text>
+        )}
+      </TouchableOpacity>
+    );
+  };
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.donutWrap}>
@@ -174,120 +292,34 @@ export default function PeriodStatsView({ range, emptyText = 'За этот пе
       )}
 
       {stats.categories.length === 0 ? <Text style={styles.hint}>{emptyText}</Text> : null}
-      {stats.groups.map((g) => (
+      {split.groups.map((g) => (
         <View key={`${g.type_id}-${g.title}`} style={styles.group}>
           <FoldHeader style={[formStyles.sectionHeader, styles.groupHeader]} folded={fold.is(g.title)} onToggle={() => fold.toggle(g.title)}>
             <Text style={styles.groupTitle}>{g.title}</Text>
             <Text style={styles.groupTotal}>{money(g.spent_minor)}</Text>
           </FoldHeader>
-          {fold.is(g.title) ? null : g.categories.map((c) => {
-            const plan = c.category_id === null ? undefined : norms?.byCategory.get(c.category_id);
-            const mtd = (c.category_id !== null && norms?.monthToDate.get(c.category_id)) || 0;
-            const name = `${c.emoji || ''} ${c.name}`.trim();
-            return (
-              // tap: the category's operations in this period (the ⓘ line inside keeps its own tap)
-              <TouchableOpacity
-                key={String(c.category_id)}
-                style={styles.row}
-                onPress={() => openTransactions(c.category_id, range)}
-                accessibilityHint="Показать операции категории за период"
-              >
-                <View style={styles.rowTop}>
-                  <View style={[styles.dot, { backgroundColor: c.color }]} />
-                  <Text style={styles.name} numberOfLines={1}>{name}</Text>
-                  <Text style={styles.amount}>
-                    {money(c.spent_minor)}
-                    {plan?.kind === 'limit' && plan.rhythm !== 'month' && !isPartOfWindow(plan.window, range) && plan.periodNorm > 0
-                      ? <Text style={styles.ofLimit}> / {m(plan.periodNorm)} ({pct(c.spent_minor, Math.round(plan.periodNorm))})</Text> : null}
-                  </Text>
-                </View>
-                {plan?.kind === 'limit' && plan.rhythm !== 'month' ? (() => {
-                  // a period shorter than the category's rhythm (a day of a weekly limit) is measured as the whole rhythm
-                  // window so far: a weekly category is meant to be spent unevenly, a day's share of it would read as overspend
-                  const whole = isPartOfWindow(plan.window, range);
-                  const limit = Math.round(whole ? plan.windowNorm : plan.periodNorm);
-                  const spent = whole ? plan.windowSpent : c.spent_minor;
-                  const left = limit - spent;
-                  const p = paceOf(spent, limit, mtd, plan.monthLimit);
-                  const end = whole ? plan.window.to : range.to;
-                  const ongoing = end >= today;
-                  // the other days of the window, drawn faded before this period's part
-                  const others = whole ? Math.max(0, spent - Math.min(c.spent_minor, spent)) : 0;
-                  return (
-                    <>
-                      {/* the bar is scaled to the bigger of the two: an overspend shows how far past the limit */}
-                      {limit > 0 ? (
-                        spent <= limit ? <Meter ratio={spent / limit} base={others / limit} height={8} color={c.color} />
-                          : whole ? <Meter ratio={1} base={others / spent} limitTick={limit / spent} height={8} color={c.color} />
-                            : <Meter ratio={1} over={limit / spent} height={8} color={c.color} />
-                      ) : null}
-                      <TouchableOpacity style={styles.paceRow} onPress={() => openInfo({ id: c.category_id!, name })} accessibilityLabel="Как считается категория">
-                        <Text style={[styles.share, styles.paceText]}>
-                          {/* as in the month stats: the limit first — how the period moved it: at its start (crossed out) → for
-                              the rest of the month after it — then what's left */}
-                          {plan.effect ? (() => {
-                            const { before, after } = plan.effect;
-                            const moved = after !== null && Math.round(after) !== Math.round(before);
-                            return (
-                              <>
-                                {'Лимит '}
-                                {moved ? <><Text style={styles.crossed}>{m(before)}</Text>{' → '}</> : null}
-                                <Text style={moved ? (after! < before ? styles.paceAhead : styles.paceOk) : undefined}>{m(moved ? after! : before)}</Text>
-                                {` ${PER_PERIOD[plan.rhythm]}\n`}
-                              </>
-                            );
-                          })() : null}
-                          {whole ? `${plan.rhythm === 'week' ? 'Неделя' : '2 недели'} ${shortRange(plan.window)}: ` : ''}
-                          {limit > 0 ? (
-                            <>
-                              <Text style={[styles.pace, paceStyle(p)]}>
-                                {(left < 0 ? `перерасход ${money(-left)}` : ongoing ? `осталось ${money(left)}` : `сэкономлено ${money(left)}`).replace(/^./, (ch) => (whole ? ch : ch.toUpperCase()))}
-                              </Text>
-                              {left >= 0 && ongoing && rangeDays({ from: whole ? plan.window.from : range.from, to: end }) > 1 ? ` · до ${WEEKDAYS[parseDayKey(end).getDay()]}` : ''}
-                            </>
-                          ) : `${whole ? 'п' : 'П'}лана нет`}
-                        </Text>
-                        <InfoIcon color={colors.accent} size={INFO_SIZE} />
-                      </TouchableOpacity>
-                    </>
-                  );
-                })() : plan?.kind === 'limit' ? (() => {
-                  // "крупно, раз в месяц": not split by days, the month's plan so far
-                  const left = Math.round(plan.windowNorm) - plan.windowSpent;
-                  const p = paceOf(plan.windowSpent, plan.windowNorm, mtd, plan.monthLimit);
-                  const bar = rhythmBar(plan, range, c.spent_minor);
-                  return (
-                    <>
-                      <Meter ratio={bar.ratio} base={bar.base} height={8} color={c.color} />
-                      <TouchableOpacity style={styles.paceRow} onPress={() => openInfo({ id: c.category_id!, name })} accessibilityLabel="Как считается категория">
-                        <Text style={[styles.share, styles.paceText]}>
-                          <Text style={[styles.pace, paceStyle(p)]}>
-                            На {monthIn} {left < 0 ? `перерасход ${money(-left)}` : `осталось ${money(left)}`}
-                          </Text>
-                        </Text>
-                        <InfoIcon color={colors.accent} size={INFO_SIZE} />
-                      </TouchableOpacity>
-                    </>
-                  );
-                })() : plan ? (
-                  // a fixed payment: the month's plan, not split by days
-                  <>
-                    {plan.monthLimit > 0 ? <Meter ratio={mtd / plan.monthLimit} height={8} color={c.color} /> : null}
-                    <TouchableOpacity style={styles.paceRow} onPress={() => openInfo({ id: c.category_id!, name })} accessibilityLabel="Как считается категория">
-                      <Text style={styles.share}>
-                        {plan.monthLimit > 0 ? `${money(mtd)} из ${money(plan.monthLimit)} на ${monthIn}` : `в ${MONTHS_PREP[parseYm(norms!.ym).month]} плана нет`}
-                      </Text>
-                      <InfoIcon color={colors.accent} size={INFO_SIZE} />
-                    </TouchableOpacity>
-                  </>
-                ) : (
-                  <Text style={styles.share}>{pct(c.spent_minor, stats.spent_minor)} всех трат</Text>
-                )}
-              </TouchableOpacity>
-            );
-          })}
+          {fold.is(g.title) ? null : g.categories.map(rowOf)}
         </View>
       ))}
+      {month && (split.unplanned.length || month.share > 0) ? (
+        <View style={styles.group}>
+          <FoldHeader style={[formStyles.sectionHeader, styles.groupHeader]} folded={fold.is(UNPLANNED)} onToggle={() => fold.toggle(UNPLANNED)}>
+            <Text style={styles.groupTitle}>{UNPLANNED}</Text>
+            <Text style={styles.groupTotal}>{money(split.spent)}</Text>
+          </FoldHeader>
+          {fold.is(UNPLANNED) ? null : (
+            <>
+              {/* the share is the month's: not split by days; how much of it the month took so far */}
+              {month.share > 0 ? (
+                <Text style={[styles.share, month.spent > month.share && styles.paceAhead]}>
+                  В {MONTHS_PREP[parseYm(norms!.ym).month]}: {money(month.spent)} из {money(month.share)} ({pct(month.spent, month.share)})
+                </Text>
+              ) : null}
+              {split.unplanned.map(rowOf)}
+            </>
+          )}
+        </View>
+      ) : null}
       <RefundsRow amount={stats.refunds_unassigned_minor} currency={stats.currency} onPress={() => openTransactions(null, range, ['refund'])} />
       {stats.other_currencies.length > 0 ? (
         <Text style={styles.hint}>
