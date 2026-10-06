@@ -1,3 +1,4 @@
+jest.mock('../src/navigation', () => ({ navigateWhenReady: jest.fn() }));
 import type { CategoryStat, StatGroup } from '../src/db/plans';
 import { splitUnplanned } from '../src/ui/stats/unplanned';
 
@@ -26,4 +27,28 @@ test('a refund bigger than the spending counts as nothing in the total', () => {
   const r = splitUnplanned([group('Жизнь', [cat(2, -100, null), cat(4, 300, null)])], () => false);
   expect(r.spent).toBe(300);
   expect(r.groups).toEqual([]);
+});
+
+describe('unplannedMonth', () => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { freshDb } = require('./helpers');
+  beforeEach(() => freshDb());
+
+  test('a past day counts the month outside the plan up to that day, not up to today', async () => {
+    const { createCategory } = await import('../src/db/categories');
+    const { addManualTransaction } = await import('../src/db/transactions');
+    const { setPlanAmount } = await import('../src/db/plans');
+    const { unplannedMonth } = await import('../src/ui/stats/unplanned');
+    const at = (day: string) => Math.floor(new Date(`${day}T12:00:00`).getTime() / 1000);
+    const food = await createCategory('Еда');
+    const taxi = await createCategory('Такси');
+    await setPlanAmount('2025-10', food, 31000, 'limit', 'GEL', 'day');
+    for (const [amount, id, day] of [[1000, taxi, '2025-10-02'], [500, null, '2025-10-03'], [2000, taxi, '2025-10-10'], [700, food, '2025-10-03']] as const) {
+      await addManualTransaction({ amount_minor: amount, category_id: id, occurred_at: at(day), kind: 'purchase', currency: 'GEL' });
+    }
+    const u = await unplannedMonth('2025-10', 'GEL', '2025-10-03');
+    expect(u.spent).toBe(1500);
+    expect(u.planned.has(food)).toBe(true);
+    expect((await unplannedMonth('2025-10', 'GEL', '2025-10-31')).spent).toBe(3500);
+  });
 });

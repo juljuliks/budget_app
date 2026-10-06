@@ -101,7 +101,7 @@ export default function PeriodStatsView({ range, emptyText = 'За этот пе
       loadNorms(range, currency).then((n) => {
         const planned = [...n.byCategory].filter(([id, p]) => p.kind === 'limit' && p.rhythm !== 'month' && p.periodNorm > 0
           && (n.monthToDate.get(id) ?? 0) > 0).map(([id]) => id);
-        return Promise.all([periodStats(from, to, currency, planned), unplannedMonth(n.ym, currency)])
+        return Promise.all([periodStats(from, to, currency, planned), unplannedMonth(n.ym, currency, range.to)])
           .then(keep(([s, u]: [PeriodStats, Awaited<ReturnType<typeof unplannedMonth>>]) => { setNorms(n); setMonth(u); setStats(s); }));
       }).catch((e) => console.error('load period stats failed', e));
     } else {

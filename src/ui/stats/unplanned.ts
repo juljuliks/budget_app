@@ -1,5 +1,6 @@
 import { Currency } from '../../db/fx';
-import { CategoryStat, getPlanBudget, monthStats, parseYm, planConverter, StatGroup, unplannedOf, unplannedSpent } from '../../db/plans';
+import { CategoryStat, getPlanBudget, monthStats, parseYm, periodStats, planConverter, StatGroup, unplannedOf } from '../../db/plans';
+import { DayKey, rangeToUnix } from '../dateRange';
 
 /**
  * "Вне плана" in the stats: the categories without a plan this month and the uncategorized spending leave their
@@ -31,12 +32,15 @@ export async function unplannedShare(ym: string, currency: Currency): Promise<nu
 }
 
 /**
- * For a day / week: the month the period ends in — which categories have a plan, the spending outside it so far and
- * the month's share for it.
+ * For a day / week: the month the period ends in — which categories have a plan, the spending outside it from the 1st
+ * up to the period's end (`to`: a past period counts as of its end, not as of today) and the month's share for it.
  */
-export async function unplannedMonth(ym: string, currency: Currency): Promise<{ planned: Set<number>; spent: number; share: number }> {
+export async function unplannedMonth(ym: string, currency: Currency, to: DayKey): Promise<{ planned: Set<number>; spent: number; share: number }> {
   const { year, month } = parseYm(ym);
-  const [stats, share] = await Promise.all([monthStats(year, month, currency), unplannedShare(ym, currency)]);
+  const { from, to: end } = rangeToUnix({ from: `${ym}-01`, to });
+  const [stats, upTo, share] = await Promise.all([monthStats(year, month, currency), periodStats(from, end, currency), unplannedShare(ym, currency)]);
   const planned = new Set(stats.categories.filter((c) => c.category_id !== null && c.limit_minor !== null).map((c) => c.category_id!));
-  return { planned, spent: unplannedSpent(stats), share };
+  const spent = upTo.categories.filter((c) => c.category_id === null || !planned.has(c.category_id))
+    .reduce((a, c) => a + Math.max(0, c.spent_minor), 0);
+  return { planned, spent, share };
 }
