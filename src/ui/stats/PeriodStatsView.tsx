@@ -532,9 +532,11 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
           <FoldHeader style={[formStyles.sectionHeader, styles.groupHeader]} folded={fold.is(OVERSPENT)} onToggle={() => fold.toggle(OVERSPENT)}>
             <Text style={styles.groupTitle}>{OVERSPENT}</Text>
             {/* the period's spending of these categories; each row says its month's overspend */}
-            <MaskedTotal style={styles.groupTotal} hiddenText={headerPct(overspentCats.reduce((a, c) => a + c.spent_minor, 0), 0)}>
-              {money(overspentCats.reduce((a, c) => a + c.spent_minor, 0))}
-            </MaskedTotal>
+            {overspentCats.length > 1 ? (
+              <MaskedTotal style={styles.groupTotal} hiddenText={headerPct(overspentCats.reduce((a, c) => a + c.spent_minor, 0), 0)}>
+                {money(overspentCats.reduce((a, c) => a + c.spent_minor, 0))}
+              </MaskedTotal>
+            ) : null}
           </FoldHeader>
           {fold.is(OVERSPENT) ? null : overspentCats.map((c, i) => rowOf(c, i, overspentCats, true, true))}
         </View>
@@ -543,9 +545,11 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
         <View key="other" style={styles.group}>
           <FoldHeader style={[formStyles.sectionHeader, styles.groupHeader]} folded={fold.is(OTHER)} onToggle={() => fold.toggle(OTHER)}>
             <Text style={styles.groupTitle}>{OTHER}</Text>
-            <MaskedTotal style={styles.groupTotal} hiddenText={headerPct(otherCats.reduce((a, c) => a + c.spent_minor, 0), 0)}>
-              {money(otherCats.reduce((a, c) => a + c.spent_minor, 0))}
-            </MaskedTotal>
+            {otherCats.length > 1 ? (
+              <MaskedTotal style={styles.groupTotal} hiddenText={headerPct(otherCats.reduce((a, c) => a + c.spent_minor, 0), 0)}>
+                {money(otherCats.reduce((a, c) => a + c.spent_minor, 0))}
+              </MaskedTotal>
+            ) : null}
           </FoldHeader>
           {fold.is(OTHER) ? null : otherCats.map(plainRow)}
         </View>
@@ -553,7 +557,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
         <View key={`${g.type_id}-${g.title}`} style={styles.group}>
           <FoldHeader style={[formStyles.sectionHeader, styles.groupHeader]} folded={fold.is(g.title)} onToggle={() => fold.toggle(g.title)}>
             <Text style={styles.groupTitle}>{g.title}</Text>
-            <SectionTotal spent={g.spent_minor} planned={g.categories.reduce((a, c) => a + ((c.category_id !== null && norms?.byCategory.get(c.category_id)?.monthLimit) || 0), 0)} />
+            {g.categories.length > 1 ? <SectionTotal spent={g.spent_minor} planned={g.categories.reduce((a, c) => a + ((c.category_id !== null && norms?.byCategory.get(c.category_id)?.monthLimit) || 0), 0)} /> : null}
           </FoldHeader>
           {fold.is(g.title) ? null : g.categories.map(rowOf)}
         </View>
@@ -565,9 +569,10 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
             <Text style={styles.groupTitle}>{UNPLANNED}</Text>
             {/* like the limits' headers: the month's spending outside the plan / its share (%) — the share is a month's,
                 as an obligatory payment's plan is */}
-            {byLimits ? (
+            {/* one category: no total, its row says it */}
+            {byLimits ? (split.unplanned.length > 1 ? (
               <MaskedTotal style={styles.groupTotal} hiddenText={headerPct(split.spent, 0)}>{money(split.spent)}</MaskedTotal>
-            ) : <SectionTotal spent={split.spent} planned={month.share} />}
+            ) : null) : <SectionTotal spent={split.spent} planned={month.share} />}
           </FoldHeader>
           {fold.is(UNPLANNED) ? null : (
             <>
