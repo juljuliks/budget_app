@@ -292,13 +292,13 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
     if (plan?.kind === 'fixed') {
       const paid = (c.category_id !== null && norms?.monthToDate.get(c.category_id)) || 0;
       if (plan.monthLimit <= 0 || Math.round(paid) === Math.round(plan.monthLimit) || paid !== c.spent_minor) return null;
-      return <Text style={styles.ofLimit}> / {m(plan.monthLimit)}{c.spent_minor > 0 ? ` (${pct(c.spent_minor, Math.round(plan.monthLimit))})` : ''}</Text>;
+      return <Text style={styles.ofLimit}>{'\u00a0/\u00a0'}{m(plan.monthLimit)}{c.spent_minor > 0 ? ` (${pct(c.spent_minor, Math.round(plan.monthLimit))})` : ''}</Text>;
     }
     if (plan?.kind !== 'limit' || plan.rhythm === 'month') return null;
     const { spent, limit: lim } = limitPair(plan, c);
     if (lim <= 0) return null;
     // no "(0%)" while nothing is spent
-    return <Text style={styles.ofLimit}> / {m(lim)}{spent > 0 ? ` (${pct(spent, Math.round(lim))})` : ''}</Text>;
+    return <Text style={styles.ofLimit}>{'\u00a0/\u00a0'}{m(lim)}{spent > 0 ? ` (${pct(spent, Math.round(lim))})` : ''}</Text>;
   };
   /**
    * What a day / week limit's "spent / limit" on the right is measured over: the period itself, or — a day of a
@@ -329,7 +329,8 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
         <View style={styles.rowTop}>
           <View style={[styles.dot, { backgroundColor: c.color }]} />
           <Text style={styles.name} numberOfLines={1}>{name}</Text>
-          <Text style={styles.amount}>
+          {/* one line, never wrapped: a wrapped "0 / 106.81 ₾" showed just "0 /" (its second line hidden) */}
+          <Text style={styles.amount} numberOfLines={1}>
             {/* as in the month stats: with a limit the spending without ₾, "/ limit ₾ (%)" muted */}
             {/* "Скрыть суммы": just the % — of its limit, or of all spending without one */}
             {hidden ? hiddenShare(c, plan) : (
