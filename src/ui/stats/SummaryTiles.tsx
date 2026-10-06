@@ -6,7 +6,6 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, Vi
 import { parseDayKey, shortRange } from '../dateRange';
 import { ChevronDownIcon } from '../icons';
 import Meter from '../Meter';
-import { PER_PERIOD } from '../strings';
 import { colors } from '../theme';
 import { pct, SummaryGroup, SummaryGroupKey } from './summaryGroups';
 
