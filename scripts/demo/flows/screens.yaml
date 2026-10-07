@@ -3,10 +3,14 @@
 appId: com.budgetapp
 ---
 - launchApp
+# a slow emulator may show "isn't responding" on the first start: keep waiting
+- tapOn:
+    text: "Wait|Подождать"
+    optional: true
 # the app opens on the tab it was left on: the stats first
 - extendedWaitUntil:
     visible: "Статистика"
-    timeout: 30000
+    timeout: 60000
 - tapOn: "Статистика"
 - extendedWaitUntil:
     visible: "План"

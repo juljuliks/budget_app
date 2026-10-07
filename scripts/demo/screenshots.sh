@@ -28,6 +28,10 @@ adb shell chown "$OWNER" "$DIR/app.db"
 adb shell chmod 660 "$DIR/app.db"
 adb shell restorecon "$DIR/app.db" || true
 
+# start it once more with the demo database and give the slow emulator time to settle before the flow
+adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null
+sleep 20
+
 # where Maestro writes takeScreenshot's files depends on its version (the working folder, the flow's, the test
 # output's): run in OUT, then gather the numbered PNGs from wherever they landed
 cp "$FLOWS/screens.yaml" "$OUT/"
@@ -35,6 +39,6 @@ cd "$OUT"
 "$HOME/.maestro/bin/maestro" test --test-output-dir "$OUT/maestro" screens.yaml || echo "::warning::Some screens could not be shot"
 rm -f screens.yaml
 find "$OUT" "$HOME/.maestro" "$FLOWS" "${GITHUB_WORKSPACE:-.}" /tmp -name '[0-9][0-9]-*.png' -newer "$DEMO_DB" 2>/dev/null \
-  | while read -r f; do [ "$(dirname "$f")" = "$OUT" ] || cp "$f" "$OUT/"; done
+  | while read -r f; do [ "$(dirname "$f")" = "$OUT" ] || cp "$f" "$OUT/"; done || true
 adb exec-out screencap -p > 99-last.png || true
 ls -laR
