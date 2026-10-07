@@ -33,6 +33,8 @@ export default function CategoriesScreen({ navigation }: Props) {
   const [picked, setPicked] = useState<number[]>([]);
   const [merging, setMerging] = useState<number[]>([]);
   const picking = picked.length > 0;
+  // the "Разделы" row's height: the picking toolbar in its place takes the same
+  const [headerHeight, setHeaderHeight] = useState(0);
   // "Сбережения" can't be merged
   const pick = (c: Category) => {
     if (isSavings(c)) return;
@@ -86,20 +88,22 @@ export default function CategoriesScreen({ navigation }: Props) {
           {picking ? <View style={[styles.check, isSavings(item) && styles.off]}><Checkbox checked={picked.includes(item.id)} size={20} /></View> : null}
           <View style={[styles.dot, { backgroundColor: colorOf.get(item.id) ?? colors.border }]} />
           <Text style={styles.name} numberOfLines={1}>{`${item.emoji || ''} ${item.name}`.trim()}</Text>
-          {picking ? null : <Text style={styles.chevron}>›</Text>}
+          {/* hidden, not removed, while picking: the "›" sets the row's height, the rows would shrink and the list jump */}
+          <Text style={[styles.chevron, picking && styles.invisible]}>›</Text>
         </TouchableOpacity>
       )}
       // the category types live one level down from here
       ListHeaderComponent={picking ? (
-        // picking several (started by a long press); "Объединить" at the bottom once two are picked
-        <View style={styles.toolbar}>
+        // picking several (started by a long press); "Объединить" at the bottom once two are picked. As tall as the
+        // "Разделы" row it replaces (measured): a shorter header moved the list up
+        <View style={[styles.toolbar, headerHeight ? { height: headerHeight } : null]}>
           <Text style={[styles.pickLabel, styles.flex]}>Выбрано: {picked.length}</Text>
           <TouchableOpacity onPress={() => setPicked([])} hitSlop={8} accessibilityRole="button">
             <Text style={styles.toolbarCancel}>Отмена</Text>
           </TouchableOpacity>
         </View>
       ) : (
-        <TouchableOpacity style={styles.typesRow} onPress={openCategoryTypes} accessibilityRole="button">
+        <TouchableOpacity style={styles.typesRow} onPress={openCategoryTypes} accessibilityRole="button" onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}>
           <View style={styles.flex}>
             <Text style={styles.typesTitle}>Разделы</Text>
             <Text style={styles.typesNote} numberOfLines={1}>{types.length ? types.join(', ') : 'Разделы объединяют категории и задают им цвета'}</Text>
@@ -149,6 +153,7 @@ const styles = StyleSheet.create({
   chevron: { fontSize: 24, color: colors.muted, marginLeft: 8 },
   check: { marginRight: 10 },
   off: { opacity: 0.35 },
+  invisible: { opacity: 0 },
   toolbar: {
     flexDirection: 'row', alignItems: 'center', gap: 16, paddingHorizontal: 16, paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
