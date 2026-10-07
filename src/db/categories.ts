@@ -119,10 +119,12 @@ export async function deleteCategory(id: number, targetId: number | null, nowYm 
   }
   const from = monthStart(nowYm);
   await db.transaction(async (tx) => {
+    // a rule-picked one keeps following its merchant (whose rule moves along below), a hand-picked one stays so;
+    // none = no source
     await tx.run(
-      `UPDATE transactions SET category_id = ?, category_source = ?
+      `UPDATE transactions SET category_id = ?, category_source = CASE WHEN ? IS NULL THEN NULL ELSE category_source END
         WHERE category_id = ? AND occurred_at >= ?`,
-      [targetId, targetId === null ? null : 'user', id, from]);
+      [targetId, targetId, id, from]);
     if (targetId === null) {
       await tx.run('DELETE FROM merchant_rules WHERE category_id = ?', [id]);
     } else {

@@ -138,6 +138,16 @@ describe('deleteCategory', () => {
     expect((await monthStats(2026, 8)).categories).toEqual([expect.objectContaining({ category_id: 1, name: 'Продукты', spent_minor: 100 })]);
   });
 
+  test('moved to another category, a rule-picked transaction keeps following its merchant, a hand-picked one stays hand-picked', async () => {
+    const byRule = await tx(1, at(2026, 9, 2));
+    const byHand = await tx(1, at(2026, 9, 3));
+    const db = await getDb();
+    await db.run("UPDATE transactions SET category_source = 'rule' WHERE id = ?", [byRule]);
+    await deleteCategory(1, 2, NOW);
+    expect(await db.get('SELECT category_id, category_source FROM transactions WHERE id = ?', [byRule])).toEqual({ category_id: 2, category_source: 'rule' });
+    expect(await db.get('SELECT category_id, category_source FROM transactions WHERE id = ?', [byHand])).toEqual({ category_id: 2, category_source: 'user' });
+  });
+
   test('without a target this month\'s transactions become uncategorized and rules are removed', async () => {
     const current = await tx(1, at(2026, 9, 2));
     await createRule('exact', 'SPAR', 1);
