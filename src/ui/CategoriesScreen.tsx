@@ -3,7 +3,7 @@ import { NO_SECTION } from './strings';
 import { SectionList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Category, listCategories } from '../db/categories';
+import { Category, isSavings, listCategories } from '../db/categories';
 import { categoryColors } from '../db/colors';
 import { listCategoryTypes } from '../db/categoryTypes';
 import type { RootStackParamList } from '../navigation';
@@ -13,10 +13,12 @@ import { CreateButton } from './PlusButton';
 import CategorySheet from './CategorySheet';
 import { openCategoryTypes } from './modals';
 import { onTransactionsChanged } from '../events';
+import Checkbox from './Checkbox';
+import MergeCategoriesSheet from './MergeCategoriesSheet';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Categories'>;
 
-/** All live categories grouped by type, with edit (pencil) and delete (trash). */
+/** All live categories grouped by type: a tap opens one, a long press picks several to merge. */
 export default function CategoriesScreen({ navigation }: Props) {
   const [cats, setCats] = useState<Category[]>([]);
   const [colorOf, setColorOf] = useState<Map<number, string>>(new Map());
@@ -26,6 +28,15 @@ export default function CategoriesScreen({ navigation }: Props) {
   // what the sheet shows: kept while it slides away (it would turn into "Новая категория" mid-animation)
   const [shown, setShown] = useState<number | 'new'>('new');
   const setOpen = (v: number | 'new' | null) => { setOpenState(v); if (v !== null) setShown(v); };
+  // picked to merge, in the order picked (the first is merged into); empty = not picking
+  const [picked, setPicked] = useState<number[]>([]);
+  const [merging, setMerging] = useState<number[]>([]);
+  const picking = picked.length > 0;
+  // "Сбережения" can't be merged
+  const pick = (c: Category) => {
+    if (isSavings(c)) return;
+    setPicked((p) => (p.includes(c.id) ? p.filter((id) => id !== c.id) : [...p, c.id]));
+  };
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -61,14 +72,33 @@ export default function CategoriesScreen({ navigation }: Props) {
       renderSectionHeader={({ section }) => <Text style={formStyles.sectionHeader}>{section.title}</Text>}
       renderItem={({ item }) => (
         // like the merchants: the row opens the category in a sheet (name, section, color, operations, deleting)
-        <TouchableOpacity style={styles.row} onPress={() => setOpen(item.id)} accessibilityRole="button">
+        // picking: a tap picks / unpicks
+        <TouchableOpacity
+          style={styles.row}
+          onPress={() => (picking ? pick(item) : setOpen(item.id))}
+          onLongPress={() => pick(item)}
+          accessibilityRole="button"
+          accessibilityState={picking ? { selected: picked.includes(item.id), disabled: isSavings(item) } : undefined}
+        >
+          {picking ? <View style={[styles.check, isSavings(item) && styles.off]}><Checkbox checked={picked.includes(item.id)} size={20} /></View> : null}
           <View style={[styles.dot, { backgroundColor: colorOf.get(item.id) ?? colors.border }]} />
           <Text style={styles.name} numberOfLines={1}>{`${item.emoji || ''} ${item.name}`.trim()}</Text>
-          <Text style={styles.chevron}>›</Text>
+          {picking ? null : <Text style={styles.chevron}>›</Text>}
         </TouchableOpacity>
       )}
       // the category types live one level down from here
-      ListHeaderComponent={
+      ListHeaderComponent={picking ? (
+        // picking several (started by a long press): merge them
+        <View style={styles.toolbar}>
+          <Text style={[styles.pickLabel, styles.flex]}>Выбрано: {picked.length}</Text>
+          <TouchableOpacity onPress={() => setMerging(picked)} disabled={picked.length < 2} hitSlop={8} accessibilityRole="button">
+            <Text style={[styles.toolbarAction, picked.length < 2 && styles.off]}>Объединить</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setPicked([])} hitSlop={8} accessibilityRole="button">
+            <Text style={styles.toolbarCancel}>Отмена</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
         <TouchableOpacity style={styles.typesRow} onPress={openCategoryTypes} accessibilityRole="button">
           <View style={styles.flex}>
             <Text style={styles.typesTitle}>Разделы</Text>
@@ -76,7 +106,7 @@ export default function CategoriesScreen({ navigation }: Props) {
           </View>
           <Text style={styles.chevron}>›</Text>
         </TouchableOpacity>
-      }
+      )}
       ListEmptyComponent={<Text style={styles.empty}>Категорий нет. Нажмите «Создать».</Text>}
     />
     <CategorySheet
@@ -85,6 +115,11 @@ export default function CategoriesScreen({ navigation }: Props) {
       onClose={() => setOpen(null)}
       onSaved={load}
       onDeleted={load}
+    />
+    <MergeCategoriesSheet
+      ids={merging}
+      onClose={() => setMerging([])}
+      onMerged={() => { setMerging([]); setPicked([]); load(); }}
     />
     </>
   );
@@ -107,4 +142,13 @@ const styles = StyleSheet.create({
   typesTitle: { fontSize: 16, color: colors.text, fontWeight: '600' },
   typesNote: { fontSize: 13, color: colors.muted, marginTop: 2 },
   chevron: { fontSize: 24, color: colors.muted, marginLeft: 8 },
+  check: { marginRight: 10 },
+  off: { opacity: 0.35 },
+  toolbar: {
+    flexDirection: 'row', alignItems: 'center', gap: 16, paddingHorizontal: 16, paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
+  },
+  pickLabel: { fontSize: 15, color: colors.text },
+  toolbarAction: { fontSize: 15, fontWeight: '600', color: colors.accent },
+  toolbarCancel: { fontSize: 15, color: colors.muted },
 });
