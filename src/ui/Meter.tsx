@@ -38,7 +38,8 @@ export default function Meter({ ratio, height = 6, color, marginTop = 8, base = 
   // the limit on a bar scaled to the spending: past it, the overspend
   const at = over ?? limitTick;
   const [width, setWidth] = React.useState(0);
-  const icon = height + 4;
+  // a bit taller than the bar, sticking out above and below it, as the 🔒 in the plan's bar
+  const icon = height * 2;
   const overWidth = at === undefined ? 0 : (1 - clamp(at)) * width;
   return (
     <View style={{ marginTop }} onLayout={at === undefined ? undefined : (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)}>
@@ -51,7 +52,7 @@ export default function Meter({ ratio, height = 6, color, marginTop = 8, base = 
         {at !== undefined ? <View style={[styles.overPart, { left: `${clamp(at) * 100}%` }]} /> : null}
       </View>
       {at !== undefined && overWidth >= icon + ICON_ROOM ? (
-        <View pointerEvents="none" style={[styles.overIcon, { top: -2, height: icon, left: `${clamp(at) * 100}%`, right: 0 }]}>
+        <View pointerEvents="none" style={[styles.overIcon, { top: (height - icon) / 2, height: icon, left: `${clamp(at) * 100}%`, right: 0 }]}>
           <WarnTriangleIcon color={colors.danger} size={icon} />
         </View>
       ) : null}
