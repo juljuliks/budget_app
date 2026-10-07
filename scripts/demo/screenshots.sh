@@ -28,7 +28,10 @@ adb shell chown "$OWNER" "$DIR/app.db"
 adb shell chmod 660 "$DIR/app.db"
 adb shell restorecon "$DIR/app.db" || true
 
+# Maestro saves a flow's screenshots next to the flow file: run a copy of it in OUT
+cp "$FLOWS/screens.yaml" "$OUT/"
 cd "$OUT"
-"$HOME/.maestro/bin/maestro" test "$FLOWS/screens.yaml" || echo "::warning::Some screens could not be shot"
+"$HOME/.maestro/bin/maestro" test screens.yaml || echo "::warning::Some screens could not be shot"
+rm -f screens.yaml
 adb exec-out screencap -p > 99-last.png || true
 ls -la

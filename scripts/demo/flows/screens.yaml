@@ -50,6 +50,7 @@ appId: com.budgetapp
 - waitForAnimationToEnd
 - takeScreenshot: 07-prev-month
 
+# back to this month
 - tapOn:
     text: "Следующий месяц"
     optional: true

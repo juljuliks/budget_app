@@ -126,7 +126,7 @@ export default function StatsHome() {
             <>
               <TouchableOpacity onPress={() => step(-1)} hitSlop={12} accessibilityLabel="Предыдущий период"><Text style={styles.arrow}>‹</Text></TouchableOpacity>
               <Text style={styles.month}>{periodLabel(kind, range)}</Text>
-              <TouchableOpacity onPress={() => step(1)} hitSlop={12} disabled={range.to >= today}>
+              <TouchableOpacity onPress={() => step(1)} hitSlop={12} disabled={range.to >= today} accessibilityLabel="Следующий период">
                 <Text style={[styles.arrow, range.to >= today && styles.arrowDisabled]}>›</Text>
               </TouchableOpacity>
             </>
@@ -136,7 +136,7 @@ export default function StatsHome() {
         <View style={styles.monthRow}>
           <TouchableOpacity onPress={() => shift(-1)} hitSlop={12} accessibilityLabel="Предыдущий месяц"><Text style={styles.arrow}>‹</Text></TouchableOpacity>
           <Text style={styles.month}>{monthTitle(shown.year, shown.month)}</Text>
-          <TouchableOpacity onPress={() => shift(1)} hitSlop={12} disabled={shownYm >= maxYm}>
+          <TouchableOpacity onPress={() => shift(1)} hitSlop={12} disabled={shownYm >= maxYm} accessibilityLabel="Следующий месяц">
             <Text style={[styles.arrow, shownYm >= maxYm && styles.arrowDisabled]}>›</Text>
           </TouchableOpacity>
         </View>
