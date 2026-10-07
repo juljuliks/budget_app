@@ -15,6 +15,8 @@ import { openCategoryTypes } from './modals';
 import { onTransactionsChanged } from '../events';
 import Checkbox from './Checkbox';
 import MergeCategoriesSheet from './MergeCategoriesSheet';
+import Button from './Button';
+import { plural } from './format';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Categories'>;
 
@@ -88,12 +90,9 @@ export default function CategoriesScreen({ navigation }: Props) {
       )}
       // the category types live one level down from here
       ListHeaderComponent={picking ? (
-        // picking several (started by a long press): merge them
+        // picking several (started by a long press); "Объединить" at the bottom once two are picked
         <View style={styles.toolbar}>
           <Text style={[styles.pickLabel, styles.flex]}>Выбрано: {picked.length}</Text>
-          <TouchableOpacity onPress={() => setMerging(picked)} disabled={picked.length < 2} hitSlop={8} accessibilityRole="button">
-            <Text style={[styles.toolbarAction, picked.length < 2 && styles.off]}>Объединить</Text>
-          </TouchableOpacity>
           <TouchableOpacity onPress={() => setPicked([])} hitSlop={8} accessibilityRole="button">
             <Text style={styles.toolbarCancel}>Отмена</Text>
           </TouchableOpacity>
@@ -116,6 +115,11 @@ export default function CategoriesScreen({ navigation }: Props) {
       onSaved={load}
       onDeleted={load}
     />
+    {picked.length > 1 ? (
+      <View style={styles.bottomBar}>
+        <Button title={`Объединить ${picked.length} ${plural(picked.length, ['категорию', 'категории', 'категорий'])}`} onPress={() => setMerging(picked)} />
+      </View>
+    ) : null}
     <MergeCategoriesSheet
       ids={merging}
       onClose={() => setMerging([])}
@@ -149,6 +153,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
   },
   pickLabel: { fontSize: 15, color: colors.text },
-  toolbarAction: { fontSize: 15, fontWeight: '600', color: colors.accent },
+  // pinned under the list
+  bottomBar: {
+    paddingHorizontal: 16, paddingTop: 12, paddingBottom: 16, backgroundColor: colors.bg,
+    borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
+  },
   toolbarCancel: { fontSize: 15, color: colors.muted },
 });
