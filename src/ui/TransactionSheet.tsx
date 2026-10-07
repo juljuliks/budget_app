@@ -8,7 +8,7 @@ import { formatMoneyWithCurrency, parseAmountInput, toInputValue } from './money
 import { AMOUNT_HINT } from './strings';
 import { assignCategory, MerchantChoice, merchantChangePreview } from '../assign';
 import { findCategoryForMerchant, isMixedMerchant } from '../categorize';
-import { merchantCategories, setMerchantMixed } from '../db/merchants';
+import { merchantCategories } from '../db/merchants';
 import MerchantCard from './MerchantCard';
 import { emitTransactionsChanged, onTransactionsChanged } from '../events';
 import { formatAmount, formatDay, formatTime, isIncome, merchantLabel, plural } from './format';
@@ -123,13 +123,6 @@ export default function TransactionSheet({ txId: openId, onClose }: Props) {
         { text: 'Отмена', style: 'cancel' },
         { text: 'Только для этой операции', onPress: () => { assign(categoryId, 'only'); } },
         { text: 'Для мерчанта', style: 'secondary', onPress: () => { assign(categoryId, 'merchant'); } },
-        // a delivery of groceries or meals: no category of its own, each new one asks
-        {
-          text: 'У мерчанта разные — спрашивать', style: 'secondary', onPress: () => {
-            setMerchantMixed(change.key, true).then(() => assign(categoryId, 'only'))
-              .catch((e) => { console.error('set merchant mixed failed', e); toastError('Не удалось сохранить'); });
-          },
-        },
       ]);
   }
 

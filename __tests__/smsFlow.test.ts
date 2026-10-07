@@ -213,7 +213,7 @@ test('preview of making a category the merchant\'s: count and sum of what change
   expect(await merchantChangePreview(a, 3)).toBeNull(); // already the merchant's category
   expect(await merchantChangePreview(a, null)).toBeNull();
   expect(await merchantChangePreview(a, 2)).toEqual({
-    merchant: 'SPAR', key: 'SPAR', fromCategoryId: 3, count: 2, totals: [{ currency: 'GEL', amount_minor: 1950 }],
+    merchant: 'SPAR', fromCategoryId: 3, count: 2, totals: [{ currency: 'GEL', amount_minor: 1950 }],
   });
   await assignCategory(a, 2, 'merchant');
   expect(await tx('SELECT category_id FROM merchant_rules')).toEqual({ category_id: 2 });

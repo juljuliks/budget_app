@@ -40,8 +40,6 @@ export default assignCategory;
 
 export type MerchantChange = {
   merchant: string;
-  /** its merchant_key */
-  key: string;
   /** the merchant's category now, null = none yet */
   fromCategoryId: number | null;
   /** transactions whose category changes if the new one becomes the merchant's (this one included) */
@@ -67,7 +65,6 @@ export async function merchantChangePreview(txId: number, categoryId: number | n
   const totals = await categoryChangeTotals(tx.merchant_key, categoryId, txId);
   return {
     merchant: tx.raw_merchant || tx.merchant_key,
-    key: tx.merchant_key,
     fromCategoryId: rule?.category_id ?? null,
     count: totals.reduce((s, t) => s + t.n, 0),
     totals: totals.map(({ currency, amount_minor }) => ({ currency, amount_minor })),
