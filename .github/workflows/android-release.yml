@@ -24,8 +24,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # the run that built 1.0.0: later runs are 1.0.1, 1.0.2, …
-  VERSION_BASE_RUN: 57
+  # the run that built 1.0.0: later runs are 1.0.1, 1.0.2, … (moved here when 1.0.0 was rebuilt with everything since)
+  VERSION_BASE_RUN: 69
   KEEP_RELEASES: 5
 
 jobs:
@@ -89,6 +89,12 @@ jobs:
           ./gradlew assembleRelease --no-daemon
           cp app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/budget-app-${{ steps.version.outputs.name }}.apk"
 
+      # a version published before under the same number (the numbering restarted): replaced, not mixed with it
+      - name: Free the version's tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release delete "v${{ steps.version.outputs.name }}" --cleanup-tag -y || true
+
       - name: Publish as a release
         uses: softprops/action-gh-release@v2
         with:
@@ -107,6 +113,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release list --limit 200 --json tagName,createdAt -q 'sort_by(.createdAt) | reverse | .[].tagName' > "$RUNNER_TEMP/releases"
-          { grep '^build-' "$RUNNER_TEMP/releases" || true; grep '^v' "$RUNNER_TEMP/releases" | tail -n +$(( KEEP_RELEASES + 1 )) || true; } \
-            | while read -r tag; do gh release delete "$tag" --cleanup-tag -y; done
+          CURRENT="${{ steps.version.outputs.name }}"
+          # versions numbered above this one are from before the numbering restarted
+          NEWER=$(grep '^v1\.0\.' "$RUNNER_TEMP/releases" | while read -r tag; do [ "${tag#v1.0.}" -gt "${CURRENT#1.0.}" ] && echo "$tag"; done || true)
+          { grep '^build-' "$RUNNER_TEMP/releases" || true; echo "$NEWER"; grep '^v' "$RUNNER_TEMP/releases" | tail -n +$(( KEEP_RELEASES + 1 )) || true; } \
+            | sort -u | while read -r tag; do [ -n "$tag" ] && gh release delete "$tag" --cleanup-tag -y || true; done
 
