@@ -151,7 +151,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
                 now={c.category_id === null ? undefined : today?.byCategory.get(c.category_id)}
                 monthToDate={c.category_id === null ? 0 : today?.monthToDate.get(c.category_id) ?? 0}
                 onAddToPlan={c.category_id !== null && c.limit_minor === null && !c.deleted
-                  ? () => setPlanTarget({ category_id: c.category_id!, label: categoryLabel(c), limit_minor: 0, currency })
+                  ? () => setPlanTarget({ category_id: c.category_id!, label: categoryLabel(c), limit_minor: 0, currency: stats.currency, suggested_minor: c.spent_minor })
                   : undefined}
               />
             ))}
@@ -200,7 +200,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
                   openTransactions={openTransactions}
                   monthToDate={0}
                   onAddToPlan={c.category_id !== null && !c.deleted
-                    ? () => setPlanTarget({ category_id: c.category_id!, label: categoryLabel(c), limit_minor: 0, currency })
+                    ? () => setPlanTarget({ category_id: c.category_id!, label: categoryLabel(c), limit_minor: 0, currency: stats.currency, suggested_minor: c.spent_minor })
                     : undefined}
                 />
               ))}

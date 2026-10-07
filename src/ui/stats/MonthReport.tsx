@@ -342,7 +342,7 @@ function UnplannedCategories({ r, minus, onPlan, currency }: {
           note="без плана"
           value={minus(c.spent)}
           valueStyle={styles.bad}
-          onPlan={() => onPlan({ category_id: c.id!, label: categoryLabel(c), limit_minor: 0, currency })}
+          onPlan={() => onPlan({ category_id: c.id!, label: categoryLabel(c), limit_minor: 0, currency, suggested_minor: Math.round(c.spent) })}
         />
       ))}
     </>

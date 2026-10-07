@@ -45,6 +45,8 @@ export type PlanAmountTarget = {
   kind?: PlanKind;
   /** how a flexible item's norm is counted in period stats */
   norm_period?: NormPeriod;
+  /** not in the plan yet: the amount offered (what the category spent), in `currency`; over last month's plan */
+  suggested_minor?: number;
 };
 
 type Props = {
@@ -93,11 +95,17 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
       setFree(budget ? inShown(Math.max(budget.plannable_minor - others, 0), budget.currency) : null);
       setPrevious(last ? { ...inShown(last.limit_minor, last.currency), ym: last.ym } : null);
       setAverage(avg && avg.average_minor > 0 ? { minor: avg.average_minor, months: avg.months, from: avg.from, to: avg.to } : null);
-      // not in the plan yet: last month's item is offered, ready to save as is (so it counts as a change)
-      if (!target.limit_minor && last) {
-        const dirty = { shouldDirty: true };
+      // not in the plan yet: the amount it was opened with (what the category spent), else last month's item —
+      // ready to save as is (so it counts as a change); the kind and pattern from last month either way
+      const dirty = { shouldDirty: true };
+      if (!target.limit_minor && target.suggested_minor) {
+        form.setValue('value', toInputValue(target.suggested_minor), dirty);
+        form.setValue('currency', target.currency, dirty);
+      } else if (!target.limit_minor && last) {
         form.setValue('value', toInputValue(last.limit_minor), dirty);
         form.setValue('currency', last.currency, dirty);
+      }
+      if (!target.limit_minor && last) {
         if (!target.kind) form.setValue('kind', last.kind, dirty);
         if (!target.norm_period) form.setValue('norm', last.norm_period, dirty);
       }
