@@ -122,13 +122,14 @@ test('deleting merchants: operations keep their categories (as their own), lose 
   expect(await categoryOf(again)).toBeNull();
 });
 
-test('a merchant without a category: picking one asks "this operation or the merchant"', async () => {
+test('a merchant without a category: nothing asked, the pick becomes its category; with one, the question', async () => {
   const a = await sms('BOLT');
   const b = await sms('BOLT');
-  await assignCategory(a, 2, 'only');
-  expect(await merchantChangePreview(b, 1)).toEqual(expect.objectContaining({ merchant: 'BOLT', fromCategoryId: null, count: 1 }));
-  await assignCategory(b, 1, 'only');
-  expect(await findCategoryForMerchant('BOLT')).toBeNull();
+  expect(await merchantChangePreview(a, 1)).toBeNull();
+  await assignCategory(a, 1);
+  expect(await findCategoryForMerchant('BOLT')).toEqual({ category_id: 1, source: 'rule' });
+  expect(await categoryOf(b)).toBe(1);
+  expect(await merchantChangePreview(b, 2)).toEqual(expect.objectContaining({ merchant: 'BOLT', fromCategoryId: 1, count: 2 }));
 });
 
 describe('bulk category change: the selected operations only, or their merchants too', () => {
@@ -138,6 +139,8 @@ describe('bulk category change: the selected operations only, or their merchants
     const b = await sms('SPAR');
     const c = await sms('WOLT');
     const manual = await sms('SPAR');
+    await assignCategory(a, 1, 'merchant');
+    await assignCategory(c, 1, 'merchant');
     await assignCategory(manual, 3, 'only');
     const preview = await merchantsChangePreview([a, c], 2);
     expect(preview?.merchants.sort()).toEqual(['SPAR', 'WOLT']);
@@ -158,6 +161,18 @@ describe('bulk category change: the selected operations only, or their merchants
     expect(await assignCategoryToMany([a], 2, 'only')).toBe(0);
     expect([await categoryOf(a), await categoryOf(b)]).toEqual([2, null]);
     expect(await findCategoryForMerchant('SPAR')).toBeNull();
+  });
+
+  test('nothing asked: a merchant without a category gets it, one with another keeps its own', async () => {
+    const { assignCategoryToMany } = await import('../src/assign');
+    const a = await sms('SPAR');
+    const b = await sms('SPAR');
+    const c = await sms('WOLT');
+    await assignCategory(c, 1);
+    expect(await assignCategoryToMany([a, c], 2)).toBe(1);
+    expect([await categoryOf(a), await categoryOf(b), await categoryOf(c)]).toEqual([2, 2, 2]);
+    expect((await findCategoryForMerchant('SPAR'))?.category_id).toBe(2);
+    expect((await findCategoryForMerchant('WOLT'))?.category_id).toBe(1);
   });
 
   test('no merchant to ask about: "Без категории" or no merchants', async () => {

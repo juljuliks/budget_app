@@ -142,11 +142,11 @@ describe('searchTransactions', () => {
 });
 
 describe('assignCategoryToMany', () => {
-  test('sets the category on all given transactions, no merchant rules, notifies once', async () => {
+  test('"only these": sets the category on all given transactions, no merchant rules, notifies once', async () => {
     for (let i = 1; i <= 3; i++) await insertTx(i, 1000 + i, 'SPAR');
     const listener = jest.fn();
     const off = onTransactionsChanged(listener);
-    await assignCategoryToMany([1, 3], 5);
+    await assignCategoryToMany([1, 3], 5, 'only');
     off();
     const db = await getDb();
     expect(await db.all('SELECT id, category_id, category_source FROM transactions ORDER BY id')).toEqual([

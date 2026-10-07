@@ -368,7 +368,7 @@ export default function TransactionsList() {
     }
   }
 
-  // like for one operation: if the selected ones have merchants with another category (or none), ask whether the
+  // like for one operation: if the selected ones have merchants with another category, ask whether the
   // new one is for the selected operations only or becomes those merchants' too (with what that changes)
   async function applyBulk(categoryId: number | null) {
     setBulkOpen(false);

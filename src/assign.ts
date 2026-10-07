@@ -43,17 +43,18 @@ export default assignCategory;
 
 export type MerchantChange = {
   merchant: string;
-  /** the merchant's category now, null = none yet */
-  fromCategoryId: number | null;
+  /** the merchant's category now */
+  fromCategoryId: number;
   /** transactions whose category changes if the new one becomes the merchant's (this one included) */
   count: number;
   totals: Array<{ currency: string; amount_minor: number }>;
 };
 
 /**
- * Picking `categoryId` for a purchase / payment whose merchant has another category or none yet: what making it
- * the merchant's category would change (asked before changing: this one only or the merchant). null = nothing to
- * ask (no merchant, "Без категории", or already the merchant's category).
+ * Picking `categoryId` for a purchase / payment whose merchant already has another category: what making it the
+ * merchant's category would change (asked before changing: this one only or the merchant). null = nothing to ask:
+ * no merchant, "Без категории", already the merchant's category, or a merchant without one yet (the pick simply
+ * becomes its category, see assignCategory).
  */
 export async function merchantChangePreview(txId: number, categoryId: number | null): Promise<MerchantChange | null> {
   if (categoryId === null) return null;
@@ -64,11 +65,11 @@ export async function merchantChangePreview(txId: number, categoryId: number | n
   // of different categories: nothing to ask, the pick is this operation's
   if (await isMixedMerchant(tx.merchant_key)) return null;
   const rule = await findCategoryForMerchant(tx.merchant_key);
-  if (rule?.category_id === categoryId) return null;
+  if (!rule || rule.category_id === categoryId) return null;
   const totals = await categoryChangeTotals(tx.merchant_key, categoryId, txId);
   return {
     merchant: tx.raw_merchant || tx.merchant_key,
-    fromCategoryId: rule?.category_id ?? null,
+    fromCategoryId: rule.category_id,
     count: totals.reduce((s, t) => s + t.n, 0),
     totals: totals.map(({ currency, amount_minor }) => ({ currency, amount_minor })),
   };
@@ -90,8 +91,11 @@ export async function categoryChangeTotals(merchantKey: string, categoryId: numb
     [merchantKey, ...REMEMBERABLE_KINDS, alsoTxId, categoryId]);
 }
 
-/** The merchants of these transactions whose category `categoryId` would change (purchases / payments only). */
-async function merchantsToChange(txIds: number[], categoryId: number): Promise<Array<{ key: string; name: string }>> {
+/**
+ * The merchants of these transactions (purchases / payments) whose category `categoryId` would change: with another
+ * category (`withoutToo`: or none yet). A merchant of different categories has none to change.
+ */
+async function merchantsToChange(txIds: number[], categoryId: number, withoutToo = false): Promise<Array<{ key: string; name: string }>> {
   if (txIds.length === 0) return [];
   const db = await getDb();
   const rows = await db.all<{ kind: string; merchant_key: string | null; raw_merchant: string | null }>(
@@ -100,7 +104,7 @@ async function merchantsToChange(txIds: number[], categoryId: number): Promise<A
   for (const r of rows) {
     if (!r.merchant_key || !isRememberable(r.kind) || out.has(r.merchant_key) || await isMixedMerchant(r.merchant_key)) continue;
     const rule = await findCategoryForMerchant(r.merchant_key);
-    if (rule?.category_id !== categoryId) out.set(r.merchant_key, r.raw_merchant || r.merchant_key);
+    if (rule ? rule.category_id !== categoryId : withoutToo) out.set(r.merchant_key, r.raw_merchant || r.merchant_key);
   }
   return [...out].map(([key, name]) => ({ key, name }));
 }
@@ -142,7 +146,14 @@ export async function merchantsChangePreview(txIds: number[], categoryId: number
  */
 export async function assignCategoryToMany(txIds: number[], categoryId: number | null, choice?: MerchantChoice): Promise<number> {
   if (txIds.length === 0) return 0;
-  const merchants = categoryId !== null && choice === 'merchant' ? await merchantsToChange(txIds, categoryId) : [];
+  // nothing asked: merchants without a category yet simply get it (as one operation's first pick); 'merchant': those
+  // with another one too; 'only': none
+  let merchants: Array<{ key: string; name: string }> = [];
+  if (categoryId !== null && choice !== 'only') {
+    const all = await merchantsToChange(txIds, categoryId, true);
+    const withOther = new Set((await merchantsToChange(txIds, categoryId)).map((m) => m.key));
+    merchants = choice === 'merchant' ? all : all.filter((m) => !withOther.has(m.key));
+  }
   await setCategoryForTransactions(txIds, categoryId);
   for (const m of merchants) {
     await createRule('exact', m.key, categoryId!);
