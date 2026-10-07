@@ -109,7 +109,8 @@ export default function MerchantCard({ merchantId, categories: given, onClose, o
       {
         text: 'Продолжить', onPress: () => {
           setSaving(true);
-          apply().then(changed).catch((e) => { console.error('save merchant failed', e); toastError('Не удалось сохранить'); })
+          // saved: the card is done
+          apply().then(() => { changed(); onClose(); }).catch((e) => { console.error('save merchant failed', e); toastError('Не удалось сохранить'); })
             .finally(() => setSaving(false));
         },
       },
