@@ -20,8 +20,8 @@ import PlanAmountModal, { PlanAmountTarget } from './PlanAmountModal';
 
 const SAVINGS = '#0d9488';
 
-/** The report of `ym` (null = none yet), reloaded when operations change or `version` does (its plan changed). */
-function useMonthReport(ym: string | null, version = 0): MonthReport | null {
+/** The report of `ym` (null = none yet), reloaded when operations or plans change. */
+function useMonthReport(ym: string | null): MonthReport | null {
   const currency = useDisplayCurrency();
   const [report, setReport] = useState<MonthReport | null>(null);
   useEffect(() => {
@@ -32,7 +32,7 @@ function useMonthReport(ym: string | null, version = 0): MonthReport | null {
     load();
     const off = onTransactionsChanged(load);
     return () => { stale = true; off(); };
-  }, [ym, currency, version]);
+  }, [ym, currency]);
   return report;
 }
 
@@ -61,9 +61,7 @@ export function MonthReportRow({ ym }: { ym: string }) {
 
 /** The month's report in a sheet (sheets.ts → openMonthReport): from the notification, «История», the stats. */
 export function MonthReportSheet({ ym, onClose }: { ym: string | null; onClose: () => void }) {
-  // bumped when a category is added to the report month's plan: the report is counted again
-  const [planVersion, setPlanVersion] = useState(0);
-  const r = useMonthReport(ym, planVersion);
+  const r = useMonthReport(ym);
   const currency = useDisplayCurrency();
   const [planTarget, setPlanTarget] = useState<PlanAmountTarget | null>(null);
   const money = (v: number) => formatWithCurrency(Math.round(v), r?.currency ?? currency);
@@ -245,7 +243,7 @@ export function MonthReportSheet({ ym, onClose }: { ym: string | null; onClose: 
         </SheetScrollView>
       )}
       {/* planned into the report's own month */}
-      <PlanAmountModal ym={ym ?? currentYm()} currency={currency} target={planTarget} onClose={() => setPlanTarget(null)} onSaved={() => { setPlanTarget(null); setPlanVersion((v) => v + 1); }} />
+      <PlanAmountModal ym={ym ?? currentYm()} currency={currency} target={planTarget} onClose={() => setPlanTarget(null)} onSaved={() => setPlanTarget(null)} />
     </BottomSheet>
   );
 }

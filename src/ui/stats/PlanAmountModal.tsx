@@ -15,6 +15,7 @@ import TextInputModal from '../TextInputModal';
 import { useLoadedForm } from '../form';
 import { plural } from '../format';
 import { toast } from '../toast';
+import { emitTransactionsChanged } from '../../events';
 
 const KINDS = [
   ['limit', 'Траты с лимитом', 'Еда, кафе, одежда — сумма меняется, следим за остатком'],
@@ -124,6 +125,8 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
       return `Больше бюджета месяца: можно запланировать до ${free ? formatWithCurrency(free.minor, free.currency) : '0'}`;
     }
     toast(`План «${target.label}» сохранён`);
+    // the stats and reports open under the dialog count the plan too
+    emitTransactionsChanged();
     onSaved();
     return null;
   }
