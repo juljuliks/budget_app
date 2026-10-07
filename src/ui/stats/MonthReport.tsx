@@ -20,8 +20,8 @@ import PlanAmountModal, { PlanAmountTarget } from './PlanAmountModal';
 
 const SAVINGS = '#0d9488';
 
-/** The report of `ym` (null = none yet), reloaded when operations change. */
-function useMonthReport(ym: string | null): MonthReport | null {
+/** The report of `ym` (null = none yet), reloaded when operations change or `version` does (its plan changed). */
+function useMonthReport(ym: string | null, version = 0): MonthReport | null {
   const currency = useDisplayCurrency();
   const [report, setReport] = useState<MonthReport | null>(null);
   useEffect(() => {
@@ -32,7 +32,7 @@ function useMonthReport(ym: string | null): MonthReport | null {
     load();
     const off = onTransactionsChanged(load);
     return () => { stale = true; off(); };
-  }, [ym, currency]);
+  }, [ym, currency, version]);
   return report;
 }
 
@@ -61,7 +61,9 @@ export function MonthReportRow({ ym }: { ym: string }) {
 
 /** The month's report in a sheet (sheets.ts → openMonthReport): from the notification, «История», the stats. */
 export function MonthReportSheet({ ym, onClose }: { ym: string | null; onClose: () => void }) {
-  const r = useMonthReport(ym);
+  // bumped when a category is added to the report month's plan: the report is counted again
+  const [planVersion, setPlanVersion] = useState(0);
+  const r = useMonthReport(ym, planVersion);
   const currency = useDisplayCurrency();
   const [planTarget, setPlanTarget] = useState<PlanAmountTarget | null>(null);
   const money = (v: number) => formatWithCurrency(Math.round(v), r?.currency ?? currency);
@@ -242,8 +244,8 @@ export function MonthReportSheet({ ym, onClose }: { ym: string | null; onClose: 
           ) : null}
         </SheetScrollView>
       )}
-      {/* planned for the month going on */}
-      <PlanAmountModal ym={currentYm()} currency={currency} target={planTarget} onClose={() => setPlanTarget(null)} onSaved={() => setPlanTarget(null)} />
+      {/* planned into the report's own month */}
+      <PlanAmountModal ym={ym ?? currentYm()} currency={currency} target={planTarget} onClose={() => setPlanTarget(null)} onSaved={() => { setPlanTarget(null); setPlanVersion((v) => v + 1); }} />
     </BottomSheet>
   );
 }
@@ -307,7 +309,6 @@ function averageInfo(r: MonthReport, money: (v: number) => string, perYear: (v: 
     + 'месяцев с бюджетом и полными данными (операции с первой половины месяца): один удачный или неудачный месяц меньше качает оценку.';
 }
 
-/** The biggest categories outside the plan, each a year, with "＋ В план" (the month going on). */
 /** One category in the report, the same in both blocks: name, "план X, факт Y" under it, the amount right; "＋ В план" optional. */
 function CategoryLine({ c, note, value, valueStyle, onPlan }: {
   c: ReportCategory; note: string; value: string; valueStyle?: object; onPlan?: () => void;
@@ -328,8 +329,7 @@ function CategoryLine({ c, note, value, valueStyle, onPlan }: {
   );
 }
 
-/** The biggest categories outside the plan, with "＋ В план" (the month going on). */
-/** The biggest categories outside the plan, with "＋ В план" (the month going on). */
+/** The biggest categories outside the plan, with "＋ В план" (into the report's month). */
 function UnplannedCategories({ r, minus, onPlan, currency }: {
   r: MonthReport; minus: (v: number) => string; onPlan: (t: PlanAmountTarget) => void; currency: MonthReport['currency'];
 }) {
