@@ -35,6 +35,8 @@ type Props<V extends TextFormValues & FieldValues> = {
   children?: React.ReactNode;
   /** a control right of the title (e.g. delete) */
   headerRight?: React.ReactNode;
+  /** a destructive action under the submit button ("Удалить из плана"); then no "Отмена" (three buttons) */
+  remove?: { title: string; onPress: () => void };
   /** a control right of the field (e.g. the amount's currency) */
   inputAccessory?: React.ReactNode;
   /** returns an error message to show, or null when saved */
@@ -48,7 +50,7 @@ type Props<V extends TextFormValues & FieldValues> = {
  */
 export default function TextInputModal<V extends TextFormValues & FieldValues = TextFormValues>({
   visible, title, initialValue = '', form: outer, placeholder, submitLabel = 'Сохранить', hint, keyboardType, maxLength = 30,
-  allowEmpty, multiline, onSubmit, onClose, children, inputAccessory, headerRight,
+  allowEmpty, multiline, onSubmit, onClose, children, inputAccessory, headerRight, remove,
 }: Props<V>) {
   // used only without a form of the caller's (a hook can't be skipped)
   const own = useLoadedForm<TextFormValues>(outer ? null : { value: initialValue }, visible);
@@ -94,7 +96,11 @@ export default function TextInputModal<V extends TextFormValues & FieldValues = 
           </View>
           {children ? <View style={styles.extra}>{children}</View> : null}
           {/* the submit button greyed until something changed: nothing to save otherwise */}
-          <SheetActions submit={{ title: submitLabel, onPress: submit, disabled: isSubmitting || !isDirty }} onCancel={onClose} />
+          <SheetActions
+            submit={{ title: submitLabel, onPress: submit, disabled: isSubmitting || !isDirty }}
+            extra={remove ? [{ title: remove.title, danger: true, onPress: remove.onPress }] : undefined}
+            onCancel={remove ? undefined : onClose}
+          />
         </View>
     </BottomSheet>
   );

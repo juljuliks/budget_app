@@ -2,8 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Controller, useWatch } from 'react-hook-form';
 import { Currency } from '../../db/fx';
 import { categoryMonthlyAverage, getPlanBudget, lastPlanItem, NormPeriod, OverBudgetError, PlanKind, planConverter, plannedTotal, setPlanAmount } from '../../db/plans';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { TrashIcon } from '../icons';
+import { StyleSheet, Text, View } from 'react-native';
 import { colors } from '../theme';
 import { AMOUNT_HINT, PER_PERIOD, SPENDING_PATTERN } from '../strings';
 import { daysInMonth } from '../dateRange';
@@ -168,11 +167,8 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
       allowEmpty
       onSubmit={save}
       onClose={onClose}
-      headerRight={onDelete ? (
-        <TouchableOpacity onPress={() => { onClose(); onDelete(); }} hitSlop={10} style={styles.delete} accessibilityLabel="Убрать из плана">
-          <TrashIcon color={colors.danger} size={22} />
-        </TouchableOpacity>
-      ) : undefined}
+      // an item in the plan: removing it is a button under "Сохранить", as on the other sheets
+      remove={onDelete ? { title: 'Удалить из плана', onPress: () => { onClose(); onDelete(); } } : undefined}
       inputAccessory={<Controller control={form.control} name="currency" render={({ field }) => <CurrencyButton value={field.value} onChange={field.onChange} />} />}
     >
       <Controller control={form.control} name="kind" render={({ field }) => <RadioGroup options={KINDS} value={field.value} onChange={field.onChange} />} />
@@ -196,7 +192,6 @@ function monthName(ym: string): string {
 }
 
 const styles = StyleSheet.create({
-  delete: { padding: 8 },
   facts: { marginBottom: 12, gap: 6 },
   fact: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   factLabel: { flex: 1 },
