@@ -33,3 +33,27 @@ test('a category\'s summary: all its operations counted, spending minus open ref
   await add('purchase', 999, 'SPAR', 8);
   expect(await categorySummary(7)).toEqual({ count: 5, totals: [{ currency: 'GEL', amount_minor: 10500 }] });
 });
+
+test('money back from a person (a deposit in a transfer category) is subtracted from the transfers to them', async () => {
+  const { monthStats } = await import('../src/db/plans');
+  const { getTransferTypeId } = await import('../src/db/categoryTypes');
+  const db = await getDb();
+  const dema = (await db.run('INSERT INTO categories (name, type_id) VALUES (?, ?)', ['Дема', await getTransferTypeId()])).lastInsertRowid;
+  const food = 1;
+  let h = 0;
+  const add = (kind: string, amount: number, category: number | null) => db.run(
+    `INSERT INTO transactions (bank, kind, amount_minor, currency, category_id, category_source, occurred_at, raw_sms, sms_hash)
+      VALUES ('tbc', ?, ?, 'GEL', ?, 'user', ?, '', ?)`, [kind, amount, category, Math.floor(new Date(2026, 9, 5, 12).getTime() / 1000), `d${h++}`]);
+  await add('transfer', 10000, dema);
+  await add('transfer', 3800, dema);
+  await add('deposit', 10000, dema);
+  // a deposit elsewhere (a salary, one in an ordinary category) is income, not counted
+  await add('deposit', 500000, null);
+  await add('deposit', 2000, food);
+  await add('purchase', 5000, food);
+  const stats = await monthStats(2026, 9, 'GEL');
+  const spent = (id: number) => stats.categories.find((c) => c.category_id === id)?.spent_minor;
+  expect(spent(dema)).toBe(3800);
+  expect(spent(food)).toBe(5000);
+  expect(stats.spent_minor).toBe(8800);
+});
