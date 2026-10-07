@@ -106,4 +106,25 @@ describe('migrations', () => {
     expect(await db.get('SELECT merchant_key, category_id, category_source FROM transactions'))
       .toEqual({ merchant_key: 'SPAR VAKE', category_id: 2, category_source: 'rule' });
   });
+
+  test('migration 24: a refund settled on a reduced purchase gives it its amount back and counts by itself again', async () => {
+    const db = openDatabase(':memory:');
+    await migrate(db, MIGRATIONS.slice(0, 23));
+    const add = async (kind: string, amount: number, category: number | null, hash: string) => (await db.run(
+      `INSERT INTO transactions (bank, kind, amount_minor, currency, merchant_key, category_id, category_source, occurred_at, raw_sms, sms_hash)
+        VALUES ('TBC', ?, ?, 'GEL', 'ZARA', ?, ?, 1, '', ?)`, [kind, amount, category, category ? 'user' : null, hash])).lastInsertRowid;
+    // 1000 bought, 300 returned: the purchase was reduced to 700
+    const purchase = await add('purchase', 700, 8, 'p');
+    const reduced = await add('refund', 300, null, 'r1');
+    await db.run('UPDATE transactions SET refund_settled_at = 5, refund_target_id = ? WHERE id = ?', [purchase, reduced]);
+    // a full refund: its purchase was deleted
+    const full = await add('refund', 500, null, 'r2');
+    await db.run('UPDATE transactions SET refund_settled_at = 5, refund_target_id = 999 WHERE id = ?', [full]);
+    await migrate(db);
+    const row = (id: number) => db.get<{ amount_minor: number; category_id: number | null; refund_settled_at: number | null }>(
+      'SELECT amount_minor, category_id, refund_settled_at FROM transactions WHERE id = ?', [id]);
+    expect(await row(purchase)).toEqual({ amount_minor: 1000, category_id: 8, refund_settled_at: null });
+    expect(await row(reduced)).toEqual({ amount_minor: 300, category_id: 8, refund_settled_at: null });
+    expect(await row(full)).toEqual({ amount_minor: 500, category_id: null, refund_settled_at: 5 });
+  });
 });

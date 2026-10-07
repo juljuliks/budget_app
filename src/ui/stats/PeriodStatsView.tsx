@@ -19,6 +19,7 @@ import { plural } from '../format';
 import { chart, colors } from '../theme';
 import { DonutCenter, RefundsRow } from './StatsView';
 import { useLatestRequest } from '../useLatestRequest';
+import { categoryLabel } from '../../db/categories';
 import { GROUP_TITLES, pct, SummaryGroupKey, summaryGroups } from './summaryGroups';
 import { formStyles } from '../formStyles';
 import { splitUnplanned, unplannedMonth } from './unplanned';
@@ -334,24 +335,24 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
     (plan?.kind === 'limit' && plan.rhythm !== 'month' ? limitPair(plan, c).spent : c.spent_minor);
 
   /** a row with just the name and the period's spending (no limit to judge it by): tap opens its operations */
-  const plainRow = (c: CategoryStat) => (
+  const plainRow = (c: CategoryStat, withType = false) => (
     <TouchableOpacity key={String(c.category_id)} style={styles.row} onPress={() => openTransactions(c.category_id, range)} accessibilityHint="Показать операции категории за период">
       <View style={styles.rowTop}>
         <View style={[styles.dot, { backgroundColor: c.color }]} />
-        <Text style={styles.name} numberOfLines={1}>{`${c.emoji || ''} ${c.name}`.trim()}</Text>
+        <Text style={styles.name} numberOfLines={1}>{withType ? categoryLabel(c) : `${c.emoji || ''} ${c.name}`.trim()}</Text>
         <Text style={[styles.amount, styles.amountPad]}>{hidden ? headerPct(c.spent_minor, 0) : `${money(c.spent_minor)}${GLYPH_ROOM}`}</Text>
       </View>
     </TouchableOpacity>
   );
 
   /** a category's row: tap opens its operations in the period; a limit's line has its ⓘ */
-  const rowOf = (c: CategoryStat, _i?: number, _all?: CategoryStat[], noBar = false, plainAmount = false) => {
+  const rowOf = (c: CategoryStat, _i?: number, _all?: CategoryStat[], noBar = false, plainAmount = false, withType = false) => {
     // noBar: in a limits section of several categories the section's bar shows them all
     // plainAmount: outside the period's own limit sections (a month's overspend) — just the spending on the right, and
     // no bar either (no limit left to draw it against)
     const plan = c.category_id === null ? undefined : norms?.byCategory.get(c.category_id);
     const mtd = (c.category_id !== null && norms?.monthToDate.get(c.category_id)) || 0;
-    const name = `${c.emoji || ''} ${c.name}`.trim();
+    const name = withType ? categoryLabel(c) : `${c.emoji || ''} ${c.name}`.trim();
     const ofLimit = plainAmount ? null : ofLimitOf(c, plan);
     return (
       // tap: the category's operations in this period (the ⓘ line inside keeps its own tap)
@@ -555,7 +556,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
             ) : null}
           </SectionHeader>
           <View>
-            {otherCats.map(plainRow)}
+            {otherCats.map((c) => plainRow(c))}
           </View>
         </React.Fragment>
       )] : []) : split.groups.map((g) => (
@@ -605,7 +606,8 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                 );
               })() : null}
               {/* just the spending: no "% всех трат" line under each */}
-              {byLimits ? split.unplanned.map(plainRow) : split.unplanned.map(rowOf)}
+              {/* outside the plan the rows aren't under their type's section: "Жизнь: Покупки" */}
+              {byLimits ? split.unplanned.map((c) => plainRow(c, true)) : split.unplanned.map((c, i, all) => rowOf(c, i, all, false, false, true))}
             </>
           </View>
         </>

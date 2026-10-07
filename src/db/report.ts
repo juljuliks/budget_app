@@ -18,7 +18,8 @@ const DATA_FROM_DAY = 15;
 /** the biggest categories outside the plan offered to plan */
 const TOP_UNPLANNED = 3;
 
-export type ReportCategory = { id: number | null; name: string; emoji: string | null; spent: number; limit: number };
+/** type_name: only the categories outside the plan carry it ("Жизнь: Покупки"), the rest are named within their block */
+export type ReportCategory = { id: number | null; name: string; emoji: string | null; spent: number; limit: number; type_name?: string | null };
 
 export type MonthReport = {
   ym: string;
@@ -156,7 +157,7 @@ export async function monthReport(ym: string, currency: Currency): Promise<Month
     unplannedOfSpending,
     review: outside > 0 && (unplannedOfSpending > REVIEW_SHARE_OF_SPENDING || (share > 0 && outside > share * (1 + REVIEW_SHARE_EXCEEDED))),
     topUnplanned: stats.categories.filter((c) => c.limit_minor === null && c.category_id !== null && !c.deleted && c.spent_minor > 0)
-      .slice(0, TOP_UNPLANNED).map(cat),
+      .slice(0, TOP_UNPLANNED).map((c) => ({ ...cat(c), type_name: c.type_name })),
     uncategorizedCount,
     savedInPlan: underPlan.reduce((a, c) => a + c.limit - c.spent, 0),
     underPlan,

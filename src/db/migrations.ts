@@ -273,6 +273,26 @@ export const MIGRATIONS: MigrationStep[][] = [
   [
     'ALTER TABLE plan_months ADD COLUMN unplanned_minor INTEGER CHECK (unplanned_minor >= 0)',
   ],
+  // 24: refunds are no longer settled on a purchase (they're subtracted from the merchant's category). One settled
+  // earlier on a purchase it reduced (the purchase still there, same currency): the purchase gets its amount back, the
+  // refund counts by itself again in the purchase's category — the same total. One whose purchase was deleted (a full
+  // refund) stays settled: there's nothing left to subtract it from.
+  [
+    `UPDATE transactions SET amount_minor = amount_minor + (
+        SELECT r.amount_minor FROM transactions r
+          WHERE r.kind = 'refund' AND r.refund_settled_at IS NOT NULL AND r.refund_target_id = transactions.id
+            AND r.currency = transactions.currency)
+      WHERE id IN (SELECT r.refund_target_id FROM transactions r
+        JOIN transactions p ON p.id = r.refund_target_id AND p.currency = r.currency
+        WHERE r.kind = 'refund' AND r.refund_settled_at IS NOT NULL)`,
+    `UPDATE transactions SET
+        category_id = coalesce(category_id, (SELECT p.category_id FROM transactions p WHERE p.id = transactions.refund_target_id)),
+        category_source = CASE WHEN category_id IS NULL AND (SELECT p.category_id FROM transactions p WHERE p.id = transactions.refund_target_id) IS NOT NULL
+          THEN 'rule' ELSE category_source END,
+        refund_settled_at = NULL, refund_target_id = NULL
+      WHERE kind = 'refund' AND refund_settled_at IS NOT NULL
+        AND EXISTS (SELECT 1 FROM transactions p WHERE p.id = transactions.refund_target_id AND p.currency = transactions.currency)`,
+  ],
 ];
 
 export async function getSchemaVersion(db: Db): Promise<number> {

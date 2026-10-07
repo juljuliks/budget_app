@@ -192,13 +192,14 @@ export default function StatsView({ year, month, currency }: { year: number; mon
                 <CategoryRow
                   key={String(c.category_id)}
                   stat={c}
-                total={stats.spent_minor}
+                  total={stats.spent_minor}
                   currency={stats.currency}
                   evenPace={evenPace}
                   dim={daysInMonth(ym)}
                   ym={ym}
                   openTransactions={openTransactions}
                   monthToDate={0}
+                  withType
                   onAddToPlan={c.category_id !== null && !c.deleted
                     ? () => setPlanTarget({ category_id: c.category_id!, label: categoryLabel(c), limit_minor: 0, currency: stats.currency, suggested_minor: c.spent_minor })
                     : undefined}
@@ -287,7 +288,7 @@ const WEEKDAYS = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
 
 type NowNorm = Norms['byCategory'] extends Map<number, infer V> ? V : never;
 
-function CategoryRow({ stat, total, currency, evenPace, dim, ym, openTransactions, now, monthToDate, onAddToPlan }: {
+function CategoryRow({ stat, total, currency, evenPace, dim, ym, openTransactions, now, monthToDate, onAddToPlan, withType }: {
   stat: CategoryStat;
   /** the month's spending: a row's share of it when the amounts are hidden */
   total: number;
@@ -298,6 +299,8 @@ function CategoryRow({ stat, total, currency, evenPace, dim, ym, openTransaction
   /** the current month only: the norm window around today */
   now?: NowNorm; monthToDate: number;
   onAddToPlan?: () => void;
+  /** "Жизнь: Покупки": outside the plan, where the rows aren't under their type's section */
+  withType?: boolean;
 }) {
   const { spent_minor: spent, limit_minor: limit } = stat;
   const hidden = useHideAmounts();
@@ -311,7 +314,7 @@ function CategoryRow({ stat, total, currency, evenPace, dim, ym, openTransaction
     <TouchableOpacity style={styles.row} onPress={() => openTransactions(stat.category_id, monthDays(ym))} accessibilityHint="Показать операции категории">
       <View style={styles.rowTop}>
         <View style={[styles.dot, { backgroundColor: stat.color }]} />
-        <Text style={styles.rowName} numberOfLines={1}>{`${stat.emoji || ''} ${stat.name}`.trim()}</Text>
+        <Text style={styles.rowName} numberOfLines={1}>{withType ? categoryLabel(stat) : `${stat.emoji || ''} ${stat.name}`.trim()}</Text>
         {/* an obligatory payment: all paid — a green tick, otherwise (partly too) a grey circle */}
         {limit && fixed ? (
           <Text style={[styles.paidMark, paid ? styles.paidOn : styles.paidOff]} accessibilityLabel={paid ? 'Оплачено' : 'Не оплачено'}>

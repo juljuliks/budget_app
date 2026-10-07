@@ -32,7 +32,7 @@ const CATS: Record<string, Cat> = {
   subs: { name: 'Подписки', emoji: '📺' },
   fun: { name: 'Развлечения', emoji: '🎮' },
   shop: { name: 'Покупки', emoji: '🛍️' },
-  beauty: { name: 'Красота', emoji: '💅' },
+  beauty: { name: 'Красота', emoji: '💅', type: 'Жизнь' },
 };
 
 /** [category, amount ₾, kind, rhythm] */
