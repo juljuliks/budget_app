@@ -202,6 +202,7 @@ export default function MerchantCard({ merchantId, categories: given, onClose, o
 
             {/* the categories right here: one for the merchant, or — different ones — several, offered for its operations */}
             <View style={styles.pickerTop}>
+              {mixed ? <Text style={styles.hint}>Какие обычно категории у «{m.name}»?</Text> : null}
               <CategoryPicker
                 title={mixed ? 'Выберите категории' : 'Выберите категорию'}
                 selectedId={single}
@@ -209,7 +210,6 @@ export default function MerchantCard({ merchantId, categories: given, onClose, o
                 onSelect={toggle}
                 disabled={saving}
               />
-              {mixed ? <Text style={styles.hint}>Какие обычно категории у «{m.name}»? Они будут кнопками в уведомлении о новой операции.</Text> : null}
             </View>
 
             <SheetActions
@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
   summaryRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 4 },
   meta: { fontSize: 14, color: colors.muted, flexShrink: 1 },
   link: { fontSize: 14, color: colors.accent },
-  hint: { fontSize: 13, color: colors.muted, marginTop: 10 },
+  hint: { fontSize: 14, color: colors.muted, marginTop: 12 },
   switchRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 16 },
   switchText: { flex: 1 },
   switchTitle: { fontSize: 16, color: colors.text },
