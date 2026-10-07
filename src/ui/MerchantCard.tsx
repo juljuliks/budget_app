@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import BottomSheet, { SheetScrollView } from './BottomSheet';
 import { sheetAlert } from './sheetAlert';
 import { useNavigation } from '@react-navigation/native';
@@ -124,21 +124,11 @@ export default function MerchantCard({ merchantId, categories: given, onClose, o
       ]);
   }
 
-  // different categories: no category of its own, each new operation asks (picking one category ends it)
-  function setMixed() {
+  // different categories: no category of its own, each new operation asks; off: none, until one is picked
+  function setMixed(on: boolean) {
     if (!m) return;
-    sheetAlert(
-      `У «${m.name}» разные категории?`,
-      `Каждая новая операция будет спрашивать категорию — в уведомлении кнопками будут категории, которые уже были у «${m.name}». ${m.category_id !== null ? 'Категория мерчанта открепится, у прошлых операций она останется.' : 'У прошлых операций категории не изменятся.'}`,
-      [
-        { text: 'Отмена', style: 'cancel' },
-        {
-          text: 'Спрашивать каждый раз', onPress: () => {
-            setMerchantMixed(m.id, true).then(() => { changed(); toast(`«${m.name}»: категория — каждый раз`); })
-              .catch((e) => { console.error('set merchant mixed failed', e); toastError('Не удалось сохранить'); });
-          },
-        },
-      ]);
+    setMerchantMixed(m.id, on).then(changed)
+      .catch((e) => { console.error('set merchant mixed failed', e); toastError('Не удалось сохранить'); });
   }
 
   function showTransactions() {
@@ -169,25 +159,25 @@ export default function MerchantCard({ merchantId, categories: given, onClose, o
               ) : null}
             </View>
 
+            {/* a delivery of groceries or meals: no category of its own, each new operation asks */}
+            <View style={styles.switchRow}>
+              <View style={styles.switchText}>
+                <Text style={styles.switchTitle}>Разные категории</Text>
+                <Text style={styles.switchHint}>Каждая новая операция спрашивает категорию</Text>
+              </View>
+              <Switch value={m.mixed} onValueChange={setMixed} trackColor={{ true: colors.accent, false: colors.border }} thumbColor={colors.bg} />
+            </View>
+
             {m.mixed ? (
-              // different categories: what its operations had; one of its own ends that
-              <>
-                <Text style={styles.heading}>Категория</Text>
-                <Text style={styles.mixedNote}>Разные — каждая новая операция спрашивает категорию.</Text>
-                {had.length ? (
+              // what its operations had
+              had.length ? (
+                <>
+                  <Text style={styles.heading}>Категории операций</Text>
                   <View style={styles.currentRow}>
                     {had.map((h) => <Chip key={h.label} label={`${h.label} · ${h.n}`} />)}
                   </View>
-                ) : null}
-                <Button title="Выбрать одну категорию" outline onPress={() => setPicking(true)} style={styles.action} />
-                <CategoryPickerModal
-                  visible={picking}
-                  title="Категория мерчанта"
-                  selectedId={null}
-                  onPick={(id) => { setPicking(false); pick(id); }}
-                  onClose={() => setPicking(false)}
-                />
-              </>
+                </>
+              ) : null
             ) : category ? (
               // the category and "Сменить" (the categories open in a sheet), as on an operation
               <>
@@ -199,7 +189,6 @@ export default function MerchantCard({ merchantId, categories: given, onClose, o
                     <Text style={styles.changeText}>Сменить</Text>
                   </TouchableOpacity>
                 </View>
-                <Button title="Разные категории — спрашивать" outline onPress={setMixed} style={styles.action} />
                 <Button title="Открепить категорию" danger outline onPress={unpin} style={styles.action} />
                 <CategoryPickerModal
                   visible={picking}
@@ -213,7 +202,6 @@ export default function MerchantCard({ merchantId, categories: given, onClose, o
               // none yet: the categories right here, that's what the card is opened for
               <View style={styles.pickerTop}>
                 <CategoryPicker title="Выберите категорию" selectedId={null} onSelect={pick} />
-                <Button title="Разные категории — спрашивать" outline onPress={setMixed} style={styles.action} />
               </View>
             )}
 
@@ -232,7 +220,10 @@ const styles = StyleSheet.create({
   link: { fontSize: 14, color: colors.accent },
   heading: { fontSize: 13, fontWeight: '600', color: colors.muted, textTransform: 'uppercase', marginTop: 20, marginBottom: 8 },
   action: { marginTop: 16 },
-  mixedNote: { fontSize: 15, color: colors.text, marginBottom: 10 },
+  switchRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 16 },
+  switchText: { flex: 1 },
+  switchTitle: { fontSize: 16, color: colors.text },
+  switchHint: { fontSize: 13, color: colors.muted, marginTop: 2 },
   pickerTop: { marginTop: 8 },
   currentRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
   changeButton: {
