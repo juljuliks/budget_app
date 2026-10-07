@@ -28,10 +28,13 @@ adb shell chown "$OWNER" "$DIR/app.db"
 adb shell chmod 660 "$DIR/app.db"
 adb shell restorecon "$DIR/app.db" || true
 
-# Maestro saves a flow's screenshots next to the flow file: run a copy of it in OUT
+# where Maestro writes takeScreenshot's files depends on its version (the working folder, the flow's, the test
+# output's): run in OUT, then gather the numbered PNGs from wherever they landed
 cp "$FLOWS/screens.yaml" "$OUT/"
 cd "$OUT"
-"$HOME/.maestro/bin/maestro" test screens.yaml || echo "::warning::Some screens could not be shot"
+"$HOME/.maestro/bin/maestro" test --test-output-dir "$OUT/maestro" screens.yaml || echo "::warning::Some screens could not be shot"
 rm -f screens.yaml
+find "$OUT" "$HOME/.maestro" "$FLOWS" "${GITHUB_WORKSPACE:-.}" /tmp -name '[0-9][0-9]-*.png' -newer "$DEMO_DB" 2>/dev/null \
+  | while read -r f; do [ "$(dirname "$f")" = "$OUT" ] || cp "$f" "$OUT/"; done
 adb exec-out screencap -p > 99-last.png || true
-ls -la
+ls -laR
