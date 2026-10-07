@@ -69,7 +69,7 @@ export default function TransactionSheet({ txId: openId, onClose }: Props) {
     const c = rule ? await getCategory(rule.category_id) : undefined;
     setMerchantCategory(c ? categoryLabel(c) : null);
     const mixed = t?.merchant_key && isRememberable(t.kind) && await isMixedMerchant(t.merchant_key);
-    setMixedCats(mixed ? (await merchantCategories(t!.merchant_key!, 4)).map((x) => ({ id: x.id, label: categoryLabel(x) })) : null);
+    setMixedCats(mixed ? (await merchantCategories(t!.merchant_key!, 50)).map((x) => ({ id: x.id, label: categoryLabel(x) })) : null);
     return t;
   }, [txId]);
 
@@ -187,6 +187,31 @@ export default function TransactionSheet({ txId: openId, onClose }: Props) {
       {tx.refund_settled_at ? (
         // settled on its purchase earlier (the purchase was reduced / deleted): it no longer counts by itself
         <Text style={styles.refundDone}>✓ Возврат учтён в покупке</Text>
+      ) : mixedCats?.length ? (
+        // a merchant of different categories: all of its categories to pick from (this one's selected), "Сменить" for
+        // any other
+        <>
+          <SectionHeading title="Категория" />
+          <View style={styles.currentRow}>
+            {mixedCats.map((c) => (
+              <Chip key={c.id} label={c.label} selected={c.id === tx.category_id} disabled={saving} onPress={() => { if (c.id !== tx.category_id) choose(c.id); }} />
+            ))}
+            {/* picked elsewhere, not among the merchant's yet (e.g. just now from "Сменить") */}
+            {category && !mixedCats.some((c) => c.id === tx.category_id) ? <Chip label={category} selected /> : null}
+            <TouchableOpacity style={styles.changeButton} disabled={saving} onPress={() => setPickerOpen(true)} accessibilityLabel="Сменить категорию">
+              <PencilIcon color={colors.accent} size={16} />
+              <Text style={styles.changeText}>Сменить</Text>
+            </TouchableOpacity>
+          </View>
+          <CategoryPickerModal
+            visible={pickerOpen}
+            title="Сменить категорию"
+            selectedId={tx.category_id}
+            allowNone
+            onPick={(id) => { setPickerOpen(false); choose(id); }}
+            onClose={() => setPickerOpen(false)}
+          />
+        </>
       ) : category ? (
         // categorized: the category and "Сменить" (the picker opens in a sheet)
         <>
@@ -215,16 +240,7 @@ export default function TransactionSheet({ txId: openId, onClose }: Props) {
           />
         </>
       ) : (
-        // none yet: the categories right away; a merchant of different categories offers its own first
-        <>
-        {mixedCats?.length ? (
-          <>
-            <SectionHeading title={`Обычно у «${merchantName}»`} />
-            <View style={styles.currentRow}>
-              {mixedCats.map((c) => <Chip key={c.id} label={c.label} onPress={() => choose(c.id)} />)}
-            </View>
-          </>
-        ) : null}
+        // none yet: the categories right away
         <CategoryPicker
           title="Выберите категорию"
           selectedId={tx.category_id}
@@ -234,7 +250,6 @@ export default function TransactionSheet({ txId: openId, onClose }: Props) {
           transferFirst={tx.kind === 'transfer'}
           disabled={saving}
         />
-        </>
       )}
 
       {/* only purchases / payments are remembered for their merchant (see assignCategory) */}
