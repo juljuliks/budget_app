@@ -335,7 +335,14 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
     (plan?.kind === 'limit' && plan.rhythm !== 'month' ? limitPair(plan, c).spent : c.spent_minor);
 
   /** a row with just the name and the period's spending (no limit to judge it by): tap opens its operations */
-  const plainRow = (c: CategoryStat, withType = false) => (
+  // "Жизнь: Покупки" wherever the sections aren't the categories' types: by limits (shorter than a month), outside
+  // the plan, the calculations
+  /** a limit's category in the calculations, with its type */
+  const labelOf = (id: number, name: string) => {
+    const c = stats.categories.find((x) => x.category_id === id);
+    return c ? categoryLabel(c) : name;
+  };
+  const plainRow = (c: CategoryStat, withType = byLimits) => (
     <TouchableOpacity key={String(c.category_id)} style={styles.row} onPress={() => openTransactions(c.category_id, range)} accessibilityHint="Показать операции категории за период">
       <View style={styles.rowTop}>
         <View style={[styles.dot, { backgroundColor: c.color }]} />
@@ -346,7 +353,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
   );
 
   /** a category's row: tap opens its operations in the period; a limit's line has its ⓘ */
-  const rowOf = (c: CategoryStat, _i?: number, _all?: CategoryStat[], noBar = false, plainAmount = false, withType = false) => {
+  const rowOf = (c: CategoryStat, _i?: number, _all?: CategoryStat[], noBar = false, plainAmount = false, withType = byLimits) => {
     // noBar: in a limits section of several categories the section's bar shows them all
     // plainAmount: outside the period's own limit sections (a month's overspend) — just the spending on the right, and
     // no bar either (no limit left to draw it against)
@@ -606,7 +613,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                 );
               })() : null}
               {/* just the spending: no "% всех трат" line under each */}
-              {/* outside the plan the rows aren't under their type's section: "Жизнь: Покупки" */}
+              {/* outside the plan the rows aren't under their type's section either */}
               {byLimits ? split.unplanned.map((c) => plainRow(c, true)) : split.unplanned.map((c, i, all) => rowOf(c, i, all, false, false, true))}
             </>
           </View>
@@ -745,7 +752,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                   <Text style={styles.infoText}>
                     {outsideCats.map((c) => (
                       <React.Fragment key={String(c.category_id)}>
-                        {`${c.emoji || ''} ${c.name}`.trim()}: <Code>{money(c.spent_minor)}</Code>{'\n'}
+                        {categoryLabel(c)}: <Code>{money(c.spent_minor)}</Code>{'\n'}
                       </React.Fragment>
                     ))}
                   </Text>
@@ -754,7 +761,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                     {g.items.map((i) => (
                       <React.Fragment key={i.id}>
                         {g.key === 'fixed' ? `${i.spent >= i.limit ? '✓' : '○'} ` : ''}
-                        <Text style={styles.infoBold}>{i.name}</Text>: {g.key === 'fixed' ? 'оплачено' : 'потрачено'} <Code>{money(i.spent)}</Code>,{' '}
+                        <Text style={styles.infoBold}>{labelOf(i.id, i.name)}</Text>: {g.key === 'fixed' ? 'оплачено' : 'потрачено'} <Code>{money(i.spent)}</Code>,{' '}
                         {g.key === 'month' || g.key === 'fixed' ? <>план <Code>{m(i.limit)}</Code></> : <>лимит <Code>{formula(i.parts)}</Code></>}
                         {g.key === 'fixed' && i.spent > i.limit ? <Text style={styles.paceAhead}> — перерасход {money(i.spent - i.limit)}</Text> : null}.{noPlan(i.parts)}{'\n'}
                       </React.Fragment>
@@ -768,7 +775,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                     Не входят — план месяца уже превышен, лимита не осталось:{'\n'}
                     {g.overspent.map((o) => (
                       <React.Fragment key={o.id}>
-                        <Text style={styles.infoBold}>{o.name}</Text>: <Text style={styles.paceAhead}>перерасход на {monthIn} {money(o.over)}</Text>{'\n'}
+                        <Text style={styles.infoBold}>{labelOf(o.id, o.name)}</Text>: <Text style={styles.paceAhead}>перерасход на {monthIn} {money(o.over)}</Text>{'\n'}
                       </React.Fragment>
                     ))}
                   </Text>
