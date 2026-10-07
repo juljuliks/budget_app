@@ -53,5 +53,6 @@ if ! "${ADB_EMU[@]}" install -r "$APK"; then
 fi
 "${ADB_EMU[@]}" shell pm grant com.budgetapp android.permission.RECEIVE_SMS || true
 "${ADB_EMU[@]}" shell pm grant com.budgetapp android.permission.POST_NOTIFICATIONS || true
-"${ADB_EMU[@]}" shell monkey -p com.budgetapp -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
+# am start, not monkey: monkey exits 251 on this image, which stopped the script here (set -e)
+"${ADB_EMU[@]}" shell am start -n com.budgetapp/.MainActivity >/dev/null
 echo "App started on $SERIAL."

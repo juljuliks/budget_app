@@ -39,6 +39,9 @@ const RING_LOCKED = '#0f766e';
 /** the budget's bar, and the 🔒 over its locked part: twice as tall */
 const BAR_HEIGHT = 12;
 const LOCK_BADGE = BAR_HEIGHT * 2;
+/** the 🔒 badge's size of the locked part's width, and the smallest worth drawing */
+const LOCK_SHARE = 0.6;
+const LOCK_MIN = 10;
 /** the share set aside for spending outside the plan */
 const RING_UNPLANNED = '#eda100';
 
@@ -289,12 +292,19 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
                 ) : p.value > 0 ? <View key={p.key} style={{ flex: p.value, backgroundColor: p.color }} /> : null))}
                 {!toSavings && locked > 0 ? <View style={[styles.lockedPart, { flex: locked }]} onLayout={(e) => setLockBox({ x: e.nativeEvent.layout.x, width: e.nativeEvent.layout.width })} /> : null}
               </View>
-              {/* the 🔒 twice the bar's height, in the middle of the locked part, sticking out above and below */}
-              {locked > 0 && lockBox ? (
-                <View pointerEvents="none" style={[styles.lockBadgeBox, { left: lockBox.x, width: lockBox.width }]}>
-                  <View style={styles.lockBadge}><LockIcon color="#FFFFFF" size={LOCK_BADGE - 10} /></View>
-                </View>
-              ) : null}
+              {/* the 🔒 in the middle of the locked part: 60% of that part's width, up to twice the bar's height (sticking
+                  out above and below); too narrow a part has none — its dark color says it */}
+              {locked > 0 && lockBox && lockBox.width * LOCK_SHARE >= LOCK_MIN ? (() => {
+                const size = Math.round(Math.min(LOCK_BADGE, lockBox.width * LOCK_SHARE));
+                return (
+                  <View pointerEvents="none" style={[styles.lockBadgeBox, { left: lockBox.x, width: lockBox.width, top: (BAR_HEIGHT - size) / 2, height: size }]}>
+                    <View style={[styles.lockBadge, { width: size, height: size, borderRadius: size / 2, borderWidth: size >= 20 ? 2 : 1 }]}>
+                      {/* the lock about two thirds of the circle: "size − 10" left a dot in a small one */}
+                      <LockIcon color="#FFFFFF" size={Math.round(size * 0.65)} />
+                    </View>
+                  </View>
+                );
+              })() : null}
             </View>
             <View style={styles.parts}>
               {/* no share for spending outside the plan: no column for it */}

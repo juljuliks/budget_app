@@ -3,7 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "emulator": "./scripts/emulator.sh",
+    "apk": "./scripts/apk_to_desktop.sh",
+    "release": "./scripts/release.sh"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^9.6.0",
