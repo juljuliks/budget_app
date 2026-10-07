@@ -4,7 +4,7 @@ import { getDb } from '../src/db';
 import { ingestSms } from '../src/ingest';
 import { assignCategory, categoryChangeTotals, merchantChangePreview } from '../src/assign';
 import {
-  deleteMerchants, listMerchants, merchantsCategoryPreview, setMerchantCategory, setMerchantsCategory,
+  deleteMerchants, listMerchants, merchantCategories, merchantsCategoryPreview, setMerchantCategory, setMerchantMixed, setMerchantsCategory,
 } from '../src/db/merchants';
 import { findCategoryForMerchant } from '../src/categorize';
 import { freshDb } from './helpers';
@@ -165,5 +165,39 @@ describe('bulk category change: the selected operations only, or their merchants
     const a = await sms('SPAR');
     expect(await merchantsChangePreview([a], null)).toBeNull();
     expect(await merchantsChangePreview([], 2)).toBeNull();
+  });
+});
+
+describe('a merchant of different categories', () => {
+  test('has no category of its own: new operations arrive without one, picks stay theirs, no question asked', async () => {
+    const first = await sms('WOLT');
+    await assignCategory(first, 1); // the first pick became the merchant's
+    const followed = await sms('WOLT');
+    expect(await categoryOf(followed)).toBe(1);
+
+    await setMerchantMixed('WOLT', true);
+    expect(await findCategoryForMerchant('WOLT')).toBeNull();
+    // what followed the merchant keeps its category, as its own
+    expect(await (await getDb()).get('SELECT category_id, category_source FROM transactions WHERE id = ?', [followed])).toEqual({ category_id: 1, category_source: 'user' });
+
+    const next = await sms('WOLT');
+    expect(await categoryOf(next)).toBeNull();
+    expect(await merchantChangePreview(next, 2)).toBeNull();
+    await assignCategory(next, 2);
+    expect(await findCategoryForMerchant('WOLT')).toBeNull();
+    expect(await categoryOf(next)).toBe(2);
+
+    const list = await listMerchants();
+    expect(list.find((m) => m.id === 'WOLT')).toEqual(expect.objectContaining({ mixed: true, category_id: null }));
+    // the categories its operations had, the most used first
+    expect((await merchantCategories('WOLT')).map((c) => [c.id, c.n])).toEqual([[1, 2], [2, 1]]);
+  });
+
+  test('picking one category for it ends the "different" mark', async () => {
+    await sms('WOLT');
+    await setMerchantMixed('WOLT', true);
+    await setMerchantCategory('WOLT', 3);
+    expect(await findCategoryForMerchant('WOLT')).toEqual({ category_id: 3, source: 'rule' });
+    expect((await listMerchants())[0].mixed).toBe(false);
   });
 });

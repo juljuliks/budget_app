@@ -22,6 +22,9 @@ import { toast, toastError } from './toast';
 
 export type CategoryInfo = { label: string; color: string };
 
+/** Merchants of different categories (a delivery): each operation asks. */
+const MIXED = 'Разные категории';
+
 const SHORT_MONTHS = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
 
 /** "12 мая", with the year when it isn't this one: "12 мая 2025". */
@@ -57,7 +60,7 @@ export default function MerchantsScreen() {
   const [order, setOrder] = useState<number[]>([]);
   const [query, setQuery] = useState('');
   // the categories filter, as on the operations ('none' = without a category)
-  const [catFilter, setCatFilter] = useState<Array<number | 'none'>>([]);
+  const [catFilter, setCatFilter] = useState<Array<number | 'none' | 'mixed'>>([]);
   const [catSheetOpen, setCatSheetOpen] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
@@ -76,17 +79,19 @@ export default function MerchantsScreen() {
 
   const words = normalizeForSearch(query);
   // a merchant whose category is gone counts as without one
-  const catOf = useCallback((m: MerchantRow): number | 'none' => (m.category_id !== null && categories.has(m.category_id) ? m.category_id : 'none'), [categories]);
+  // of different categories: a group of its own
+  const catOf = useCallback((m: MerchantRow): number | 'none' | 'mixed' => (m.mixed ? 'mixed'
+    : m.category_id !== null && categories.has(m.category_id) ? m.category_id : 'none'), [categories]);
   const shown = useMemo(() => merchants.filter((m) => (!words || normalizeForSearch(m.name).includes(words))
     && (catFilter.length === 0 || catFilter.includes(catOf(m)))), [merchants, words, catFilter, catOf]);
   // a search or a filter shows the long-unvisited ones too, in their categories
   const filtering = !!words || catFilter.length > 0;
   // the filter's options: "Без категории" first, then the categories in their order, each with its merchants
   const catOptions = useMemo(() => {
-    const count = new Map<number | 'none', number>();
+    const count = new Map<number | 'none' | 'mixed', number>();
     for (const m of merchants) count.set(catOf(m), (count.get(catOf(m)) ?? 0) + 1);
-    return (['none', ...order] as Array<number | 'none'>).filter((c) => count.has(c))
-      .map((c) => ({ key: c, label: c === 'none' ? NO_CATEGORY : categories.get(c)!.label, count: count.get(c)! }));
+    return (['none', 'mixed', ...order] as Array<number | 'none' | 'mixed'>).filter((c) => count.has(c))
+      .map((c) => ({ key: c, label: c === 'none' ? NO_CATEGORY : c === 'mixed' ? MIXED : categories.get(c)!.label, count: count.get(c)! }));
   }, [merchants, order, categories, catOf]);
 
   // one section per category with merchants bought at in the last month (RECENT_DAYS); a merchant whose category is
@@ -94,16 +99,16 @@ export default function MerchantsScreen() {
   // deleted, a search shows them all in their categories, and a new purchase brings one back
   const [staleOpen, setStaleOpen] = useState(false);
   const sections = useMemo<Section[]>(() => {
-    const by = new Map<number | null, MerchantRow[]>();
+    const by = new Map<number | null | 'mixed', MerchantRow[]>();
     const stale: MerchantRow[] = [];
     for (const m of shown) {
       if (!filtering && !m.activity.recent) { stale.push(m); continue; }
-      const c = m.category_id !== null && categories.has(m.category_id) ? m.category_id : null;
+      const c = m.mixed ? 'mixed' : m.category_id !== null && categories.has(m.category_id) ? m.category_id : null;
       by.set(c, [...(by.get(c) ?? []), m]);
     }
-    const out: Section[] = [null, ...order].filter((c) => by.has(c)).map((c) => ({
+    const out: Section[] = ([null, 'mixed', ...order] as Array<number | null | 'mixed'>).filter((c) => by.has(c)).map((c) => ({
       key: String(c),
-      title: c === null ? NO_CATEGORY : categories.get(c)!.label,
+      title: c === null ? NO_CATEGORY : c === 'mixed' ? MIXED : categories.get(c)!.label,
       count: by.get(c)!.length,
       data: by.get(c)!,
     }));
@@ -250,7 +255,7 @@ export default function MerchantsScreen() {
         renderItem={({ item, section }) => {
           const on = selected.includes(item.id);
           // the stale section mixes categories: each row names its own
-          const cat = section.stale ? (item.category_id !== null ? categories.get(item.category_id)?.label : undefined) ?? NO_CATEGORY : null;
+          const cat = section.stale ? (item.mixed ? MIXED : item.category_id !== null ? categories.get(item.category_id)?.label : undefined) ?? NO_CATEGORY : null;
           return (
             <TouchableOpacity
               style={styles.row}

@@ -14,6 +14,8 @@ export type MerchantRow = {
   count: number;
   /** the merchant's category (its exact rule), null = none */
   category_id: number | null;
+  /** of different categories: none of its own, each new operation asks */
+  mixed: boolean;
   /** its purchases / payments of the last month (RECENT_DAYS), or, without any, of all time */
   activity: MerchantActivity;
 };
@@ -52,8 +54,10 @@ export async function listMerchants(): Promise<MerchantRow[]> {
   const activityOf = await merchantActivity();
   const rules = await db.all<{ pattern: string; category_id: number }>("SELECT pattern, category_id FROM merchant_rules WHERE match_type = 'exact'");
   const ruleOf = new Map(rules.map((r) => [r.pattern, r.category_id]));
+  const mixed = new Set((await db.all<{ k: string }>('SELECT merchant_key AS k FROM mixed_merchants')).map((r) => r.k));
   return counts.map(({ mid, n }) => ({
-    id: mid, name: names.get(mid) ?? mid, count: n, category_id: ruleOf.get(mid) ?? null, activity: activityOf.get(mid) ?? NO_ACTIVITY,
+    id: mid, name: names.get(mid) ?? mid, count: n, category_id: mixed.has(mid) ? null : ruleOf.get(mid) ?? null, mixed: mixed.has(mid),
+    activity: activityOf.get(mid) ?? NO_ACTIVITY,
   })).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 }
 
@@ -110,12 +114,40 @@ export async function getMerchant(id: string): Promise<MerchantDetails | null> {
  */
 export async function setMerchantCategory(id: string, categoryId: number | null) {
   const db = await getDb();
+  // one category of its own: no longer of different ones
+  await db.run('DELETE FROM mixed_merchants WHERE merchant_key = ?', [id]);
   if (categoryId === null) {
     await db.run("DELETE FROM merchant_rules WHERE match_type = 'exact' AND pattern = ?", [id]);
     return;
   }
   await createRule('exact', id, categoryId);
   await backfillRule('exact', id, categoryId);
+}
+
+/**
+ * Marks a merchant as of different categories (on) or not (off). On: its category goes, its operations keep theirs
+ * (those that followed it become their own), each new one asks. Off: new operations just arrive without a category
+ * until one is picked for the merchant.
+ */
+export async function setMerchantMixed(id: string, on: boolean) {
+  const db = await getDb();
+  await db.transaction(async (tx) => {
+    if (!on) { await tx.run('DELETE FROM mixed_merchants WHERE merchant_key = ?', [id]); return; }
+    await tx.run('INSERT OR IGNORE INTO mixed_merchants (merchant_key, created_at) VALUES (?, ?)', [id, Math.floor(Date.now() / 1000)]);
+    await tx.run("DELETE FROM merchant_rules WHERE match_type = 'exact' AND pattern = ?", [id]);
+    await tx.run("UPDATE transactions SET category_source = 'user' WHERE merchant_key = ? AND category_source = 'rule'", [id]);
+  });
+}
+
+/** The categories a merchant's purchases / payments had (live ones), the most used first: what its new ones offer. */
+export async function merchantCategories(id: string, limit = 10): Promise<Array<{ id: number; name: string; emoji: string | null; type_name: string | null; n: number }>> {
+  const db = await getDb();
+  return db.all(
+    `SELECT c.id, c.name, c.emoji, ct.name AS type_name, count(*) AS n FROM transactions t
+      JOIN categories c ON c.id = t.category_id AND c.deleted_at IS NULL
+      LEFT JOIN category_types ct ON ct.id = c.type_id
+      WHERE t.merchant_key = ? AND t.kind IN ${KINDS}
+      GROUP BY c.id ORDER BY n DESC, max(t.occurred_at) DESC LIMIT ?`, [id, limit]);
 }
 
 /**
@@ -159,9 +191,10 @@ export async function deleteMerchants(keys: string[]): Promise<number> {
           WHERE merchant_key = ?`, [key]);
       changed += res.changes;
       await tx.run("DELETE FROM merchant_rules WHERE match_type = 'exact' AND pattern = ?", [key]);
+      await tx.run('DELETE FROM mixed_merchants WHERE merchant_key = ?', [key]);
     }
   });
   return changed;
 }
 
-export default { listMerchants, getMerchant, setMerchantCategory, setMerchantsCategory, merchantsCategoryPreview, deleteMerchants };
+export default { listMerchants, getMerchant, setMerchantCategory, setMerchantMixed, merchantCategories, setMerchantsCategory, merchantsCategoryPreview, deleteMerchants };

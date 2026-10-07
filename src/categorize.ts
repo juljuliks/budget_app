@@ -4,9 +4,16 @@ import type { Db } from './db/types';
 
 export type MatchType = 'exact' | 'prefix';
 
-/** The merchant's category, by the transaction's merchant_key. */
+/** A merchant of different categories: no category of its own, each new operation asks (see mixed_merchants). */
+export async function isMixedMerchant(merchantKey: string, db?: Db): Promise<boolean> {
+  db ??= await getDb();
+  return !!(await db.get('SELECT 1 FROM mixed_merchants WHERE merchant_key = ?', [merchantKey]));
+}
+
+/** The merchant's category, by the transaction's merchant_key; none for a merchant of different categories. */
 export async function findCategoryForMerchant(merchantKey: string): Promise<{ category_id: number; source: 'rule' } | null> {
   const db = await getDb();
+  if (await isMixedMerchant(merchantKey, db)) return null;
   const exact = await db.get<{ category_id: number }>(
     'SELECT category_id FROM merchant_rules WHERE match_type = ? AND pattern = ?', ['exact', merchantKey]);
   if (exact) return { category_id: exact.category_id, source: 'rule' };
@@ -49,4 +56,4 @@ export async function backfillRule(matchType: MatchType, pattern: string, catego
   return res.changes;
 }
 
-export default { findCategoryForMerchant, createRule, backfillRule };
+export default { findCategoryForMerchant, isMixedMerchant, createRule, backfillRule };

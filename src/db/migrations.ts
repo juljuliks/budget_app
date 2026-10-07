@@ -293,6 +293,14 @@ export const MIGRATIONS: MigrationStep[][] = [
       WHERE kind = 'refund' AND refund_settled_at IS NOT NULL
         AND EXISTS (SELECT 1 FROM transactions p WHERE p.id = transactions.refund_target_id AND p.currency = transactions.currency)`,
   ],
+  // 25: merchants whose operations are of different categories (a delivery: groceries or ready meals): no category of
+  // their own, each new operation asks, offering the categories it already had
+  [
+    `CREATE TABLE IF NOT EXISTS mixed_merchants (
+      merchant_key TEXT PRIMARY KEY,
+      created_at INTEGER NOT NULL
+    )`,
+  ],
 ];
 
 export async function getSchemaVersion(db: Db): Promise<number> {

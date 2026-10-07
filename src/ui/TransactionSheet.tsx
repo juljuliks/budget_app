@@ -7,7 +7,9 @@ import CurrencyButton from './CurrencyButton';
 import { formatMoneyWithCurrency, parseAmountInput, toInputValue } from './money';
 import { AMOUNT_HINT } from './strings';
 import { assignCategory, MerchantChoice, merchantChangePreview } from '../assign';
-import { findCategoryForMerchant } from '../categorize';
+import { findCategoryForMerchant, isMixedMerchant } from '../categorize';
+import { merchantCategories, setMerchantMixed } from '../db/merchants';
+import MerchantCard from './MerchantCard';
 import { emitTransactionsChanged, onTransactionsChanged } from '../events';
 import { formatAmount, formatDay, formatTime, isIncome, merchantLabel, plural } from './format';
 import { toast, toastError } from './toast';
@@ -55,6 +57,10 @@ export default function TransactionSheet({ txId: openId, onClose }: Props) {
 
   // the merchant's category (its rule): new transactions of the merchant get it automatically
   const [merchantCategory, setMerchantCategory] = useState<string | null>(null);
+  // a merchant of different categories: the ones its operations had (picked with a tap)
+  const [mixedCats, setMixedCats] = useState<Array<{ id: number; label: string }> | null>(null);
+  // the merchant's card, from its name
+  const [merchantOpen, setMerchantOpen] = useState(false);
 
   const load = useCallback(async () => {
     const t = await getTransaction(txId);
@@ -62,6 +68,8 @@ export default function TransactionSheet({ txId: openId, onClose }: Props) {
     const rule = t?.merchant_key && isRememberable(t.kind) ? await findCategoryForMerchant(t.merchant_key) : null;
     const c = rule ? await getCategory(rule.category_id) : undefined;
     setMerchantCategory(c ? categoryLabel(c) : null);
+    const mixed = t?.merchant_key && isRememberable(t.kind) && await isMixedMerchant(t.merchant_key);
+    setMixedCats(mixed ? (await merchantCategories(t!.merchant_key!, 4)).map((x) => ({ id: x.id, label: categoryLabel(x) })) : null);
     return t;
   }, [txId]);
 
@@ -115,6 +123,13 @@ export default function TransactionSheet({ txId: openId, onClose }: Props) {
         { text: 'Отмена', style: 'cancel' },
         { text: 'Только для этой операции', onPress: () => { assign(categoryId, 'only'); } },
         { text: 'Для мерчанта', style: 'secondary', onPress: () => { assign(categoryId, 'merchant'); } },
+        // a delivery of groceries or meals: no category of its own, each new one asks
+        {
+          text: 'У мерчанта разные — спрашивать', style: 'secondary', onPress: () => {
+            setMerchantMixed(change.key, true).then(() => assign(categoryId, 'only'))
+              .catch((e) => { console.error('set merchant mixed failed', e); toastError('Не удалось сохранить'); });
+          },
+        },
       ]);
   }
 
@@ -161,7 +176,12 @@ export default function TransactionSheet({ txId: openId, onClose }: Props) {
         </Text>
         <PencilIcon color={colors.accent} size={18} />
       </TouchableOpacity>
-      <Text style={styles.merchant}>{merchantLabel(tx)}</Text>
+      {/* a merchant of purchases / payments: its name opens its card (its category, its operations) */}
+      {rememberable ? (
+        <TouchableOpacity onPress={() => setMerchantOpen(true)} hitSlop={6} accessibilityRole="button" accessibilityHint="Открыть мерчанта">
+          <Text style={[styles.merchant, styles.merchantLink]}>{merchantLabel(tx)} ›</Text>
+        </TouchableOpacity>
+      ) : <Text style={styles.merchant}>{merchantLabel(tx)}</Text>}
       <Text style={styles.meta}>{formatDay(tx.occurred_at)}, {formatTime(tx.occurred_at)}</Text>
 
       {tx.refund_settled_at ? (
@@ -195,7 +215,16 @@ export default function TransactionSheet({ txId: openId, onClose }: Props) {
           />
         </>
       ) : (
-        // none yet: the categories right away
+        // none yet: the categories right away; a merchant of different categories offers its own first
+        <>
+        {mixedCats?.length ? (
+          <>
+            <SectionHeading title={`Обычно у «${merchantName}»`} />
+            <View style={styles.currentRow}>
+              {mixedCats.map((c) => <Chip key={c.id} label={c.label} onPress={() => choose(c.id)} />)}
+            </View>
+          </>
+        ) : null}
         <CategoryPicker
           title="Выберите категорию"
           selectedId={tx.category_id}
@@ -205,9 +234,13 @@ export default function TransactionSheet({ txId: openId, onClose }: Props) {
           transferFirst={tx.kind === 'transfer'}
           disabled={saving}
         />
+        </>
       )}
 
       {/* only purchases / payments are remembered for their merchant (see assignCategory) */}
+      {rememberable && mixedCats ? (
+        <Text style={styles.merchantInfo}>У «{merchantName}» разные категории: каждая новая операция спрашивает.</Text>
+      ) : null}
       {rememberable && merchantCategory ? (
         <Text style={styles.merchantInfo}>
           Категория мерчанта «{merchantName}»: {merchantCategory}. Новые операции мерчанта получают её автоматически.
@@ -255,6 +288,8 @@ export default function TransactionSheet({ txId: openId, onClose }: Props) {
         onClose={() => setNoteOpen(false)}
       />
 
+      <MerchantCard merchantId={merchantOpen ? tx.merchant_key : null} onClose={() => setMerchantOpen(false)} onChanged={reload} onLeave={onClose} />
+
       <SheetActions submit={null} extra={[{ title: 'Удалить операцию', danger: true, onPress: () => confirmDeleteTransaction(tx, onClose) }]} />
     </SheetScrollView>
     </BottomSheet>
@@ -269,6 +304,7 @@ const styles = StyleSheet.create({
   amount: { fontSize: 28, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
   income: { color: colors.income },
   merchant: { fontSize: 18, color: colors.text, marginTop: 4 },
+  merchantLink: { color: colors.accent },
   meta: { fontSize: 14, color: colors.muted, marginTop: 2 },
   heading: { fontSize: 13, fontWeight: '600', color: colors.muted, marginTop: 24, marginBottom: 8, textTransform: 'uppercase' },
   currentRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },

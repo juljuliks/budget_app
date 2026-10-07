@@ -1,7 +1,7 @@
 import { getDb } from './db';
 import { setCategoryForTransactions, setTransactionCategory } from './db/transactions';
 import { incrementCategoryUsage } from './db/categories';
-import { createRule, backfillRule, findCategoryForMerchant } from './categorize';
+import { createRule, backfillRule, findCategoryForMerchant, isMixedMerchant } from './categorize';
 import { emitTransactionsChanged } from './events';
 import { isRememberable, REMEMBERABLE_KINDS } from './types';
 
@@ -19,7 +19,8 @@ export async function assignCategory(txId: number, categoryId: number | null, ch
   const tx = await db.get<{ kind: string; merchant_key: string | null }>(
     'SELECT kind, merchant_key FROM transactions WHERE id = ?', [txId]);
   // only purchases / payments are remembered: a transfer or deposit "merchant" is a person or the card
-  const key = tx?.merchant_key && isRememberable(tx.kind) ? tx.merchant_key : null;
+  // a merchant of different categories has none of its own: a pick is always this operation's
+  const key = tx?.merchant_key && isRememberable(tx.kind) && !(await isMixedMerchant(tx.merchant_key)) ? tx.merchant_key : null;
   const forMerchant = categoryId !== null && key !== null
     && (choice === 'merchant' || (choice === undefined && !(await findCategoryForMerchant(key))));
 
@@ -39,6 +40,8 @@ export default assignCategory;
 
 export type MerchantChange = {
   merchant: string;
+  /** its merchant_key */
+  key: string;
   /** the merchant's category now, null = none yet */
   fromCategoryId: number | null;
   /** transactions whose category changes if the new one becomes the merchant's (this one included) */
@@ -57,11 +60,14 @@ export async function merchantChangePreview(txId: number, categoryId: number | n
   const tx = await db.get<{ kind: string; merchant_key: string | null; raw_merchant: string | null }>(
     'SELECT kind, merchant_key, raw_merchant FROM transactions WHERE id = ?', [txId]);
   if (!tx?.merchant_key || !isRememberable(tx.kind)) return null;
+  // of different categories: nothing to ask, the pick is this operation's
+  if (await isMixedMerchant(tx.merchant_key)) return null;
   const rule = await findCategoryForMerchant(tx.merchant_key);
   if (rule?.category_id === categoryId) return null;
   const totals = await categoryChangeTotals(tx.merchant_key, categoryId, txId);
   return {
     merchant: tx.raw_merchant || tx.merchant_key,
+    key: tx.merchant_key,
     fromCategoryId: rule?.category_id ?? null,
     count: totals.reduce((s, t) => s + t.n, 0),
     totals: totals.map(({ currency, amount_minor }) => ({ currency, amount_minor })),
@@ -92,7 +98,7 @@ async function merchantsToChange(txIds: number[], categoryId: number): Promise<A
     `SELECT kind, merchant_key, raw_merchant FROM transactions WHERE id IN (${txIds.map(() => '?').join(',')})`, txIds);
   const out = new Map<string, string>();
   for (const r of rows) {
-    if (!r.merchant_key || !isRememberable(r.kind) || out.has(r.merchant_key)) continue;
+    if (!r.merchant_key || !isRememberable(r.kind) || out.has(r.merchant_key) || await isMixedMerchant(r.merchant_key)) continue;
     const rule = await findCategoryForMerchant(r.merchant_key);
     if (rule?.category_id !== categoryId) out.set(r.merchant_key, r.raw_merchant || r.merchant_key);
   }

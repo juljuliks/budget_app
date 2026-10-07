@@ -1,6 +1,9 @@
 // Helper integration points for notifee notifications.
 import notifee, { AndroidImportance } from '@notifee/react-native';
 import { buildCategorySuggestions } from './notifyHelper';
+import { isMixedMerchant } from '../categorize';
+import { merchantCategories } from '../db/merchants';
+import { isRememberable } from '../types';
 import { categoryLabel } from '../db/categories';
 import { getDb } from '../db';
 import { assignCategory } from '../assign';
@@ -31,7 +34,11 @@ export async function showUncategorizedTransactionNotification(txId: number) {
     return;
   }
 
-  const suggestions = await buildCategorySuggestions(tx.kind, MAX_ACTIONS - 1);
+  // a merchant of different categories (a delivery: groceries or meals) offers the ones it had, then the usual ones
+  const mixed = !!tx.merchant_key && isRememberable(tx.kind) && await isMixedMerchant(tx.merchant_key);
+  const own = mixed ? (await merchantCategories(tx.merchant_key!, MAX_ACTIONS - 1)) : [];
+  const suggestions = [...own, ...(await buildCategorySuggestions(tx.kind, MAX_ACTIONS - 1)).filter((s) => !own.some((o) => o.id === s.id))]
+    .slice(0, MAX_ACTIONS - 1);
   const actions: Array<{ title: string; pressAction: { id: string; launchActivity?: string } }> = suggestions.map((s) => ({
     title: categoryLabel(s),
     pressAction: { id: `suggest_${s.id}` },
@@ -44,7 +51,7 @@ export async function showUncategorizedTransactionNotification(txId: number) {
     id: `tx_${txId}`,
     // "Перевод — 25.00 ₾" / "Оплата — 25.69 ₾", the merchant or person below when known
     title: `${KIND_LABELS[tx.kind] ?? 'Операция'} — ${formatMoneyWithCurrency(tx.amount_minor, tx.currency)}`,
-    body: tx.raw_merchant || ' ',
+    body: mixed ? `${tx.raw_merchant || tx.merchant_key} · выберите категорию` : tx.raw_merchant || ' ',
     android: {
       channelId: CHANNEL_ID,
       smallIcon: 'ic_notification',
