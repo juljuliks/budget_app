@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { averageFullMonths, NormPeriod, CategoryStat, parseYm, periodStats, PeriodStats } from '../../db/plans';
 import { useDisplayCurrency } from '../../displayCurrency';
 import { useOpenCategoryTransactions } from '../../navigation';
@@ -23,7 +23,7 @@ import { GROUP_TITLES, LimitsAccordion } from './SummaryTiles';
 import { pct, SummaryGroupKey, summaryGroups } from './summaryGroups';
 import { formStyles } from '../formStyles';
 import { splitUnplanned, unplannedMonth } from './unplanned';
-import { FoldHeader, useFolded } from '../fold';
+import StickyScrollView, { SectionHeader } from '../StickyScrollView';
 
 /** Periods up to this long are measured against the plan (its share for these days); longer ones aren't. */
 const PACE_MAX_DAYS = 31;
@@ -100,8 +100,6 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
   // the app's currency (Настройки → Валюта)
   const currency = useDisplayCurrency();
   const openTransactions = useOpenCategoryTransactions();
-  // folded sections, remembered
-  const fold = useFolded('stats-period');
   const days = rangeDays(range);
   const today = dayKeyOf(new Date());
   // measured against the plan only within one month: a period across months (or a year) is just its categories
@@ -488,7 +486,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
     );
   };
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <StickyScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.donutWrap}>
         <Donut segments={segments} selectedKey={picked ? selected : null} onSelect={setSelected}>
           <DonutCenter total={stats.spent_minor} picked={picked} currency={cur} />
@@ -512,8 +510,8 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
         const vsLimit = !!g && g.limit > 0;
         const total = g ? g.spent : cats.reduce((a, c) => a + c.spent_minor, 0);
         return (
-          <View key={key} style={styles.group}>
-            <FoldHeader style={[formStyles.sectionHeader, styles.groupHeader]} folded={fold.is(`limit:${key}`)} onToggle={() => fold.toggle(`limit:${key}`)}>
+          <React.Fragment key={key}>
+            <SectionHeader style={[formStyles.sectionHeader, styles.groupHeader, styles.group]}>
               <Text style={styles.groupTitle}>{title}</Text>
               {/* one category: its row says it all, the header just names the section */}
               {cats.length > 1 ? (
@@ -523,19 +521,19 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                 {vsLimit ? <Text style={[styles.groupPlan, overStyle(g!.spent, g!.limit)]}> ({pct(g!.spent, Math.round(g!.limit))})</Text> : null}
               </MaskedTotal>
               ) : null}
-            </FoldHeader>
-            {fold.is(`limit:${key}`) ? null : (
+            </SectionHeader>
+            <View>
               <>
                 {/* the section's total only over several categories: with one it repeats its row */}
                 {g && cats.length > 1 ? <LimitSummary g={g} /> : null}
                 {cats.map((c, i) => rowOf(c, i, cats, cats.length > 1))}
               </>
-            )}
-          </View>
+            </View>
+          </React.Fragment>
         );
       }).concat(overspentCats.length ? [(
-        <View key="overspent" style={styles.group}>
-          <FoldHeader style={[formStyles.sectionHeader, styles.groupHeader]} folded={fold.is(OVERSPENT)} onToggle={() => fold.toggle(OVERSPENT)}>
+        <React.Fragment key="overspent">
+          <SectionHeader style={[formStyles.sectionHeader, styles.groupHeader, styles.group]}>
             <Text style={styles.groupTitle}>{OVERSPENT}</Text>
             {/* the period's spending of these categories; each row says its month's overspend */}
             {overspentCats.length > 1 ? (
@@ -543,35 +541,41 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                 {money(overspentCats.reduce((a, c) => a + c.spent_minor, 0))}
               </MaskedTotal>
             ) : null}
-          </FoldHeader>
-          {fold.is(OVERSPENT) ? null : overspentCats.map((c, i) => rowOf(c, i, overspentCats, true, true))}
-        </View>
+          </SectionHeader>
+          <View>
+            {overspentCats.map((c, i) => rowOf(c, i, overspentCats, true, true))}
+          </View>
+        </React.Fragment>
       )] : []).concat(otherCats.length ? [(
         // limits these days can't measure (a weekly one on a day, the month's, obligatory payments): just the spending
-        <View key="other" style={styles.group}>
-          <FoldHeader style={[formStyles.sectionHeader, styles.groupHeader]} folded={fold.is(OTHER)} onToggle={() => fold.toggle(OTHER)}>
+        <React.Fragment key="other">
+          <SectionHeader style={[formStyles.sectionHeader, styles.groupHeader, styles.group]}>
             <Text style={styles.groupTitle}>{OTHER}</Text>
             {otherCats.length > 1 ? (
               <MaskedTotal style={styles.groupTotal} hiddenText={headerPct(otherCats.reduce((a, c) => a + c.spent_minor, 0), 0)}>
                 {money(otherCats.reduce((a, c) => a + c.spent_minor, 0))}
               </MaskedTotal>
             ) : null}
-          </FoldHeader>
-          {fold.is(OTHER) ? null : otherCats.map(plainRow)}
-        </View>
+          </SectionHeader>
+          <View>
+            {otherCats.map(plainRow)}
+          </View>
+        </React.Fragment>
       )] : []) : split.groups.map((g) => (
-        <View key={`${g.type_id}-${g.title}`} style={styles.group}>
-          <FoldHeader style={[formStyles.sectionHeader, styles.groupHeader]} folded={fold.is(g.title)} onToggle={() => fold.toggle(g.title)}>
+        <React.Fragment key={`${g.type_id}-${g.title}`}>
+          <SectionHeader style={[formStyles.sectionHeader, styles.groupHeader, styles.group]}>
             <Text style={styles.groupTitle}>{g.title}</Text>
             {g.categories.length > 1 ? <SectionTotal spent={g.spent_minor} planned={g.categories.reduce((a, c) => a + ((c.category_id !== null && norms?.byCategory.get(c.category_id)?.monthLimit) || 0), 0)} /> : null}
-          </FoldHeader>
-          {fold.is(g.title) ? null : g.categories.map(rowOf)}
-        </View>
+          </SectionHeader>
+          <View>
+            {g.categories.map(rowOf)}
+          </View>
+        </React.Fragment>
       ))}
       {/* shorter than a month: the share is the month's limit, these days can't measure it — just the spending */}
       {month && (split.unplanned.length || (month.share > 0 && !byLimits)) ? (
-        <View style={styles.group}>
-          <FoldHeader style={[formStyles.sectionHeader, styles.groupHeader]} folded={fold.is(UNPLANNED)} onToggle={() => fold.toggle(UNPLANNED)}>
+        <>
+          <SectionHeader style={[formStyles.sectionHeader, styles.groupHeader, styles.group]}>
             <Text style={styles.groupTitle}>{UNPLANNED}</Text>
             {/* like the limits' headers: the month's spending outside the plan / its share (%) — the share is a month's,
                 as an obligatory payment's plan is */}
@@ -579,8 +583,8 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
             {byLimits ? (split.unplanned.length > 1 ? (
               <MaskedTotal style={styles.groupTotal} hiddenText={headerPct(split.spent, 0)}>{money(split.spent)}</MaskedTotal>
             ) : null) : <SectionTotal spent={split.spent} planned={month.share} />}
-          </FoldHeader>
-          {fold.is(UNPLANNED) ? null : (
+          </SectionHeader>
+          <View>
             <>
               {/* the share is a month's limit, drawn like a "крупно, раз в месяц" category's: the month so far, the
                   other days faded, an overspend scaled to the spending with a tick at the share */}
@@ -606,8 +610,8 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
               {/* just the spending: no "% всех трат" line under each */}
               {byLimits ? split.unplanned.map(plainRow) : split.unplanned.map(rowOf)}
             </>
-          )}
-        </View>
+          </View>
+        </>
       ) : null}
       <RefundsRow amount={stats.refunds_unassigned_minor} currency={stats.currency} onPress={() => openTransactions(null, range, ['refund'])} />
       {stats.other_currencies.length > 0 ? (
@@ -795,7 +799,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
         </SheetScrollView>
         <Button title="Понятно" onPress={() => setInfoOpen(null)} style={styles.infoButton} />
       </BottomSheet>
-    </ScrollView>
+    </StickyScrollView>
   );
 }
 
@@ -814,8 +818,8 @@ const styles = StyleSheet.create({
   summary: { flexShrink: 1, fontSize: 14, color: colors.text, textAlign: 'center' },
   hint: { color: colors.muted, fontSize: 14, textAlign: 'center', marginVertical: 12 },
   group: { marginTop: 16 },
-  // a grey band across the screen, like the days on the operations
-  groupHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginHorizontal: -16 },
+  // a grey band across the screen, sticking on top as the days on the operations do
+  groupHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: -16 },
   groupTitle: { fontSize: 13, fontWeight: '600', color: colors.muted },
   groupPlan: { color: colors.muted },
   groupTotal: { fontSize: 13, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },

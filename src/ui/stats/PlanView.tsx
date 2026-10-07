@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { categoryLabel } from '../../db/categories';
 import { Currency } from '../../db/fx';
@@ -23,7 +23,7 @@ import { Controller, useWatch } from 'react-hook-form';
 import TextInputModal from '../TextInputModal';
 import { useLoadedForm } from '../form';
 import { formStyles } from '../formStyles';
-import { FoldHeader, useFolded } from '../fold';
+import StickyScrollView, { SectionHeader } from '../StickyScrollView';
 import PlanAddModal from './PlanAddModal';
 import PlanAmountModal, { PlanAmountTarget } from './PlanAmountModal';
 import { chart, colors } from '../theme';
@@ -104,8 +104,6 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
   const [spentBy, setSpentBy] = useState<{ byCategory: Map<number, number>; total: number }>({ byCategory: new Map(), total: 0 });
   const [editingItem, setEditingItem] = useState<PlanAmountTarget | null>(null);
   const [addOpen, setAddOpen] = useState(false);
-  // folded sections, remembered
-  const fold = useFolded('plan');
 
   const latest = useLatestRequest();
   const load = useCallback(() => {
@@ -260,7 +258,7 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
 
   return (
     <View style={styles.screen}>
-    <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <StickyScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <View style={styles.budgetBox}>
         {/* the budget in one line, then its split as one bar: planned / for spending outside the plan / savings
             (or not distributed), each part's amount under it in its color */}
@@ -333,93 +331,97 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
       {/* system "categories" first: what the budget sets apart before the plan — savings (locked and floating) and the
           share outside the plan; like the plan's sections, with their share of the budget; a tap opens the budget */}
       {shownBudget ? systemGroups.map((g) => (
-        <View key={g.title} style={styles.group}>
-          <FoldHeader style={[formStyles.sectionHeader, styles.groupHeader]} folded={fold.is(g.title)} onToggle={() => fold.toggle(g.title)}>
+        <React.Fragment key={g.title}>
+          <SectionHeader style={[formStyles.sectionHeader, styles.groupHeader, styles.group]}>
             <Text style={styles.groupTitle}>{g.title}</Text>
             {/* "Скрыть суммы": the share only */}
             <Text style={styles.groupTotal}>
               {hidden ? null : money(g.rows.reduce((a, r) => a + r.value, 0))}
               <Text style={styles.groupShare}>{hidden ? '' : ' · '}{percentOf(g.rows.reduce((a, r) => a + r.value, 0), shownBudget) || '0%'}</Text>
             </Text>
-          </FoldHeader>
-          {fold.is(g.title) ? null : g.rows.map((r) => (
-            <TouchableOpacity key={r.key} style={styles.row} onPress={() => setBudgetOpen(true)} accessibilityLabel={`Изменить: ${r.name}`}>
-              {/* system: no pin, a lock in its place */}
-              <View style={styles.pin}><LockIcon color={colors.muted} size={20} /></View>
-              <View style={styles.nameBox}>
-                <Text style={styles.name} numberOfLines={1}>{r.name}</Text>
-                <Text style={styles.percent}>{[r.note, `${percentOf(r.value, shownBudget) || '0%'} бюджета`].filter(Boolean).join(' · ')}</Text>
-              </View>
-              {hidden ? null : (
-                <View style={styles.amountBox}>
-                  <Text style={[styles.amount, r.style]}>{money(r.value)}</Text>
+          </SectionHeader>
+          <View>
+            {g.rows.map((r) => (
+              <TouchableOpacity key={r.key} style={styles.row} onPress={() => setBudgetOpen(true)} accessibilityLabel={`Изменить: ${r.name}`}>
+                {/* system: no pin, a lock in its place */}
+                <View style={styles.pin}><LockIcon color={colors.muted} size={20} /></View>
+                <View style={styles.nameBox}>
+                  <Text style={styles.name} numberOfLines={1}>{r.name}</Text>
+                  <Text style={styles.percent}>{[r.note, `${percentOf(r.value, shownBudget) || '0%'} бюджета`].filter(Boolean).join(' · ')}</Text>
                 </View>
-              )}
-            </TouchableOpacity>
-          ))}
-        </View>
+                {hidden ? null : (
+                  <View style={styles.amountBox}>
+                    <Text style={[styles.amount, r.style]}>{money(r.value)}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </React.Fragment>
       )) : null}
 
       {groupByType(items).map((g) => (
-        <View key={g.title} style={styles.group}>
-          <FoldHeader style={[formStyles.sectionHeader, styles.groupHeader]} folded={fold.is(g.title)} onToggle={() => fold.toggle(g.title)}>
+        <React.Fragment key={g.title}>
+          <SectionHeader style={[formStyles.sectionHeader, styles.groupHeader, styles.group]}>
             <Text style={styles.groupTitle}>{g.title}</Text>
             {/* the type's share of the amount to distribute; "Скрыть суммы": the share only */}
             <Text style={styles.groupTotal}>
               {hidden && shownBudget ? null : money(g.planned)}
               {shownBudget && g.planned ? <Text style={styles.groupShare}>{hidden ? '' : ' · '}{percentOf(g.planned, shownBudget)}</Text> : null}
             </Text>
-          </FoldHeader>
-          {fold.is(g.title) ? null : g.items.map((item) => (
-            // the whole row opens the item's sheet (amount, kind; delete is in its title); the pin is its own button
-            <TouchableOpacity
-              key={item.category_id}
-              style={styles.row}
-              onPress={() => setEditingItem({ ...item, label: categoryLabel(item) })}
-              accessibilityLabel={`Изменить: ${categoryLabel(item)}`}
-            >
+          </SectionHeader>
+          <View>
+            {g.items.map((item) => (
+              // the whole row opens the item's sheet (amount, kind; delete is in its title); the pin is its own button
               <TouchableOpacity
-                onPress={() => run(setPlanPinned(ym, item.category_id, !item.pinned),
-                  item.pinned ? `«${categoryLabel(item)}» больше не повторяется` : `«${categoryLabel(item)}» будет повторяться каждый месяц`)}
-                hitSlop={8}
-                accessibilityLabel={item.pinned ? 'Не повторять каждый месяц' : 'Повторять каждый месяц'}
-                style={styles.pin}
+                key={item.category_id}
+                style={styles.row}
+                onPress={() => setEditingItem({ ...item, label: categoryLabel(item) })}
+                accessibilityLabel={`Изменить: ${categoryLabel(item)}`}
               >
-                <PinIcon color={item.pinned ? colors.accent : colors.muted} filled={item.pinned} />
-              </TouchableOpacity>
-              <View style={styles.nameBox}>
-                {/* the type is the section title, so just emoji + name here */}
-                <Text style={styles.name} numberOfLines={1}>{`${item.emoji || ''} ${item.name}`.trim()}</Text>
-                {item.kind === 'fixed' || item.limit_minor || (shownBudget && item.converted_minor) ? (
-                  <Text style={styles.percent}>
-                    {[
-                      item.kind === 'fixed' ? 'обязательный платёж' : '',
-                      // a flexible item's amount per its norm rhythm, e.g. "≈ 46 ₾ в неделю"
-                      item.kind === 'limit' && !hidden ? normText(item, ym, currency) : '',
-                      shownBudget && item.converted_minor ? `${percentOf(item.converted_minor, shownBudget)} бюджета` : '',
-                    ].filter(Boolean).join(' · ')}
-                  </Text>
-                ) : null}
-              </View>
-              {/* "Скрыть суммы": the amounts left out (the % of the budget stays in the line under the name) */}
-              {hidden ? null : item.limit_minor ? (
-                <View style={styles.amountBox}>
-                  <Text style={styles.amount}>
-                    {item.converted_minor !== null ? money(item.converted_minor) : formatWithCurrency(item.limit_minor, item.currency)}
-                  </Text>
-                  {item.converted_minor !== null && item.currency !== currency ? (
-                    <Text style={styles.amountOriginal}>{original(item.limit_minor, item.currency).trim()}</Text>
+                <TouchableOpacity
+                  onPress={() => run(setPlanPinned(ym, item.category_id, !item.pinned),
+                    item.pinned ? `«${categoryLabel(item)}» больше не повторяется` : `«${categoryLabel(item)}» будет повторяться каждый месяц`)}
+                  hitSlop={8}
+                  accessibilityLabel={item.pinned ? 'Не повторять каждый месяц' : 'Повторять каждый месяц'}
+                  style={styles.pin}
+                >
+                  <PinIcon color={item.pinned ? colors.accent : colors.muted} filled={item.pinned} />
+                </TouchableOpacity>
+                <View style={styles.nameBox}>
+                  {/* the type is the section title, so just emoji + name here */}
+                  <Text style={styles.name} numberOfLines={1}>{`${item.emoji || ''} ${item.name}`.trim()}</Text>
+                  {item.kind === 'fixed' || item.limit_minor || (shownBudget && item.converted_minor) ? (
+                    <Text style={styles.percent}>
+                      {[
+                        item.kind === 'fixed' ? 'обязательный платёж' : '',
+                        // a flexible item's amount per its norm rhythm, e.g. "≈ 46 ₾ в неделю"
+                        item.kind === 'limit' && !hidden ? normText(item, ym, currency) : '',
+                        shownBudget && item.converted_minor ? `${percentOf(item.converted_minor, shownBudget)} бюджета` : '',
+                      ].filter(Boolean).join(' · ')}
+                    </Text>
                   ) : null}
                 </View>
-              ) : (
-                // carried over without an amount: last month's as a muted hint, in the app's currency
-                <Text style={[styles.amount, styles.amountEmpty]}>
-                  {item.previous_minor ? `в прошлом месяце ${inShown(item.previous_minor, item.currency)}` : '0'}
-                </Text>
-              )}
-            </TouchableOpacity>
-          ))}
-        </View>
+                {/* "Скрыть суммы": the amounts left out (the % of the budget stays in the line under the name) */}
+                {hidden ? null : item.limit_minor ? (
+                  <View style={styles.amountBox}>
+                    <Text style={styles.amount}>
+                      {item.converted_minor !== null ? money(item.converted_minor) : formatWithCurrency(item.limit_minor, item.currency)}
+                    </Text>
+                    {item.converted_minor !== null && item.currency !== currency ? (
+                      <Text style={styles.amountOriginal}>{original(item.limit_minor, item.currency).trim()}</Text>
+                    ) : null}
+                  </View>
+                ) : (
+                  // carried over without an amount: last month's as a muted hint, in the app's currency
+                  <Text style={[styles.amount, styles.amountEmpty]}>
+                    {item.previous_minor ? `в прошлом месяце ${inShown(item.previous_minor, item.currency)}` : '0'}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </React.Fragment>
       ))}
 
       <TextInputModal
@@ -459,7 +461,7 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
         onSaved={load}
         onDelete={() => { const item = items.find((i) => i.category_id === editingItem?.category_id); if (item) removeItem(item); }}
       />
-    </ScrollView>
+    </StickyScrollView>
     {/* like the "+" on the transactions screen: several categories with amounts at once */}
     <Fab onPress={() => setAddOpen(true)} accessibilityLabel="Добавить категории в план" />
     <PlanAddModal ym={ym} currency={currency} visible={addOpen} plannedIds={items.map((i) => i.category_id)} onClose={() => setAddOpen(false)} onSaved={load} />
@@ -517,8 +519,8 @@ const styles = StyleSheet.create({
   caption: { fontSize: 13, color: colors.muted, textAlign: 'center' },
   hint: { color: colors.muted, fontSize: 14, textAlign: 'center', marginVertical: 12 },
   group: { marginTop: 12 },
-  // a grey band across the screen, like the days on the operations
-  groupHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginHorizontal: -16 },
+  // a grey band across the screen, sticking on top as the days on the operations do
+  groupHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: -16 },
   groupTitle: { fontSize: 13, fontWeight: '600', color: colors.muted },
   groupShare: { color: colors.muted, fontWeight: '400' },
   groupTotal: { fontSize: 13, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useOpenCategoryTransactions } from '../../navigation';
 import { categoryLabel } from '../../db/categories';
@@ -18,7 +18,7 @@ import { chart, colors } from '../theme';
 import PlanAmountModal, { PlanAmountTarget } from './PlanAmountModal';
 import { useLatestRequest } from '../useLatestRequest';
 import { formStyles } from '../formStyles';
-import { FoldHeader, useFolded } from '../fold';
+import StickyScrollView, { SectionHeader } from '../StickyScrollView';
 import { pct } from './summaryGroups';
 import { MonthReportRow } from './MonthReport';
 import { splitUnplanned, unplannedShare } from './unplanned';
@@ -64,8 +64,6 @@ export default function StatsView({ year, month, currency }: { year: number; mon
   const segments = useMemo(() => (stats ? donutSegments(stats.groups) : []), [stats]);
   // hooks before the loading return: their order must not change between renders
   const openTransactions = useOpenCategoryTransactions();
-  // folded sections, remembered
-  const fold = useFolded('stats-month');
 
   if (!stats) return <View style={styles.center}><ActivityIndicator /></View>;
 
@@ -80,7 +78,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
   const picked = selected === null ? undefined : stats.categories.find((c) => String(c.category_id) === selected);
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <StickyScrollView style={styles.screen} contentContainerStyle={styles.content}>
       {/* a month that is over: its report on top */}
       {ym < currentYm() ? <View style={styles.report}><MonthReportRow ym={ym} /></View> : null}
       <View style={styles.donutWrap}>
@@ -125,8 +123,8 @@ export default function StatsView({ year, month, currency }: { year: number; mon
         <Text style={styles.hint}>В этом месяце трат нет.</Text>
       ) : (
         split.groups.map((g) => (
-          <View key={`${g.type_id}-${g.title}`} style={styles.group}>
-            <FoldHeader style={[formStyles.sectionHeader, styles.groupHeader]} folded={fold.is(g.title)} onToggle={() => fold.toggle(g.title)}>
+          <React.Fragment key={`${g.type_id}-${g.title}`}>
+            <SectionHeader style={[formStyles.sectionHeader, styles.groupHeader, styles.group]}>
               <Text style={styles.groupTitle}>{g.title}</Text>
               {/* "fact / plan ₾ (%)", as in the period stats; "Скрыть суммы" leaves just the % */}
               {/* one category: its row says it all, the header just names the section */}
@@ -137,39 +135,41 @@ export default function StatsView({ year, month, currency }: { year: number; mon
                 {g.planned_minor ? <Text style={[styles.rowLimit, overStyle(g.spent_minor, g.planned_minor)]}> ({pct(g.spent_minor, g.planned_minor)})</Text> : null}
               </MaskedTotal>
               ) : null}
-            </FoldHeader>
-            {fold.is(g.title) ? null : g.categories.map((c) => (
-              <CategoryRow
-                key={String(c.category_id)}
-                stat={c}
-                total={stats.spent_minor}
-                currency={stats.currency}
-                evenPace={evenPace}
-                dim={daysInMonth(ym)}
-                ym={ym}
-                openTransactions={openTransactions}
-                now={c.category_id === null ? undefined : today?.byCategory.get(c.category_id)}
-                monthToDate={c.category_id === null ? 0 : today?.monthToDate.get(c.category_id) ?? 0}
-                onAddToPlan={c.category_id !== null && c.limit_minor === null && !c.deleted
-                  ? () => setPlanTarget({ category_id: c.category_id!, label: categoryLabel(c), limit_minor: 0, currency: stats.currency, suggested_minor: c.spent_minor })
-                  : undefined}
-              />
-            ))}
-          </View>
+            </SectionHeader>
+            <View>
+              {g.categories.map((c) => (
+                <CategoryRow
+                  key={String(c.category_id)}
+                  stat={c}
+                  total={stats.spent_minor}
+                  currency={stats.currency}
+                  evenPace={evenPace}
+                  dim={daysInMonth(ym)}
+                  ym={ym}
+                  openTransactions={openTransactions}
+                  now={c.category_id === null ? undefined : today?.byCategory.get(c.category_id)}
+                  monthToDate={c.category_id === null ? 0 : today?.monthToDate.get(c.category_id) ?? 0}
+                  onAddToPlan={c.category_id !== null && c.limit_minor === null && !c.deleted
+                    ? () => setPlanTarget({ category_id: c.category_id!, label: categoryLabel(c), limit_minor: 0, currency: stats.currency, suggested_minor: c.spent_minor })
+                    : undefined}
+                />
+              ))}
+            </View>
+          </React.Fragment>
         ))
       )}
 
       {split.unplanned.length || share > 0 ? (
-        <View style={styles.group}>
-          <FoldHeader style={[formStyles.sectionHeader, styles.groupHeader]} folded={fold.is(UNPLANNED)} onToggle={() => fold.toggle(UNPLANNED)}>
+        <>
+          <SectionHeader style={[formStyles.sectionHeader, styles.groupHeader, styles.group]}>
             <Text style={styles.groupTitle}>{UNPLANNED}</Text>
             <MaskedTotal style={styles.groupTotal} hiddenText={share ? pct(split.spent, share) : shareOfAll(split.spent, stats.spent_minor)}>
               {share ? <Text style={overStyle(split.spent, share)}>{formatShort(split.spent)}</Text> : formatWithCurrency(split.spent, stats.currency)}
               {share ? <Text style={styles.rowLimit}> / {formatWithCurrency(share, stats.currency)}</Text> : null}
               {share ? <Text style={[styles.rowLimit, overStyle(split.spent, share)]}> ({pct(split.spent, share)})</Text> : null}
             </MaskedTotal>
-          </FoldHeader>
-          {fold.is(UNPLANNED) ? null : (
+          </SectionHeader>
+          <View>
             <>
               {/* the share as a limit: an overspend scales the bar to the spending, a tick at the share */}
               {/* nothing spent outside the plan yet: no empty bar, just the hint below */}
@@ -205,8 +205,8 @@ export default function StatsView({ year, month, currency }: { year: number; mon
                 />
               ))}
             </>
-          )}
-        </View>
+          </View>
+        </>
       ) : null}
 
       <RefundsRow amount={stats.refunds_unassigned_minor} currency={stats.currency} onPress={() => openTransactions(null, monthDays(ym), ['refund'])} />
@@ -217,7 +217,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
       ) : null}
 
       <PlanAmountModal ym={ymOf(year, month)} currency={currency} target={planTarget} onClose={() => setPlanTarget(null)} onSaved={load} />
-    </ScrollView>
+    </StickyScrollView>
   );
 }
 
@@ -400,8 +400,8 @@ const styles = StyleSheet.create({
   dangerText: { color: colors.danger },
   hint: { color: colors.muted, fontSize: 14, textAlign: 'center', marginVertical: 12 },
   group: { marginTop: 16 },
-  // a grey band across the screen, like the days on the operations
-  groupHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginHorizontal: -16 },
+  // a grey band across the screen, sticking on top as the days on the operations do
+  groupHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: -16 },
   groupTitle: { fontSize: 13, fontWeight: '600', color: colors.muted },
   groupTotal: { fontSize: 13, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
   row: { paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
