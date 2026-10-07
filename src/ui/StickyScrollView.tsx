@@ -1,9 +1,13 @@
 import React from 'react';
-import { ScrollView, ScrollViewProps, StyleProp, View, ViewStyle } from 'react-native';
+import { ScrollView, ScrollViewProps, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 
-/** A section's header that stays on top while its section scrolls under it (in a StickyScrollView). */
+/**
+ * A section's header that stays on top while its section scrolls under it (in a StickyScrollView): the title left,
+ * the totals right, centred. ScrollView moves a sticky child's style to its own wrapper (the band: background,
+ * padding, margins) and gives the child just a fill, so the row is laid out by an inner view.
+ */
 export function SectionHeader({ style, children }: { style?: StyleProp<ViewStyle>; children: React.ReactNode }) {
-  return <View style={style}>{children}</View>;
+  return <View style={style}><View style={styles.row}>{children}</View></View>;
 }
 
 /** The children as one flat list: fragments opened (keys prefixed by theirs, so sections' rows stay apart). */
@@ -27,3 +31,7 @@ export default function StickyScrollView({ children, ...props }: ScrollViewProps
   const sticky = items.flatMap((c, i) => (c.type === SectionHeader ? [i] : []));
   return <ScrollView {...props} stickyHeaderIndices={sticky}>{items}</ScrollView>;
 }
+
+const styles = StyleSheet.create({
+  row: { flexGrow: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+});
