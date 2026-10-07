@@ -9,6 +9,8 @@ FLOWS="$(cd "$(dirname "$0")" && pwd)/flows"
 mkdir -p "$OUT"
 
 adb install -r "$APK"
+# a slow emulator's system apps (the launcher) may pop "isn't responding" over the screens: don't show those dialogs
+adb shell settings put global hide_error_dialogs 1 || true
 adb shell pm grant "$PKG" android.permission.RECEIVE_SMS || true
 adb shell pm grant "$PKG" android.permission.POST_NOTIFICATIONS || true
 
