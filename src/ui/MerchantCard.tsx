@@ -4,7 +4,7 @@ import BottomSheet, { SheetScrollView } from './BottomSheet';
 import { sheetAlert } from './sheetAlert';
 import { useNavigation } from '@react-navigation/native';
 import { categoryChangeTotals } from '../assign';
-import { addMerchantCategory, getMerchant, merchantCategories, MerchantDetails, merchantUsedCategories, removeMerchantCategory, setMerchantCategory, setMerchantMixed } from '../db/merchants';
+import { addMerchantCategory, deleteMerchants, getMerchant, merchantCategories, MerchantDetails, merchantUsedCategories, removeMerchantCategory, setMerchantCategory, setMerchantMixed } from '../db/merchants';
 import { categoryLabel, categoryLabelOf, listCategories } from '../db/categories';
 import { categoryColors } from '../db/colors';
 import { emitTransactionsChanged } from '../events';
@@ -166,6 +166,28 @@ export default function MerchantCard({ merchantId, categories: given, onClose, o
       ]);
   }
 
+  // its operations stay with their categories, without the merchant (as deleting from the merchants' list)
+  function remove() {
+    if (!m) return;
+    sheetAlert(
+      `Удалить мерчанта «${m.name}»?`,
+      `${m.count} ${plural(m.count, ['покупка останется', 'покупки останутся', 'покупок останутся'])} в операциях со своими категориями, но без мерчанта. `
+        + 'Новые операции этого мерчанта не будут получать категорию автоматически. Новые SMS от него снова создадут мерчанта.',
+      [
+        { text: 'Отмена', style: 'cancel' },
+        {
+          text: 'Удалить мерчанта', style: 'destructive', onPress: () => {
+            deleteMerchants([m.id]).then(() => {
+              emitTransactionsChanged();
+              onChanged();
+              onClose();
+              toast(`Мерчант «${m.name}» удалён`);
+            }).catch((e) => { console.error('delete merchant failed', e); toastError('Не удалось удалить'); });
+          },
+        },
+      ]);
+  }
+
   function showTransactions() {
     if (!m) return;
     onClose();
@@ -215,7 +237,10 @@ export default function MerchantCard({ merchantId, categories: given, onClose, o
 
             <SheetActions
               submit={{ title: 'Сохранить', onPress: save, disabled: !dirty || saving }}
-              extra={!mixed && m.category_id !== null && !m.mixed ? [{ title: 'Открепить категорию', danger: true, onPress: unpin }] : undefined}
+              extra={[
+                ...(!mixed && m.category_id !== null && !m.mixed ? [{ title: 'Открепить категорию', danger: true, onPress: unpin }] : []),
+                { title: 'Удалить мерчанта', danger: true, onPress: remove },
+              ]}
             />
           </SheetScrollView>
         )}
