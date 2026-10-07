@@ -65,9 +65,11 @@ export default function CategoriesScreen({ navigation }: Props) {
   }
 
   return (
-    <>
+    <View style={styles.screen}>
     <SectionList
       style={styles.list}
+      // room under the last rows for the merge button over them, from the first pick (no jump when it appears)
+      contentContainerStyle={picking ? styles.pickingContent : undefined}
       sections={sections}
       keyExtractor={(c) => String(c.id)}
       renderSectionHeader={({ section }) => <Text style={formStyles.sectionHeader}>{section.title}</Text>}
@@ -124,7 +126,7 @@ export default function CategoriesScreen({ navigation }: Props) {
       onClose={() => setMerging([])}
       onMerged={() => { setMerging([]); setPicked([]); load(); }}
     />
-    </>
+    </View>
   );
 }
 
@@ -152,8 +154,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
   },
   pickLabel: { fontSize: 15, color: colors.text },
-  // pinned under the list
+  screen: { flex: 1, backgroundColor: colors.bg },
+  pickingContent: { paddingBottom: 88 },
+  // fixed over the bottom of the list: its showing doesn't resize the list (that moved the scroll)
   bottomBar: {
+    position: 'absolute', left: 0, right: 0, bottom: 0,
     paddingHorizontal: 16, paddingTop: 12, paddingBottom: 16, backgroundColor: colors.bg,
     borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
   },
