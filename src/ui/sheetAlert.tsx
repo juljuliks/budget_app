@@ -9,13 +9,16 @@ import { colors } from './theme';
 
 /** 'secondary': outlined, for the less usual choice next to a filled one */
 export type SheetButton = { text: string; style?: 'cancel' | 'destructive' | 'secondary' | 'default'; onPress?: () => void };
-type Request = { title: string; message?: string; buttons: SheetButton[] };
+type Request = { title: string; message?: string; buttons: SheetButton[]; question?: string };
 
 let show: ((r: Request) => void) | null = null;
 
-/** Like Alert.alert(title, message, buttons): a sheet with the buttons stacked, the cancel one last. */
-export function sheetAlert(title: string, message?: string, buttons: SheetButton[] = [{ text: 'Понятно' }]) {
-  show?.({ title, message, buttons });
+/**
+ * Like Alert.alert(title, message, buttons): a sheet with the buttons stacked, the cancel one last. `question`: what
+ * the buttons answer, in bold after the message.
+ */
+export function sheetAlert(title: string, message?: string, buttons: SheetButton[] = [{ text: 'Понятно' }], question?: string) {
+  show?.({ title, message, buttons, question });
 }
 
 export function SheetAlertHost() {
@@ -34,7 +37,12 @@ export function SheetAlertHost() {
   return (
     <BottomSheet visible={visible} onClose={() => { close(); cancel?.onPress?.(); }} title={req?.title}>
       <View style={styles.body}>
-        {req?.message ? <Text style={styles.message}>{req.message}</Text> : null}
+        {req?.message || req?.question ? (
+          <Text style={styles.message}>
+            {req.message ?? ''}
+            {req.question ? <Text style={styles.question}>{req.message ? ' ' : ''}{req.question}</Text> : null}
+          </Text>
+        ) : null}
         {/* the same buttons as every sheet (SheetActions): filled, outlined for 'secondary', red for 'destructive' */}
         {actions.map((b) => (
           <Button
@@ -54,5 +62,6 @@ export function SheetAlertHost() {
 const styles = StyleSheet.create({
   body: { paddingHorizontal: 20, gap: 10 },
   message: { fontSize: 15, color: colors.text, lineHeight: 21, marginBottom: 6 },
+  question: { fontWeight: '600' },
   cancelRow: { marginTop: 0 },
 });

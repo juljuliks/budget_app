@@ -153,14 +153,14 @@ export default function MerchantCard({ merchantId, categories: given, onClose, o
     const n = followers.count;
     sheetAlert(
       name ? `Категория «${name}» для «${m.name}»` : `Без категории для «${m.name}»`,
-      `Новые операции будут ${name ? `получать «${name}»` : 'приходить без категории'}. Выбранные вручную категории не изменятся. `
-        + `Какую категорию сделать для ${n} ${plural(n, ['прошлой операции', 'прошлых операций', 'прошлых операций'])} на ${money(followers.totals)}?`,
+      `Новые операции будут ${name ? `получать «${name}»` : 'приходить без категории'}. Выбранные вручную категории не изменятся.`,
       [
         { text: 'Отмена', style: 'cancel' },
         // the past ones: the new category (or none), or the one they have
         { text: name ?? 'Без категории', onPress: () => run(apply('change')) },
         { text: old, style: 'secondary', onPress: () => run(apply('keep')) },
-      ]);
+      ],
+      `Какую категорию сделать для ${n} ${plural(n, ['прошлой операции', 'прошлых операций', 'прошлых операций'])} на ${money(followers.totals)}?`);
   }
 
   // its operations stay with their categories, without the merchant (as deleting from the merchants' list)
