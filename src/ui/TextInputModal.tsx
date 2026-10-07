@@ -93,8 +93,8 @@ export default function TextInputModal<V extends TextFormValues & FieldValues = 
           {inputAccessory}
           </View>
           {children ? <View style={styles.extra}>{children}</View> : null}
-          {/* the submit button only once something changed: nothing to save otherwise */}
-          <SheetActions submit={isDirty ? { title: submitLabel, onPress: submit, disabled: isSubmitting } : null} onCancel={onClose} />
+          {/* the submit button greyed until something changed: nothing to save otherwise */}
+          <SheetActions submit={{ title: submitLabel, onPress: submit, disabled: isSubmitting || !isDirty }} onCancel={onClose} />
         </View>
     </BottomSheet>
   );
