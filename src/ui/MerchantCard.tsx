@@ -32,7 +32,8 @@ const money = (totals: Array<{ currency: string; amount_minor: number }>) =>
 
 /**
  * A merchant's card (bottom sheet): its operations, "Разные категории", and the categories right in it — the merchant's
- * one, or, of different categories, several (offered for its operations); "Сохранить" says what it means first.
+ * one or "Без категории", or, of different categories, several (offered for its operations); "Сохранить" says what a
+ * change means first (no question for a merchant getting its first category or none).
  */
 export default function MerchantCard({ merchantId, categories: given, onClose, onChanged, onLeave }: Props) {
   const navigation = useNavigation();
@@ -96,7 +97,8 @@ export default function MerchantCard({ merchantId, categories: given, onClose, o
   }
 
   function toggle(id: number | null) {
-    if (id === null) return;
+    // "Без категории": the merchant's own choice (not offered in the list of different ones)
+    if (id === null) { if (!mixed) setSingle(null); return; }
     if (mixed) setList((l) => (l.includes(id) ? l.filter((x) => x !== id) : [...l, id]));
     else setSingle(id);
   }
@@ -133,9 +135,13 @@ export default function MerchantCard({ merchantId, categories: given, onClose, o
       return;
     }
     if (single === null) {
-      // "Разные категории" off, nothing picked
-      confirm(`Выключить разные категории у «${m.name}»?`, `Новые операции «${m.name}» будут приходить без категории, пока её не выбрать.`,
-        () => setMerchantMixed(m.id, false));
+      // "Без категории" (or "Разные категории" switched off with nothing picked): nothing retroactive, no question —
+      // past operations keep their categories, new ones arrive without one
+      run(async () => {
+        if (m.mixed) await setMerchantMixed(m.id, false);
+        else await setMerchantCategory(m.id, null);
+        toast(`Новые операции «${m.name}» будут приходить без категории`);
+      });
       return;
     }
     const name = await label(single);
@@ -150,22 +156,6 @@ export default function MerchantCard({ merchantId, categories: given, onClose, o
         ? ` Категория изменится у ${n} ${plural(n, ['операции', 'операций', 'операций'])} на ${money(totals)}.`
         : ''} Выбранные вручную категории не изменятся.${m.mixed ? ' Разные категории выключатся.' : ''}`,
       assign);
-  }
-
-  function unpin() {
-    if (!m) return;
-    sheetAlert(
-      `Открепить категорию от «${m.name}»?`,
-      `Новые операции «${m.name}» будут приходить без категории. У прошлых операций категория останется.`,
-      [
-        { text: 'Отмена', style: 'cancel' },
-        {
-          text: 'Открепить', style: 'destructive', onPress: () => {
-            setMerchantCategory(m.id, null).then(() => { changed(); toast(`Категория откреплена от «${m.name}»`); })
-              .catch((e) => { console.error('unpin failed', e); toastError('Не удалось открепить'); });
-          },
-        },
-      ]);
   }
 
   // its operations stay with their categories, without the merchant (as deleting from the merchants' list)
@@ -233,16 +223,15 @@ export default function MerchantCard({ merchantId, categories: given, onClose, o
                 selectedId={single}
                 selectedIds={mixed ? list : undefined}
                 onSelect={toggle}
+                // one category or none: "Без категории" among them (selected for a merchant without one)
+                allowNone={!mixed}
                 disabled={saving}
               />
             </View>
 
             <SheetActions
               submit={{ title: 'Сохранить', onPress: save, disabled: !dirty || saving }}
-              extra={[
-                ...(!mixed && m.category_id !== null && !m.mixed ? [{ title: 'Открепить категорию', danger: true, onPress: unpin }] : []),
-                { title: 'Удалить мерчанта', danger: true, onPress: remove },
-              ]}
+              extra={[{ title: 'Удалить мерчанта', danger: true, onPress: remove }]}
             />
           </SheetScrollView>
         )}
