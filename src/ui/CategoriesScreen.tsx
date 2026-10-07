@@ -16,7 +16,6 @@ import { onTransactionsChanged } from '../events';
 import Checkbox from './Checkbox';
 import MergeCategoriesSheet from './MergeCategoriesSheet';
 import Button from './Button';
-import { plural } from './format';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Categories'>;
 
@@ -117,7 +116,7 @@ export default function CategoriesScreen({ navigation }: Props) {
     />
     {picked.length > 1 ? (
       <View style={styles.bottomBar}>
-        <Button title={`Объединить ${picked.length} ${plural(picked.length, ['категорию', 'категории', 'категорий'])}`} onPress={() => setMerging(picked)} />
+        <Button title={`Объединить (${picked.length})`} onPress={() => setMerging(picked)} />
       </View>
     ) : null}
     <MergeCategoriesSheet
