@@ -1,14 +1,14 @@
 # Screenshots of the main screens of a published build, on demand (Actions → "Screenshots" → Run workflow, or the
 # API): an Android 13 emulator, the build's APK with a demo database in place of the app's (scripts/demo), Maestro
 # shooting the month, week, day, plan and operations screens. The PNGs are added to that build's release as
-# screenshots-N.zip. Not run on every push: the emulator takes ~10 minutes.
+# screenshots-1.0.N.zip. Not run on every push: the emulator takes ~10 minutes.
 name: Screenshots
 
 on:
   workflow_dispatch:
     inputs:
       build:
-        description: 'Release tag, e.g. build-52 (empty: the latest build)'
+        description: 'Release tag, e.g. v1.0.3 (empty: the latest build)'
         required: false
         default: ''
 
@@ -36,7 +36,7 @@ jobs:
           TAG="${{ inputs.build }}"
           [ -n "$TAG" ] || TAG="$(gh release view --json tagName -q .tagName)"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "number=${TAG#build-}" >> "$GITHUB_OUTPUT"
+          echo "number=${TAG#v}" >> "$GITHUB_OUTPUT"
           # the demo database and the flows of that build's code (its schema)
           git checkout --quiet "$TAG"
           gh release download "$TAG" -p 'budget-app-*.apk' -D "$RUNNER_TEMP/apk"

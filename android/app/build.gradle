@@ -8,6 +8,12 @@ react {
 
 def jscFlavor = 'org.webkit:android-jsc:+'
 
+// versionCode: the number of commits, so every build (CI or local) installs over an older one; versionName: "1.0.N"
+// from CI (BUDGETAPP_VERSION_NAME), a local build says "-dev"
+def commitCount = { ->
+    try { return 'git rev-list --count HEAD'.execute(null, rootDir).text.trim().toInteger() } catch (ignored) { return 1 }
+}
+
 android {
     ndkVersion rootProject.ext.ndkVersion
     compileSdkVersion rootProject.ext.compileSdkVersion
@@ -18,8 +24,8 @@ android {
         applicationId "com.budgetapp"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "0.1"
+        versionCode commitCount()
+        versionName(project.findProperty('BUDGETAPP_VERSION_NAME') ?: "1.0-dev")
     }
 
     compileOptions {

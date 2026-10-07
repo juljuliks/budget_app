@@ -1,5 +1,6 @@
 # Builds the release APK, signed with the app's release key, on every push to main (or by hand from the Actions
-# tab), and publishes it as a GitHub release — so a new build can be downloaded and installed right from the phone.
+# tab), and publishes it as a GitHub release "1.0.N" — so a new build can be downloaded and installed right from the
+# phone. N counts the builds since 1.0.0; only the last KEEP_RELEASES releases are kept.
 #
 # One-time setup (repo → Settings → Secrets and variables → Actions → New repository secret):
 #   BUDGETAPP_KEYSTORE_BASE64          the release keystore file as base64 (macOS: base64 -i release.keystore | pbcopy)
@@ -22,11 +23,23 @@ concurrency:
   group: android-release
   cancel-in-progress: true
 
+env:
+  # the run that built 1.0.0: later runs are 1.0.1, 1.0.2, …
+  VERSION_BASE_RUN: 57
+  KEEP_RELEASES: 5
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      # the whole history: the versionCode is the number of commits (android/app/build.gradle)
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Version
+        id: version
+        run: echo "name=1.0.$(( ${{ github.run_number }} - VERSION_BASE_RUN ))" >> "$GITHUB_OUTPUT"
 
       - name: Check the release key secrets
         env:
@@ -70,20 +83,30 @@ jobs:
           ORG_GRADLE_PROJECT_BUDGETAPP_RELEASE_STORE_PASSWORD: ${{ secrets.BUDGETAPP_RELEASE_STORE_PASSWORD }}
           ORG_GRADLE_PROJECT_BUDGETAPP_RELEASE_KEY_ALIAS: ${{ secrets.BUDGETAPP_RELEASE_KEY_ALIAS }}
           ORG_GRADLE_PROJECT_BUDGETAPP_RELEASE_KEY_PASSWORD: ${{ secrets.BUDGETAPP_RELEASE_KEY_PASSWORD }}
+          ORG_GRADLE_PROJECT_BUDGETAPP_VERSION_NAME: ${{ steps.version.outputs.name }}
         run: |
           chmod +x ./gradlew
           ./gradlew assembleRelease --no-daemon
-          cp app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/budget-app-${{ github.run_number }}.apk"
+          cp app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/budget-app-${{ steps.version.outputs.name }}.apk"
 
       - name: Publish as a release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: build-${{ github.run_number }}
-          name: Сборка ${{ github.run_number }}
+          tag_name: v${{ steps.version.outputs.name }}
+          name: ${{ steps.version.outputs.name }}
           body: |
             Коммит ${{ github.sha }}: ${{ github.event.head_commit.message }}
 
-            Скачайте `budget-app-${{ github.run_number }}.apk` на телефоне и откройте — установится поверх, данные сохранятся.
-          files: ${{ runner.temp }}/budget-app-${{ github.run_number }}.apk
+            Скачайте `budget-app-${{ steps.version.outputs.name }}.apk` на телефоне и откройте — установится поверх, данные сохранятся.
+          files: ${{ runner.temp }}/budget-app-${{ steps.version.outputs.name }}.apk
           make_latest: true
+
+      # the old per-push "Сборка N" releases, and versions older than the last KEEP_RELEASES, go with their tags
+      - name: Drop old releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release list --limit 200 --json tagName,createdAt -q 'sort_by(.createdAt) | reverse | .[].tagName' > "$RUNNER_TEMP/releases"
+          { grep '^build-' "$RUNNER_TEMP/releases" || true; grep '^v' "$RUNNER_TEMP/releases" | tail -n +$(( KEEP_RELEASES + 1 )) || true; } \
+            | while read -r tag; do gh release delete "$tag" --cleanup-tag -y; done
 
