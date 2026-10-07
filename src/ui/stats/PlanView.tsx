@@ -36,6 +36,9 @@ const RING_FREE = colors.income;
 const RING_SAVINGS = '#5eead4';
 /** 🔒 locked for savings: the darker part of the savings */
 const RING_LOCKED = '#0f766e';
+/** the budget's bar, and the 🔒 over its locked part: twice as tall */
+const BAR_HEIGHT = 12;
+const LOCK_BADGE = BAR_HEIGHT * 2;
 /** the share set aside for spending outside the plan */
 const RING_UNPLANNED = '#eda100';
 
@@ -80,6 +83,8 @@ function groupByType(items: PlanItem[]): Array<{ title: string; planned: number;
 export default function PlanView({ ym, currency }: { ym: string; currency: Currency }) {
   const hidden = useHideAmounts();
   const [items, setItems] = useState<PlanItem[] | null>(null);
+  // where the locked part sits in the budget's bar: its 🔒 is drawn over it, taller than the bar
+  const [lockBox, setLockBox] = useState<{ x: number; width: number } | null>(null);
   // amount to distribute (e.g. salary) in its own currency; null = not set (shown as 0, no cap)
   const [budget, setBudget] = useState<PlanBudget | null>(null);
   // converts an amount to the screen's currency on the plan's rate date (null: no rate known)
@@ -275,15 +280,23 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
 
         {shownBudget ? (
           <>
-            <View style={styles.bar} accessibilityLabel={`Запланировано ${percentOf(total, shownBudget) || '0%'} бюджета`}>
-              {/* the savings part: the leftover light, the locked part dark with 🔒 at the end */}
-              {parts.filter((p) => p.key !== 'locked').map((p) => (p.key === 'free' && toSavings && timing !== 'past' ? (
-                <React.Fragment key={p.key}>
-                  {(free ?? 0) > 0 ? <View style={{ flex: free!, backgroundColor: p.color }} /> : null}
-                  {locked > 0 ? <View style={[styles.lockedPart, { flex: locked }]}><LockIcon color="#FFFFFF" size={9} /></View> : null}
-                </React.Fragment>
-              ) : p.value > 0 ? <View key={p.key} style={{ flex: p.value, backgroundColor: p.color }} /> : null))}
-              {!toSavings && locked > 0 ? <View style={[styles.lockedPart, { flex: locked }]}><LockIcon color="#FFFFFF" size={9} /></View> : null}
+            <View style={styles.barBox}>
+              <View style={styles.bar} accessibilityLabel={`Запланировано ${percentOf(total, shownBudget) || '0%'} бюджета`}>
+                {/* the savings part: the leftover light, the locked part dark, its 🔒 drawn over it below */}
+                {parts.filter((p) => p.key !== 'locked').map((p) => (p.key === 'free' && toSavings && timing !== 'past' ? (
+                  <React.Fragment key={p.key}>
+                    {(free ?? 0) > 0 ? <View style={{ flex: free!, backgroundColor: p.color }} /> : null}
+                    {locked > 0 ? <View style={[styles.lockedPart, { flex: locked }]} onLayout={(e) => setLockBox({ x: e.nativeEvent.layout.x, width: e.nativeEvent.layout.width })} /> : null}
+                  </React.Fragment>
+                ) : p.value > 0 ? <View key={p.key} style={{ flex: p.value, backgroundColor: p.color }} /> : null))}
+                {!toSavings && locked > 0 ? <View style={[styles.lockedPart, { flex: locked }]} onLayout={(e) => setLockBox({ x: e.nativeEvent.layout.x, width: e.nativeEvent.layout.width })} /> : null}
+              </View>
+              {/* the 🔒 twice the bar's height, in the middle of the locked part, sticking out above and below */}
+              {locked > 0 && lockBox ? (
+                <View pointerEvents="none" style={[styles.lockBadgeBox, { left: lockBox.x, width: lockBox.width }]}>
+                  <View style={styles.lockBadge}><LockIcon color="#FFFFFF" size={LOCK_BADGE - 10} /></View>
+                </View>
+              ) : null}
             </View>
             <View style={styles.parts}>
               {/* no share for spending outside the plan: no column for it */}
@@ -471,7 +484,13 @@ const styles = StyleSheet.create({
   left: { textAlign: 'left' },
   budgetAmounts: { alignItems: 'flex-end' },
   budgetOriginal: { fontSize: 13, color: colors.muted, fontVariant: ['tabular-nums'] },
-  bar: { flexDirection: 'row', height: 12, borderRadius: 5, overflow: 'hidden', gap: 2, marginTop: 10, backgroundColor: chart.track },
+  barBox: { marginTop: 10 },
+  bar: { flexDirection: 'row', height: BAR_HEIGHT, borderRadius: 5, overflow: 'hidden', gap: 2, backgroundColor: chart.track },
+  lockBadgeBox: { position: 'absolute', top: (BAR_HEIGHT - LOCK_BADGE) / 2, height: LOCK_BADGE, alignItems: 'center', justifyContent: 'center' },
+  lockBadge: {
+    width: LOCK_BADGE, height: LOCK_BADGE, borderRadius: LOCK_BADGE / 2, backgroundColor: RING_LOCKED,
+    borderWidth: 2, borderColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center',
+  },
   parts: { flexDirection: 'row', gap: 8, marginTop: 10 },
   part: { flex: 1 },
   legend: { flexDirection: 'row', alignItems: 'center', gap: 5 },
