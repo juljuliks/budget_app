@@ -30,7 +30,7 @@ import { ChevronRightIcon, PencilIcon, SearchIcon } from './icons';
 import { DayRange, formatRange, rangeToUnix } from './RangeCalendar';
 import { ActiveFilter, AllFiltersSheet, DateSheet, FilterButton, OptionsSheet } from './FilterSheets';
 import { colors } from './theme';
-import { confirmDeleteTransaction } from './transactionActions';
+import { confirmDeleteTransaction, confirmDeleteTransactions } from './transactionActions';
 import TransactionItem from './TransactionItem';
 import { toast, toastError } from './toast';
 import { showLimitAlert } from '../notifications/notifeeIntegration';
@@ -515,7 +515,11 @@ export default function TransactionsList() {
           {unreadSelected.length > 0 ? (
             <Button title={`Отметить просмотренными (${unreadSelected.length})`} onPress={readSelected} style={styles.secondaryButton} />
           ) : null}
-          <Button title={`Изменить категорию (${selected.size})`} onPress={() => setBulkOpen(true)} />
+          {/* as on the merchants: the category and deleting, side by side */}
+          <View style={styles.bottomActions}>
+            <Button title={`Категория (${selected.size})`} onPress={() => setBulkOpen(true)} style={styles.bottomButton} />
+            <Button title={`Удалить (${selected.size})`} danger onPress={() => confirmDeleteTransactions(selectedRows, endSelect)} style={styles.bottomButton} />
+          </View>
         </View>
       ) : null}
       {/* hidden in edit mode (it would cover the ✎ / 🗑 of the last row) and while selecting (the actions bar) */}
@@ -597,6 +601,8 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
   },
   bottomBarStack: { gap: 8 },
+  bottomActions: { flexDirection: 'row', gap: 10 },
+  bottomButton: { flex: 1 },
   secondaryButton: { backgroundColor: colors.muted },
   empty: { padding: 32, textAlign: 'center', color: colors.muted },
   dayHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
