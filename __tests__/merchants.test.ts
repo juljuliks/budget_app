@@ -4,7 +4,7 @@ import { getDb } from '../src/db';
 import { ingestSms } from '../src/ingest';
 import { assignCategory, categoryChangeTotals, merchantChangePreview } from '../src/assign';
 import {
-  addMerchantCategory, deleteMerchants, listMerchants, merchantCategories, merchantsCategoryPreview, removeMerchantCategory, setMerchantCategory, setMerchantMixed, setMerchantsCategory,
+  addMerchantCategory, deleteMerchants, listMerchants, merchantCategories, merchantFollowers, merchantsCategoryPreview, removeMerchantCategory, setMerchantCategory, setMerchantMixed, setMerchantsCategory,
 } from '../src/db/merchants';
 import { findCategoryForMerchant } from '../src/categorize';
 import { freshDb } from './helpers';
@@ -29,18 +29,31 @@ test('the list: merchants of purchases with their category, most frequent first'
   expect(list.map((m) => [m.id, m.name, m.count, m.category_id])).toEqual([['SPAR VAKE', 'SPAR VAKE', 2, 1], ['WOLT', 'WOLT', 1, null]]);
 });
 
-test('setting / removing a merchant category: followers change, manual choices stay; removing changes nothing', async () => {
+test('setting / removing a merchant category: followers change, manual choices stay', async () => {
   const a = await sms('SPAR');
   const b = await sms('SPAR');
   await assignCategory(a, 1);          // SPAR -> 1, b follows
   await assignCategory(b, 3, 'only');  // b: a manual choice
+  expect((await merchantFollowers('SPAR')).count).toBe(1);
   await setMerchantCategory('SPAR', 2);
   expect([await categoryOf(a), await categoryOf(b)]).toEqual([2, 3]);
   await setMerchantCategory('SPAR', null);
   expect(await findCategoryForMerchant('SPAR')).toBeNull();
-  expect([await categoryOf(a), await categoryOf(b)]).toEqual([2, 3]);
+  expect([await categoryOf(a), await categoryOf(b)]).toEqual([null, 3]);
   const c = await sms('SPAR');
   expect(await categoryOf(c)).toBeNull(); // arrives without a category again
+});
+
+test('changing / removing a merchant category keeping the past: its operations keep theirs, no longer following it', async () => {
+  const a = await sms('SPAR');
+  await assignCategory(a, 1);
+  await setMerchantCategory('SPAR', 2, 'keep');
+  expect(await categoryOf(a)).toBe(1);
+  expect((await findCategoryForMerchant('SPAR'))?.category_id).toBe(2);
+  expect((await merchantFollowers('SPAR')).count).toBe(0);
+  expect(await categoryOf(await sms('SPAR'))).toBe(2);
+  await setMerchantCategory('SPAR', null, 'keep');
+  expect(await categoryOf(a)).toBe(1);
 });
 
 test('one category for several merchants: their followers change, manual choices stay; the preview counts what changes', async () => {

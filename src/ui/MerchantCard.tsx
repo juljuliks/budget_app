@@ -3,8 +3,7 @@ import { StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import BottomSheet, { SheetScrollView } from './BottomSheet';
 import { sheetAlert } from './sheetAlert';
 import { useNavigation } from '@react-navigation/native';
-import { categoryChangeTotals } from '../assign';
-import { addMerchantCategory, deleteMerchants, getMerchant, merchantCategories, MerchantDetails, merchantUsedCategories, removeMerchantCategory, setMerchantCategory, setMerchantMixed } from '../db/merchants';
+import { addMerchantCategory, deleteMerchants, getMerchant, merchantFollowers, merchantCategories, MerchantDetails, merchantUsedCategories, removeMerchantCategory, setMerchantCategory, setMerchantMixed } from '../db/merchants';
 import { categoryLabel, categoryLabelOf, listCategories } from '../db/categories';
 import { categoryColors } from '../db/colors';
 import { emitTransactionsChanged } from '../events';
@@ -134,28 +133,33 @@ export default function MerchantCard({ merchantId, categories: given, onClose, o
         });
       return;
     }
-    if (single === null) {
-      // "Без категории" (or "Разные категории" switched off with nothing picked): nothing retroactive, no question —
-      // past operations keep their categories, new ones arrive without one
-      run(async () => {
-        if (m.mixed) await setMerchantMixed(m.id, false);
-        else await setMerchantCategory(m.id, null);
-        toast(`Новые операции «${m.name}» будут приходить без категории`);
-      });
+    const name = single === null ? null : await label(single);
+    const apply = (past: 'change' | 'keep') => async () => {
+      if (single === null && m.mixed) await setMerchantMixed(m.id, false);
+      else await setMerchantCategory(m.id, single, past);
+      toast(name ? `Категория «${name}» назначена мерчанту «${m.name}»` : `Новые операции «${m.name}» будут приходить без категории`);
+    };
+    // its first category, none for one of different categories: nothing to change in the past, no question
+    if (m.category_id === null) {
+      if (m.mixed && name) {
+        confirm(`Категория «${name}» для «${m.name}»`, 'Новые операции мерчанта будут получать её автоматически. Разные категории выключатся.', apply('change'));
+      } else run(apply('change'));
       return;
     }
-    const name = await label(single);
-    const assign = async () => { await setMerchantCategory(m.id, single); toast(`Категория «${name}» назначена мерчанту «${m.name}»`); };
-    // a merchant without a category yet: nothing to warn about, it just gets one
-    if (m.category_id === null && !m.mixed) { run(assign); return; }
-    const totals = await categoryChangeTotals(m.id, single);
-    const n = totals.reduce((a, t) => a + t.n, 0);
-    confirm(
-      `Категория «${name}» для «${m.name}»`,
-      `Новые операции мерчанта будут получать её автоматически.${n > 0
-        ? ` Категория изменится у ${n} ${plural(n, ['операции', 'операций', 'операций'])} на ${money(totals)}.`
-        : ''} Выбранные вручную категории не изменятся.${m.mixed ? ' Разные категории выключатся.' : ''}`,
-      assign);
+    // another category or none: the past operations that followed the old one — changed with it, or kept as they are
+    const followers = await merchantFollowers(m.id);
+    if (followers.count === 0) { run(apply('change')); return; }
+    const old = await label(m.category_id);
+    const n = followers.count;
+    sheetAlert(
+      name ? `Категория «${name}» для «${m.name}»` : `Без категории для «${m.name}»`,
+      `Новые операции будут ${name ? `получать «${name}»` : 'приходить без категории'}. А ${n} ${plural(n, ['прошлая операция', 'прошлые операции', 'прошлых операций'])} `
+        + `на ${money(followers.totals)} с «${old}» от мерчанта? Выбранные вручную категории не изменятся.`,
+      [
+        { text: 'Отмена', style: 'cancel' },
+        { text: name ? 'Сменить и у них' : 'Убрать и у них', onPress: () => run(apply('change')) },
+        { text: 'Оставить у прошлых', style: 'secondary', onPress: () => run(apply('keep')) },
+      ]);
   }
 
   // its operations stay with their categories, without the merchant (as deleting from the merchants' list)

@@ -109,19 +109,36 @@ export async function getMerchant(id: string): Promise<MerchantDetails | null> {
 }
 
 /**
- * Sets (or with null removes) a merchant's category. Setting it also changes the merchant's transactions that
- * follow it (not the manual choices). Removing it changes no transaction: new ones just arrive without one.
+ * Sets (or with null removes) a merchant's category; new operations get it (or arrive without one). `past`: its
+ * operations that follow it (not the manual choices) change too ('change': to the new one, or to none), or keep theirs
+ * as their own ('keep': they no longer follow the merchant).
  */
-export async function setMerchantCategory(id: string, categoryId: number | null) {
+export async function setMerchantCategory(id: string, categoryId: number | null, past: 'change' | 'keep' = 'change') {
   const db = await getDb();
   // one category of its own: no longer of different ones
   await db.run('DELETE FROM mixed_merchants WHERE merchant_key = ?', [id]);
+  if (past === 'keep') await db.run(`UPDATE transactions SET category_source = 'user' WHERE merchant_key = ? AND category_source = 'rule'`, [id]);
   if (categoryId === null) {
     await db.run("DELETE FROM merchant_rules WHERE match_type = 'exact' AND pattern = ?", [id]);
+    if (past === 'change') {
+      await db.run(`UPDATE transactions SET category_id = NULL, category_source = NULL WHERE merchant_key = ? AND category_source = 'rule'
+        AND (kind IN ${KINDS} OR (kind = 'refund' AND refund_settled_at IS NULL))`, [id]);
+    }
     return;
   }
   await createRule('exact', id, categoryId);
-  await backfillRule('exact', id, categoryId);
+  if (past === 'change') await backfillRule('exact', id, categoryId);
+}
+
+/** A merchant's operations that follow its category (not the manual choices): how many, per currency how much. */
+export async function merchantFollowers(id: string): Promise<{ count: number; totals: Array<{ currency: string; amount_minor: number }> }> {
+  const db = await getDb();
+  const rows = await db.all<{ currency: string; amount_minor: number; n: number }>(
+    `SELECT currency, sum(CASE WHEN kind = 'refund' THEN -amount_minor ELSE amount_minor END) AS amount_minor, count(*) AS n FROM transactions
+      WHERE merchant_key = ? AND category_source = 'rule' AND category_id IS NOT NULL
+        AND (kind IN ${KINDS} OR (kind = 'refund' AND refund_settled_at IS NULL))
+      GROUP BY currency ORDER BY amount_minor DESC`, [id]);
+  return { count: rows.reduce((a, r) => a + r.n, 0), totals: rows.map(({ currency, amount_minor }) => ({ currency, amount_minor })) };
 }
 
 /**
@@ -227,4 +244,4 @@ export async function deleteMerchants(keys: string[]): Promise<number> {
   return changed;
 }
 
-export default { listMerchants, getMerchant, setMerchantCategory, setMerchantMixed, merchantCategories, addMerchantCategory, removeMerchantCategory, setMerchantsCategory, merchantsCategoryPreview, deleteMerchants };
+export default { listMerchants, getMerchant, setMerchantCategory, merchantFollowers, setMerchantMixed, merchantCategories, addMerchantCategory, removeMerchantCategory, setMerchantsCategory, merchantsCategoryPreview, deleteMerchants };
