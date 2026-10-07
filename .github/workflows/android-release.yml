@@ -25,7 +25,7 @@ concurrency:
 
 env:
   # the run that built 1.0.0: later runs are 1.0.1, 1.0.2, … (moved here when 1.0.0 was rebuilt with everything since)
-  VERSION_BASE_RUN: 69
+  VERSION_BASE_RUN: 74
   KEEP_RELEASES: 5
 
 jobs:
