@@ -3,6 +3,11 @@
 appId: com.budgetapp
 ---
 - launchApp
+# the app opens on the tab it was left on: the stats first
+- extendedWaitUntil:
+    visible: "Статистика"
+    timeout: 30000
+- tapOn: "Статистика"
 - extendedWaitUntil:
     visible: "План"
     timeout: 30000
