@@ -4,15 +4,12 @@ import BottomSheet, { SheetScrollView } from './BottomSheet';
 import { sheetAlert } from './sheetAlert';
 import { useNavigation } from '@react-navigation/native';
 import { categoryChangeTotals } from '../assign';
-import { addMerchantCategory, getMerchant, merchantCategories, MerchantDetails, removeMerchantCategory, setMerchantCategory, setMerchantMixed } from '../db/merchants';
+import { addMerchantCategory, getMerchant, merchantCategories, MerchantDetails, merchantUsedCategories, removeMerchantCategory, setMerchantCategory, setMerchantMixed } from '../db/merchants';
 import { categoryLabel, categoryLabelOf, listCategories } from '../db/categories';
 import { categoryColors } from '../db/colors';
 import { emitTransactionsChanged } from '../events';
-import Button from './Button';
+import { SheetActions } from './Button';
 import CategoryPicker from './CategoryPicker';
-import CategoryPickerModal from './CategoryPickerModal';
-import Chip from './Chip';
-import { PencilIcon } from './icons';
 import { plural } from './format';
 import type { CategoryInfo } from './MerchantsScreen';
 import { colors } from './theme';
@@ -34,20 +31,21 @@ const money = (totals: Array<{ currency: string; amount_minor: number }>) =>
   totals.map((t) => formatMoneyWithCurrency(t.amount_minor, t.currency)).join(' + ');
 
 /**
- * A merchant's card (bottom sheet): its operations and its category (change / unpin), or — a merchant of different
- * categories — its list of categories, offered for its operations.
+ * A merchant's card (bottom sheet): its operations, "Разные категории", and the categories right in it — the merchant's
+ * one, or, of different categories, several (offered for its operations); "Сохранить" says what it means first.
  */
 export default function MerchantCard({ merchantId, categories: given, onClose, onChanged, onLeave }: Props) {
   const navigation = useNavigation();
   const [m, setM] = useState<MerchantDetails | null>(null);
   const [loaded, setLoaded] = useState<Map<number, CategoryInfo>>(new Map());
   const categories = given ?? loaded;
-  // of different categories: its list, how many of its operations each has
-  const [had, setHad] = useState<Array<{ id: number; label: string; n: number }>>([]);
-  // adding to that list (the categories sheet)
-  const [adding, setAdding] = useState(false);
-  // the categories sheet ("Сменить"); a merchant without a category shows them right in the card
-  const [picking, setPicking] = useState(false);
+  // what the card edits, saved with "Сохранить": of different categories or not, the merchant's category, its list
+  const [mixed, setMixed] = useState(false);
+  const [single, setSingle] = useState<number | null>(null);
+  const [list, setList] = useState<number[]>([]);
+  // the saved list (to tell what changed)
+  const [savedList, setSavedList] = useState<number[]>([]);
+  const [saving, setSaving] = useState(false);
 
   // the parent passes onClose inline: kept in a ref so a parent re-render doesn't reset and reload the card
   const onCloseRef = useRef(onClose);
@@ -55,13 +53,15 @@ export default function MerchantCard({ merchantId, categories: given, onClose, o
 
   const load = useCallback(() => {
     if (merchantId === null) return;
-    getMerchant(merchantId).then((d) => {
+    Promise.all([getMerchant(merchantId), merchantCategories(merchantId, 100)]).then(([d, cs]) => {
       setM(d);
       // the merchant is gone (deleted meanwhile)
-      if (!d) onCloseRef.current();
+      if (!d) { onCloseRef.current(); return; }
+      setMixed(d.mixed);
+      setSingle(d.category_id);
+      setList(cs.map((c) => c.id));
+      setSavedList(cs.map((c) => c.id));
     }).catch((e) => console.error('load merchant failed', e));
-    merchantCategories(merchantId, 100).then((cs) => setHad(cs.map((c) => ({ id: c.id, label: categoryLabel(c), n: c.n }))))
-      .catch((e) => console.error('load merchant categories failed', e));
   }, [merchantId]);
 
   // opened from an operation: the labels aren't passed in
@@ -74,8 +74,8 @@ export default function MerchantCard({ merchantId, categories: given, onClose, o
 
   // a new merchant: start clean
   useEffect(() => {
-    setPicking(false);
     setM(null);
+    setSaving(false);
     load();
   }, [merchantId, load]);
 
@@ -85,29 +85,68 @@ export default function MerchantCard({ merchantId, categories: given, onClose, o
     load();
   }
 
-  async function pick(categoryId: number | null) {
-    if (!m || categoryId === null || categoryId === m.category_id) { setPicking(false); return; }
-    const totals = await categoryChangeTotals(m.id, categoryId);
-    const n = totals.reduce((s, t) => s + t.n, 0);
-    // a category just created from the picker isn't in the screen's list yet
-    const label = categories.get(categoryId)?.label ?? await categoryLabelOf(categoryId);
-    sheetAlert(
-      `Категория «${label}» для «${m.name}»?`,
+  const label = async (id: number) => categories.get(id)?.label ?? await categoryLabelOf(id);
+  const sameList = list.length === savedList.length && list.every((id) => savedList.includes(id));
+  const dirty = !!m && (mixed !== m.mixed || (mixed ? !sameList : single !== m.category_id));
+
+  // switched on with an empty list: the categories its operations have, picked already
+  function switchMixed(on: boolean) {
+    setMixed(on);
+    if (on && m && list.length === 0) merchantUsedCategories(m.id).then(setList).catch((e) => console.error('load used categories failed', e));
+  }
+
+  function toggle(id: number | null) {
+    if (id === null) return;
+    if (mixed) setList((l) => (l.includes(id) ? l.filter((x) => x !== id) : [...l, id]));
+    else setSingle(id);
+  }
+
+  // "Сохранить": what the choice means, then save
+  async function save() {
+    if (!m || !dirty) return;
+    const confirm = (title: string, message: string, apply: () => Promise<void>) => sheetAlert(title, message, [
+      { text: 'Отмена', style: 'cancel' },
+      {
+        text: 'Продолжить', onPress: () => {
+          setSaving(true);
+          apply().then(changed).catch((e) => { console.error('save merchant failed', e); toastError('Не удалось сохранить'); })
+            .finally(() => setSaving(false));
+        },
+      },
+    ]);
+    if (mixed) {
+      const names = await Promise.all(list.map(label));
+      const pinned = m.category_id !== null ? await label(m.category_id) : null;
+      confirm(
+        names.length ? `Разные категории у «${m.name}»: ${names.map((n) => `«${n}»`).join(', ')}` : `Разные категории у «${m.name}»`,
+        `Каждая новая операция «${m.name}» будет спрашивать категорию${names.length ? ' — в уведомлении кнопками будут эти категории' : ''}. `
+          + 'Категория, выбранная для операции, добавится к ним. '
+          + (pinned ? `Категория мерчанта «${pinned}» открепится, у прошлых операций она останется.` : 'У прошлых операций категории не изменятся.'),
+        async () => {
+          await setMerchantMixed(m.id, true);
+          // the list as picked: setMerchantMixed adds the ones its operations had
+          const now = (await merchantCategories(m.id, 1000)).map((c) => c.id);
+          for (const id of now) if (!list.includes(id)) await removeMerchantCategory(m.id, id);
+          for (const id of list) if (!now.includes(id)) await addMerchantCategory(m.id, id);
+          toast(`«${m.name}»: разные категории`);
+        });
+      return;
+    }
+    if (single === null) {
+      // "Разные категории" off, nothing picked
+      confirm(`Выключить разные категории у «${m.name}»?`, `Новые операции «${m.name}» будут приходить без категории, пока её не выбрать.`,
+        () => setMerchantMixed(m.id, false));
+      return;
+    }
+    const totals = await categoryChangeTotals(m.id, single);
+    const n = totals.reduce((a, t) => a + t.n, 0);
+    const name = await label(single);
+    confirm(
+      `Категория «${name}» для «${m.name}»`,
       `Новые операции мерчанта будут получать её автоматически.${n > 0
         ? ` Категория изменится у ${n} ${plural(n, ['операции', 'операций', 'операций'])} на ${money(totals)}.`
-        : ''} Выбранные вручную категории не изменятся.`,
-      [
-        { text: 'Отмена', style: 'cancel' },
-        {
-          text: 'Сохранить', onPress: () => {
-            setMerchantCategory(m.id, categoryId).then(() => {
-              setPicking(false);
-              changed();
-              toast(`Категория «${label}» назначена мерчанту «${m.name}»`);
-            }).catch((e) => { console.error('set merchant category failed', e); toastError('Не удалось сохранить'); });
-          },
-        },
-      ]);
+        : ''} Выбранные вручную категории не изменятся.${m.mixed ? ' Разные категории выключатся.' : ''}`,
+      async () => { await setMerchantCategory(m.id, single); toast(`Категория «${name}» назначена мерчанту «${m.name}»`); });
   }
 
   function unpin() {
@@ -126,28 +165,6 @@ export default function MerchantCard({ merchantId, categories: given, onClose, o
       ]);
   }
 
-  // different categories: no category of its own, each new operation asks; off: none, until one is picked
-  function setMixed(on: boolean) {
-    if (!m) return;
-    setMerchantMixed(m.id, on).then(async () => {
-      changed();
-      // nothing in its list yet (its operations had no category): which categories it has, right away
-      if (on && (await merchantCategories(m.id)).length === 0) setAdding(true);
-    }).catch((e) => { console.error('set merchant mixed failed', e); toastError('Не удалось сохранить'); });
-  }
-
-  function addToList(categoryId: number | null) {
-    setAdding(false);
-    if (!m || categoryId === null) return;
-    addMerchantCategory(m.id, categoryId).then(changed).catch((e) => { console.error('add merchant category failed', e); toastError('Не удалось сохранить'); });
-  }
-
-  function removeFromList(categoryId: number) {
-    if (!m) return;
-    removeMerchantCategory(m.id, categoryId).then(changed).catch((e) => { console.error('remove merchant category failed', e); toastError('Не удалось сохранить'); });
-  }
-
-
   function showTransactions() {
     if (!m) return;
     onClose();
@@ -155,8 +172,6 @@ export default function MerchantCard({ merchantId, categories: given, onClose, o
     // the Transactions tab searching this merchant's name, back returns to the merchants (`as never`: a nested navigate the root types don't describe)
     navigation.navigate({ name: 'Main', params: { screen: 'Transactions', params: { query: m.name, nonce: Date.now(), from: 'Merchants' } } } as never);
   }
-
-  const category = m?.category_id != null ? categories.get(m.category_id) : undefined;
 
   return (
     <BottomSheet visible={merchantId !== null} onClose={onClose} style={styles.sheet}>
@@ -182,54 +197,25 @@ export default function MerchantCard({ merchantId, categories: given, onClose, o
                 <Text style={styles.switchTitle}>Разные категории</Text>
                 <Text style={styles.switchHint}>Каждая новая операция спрашивает категорию</Text>
               </View>
-              <Switch value={m.mixed} onValueChange={setMixed} trackColor={{ true: colors.accent, false: colors.border }} thumbColor={colors.bg} />
+              <Switch value={mixed} onValueChange={switchMixed} disabled={saving} trackColor={{ true: colors.accent, false: colors.border }} thumbColor={colors.bg} />
             </View>
 
-            {m.mixed ? (
-              // its list: offered for its operations; ✕ takes one off, ＋ adds (one picked for an operation joins by itself)
-              <>
-                <Text style={styles.heading}>Категории мерчанта</Text>
-                <View style={styles.currentRow}>
-                  {had.map((h) => (
-                    <Chip key={h.id} label={h.n ? `${h.label} · ${h.n}` : h.label} trailing="✕" onPress={() => removeFromList(h.id)} />
-                  ))}
-                  <Chip label="Добавить категорию" add onPress={() => setAdding(true)} />
-                </View>
-                <CategoryPickerModal
-                  visible={adding}
-                  title={had.length ? 'Добавить категорию' : `Какие категории бывают у «${m.name}»?`}
-                  selectedId={null}
-                  onPick={addToList}
-                  onClose={() => setAdding(false)}
-                />
-              </>
-            ) : category ? (
-              // the category and "Сменить" (the categories open in a sheet), as on an operation
-              <>
-                <Text style={styles.heading}>Категория</Text>
-                <View style={styles.currentRow}>
-                  <Chip label={category.label} selected />
-                  <TouchableOpacity style={styles.changeButton} onPress={() => setPicking(true)} accessibilityLabel="Сменить категорию">
-                    <PencilIcon color={colors.accent} size={16} />
-                    <Text style={styles.changeText}>Сменить</Text>
-                  </TouchableOpacity>
-                </View>
-                <Button title="Открепить категорию" danger outline onPress={unpin} style={styles.action} />
-                <CategoryPickerModal
-                  visible={picking}
-                  title="Сменить категорию"
-                  selectedId={m.category_id}
-                  onPick={(id) => { setPicking(false); pick(id); }}
-                  onClose={() => setPicking(false)}
-                />
-              </>
-            ) : (
-              // none yet: the categories right here, that's what the card is opened for
-              <View style={styles.pickerTop}>
-                <CategoryPicker title="Выберите категорию" selectedId={null} onSelect={pick} />
-              </View>
-            )}
+            {/* the categories right here: one for the merchant, or — different ones — several, offered for its operations */}
+            <View style={styles.pickerTop}>
+              <CategoryPicker
+                title={mixed ? 'Выберите категории' : 'Выберите категорию'}
+                selectedId={single}
+                selectedIds={mixed ? list : undefined}
+                onSelect={toggle}
+                disabled={saving}
+              />
+              {mixed ? <Text style={styles.hint}>Какие обычно категории у «{m.name}»? Они будут кнопками в уведомлении о новой операции.</Text> : null}
+            </View>
 
+            <SheetActions
+              submit={{ title: 'Сохранить', onPress: save, disabled: !dirty || saving }}
+              extra={!mixed && m.category_id !== null && !m.mixed ? [{ title: 'Открепить категорию', danger: true, onPress: unpin }] : undefined}
+            />
           </SheetScrollView>
         )}
     </BottomSheet>
@@ -243,18 +229,10 @@ const styles = StyleSheet.create({
   summaryRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 4 },
   meta: { fontSize: 14, color: colors.muted, flexShrink: 1 },
   link: { fontSize: 14, color: colors.accent },
-  heading: { fontSize: 13, fontWeight: '600', color: colors.muted, textTransform: 'uppercase', marginTop: 20, marginBottom: 8 },
-  action: { marginTop: 16 },
+  hint: { fontSize: 13, color: colors.muted, marginTop: 10 },
   switchRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 16 },
   switchText: { flex: 1 },
   switchTitle: { fontSize: 16, color: colors.text },
   switchHint: { fontSize: 13, color: colors.muted, marginTop: 2 },
   pickerTop: { marginTop: 8 },
-  currentRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
-  changeButton: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16,
-    borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed',
-  },
-  changeText: { fontSize: 15, color: colors.accent },
 });

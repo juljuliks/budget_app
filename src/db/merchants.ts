@@ -159,6 +159,14 @@ export async function merchantCategories(id: string, limit = 10): Promise<Array<
       ORDER BY n DESC, c.sort_order, c.id LIMIT ?`, [id, limit]);
 }
 
+/** The live categories a merchant's purchases / payments have, the most used first (what a new list starts with). */
+export async function merchantUsedCategories(id: string): Promise<number[]> {
+  const db = await getDb();
+  return (await db.all<{ id: number }>(
+    `SELECT t.category_id AS id FROM transactions t JOIN categories c ON c.id = t.category_id AND c.deleted_at IS NULL
+      WHERE t.merchant_key = ? AND t.kind IN ${KINDS} GROUP BY t.category_id ORDER BY count(*) DESC`, [id])).map((r) => r.id);
+}
+
 /** Adds a category to a merchant's list (picked for one of its operations, or by hand in its card). */
 export async function addMerchantCategory(id: string, categoryId: number) {
   const db = await getDb();

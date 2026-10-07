@@ -10,6 +10,8 @@ import SectionHeading from './SectionHeading';
 
 type Props = {
   selectedId?: number | null;
+  /** several picked (a merchant of different categories): each tap reports its id, the parent toggles it */
+  selectedIds?: number[];
   /** null only comes from the "Без категории" chip (allowNone) */
   onSelect: (id: number | null) => void;
   /** adds a "Без категории" chip (selected when selectedId is null) */
@@ -33,7 +35,7 @@ const COLLAPSED = 8;
  * focus / changes, so a category created or edited elsewhere shows up immediately.
  */
 export default function CategoryPicker({
-  selectedId, onSelect, allowNone = false, title = 'Категория', transferFirst = false, excludeIds, disabled, showAll = false,
+  selectedId, selectedIds, onSelect, allowNone = false, title = 'Категория', transferFirst = false, excludeIds, disabled, showAll = false,
 }: Props) {
   // "+": a new category in a sheet, picked right after it is created (as if tapped in the list)
   const [creating, setCreating] = useState(false);
@@ -59,11 +61,12 @@ export default function CategoryPicker({
   useEffect(() => onTransactionsChanged(load), [load]);
 
   const excluded = new Set(excludeIds ?? []);
+  const isSelected = (id: number) => (selectedIds ? selectedIds.includes(id) : id === selectedId);
   const available = categories.filter((c) => !excluded.has(c.id));
   const collapsible = !showAll && available.length > COLLAPSED + 1;
   // collapsed: the first COLLAPSED, plus the selected one when it's further down (the choice stays visible)
   const shown = !collapsible || expanded ? available
-    : available.filter((c, i) => i < COLLAPSED || c.id === selectedId);
+    : available.filter((c, i) => i < COLLAPSED || isSelected(c.id));
   const hidden = available.length - shown.length;
 
   return (
@@ -72,7 +75,7 @@ export default function CategoryPicker({
       <SectionHeading title={title} />
       <View style={styles.chips}>
         {shown.map((c) => (
-          <Chip key={c.id} label={categoryLabel(c)} selected={c.id === selectedId} disabled={disabled} onPress={() => onSelect(c.id)} compact />
+          <Chip key={c.id} label={categoryLabel(c)} selected={isSelected(c.id)} disabled={disabled} onPress={() => onSelect(c.id)} compact />
         ))}
         {allowNone ? (
           <Chip label="Без категории" selected={selectedId === null} disabled={disabled} onPress={() => onSelect(null)} compact />
