@@ -129,7 +129,9 @@ export async function deleteCategory(id: number, targetId: number | null, nowYm 
       await tx.run('DELETE FROM merchant_rules WHERE category_id = ?', [id]);
     } else {
       await tx.run('UPDATE merchant_rules SET category_id = ? WHERE category_id = ?', [targetId, id]);
+      await tx.run('UPDATE OR IGNORE merchant_categories SET category_id = ? WHERE category_id = ?', [targetId, id]);
     }
+    await tx.run('DELETE FROM merchant_categories WHERE category_id = ?', [id]);
     await tx.run('DELETE FROM plan_items WHERE category_id = ? AND ym >= ?', [id, nowYm]);
     await tx.run('DELETE FROM category_usage WHERE category_id = ?', [id]);
 

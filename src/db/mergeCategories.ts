@@ -49,6 +49,8 @@ export async function mergeCategories(targetId: number, sourceIds: number[], nam
   await db.transaction(async (tx) => {
     await tx.run(`UPDATE transactions SET category_id = ? WHERE category_id IN (${sourceMarks})`, [targetId, ...sources]);
     await tx.run(`UPDATE merchant_rules SET category_id = ? WHERE category_id IN (${sourceMarks})`, [targetId, ...sources]);
+    await tx.run(`UPDATE OR IGNORE merchant_categories SET category_id = ? WHERE category_id IN (${sourceMarks})`, [targetId, ...sources]);
+    await tx.run(`DELETE FROM merchant_categories WHERE category_id IN (${sourceMarks})`, sources);
     await tx.run(`DELETE FROM plan_items WHERE category_id IN (${marks})`, all);
     for (const m of merged) {
       await tx.run(

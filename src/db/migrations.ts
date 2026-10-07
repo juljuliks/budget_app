@@ -301,6 +301,18 @@ export const MIGRATIONS: MigrationStep[][] = [
       created_at INTEGER NOT NULL
     )`,
   ],
+  // 26: such a merchant's own list of categories (offered for its operations): filled with the ones its operations
+  // had when marked, then with every one picked for them; added and removed by hand in its card. Kept when unmarked.
+  [
+    `CREATE TABLE IF NOT EXISTS merchant_categories (
+      merchant_key TEXT NOT NULL,
+      category_id INTEGER NOT NULL,
+      PRIMARY KEY (merchant_key, category_id)
+    )`,
+    `INSERT OR IGNORE INTO merchant_categories (merchant_key, category_id)
+      SELECT DISTINCT t.merchant_key, t.category_id FROM transactions t JOIN mixed_merchants m ON m.merchant_key = t.merchant_key
+        WHERE t.category_id IS NOT NULL AND t.kind IN (${REMEMBERABLE_KINDS.map((k) => `'${k}'`).join(',')})`,
+  ],
 ];
 
 export async function getSchemaVersion(db: Db): Promise<number> {

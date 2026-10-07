@@ -4,7 +4,7 @@ import BottomSheet, { SheetScrollView } from './BottomSheet';
 import { sheetAlert } from './sheetAlert';
 import { useNavigation } from '@react-navigation/native';
 import { categoryChangeTotals } from '../assign';
-import { getMerchant, merchantCategories, MerchantDetails, setMerchantCategory, setMerchantMixed } from '../db/merchants';
+import { addMerchantCategory, getMerchant, merchantCategories, MerchantDetails, removeMerchantCategory, setMerchantCategory, setMerchantMixed } from '../db/merchants';
 import { categoryLabel, categoryLabelOf, listCategories } from '../db/categories';
 import { categoryColors } from '../db/colors';
 import { emitTransactionsChanged } from '../events';
@@ -35,15 +35,17 @@ const money = (totals: Array<{ currency: string; amount_minor: number }>) =>
 
 /**
  * A merchant's card (bottom sheet): its operations and its category (change / unpin), or — a merchant of different
- * categories — the ones its operations had.
+ * categories — its list of categories, offered for its operations.
  */
 export default function MerchantCard({ merchantId, categories: given, onClose, onChanged, onLeave }: Props) {
   const navigation = useNavigation();
   const [m, setM] = useState<MerchantDetails | null>(null);
   const [loaded, setLoaded] = useState<Map<number, CategoryInfo>>(new Map());
   const categories = given ?? loaded;
-  // of different categories: the ones its operations had, how many each
-  const [had, setHad] = useState<Array<{ label: string; n: number }>>([]);
+  // of different categories: its list, how many of its operations each has
+  const [had, setHad] = useState<Array<{ id: number; label: string; n: number }>>([]);
+  // adding to that list (the categories sheet)
+  const [adding, setAdding] = useState(false);
   // the categories sheet ("Сменить"); a merchant without a category shows them right in the card
   const [picking, setPicking] = useState(false);
 
@@ -58,7 +60,7 @@ export default function MerchantCard({ merchantId, categories: given, onClose, o
       // the merchant is gone (deleted meanwhile)
       if (!d) onCloseRef.current();
     }).catch((e) => console.error('load merchant failed', e));
-    merchantCategories(merchantId).then((cs) => setHad(cs.map((c) => ({ label: categoryLabel(c), n: c.n }))))
+    merchantCategories(merchantId, 100).then((cs) => setHad(cs.map((c) => ({ id: c.id, label: categoryLabel(c), n: c.n }))))
       .catch((e) => console.error('load merchant categories failed', e));
   }, [merchantId]);
 
@@ -127,9 +129,24 @@ export default function MerchantCard({ merchantId, categories: given, onClose, o
   // different categories: no category of its own, each new operation asks; off: none, until one is picked
   function setMixed(on: boolean) {
     if (!m) return;
-    setMerchantMixed(m.id, on).then(changed)
-      .catch((e) => { console.error('set merchant mixed failed', e); toastError('Не удалось сохранить'); });
+    setMerchantMixed(m.id, on).then(async () => {
+      changed();
+      // nothing in its list yet (its operations had no category): which categories it has, right away
+      if (on && (await merchantCategories(m.id)).length === 0) setAdding(true);
+    }).catch((e) => { console.error('set merchant mixed failed', e); toastError('Не удалось сохранить'); });
   }
+
+  function addToList(categoryId: number | null) {
+    setAdding(false);
+    if (!m || categoryId === null) return;
+    addMerchantCategory(m.id, categoryId).then(changed).catch((e) => { console.error('add merchant category failed', e); toastError('Не удалось сохранить'); });
+  }
+
+  function removeFromList(categoryId: number) {
+    if (!m) return;
+    removeMerchantCategory(m.id, categoryId).then(changed).catch((e) => { console.error('remove merchant category failed', e); toastError('Не удалось сохранить'); });
+  }
+
 
   function showTransactions() {
     if (!m) return;
@@ -169,15 +186,23 @@ export default function MerchantCard({ merchantId, categories: given, onClose, o
             </View>
 
             {m.mixed ? (
-              // what its operations had
-              had.length ? (
-                <>
-                  <Text style={styles.heading}>Категории операций</Text>
-                  <View style={styles.currentRow}>
-                    {had.map((h) => <Chip key={h.label} label={`${h.label} · ${h.n}`} />)}
-                  </View>
-                </>
-              ) : null
+              // its list: offered for its operations; ✕ takes one off, ＋ adds (one picked for an operation joins by itself)
+              <>
+                <Text style={styles.heading}>Категории мерчанта</Text>
+                <View style={styles.currentRow}>
+                  {had.map((h) => (
+                    <Chip key={h.id} label={h.n ? `${h.label} · ${h.n}` : h.label} trailing="✕" onPress={() => removeFromList(h.id)} />
+                  ))}
+                  <Chip label="Добавить категорию" add onPress={() => setAdding(true)} />
+                </View>
+                <CategoryPickerModal
+                  visible={adding}
+                  title={had.length ? 'Добавить категорию' : `Какие категории бывают у «${m.name}»?`}
+                  selectedId={null}
+                  onPick={addToList}
+                  onClose={() => setAdding(false)}
+                />
+              </>
             ) : category ? (
               // the category and "Сменить" (the categories open in a sheet), as on an operation
               <>

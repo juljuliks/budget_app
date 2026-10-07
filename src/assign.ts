@@ -24,6 +24,9 @@ export async function assignCategory(txId: number, categoryId: number | null, ch
   const forMerchant = categoryId !== null && key !== null
     && (choice === 'merchant' || (choice === undefined && !(await findCategoryForMerchant(key))));
 
+  // a merchant of different categories: a category picked for its operation joins its list
+  if (categoryId !== null && tx?.merchant_key && isRememberable(tx.kind) && key === null) await rememberForMixed([txId], categoryId);
+
   if (forMerchant) {
     await createRule('exact', key!, categoryId!);
     // this one follows the merchant from now on, like the ones the rule picked
@@ -153,7 +156,18 @@ export async function assignCategoryToMany(txIds: number[], categoryId: number |
         AND merchant_key IN (${merchants.map(() => '?').join(',')}) AND kind IN (${REMEMBERABLE_KINDS.map(() => '?').join(',')})`,
       [...txIds, ...merchants.map((m) => m.key), ...REMEMBERABLE_KINDS]);
   }
+  if (categoryId !== null) await rememberForMixed(txIds, categoryId);
   if (categoryId !== null) await incrementCategoryUsage(categoryId);
   emitTransactionsChanged();
   return merchants.length;
+}
+
+/** The category picked for these operations joins the lists of their merchants of different categories. */
+async function rememberForMixed(txIds: number[], categoryId: number) {
+  const db = await getDb();
+  await db.run(
+    `INSERT OR IGNORE INTO merchant_categories (merchant_key, category_id)
+      SELECT DISTINCT t.merchant_key, ? FROM transactions t JOIN mixed_merchants m ON m.merchant_key = t.merchant_key
+        WHERE t.id IN (${txIds.map(() => '?').join(',')}) AND t.kind IN (${REMEMBERABLE_KINDS.map(() => '?').join(',')})`,
+    [categoryId, ...txIds, ...REMEMBERABLE_KINDS]);
 }

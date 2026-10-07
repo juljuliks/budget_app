@@ -134,20 +134,41 @@ export async function setMerchantMixed(id: string, on: boolean) {
   await db.transaction(async (tx) => {
     if (!on) { await tx.run('DELETE FROM mixed_merchants WHERE merchant_key = ?', [id]); return; }
     await tx.run('INSERT OR IGNORE INTO mixed_merchants (merchant_key, created_at) VALUES (?, ?)', [id, Math.floor(Date.now() / 1000)]);
+    // its list starts with the categories its operations had (the rule's one included)
+    await tx.run(
+      `INSERT OR IGNORE INTO merchant_categories (merchant_key, category_id)
+        SELECT DISTINCT merchant_key, category_id FROM transactions WHERE merchant_key = ? AND category_id IS NOT NULL AND kind IN ${KINDS}`, [id]);
     await tx.run("DELETE FROM merchant_rules WHERE match_type = 'exact' AND pattern = ?", [id]);
     await tx.run("UPDATE transactions SET category_source = 'user' WHERE merchant_key = ? AND category_source = 'rule'", [id]);
   });
 }
 
-/** The categories a merchant's purchases / payments had (live ones), the most used first: what its new ones offer. */
+/**
+ * A merchant of different categories: its list of categories (live ones) with how many of its purchases / payments
+ * each has, the most used first — what its new operations offer.
+ */
 export async function merchantCategories(id: string, limit = 10): Promise<Array<{ id: number; name: string; emoji: string | null; type_name: string | null; n: number }>> {
   const db = await getDb();
   return db.all(
-    `SELECT c.id, c.name, c.emoji, ct.name AS type_name, count(*) AS n FROM transactions t
-      JOIN categories c ON c.id = t.category_id AND c.deleted_at IS NULL
+    `SELECT c.id, c.name, c.emoji, ct.name AS type_name,
+        (SELECT count(*) FROM transactions t WHERE t.merchant_key = mc.merchant_key AND t.category_id = c.id AND t.kind IN ${KINDS}) AS n
+      FROM merchant_categories mc
+      JOIN categories c ON c.id = mc.category_id AND c.deleted_at IS NULL
       LEFT JOIN category_types ct ON ct.id = c.type_id
-      WHERE t.merchant_key = ? AND t.kind IN ${KINDS}
-      GROUP BY c.id ORDER BY n DESC, max(t.occurred_at) DESC LIMIT ?`, [id, limit]);
+      WHERE mc.merchant_key = ?
+      ORDER BY n DESC, c.sort_order, c.id LIMIT ?`, [id, limit]);
+}
+
+/** Adds a category to a merchant's list (picked for one of its operations, or by hand in its card). */
+export async function addMerchantCategory(id: string, categoryId: number) {
+  const db = await getDb();
+  await db.run('INSERT OR IGNORE INTO merchant_categories (merchant_key, category_id) VALUES (?, ?)', [id, categoryId]);
+}
+
+/** Takes a category off a merchant's list: no longer offered (until picked for one of its operations again). */
+export async function removeMerchantCategory(id: string, categoryId: number) {
+  const db = await getDb();
+  await db.run('DELETE FROM merchant_categories WHERE merchant_key = ? AND category_id = ?', [id, categoryId]);
 }
 
 /**
@@ -192,9 +213,10 @@ export async function deleteMerchants(keys: string[]): Promise<number> {
       changed += res.changes;
       await tx.run("DELETE FROM merchant_rules WHERE match_type = 'exact' AND pattern = ?", [key]);
       await tx.run('DELETE FROM mixed_merchants WHERE merchant_key = ?', [key]);
+      await tx.run('DELETE FROM merchant_categories WHERE merchant_key = ?', [key]);
     }
   });
   return changed;
 }
 
-export default { listMerchants, getMerchant, setMerchantCategory, setMerchantMixed, merchantCategories, setMerchantsCategory, merchantsCategoryPreview, deleteMerchants };
+export default { listMerchants, getMerchant, setMerchantCategory, setMerchantMixed, merchantCategories, addMerchantCategory, removeMerchantCategory, setMerchantsCategory, merchantsCategoryPreview, deleteMerchants };

@@ -4,7 +4,7 @@ import { getDb } from '../src/db';
 import { ingestSms } from '../src/ingest';
 import { assignCategory, categoryChangeTotals, merchantChangePreview } from '../src/assign';
 import {
-  deleteMerchants, listMerchants, merchantCategories, merchantsCategoryPreview, setMerchantCategory, setMerchantMixed, setMerchantsCategory,
+  addMerchantCategory, deleteMerchants, listMerchants, merchantCategories, merchantsCategoryPreview, removeMerchantCategory, setMerchantCategory, setMerchantMixed, setMerchantsCategory,
 } from '../src/db/merchants';
 import { findCategoryForMerchant } from '../src/categorize';
 import { freshDb } from './helpers';
@@ -199,5 +199,19 @@ describe('a merchant of different categories', () => {
     await setMerchantCategory('WOLT', 3);
     expect(await findCategoryForMerchant('WOLT')).toEqual({ category_id: 3, source: 'rule' });
     expect((await listMerchants())[0].mixed).toBe(false);
+  });
+
+  test('its list: what its operations had when marked, added by hand or by a pick, removed by hand', async () => {
+    const op = await sms('WOLT');
+    await setMerchantMixed('WOLT', true);
+    expect(await merchantCategories('WOLT')).toEqual([]);
+    await addMerchantCategory('WOLT', 1);
+    await addMerchantCategory('WOLT', 2);
+    expect((await merchantCategories('WOLT')).map((c) => [c.id, c.n])).toEqual([[1, 0], [2, 0]]);
+    await assignCategory(op, 2);
+    expect((await merchantCategories('WOLT')).map((c) => [c.id, c.n])).toEqual([[2, 1], [1, 0]]);
+    await removeMerchantCategory('WOLT', 1);
+    await assignCategory(await sms('WOLT'), 3);
+    expect((await merchantCategories('WOLT')).map((c) => c.id)).toEqual([2, 3]);
   });
 });
