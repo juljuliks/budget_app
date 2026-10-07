@@ -104,16 +104,15 @@ export default function MerchantCard({ merchantId, categories: given, onClose, o
   // "Сохранить": what the choice means, then save
   async function save() {
     if (!m || !dirty) return;
+    // saved: the card is done
+    const run = (apply: () => Promise<void>) => {
+      setSaving(true);
+      apply().then(() => { changed(); onClose(); }).catch((e) => { console.error('save merchant failed', e); toastError('Не удалось сохранить'); })
+        .finally(() => setSaving(false));
+    };
     const confirm = (title: string, message: string, apply: () => Promise<void>) => sheetAlert(title, message, [
       { text: 'Отмена', style: 'cancel' },
-      {
-        text: 'Продолжить', onPress: () => {
-          setSaving(true);
-          // saved: the card is done
-          apply().then(() => { changed(); onClose(); }).catch((e) => { console.error('save merchant failed', e); toastError('Не удалось сохранить'); })
-            .finally(() => setSaving(false));
-        },
-      },
+      { text: 'Продолжить', onPress: () => run(apply) },
     ]);
     if (mixed) {
       const names = await Promise.all(list.map(label));
@@ -139,15 +138,18 @@ export default function MerchantCard({ merchantId, categories: given, onClose, o
         () => setMerchantMixed(m.id, false));
       return;
     }
+    const name = await label(single);
+    const assign = async () => { await setMerchantCategory(m.id, single); toast(`Категория «${name}» назначена мерчанту «${m.name}»`); };
+    // a merchant without a category yet: nothing to warn about, it just gets one
+    if (m.category_id === null && !m.mixed) { run(assign); return; }
     const totals = await categoryChangeTotals(m.id, single);
     const n = totals.reduce((a, t) => a + t.n, 0);
-    const name = await label(single);
     confirm(
       `Категория «${name}» для «${m.name}»`,
       `Новые операции мерчанта будут получать её автоматически.${n > 0
         ? ` Категория изменится у ${n} ${plural(n, ['операции', 'операций', 'операций'])} на ${money(totals)}.`
         : ''} Выбранные вручную категории не изменятся.${m.mixed ? ' Разные категории выключатся.' : ''}`,
-      async () => { await setMerchantCategory(m.id, single); toast(`Категория «${name}» назначена мерчанту «${m.name}»`); });
+      assign);
   }
 
   function unpin() {
