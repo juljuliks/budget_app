@@ -1,0 +1,63 @@
+# The screens shot on every build (scripts/demo/screenshots.sh): the demo database's month, week and day stats,
+# the plan and the operations. Steps that can't find their button are skipped, the rest still shot.
+appId: com.budgetapp
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "План"
+    timeout: 30000
+- waitForAnimationToEnd
+- takeScreenshot: 01-month
+- scroll
+- takeScreenshot: 02-month-scrolled
+- scroll
+- takeScreenshot: 03-month-bottom
+
+- tapOn:
+    text: "Выбрать период"
+    optional: true
+- tapOn:
+    text: "За неделю"
+    optional: true
+- waitForAnimationToEnd
+- takeScreenshot: 04-week
+- scroll
+- takeScreenshot: 05-week-scrolled
+
+- tapOn:
+    text: "Выбрать период"
+    optional: true
+- tapOn:
+    text: "За день"
+    optional: true
+- waitForAnimationToEnd
+- takeScreenshot: 06-day
+
+- tapOn:
+    text: "Выбрать период"
+    optional: true
+- tapOn:
+    text: "За месяц"
+    optional: true
+- tapOn:
+    text: "Предыдущий месяц"
+    optional: true
+- waitForAnimationToEnd
+- takeScreenshot: 07-prev-month
+
+- tapOn:
+    text: "Следующий месяц"
+    optional: true
+- tapOn:
+    text: "План"
+    optional: true
+- waitForAnimationToEnd
+- takeScreenshot: 08-plan
+- scroll
+- takeScreenshot: 09-plan-scrolled
+
+- tapOn:
+    text: "Операции"
+    optional: true
+- waitForAnimationToEnd
+- takeScreenshot: 10-operations

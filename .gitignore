@@ -26,3 +26,6 @@ data/
 .DS_Store
 .idea/
 .vscode/
+
+# demo database builder output (scripts/demo)
+dist-demo/
