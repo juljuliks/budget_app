@@ -19,8 +19,7 @@ import { plural } from '../format';
 import { chart, colors } from '../theme';
 import { DonutCenter, RefundsRow } from './StatsView';
 import { useLatestRequest } from '../useLatestRequest';
-import { GROUP_TITLES, LimitsAccordion } from './SummaryTiles';
-import { pct, SummaryGroupKey, summaryGroups } from './summaryGroups';
+import { GROUP_TITLES, pct, SummaryGroupKey, summaryGroups } from './summaryGroups';
 import { formStyles } from '../formStyles';
 import { splitUnplanned, unplannedMonth } from './unplanned';
 import StickyScrollView, { SectionHeader } from '../StickyScrollView';
@@ -492,9 +491,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
           <DonutCenter total={stats.spent_minor} picked={picked} currency={cur} />
         </Donut>
       </View>
-      {byLimits || (!pace && days <= PACE_MAX_DAYS) ? null : limited.length ? (
-        <LimitsAccordion defaultOpen foldKey="period" groups={groups} money={money} onPress={(key) => openInfo({ group: key })} />
-      ) : (
+      {byLimits || (!pace && days <= PACE_MAX_DAYS) || !summary ? null : (
         <TouchableOpacity style={styles.summaryRow} onPress={() => openInfo('summary')} accessibilityLabel="Как считаются траты">
           <Text style={styles.summary}>{summary}</Text>
           <InfoIcon color={colors.accent} size={INFO_SIZE} />
