@@ -303,11 +303,11 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
               {parts.filter((p) => p.key !== 'unplanned' || unplanned > 0).map((p) => (
                 <View key={p.key} style={styles.part}>
                   <View style={styles.legend}>
-                    {/* savings holding both the leftover and the locked part: half of each, as in the bar */}
+                    {/* savings holding both the leftover and the locked part: two dots, the locked one over the other */}
                     {p.key === 'free' && locked > 0 && (free ?? 0) > 0 ? (
-                      <View style={[styles.legendDot, styles.legendSplit]}>
-                        <View style={[styles.legendHalf, { backgroundColor: p.color }]} />
-                        <View style={[styles.legendHalf, { backgroundColor: RING_LOCKED }]} />
+                      <View style={styles.legendPair}>
+                        <View style={[styles.legendDot, { backgroundColor: p.color }]} />
+                        <View style={[styles.legendDot, styles.legendOver, { backgroundColor: RING_LOCKED }]} />
                       </View>
                     ) : <View style={[styles.legendDot, { backgroundColor: p.key === 'free' && locked > 0 ? RING_LOCKED : p.color }]} />}
                     <Text style={styles.partLabel} numberOfLines={1}>{p.label}</Text>
@@ -501,8 +501,9 @@ const styles = StyleSheet.create({
   part: { flex: 1 },
   legend: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   legendDot: { width: 8, height: 8, borderRadius: 4 },
-  legendSplit: { flexDirection: 'row', overflow: 'hidden' },
-  legendHalf: { flex: 1 },
+  legendPair: { flexDirection: 'row', alignItems: 'center' },
+  // the second dot covers a third of the first, a ring of the card's colour between them
+  legendOver: { width: 12, height: 12, borderRadius: 6, marginLeft: -5, borderWidth: 2, borderColor: colors.surface },
   partLabel: { fontSize: 12, color: colors.muted, flexShrink: 1 },
   partValue: { fontSize: 15, fontWeight: '600', color: colors.text, marginTop: 2, fontVariant: ['tabular-nums'] },
   partNote: { fontSize: 12, color: colors.muted, fontVariant: ['tabular-nums'] },
