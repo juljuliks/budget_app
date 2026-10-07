@@ -224,10 +224,11 @@ export default function CategorySheet({ visible, categoryId, typeId: initialType
         )}
 
         <SheetActions
-          // a new category: always (it's created); an existing one: greyed until something changed. No "Отмена": the
-          // sheet closes by swiping down
+          // a new category: always (it's created); an existing one: greyed until something changed. "Отмена" only next to
+          // a single action: with "Удалить категорию" too, three buttons — the sheet closes by swiping down
           submit={{ title: isNew ? 'Создать' : 'Сохранить', onPress: save, disabled: isSubmitting || (!isNew && !isDirty) }}
           extra={isNew || system ? undefined : [{ title: 'Удалить категорию', onPress: remove, danger: true }]}
+          onCancel={isNew || system ? onClose : undefined}
         />
       </SheetScrollView>
 
