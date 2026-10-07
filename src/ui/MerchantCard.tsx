@@ -153,12 +153,12 @@ export default function MerchantCard({ merchantId, categories: given, onClose, o
     const n = followers.count;
     sheetAlert(
       name ? `Категория «${name}» для «${m.name}»` : `Без категории для «${m.name}»`,
-      `Новые операции будут ${name ? `получать «${name}»` : 'приходить без категории'}. А ${n} ${plural(n, ['прошлая операция', 'прошлые операции', 'прошлых операций'])} `
-        + `на ${money(followers.totals)} с «${old}» от мерчанта? Выбранные вручную категории не изменятся.`,
+      `Новые операции будут ${name ? `получать «${name}»` : 'приходить без категории'}. Выбранные вручную категории не изменятся. `
+        + `Что сделать с ${n} ${plural(n, ['прошлой операцией', 'прошлыми операциями', 'прошлыми операциями'])} на ${money(followers.totals)} с «${old}» от мерчанта?`,
       [
         { text: 'Отмена', style: 'cancel' },
-        { text: name ? 'Сменить и у них' : 'Убрать и у них', onPress: () => run(apply('change')) },
-        { text: 'Оставить у прошлых', style: 'secondary', onPress: () => run(apply('keep')) },
+        { text: name ? 'Сменить' : 'Убрать', onPress: () => run(apply('change')) },
+        { text: 'Оставить', style: 'secondary', onPress: () => run(apply('keep')) },
       ]);
   }
 
