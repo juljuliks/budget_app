@@ -46,7 +46,18 @@ export function OptionsSheet<K extends string | number>({
   const words = normalizeForSearch(query);
   const shown = words ? options.filter((o) => normalizeForSearch(o.label).includes(words)) : options;
   return (
-    <BottomSheet visible={visible} onClose={onClose} title={title} style={styles.sheet}>
+    <BottomSheet
+      visible={visible}
+      onClose={onClose}
+      title={title}
+      style={styles.sheet}
+      // right of the title, as the toolbars' "Отмена": shown once something is picked
+      headerRight={selected.length ? (
+        <TouchableOpacity onPress={onClear} hitSlop={10} accessibilityRole="button">
+          <Text style={styles.headerAction}>Снять выбор</Text>
+        </TouchableOpacity>
+      ) : null}
+    >
       {searchPlaceholder ? (
         <View style={styles.search}>
           <SearchIcon color={colors.muted} />
@@ -84,11 +95,6 @@ export function OptionsSheet<K extends string | number>({
       />
       <View style={styles.footer}>
         <Button title="Готово" onPress={onClose} />
-        {selected.length ? (
-          <TouchableOpacity style={styles.secondary} onPress={onClear}>
-            <Text style={styles.secondaryText}>Снять выбор</Text>
-          </TouchableOpacity>
-        ) : null}
       </View>
     </BottomSheet>
   );
@@ -166,5 +172,6 @@ const styles = StyleSheet.create({
   allChips: { paddingHorizontal: 20, paddingVertical: 8 },
   footer: { paddingHorizontal: 20, paddingTop: 12 },
   secondary: { alignItems: 'center', paddingTop: 12 },
+  headerAction: { fontSize: 15, color: colors.accent },
   secondaryText: { fontSize: 15, color: colors.accent },
 });
