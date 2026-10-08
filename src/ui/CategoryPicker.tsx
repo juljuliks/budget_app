@@ -43,7 +43,7 @@ export default function CategoryPicker({
   const [creating, setCreating] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [transferTypeId, setTransferTypeId] = useState<number | null>(null);
-  // "Показать все": every category in a sheet over this one
+  // "Все категории": every category in a sheet over this one
   const [allOpen, setAllOpen] = useState(false);
 
   const load = useCallback(() => {
@@ -83,7 +83,7 @@ export default function CategoryPicker({
           <Chip label="Без категории" selected={selectedId === null} disabled={disabled} onPress={() => onSelect(null)} compact />
         ) : null}
         {collapsible ? (
-          <Chip label="Показать все" action compact disabled={disabled} onPress={() => setAllOpen(true)} />
+          <Chip label="Все категории" action compact disabled={disabled} onPress={() => setAllOpen(true)} />
         ) : null}
         <Chip label="Новая категория" add compact disabled={disabled} onPress={() => setCreating(true)} />
       </View>
