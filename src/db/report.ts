@@ -24,6 +24,8 @@ export type ReportCategory = { id: number | null; name: string; emoji: string | 
 export type MonthReport = {
   ym: string;
   currency: Currency;
+  /** the month had a plan (a budget or a category with an amount): only then is there a report */
+  hasPlan: boolean;
   /** null without a budget for the month */
   budget: number | null;
   spent: number;
@@ -90,6 +92,17 @@ async function savedIn(ym: string, currency: Currency): Promise<{ budget: number
   return { budget: amount, saved: amount === null ? null : amount - stats.spent_minor, stats };
 }
 
+/**
+ * Whether `ym` had a plan: a budget or a category with an amount. Read as stored (not ensureMonthPlan): looking at a
+ * past month must not create its plan.
+ */
+export async function hasMonthPlan(ym: string): Promise<boolean> {
+  const db = await getDb();
+  return !!(await db.get(
+    `SELECT 1 FROM plan_months WHERE ym = ? AND budget_minor IS NOT NULL
+      UNION ALL SELECT 1 FROM plan_items WHERE ym = ? AND limit_minor > 0 LIMIT 1`, [ym, ym]));
+}
+
 /** Whether `ym` has operations from its first half on (DATA_FROM_DAY). */
 async function hasDataIn(ym: string): Promise<boolean> {
   const { year, month } = parseYm(ym);
@@ -101,6 +114,8 @@ async function hasDataIn(ym: string): Promise<boolean> {
 
 export async function monthReport(ym: string, currency: Currency): Promise<MonthReport> {
   const prevYm = previousYm(ym);
+  // before getPlanBudget below, which creates the current month's plan
+  const hasPlan = await hasMonthPlan(ym);
   const [{ budget, saved, stats }, previous, planBudget, conv, hasData, previousHasData] = await Promise.all([
     savedIn(ym, currency), savedIn(prevYm, currency), getPlanBudget(ym), planConverter(ym), hasDataIn(ym), hasDataIn(prevYm)]);
   // the year's estimate: the average of this month and the ones before it that have a budget and data
@@ -147,7 +162,7 @@ export async function monthReport(ym: string, currency: Currency): Promise<Month
   const movedToSavings = moved.reduce((a, m) => a + (fx(m.amount_minor, m.currency, currency, dateKey(m.occurred_at)) ?? 0), 0);
 
   return {
-    ym, currency, budget, spent: stats.spent_minor, saved,
+    ym, currency, hasPlan, budget, spent: stats.spent_minor, saved,
     previousSaved: hasData && previousHasData ? previous.saved : null,
     average: months.length ? { saved: months.reduce((a, m) => a + m.saved, 0) / months.length, months } : null,
     hasData,

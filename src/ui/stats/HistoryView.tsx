@@ -84,8 +84,8 @@ function MonthRow({ month, expanded, onToggle, currency }: { month: HistoryMonth
           </View>
         ) : null}
       </TouchableOpacity>
-      {/* a month that is over: its report (what was put aside, what kept more from it) */}
-      {month.ym < currentYm() ? (
+      {/* a month that is over and had a plan (a budget or a category with an amount) */}
+      {month.ym < currentYm() && (month.budget_minor !== null || month.planned_minor > 0) ? (
         <TouchableOpacity style={styles.reportLink} onPress={() => openMonthReport(month.ym)} hitSlop={6}>
           <Text style={styles.reportText}>Отчёт за месяц ›</Text>
         </TouchableOpacity>

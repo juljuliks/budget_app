@@ -35,7 +35,8 @@ export async function scheduleMonthReports(now = new Date()) {
       const at = reportTime(ym);
       if (at <= now.getTime()) continue;
       const r = await monthReport(ym, currency);
-      if (r.spent <= 0 && r.saved === null) continue; // nothing happened that month
+      // no plan that month (or it was removed since): no report
+      if (!r.hasPlan) { await notifee.cancelTriggerNotification(`report_${ym}`); continue; }
       const money = (v: number) => formatWithCurrency(Math.round(v), currency);
       const body = r.saved === null ? `Потрачено ${money(r.spent)}`
         : r.saved < 0 ? `Бюджет превышен на ${money(-r.saved)}`

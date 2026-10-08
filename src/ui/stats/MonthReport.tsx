@@ -44,7 +44,8 @@ const title = (ym: string) => { const { year, month } = parseYm(ym); return mont
  */
 export function MonthReportRow({ ym }: { ym: string }) {
   const r = useMonthReport(ym);
-  if (!r) return null;
+  // no plan that month: no report
+  if (!r || !r.hasPlan) return null;
   const money = (v: number) => formatWithCurrency(v, r.currency);
   return (
     <TouchableOpacity style={styles.row} onPress={() => openMonthReport(ym)} accessibilityHint="Открыть отчёт за месяц">
@@ -106,7 +107,10 @@ export function MonthReportSheet({ ym, onClose }: { ym: string | null; onClose: 
 
   return (
     <BottomSheet visible={ym !== null} onClose={onClose} title={ym ? `Отчёт · ${title(ym)}` : ''}>
-      {!r ? <ActivityIndicator style={styles.loading} /> : (
+      {!r ? <ActivityIndicator style={styles.loading} /> : !r.hasPlan ? (
+        // an old notification of a month whose plan is gone
+        <Text style={[styles.hint, styles.content]}>Плана на этот месяц не было — отчёта нет.</Text>
+      ) : (
         <SheetScrollView contentContainerStyle={styles.content}>
           {/* what was put aside, and that a year */}
           {r.saved === null ? (

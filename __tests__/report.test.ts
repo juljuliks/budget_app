@@ -98,3 +98,17 @@ test('locked savings: in the breakdown, and touched when spending passes budget 
   expect(f.locked + f.undistributed + f.plan + f.unplanned).toBe(r.saved);
   expect(r.lockedTouched).toBe(5000);
 });
+
+test('a report only for a month with a plan: a budget or a category with an amount', async () => {
+  const db = await getDb();
+  const food = (await db.run("INSERT INTO categories (name) VALUES ('Еда')")).lastInsertRowid;
+  await addManualTransaction({ amount_minor: 5000, category_id: food, occurred_at: at('2026-08-05') });
+  expect((await monthReport('2026-08', 'GEL')).hasPlan).toBe(false);
+  // a category in the plan without an amount yet is not a plan
+  await db.run("INSERT INTO plan_items (ym, category_id, limit_minor, currency, kind, norm_period) VALUES ('2026-08', ?, 0, 'GEL', 'limit', 'day')", [food]);
+  expect((await monthReport('2026-08', 'GEL')).hasPlan).toBe(false);
+  await setPlanAmount('2026-08', food, 30000, 'limit');
+  expect((await monthReport('2026-08', 'GEL')).hasPlan).toBe(true);
+  await setPlanBudget('2026-07', 100000, 'GEL');
+  expect((await monthReport('2026-07', 'GEL')).hasPlan).toBe(true);
+});
