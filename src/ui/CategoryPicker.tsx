@@ -9,6 +9,7 @@ import BottomSheet, { SheetScrollView } from './BottomSheet';
 import { SheetActions } from './Button';
 import Chip from './Chip';
 import SectionHeading from './SectionHeading';
+import { NO_CATEGORY } from './strings';
 
 type Props = {
   selectedId?: number | null;
@@ -71,23 +72,26 @@ export default function CategoryPicker({
   const offered = categories.filter((c) => !excluded.has(c.id));
   // the order they had when the sheet opened: a tap doesn't move a chip under the finger
   const [firstIds] = useState(() => new Set(selectedIds ?? []));
+  // "Без категории" chosen: that chip goes first, as a chosen category would
+  const [noneFirst] = useState(() => allowNone && !selectedIds && selectedId === null);
   const available = selectedFirst ? [...offered.filter((c) => firstIds.has(c.id)), ...offered.filter((c) => !firstIds.has(c.id))] : offered;
   const collapsible = !showAll && available.length > COLLAPSED + 1;
   // collapsed: the first COLLAPSED, plus the selected one when it's further down (the choice stays visible)
   const shown = !collapsible ? available
     : available.filter((c, i) => i < COLLAPSED || isSelected(c.id));
 
+  const noneChip = <Chip label={NO_CATEGORY} selected={selectedId === null} disabled={disabled} onPress={() => onSelect(null)} compact />;
+
   return (
     <View>
       {/* no gear: categories are managed only from Настройки (the gear in the tab headers) */}
       <SectionHeading title={title} />
       <View style={styles.chips}>
+        {noneFirst ? noneChip : null}
         {shown.map((c) => (
           <Chip key={c.id} label={categoryLabel(c)} selected={isSelected(c.id)} disabled={disabled} onPress={() => onSelect(c.id)} compact />
         ))}
-        {allowNone ? (
-          <Chip label="Без категории" selected={selectedId === null} disabled={disabled} onPress={() => onSelect(null)} compact />
-        ) : null}
+        {allowNone && !noneFirst ? noneChip : null}
         {collapsible ? (
           <Chip label="Все категории" action compact disabled={disabled} onPress={() => setAllOpen(true)} />
         ) : null}
