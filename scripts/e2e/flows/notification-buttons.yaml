@@ -1,0 +1,15 @@
+# 8.1.5: the shade pulled down, the notification's category button pressed: the operation gets it, the merchant too.
+appId: com.budgetapp
+---
+- swipe:
+    start: 50%, 1%
+    end: 50%, 80%
+- extendedWaitUntil:
+    visible: "Покупка — 12\\.00.₾"
+    timeout: 10000
+# the buttons show on an expanded notification: pulled down by itself
+- swipe:
+    from:
+      text: "Покупка — 12\\.00.₾"
+    direction: DOWN
+- tapOn: "🛒 Продукты"

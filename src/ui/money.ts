@@ -22,7 +22,8 @@ export function formatMoney(minor: number, opts: { compact?: boolean } = {}): st
 
 /** Like parseAmountInput, but an empty field means 0. */
 export function parseAmountOrZero(input: string): number | null {
-  return input.trim() === '' ? 0 : parseAmountInput(input);
+  // "0" / "0.00" means none too (an empty field does)
+  return input.trim() === '' || /^0+([.,]0*)?$/.test(input.trim()) ? 0 : parseAmountInput(input);
 }
 
 export function toInputValue(minor: number | null | undefined): string {

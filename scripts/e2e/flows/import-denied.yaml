@@ -1,0 +1,24 @@
+# 1.4.2: the permission to read SMS refused.
+appId: com.budgetapp
+---
+- launchApp:
+    permissions:
+      android.permission.READ_SMS: unset
+      android.permission.RECEIVE_SMS: unset
+- tapOn:
+    text: "Don.t allow"
+    optional: true
+- extendedWaitUntil:
+    visible: "Настройки"
+    timeout: 60000
+- tapOn: "Настройки"
+- tapOn: "Импорт SMS из телефона"
+- tapOn: "Всё время"
+# a second refusal may not be asked any more
+- tapOn:
+    text: "Don.t allow"
+    optional: true
+- extendedWaitUntil:
+    visible: "Нет доступа к SMS"
+    timeout: 10000
+- assertVisible: "Без разрешения на чтение SMS импорт невозможен\\. Его можно дать в настройках Android → Приложения → Budget → Разрешения → SMS\\."

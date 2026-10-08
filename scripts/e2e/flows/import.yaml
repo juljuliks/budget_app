@@ -1,0 +1,45 @@
+# 1.4.1, 1.4.4, 1.4.5: Настройки → «Импорт SMS из телефона»: the period, the permission, what was added; the same again.
+appId: com.budgetapp
+---
+# Maestro grants every permission at launch by default: reading SMS must be asked
+- launchApp:
+    permissions:
+      android.permission.READ_SMS: unset
+      android.permission.RECEIVE_SMS: unset
+# the start asks for the SMS permission the hook took away (to have the SMS only in the phone)
+- tapOn:
+    text: "Allow"
+    optional: true
+- extendedWaitUntil:
+    visible: "Настройки"
+    timeout: 60000
+- tapOn: "Настройки"
+- tapOn: "Импорт SMS из телефона"
+- extendedWaitUntil:
+    visible: "Операции из SMS банка, которые уже есть в телефоне\\. Уже добавленные не повторятся\\. Понадобится разрешение на чтение SMS — читаются только сообщения банка\\."
+    timeout: 10000
+- assertVisible: "1 месяц"
+- assertVisible: "3 месяца"
+- assertVisible: "6 месяцев"
+- assertVisible: "Всё время"
+- tapOn: "1 месяц"
+# reading SMS comes with receiving them (one permission group): no second question
+- tapOn:
+    text: "Allow"
+    optional: true
+- extendedWaitUntil:
+    visible: "Добавлено 3 операции"
+    timeout: 20000
+- assertVisible: "(?s)Прочитано SMS банка: 5\\..*Не операции \\(баланс, коды, отклонённые\\) или не распознаны: 2\\."
+- tapOn: "Понятно"
+# past operations: no "new" marks, no badge; the merchant's category applied
+- assertVisible: "CARREFOUR"
+- assertVisible: ".*Продукты · .*"
+# again: nothing new
+- tapOn: "Настройки"
+- tapOn: "Импорт SMS из телефона"
+- tapOn: "1 месяц"
+- extendedWaitUntil:
+    visible: "Новых операций нет"
+    timeout: 20000
+- assertVisible: "(?s)Прочитано SMS банка: 5\\..*Уже были в приложении: 3\\..*"

@@ -29,12 +29,12 @@ React Native 0.71 (TypeScript), react-native-quick-sqlite, notifee, react-naviga
 
 ```sh
 npm ci
-npm test               # Jest: парсер, база, план, отчёты, тексты
+npm test               # Jest: логика (парсер, база, план, отчёт) и тесты экранов (всё приложение на SQLite в памяти)
 npm run emulator       # сборка release и установка на эмулятор budget_pixel, запуск приложения
 npm run apk            # APK на рабочий стол
 npm run release        # релизная сборка
 scripts/send_test_sms.sh        # тестовое SMS банка на эмулятор
-scripts/e2e/run.sh              # e2e-сценарии (Maestro) на эмуляторе
+scripts/e2e/run.sh              # Maestro на эмуляторе: только то, что без устройства не проверить (SMS, уведомления, импорт)
 ```
 
 ## Где что
@@ -47,8 +47,8 @@ scripts/e2e/run.sh              # e2e-сценарии (Maestro) на эмуля
 | `src/ui/` | экраны и листы; `src/ui/stats/` — статистика, план, отчёт |
 | `src/notifications/` | уведомления и их кнопки |
 | `android/app/src/main/java/com/budgetapp/` | нативная часть: SMS, пуши |
-| `__tests__/` | Jest-тесты |
-| `scripts/e2e/` | e2e-сценарии и [план e2e-тестов](scripts/e2e/PLAN.md) |
+| `__tests__/` | Jest: логика; `__tests__/screens/` — тесты экранов |
+| `scripts/e2e/` | Maestro, стартовые базы тестов и [план тестов](scripts/e2e/PLAN.md) |
 
 ## Ещё документы
 

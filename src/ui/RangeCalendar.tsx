@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { MONTHS } from './stats/months';
 import { colors } from './theme';
@@ -29,6 +29,8 @@ export default function RangeCalendar({ value, onChange, single, maxDay }: Props
   const [month, setMonth] = useState({ y: initial.getFullYear(), m: initial.getMonth() });
   // waiting for the second tap of a range
   const [anchor, setAnchor] = useState<DayKey | null>(null);
+  // dates cleared ("Сбросить даты"): the next tap starts a new range, not the end of the one begun before
+  useEffect(() => { if (value === null) setAnchor(null); }, [value]);
 
   const cells = useMemo(() => {
     const first = new Date(month.y, month.m, 1);
@@ -74,7 +76,7 @@ export default function RangeCalendar({ value, onChange, single, maxDay }: Props
             const isEdge = value !== null && (day === value.from || day === value.to);
             const off = maxDay !== undefined && day > maxDay;
             return (
-              <TouchableOpacity key={day} style={[styles.cell, inRange && styles.inRange, isEdge && styles.edge]} onPress={() => tap(day)} disabled={off}>
+              <TouchableOpacity key={day} testID={`day-${day}`} style={[styles.cell, inRange && styles.inRange, isEdge && styles.edge]} onPress={() => tap(day)} disabled={off}>
                 <Text style={[styles.day, day === today && styles.today, isEdge && styles.edgeText, off && styles.off]}>{Number(day.slice(8))}</Text>
               </TouchableOpacity>
             );

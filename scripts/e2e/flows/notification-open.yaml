@@ -1,0 +1,13 @@
+# 8.1.6, 8.1.7: the app closed, the notification tapped: the operation's card, its categories right away.
+appId: com.budgetapp
+---
+- swipe:
+    start: 50%, 1%
+    end: 50%, 80%
+- tapOn: "Покупка — 12\\.00.₾"
+- extendedWaitUntil:
+    visible: "Выберите категорию"
+    timeout: 30000
+- assertVisible: "NEWSHOP ›"
+- tapOn: ".*Кафе и рестораны"
+- assertVisible: "Категория «.*Кафе и рестораны» назначена"

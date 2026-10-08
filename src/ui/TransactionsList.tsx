@@ -89,10 +89,11 @@ const SEARCH_DEBOUNCE_MS = 200;
 
 export default function TransactionsList() {
   const navigation = useRootNavigation();
-  const [rows, setRows] = useState<Row[]>([]);
+  // the rows loaded and (not by day) every group of what the filters match, with its count and total: one state, so
+  // the rows of a new grouping are never drawn with the old one's groups (repeated headers for a frame)
+  const [loaded, setLoaded] = useState<{ rows: Row[]; groups: TransactionGroup[] | null }>({ rows: [], groups: null });
+  const { rows, groups } = loaded;
   const [next, setNext] = useState<Next>(null);
-  // not by day: every group of what the filters match, with its count and total
-  const [groups, setGroups] = useState<TransactionGroup[] | null>(null);
   // a group's checkbox: every operation of it, loaded or not (read when it's first ticked)
   const [groupIds, setGroupIds] = useState<Map<string, number[]>>(new Map());
   // what the rows loaded were read with: the next pages and a group's checkbox use the same
@@ -220,9 +221,8 @@ export default function TransactionsList() {
     if (movedOut.current && page.rows.length < loadedCount.current) setRemount((n) => n + 1);
     movedOut.current = false;
     loadedCount.current = page.rows.length;
-    setRows(page.rows);
+    setLoaded({ rows: page.rows, groups: found });
     setNext(page.next);
-    setGroups(found);
     setGroupIds(new Map());
     setLoading(false);
   }, []);
@@ -240,12 +240,12 @@ export default function TransactionsList() {
     try {
       const page = await fetchPage(viewRef.current, next, PAGE_SIZE);
       if (id !== requestId.current) return;
-      setRows((prev) => {
+      setLoaded((prev) => {
         // an offset page can repeat a row when operations came in meanwhile
-        const have = new Set(prev.map((r) => r.id));
-        const all = prev.concat(page.rows.filter((r) => !have.has(r.id)));
+        const have = new Set(prev.rows.map((r) => r.id));
+        const all = prev.rows.concat(page.rows.filter((r) => !have.has(r.id)));
         loadedCount.current = all.length;
-        return all;
+        return { ...prev, rows: all };
       });
       setNext(page.next);
     } finally {
@@ -586,7 +586,8 @@ export default function TransactionsList() {
     const one = change.merchants.length === 1;
     sheetAlert(
       `Категория «${to ? categoryLabel(to) : '?'}» — только для выбранных операций или и для ${one ? 'мерчанта' : 'мерчантов'}?`,
-      `${one ? `Для мерчанта «${names}»` : `Для мерчантов (${names})`}: категория изменится у ${change.count} ${plural(change.count, ['операции', 'операций', 'операций'])} на ${sum}, и новые операции будут получать её автоматически. Выбранные вручную категории не изменятся.`,
+      // nothing of theirs follows them (all picked by hand): only the new operations change
+      `${one ? `Для мерчанта «${names}»` : `Для мерчантов (${names})`}: ${change.count > 0 ? `категория изменится у ${change.count} ${plural(change.count, ['операции', 'операций', 'операций'])} на ${sum}, и новые` : 'новые'} операции будут получать её автоматически. Выбранные вручную категории не изменятся.`,
       [
         { text: 'Отмена', style: 'cancel' },
         { text: `Только для выбранных (${selected.size})`, onPress: () => { assignBulk(categoryId, 'only'); } },
@@ -679,6 +680,7 @@ export default function TransactionsList() {
         // a new filter remounts the list: Android sticky headers keep their old offsets when the sections
         // change under a scrolled list and cover the rows ("Вчера" over operations)
         key={listKey}
+        testID="operations-list"
         style={styles.list}
         sections={sections}
         keyExtractor={(i) => String(i.id)}

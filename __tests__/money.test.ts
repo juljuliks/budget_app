@@ -48,3 +48,13 @@ test('meterColor: green far from the limit, blends to red, red at and over it', 
   // between amber and red
   expect(meterColor(0.8)).toBe('#df6e1e');
 });
+
+test('parseAmountOrZero: empty and a zero are "none", other non-amounts are refused', () => {
+  const { parseAmountOrZero } = require('../src/ui/money');
+  expect(parseAmountOrZero('')).toBe(0);
+  expect(parseAmountOrZero('0')).toBe(0);
+  expect(parseAmountOrZero('0.00')).toBe(0);
+  expect(parseAmountOrZero('0,0')).toBe(0);
+  expect(parseAmountOrZero('12,5')).toBe(1250);
+  expect(parseAmountOrZero('abc')).toBeNull();
+});

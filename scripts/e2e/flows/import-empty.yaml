@@ -1,0 +1,16 @@
+# 1.4.3: no SMS from the bank for the period.
+appId: com.budgetapp
+---
+- launchApp:
+    permissions:
+      android.permission.READ_SMS: allow
+- extendedWaitUntil:
+    visible: "Настройки"
+    timeout: 60000
+- tapOn: "Настройки"
+- tapOn: "Импорт SMS из телефона"
+- tapOn: "Всё время"
+- extendedWaitUntil:
+    visible: "SMS банка не найдены"
+    timeout: 10000
+- assertVisible: "За этот период в телефоне нет SMS от TBC\\."

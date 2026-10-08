@@ -1,0 +1,10 @@
+# 1.1, 1.2: the operation taken in while the app was closed is there, new, with the card's balance from its SMS.
+appId: com.budgetapp
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "NEWSHOP"
+    timeout: 60000
+- assertVisible: "−12\\.00.₾"
+- assertVisible: "283\\.14.₾"
+- assertNotVisible: "SPAR"

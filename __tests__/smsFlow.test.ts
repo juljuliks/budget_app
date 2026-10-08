@@ -8,7 +8,11 @@ jest.mock('@notifee/react-native', () => ({
     cancelNotification: (...a: any[]) => cancelNotification(...a),
     createChannel: jest.fn(),
     onBackgroundEvent: jest.fn(),
+    // the month's report on the 1st (scheduled after every new operation)
+    createTriggerNotification: jest.fn(),
+    cancelTriggerNotification: jest.fn(),
   },
+  TriggerType: { TIMESTAMP: 0 },
   AndroidImportance: { HIGH: 4 },
   EventType: { ACTION_PRESS: 2 },
 }), { virtual: true });

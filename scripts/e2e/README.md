@@ -1,39 +1,50 @@
-# End-to-end flows
+# Тесты приложения
 
-Run on a local emulator (a `google_apis` image: the script needs `adb root` to put the database in place):
+Два уровня. Тест-кейсы и где какой проверяется — [PLAN.md](PLAN.md).
 
-```sh
-npm ci
-scripts/e2e/run.sh path/to/budget-app-1.0.N.apk          # every flow
-scripts/e2e/run.sh delete-sort-out                       # one flow, the app already installed
-```
+## Тесты экранов (Jest, без эмулятора)
 
-Each flow starts from `seed.ts`'s database, runs its Maestro steps (`flows/*.yaml`: taps, and checks of the texts on
-the screens), then the database is pulled back and checked by `verify.ts`. A JS error in logcat fails the flow too.
-Screenshots of a failing step, logcat and the pulled database: `e2e-out/<flow>/`.
-
-Without an emulator, `simulate.ts` does what the flows do with the app's functions, to check `seed.ts` and
-`verify.ts` agree:
+`__tests__/screens/`: всё приложение (`<App />`) рендерится через React Native Testing Library на настоящей базе —
+SQLite в памяти. Тесты нажимают кнопки, вводят текст, проверяют тексты на экране и строки в базе.
 
 ```sh
-npx tsc -p scripts/e2e
-node dist-e2e/scripts/e2e/seed.js /tmp/e.db && node dist-e2e/scripts/e2e/simulate.js delete-sort-out /tmp/e.db \
-  && node dist-e2e/scripts/e2e/verify.js delete-sort-out /tmp/e.db
+npm test                                  # всё: логика и экраны (~30 с)
+npx jest --selectProjects screens         # только экраны
+npx jest --selectProjects screens -t "2.5"  # кейсы раздела
 ```
 
-## Flows
+- **Seed.** Стартовые базы в [seeds.ts](seeds.ts), общие с Maestro: `base`, `ops` (операции), `planned` (бюджет и
+  план, прошлый месяц для отчёта), `autoCategory`.
+- **Дата.** «Сегодня» — четверг 15.10.2026, 12:00, дальше время идёт (`setup.ts`): темп, недели и «до …» не зависят от
+  дня запуска.
+- **Подмены.** notifee — мок: тесты проверяют, что приложение передаёт в уведомление. react-native-svg — заглушка.
+  Списки рендерят все загруженные строки, следующая страница подгружается по `endReached`.
+- **Ошибки.** `console.error` во время теста — провал, как JS-ошибка в logcat.
+- **Хелперы** в [app.tsx](../../__tests__/screens/app.tsx): `openApp(seed)`, `tap` (ждёт элемент, ищет в верхнем
+  открытом листе), `longPress`, `rowOf`, `scrollTo`, `openSettings`, `toggleSwitch`, `texts`.
 
-The seed: «Покупки» with this month's ZARA ×2 and HM (merchants of it), WOLT (picked by hand) — 4 operations on
-360 ₾ — and past ZARA, APPLE (1 000 ₾); «Одежда», «Техника» to move them to; «Пустая» with a past OLDSHOP only.
+## Maestro на эмуляторе
 
-| flow | what it checks |
+`flows/`: только то, чего без устройства не проверить — приём SMS Kotlin-ресивером в фоне, чтение входящих и
+разрешения, уведомления в шторке.
+
+```sh
+scripts/e2e/run.sh                # все сценарии
+scripts/e2e/run.sh sms-receive    # один
+```
+
+Нужны запущенный эмулятор (образ google_apis: `adb root`) и Maestro (`curl -fsSL https://get.maestro.mobile.dev | bash`).
+
+| сценарий | что проверяет |
 |---|---|
-| `delete-empty` | no operations this month: the plain confirmation (the past kept, the merchant loses it), deleted |
-| `delete-move-all` | all to one category: the picker with «Сохранить», the confirmation's text, moved; the past stays in «Покупки», fixed; the merchants move |
-| `delete-sort-out` | to several: the list grouped by merchant with the banner; ZARA with its merchant (this month only), HM alone, WOLT to none; the counts on the banner; the summary; deleted |
-| `delete-sort-out-leave` | the category filter locked; «Отменить» and back ask; «Продолжить» stays; «Прервать» keeps the category and what was moved |
+| `sms-receive` | SMS при закрытом приложении: банковское принято в фоне (операция, баланс, уведомление); с номера телефона и от чужого отправителя — нет |
+| `import` | импорт входящих: период, разрешение, «Добавлено 3 операции», повтор — «Новых операций нет» |
+| `import-denied` | отказ в разрешении на SMS — «Нет доступа к SMS» |
+| `import-empty` | нет SMS банка — «SMS банка не найдены» |
+| `notification-buttons` | кнопка категории в развёрнутом уведомлении: категория у операции и мерчанта, уведомление ушло |
+| `notification-open` | тап по уведомлению при закрытом приложении открывает операцию |
 
-## By hand
-
-- In a sort-out, «Дата» narrows within this month only: a range reaching outside is cut to the month (a toast says so).
-- Any way out of a sort-out (back, «Статистика» in the tab bar, the gear, a day's stats) asks «Прервать удаление?»: «Продолжить» stays, «Прервать» ends it and goes there.
+Каждый сценарий: база из `seed.ts` подкладывается вместо приложения, `flows/<сценарий>.sh before` делает то, что
+Maestro не умеет (SMS через `adb emu sms send`, разрешения, очистка входящих), потом шаги Maestro, потом
+`flows/<сценарий>.sh after` (проверка уведомлений через `dumpsys notification`) и проверка базы в `verify.ts`.
+Скриншоты упавшего шага, logcat и база — в `e2e-out/<сценарий>/`.

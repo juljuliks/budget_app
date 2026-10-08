@@ -9,12 +9,14 @@
     "release": "./scripts/release.sh"
   },
   "devDependencies": {
+    "@testing-library/react-native": "^12.9.0",
     "@types/better-sqlite3": "^9.6.0",
     "@types/jest": "^29.5.14",
     "@types/react": "^18.0.0",
     "@types/react-native": "^0.71.0",
     "better-sqlite3": "^11.10.0",
     "jest": "^29.0.0",
+    "react-test-renderer": "^18.2.0",
     "ts-jest": "^29.0.0",
     "typescript": "^5.0.0"
   },
