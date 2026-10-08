@@ -52,6 +52,8 @@ export default function MerchantCard({ merchantId, categories: given, onClose, o
   const [saving, setSaving] = useState(false);
   // "Сменить": the categories sheet
   const [changing, setChanging] = useState(false);
+  // different categories: "Добавить категорию"
+  const [adding, setAdding] = useState(false);
 
   // the parent passes onClose inline: kept in a ref so a parent re-render doesn't reset and reload the card
   const onCloseRef = useRef(onClose);
@@ -246,17 +248,35 @@ export default function MerchantCard({ merchantId, categories: given, onClose, o
                   onClose={() => setChanging(false)}
                 />
               </View>
+            ) : mixed ? (
+              // different ones: its categories (✕ takes one off) and "Добавить категорию" (every category in a sheet)
+              <View style={styles.pickerTop}>
+                <SectionHeading title="Категории мерчанта" />
+                <Text style={styles.listHint}>Какие обычно категории у «{m.name}»?</Text>
+                <View style={styles.currentRow}>
+                  {list.map((id) => (
+                    <Chip key={id} label={categories.get(id)?.label ?? '…'} selected trailing="✕" disabled={saving} onPress={() => toggle(id)} />
+                  ))}
+                  <TouchableOpacity style={styles.changeButton} disabled={saving} onPress={() => setAdding(true)} accessibilityLabel="Добавить категорию">
+                    <Text style={styles.changeText}>＋ Добавить категорию</Text>
+                  </TouchableOpacity>
+                </View>
+                <CategoryPickerModal
+                  visible={adding}
+                  title="Добавить категорию"
+                  excludeIds={list}
+                  onPick={(id) => { setAdding(false); if (id !== null) toggle(id); }}
+                  onClose={() => setAdding(false)}
+                />
+              </View>
             ) : (
-            // none yet, or different ones: the categories right here (several, offered for its operations)
+            // none yet: the categories right here, "Без категории" among them
             <View style={styles.pickerTop}>
-              {mixed ? <Text style={styles.hint}>Какие обычно категории у «{m.name}»?</Text> : null}
               <CategoryPicker
-                title={mixed ? 'Выберите категории' : 'Выберите категорию'}
+                title="Выберите категорию"
                 selectedId={single}
-                selectedIds={mixed ? list : undefined}
                 onSelect={toggle}
-                // one category or none: "Без категории" among them (selected for a merchant without one)
-                allowNone={!mixed}
+                allowNone
                 disabled={saving}
               />
             </View>
@@ -279,7 +299,7 @@ const styles = StyleSheet.create({
   summaryRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 4 },
   meta: { fontSize: 14, color: colors.muted, flexShrink: 1 },
   link: { fontSize: 14, color: colors.accent },
-  hint: { fontSize: 14, color: colors.muted, marginTop: 12 },
+  listHint: { fontSize: 14, color: colors.muted, marginBottom: 10 },
   currentRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
   changeButton: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
