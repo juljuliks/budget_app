@@ -261,11 +261,12 @@ export default function MerchantCard({ merchantId, categories: given, onClose, o
                     <Text style={styles.changeText}>＋ Добавить категорию</Text>
                   </TouchableOpacity>
                 </View>
+                {/* several at once: the merchant's ones selected and first, a tap adds or takes one off */}
                 <CategoryPickerModal
                   visible={adding}
-                  title="Добавить категорию"
-                  excludeIds={list}
-                  onPick={(id) => { setAdding(false); if (id !== null) toggle(id); }}
+                  title="Категории мерчанта"
+                  selectedIds={list}
+                  onPick={(id) => { if (id !== null) toggle(id); }}
                   onClose={() => setAdding(false)}
                 />
               </View>

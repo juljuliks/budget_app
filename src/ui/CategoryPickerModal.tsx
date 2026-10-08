@@ -10,6 +10,8 @@ type Props = {
   visible: boolean;
   title: string;
   selectedId?: number | null;
+  /** several picked: each tap reports its id (the parent toggles it), the sheet stays open until "Готово" */
+  selectedIds?: number[];
   transferFirst?: boolean;
   allowNone?: boolean;
   /** categories not offered (e.g. the one being deleted) */
@@ -19,20 +21,25 @@ type Props = {
 };
 
 /** Bottom sheet with the shared CategoryPicker (categories, "+ Новая категория"). */
-export default function CategoryPickerModal({ visible, title, selectedId, transferFirst, allowNone, excludeIds, onPick, onClose }: Props) {
+export default function CategoryPickerModal({ visible, title, selectedId, selectedIds, transferFirst, allowNone, excludeIds, onPick, onClose }: Props) {
   return (
     <BottomSheet visible={visible} onClose={onClose} title={title} style={styles.sheet}>
         <SheetScrollView contentContainerStyle={styles.content}>
-          <CategoryPicker
+          {/* remounted on opening: the selected ones go first in the order of that moment */}
+          {visible ? <CategoryPicker
             selectedId={selectedId}
+            selectedIds={selectedIds}
+            selectedFirst={!!selectedIds}
             onSelect={onPick}
             allowNone={allowNone}
             transferFirst={transferFirst}
             excludeIds={excludeIds}
             showAll
-          />
+          /> : null}
         </SheetScrollView>
-        <SheetActions submit={null} onCancel={onClose} style={styles.actions} />
+        {selectedIds
+          ? <SheetActions submit={{ title: 'Готово', onPress: onClose }} style={styles.actions} />
+          : <SheetActions submit={null} onCancel={onClose} style={styles.actions} />}
     </BottomSheet>
   );
 }

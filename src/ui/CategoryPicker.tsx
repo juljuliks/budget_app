@@ -26,6 +26,8 @@ type Props = {
   disabled?: boolean;
   /** every category at once (the picker in its own sheet); otherwise the most used first, COLLAPSED of them and "Показать ещё" */
   showAll?: boolean;
+  /** the selected ones first (several picked in a sheet) */
+  selectedFirst?: boolean;
 };
 
 /** categories shown before "Показать ещё" when the picker sits right in a form */
@@ -38,6 +40,7 @@ const COLLAPSED = 8;
  */
 export default function CategoryPicker({
   selectedId, selectedIds, onSelect, allowNone = false, title = 'Категория', transferFirst = false, excludeIds, disabled, showAll = false,
+  selectedFirst = false,
 }: Props) {
   // "+": a new category in a sheet, picked right after it is created (as if tapped in the list)
   const [creating, setCreating] = useState(false);
@@ -65,7 +68,10 @@ export default function CategoryPicker({
 
   const excluded = new Set(excludeIds ?? []);
   const isSelected = (id: number) => (selectedIds ? selectedIds.includes(id) : id === selectedId);
-  const available = categories.filter((c) => !excluded.has(c.id));
+  const offered = categories.filter((c) => !excluded.has(c.id));
+  // the order they had when the sheet opened: a tap doesn't move a chip under the finger
+  const [firstIds] = useState(() => new Set(selectedIds ?? []));
+  const available = selectedFirst ? [...offered.filter((c) => firstIds.has(c.id)), ...offered.filter((c) => !firstIds.has(c.id))] : offered;
   const collapsible = !showAll && available.length > COLLAPSED + 1;
   // collapsed: the first COLLAPSED, plus the selected one when it's further down (the choice stays visible)
   const shown = !collapsible ? available
