@@ -16,9 +16,11 @@ const ruleOf = (merchant: string) => (db.prepare(
 
 switch (flow) {
   case 'sms-receive':
-    expect('only the bank\'s SMS: one operation', db.prepare(
-      "SELECT raw_merchant AS m, kind, amount_minor AS a, category_id AS c, seen_at FROM transactions").all(),
-      [{ m: 'NEWSHOP', kind: 'purchase', a: 1200, c: null, seen_at: null }]);
+    expect('only the bank\'s SMS: two operations', db.prepare(
+      "SELECT raw_merchant AS m, kind, amount_minor AS a, category_id AS c, seen_at FROM transactions ORDER BY occurred_at").all(),
+      [{ m: 'LONGSHOP', kind: 'purchase', a: 3300, c: null, seen_at: null }, { m: 'NEWSHOP', kind: 'purchase', a: 1200, c: null, seen_at: null }]);
+    expect('the long SMS whole: its parts joined', (db.prepare("SELECT raw_sms AS t FROM transactions WHERE raw_merchant = 'LONGSHOP'").get() as { t: string }).t
+      .endsWith('block the card in the TBC app right away.'), true);
     break;
   case 'import': {
     const imported = db.prepare(

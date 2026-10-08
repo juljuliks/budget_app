@@ -1,4 +1,4 @@
-# 1.1, 1.2: the operation taken in while the app was closed is there, new, with the card's balance from its SMS.
+# 1.1, 1.2: the operations taken in while the app was closed are there, new, with the card's balance from the latest SMS.
 appId: com.budgetapp
 ---
 - launchApp
@@ -7,4 +7,7 @@ appId: com.budgetapp
     timeout: 60000
 - assertVisible: "−12\\.00.₾"
 - assertVisible: "283\\.14.₾"
+# the long one, its parts joined
+- assertVisible: "LONGSHOP"
+- assertVisible: "−33\\.00.₾"
 - assertNotVisible: "SPAR"
