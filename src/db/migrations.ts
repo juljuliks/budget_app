@@ -313,6 +313,29 @@ export const MIGRATIONS: MigrationStep[][] = [
       SELECT DISTINCT t.merchant_key, t.category_id FROM transactions t JOIN mixed_merchants m ON m.merchant_key = t.merchant_key
         WHERE t.category_id IS NOT NULL AND t.kind IN (${REMEMBERABLE_KINDS.map((k) => `'${k}'`).join(',')})`,
   ],
+  // 27: "Пополнение счёта" (categories.system = 'topup'): every deposit goes there by default — money that came to the
+  // card, what the month has to distribute, not spending. Deposits without a category get it. The seeded transfer
+  // category "Прочие" goes, its history too: its deposits to "Пополнение счёта", the rest without a category.
+  [
+    `INSERT INTO categories (name, emoji, system, sort_order) VALUES ('Пополнение счёта', '💳', 'topup', 101)`,
+    `UPDATE transactions SET category_id = (SELECT id FROM categories WHERE system = 'topup'), category_source = NULL
+      WHERE kind = 'deposit' AND category_id IS NULL`,
+    async (db) => {
+      const others = await db.all<{ id: number }>(
+        `SELECT c.id FROM categories c JOIN category_types t ON t.id = c.type_id
+          WHERE t.is_transfer = 1 AND c.name = 'Прочие' AND c.system IS NULL`);
+      for (const { id } of others) {
+        await db.run(
+          `UPDATE transactions SET category_id = (SELECT id FROM categories WHERE system = 'topup'), category_source = NULL
+            WHERE category_id = ? AND kind = 'deposit'`, [id]);
+        await db.run('UPDATE transactions SET category_id = NULL, category_source = NULL WHERE category_id = ?', [id]);
+        for (const table of ['plan_items', 'merchant_rules', 'merchant_categories', 'category_usage']) {
+          await db.run(`DELETE FROM ${table} WHERE category_id = ?`, [id]);
+        }
+        await db.run('DELETE FROM categories WHERE id = ?', [id]);
+      }
+    },
+  ],
 ];
 
 export async function getSchemaVersion(db: Db): Promise<number> {

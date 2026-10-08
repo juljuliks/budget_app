@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Controller, useForm, useFormState, useWatch } from 'react-hook-form';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { incrementCategoryUsage } from '../db/categories';
+import { incrementCategoryUsage, topUpCategoryId } from '../db/categories';
 import { addManualTransaction } from '../db/transactions';
 import { emitTransactionsChanged } from '../events';
 import CategoryPicker from './CategoryPicker';
@@ -51,6 +51,18 @@ export default function AddTransactionSheet({ visible, onClose }: Props) {
   const [draft, setDraft] = useState<DayKey | null>(null);
   const today = dayKeyOf(new Date());
   const date = useWatch({ control: form.control, name: 'date' });
+  // a deposit goes to "Пополнение счёта" unless another is picked; a purchase can't be in it
+  const kind = useWatch({ control: form.control, name: 'kind' });
+  useEffect(() => {
+    let live = true;
+    topUpCategoryId().then((topUp) => {
+      if (!live || topUp === null) return;
+      const current = form.getValues('categoryId');
+      if (kind === 'deposit' && current === null) form.setValue('categoryId', topUp);
+      if (kind !== 'deposit' && current === topUp) form.setValue('categoryId', null);
+    }).catch((e) => console.error('top-up category failed', e));
+    return () => { live = false; };
+  }, [kind, form]);
 
 
   const save = submitForm(form, async ({ amount, kind, currency, description, date, categoryId }) => {
@@ -139,7 +151,7 @@ export default function AddTransactionSheet({ visible, onClose }: Props) {
         control={form.control}
         name="categoryId"
         render={({ field }) => (
-          <CategoryPicker selectedId={field.value} onSelect={field.onChange} allowNone disabled={saving} />
+          <CategoryPicker selectedId={field.value} onSelect={field.onChange} allowNone deposit={kind === 'deposit'} disabled={saving} />
         )}
       />
 

@@ -1,5 +1,5 @@
 import { Currency } from '../../db/fx';
-import { CategoryStat, getPlanBudget, monthStats, parseYm, periodStats, planConverter, StatGroup, unplannedOf } from '../../db/plans';
+import { CategoryStat, getPlanBudget, monthStats, parseYm, periodStats, planConverter, spentOf, StatGroup, unplannedOf } from '../../db/plans';
 import { DayKey, rangeToUnix } from '../dateRange';
 
 /**
@@ -15,7 +15,7 @@ export function splitUnplanned(groups: StatGroup[], planned: (c: CategoryStat) =
     if (inPlan.length === 0) continue;
     kept.push({
       ...g, categories: inPlan,
-      spent_minor: inPlan.reduce((s, c) => s + c.spent_minor, 0),
+      spent_minor: inPlan.reduce((s, c) => s + spentOf(c), 0),
       planned_minor: inPlan.reduce((s, c) => s + (c.limit_minor ?? 0), 0),
     });
   }

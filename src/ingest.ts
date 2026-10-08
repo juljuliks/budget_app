@@ -6,7 +6,7 @@ import { sha256Hex } from './hash';
 import { getDb } from './db';
 import { findCategoryForMerchant } from './categorize';
 import { isRememberable } from './types';
-import { incrementCategoryUsage } from './db/categories';
+import { incrementCategoryUsage, topUpCategoryId } from './db/categories';
 import { emitTransactionsChanged } from './events';
 
 export type IncomingSms = {
@@ -24,7 +24,7 @@ export const CROSS_SOURCE_WINDOW_S = 15 * 60;
 export type IngestResult =
   | { status: 'ignored' }                       // not a transaction SMS
   | { status: 'duplicate'; txId: number }
-  | { status: 'inserted'; txId: number; categoryId: number | null };
+  | { status: 'inserted'; txId: number; categoryId: number | null; kind: string };
 
 // Dedup key. For fixtures (no timestamp) this equals sha256(body + sender), which
 // matches hashes already stored by the old importer.
@@ -76,7 +76,10 @@ export async function ingestSms(sms: IncomingSms, opts: { quiet?: boolean } = {}
   const occurredAt = resolveOccurredAt(parsed, sms.timestamp);
   const rule = parsed.merchant_key && isRememberable(parsed.kind) ? await findCategoryForMerchant(parsed.merchant_key) : null;
   // a refund is subtracted from its merchant's category right away (see refundCategory); settling it on the purchase is optional
-  const categoryId = parsed.kind === 'refund' ? await refundCategory(parsed.merchant_key, occurredAt) : rule?.category_id ?? null;
+  // a deposit: "Пополнение счёта" (money that came to the card); moved by hand when it was a person paying back
+  const categoryId = parsed.kind === 'refund' ? await refundCategory(parsed.merchant_key, occurredAt)
+    : parsed.kind === 'deposit' ? await topUpCategoryId()
+    : rule?.category_id ?? null;
   // the bank may report one operation both by SMS and by push: keep the first
   const twin = await db.get<{ id: number; occurred_at: number }>(
     `SELECT id, occurred_at FROM transactions
@@ -104,7 +107,7 @@ export async function ingestSms(sms: IncomingSms, opts: { quiet?: boolean } = {}
       parsed.raw_merchant || null,
       parsed.merchant_key || null,
       categoryId,
-      categoryId ? 'rule' : null,
+      categoryId && parsed.kind !== 'deposit' ? 'rule' : null,
       occurredAt,
       sms.body,
       hash,
@@ -117,10 +120,10 @@ export async function ingestSms(sms: IncomingSms, opts: { quiet?: boolean } = {}
   }
   // the balance after this operation, as the bank reports it
   if (balance) await recordBalance({ minor: balance.minor, currency: balance.currency, at: occurredAt, txId: lastInsertRowid });
-  if (categoryId && parsed.kind !== 'refund') await incrementCategoryUsage(categoryId);
+  if (categoryId && parsed.kind !== 'refund' && parsed.kind !== 'deposit') await incrementCategoryUsage(categoryId);
   changed();
 
-  return { status: 'inserted', txId: lastInsertRowid, categoryId };
+  return { status: 'inserted', txId: lastInsertRowid, categoryId, kind: parsed.kind };
 }
 
 export default ingestSms;

@@ -88,6 +88,13 @@ describe('4.1–4.2 the list; creating and changing a category', () => {
     expect(screen.getByDisplayValue('Сбережения').props.editable).toBe(false);
     expect(screen.queryByText('Удалить категорию')).toBeNull();
   });
+
+  test('"Пополнение счёта": a system one too — what it is for, can\'t be deleted', async () => {
+    await tap('💳 Пополнение счёта');
+    expect(await screen.findByText(/^Системная категория: сюда попадают все пополнения карты/)).toBeTruthy();
+    expect(screen.getByDisplayValue('Пополнение счёта').props.editable).toBe(false);
+    expect(screen.queryByText('Удалить категорию')).toBeNull();
+  });
 });
 
 test('4.3: deleting a section: its categories stay without one', async () => {

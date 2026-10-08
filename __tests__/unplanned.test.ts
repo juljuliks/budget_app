@@ -4,7 +4,7 @@ import { splitUnplanned } from '../src/ui/stats/unplanned';
 
 const cat = (id: number | null, spent: number, limit: number | null, type_id: number | null = 1): CategoryStat => ({
   category_id: id, name: `c${id}`, emoji: null, type_id, type_name: null, spent_minor: spent, limit_minor: limit,
-  plan_kind: limit === null ? null : 'limit', plan_norm: null, color: '#000', deleted: false,
+  plan_kind: limit === null ? null : 'limit', plan_norm: null, color: '#000', deleted: false, transfer: false,
 });
 const group = (title: string, cats: CategoryStat[]): StatGroup => ({
   type_id: cats[0].type_id, title, categories: cats,

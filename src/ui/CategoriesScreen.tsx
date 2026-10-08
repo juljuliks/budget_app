@@ -3,7 +3,7 @@ import { NO_SECTION } from './strings';
 import { SectionList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Category, isSavings, listCategories } from '../db/categories';
+import { Category, isSystemCategory, listCategories } from '../db/categories';
 import { categoryColors } from '../db/colors';
 import { listCategoryTypes } from '../db/categoryTypes';
 import type { RootStackParamList } from '../navigation';
@@ -37,7 +37,7 @@ export default function CategoriesScreen({ navigation }: Props) {
   const [headerHeight, setHeaderHeight] = useState(0);
   // "Сбережения" can't be merged
   const pick = (c: Category) => {
-    if (isSavings(c)) return;
+    if (isSystemCategory(c)) return;
     setPicked((p) => (p.includes(c.id) ? p.filter((id) => id !== c.id) : [...p, c.id]));
   };
 
@@ -83,9 +83,9 @@ export default function CategoriesScreen({ navigation }: Props) {
           onPress={() => (picking ? pick(item) : setOpen(item.id))}
           onLongPress={() => pick(item)}
           accessibilityRole="button"
-          accessibilityState={picking ? { selected: picked.includes(item.id), disabled: isSavings(item) } : undefined}
+          accessibilityState={picking ? { selected: picked.includes(item.id), disabled: isSystemCategory(item) } : undefined}
         >
-          {picking ? <View style={[styles.check, isSavings(item) && styles.off]}><Checkbox checked={picked.includes(item.id)} size={20} /></View> : null}
+          {picking ? <View style={[styles.check, isSystemCategory(item) && styles.off]}><Checkbox checked={picked.includes(item.id)} size={20} /></View> : null}
           <View style={[styles.dot, { backgroundColor: colorOf.get(item.id) ?? colors.border }]} />
           <Text style={styles.name} numberOfLines={1}>{`${item.emoji || ''} ${item.name}`.trim()}</Text>
           {/* hidden, not removed, while picking: the "›" sets the row's height, the rows would shrink and the list jump */}

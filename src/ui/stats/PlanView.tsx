@@ -256,7 +256,8 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
 
   const budgetHint = [
     total > 0 ? `Уже запланировано: ${money(total)}` : '',
-    income > 0 ? `Пополнения за месяц: ${money(income)}` : '',
+    // "Пополнение счёта" and the transfers more came back for (src/db/plans.ts monthIncome)
+    income > 0 ? `Пришло за месяц: ${money(income)}` : '',
   ].filter(Boolean).join('\n') || 'Сколько денег на месяц, например зарплата. План не сможет его превысить.';
 
   return (

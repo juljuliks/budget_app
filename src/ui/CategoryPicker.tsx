@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Category, categoryLabel, categoryUsageCounts, isTransferCategory, listCategories } from '../db/categories';
+import { Category, categoryLabel, categoryUsageCounts, isTopUp, isTransferCategory, listCategories } from '../db/categories';
 import { getTransferTypeId } from '../db/categoryTypes';
 import { onTransactionsChanged } from '../events';
 import CategorySheet from './CategorySheet';
@@ -22,6 +22,8 @@ type Props = {
   title?: string;
   /** money transfers: categories of the transfer type come first; a new category gets that type */
   transferFirst?: boolean;
+  /** a deposit: "Пополнение счёта" first, then the transfer categories (a person paying back); only then is it offered */
+  deposit?: boolean;
   /** categories not to offer (already in the plan, the one being deleted, ...) */
   excludeIds?: number[];
   disabled?: boolean;
@@ -40,7 +42,7 @@ const COLLAPSED = 8;
  * focus / changes, so a category created or edited elsewhere shows up immediately.
  */
 export default function CategoryPicker({
-  selectedId, selectedIds, onSelect, allowNone = false, title = 'Категория', transferFirst = false, excludeIds, disabled, showAll = false,
+  selectedId, selectedIds, onSelect, allowNone = false, title = 'Категория', transferFirst = false, deposit = false, excludeIds, disabled, showAll = false,
   selectedFirst = false,
 }: Props) {
   // "+": a new category in a sheet, picked right after it is created (as if tapped in the list)
@@ -54,14 +56,18 @@ export default function CategoryPicker({
     Promise.all([listCategories(), getTransferTypeId(), categoryUsageCounts()])
       .then(([cats, transferType, usage]) => {
         // the most used first (a stable sort keeps the usual order among equals); for transfers the transfer-type ones go first
-        const byUsage = showAll ? cats : [...cats].sort((a, b) => (usage.get(b.id) ?? 0) - (usage.get(a.id) ?? 0));
-        setCategories(transferFirst
+        const sorted = showAll ? cats : [...cats].sort((a, b) => (usage.get(b.id) ?? 0) - (usage.get(a.id) ?? 0));
+        // "Пополнение счёта" only for a deposit, and first there
+        const byUsage = sorted.filter((c) => !isTopUp(c));
+        setCategories(deposit
+          ? [...sorted.filter(isTopUp), ...byUsage.filter(isTransferCategory), ...byUsage.filter((c) => !isTransferCategory(c))]
+          : transferFirst
           ? [...byUsage.filter(isTransferCategory), ...byUsage.filter((c) => !isTransferCategory(c))]
           : byUsage);
         setTransferTypeId(transferType);
       })
       .catch((e) => console.error('load categories failed', e));
-  }, [transferFirst, showAll]);
+  }, [transferFirst, deposit, showAll]);
 
   // on focus, and again whenever load changes while focused (useFocusEffect re-runs on a new callback): no extra useEffect
   useFocusEffect(load);
@@ -108,6 +114,7 @@ export default function CategoryPicker({
               onSelect={(id) => { onSelect(id); if (!selectedIds) setAllOpen(false); }}
               allowNone={allowNone}
               transferFirst={transferFirst}
+              deposit={deposit}
               excludeIds={excludeIds}
               disabled={disabled}
               showAll

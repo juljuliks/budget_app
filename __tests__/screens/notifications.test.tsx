@@ -29,7 +29,8 @@ describe('8.1 a new operation', () => {
   });
   test('a transfer: the transfer categories', async () => {
     await sms('Money Transfer:\n15.00 GEL\nMC GOLD\n15/10/2026\nANA K');
-    expect(shown()).toEqual([['Перевод — 15.00 ₾', 'ANA K', ['🔁 Переводы: Прочие', '➡️ К категориям']]]);
+    // no transfer categories yet (the seeded "Прочие" went): just the list
+    expect(shown()).toEqual([['Перевод — 15.00 ₾', 'ANA K', ['➡️ К категориям']]]);
   });
   test('a merchant of different categories: its own first', async () => {
     const db = await getDb();

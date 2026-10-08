@@ -13,13 +13,28 @@ export type Category = {
   deleted_at: number | null;
   /** own color; null = from the type's palette (see src/colors.ts) */
   color: string | null;
-  /** 'savings' for the system category "Сбережения" (can't be deleted or renamed), else null */
+  /** 'savings' for "Сбережения", 'topup' for "Пополнение счёта" (system categories: can't be deleted or renamed), else null */
   system: string | null;
 };
 
 /** The system category money put aside goes to: its operations aren't spending. */
 export const SAVINGS = 'savings';
 export const isSavings = (c: { system?: string | null }) => c.system === SAVINGS;
+
+/**
+ * The system category every deposit goes to by default: money that came to the card (P2P from crypto, a salary) —
+ * what the month has to distribute, not spending. Deposits only; one, can't be deleted (src/db/plans.ts monthIncome).
+ */
+export const TOP_UP = 'topup';
+export const isTopUp = (c: { system?: string | null }) => c.system === TOP_UP;
+/** A category of the system: "Сбережения", "Пополнение счёта" (not deleted, merged, planned, offered for purchases). */
+export const isSystemCategory = (c: { system?: string | null }) => !!c.system;
+
+/** The id of "Пополнение счёта". */
+export async function topUpCategoryId(): Promise<number | null> {
+  const db = await getDb();
+  return (await db.get<{ id: number }>("SELECT id FROM categories WHERE system = 'topup'"))?.id ?? null;
+}
 
 /** The id of "Сбережения". */
 export async function savingsCategoryId(): Promise<number | null> {

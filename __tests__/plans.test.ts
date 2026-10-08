@@ -7,7 +7,7 @@ import {
   addPlanItem, currentYm, ensureMonthPlan, getPlanBudget, listPlan, monthIncome, monthRange, monthStats, periodStats, planHistory,
   removePlanItem, setPlanAmount, setPlanBudget, setPlanPinned, ymOf,
 } from '../src/db/plans';
-import { createCategory, deleteCategory } from '../src/db/categories';
+import { createCategory, deleteCategory, topUpCategoryId } from '../src/db/categories';
 import { addManualTransaction } from '../src/db/transactions';
 import { freshDb } from './helpers';
 import { NEUTRAL_COLOR } from '../src/colors';
@@ -200,11 +200,13 @@ describe('amount to distribute', () => {
     expect(await getPlanBudget(M2)).toMatchObject({ amount_minor: 300000, currency: 'GEL' });
   });
 
-  test('month income = GEL deposits of the month', async () => {
-    await spend(250000, null, 2099, 0, 'deposit');
-    await spend(1000, null, 2099, 0, 'deposit', 'USD');
+  test('month income = the deposits of the month in "Пополнение счёта" (GEL; no rate: not counted)', async () => {
+    const topUp = (await topUpCategoryId())!;
+    await spend(250000, topUp, 2099, 0, 'deposit');
+    await spend(1000, topUp, 2099, 0, 'deposit', 'USD');
     await spend(500, null, 2099, 0);
-    await spend(7000, null, 2099, 1, 'deposit');
+    await spend(3000, null, 2099, 0, 'deposit'); // without a category: not counted
+    await spend(7000, topUp, 2099, 1, 'deposit');
     expect(await monthIncome(M1)).toBe(250000);
   });
 

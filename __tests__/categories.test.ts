@@ -29,12 +29,13 @@ async function tx(categoryId: number | null, occurredAt: number, amount = 100) {
 beforeEach(() => freshDb());
 
 describe('types', () => {
-  test('fresh DB has the transfer type with the seeded category renamed to avoid "Переводы: Переводы"', async () => {
+  test('fresh DB has the transfer type, empty (its seeded "Прочие" went: deposits are "Пополнение счёта"), and the system ones', async () => {
     const transfer = await getTransferTypeId();
     expect(await listCategoryTypes()).toEqual([{ id: transfer, name: 'Переводы', is_transfer: 1, sort_order: 100, palette: null }]);
-    const cats = (await listCategories()).filter(isTransferCategory);
-    expect(cats.map(categoryLabel)).toEqual(['🔁 Переводы: Прочие']);
-    expect(isTransferCategory(cats[0])).toBe(true);
+    expect((await listCategories()).filter(isTransferCategory)).toEqual([]);
+    expect((await listCategories()).filter((c) => c.system).map((c) => [categoryLabel(c), c.system])).toEqual([
+      ['🏦 Сбережения', 'savings'], ['💳 Пополнение счёта', 'topup'],
+    ]);
   });
 
   test('label: emoji + type prefix', () => {
@@ -63,6 +64,7 @@ describe('types', () => {
   test('categories are listed by type order, untyped last', async () => {
     const hobby = await createCategoryType('Хобби');
     await createCategory('Гитара', null, hobby);
+    await createCategory('Маме', null, await getTransferTypeId());
     const labels = (await listCategories()).map((c) => c.type_name ?? '-');
     expect(labels.slice(0, 2)).toEqual(['Хобби', 'Переводы']);
     expect(labels[labels.length - 1]).toBe('-');
@@ -176,7 +178,7 @@ describe('deleteCategory', () => {
 test('stats are grouped by type: types first, then untyped, then uncategorized', async () => {
   const hobby = await createCategoryType('Хобби');
   const guitar = await createCategory('Гитара', null, hobby);
-  const transfer = (await listCategories()).filter(isTransferCategory)[0].id;
+  const transfer = await createCategory('Маме', null, await getTransferTypeId());
   await tx(guitar, at(2026, 9), 300);
   await tx(transfer, at(2026, 9), 500);
   await tx(1, at(2026, 9), 200);
@@ -195,9 +197,9 @@ test('migration 4 types existing "Перевод…" categories and turns archiv
   await migrate(db);
   const rows = await db.all<{ name: string; type_id: number | null; deleted_at: number | null }>(
     "SELECT name, type_id, deleted_at FROM categories WHERE name IN ('Перевод маме', 'Старое', 'Прочие') ORDER BY name");
+  // the seeded "Переводы" became "Прочие" there, and went with migration 27
   expect(rows).toEqual([
     { name: 'Перевод маме', type_id: 1, deleted_at: null },
-    { name: 'Прочие', type_id: 1, deleted_at: null },
     { name: 'Старое', type_id: null, deleted_at: expect.any(Number) },
   ]);
 });

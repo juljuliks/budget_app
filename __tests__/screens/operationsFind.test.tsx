@@ -35,7 +35,12 @@ describe('2.2 the search', () => {
   });
   test('"без категории": the uncategorized', async () => {
     search('без категории');
-    await shows(['Перевод · NINO B', 'GLOVO', 'Пополнение · SALARY'], ['SPAR']);
+    // a deposit is in "Пополнение счёта"
+    await shows(['Перевод · NINO B', 'GLOVO'], ['SPAR', 'Пополнение · SALARY']);
+  });
+  test('"пополнение счёта": the deposits', async () => {
+    search('пополнение счёта');
+    await shows(['Пополнение · SALARY'], ['SPAR', 'GLOVO']);
   });
   test('several words: all of them', async () => {
     search('zara 120');
@@ -59,8 +64,9 @@ describe('2.3 the filters', () => {
   test('categories: those with operations, with their counts; several at once', async () => {
     await tap('#filter-category');
     expect(await screen.findByText('Категории')).toBeTruthy();
-    // "Без категории" among them, with how many
-    expect(within(rowOf('⚪️ Без категории')).getByText('3')).toBeTruthy();
+    // "Без категории" among them, with how many (the deposit is in "Пополнение счёта")
+    expect(within(rowOf('⚪️ Без категории')).getByText('2')).toBeTruthy();
+    expect(within(rowOf('💳 Пополнение счёта')).getByText('1')).toBeTruthy();
     expect(within(rowOf('🛒 Продукты')).getByText('61')).toBeTruthy();
     await tap('👕 Одежда');
     await tap('📺 Подписки');
@@ -155,7 +161,7 @@ describe('2.4 the groupings', () => {
   });
   test('by category: "Без категории" first', async () => {
     await groupBy('По категориям');
-    await shows(['⚪️ Без категории · 3 операции', '+70.00 ₾']);
+    await shows(['⚪️ Без категории · 2 операции', '−30.00 ₾']);
   });
   test('by kind', async () => {
     await groupBy('По типу');

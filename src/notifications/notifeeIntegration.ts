@@ -4,7 +4,7 @@ import { buildCategorySuggestions } from './notifyHelper';
 import { isMixedMerchant } from '../categorize';
 import { merchantCategories } from '../db/merchants';
 import { isRememberable } from '../types';
-import { categoryLabel } from '../db/categories';
+import { categoryLabel, isTopUp, listCategories, topCategories } from '../db/categories';
 import { getDb } from '../db';
 import { assignCategory } from '../assign';
 import { openTransaction } from '../sheets';
@@ -61,6 +61,38 @@ export async function showUncategorizedTransactionNotification(txId: number) {
       actions,
     },
     data: { txId: String(txId), merchant_key: tx.merchant_key || '' },
+  });
+}
+
+/**
+ * A deposit, put in "Пополнение счёта": "Пополнение — 200 ₾ → 💳 Пополнение счёта", the sender below; the buttons move it
+ * to a transfer category (a person paying back: subtracted from what was sent them), the most used first, and
+ * "К категориям" opens it. Nothing is remembered for the sender.
+ */
+export async function showDepositNotification(txId: number) {
+  const db = await getDb();
+  const tx = await db.get<{ amount_minor: number; currency: string; raw_merchant: string | null; category_id: number | null }>(
+    "SELECT amount_minor, currency, raw_merchant, category_id FROM transactions WHERE id = ? AND kind = 'deposit'", [txId]);
+  if (!tx) return;
+  const category = (await listCategories()).find((c) => c.id === tx.category_id);
+  const transfers = (await topCategories(10_000)).filter((c) => c.type_is_transfer === 1 && !isTopUp(c)).slice(0, MAX_ACTIONS - 1);
+  const actions: Array<{ title: string; pressAction: { id: string; launchActivity?: string } }> = transfers.map((s) => ({
+    title: categoryLabel(s),
+    pressAction: { id: `suggest_${s.id}` },
+  }));
+  actions.push({ title: '➡️ К категориям', pressAction: { id: ALL_CATEGORIES_ACTION, launchActivity: 'default' } });
+  await notifee.displayNotification({
+    id: `tx_${txId}`,
+    title: `Пополнение — ${formatMoneyWithCurrency(tx.amount_minor, tx.currency)}${category ? ` → ${categoryLabel(category)}` : ''}`,
+    body: tx.raw_merchant || ' ',
+    android: {
+      channelId: CHANNEL_ID,
+      smallIcon: 'ic_notification',
+      importance: AndroidImportance.HIGH,
+      pressAction: { id: 'default', launchActivity: 'default' },
+      actions,
+    },
+    data: { txId: String(txId), merchant_key: '' },
   });
 }
 
@@ -149,4 +181,4 @@ export async function handleNotificationAction(event: ActionEvent) {
   if (event.notification?.id) await notifee.cancelNotification(event.notification.id);
 }
 
-export default { showUncategorizedTransactionNotification, showLimitAlert, handleNotificationAction };
+export default { showUncategorizedTransactionNotification, showDepositNotification, showLimitAlert, handleNotificationAction };

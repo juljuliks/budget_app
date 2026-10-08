@@ -45,8 +45,8 @@ test('1.1: every kind, its sign, its name in the list; the amounts\' formats; th
   expect(row('YANDEX GO').getByText('−12.00 ₾')).toBeTruthy();
   expect(row('AMZN Mktp US').getByText('−19.90 ₾')).toBeTruthy();
   expect(screen.getByText('12 октября')).toBeTruthy();
-  // all new and without a category
-  expect(screen.getByText('15')).toBeTruthy();
+  // new and without a category: all but the 2 deposits ("Пополнение счёта")
+  expect(screen.getByText('13')).toBeTruthy();
 
   expect(await tx('SPAR TBILISI GE')).toMatchObject({ kind: 'purchase', a: 4400, c: 'GEL', k: 'SPAR' });
   expect(await tx('SPAR 123')).toMatchObject({ k: 'SPAR' });

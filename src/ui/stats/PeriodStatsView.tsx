@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { averageFullMonths, NormPeriod, CategoryStat, parseYm, periodStats, PeriodStats } from '../../db/plans';
+import { averageFullMonths, NormPeriod, CategoryStat, parseYm, periodStats, PeriodStats, spentOf } from '../../db/plans';
 import { useDisplayCurrency } from '../../displayCurrency';
 import { useOpenCategoryTransactions } from '../../navigation';
 import { onTransactionsChanged } from '../../events';
@@ -139,6 +139,9 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
   const picked = selected === null ? undefined : stats.categories.find((c) => String(c.category_id) === selected);
   const cur = stats.currency;
   const money = (minor: number) => formatWithCurrency(minor, cur);
+  // a transfer category carries its sign, as in the operations: "−" sent, "+" (green) more came back than was sent
+  const signed = (c: CategoryStat) => (!c.transfer ? money(c.spent_minor) : c.spent_minor < 0 ? `+${money(-c.spent_minor)}` : `−${money(c.spent_minor)}`);
+  const cameInStyle = (c: CategoryStat) => (c.transfer && c.spent_minor < 0 ? { color: colors.income } : null);
   /** an amount in a formula: whole minor units, "64.52 ₾" */
   const m = (v: number) => money(Math.round(v));
   /** "перерасход 69 ₾" / "осталось 20 ₾" */
@@ -174,7 +177,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
     return byMonth ? `${name} · ${monthIn}` : g?.window ? `${name} · ${shortRange(g.window)}` : name;
   };
   // the period's spending outside the plan, by category (the "Вне плана" block's calculation)
-  const outsideCats = stats.categories.filter((c) => c.spent_minor > 0
+  const outsideCats = stats.categories.filter((c) => (c.spent_minor > 0 || (c.transfer && c.spent_minor < 0))
     && (c.category_id === null || (month ? !month.planned.has(c.category_id) : norms?.byCategory.get(c.category_id) === undefined)));
   const summary = pace
     ? (limited.length ? null : 'Плана на эти дни нет — показана только структура трат.')
@@ -225,7 +228,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
   const overspentCats = byLimits ? planned.filter(monthOver).sort((a, b) => b.spent_minor - a.spent_minor) : [];
   const otherCats = byLimits ? planned.filter((c) => {
     const p = c.category_id === null ? undefined : norms?.byCategory.get(c.category_id);
-    return !monthOver(c) && !(p && p.kind === 'limit' && fitting(p.rhythm)) && c.spent_minor > 0;
+    return !monthOver(c) && !(p && p.kind === 'limit' && fitting(p.rhythm)) && (c.spent_minor > 0 || (c.transfer && c.spent_minor < 0));
   }).sort((a, b) => b.spent_minor - a.spent_minor) : [];
 
   /** A limits section's total, as its tile had it: the bar, what's left or the overspend, how the period moved the limit. */
@@ -347,7 +350,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
       <View style={styles.rowTop}>
         <View style={[styles.dot, { backgroundColor: c.color }]} />
         <Text style={styles.name} numberOfLines={1}>{withType ? categoryLabel(c) : `${c.emoji || ''} ${c.name}`.trim()}</Text>
-        <Text style={[styles.amount, styles.amountPad]}>{hidden ? headerPct(c.spent_minor, 0) : `${money(c.spent_minor)}${GLYPH_ROOM}`}</Text>
+        <Text style={[styles.amount, styles.amountPad, cameInStyle(c)]}>{hidden ? headerPct(c.spent_minor, 0) : `${signed(c)}${GLYPH_ROOM}`}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -378,7 +381,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
               nested text was cut short on Android ("0 /", "0 / 106.8…") */}
           {hidden ? <Text style={styles.amount} numberOfLines={1}>{hiddenShare(c, plan)}</Text> : (
             <View style={styles.amountBox}>
-              <Text style={[styles.amountText, ofLimit ? overStyle(rightSpent(c, plan), rightLimit(c, plan)) : null]}>{ofLimit ? formatShort(rightSpent(c, plan)) : `${money(c.spent_minor)}${GLYPH_ROOM}`}</Text>
+              <Text style={[styles.amountText, ofLimit ? overStyle(rightSpent(c, plan), rightLimit(c, plan)) : cameInStyle(c)]}>{ofLimit ? formatShort(rightSpent(c, plan)) : `${signed(c)}${GLYPH_ROOM}`}</Text>
               {ofLimit ? <Text style={[styles.amountText, styles.ofLimit]}>{ofLimit}</Text> : null}
             </View>
           )}
@@ -513,7 +516,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
         const g = groups.find((x) => x.key === key);
         const title = GROUP_TITLES[key] === GROUP_TITLES.fixed ? 'Обязательные платежи' : `${GROUP_TITLES[key]} лимиты`;
         const vsLimit = !!g && g.limit > 0;
-        const total = g ? g.spent : cats.reduce((a, c) => a + c.spent_minor, 0);
+        const total = g ? g.spent : cats.reduce((a, c) => a + spentOf(c), 0);
         return (
           <React.Fragment key={key}>
             <SectionHeader style={[formStyles.sectionHeader, styles.groupHeader, styles.group]}>
@@ -542,8 +545,8 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
             <Text style={styles.groupTitle}>{OVERSPENT}</Text>
             {/* the period's spending of these categories; each row says its month's overspend */}
             {overspentCats.length > 1 ? (
-              <MaskedTotal style={styles.groupTotal} hiddenText={headerPct(overspentCats.reduce((a, c) => a + c.spent_minor, 0), 0)}>
-                {money(overspentCats.reduce((a, c) => a + c.spent_minor, 0))}
+              <MaskedTotal style={styles.groupTotal} hiddenText={headerPct(overspentCats.reduce((a, c) => a + spentOf(c), 0), 0)}>
+                {money(overspentCats.reduce((a, c) => a + spentOf(c), 0))}
               </MaskedTotal>
             ) : null}
           </SectionHeader>
@@ -557,8 +560,8 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
           <SectionHeader style={[formStyles.sectionHeader, styles.groupHeader, styles.group]}>
             <Text style={styles.groupTitle}>{OTHER}</Text>
             {otherCats.length > 1 ? (
-              <MaskedTotal style={styles.groupTotal} hiddenText={headerPct(otherCats.reduce((a, c) => a + c.spent_minor, 0), 0)}>
-                {money(otherCats.reduce((a, c) => a + c.spent_minor, 0))}
+              <MaskedTotal style={styles.groupTotal} hiddenText={headerPct(otherCats.reduce((a, c) => a + spentOf(c), 0), 0)}>
+                {money(otherCats.reduce((a, c) => a + spentOf(c), 0))}
               </MaskedTotal>
             ) : null}
           </SectionHeader>
@@ -752,7 +755,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
                   <Text style={styles.infoText}>
                     {outsideCats.map((c) => (
                       <React.Fragment key={String(c.category_id)}>
-                        {categoryLabel(c)}: <Code>{money(c.spent_minor)}</Code>{'\n'}
+                        {categoryLabel(c)}: <Code>{signed(c)}</Code>{c.transfer && c.spent_minor < 0 ? ' — пришло, не трата' : ''}{'\n'}
                       </React.Fragment>
                     ))}
                   </Text>

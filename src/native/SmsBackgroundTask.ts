@@ -1,6 +1,6 @@
 import { ingestSms } from '../ingest';
 import { createNotificationChannel } from '../notifications/notifeeBootstrap';
-import { showLimitAlert, showUncategorizedTransactionNotification } from '../notifications/notifeeIntegration';
+import { showDepositNotification, showLimitAlert, showUncategorizedTransactionNotification } from '../notifications/notifeeIntegration';
 import { scheduleMonthReports } from '../notifications/monthReportNotice';
 
 export type SmsTaskData = {
@@ -17,7 +17,11 @@ export default async function SmsBackgroundTask(data: SmsTaskData): Promise<void
     const result = await ingestSms({ sender: data.sender, body: data.body, timestamp: data.timestamp, source: data.source });
     console.log('SmsBackgroundTask:', result.status, 'txId' in result ? result.txId : '');
 
-    if (result.status === 'inserted' && result.categoryId === null) {
+    if (result.status === 'inserted' && result.kind === 'deposit') {
+      // in "Пополнение счёта": said so, with the transfer categories to move it to (a person paying back)
+      await createNotificationChannel();
+      await showDepositNotification(result.txId);
+    } else if (result.status === 'inserted' && result.categoryId === null) {
       // the app may never have been opened, so the channel might not exist yet
       await createNotificationChannel();
       await showUncategorizedTransactionNotification(result.txId);

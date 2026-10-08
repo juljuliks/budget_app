@@ -227,6 +227,7 @@ export default function TransactionSheet({ txId: openId, onClose }: Props) {
             title="Сменить категорию"
             selectedId={tx.category_id}
             transferFirst={tx.kind === 'transfer'}
+            deposit={tx.kind === 'deposit'}
               allowNone
             onPick={(id) => { setPickerOpen(false); choose(id); }}
             onClose={() => setPickerOpen(false)}
@@ -241,6 +242,7 @@ export default function TransactionSheet({ txId: openId, onClose }: Props) {
           allowNone
           // money transfers: transfer-type categories first
           transferFirst={tx.kind === 'transfer'}
+            deposit={tx.kind === 'deposit'}
           disabled={saving}
         />
       )}

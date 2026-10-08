@@ -811,6 +811,7 @@ export default function TransactionsList() {
         title={`Выбрано операций: ${selected.size}`}
         // a category created from here is applied to the selection right away
         transferFirst={selectedRows.length > 0 && selectedRows.every((r) => r.kind === 'transfer')}
+        deposit={selectedRows.length > 0 && selectedRows.every((r) => r.kind === 'deposit')}
         allowNone
         onPick={applyBulk}
         onClose={() => setBulkOpen(false)}

@@ -3,6 +3,8 @@ import { fireEvent, waitFor } from '@testing-library/react-native';
 import { openApp, screen, tap, texts } from './app';
 import { ops } from '../../scripts/e2e/seeds';
 import { getDb } from '../../src/db';
+import { createCategory } from '../../src/db/categories';
+import { getTransferTypeId } from '../../src/db/categoryTypes';
 
 const opsOf = async (merchant: string) => (await (await getDb()).all<{ c: string | null; s: string | null; a: number; cur: string; note: string | null }>(
   `SELECT c.name AS c, t.category_source AS s, t.amount_minor AS a, t.currency AS cur, t.note FROM transactions t
@@ -78,14 +80,31 @@ test('2.7.7: "Без категории" stays: the merchant\'s category won\'t 
 });
 
 test('2.7.8: a transfer: the transfer categories first, no merchant category', async () => {
+  await createCategory('Маме', '👩', await getTransferTypeId());
   await tap('Перевод · NINO B');
   expect(await screen.findByText('Выберите категорию')).toBeTruthy();
   const all = texts();
   // "Без категории" first (what it has now), then the transfer ones
   const i = all.indexOf('Выберите категорию');
-  expect(all.slice(i + 1, i + 3)).toEqual(['⚪️ Без категории', '🔁 Переводы: Прочие']);
+  expect(all.slice(i + 1, i + 3)).toEqual(['⚪️ Без категории', '👩 Переводы: Маме']);
+  // "Пополнение счёта" is for deposits only
+  expect(all).not.toContain('💳 Пополнение счёта');
   // the person isn't a merchant: no link
   expect(screen.queryByText('Перевод · NINO B ›')).toBeNull();
+});
+
+test('2.7.8: a deposit: in "Пополнение счёта", first; then the transfer categories (a person paying back)', async () => {
+  await createCategory('Маме', '👩', await getTransferTypeId());
+  await tap('Пополнение · SALARY');
+  expect(await screen.findByText('Сменить')).toBeTruthy();
+  expect(screen.getByText('💳 Пополнение счёта')).toBeTruthy();
+  await tap('Сменить');
+  expect(await screen.findByText('👩 Переводы: Маме')).toBeTruthy();
+  const all = texts();
+  const i = all.indexOf('💳 Пополнение счёта', all.indexOf('Сменить') + 1);
+  expect(all.slice(i, i + 2)).toEqual(['💳 Пополнение счёта', '👩 Переводы: Маме']);
+  await tap('👩 Переводы: Маме');
+  await waitFor(async () => expect((await opsOf('SALARY'))[0].c).toBe('Маме'));
 });
 
 test('2.7.9: the amount and its currency', async () => {

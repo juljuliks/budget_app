@@ -161,9 +161,8 @@ test('money transfer offers only categories of the transfer type, plus "new cate
   const n = displayNotification.mock.calls[0][0];
   expect(n.title).toMatch(/^Перевод/);
   const titles = n.android.actions.map((a: any) => a.title);
-  expect(titles).toHaveLength(3);
-  expect(titles.slice(0, 2).sort()).toEqual(['👩 Переводы: Маме', '🔁 Переводы: Прочие']);
-  expect(n.android.actions[2].pressAction.id).toBe('all_categories');
+  expect(titles).toEqual(['👩 Переводы: Маме', '➡️ К категориям']);
+  expect(n.android.actions[1].pressAction.id).toBe('all_categories');
 });
 
 test('the same operation by SMS and by bank push is stored once; two real purchases stay two', async () => {
@@ -237,6 +236,7 @@ test('a merchant rule never categorizes a money transfer: every transfer asks fo
 });
 
 test('picking a category for a money transfer creates no merchant rule', async () => {
+  await createCategory('Маме', '👩', await getTransferTypeId());
   await SmsBackgroundTask({ sender: 'TBC SMS', body: 'Money Transfer:\n1.00 GEL\nMC GOLD\n02/10/2026', timestamp: 1 });
   await SmsBackgroundTask({ sender: 'TBC SMS', body: 'Money Transfer:\n2.00 GEL\nMC GOLD\n02/10/2026', timestamp: 2 });
   const [first] = displayNotification.mock.calls.map((c) => c[0]);

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useFormState, useWatch } from 'react-hook-form';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import BottomSheet, { SheetScrollView } from '../BottomSheet';
-import { Category, categoryLabel, isSavings, listCategories } from '../../db/categories';
+import { Category, categoryLabel, isSystemCategory, listCategories } from '../../db/categories';
 import { Currency } from '../../db/fx';
 import { addPlanItem, getPlanBudget, lastPlanItem, PlanBudget, planConverter, PlanKind, plannedTotal, setPlanAmount } from '../../db/plans';
 import CurrencyButton from '../CurrencyButton';
@@ -61,7 +61,7 @@ export default function PlanAddModal({ ym, currency: screenCurrency, visible, pl
     if (!visible) { setRows(null); return; }
     (async () => {
       // "Сбережения" isn't planned: it gets what the budget leaves
-      const cats = (await listCategories()).filter((c) => !plannedIds.includes(c.id) && !isSavings(c));
+      const cats = (await listCategories()).filter((c) => !plannedIds.includes(c.id) && !isSystemCategory(c));
       setRows(await Promise.all(cats.map(async (c) => ({ ...c, last: await lastPlanItem(ym, c.id) }))));
       const b = await getPlanBudget(ym);
       setBudget(b);

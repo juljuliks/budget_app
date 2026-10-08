@@ -58,7 +58,8 @@ describe('migrations', () => {
     await db.run("INSERT INTO merchant_rules (match_type, pattern, category_id, created_at) VALUES ('exact', 'MC GOLD', 1, 0), ('exact', 'SPAR', 1, 0)");
     await migrate(db);
     expect(await db.all('SELECT kind, raw_merchant, merchant_key, category_id FROM transactions ORDER BY sms_hash')).toEqual([
-      { kind: 'deposit', raw_merchant: 'DEMID RIABOV', merchant_key: 'DEMID RIABOV', category_id: null },
+      // (migration 27: a deposit without a category goes to "Пополнение счёта")
+      { kind: 'deposit', raw_merchant: 'DEMID RIABOV', merchant_key: 'DEMID RIABOV', category_id: expect.any(Number) },
       { kind: 'transfer', raw_merchant: null, merchant_key: null, category_id: 1 },
     ]);
     expect(await db.all('SELECT pattern FROM merchant_rules')).toEqual([{ pattern: 'SPAR' }]);

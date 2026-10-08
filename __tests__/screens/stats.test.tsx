@@ -6,6 +6,8 @@ import { buy, ops, planned, on } from '../../scripts/e2e/seeds';
 import { emitTransactionsChanged } from '../../src/events';
 import { getDb } from '../../src/db';
 import { getSetting } from '../../src/db/settings';
+import { createCategory } from '../../src/db/categories';
+import { getTransferTypeId } from '../../src/db/categoryTypes';
 
 async function openStats() {
   await openApp(planned);
@@ -84,6 +86,35 @@ describe('5.1 a month', () => {
     expect(await screen.findByText('Август 2026')).toBeTruthy();
     expect(await screen.findByText('Составьте план на месяц во вкладке «План», чтобы видеть остаток по категориям.')).toBeTruthy();
     expect(screen.queryByText(/^Отложено |^Потрачено \d/)).toBeNull();
+  });
+});
+
+describe('5.1 transfers and "Пополнение счёта"', () => {
+  beforeEach(async () => {
+    await openApp(async () => {
+      await planned();
+      const transfers = (await getTransferTypeId())!;
+      const mom = await createCategory('Маме', '👩', transfers);
+      const debts = await createCategory('Долги', '🤝', transfers);
+      // sent 300, 200 back: −100; sent 100, 400 back: +300 (more came back)
+      await buy('NINO B', 300, on(3), mom, { kind: 'transfer' });
+      await buy('NINO B', 200, on(4), mom, { kind: 'deposit' });
+      await buy('GIO K', 100, on(5), debts, { kind: 'transfer' });
+      await buy('GIO K', 400, on(6), debts, { kind: 'deposit' });
+      // money from crypto: "Пополнение счёта", not spending
+      await buy('P2P', 2752, on(7), null, { kind: 'deposit' });
+    });
+    await tap('Статистика');
+    await screen.findByText('Потрачено 2 110 / 2 460 ₾ (86%)');
+  });
+
+  test('a transfer category carries its sign: sent more "−", more came back "+" (not spent, no "＋ В план")', async () => {
+    expect(within(rowOf('👩 Переводы: Маме')).getByText('−100 ₾')).toBeTruthy();
+    expect(within(rowOf('🤝 Переводы: Долги')).getByText('+300 ₾')).toBeTruthy();
+    expect(within(rowOf('🤝 Переводы: Долги')).queryByText('＋ В план')).toBeNull();
+    // only the −100 is spending outside the plan
+    expect(block('Вне плана').slice(1, 3)).toEqual(['480 / 300 ₾ (160%)', 'Перерасход 180 ₾']);
+    expect(texts()).not.toContain('💳 Пополнение счёта');
   });
 });
 

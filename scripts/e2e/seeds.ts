@@ -2,7 +2,7 @@
 // tests (__tests__/screens, on the in-memory database). Each fills the current database; `done()` then marks every
 // operation read except the ones made unread. Dates are around today.
 import { getDb } from '../../src/db';
-import { createCategory, findCategoryByName, updateCategory } from '../../src/db/categories';
+import { createCategory, findCategoryByName, topUpCategoryId, updateCategory } from '../../src/db/categories';
 import { currentYm, setPlanAmount, setPlanBudget } from '../../src/db/plans';
 import { addManualTransaction, markTransactionsSeen } from '../../src/db/transactions';
 import { backfillRule, createRule } from '../../src/categorize';
@@ -19,6 +19,8 @@ const unread = new Set<number>();
 export async function buy(merchant: string, lari: number, at: number, categoryId: number | null = null,
   opts: { kind?: 'purchase' | 'payment' | 'refund' | 'deposit' | 'transfer' | 'withdrawal'; currency?: string; unread?: boolean; note?: string } = {}) {
   const kind = opts.kind ?? 'purchase';
+  // a deposit from the bank goes to "Пополнение счёта" (src/ingest.ts)
+  if (kind === 'deposit' && categoryId === null) categoryId = await topUpCategoryId();
   const id = await addManualTransaction({ amount_minor: Math.round(lari * 100), currency: opts.currency ?? 'GEL', category_id: categoryId, occurred_at: at, kind: kind === 'payment' ? 'purchase' : kind });
   if (kind === 'payment') await (await getDb()).run("UPDATE transactions SET kind = 'payment' WHERE id = ?", [id]);
   // a manual one is created seen: a bank one isn't until opened
@@ -29,6 +31,7 @@ export async function buy(merchant: string, lari: number, at: number, categoryId
   // as if from an SMS: the merchant and its key
   await (await getDb()).run("UPDATE transactions SET raw_merchant = ?, merchant_key = ?, category_source = CASE WHEN category_id IS NULL THEN NULL ELSE 'user' END WHERE id = ?",
     [merchant, merchant.toUpperCase(), id]);
+  if (kind === 'deposit') await (await getDb()).run('UPDATE transactions SET category_source = NULL WHERE id = ?', [id]);
   return id;
 }
 /** the merchant's category: its operations follow it */

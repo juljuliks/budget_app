@@ -1,5 +1,5 @@
 import { getDb } from './index';
-import { Category, findCategoryByName, isSavings, listCategories } from './categories';
+import { Category, findCategoryByName, isSystemCategory, listCategories } from './categories';
 import { currentYm, NormPeriod, planConverter, PlanKind } from './plans';
 
 /** How a merged category is planned: a limit with its spending pattern, or an obligatory payment. */
@@ -22,7 +22,7 @@ export async function mergeCategories(targetId: number, sourceIds: number[], nam
   if (sources.length === 0) return;
   const all = [targetId, ...sources];
   const cats = (await listCategories()).filter((c) => all.includes(c.id));
-  if (cats.some(isSavings)) throw new Error('the savings category cannot be merged');
+  if (cats.some(isSystemCategory)) throw new Error('a system category cannot be merged');
   const clash = await findCategoryByName(name, typeId, targetId);
   if (clash && !all.includes(clash.id)) throw new MergeNameTakenError(name.trim());
 

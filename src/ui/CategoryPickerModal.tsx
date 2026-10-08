@@ -13,6 +13,8 @@ type Props = {
   /** several picked: each tap reports its id (the parent toggles it), the sheet stays open until "Готово" */
   selectedIds?: number[];
   transferFirst?: boolean;
+  /** a deposit: "Пополнение счёта" offered, first */
+  deposit?: boolean;
   allowNone?: boolean;
   /** categories not offered (e.g. the one being deleted) */
   excludeIds?: number[];
@@ -23,7 +25,7 @@ type Props = {
 };
 
 /** Bottom sheet with the shared CategoryPicker (categories, "+ Новая категория"). */
-export default function CategoryPickerModal({ visible, title, selectedId, selectedIds, transferFirst, allowNone, excludeIds, saveTitle, onPick, onClose }: Props) {
+export default function CategoryPickerModal({ visible, title, selectedId, selectedIds, transferFirst, deposit, allowNone, excludeIds, saveTitle, onPick, onClose }: Props) {
   // with saveTitle: the one picked so far (undefined = none yet)
   const [picked, setPicked] = useState<number | null | undefined>(undefined);
   useEffect(() => { if (visible) setPicked(undefined); }, [visible]);
@@ -38,6 +40,7 @@ export default function CategoryPickerModal({ visible, title, selectedId, select
             onSelect={saveTitle ? setPicked : onPick}
             allowNone={allowNone}
             transferFirst={transferFirst}
+            deposit={deposit}
             excludeIds={excludeIds}
             showAll
           /> : null}

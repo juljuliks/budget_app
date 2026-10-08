@@ -73,7 +73,8 @@ async function spendRows(from: number, to: number): Promise<SpendRow[]> {
       WHERE occurred_at >= ? AND occurred_at < ?
         AND (kind IN (${[...EXPENSE_KINDS, 'refund'].map((k) => `'${k}'`).join(',')})
           OR (kind = 'deposit' AND category_id IN (SELECT c.id FROM categories c JOIN category_types ct ON ct.id = c.type_id WHERE ct.is_transfer = 1)))
-        AND category_id IS NOT (SELECT id FROM categories WHERE system = 'savings')`,
+        AND category_id IS NOT (SELECT id FROM categories WHERE system = 'savings')
+        AND category_id IS NOT (SELECT id FROM categories WHERE system = 'topup')`,
     [from, to]);
 }
 
@@ -261,17 +262,26 @@ export async function plannedTotal(ym: string, exceptCategoryId?: number, curren
   return rows.reduce((s, r) => s + (conv(r.limit_minor, r.currency, to) ?? 0), 0);
 }
 
-/** Income (deposits, converted on their day) of the month in `currency`: a hint for the amount to distribute. */
+/**
+ * What came in this month, in `currency` (each on its day's rate): a hint for the amount to distribute. The deposits in
+ * "Пополнение счёта", and each transfer category that brought in more than was sent (a person paying back more).
+ */
 export async function monthIncome(ym: string, currency: Currency = BUDGET_CURRENCY): Promise<number> {
   const { year, month } = parseYm(ym);
   const [from, to] = monthRange(year, month);
   const db = await getDb();
   const rows = await db.all<{ amount_minor: number; currency: string; occurred_at: number }>(
-    "SELECT amount_minor, currency, occurred_at FROM transactions WHERE kind = 'deposit' AND occurred_at >= ? AND occurred_at < ?",
+    `SELECT amount_minor, currency, occurred_at FROM transactions
+      WHERE kind = 'deposit' AND occurred_at >= ? AND occurred_at < ? AND category_id = (SELECT id FROM categories WHERE system = 'topup')`,
     [from, to]);
   await ensureRates(rows.filter((r) => r.currency !== currency).map((r) => dateKey(r.occurred_at)));
   const conv = await makeConverter();
-  return rows.reduce((s, r) => s + (conv(r.amount_minor, r.currency, currency, dateKey(r.occurred_at)) ?? 0), 0);
+  const topUp = rows.reduce((s, r) => s + (conv(r.amount_minor, r.currency, currency, dateKey(r.occurred_at)) ?? 0), 0);
+  const transferIds = new Set((await db.all<{ id: number }>(
+    'SELECT c.id FROM categories c JOIN category_types ct ON ct.id = c.type_id WHERE ct.is_transfer = 1')).map((c) => c.id));
+  const { items } = await convertSpending((await spendRows(from, to)).filter((r) => r.category_id !== null && transferIds.has(r.category_id)), currency);
+  const net = sumBy(items, (r) => r.category_id);
+  return topUp + [...net.values()].reduce((s, v) => s + Math.max(0, -v), 0);
 }
 
 /** Thrown when a change would plan more than the month's amount to distribute (amounts in `currency`). */
@@ -413,7 +423,15 @@ export type CategoryStat = {
   color: string;
   /** deleted category that still has spending in this month: can't be added to a plan */
   deleted: boolean;
+  /**
+   * a category of the transfer section: what was sent minus what came back, so spent_minor < 0 = more came than went
+   * (shown "+", counted as nothing spent: it goes to the month's income, see monthIncome)
+   */
+  transfer: boolean;
 };
+
+/** What a category adds to the spending totals: a transfer one that brought in more than went out adds nothing. */
+export const spentOf = (c: Pick<CategoryStat, 'spent_minor' | 'transfer'>) => (c.transfer ? Math.max(0, c.spent_minor) : c.spent_minor);
 
 export type StatGroup = {
   /** null: categories without a type, then "Без категории" */
@@ -431,7 +449,7 @@ export function groupByType(categories: CategoryStat[], types: Array<{ id: numbe
     if (cats.length === 0) return;
     groups.push({
       type_id, title, categories: cats,
-      spent_minor: cats.reduce((s, c) => s + c.spent_minor, 0),
+      spent_minor: cats.reduce((s, c) => s + spentOf(c), 0),
       planned_minor: cats.reduce((s, c) => s + (c.limit_minor ?? 0), 0),
     });
   };
@@ -479,9 +497,9 @@ export async function monthStats(year: number, month: number, currency: Currency
 
   const colorOf = await categoryColors();
 
-  const cats = await db.all<{ id: number; name: string; emoji: string | null; type_id: number | null; type_name: string | null; limit_minor: number | null; plan_currency: string | null; plan_kind: PlanKind | null; plan_norm: string | null; deleted_at: number | null }>(
+  const cats = await db.all<{ id: number; name: string; emoji: string | null; type_id: number | null; type_name: string | null; limit_minor: number | null; plan_currency: string | null; plan_kind: PlanKind | null; plan_norm: string | null; deleted_at: number | null; is_transfer: number | null }>(
     `SELECT c.id, c.name, c.emoji, c.type_id, ct.name AS type_name, p.limit_minor, p.currency AS plan_currency, p.kind AS plan_kind,
-        p.norm_period AS plan_norm, c.deleted_at
+        p.norm_period AS plan_norm, c.deleted_at, ct.is_transfer
       FROM categories c
       LEFT JOIN category_types ct ON ct.id = c.type_id
       LEFT JOIN plan_items p ON p.category_id = c.id AND p.ym = ?`, [ym]);
@@ -495,14 +513,14 @@ export async function monthStats(year: number, month: number, currency: Currency
       category_id: c.id, name: c.name, emoji: c.emoji, type_id: c.type_id, type_name: c.type_name, spent_minor: s, limit_minor: limit,
       plan_kind: limit === null ? null : c.plan_kind,
       plan_norm: limit === null ? null : asNorm(c.plan_norm),
-      color: colorOf.get(c.id) ?? NEUTRAL_COLOR, deleted: c.deleted_at !== null,
+      color: colorOf.get(c.id) ?? NEUTRAL_COLOR, deleted: c.deleted_at !== null, transfer: c.is_transfer === 1,
     });
   }
   const uncategorized = spentBy.get(null) ?? 0;
   if (uncategorized !== 0) {
     categories.push({
       category_id: null, name: 'Без категории', emoji: NO_CATEGORY_EMOJI, type_id: null, type_name: null,
-      spent_minor: uncategorized, limit_minor: null, plan_kind: null, plan_norm: null, color: NEUTRAL_COLOR, deleted: false,
+      spent_minor: uncategorized, limit_minor: null, plan_kind: null, plan_norm: null, color: NEUTRAL_COLOR, deleted: false, transfer: false,
     });
   }
   categories.sort((a, b) => b.spent_minor - a.spent_minor || (b.limit_minor ?? 0) - (a.limit_minor ?? 0));
@@ -513,7 +531,7 @@ export async function monthStats(year: number, month: number, currency: Currency
     ym,
     currency,
     groups: groupByType(categories, types),
-    spent_minor: categories.reduce((sum, c) => sum + c.spent_minor, 0) - refundsUnassigned,
+    spent_minor: categories.reduce((sum, c) => sum + spentOf(c), 0) - refundsUnassigned,
     refunds_unassigned_minor: refundsUnassigned,
     planned_minor: categories.reduce((sum, c) => sum + (c.limit_minor ?? 0), 0),
     categories,
@@ -541,26 +559,29 @@ export async function periodStats(from: number, to: number, currency: Currency =
   const spentBy = sumBy(items, categoryKey);
   const refundsUnassigned = Math.max(0, -(spentBy.get(REFUND_KEY) ?? 0));
   const ids = [...new Set([...spentBy.keys(), ...planned])].filter((id): id is number => typeof id === 'number');
-  const cats = ids.length === 0 ? [] : await db.all<{ id: number; name: string; emoji: string | null; type_id: number | null; type_name: string | null; deleted_at: number | null }>(
-    `SELECT c.id, c.name, c.emoji, c.type_id, ct.name AS type_name, c.deleted_at FROM categories c
+  const cats = ids.length === 0 ? [] : await db.all<{ id: number; name: string; emoji: string | null; type_id: number | null; type_name: string | null; deleted_at: number | null; is_transfer: number | null }>(
+    `SELECT c.id, c.name, c.emoji, c.type_id, ct.name AS type_name, c.deleted_at, ct.is_transfer FROM categories c
       LEFT JOIN category_types ct ON ct.id = c.type_id WHERE c.id IN (${ids.map(() => '?').join(',')})`, ids);
   const colorOf = await categoryColors();
   const categories: CategoryStat[] = cats.map((c) => ({
     category_id: c.id, name: c.name, emoji: c.emoji, type_id: c.type_id, type_name: c.type_name, spent_minor: spentBy.get(c.id) ?? 0,
     limit_minor: null, plan_kind: null, plan_norm: null, color: colorOf.get(c.id) ?? NEUTRAL_COLOR, deleted: c.deleted_at !== null,
+    transfer: c.is_transfer === 1,
   }));
   const none = spentBy.get(null) ?? 0;
   if (none !== 0) {
     categories.push({
       category_id: null, name: 'Без категории', emoji: NO_CATEGORY_EMOJI, type_id: null, type_name: null, spent_minor: none,
-      limit_minor: null, plan_kind: null, plan_norm: null, color: NEUTRAL_COLOR, deleted: false,
+      limit_minor: null, plan_kind: null, plan_norm: null, color: NEUTRAL_COLOR, deleted: false, transfer: false,
     });
   }
   const positive = categories.filter((c) => c.spent_minor > 0).sort((a, b) => b.spent_minor - a.spent_minor);
+  // transfers that brought in more than went out: listed ("+"), not in the total
+  const cameIn = categories.filter((c) => c.transfer && c.spent_minor < 0).sort((a, b) => a.spent_minor - b.spent_minor);
   // planned ones with nothing spent (a refund bigger than the spending counts as nothing too)
   const untouched = categories.filter((c) => c.category_id !== null && c.spent_minor <= 0 && planned.includes(c.category_id) && !c.deleted)
     .map((c) => ({ ...c, spent_minor: 0 })).sort((a, b) => a.name.localeCompare(b.name));
-  const listed = [...positive, ...untouched];
+  const listed = [...positive, ...cameIn, ...untouched];
   const types = await db.all<{ id: number; name: string }>('SELECT id, name FROM category_types ORDER BY sort_order, name');
   return {
     currency, groups: groupByType(listed, types), categories: listed,

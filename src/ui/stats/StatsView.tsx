@@ -4,7 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useOpenCategoryTransactions } from '../../navigation';
 import { categoryLabel } from '../../db/categories';
 import { Currency } from '../../db/fx';
-import { CategoryStat, currentYm, monthStats, MonthStats, StatGroup, ymOf } from '../../db/plans';
+import { CategoryStat, currentYm, monthStats, MonthStats, spentOf, StatGroup, ymOf } from '../../db/plans';
 import { dayKeyOf, daysInMonth, monthDays, shortRange } from '../dateRange';
 import { flatOf, limitChange, loadNorms, Norms, Pace, paceOf } from './norms';
 import { onTransactionsChanged } from '../../events';
@@ -149,7 +149,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
                   openTransactions={openTransactions}
                   now={c.category_id === null ? undefined : today?.byCategory.get(c.category_id)}
                   monthToDate={c.category_id === null ? 0 : today?.monthToDate.get(c.category_id) ?? 0}
-                  onAddToPlan={c.category_id !== null && c.limit_minor === null && !c.deleted
+                  onAddToPlan={c.category_id !== null && c.limit_minor === null && !c.deleted && spentOf(c) > 0
                     ? () => setPlanTarget({ category_id: c.category_id!, label: categoryLabel(c), limit_minor: 0, currency: stats.currency, suggested_minor: c.spent_minor })
                     : undefined}
                 />
@@ -200,7 +200,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
                   openTransactions={openTransactions}
                   monthToDate={0}
                   withType
-                  onAddToPlan={c.category_id !== null && !c.deleted
+                  onAddToPlan={c.category_id !== null && !c.deleted && spentOf(c) > 0
                     ? () => setPlanTarget({ category_id: c.category_id!, label: categoryLabel(c), limit_minor: 0, currency: stats.currency, suggested_minor: c.spent_minor })
                     : undefined}
                 />
@@ -302,7 +302,10 @@ function CategoryRow({ stat, total, currency, evenPace, dim, ym, openTransaction
   /** "Жизнь: Покупки": outside the plan, where the rows aren't under their type's section */
   withType?: boolean;
 }) {
-  const { spent_minor: spent, limit_minor: limit } = stat;
+  const { limit_minor: limit } = stat;
+  // a transfer category: sent minus what came back; more came back = "+", and nothing spent for its plan
+  const spent = spentOf(stat);
+  const cameIn = stat.transfer && stat.spent_minor < 0 ? -stat.spent_minor : 0;
   const hidden = useHideAmounts();
   const ratio = limit ? spent / limit : 0;
   // fixed payment (rent, subscription): paid once this month's spending covers its plan (the share is by the amount)
@@ -329,7 +332,11 @@ function CategoryRow({ stat, total, currency, evenPace, dim, ym, openTransaction
         <Text style={styles.rowAmount}>
           {/* "Скрыть суммы": just the % — of its plan, or of all spending without one */}
           {hidden ? (limit ? `${pct(spent, limit)} плана` : `${shareOfAll(spent, total)} трат`)
-            : <>{limit ? <Text style={overStyle(spent, limit)}>{formatShort(spent)}</Text> : formatWithCurrency(spent, currency)}{limit ? <Text style={styles.rowLimit}> / {formatWithCurrency(limit, currency)}</Text> : null}{limit ? <Text style={[styles.rowLimit, overStyle(spent, limit)]}>{planShare(spent, limit)}</Text> : null}</>}
+            : <>{cameIn ? <Text style={styles.refundsAmount}>+{limit ? formatShort(cameIn) : formatWithCurrency(cameIn, currency)}</Text>
+              : limit ? <Text style={overStyle(spent, limit)}>{formatShort(spent)}</Text>
+              // transfers carry their sign, as in the operations: what went out
+              : stat.transfer ? `−${formatWithCurrency(spent, currency)}`
+              : formatWithCurrency(spent, currency)}{limit ? <Text style={styles.rowLimit}> / {formatWithCurrency(limit, currency)}</Text> : null}{limit ? <Text style={[styles.rowLimit, overStyle(spent, limit)]}>{planShare(spent, limit)}</Text> : null}</>}
         </Text>
       </View>
       {/* an obligatory payment paid more than planned: an overspend like a limit's */}

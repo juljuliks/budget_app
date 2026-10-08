@@ -6,6 +6,7 @@ import { ops } from '../../scripts/e2e/seeds';
 import { ingestSms } from '../../src/ingest';
 import { getDb } from '../../src/db';
 import { dayKeyOf } from '../../src/ui/dateRange';
+import { topUpCategoryId } from '../../src/db/categories';
 
 const p2 = (n: number) => String(n).padStart(2, '0');
 /** "dd/mm/yyyy hh:mm", minutes ago */
@@ -72,7 +73,7 @@ describe('1.5 a manual operation', () => {
     expect(row).toMatchObject({ kind: 'purchase', a: 1250, c: 'GEL', k: null, s: 'user', seen: 1 });
     expect(Math.abs(Date.now() / 1000 - (row!.at as number))).toBeLessThan(60);
   });
-  test('a deposit yesterday, in dollars, without a category', async () => {
+  test('a deposit yesterday, in dollars: in "Пополнение счёта"', async () => {
     await open();
     await tap('Пополнение');
     fireEvent.changeText(screen.getByPlaceholderText('0.00'), '100');
@@ -88,7 +89,8 @@ describe('1.5 a manual operation', () => {
     expect(await screen.findByText('Операция добавлена')).toBeTruthy();
     const row = await (await getDb()).get<{ kind: string; c: string; cat: number | null; at: number }>(
       "SELECT kind, currency AS c, category_id AS cat, occurred_at AS at FROM transactions WHERE amount_minor = 10000 AND kind = 'deposit' AND bank = 'manual'");
-    expect(row).toMatchObject({ kind: 'deposit', c: 'USD', cat: null });
+    // a deposit: "Пополнение счёта" unless another is picked
+    expect(row).toMatchObject({ kind: 'deposit', c: 'USD', cat: await topUpCategoryId() });
     expect(dayKeyOf(new Date(row!.at * 1000))).toBe(dayKeyOf(y));
   });
   test('days after today can\'t be picked; the form is clean next time', async () => {
