@@ -336,6 +336,17 @@ export const MIGRATIONS: MigrationStep[][] = [
       }
     },
   ],
+  // 28: deposits / transfers with only a date that came after an SMS whose balance already had them (the last month's):
+  // put before it, as new ones are (balance.ts placeByBalances) — the card balance counted them twice
+  [
+    async (db) => {
+      const { placeByBalances } = require('./balance') as typeof import('./balance');
+      const rows = await db.all<{ id: number }>(
+        `SELECT id FROM transactions WHERE bank != 'manual' AND kind IN ('deposit', 'transfer', 'withdrawal')
+          AND occurred_at >= CAST(strftime('%s', 'now') AS INTEGER) - 31 * 86400 ORDER BY occurred_at, id`);
+      for (const { id } of rows) await placeByBalances(id, db);
+    },
+  ],
 ];
 
 export async function getSchemaVersion(db: Db): Promise<number> {

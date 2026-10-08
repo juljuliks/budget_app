@@ -1,5 +1,5 @@
 import parseTbc, { parseTbcBalance } from './parsers/tbc';
-import { recordBalance } from './db/balance';
+import { placeByBalances, recordBalance } from './db/balance';
 import { refundCategory } from './db/refunds';
 import type { ParsedTx } from './types';
 import { sha256Hex } from './hash';
@@ -120,6 +120,8 @@ export async function ingestSms(sms: IncomingSms, opts: { quiet?: boolean } = {}
   }
   // the balance after this operation, as the bank reports it
   if (balance) await recordBalance({ minor: balance.minor, currency: balance.currency, at: occurredAt, txId: lastInsertRowid });
+  // only a date: maybe a balance the bank reported already had it in (it came before that SMS)
+  if (!parsed.has_time) await placeByBalances(lastInsertRowid);
   if (categoryId && parsed.kind !== 'refund' && parsed.kind !== 'deposit') await incrementCategoryUsage(categoryId);
   changed();
 
