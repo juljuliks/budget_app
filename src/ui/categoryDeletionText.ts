@@ -36,6 +36,8 @@ export function deleteEmptyText(label: string, p: DeletePreview): SheetText {
 
 /** The sheet's text with operations this month: they have to go somewhere first. */
 export function deleteStartText(p: DeletePreview, label: string): string {
+  // one operation: nothing to sort out (no such button either)
+  if (p.current.n === 1) return `В этом месяце в «${label}» ${opsOn(p.current)}. Перед удалением её нужно перенести в другую категорию.`;
   return `В этом месяце в «${label}» ${opsOn(p.current)}. Перед удалением их нужно перенести — в одну категорию или разложить по нескольким.`;
 }
 

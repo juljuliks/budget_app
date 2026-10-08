@@ -36,4 +36,4 @@ The seed: «Покупки» with this month's ZARA ×2 and HM (merchants of it)
 ## By hand
 
 - In a sort-out, «Дата» narrows within this month only: a range reaching outside is cut to the month (a toast says so).
-- Leaving the Operations tab during a sort-out and coming back: it goes on.
+- Any way out of a sort-out (back, «Статистика» in the tab bar, the gear, a day's stats) asks «Прервать удаление?»: «Продолжить» stays, «Прервать» ends it and goes there.

@@ -5,7 +5,7 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { HeaderBackButton } from '@react-navigation/elements';
 import {
   categoriesWithTransactions, CategoryFilter, CategoryWithCount, GroupKind, isUnread, kindsWithTransactions, listGroupedPage, listTransactionGroups,
-  listTransactionsPage, markTransactionsSeen, merchantsWithTransactions, MerchantWithCount, PageCursor, searchTransactions, transactionGroupIds,
+  listTransactionsPage, markTransactionsSeen, merchantsWithTransactions, MerchantWithCount, PageCursor, searchTransactions, transactionDayIds, transactionGroupIds,
   TransactionGroup, TransactionRow, TxFilter,
 } from '../db/transactions';
 import { emitTransactionsChanged, onTransactionsChanged } from '../events';
@@ -20,6 +20,7 @@ import CategoryPickerModal from './CategoryPickerModal';
 import Checkbox from './Checkbox';
 import Chip from './Chip';
 import { openAddTransaction, openTransaction } from './modals';
+import { guardLeave, setLeaveGuard } from '../leaveGuard';
 import Fab from './Fab';
 import PushAccessBanner from './PushAccessBanner';
 import CardBalance from './CardBalance';
@@ -202,6 +203,8 @@ export default function TransactionsList() {
   }, [sortOut, remaining]);
   // Reads the first page of the current filters and grouping; `keepDepth` (back from an operation, a change elsewhere)
   // re-reads as many as were loaded, so the list keeps its scroll depth instead of snapping back to one page
+  const movedOut = useRef(false);
+  const [remount, setRemount] = useState(0);
   const reload = useCallback(async (keepDepth: boolean) => {
     const id = ++requestId.current;
     const groupBy = groupByRef.current;
@@ -211,6 +214,11 @@ export default function TransactionsList() {
     const [page, found] = await Promise.all([fetchPage(view, null, limit), groupBy === 'day' ? null : listTransactionGroups(filter, groupBy)]);
     if (id !== requestId.current) return;
     viewRef.current = view;
+    // operations moved out of the list (a category given to them under a category filter): a list scrolled down
+    // keeps an offset past its new end on Android — rows slide under the sticky headers and taps don't reach them
+    // until a scroll. Drawn anew from the top instead
+    if (movedOut.current && page.rows.length < loadedCount.current) setRemount((n) => n + 1);
+    movedOut.current = false;
     loadedCount.current = page.rows.length;
     setRows(page.rows);
     setNext(page.next);
@@ -271,7 +279,7 @@ export default function TransactionsList() {
   }, [reload]);
 
   const data = rows;
-  const listKey = JSON.stringify([query.trim(), categories, merchants, kinds, range, groupBy]);
+  const listKey = JSON.stringify([query.trim(), categories, merchants, kinds, range, groupBy, remount]);
 
   // the filters set, as chips to clear one by one
   const activeFilters: ActiveFilter[] = [];
@@ -412,29 +420,48 @@ export default function TransactionsList() {
     setGroupBy(so.before);
   }
 
-  // out of a sort-out: the grouping it replaced back, the filters cleared, back to where it began (the categories)
-  function leaveSortOut() {
+  // a sort-out ended by leaving: the grouping it replaced back, the selection and the filters cleared
+  function abortSortOut() {
     const so = sortOutRef.current;
     setSortOut(null);
     setRemaining(null);
     if (so) setGroupBy(so.before);
     setSelectMode(false);
     setSelected(new Set());
+    clearParams();
+  }
+
+  // out of a sort-out by back: to where it began (the categories)
+  function leaveSortOut() {
+    abortSortOut();
     goBack();
   }
 
-  function askLeaveSortOut() {
+  // asks before leaving a sort-out; "Прервать" ends it and `proceed`s
+  function askAbortSortOut(proceed: () => void) {
     const so = sortOutRef.current;
-    if (!so) { goBack(); return; }
+    if (!so) { proceed(); return; }
     const t = sortOutLeaveText(so.label);
-    sheetAlert(t.title, t.message, [{ text: 'Продолжить', style: 'cancel' }, { text: 'Прервать', style: 'destructive', onPress: leaveSortOut }]);
+    sheetAlert(t.title, t.message, [{ text: 'Продолжить', style: 'cancel' }, { text: 'Прервать', style: 'destructive', onPress: proceed }]);
+  }
+
+  function askLeaveSortOut() {
+    if (!sortOutRef.current) { goBack(); return; }
+    askAbortSortOut(leaveSortOut);
+  }
+
+  // any other way out during a sort-out (the tab bar, the gear, a day's stats) asks the same
+  useEffect(() => (sortOut ? setLeaveGuard((proceed) => askAbortSortOut(() => { abortSortOut(); proceed(); })) : undefined), [sortOut]);
+
+  function clearParams() {
+    tabNavigation.setParams({ from: undefined, category: undefined, query: undefined, range: undefined, kinds: undefined, sortOut: undefined });
+    resetFilters();
   }
 
   // came here from another screen (not the tab bar): back returns there with the filter cleared
   function goBack() {
     const target = from;
-    tabNavigation.setParams({ from: undefined, category: undefined, query: undefined, range: undefined, kinds: undefined, sortOut: undefined });
-    resetFilters();
+    clearParams();
     if (target === 'Merchants' || target === 'Categories') navigation.navigate(target);
     else if (target) tabNavigation.navigate(target);
   }
@@ -489,11 +516,15 @@ export default function TransactionsList() {
   }, [tabNavigation, editMode, from, sortOut]);
 
   // a group's checkbox: all its operations, or none of them
-  async function toggleGroup(key: string) {
+  // (a day: `dayStart` given, its key is the day's)
+  async function toggleGroup(key: string, dayStart?: number) {
     let ids = groupIds.get(key);
     if (!ids) {
       const v = viewRef.current;
-      ids = await transactionGroupIds(v.filter, v.groupBy as GroupKind, key);
+      if (dayStart !== undefined) {
+        const d = new Date(dayStart * 1000);
+        ids = await transactionDayIds(v.filter, dayStart, new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).getTime() / 1000);
+      } else ids = await transactionGroupIds(v.filter, v.groupBy as GroupKind, key);
       const got = ids;
       setGroupIds((m) => new Map(m).set(key, got));
     }
@@ -514,6 +545,7 @@ export default function TransactionsList() {
 
   async function assignBulk(categoryId: number | null, choice?: MerchantChoice) {
     try {
+      movedOut.current = true;
       const merchants = await assignCategoryToMany([...selected], categoryId, choice, sortOutRef.current?.id);
       showLimitAlert(categoryId);
       const n = selected.size;
@@ -660,7 +692,8 @@ export default function TransactionsList() {
             const total = groupTotal(g);
             return (
               <View style={[formStyles.sectionHeader, styles.dayHeader]}>
-                {selecting ? (
+                {/* one operation: its own checkbox picks it, the header's would repeat it */}
+                {selecting && n > 1 ? (
                   <TouchableOpacity testID={`group-checkbox-${section.title}`} onPress={() => { toggleGroup(g.key).catch((e) => console.error('select group failed', e)); }} hitSlop={10} accessibilityRole="checkbox" accessibilityState={{ checked }}>
                     <Checkbox checked={checked} size={18} />
                   </TouchableOpacity>
@@ -671,13 +704,22 @@ export default function TransactionsList() {
             );
           }
           const spent = daySpent.get(section.key) ?? 0;
+          const dayIds = groupIds.get(section.key);
+          const dayChecked = dayIds ? dayIds.every((id) => selected.has(id)) : section.data.every((r) => selected.has(r.id));
+          const dayCount = dayIds?.length ?? section.data.length;
           return (
             <View style={[formStyles.sectionHeader, styles.dayHeader]}>
+              {/* selecting: the day's operations at once (as a group's; one operation has its own) */}
+              {selecting && dayCount > 1 ? (
+                <TouchableOpacity testID={`day-checkbox-${section.key}`} onPress={() => { toggleGroup(section.key, section.dayStart).catch((e) => console.error('select day failed', e)); }} hitSlop={10} accessibilityRole="checkbox" accessibilityState={{ checked: dayChecked }}>
+                  <Checkbox checked={dayChecked} size={18} />
+                </TouchableOpacity>
+              ) : null}
               <Text style={styles.dayTitle}>{section.title}</Text>
               {spent > 0 ? <Text style={styles.daySpent}>−{formatWithCurrency(spent, currency)}</Text> : null}
               <TouchableOpacity
                 // the stats tab with this day picked
-                onPress={() => tabNavigation.navigate('Stats', { day: section.dayStart, nonce: Date.now() })}
+                onPress={() => guardLeave(() => tabNavigation.navigate('Stats', { day: section.dayStart, nonce: Date.now() }))}
                 hitSlop={10}
                 accessibilityLabel={`Траты за день: ${section.title}`}
               >
@@ -725,7 +767,10 @@ export default function TransactionsList() {
           {/* as on the merchants: the category and deleting, side by side */}
           <View style={styles.bottomActions}>
             <Button title={`Категория (${selected.size})`} onPress={() => setBulkOpen(true)} style={styles.bottomButton} testID="bulk-category" />
-            <Button title={`Удалить (${selected.size})`} danger onPress={() => confirmDeleteTransactions(selectedRows, endSelect)} style={styles.bottomButton} />
+            {/* sorting out a category being deleted: the operations get categories here, not deleted */}
+            {sortOut ? null : (
+              <Button title={`Удалить (${selected.size})`} danger onPress={() => confirmDeleteTransactions(selectedRows, endSelect)} style={styles.bottomButton} />
+            )}
           </View>
         </View>
       ) : null}

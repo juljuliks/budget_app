@@ -22,6 +22,7 @@ import { requestAppPermissions } from './permissions';
 import { countUnseenTransactions } from './db/transactions';
 import { emitTransactionsChanged, onTransactionsChanged } from './events';
 import { autoCategorizeRefunds } from './db/refunds';
+import { guardLeave, hasLeaveGuard } from './leaveGuard';
 import { navigationRef, flushPendingNavigation, RootStackParamList, TabParamList } from './navigation';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -59,6 +60,14 @@ function MainTabs() {
       <Tab.Screen
         name="Stats"
         component={StatsHome}
+        // in the middle of a sort-out the Operations tab asks first
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            if (!hasLeaveGuard()) return;
+            e.preventDefault();
+            guardLeave(() => navigation.navigate('Stats'));
+          },
+        })}
         options={{
           title: 'Статистика',
           tabBarIcon: ({ color }) => <StatsIcon color={color} />,

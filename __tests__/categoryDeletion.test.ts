@@ -157,6 +157,7 @@ describe('the texts', () => {
 
   it('the sheet with operations', () => {
     expect(deleteStartText(preview, 'Покупки')).toMatch(/^В этом месяце в «Покупки» 12 операций на 840[^₾]*₾\. Перед удалением их нужно перенести — в одну категорию или разложить по нескольким\.$/);
+    expect(deleteStartText({ ...preview, current: { ...preview.current, n: 1 } }, 'Покупки')).toMatch(/^В этом месяце в «Покупки» 1 операция на 840[^₾]*₾\. Перед удалением её нужно перенести в другую категорию\.$/);
   });
 
   it('everything to one category', () => {

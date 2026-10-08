@@ -34,8 +34,8 @@ appId: com.budgetapp
     timeout: 10000
 
 # HM: the operation only
-- tapOn:
-    id: "group-checkbox-HM"
+# one operation: no checkbox on its header, the row picks it
+- tapOn: "HM"
 - tapOn:
     id: "bulk-category"
 - tapOn: ".*Техника"
@@ -45,8 +45,8 @@ appId: com.budgetapp
     timeout: 10000
 
 # WOLT: no category (nothing to ask)
-- tapOn:
-    id: "group-checkbox-WOLT"
+# one operation: no checkbox on its header, the row picks it
+- tapOn: "WOLT"
 - tapOn:
     id: "bulk-category"
 - tapOn: ".*Без категории"

@@ -373,6 +373,15 @@ export async function listGroupedPage(f: TxFilter, by: GroupKind, offset: number
     [...params, ...params, limit, offset]);
 }
 
+/** Every operation of one day (from `dayStart`, unix seconds, to the next day) matching `f`: the day header's checkbox. */
+export async function transactionDayIds(f: TxFilter, dayStart: number, dayEnd: number): Promise<number[]> {
+  const { sql, params } = filterWhere(f);
+  const db = await getDb();
+  const rows = await db.all<{ id: number }>(
+    `SELECT t.id FROM transactions t ${sql ? `${sql} AND` : 'WHERE'} t.occurred_at >= ? AND t.occurred_at < ?`, [...params, dayStart, dayEnd]);
+  return rows.map((r) => r.id);
+}
+
 /** Every operation of one group (its checkbox selects the ones not loaded yet too). */
 export async function transactionGroupIds(f: TxFilter, by: GroupKind, groupKey: string): Promise<number[]> {
   const { sql, params } = filterWhere(f);

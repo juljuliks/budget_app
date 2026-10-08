@@ -6,9 +6,11 @@ appId: com.budgetapp
     timeout: 60000
 - tapOn: "Настройки"
 - tapOn: "Категории"
-- extendedWaitUntil:
-    visible: ".*${CATEGORY}"
-    timeout: 10000
+# the seed's categories come after the default ones: may be below the screen
+- scrollUntilVisible:
+    element: ".*${CATEGORY}"
+    direction: DOWN
+    timeout: 20000
 - tapOn: ".*${CATEGORY}"
 - extendedWaitUntil:
     visible: "Удалить категорию"

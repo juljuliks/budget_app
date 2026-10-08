@@ -31,7 +31,7 @@ adb shell settings put global hide_error_dialogs 1 || true
 adb shell pm grant "$PKG" android.permission.RECEIVE_SMS || true
 adb shell pm grant "$PKG" android.permission.POST_NOTIFICATIONS || true
 # a first start creates the app's files dir
-adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null; sleep 8
+adb shell am start -n "$PKG/.MainActivity" >/dev/null; sleep 8
 OWNER="$(adb shell stat -c %u:%g "/data/data/$PKG" | tr -d '\r')"
 
 failed=()
