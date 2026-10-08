@@ -1,0 +1,53 @@
+# Sorting out, then leaving midway: the category filter locked, "Отменить" and back both ask, "Продолжить" stays,
+# "Прервать" leaves with the category kept and what was moved moved.
+appId: com.budgetapp
+---
+- launchApp
+- runFlow:
+    file: common/open-category.yaml
+    env:
+      CATEGORY: Покупки
+- tapOn: "Удалить категорию"
+- tapOn:
+    id: "delete-sort-out"
+- extendedWaitUntil:
+    visible:
+      id: "sort-out-banner"
+    timeout: 15000
+
+# the category filter is locked: no picker
+- tapOn:
+    id: "filter-category"
+- assertNotVisible: "Категории"
+
+- tapOn:
+    id: "group-checkbox-ZARA"
+- tapOn:
+    id: "bulk-category"
+- tapOn: ".*Одежда"
+- tapOn: "И для мерчанта"
+- extendedWaitUntil:
+    visible: "Удаление «.*Покупки»: осталось 2 операции на 110.*"
+    timeout: 10000
+
+# "Отменить" asks; "Продолжить" stays
+- tapOn:
+    id: "sort-out-cancel"
+- extendedWaitUntil:
+    visible: "Прервать удаление «.*Покупки»\\?"
+    timeout: 10000
+- assertVisible: "Категория «.*Покупки» не удалится\\. Уже перенесённые операции останутся там, куда вы их перенесли\\."
+- tapOn: "Продолжить"
+- assertVisible:
+    id: "sort-out-banner"
+
+# back asks too; "Прервать" returns to the categories
+- back
+- extendedWaitUntil:
+    visible: "Прервать удаление «.*Покупки»\\?"
+    timeout: 10000
+- tapOn: "Прервать"
+- extendedWaitUntil:
+    visible: "Новая категория"
+    timeout: 10000
+- assertVisible: ".*Покупки"

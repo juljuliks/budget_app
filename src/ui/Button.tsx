@@ -11,16 +11,19 @@ type Props = {
   /** outlined instead of filled: the less usual choice next to a filled one ("Для мерчанта", "Открепить категорию") */
   outline?: boolean;
   style?: StyleProp<ViewStyle>;
+  /** for the end-to-end flows (scripts/e2e) */
+  testID?: string;
 };
 
 /** Full-width button ("Сохранить", "Удалить операцию", ...): filled, or outlined; accent or red. */
-export default function Button({ title, onPress, disabled, danger, outline, style }: Props) {
+export default function Button({ title, onPress, disabled, danger, outline, style, testID }: Props) {
   const color = danger ? colors.danger : colors.accent;
   return (
     <TouchableOpacity
       style={[styles.button, outline ? [styles.outline, { borderColor: color }] : { backgroundColor: color }, disabled && styles.disabled, style]}
       disabled={disabled}
       onPress={onPress}
+      testID={testID}
       accessibilityRole="button"
     >
       <Text style={[styles.text, outline && { color }]}>{title}</Text>

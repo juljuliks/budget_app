@@ -29,3 +29,5 @@ data/
 
 # demo database builder output (scripts/demo)
 dist-demo/
+dist-e2e/
+e2e-out/

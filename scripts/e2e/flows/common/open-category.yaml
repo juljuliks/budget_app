@@ -1,0 +1,15 @@
+# Settings → Категории → the category ${CATEGORY}: its card
+appId: com.budgetapp
+---
+- extendedWaitUntil:
+    visible: "Настройки"
+    timeout: 60000
+- tapOn: "Настройки"
+- tapOn: "Категории"
+- extendedWaitUntil:
+    visible: ".*${CATEGORY}"
+    timeout: 10000
+- tapOn: ".*${CATEGORY}"
+- extendedWaitUntil:
+    visible: "Удалить категорию"
+    timeout: 10000

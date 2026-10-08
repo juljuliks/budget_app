@@ -15,6 +15,8 @@ export type TabParamList = {
     /** typed into the search field (a merchant's name from its card) */
     query?: string;
     nonce?: number;
+    /** a category being deleted: its operations of this month to sort out to other categories, then it goes */
+    sortOut?: number;
     /** where back returns: a tab, or the merchants / categories screen */
     from?: keyof TabParamList | 'Merchants' | 'Categories';
   } | undefined;

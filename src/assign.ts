@@ -1,6 +1,7 @@
 import { getDb } from './db';
 import { setCategoryForTransactions, setTransactionCategory } from './db/transactions';
 import { incrementCategoryUsage } from './db/categories';
+import { freezePastOfCategory } from './db/categoryDeletion';
 import { createRule, backfillRule, findCategoryForMerchant, isMixedMerchant } from './categorize';
 import { emitTransactionsChanged } from './events';
 import { isRememberable, REMEMBERABLE_KINDS } from './types';
@@ -144,7 +145,11 @@ export async function merchantsChangePreview(txIds: number[], categoryId: number
  * choice; 'merchant' also makes it their merchants' category (rule + the merchants' transactions that follow it),
  * the selected ones of those merchants then follow it too. Returns how many merchants got it.
  */
-export async function assignCategoryToMany(txIds: number[], categoryId: number | null, choice?: MerchantChoice): Promise<number> {
+export async function assignCategoryToMany(
+  txIds: number[], categoryId: number | null, choice?: MerchantChoice,
+  /** sorting out a category being deleted: the merchants moved keep their past operations in it (only this month's move) */
+  keepPastIn?: number,
+): Promise<number> {
   if (txIds.length === 0) return 0;
   // nothing asked: merchants without a category yet simply get it (as one operation's first pick); 'merchant': those
   // with another one too; 'only': none
@@ -154,6 +159,7 @@ export async function assignCategoryToMany(txIds: number[], categoryId: number |
     const withOther = new Set((await merchantsToChange(txIds, categoryId)).map((m) => m.key));
     merchants = choice === 'merchant' ? all : all.filter((m) => !withOther.has(m.key));
   }
+  if (keepPastIn !== undefined) await freezePastOfCategory(keepPastIn, merchants.map((m) => m.key));
   await setCategoryForTransactions(txIds, categoryId);
   for (const m of merchants) {
     await createRule('exact', m.key, categoryId!);

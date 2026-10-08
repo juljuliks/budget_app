@@ -1,0 +1,29 @@
+# Operations this month, all to one category: the picker with "Сохранить", the confirmation, deleted.
+appId: com.budgetapp
+---
+- launchApp
+- runFlow:
+    file: common/open-category.yaml
+    env:
+      CATEGORY: Покупки
+- tapOn: "Удалить категорию"
+- extendedWaitUntil:
+    visible: "В этом месяце в «.*Покупки» 4 операции на 360.*\\. Перед удалением их нужно перенести — в одну категорию или разложить по нескольким\\."
+    timeout: 10000
+- assertVisible: "Разложить по разным категориям"
+- tapOn:
+    id: "delete-move-all"
+- extendedWaitUntil:
+    visible: "Куда перенести 4 операции"
+    timeout: 10000
+# "Сохранить" waits for a pick
+- tapOn: ".*Одежда"
+- tapOn: "Сохранить"
+- extendedWaitUntil:
+    visible: "Перенести в «.*Одежда» и удалить «.*Покупки»\\?"
+    timeout: 10000
+- assertVisible: "(?s)• 4 операции на 360.* этого месяца перейдут в «.*Одежда»\\..*• 2 операции на 1.?000.* прошлых месяцев останутся в «.*Покупки» — история и отчёты не изменятся\\..*• 3 мерчанта \\(ZARA, APPLE, HM\\) получат категорию «.*Одежда».*• План «.*Покупки» на этот месяц удалится\\."
+- tapOn: "Перенести и удалить"
+- extendedWaitUntil:
+    notVisible: ".*Покупки"
+    timeout: 10000

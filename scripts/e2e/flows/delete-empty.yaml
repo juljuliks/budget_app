@@ -1,0 +1,17 @@
+# No operations this month: the plain confirmation (past months kept, the merchants lose it), then deleted.
+appId: com.budgetapp
+---
+- launchApp
+- runFlow:
+    file: common/open-category.yaml
+    env:
+      CATEGORY: Пустая
+- tapOn: "Удалить категорию"
+- extendedWaitUntil:
+    visible: "Удалить категорию «.*Пустая»\\?"
+    timeout: 10000
+- assertVisible: "В этом месяце операций в ней нет\\. 1 операция на 40.* прошлых месяцев останется в «.*Пустая» — история и отчёты не изменятся\\. Мерчант OLDSHOP останется без категории\\."
+- tapOn: "Удалить"
+- extendedWaitUntil:
+    notVisible: ".*Пустая"
+    timeout: 10000

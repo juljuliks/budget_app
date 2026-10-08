@@ -119,6 +119,10 @@ export async function deleteCategory(id: number, targetId: number | null, nowYm 
   }
   const from = monthStart(nowYm);
   await db.transaction(async (tx) => {
+    // the past stays in it: its operations there that follow a merchant are fixed, so the merchant moving on
+    // (below, or later) doesn't take them along
+    await tx.run(
+      "UPDATE transactions SET category_source = 'user' WHERE category_id = ? AND occurred_at < ? AND category_source = 'rule'", [id, from]);
     // a rule-picked one keeps following its merchant (whose rule moves along below), a hand-picked one stays so;
     // none = no source
     await tx.run(

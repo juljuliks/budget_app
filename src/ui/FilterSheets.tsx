@@ -10,9 +10,21 @@ import { colors } from './theme';
 import { normalizeForSearch } from '../db/transactions';
 
 /** "Категория ⌄" / "Мерчант · 2 ⌄" / "Дата ⌄": opens its picker sheet; blue while set. */
-export function FilterButton({ label, count, active, onPress }: { label: string; count?: number; active: boolean; onPress: () => void }) {
+export function FilterButton({ label, count, active, onPress, disabled, testID }: {
+  label: string; count?: number; active: boolean; onPress: () => void;
+  /** set and locked (sorting out a category being deleted: its category) */
+  disabled?: boolean;
+  testID?: string;
+}) {
   return (
-    <TouchableOpacity style={[styles.button, active && styles.buttonOn]} onPress={onPress} accessibilityRole="button" accessibilityState={{ selected: active }}>
+    <TouchableOpacity
+      style={[styles.button, active && styles.buttonOn, disabled && styles.buttonDisabled]}
+      onPress={onPress}
+      disabled={disabled}
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active, disabled }}
+    >
       <Text style={[styles.buttonText, active && styles.buttonTextOn]}>{count ? `${label} · ${count}` : label}</Text>
       <ChevronDownIcon color={active ? '#FFFFFF' : colors.accent} size={14} />
     </TouchableOpacity>
@@ -130,6 +142,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border, backgroundColor: colors.bg,
   },
   buttonOn: { backgroundColor: colors.accent, borderColor: colors.accent },
+  buttonDisabled: { opacity: 0.5 },
   buttonText: { fontSize: 13, color: colors.text },
   buttonTextOn: { color: '#FFFFFF' },
   sheet: { maxHeight: '85%' },

@@ -39,6 +39,9 @@ import { NO_CATEGORY } from './strings';
 import BottomSheet from './BottomSheet';
 import RadioGroup from './RadioGroup';
 import { groupTitle, groupTotal } from './transactionGroups';
+import { Bucket, categoryDeletePreview, currentIdsOfCategory, remainingInCategory, sortOutSummary } from '../db/categoryDeletion';
+import { sortOutBanner, sortOutDoneText, sortOutLeaveText, sortOutMerchantText } from './categoryDeletionText';
+import { dayKeyOf } from './dateRange';
 
 /** Every view loads from the database a page at a time while scrolling. */
 const PAGE_SIZE = 50;
@@ -121,16 +124,18 @@ export default function TransactionsList() {
 
   // opened from the stats screen: filter by that category
   const route = useRoute<RouteProp<TabParamList, 'Transactions'>>();
-  const { category: incomingCategory, query: incomingQuery, range: incomingRange, kinds: incomingKinds, nonce, from } = route.params ?? {};
+  const { category: incomingCategory, query: incomingQuery, range: incomingRange, kinds: incomingKinds, sortOut: incomingSortOut, nonce, from } = route.params ?? {};
   // the other filters are cleared: only what was asked for is shown
   useEffect(() => {
     if (incomingCategory === undefined) return;
+    dropSortOut(); // another way in ends a sort-out left going on
     setQuery(''); setMerchants([]);
     setCategories([incomingCategory]); setRange(incomingRange ?? null); setKinds(incomingKinds ?? []);
   }, [incomingCategory, nonce]);
   // opened from a merchant's card: its name in the search field, as if typed
   useEffect(() => {
     if (incomingQuery === undefined) return;
+    dropSortOut(); // another way in ends a sort-out left going on
     setCategories([]); setMerchants([]); setRange(null); setKinds([]);
     setQuery(incomingQuery);
   }, [incomingQuery, nonce]);
@@ -140,6 +145,61 @@ export default function TransactionsList() {
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [bulkOpen, setBulkOpen] = useState(false);
+
+  // sorting out a category being deleted (from its delete sheet): locked to it and this month, grouped by merchant,
+  // always selecting; when nothing of this month is left in it, where everything went and the delete
+  type SortOut = { id: number; label: string; ids: number[]; month: DayRange; before: GroupBy };
+  const [sortOut, setSortOut] = useState<SortOut | null>(null);
+  const sortOutRef = useRef(sortOut);
+  sortOutRef.current = sortOut;
+  const [remaining, setRemaining] = useState<Bucket | null>(null);
+  const doneShown = useRef(false);
+  const selecting = selectMode || sortOut !== null;
+  const refreshRemaining = useCallback(() => {
+    const so = sortOutRef.current;
+    if (!so) { setRemaining(null); return; }
+    remainingInCategory(so.id)
+      .then((b) => { if (sortOutRef.current?.id === so.id) setRemaining(b); })
+      .catch((e) => console.error('remaining failed', e));
+  }, []);
+  useEffect(() => {
+    if (incomingSortOut === undefined) return undefined;
+    let live = true;
+    (async () => {
+      const [c, ids] = await Promise.all([getCategory(incomingSortOut), currentIdsOfCategory(incomingSortOut)]);
+      if (!live || !c) return;
+      const now = new Date();
+      const month: DayRange = { from: dayKeyOf(new Date(now.getFullYear(), now.getMonth(), 1)), to: dayKeyOf(new Date(now.getFullYear(), now.getMonth() + 1, 0)) };
+      doneShown.current = false;
+      setRemaining(null);
+      setSortOut({ id: c.id, label: categoryLabel(c), ids, month, before: groupByRef.current });
+      setQuery(''); setMerchants([]); setKinds([]);
+      setCategories([c.id]); setRange(month); setGroupBy('merchant');
+    })().catch((e) => console.error('start sort-out failed', e));
+    return () => { live = false; };
+  }, [incomingSortOut, nonce]);
+  useEffect(refreshRemaining, [sortOut, refreshRemaining]);
+  // nothing left: where they went, and the delete
+  useEffect(() => {
+    if (!sortOut || !remaining || remaining.n > 0 || doneShown.current) return;
+    doneShown.current = true;
+    (async () => {
+      const [summary, p] = await Promise.all([sortOutSummary(sortOut.id, sortOut.ids), categoryDeletePreview(sortOut.id)]);
+      const t = sortOutDoneText(sortOut.label, summary, p);
+      sheetAlert(t.title, t.message, [
+        { text: 'Не удалять', style: 'cancel', onPress: () => leaveSortOut() },
+        {
+          text: `Удалить «${sortOut.label}»`, style: 'destructive', onPress: () => {
+            deleteCategory(sortOut.id, null).then(() => {
+              emitTransactionsChanged();
+              toast(`Категория «${sortOut.label}» удалена`);
+              leaveSortOut();
+            }).catch((e) => { console.error('delete category failed', e); toastError('Не удалось удалить'); });
+          },
+        },
+      ]);
+    })().catch((e) => console.error('sort-out summary failed', e));
+  }, [sortOut, remaining]);
   // Reads the first page of the current filters and grouping; `keepDepth` (back from an operation, a change elsewhere)
   // re-reads as many as were loaded, so the list keeps its scroll depth instead of snapping back to one page
   const reload = useCallback(async (keepDepth: boolean) => {
@@ -188,7 +248,8 @@ export default function TransactionsList() {
   const refreshAll = useCallback(() => {
     reload(true).catch((e) => console.error('reload transactions failed', e));
     loadCategoryOptions();
-  }, [reload, loadCategoryOptions]);
+    refreshRemaining();
+  }, [reload, loadCategoryOptions, refreshRemaining]);
 
   useFocusEffect(refreshAll);
   useEffect(() => onTransactionsChanged(refreshAll), [refreshAll]);
@@ -214,7 +275,7 @@ export default function TransactionsList() {
 
   // the filters set, as chips to clear one by one
   const activeFilters: ActiveFilter[] = [];
-  for (const cat of categories) {
+  for (const cat of sortOut ? [] : categories) {
     const c = categoryOptions.find((o) => o.category === cat);
     activeFilters.push({ key: `c${cat}`, label: c ? `${c.emoji || ''} ${c.name}`.trim() : cat === 'none' ? NO_CATEGORY : 'Категория', clear: () => setCategories((p) => p.filter((x) => x !== cat)) });
   }
@@ -225,7 +286,9 @@ export default function TransactionsList() {
     const m = merchantOptions.find((o) => o.merchant === mer);
     activeFilters.push({ key: `m${mer}`, label: m?.name ?? 'Мерчант', clear: () => setMerchants((p) => p.filter((x) => x !== mer)) });
   }
-  if (range) activeFilters.push({ key: 'date', label: formatRange(range), clear: () => setRange(null) });
+  if (range && !(sortOut && range.from === sortOut.month.from && range.to === sortOut.month.to)) {
+    activeFilters.push({ key: 'date', label: formatRange(range), clear: () => changeRange(null) });
+  }
   if (query.trim()) activeFilters.push({ key: 'text', label: `«${query.trim()}»`, clear: () => setQuery('') });
   const toggleIn = <T,>(list: T[], v: T) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 
@@ -301,7 +364,7 @@ export default function TransactionsList() {
   }
 
   // everything currently in the list (filtered results, or the loaded part of the feed)
-  const allSelected = selectMode && data.length > 0 && data.every((r) => selected.has(r.id));
+  const allSelected = selecting && data.length > 0 && data.every((r) => selected.has(r.id));
   function toggleSelectAll() {
     if (allSelected) {
       setSelected(new Set());
@@ -322,10 +385,55 @@ export default function TransactionsList() {
     setRange(null);
   }
 
+  // the filters besides the locked ones of a sort-out (its category and month)
+  function resetExtraFilters() {
+    const so = sortOutRef.current;
+    if (!so) { resetFilters(); return; }
+    setQuery(''); setMerchants([]); setKinds([]); setRange(so.month);
+  }
+
+  // the dates of a sort-out: this month or a part of it
+  function changeRange(next: DayRange | null) {
+    const so = sortOutRef.current;
+    if (!so) { setRange(next); return; }
+    const m = so.month;
+    const clamp = (k: string) => (k < m.from ? m.from : k > m.to ? m.to : k);
+    const r2 = next ? { from: clamp(next.from), to: clamp(next.to) } : m;
+    if (next && (r2.from !== next.from || r2.to !== next.to)) toast('При удалении категории — только этот месяц');
+    setRange(r2);
+  }
+
+  // a sort-out ended without a word: the grouping it replaced back
+  function dropSortOut() {
+    const so = sortOutRef.current;
+    if (!so) return;
+    setSortOut(null);
+    setRemaining(null);
+    setGroupBy(so.before);
+  }
+
+  // out of a sort-out: the grouping it replaced back, the filters cleared, back to where it began (the categories)
+  function leaveSortOut() {
+    const so = sortOutRef.current;
+    setSortOut(null);
+    setRemaining(null);
+    if (so) setGroupBy(so.before);
+    setSelectMode(false);
+    setSelected(new Set());
+    goBack();
+  }
+
+  function askLeaveSortOut() {
+    const so = sortOutRef.current;
+    if (!so) { goBack(); return; }
+    const t = sortOutLeaveText(so.label);
+    sheetAlert(t.title, t.message, [{ text: 'Продолжить', style: 'cancel' }, { text: 'Прервать', style: 'destructive', onPress: leaveSortOut }]);
+  }
+
   // came here from another screen (not the tab bar): back returns there with the filter cleared
   function goBack() {
     const target = from;
-    tabNavigation.setParams({ from: undefined, category: undefined, query: undefined, range: undefined, kinds: undefined });
+    tabNavigation.setParams({ from: undefined, category: undefined, query: undefined, range: undefined, kinds: undefined, sortOut: undefined });
     resetFilters();
     if (target === 'Merchants' || target === 'Categories') navigation.navigate(target);
     else if (target) tabNavigation.navigate(target);
@@ -334,7 +442,7 @@ export default function TransactionsList() {
   // Android hardware back does the same as the header arrow
   useFocusEffect(useCallback(() => {
     if (!from) return undefined;
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => { goBack(); return true; });
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => { askLeaveSortOut(); return true; });
     return () => sub.remove();
   }, [from]));
 
@@ -349,6 +457,8 @@ export default function TransactionsList() {
   useEffect(() => tabNavigation.addListener('blur', () => {
     const routes = navigationRef.getRootState()?.routes;
     if (routes && routes[routes.length - 1].name !== 'Main') return;
+    // a sort-out stays: back on the tab, it goes on
+    if (sortOutRef.current) return;
     setEditMode(false);
     setSelectMode(false);
     setSelected(new Set());
@@ -357,8 +467,8 @@ export default function TransactionsList() {
 
   useLayoutEffect(() => {
     tabNavigation.setOptions({
-      headerLeft: from
-        ? () => <HeaderBackButton onPress={goBack} accessibilityLabel="Назад" />
+      headerLeft: from || sortOut
+        ? () => <HeaderBackButton onPress={askLeaveSortOut} accessibilityLabel="Назад" />
         : undefined,
       headerRight: () => (
         <View style={styles.headerRight}>
@@ -376,7 +486,7 @@ export default function TransactionsList() {
       ),
     });
     // toggleEditMode / goBack only use state setters, navigation and `from`
-  }, [tabNavigation, editMode, from]);
+  }, [tabNavigation, editMode, from, sortOut]);
 
   // a group's checkbox: all its operations, or none of them
   async function toggleGroup(key: string) {
@@ -404,7 +514,7 @@ export default function TransactionsList() {
 
   async function assignBulk(categoryId: number | null, choice?: MerchantChoice) {
     try {
-      const merchants = await assignCategoryToMany([...selected], categoryId, choice);
+      const merchants = await assignCategoryToMany([...selected], categoryId, choice, sortOutRef.current?.id);
       showLimitAlert(categoryId);
       const n = selected.size;
       const c = categoryId === null ? undefined : await getCategory(categoryId);
@@ -427,6 +537,17 @@ export default function TransactionsList() {
     const change = await merchantsChangePreview([...selected], categoryId).catch((e) => { console.error('preview failed', e); return null; });
     if (!change) { await assignBulk(categoryId); return; }
     const to = await getCategory(categoryId!);
+    const so = sortOutRef.current;
+    if (so) {
+      // sorting out: the merchants move with this month only, the past stays in the category being deleted
+      const t = sortOutMerchantText(to ? categoryLabel(to) : '?', so.label, change.merchants, selected.size);
+      sheetAlert(t.title, t.message, [
+        { text: 'Отмена', style: 'cancel' },
+        { text: t.only, onPress: () => { assignBulk(categoryId, 'only'); } },
+        { text: t.also, style: 'secondary', onPress: () => { assignBulk(categoryId, 'merchant'); } },
+      ]);
+      return;
+    }
     const names = change.merchants.length > 3 ? `${change.merchants.slice(0, 2).join(', ')} и ещё ${change.merchants.length - 2}` : change.merchants.join(', ');
     const sum = change.totals.map((t) => formatMoneyWithCurrency(t.amount_minor, t.currency)).join(' + ');
     const one = change.merchants.length === 1;
@@ -441,7 +562,7 @@ export default function TransactionsList() {
   }
 
   const selectedRows = data.filter((r) => selected.has(r.id));
-  const showRowActions = editMode && !selectMode;
+  const showRowActions = editMode && !selecting;
 
 
 
@@ -476,18 +597,27 @@ export default function TransactionsList() {
             {/* each opens its picker in a sheet; all the filters set apply together. Merchants are found by the text search
                 (it matches the merchant name); a merchant card still opens the list filtered by its merchant, shown as a chip */}
             <View style={[styles.chipsWrap, styles.activeRow, styles.filterButtons]}>
-              <FilterButton label="Категория" count={categories.length} active={categories.length > 0} onPress={() => setSheet('category')} />
-              <FilterButton label="Тип" count={kinds.length} active={kinds.length > 0} onPress={() => setSheet('kind')} />
-              <FilterButton label="Дата" active={range !== null} onPress={() => setSheet('date')} />
-              <FilterButton label={GROUP_BY.find(([k]) => k === groupBy)![1]} active={groupBy !== 'day'} onPress={() => setSheet('group')} />
+              <FilterButton label="Категория" count={categories.length} active={categories.length > 0} disabled={!!sortOut} onPress={() => setSheet('category')} testID="filter-category" />
+              <FilterButton label="Тип" count={kinds.length} active={kinds.length > 0} onPress={() => setSheet('kind')} testID="filter-kind" />
+              <FilterButton label="Дата" active={range !== null} onPress={() => setSheet('date')} testID="filter-date" />
+              <FilterButton label={GROUP_BY.find(([k]) => k === groupBy)![1]} active={groupBy !== 'day'} onPress={() => setSheet('group')} testID="filter-group" />
             </View>
+            {sortOut ? (
+              // what is left of the category being deleted
+              <View style={styles.sortOutBanner} testID="sort-out-banner">
+                <Text style={[styles.sortOutText, styles.flex]}>{remaining ? sortOutBanner(sortOut.label, remaining) : `Удаление «${sortOut.label}»`}</Text>
+                <TouchableOpacity onPress={askLeaveSortOut} hitSlop={8} accessibilityRole="button" testID="sort-out-cancel">
+                  <Text style={styles.resetText}>Отменить</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
             {activeFilters.length > 0 ? (
               // how many filters are set (tap: the list of them, each with ✕) and "Сбросить все"
               <View style={styles.appliedRow}>
                 <TouchableOpacity onPress={() => setSheet('all')} hitSlop={8} accessibilityRole="button" accessibilityHint="Показать фильтры">
                   <Text style={styles.appliedText}>Применено фильтров: {activeFilters.length}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={resetFilters} hitSlop={8} accessibilityRole="button">
+                <TouchableOpacity onPress={resetExtraFilters} hitSlop={8} accessibilityRole="button">
                   <Text style={styles.resetText}>Сбросить все</Text>
                 </TouchableOpacity>
               </View>
@@ -495,17 +625,19 @@ export default function TransactionsList() {
           </>
         )}
 
-        {selectMode ? (
-          // while selecting (started by a long press on a row)
+        {selecting ? (
+          // while selecting (started by a long press on a row; always while sorting out)
           <View style={styles.toolbar}>
             <Text style={[styles.selectLabel, styles.flex]}>Выбрано: {selected.size}</Text>
             <TouchableOpacity style={styles.selectToggle} onPress={toggleSelectAll} accessibilityRole="checkbox" accessibilityState={{ checked: allSelected }}>
               <Checkbox checked={allSelected} size={20} />
               <Text style={styles.selectLabel}>Выбрать все</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={endSelect} hitSlop={8} accessibilityRole="button">
-              <Text style={styles.cancelSelect}>Отмена</Text>
-            </TouchableOpacity>
+            {sortOut ? null : (
+              <TouchableOpacity onPress={endSelect} hitSlop={8} accessibilityRole="button">
+                <Text style={styles.cancelSelect}>Отмена</Text>
+              </TouchableOpacity>
+            )}
           </View>
         ) : null}
       </View>
@@ -528,8 +660,8 @@ export default function TransactionsList() {
             const total = groupTotal(g);
             return (
               <View style={[formStyles.sectionHeader, styles.dayHeader]}>
-                {selectMode ? (
-                  <TouchableOpacity onPress={() => { toggleGroup(g.key).catch((e) => console.error('select group failed', e)); }} hitSlop={10} accessibilityRole="checkbox" accessibilityState={{ checked }}>
+                {selecting ? (
+                  <TouchableOpacity testID={`group-checkbox-${section.title}`} onPress={() => { toggleGroup(g.key).catch((e) => console.error('select group failed', e)); }} hitSlop={10} accessibilityRole="checkbox" accessibilityState={{ checked }}>
                     <Checkbox checked={checked} size={18} />
                   </TouchableOpacity>
                 ) : null}
@@ -560,9 +692,9 @@ export default function TransactionsList() {
             <TransactionItem
               tx={item}
               // a long press starts selecting (with this row); while selecting a tap toggles, otherwise opens
-              onPress={selectMode ? () => toggle(item.id) : open}
-              onLongPress={selectMode ? undefined : () => startSelect(item.id)}
-              selectable={selectMode}
+              onPress={selecting ? () => toggle(item.id) : open}
+              onLongPress={selecting ? undefined : () => startSelect(item.id)}
+              selectable={selecting}
               selected={selected.has(item.id)}
               onDelete={showRowActions ? () => confirmDeleteTransaction(item) : undefined}
             />
@@ -576,7 +708,7 @@ export default function TransactionsList() {
         windowSize={11}
         refreshing={refreshing}
         onRefresh={onRefresh}
-        ListFooterComponent={loadingMore ? <ActivityIndicator style={styles.footer} /> : <View style={[styles.footer, (editMode || selectMode) && styles.footerTall]} />}
+        ListFooterComponent={loadingMore ? <ActivityIndicator style={styles.footer} /> : <View style={[styles.footer, (editMode || selecting) && styles.footerTall]} />}
         ListEmptyComponent={
           <Text style={styles.empty}>
             {isFilterActive(filter) ? 'Ничего не найдено.' : 'Операций пока нет. Они появятся здесь после SMS или уведомления банка, или добавьте вручную ＋.'}
@@ -584,7 +716,7 @@ export default function TransactionsList() {
         }
       />
 
-      {selectMode && selected.size > 0 ? (
+      {selecting && selected.size > 0 ? (
         <View style={[styles.bottomBar, styles.bottomBarStack]}>
           {/* the unread ones among the selected */}
           {unreadSelected.length > 0 ? (
@@ -592,13 +724,13 @@ export default function TransactionsList() {
           ) : null}
           {/* as on the merchants: the category and deleting, side by side */}
           <View style={styles.bottomActions}>
-            <Button title={`Категория (${selected.size})`} onPress={() => setBulkOpen(true)} style={styles.bottomButton} />
+            <Button title={`Категория (${selected.size})`} onPress={() => setBulkOpen(true)} style={styles.bottomButton} testID="bulk-category" />
             <Button title={`Удалить (${selected.size})`} danger onPress={() => confirmDeleteTransactions(selectedRows, endSelect)} style={styles.bottomButton} />
           </View>
         </View>
       ) : null}
       {/* hidden in edit mode (it would cover the ✎ / 🗑 of the last row) and while selecting (the actions bar) */}
-      {editMode || selectMode ? null : <Fab onPress={openAddTransaction} accessibilityLabel="Добавить операцию" />}
+      {editMode || selecting ? null : <Fab onPress={openAddTransaction} accessibilityLabel="Добавить операцию" />}
 
       <OptionsSheet
         visible={sheet === 'category'}
@@ -618,13 +750,13 @@ export default function TransactionsList() {
         onClear={() => setKinds([])}
         onClose={() => setSheet(null)}
       />
-      <DateSheet visible={sheet === 'date'} value={range} onChange={setRange} onClose={() => setSheet(null)} />
+      <DateSheet visible={sheet === 'date'} value={range} onChange={changeRange} onClose={() => setSheet(null)} />
       <BottomSheet visible={sheet === 'group'} onClose={() => setSheet(null)} title="Группировать">
         <View style={styles.groupSheet}>
           <RadioGroup options={GROUP_BY} value={groupBy} onChange={(v) => { setGroupBy(v); setSheet(null); }} />
         </View>
       </BottomSheet>
-      <AllFiltersSheet visible={sheet === 'all'} filters={activeFilters} onReset={resetFilters} onClose={() => setSheet(null)} />
+      <AllFiltersSheet visible={sheet === 'all'} filters={activeFilters} onReset={resetExtraFilters} onClose={() => setSheet(null)} />
 
       <CategoryPickerModal
         visible={bulkOpen}
@@ -649,6 +781,11 @@ const styles = StyleSheet.create({
   activeRow: { marginBottom: 8 },
   // the Категория / Дата buttons, under the search field
   filterButtons: { marginTop: 10 },
+  sortOutBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8, paddingHorizontal: 12, paddingVertical: 10,
+    borderRadius: 10, backgroundColor: colors.warnBg,
+  },
+  sortOutText: { fontSize: 14, fontWeight: '600', color: colors.warn },
   appliedRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
   appliedText: { fontSize: 14, color: colors.accent },
   resetText: { fontSize: 14, color: colors.danger },
