@@ -37,7 +37,7 @@ import { showLimitAlert } from '../notifications/notifeeIntegration';
 import { NO_CATEGORY } from './strings';
 import BottomSheet from './BottomSheet';
 import RadioGroup from './RadioGroup';
-import { groupByMerchant } from './merchantGroups';
+import { GroupKind, groupTransactions } from './transactionGroups';
 
 /** The newest operations shown first; more come in pages while scrolling. */
 const FIRST_PAGE = 10;
@@ -50,10 +50,12 @@ function isFilterActive(f: Filter): boolean {
   return f.query.trim() !== '' || f.categories.length > 0 || f.merchants.length > 0 || f.kinds.length > 0 || f.range !== null;
 }
 
-/** How the list is split into sections: by day (the feed), or by merchant (every operation matching the filters at once). */
-type GroupBy = 'day' | 'merchant';
-const GROUP_BY: Array<readonly [GroupBy, string]> = [['day', 'По дням'], ['merchant', 'По мерчантам']];
-// grouped by merchant without a filter: the whole history (a group can't be cut by a page)
+/** How the list is split into sections: by day (the feed), or another way (every operation matching the filters at once). */
+type GroupBy = 'day' | GroupKind;
+const GROUP_BY: Array<readonly [GroupBy, string]> = [
+  ['day', 'По дням'], ['month', 'По месяцам'], ['merchant', 'По мерчантам'], ['category', 'По категориям'], ['kind', 'По типу'], ['amount', 'По сумме'],
+];
+// grouped otherwise than by day without a filter: the whole history (a group can't be cut by a page)
 const ALL_LIMIT = 50000;
 
 async function runFilterQuery(f: Filter, groupBy: GroupBy): Promise<TransactionRow[] | null> {
@@ -193,8 +195,8 @@ export default function TransactionsList() {
 
   // memoized: sections, the selection pruning and the day totals (a DB query) depend on it, so a new array each render
   // re-ran them on every keystroke while a filter was on
-  // by merchant: the groups of everything found, the rows in their order (shown a page at a time like the feed)
-  const groups = useMemo(() => (groupBy === 'merchant' && results ? groupByMerchant(results) : null), [groupBy, results]);
+  // not by day: the groups of everything found, the rows in their order (shown a page at a time like the feed)
+  const groups = useMemo(() => (groupBy !== 'day' && results ? groupTransactions(results, groupBy) : null), [groupBy, results]);
   const ordered = useMemo(() => (groups ? groups.flatMap((g) => g.rows) : results), [groups, results]);
   const data = useMemo(() => (ordered ? ordered.slice(0, shownResults) : rows), [ordered, shownResults, rows]);
   const listKey = JSON.stringify([query.trim(), categories, merchants, kinds, range, groupBy]);
@@ -222,7 +224,7 @@ export default function TransactionsList() {
     markTransactionsSeen(unreadSelected).then(() => emitTransactionsChanged()).catch((e) => console.error('mark seen failed', e));
   };
 
-  // forget selected transactions that are no longer in the list (deleted, filtered out); a merchant's checkbox
+  // forget selected transactions that are no longer in the list (deleted, filtered out); a group's checkbox
   // selects the rows of its group not shown yet too
   const listed = ordered ?? rows;
   useEffect(() => {
@@ -241,7 +243,7 @@ export default function TransactionsList() {
       let left = data.length;
       for (const g of groups) {
         if (left <= 0) break;
-        out.push({ key: g.key, title: g.name ?? 'Без мерчанта', dayStart: 0, data: g.rows.slice(0, left), group: g });
+        out.push({ key: g.key, title: g.title, dayStart: 0, data: g.rows.slice(0, left), group: g });
         left -= g.rows.length;
       }
       return out;
@@ -372,7 +374,7 @@ export default function TransactionsList() {
     // toggleEditMode / goBack only use state setters, navigation and `from`
   }, [tabNavigation, editMode, from]);
 
-  // a merchant's checkbox: all its operations, or none of them
+  // a group's checkbox: all its operations, or none of them
   function toggleGroup(ids: number[]) {
     const all = ids.every((id) => selected.has(id));
     const next = new Set(selected);
