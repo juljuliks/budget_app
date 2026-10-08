@@ -4,8 +4,9 @@ import { RouteProp, useFocusEffect, useNavigation, useRoute } from '@react-navig
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { HeaderBackButton } from '@react-navigation/elements';
 import {
-  categoriesWithTransactions, CategoryFilter, CategoryWithCount, isUnread, kindsWithTransactions, TxFilter, listTransactionsFiltered, listTransactionsPage,
-  markTransactionsSeen, merchantsWithTransactions, MerchantWithCount, PageCursor, searchTransactions, TransactionRow,
+  categoriesWithTransactions, CategoryFilter, CategoryWithCount, GroupKind, isUnread, kindsWithTransactions, listGroupedPage, listTransactionGroups,
+  listTransactionsPage, markTransactionsSeen, merchantsWithTransactions, MerchantWithCount, PageCursor, searchTransactions, transactionGroupIds,
+  TransactionGroup, TransactionRow, TxFilter,
 } from '../db/transactions';
 import { emitTransactionsChanged, onTransactionsChanged } from '../events';
 import { Category, categoryLabel, countPastTransactionsOfCategory, deleteCategory, getCategory, moveTransactionsOutOfCategory } from '../db/categories';
@@ -37,11 +38,10 @@ import { showLimitAlert } from '../notifications/notifeeIntegration';
 import { NO_CATEGORY } from './strings';
 import BottomSheet from './BottomSheet';
 import RadioGroup from './RadioGroup';
-import { GroupKind, groupTransactions } from './transactionGroups';
+import { groupTitle, groupTotal } from './transactionGroups';
 
-/** The newest operations shown first; more come in pages while scrolling. */
-const FIRST_PAGE = 10;
-const PAGE_SIZE = 20;
+/** Every view loads from the database a page at a time while scrolling. */
+const PAGE_SIZE = 50;
 
 type Filter = { query: string; categories: CategoryFilter[]; merchants: string[]; kinds: string[]; range: DayRange | null };
 
@@ -55,23 +55,44 @@ type GroupBy = 'day' | GroupKind;
 const GROUP_BY: Array<readonly [GroupBy, string]> = [
   ['day', 'По дням'], ['month', 'По месяцам'], ['merchant', 'По мерчантам'], ['category', 'По категориям'], ['kind', 'По типу'], ['amount', 'По сумме'],
 ];
-// grouped otherwise than by day without a filter: the whole history (a group can't be cut by a page)
-const ALL_LIMIT = 50000;
+// a text search: the operations it finds (matched in JS, see searchTransactions), then paged like any filter
+const SEARCH_LIMIT = 5000;
 
-async function runFilterQuery(f: Filter, groupBy: GroupBy): Promise<TransactionRow[] | null> {
-  if (!isFilterActive(f)) return groupBy === 'day' ? null : listTransactionsFiltered({}, ALL_LIMIT);
+/** The filters as the database applies them. */
+async function resolveFilter(f: Filter): Promise<TxFilter> {
   const r = f.range ? rangeToUnix(f.range) : undefined;
   const tx: TxFilter = { categories: f.categories, merchants: f.merchants, kinds: f.kinds, from: r?.from, to: r?.to };
-  return f.query.trim() ? searchTransactions(f.query, tx) : listTransactionsFiltered(tx);
+  if (f.query.trim()) tx.ids = (await searchTransactions(f.query, tx, SEARCH_LIMIT)).map((row) => row.id);
+  return tx;
 }
 
+type Row = TransactionRow & { group_key?: string };
+type ListView = { filter: TxFilter; groupBy: GroupBy };
+/** Where the next page starts: a keyset cursor by day (new operations don't shift it), an offset in the groups' order. */
+type Next = PageCursor | number | null;
+
+async function fetchPage(v: ListView, from: Next, limit: number): Promise<{ rows: Row[]; next: Next }> {
+  if (v.groupBy === 'day') {
+    const p = await listTransactionsPage(typeof from === 'number' ? null : from, limit, v.filter);
+    return { rows: p.rows, next: p.nextCursor };
+  }
+  const offset = typeof from === 'number' ? from : 0;
+  const rows = await listGroupedPage(v.filter, v.groupBy, offset, limit);
+  return { rows, next: rows.length === limit ? offset + rows.length : null };
+}
 
 const SEARCH_DEBOUNCE_MS = 200;
 
 export default function TransactionsList() {
   const navigation = useRootNavigation();
-  const [rows, setRows] = useState<TransactionRow[]>([]);
-  const [cursor, setCursor] = useState<PageCursor | null>(null);
+  const [rows, setRows] = useState<Row[]>([]);
+  const [next, setNext] = useState<Next>(null);
+  // not by day: every group of what the filters match, with its count and total
+  const [groups, setGroups] = useState<TransactionGroup[] | null>(null);
+  // a group's checkbox: every operation of it, loaded or not (read when it's first ticked)
+  const [groupIds, setGroupIds] = useState<Map<string, number[]>>(new Map());
+  // what the rows loaded were read with: the next pages and a group's checkbox use the same
+  const viewRef = useRef<ListView>({ filter: {}, groupBy: 'day' });
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -97,10 +118,6 @@ export default function TransactionsList() {
   // read by refreshAll without making it change (and re-run focus effects) on every keystroke
   const filterRef = useRef(filter);
   filterRef.current = filter;
-  const [results, setResults] = useState<TransactionRow[] | null>(null); // null = no filter, normal feed
-  // how many of the filtered results are shown (lazy, like the feed)
-  const [shownResults, setShownResults] = useState(FIRST_PAGE);
-  const searchId = useRef(0);
 
   // opened from the stats screen: filter by that category
   const route = useRoute<RouteProp<TabParamList, 'Transactions'>>();
@@ -123,22 +140,23 @@ export default function TransactionsList() {
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [bulkOpen, setBulkOpen] = useState(false);
-  // Re-reads everything currently on screen (at least one page), so returning
-  // from a detail screen keeps the scroll depth instead of snapping back to 50 rows.
-  const reload = useCallback(async () => {
+  // Reads the first page of the current filters and grouping; `keepDepth` (back from an operation, a change elsewhere)
+  // re-reads as many as were loaded, so the list keeps its scroll depth instead of snapping back to one page
+  const reload = useCallback(async (keepDepth: boolean) => {
     const id = ++requestId.current;
-    const page = await listTransactionsPage(null, Math.max(FIRST_PAGE, loadedCount.current));
+    const groupBy = groupByRef.current;
+    const filter = await resolveFilter(filterRef.current);
+    const view: ListView = { filter, groupBy };
+    const limit = keepDepth ? Math.max(PAGE_SIZE, loadedCount.current) : PAGE_SIZE;
+    const [page, found] = await Promise.all([fetchPage(view, null, limit), groupBy === 'day' ? null : listTransactionGroups(filter, groupBy)]);
     if (id !== requestId.current) return;
+    viewRef.current = view;
     loadedCount.current = page.rows.length;
     setRows(page.rows);
-    setCursor(page.nextCursor);
+    setNext(page.next);
+    setGroups(found);
+    setGroupIds(new Map());
     setLoading(false);
-  }, []);
-
-  const runFilter = useCallback(async (f: Filter) => {
-    const id = ++searchId.current;
-    const found = await runFilterQuery(f, groupByRef.current);
-    if (id === searchId.current) setResults(found);
   }, []);
 
   const loadCategoryOptions = useCallback(() => {
@@ -148,57 +166,50 @@ export default function TransactionsList() {
   }, []);
 
   const loadMore = useCallback(async () => {
-    // filtered: the results are all loaded, only shown a page at a time
-    if (results) { setShownResults((n) => (n < results.length ? n + PAGE_SIZE : n)); return; }
-    if (!cursor || loadingMore || loading) return;
+    if (next === null || loadingMore || loading) return;
     setLoadingMore(true);
     const id = requestId.current;
     try {
-      const page = await listTransactionsPage(cursor, PAGE_SIZE);
+      const page = await fetchPage(viewRef.current, next, PAGE_SIZE);
       if (id !== requestId.current) return;
       setRows((prev) => {
-        const next = prev.concat(page.rows);
-        loadedCount.current = next.length;
-        return next;
+        // an offset page can repeat a row when operations came in meanwhile
+        const have = new Set(prev.map((r) => r.id));
+        const all = prev.concat(page.rows.filter((r) => !have.has(r.id)));
+        loadedCount.current = all.length;
+        return all;
       });
-      setCursor(page.nextCursor);
+      setNext(page.next);
     } finally {
       setLoadingMore(false);
     }
-  }, [cursor, loadingMore, loading, results]);
+  }, [next, loadingMore, loading]);
 
   const refreshAll = useCallback(() => {
-    reload().catch((e) => console.error('reload transactions failed', e));
-    runFilter(filterRef.current).catch((e) => console.error('filter failed', e));
+    reload(true).catch((e) => console.error('reload transactions failed', e));
     loadCategoryOptions();
-  }, [reload, runFilter, loadCategoryOptions]);
+  }, [reload, loadCategoryOptions]);
 
   useFocusEffect(refreshAll);
   useEffect(() => onTransactionsChanged(refreshAll), [refreshAll]);
 
-  // text: debounced while typing; categories / merchants / dates: immediately
+  // a new filter or grouping starts from its first page with nothing selected; text: debounced while typing
+  const firstRun = useRef(true);
   useEffect(() => {
-    const t = setTimeout(() => { runFilter(filterRef.current).catch((e) => console.error('filter failed', e)); }, SEARCH_DEBOUNCE_MS);
+    if (firstRun.current) { firstRun.current = false; return undefined; }
+    setSelectMode(false);
+    setSelected(new Set());
+    const t = setTimeout(() => { reload(false).catch((e) => console.error('filter failed', e)); }, query ? SEARCH_DEBOUNCE_MS : 0);
     return () => clearTimeout(t);
-  }, [query, runFilter]);
-  useEffect(() => {
-    runFilter(filterRef.current).catch((e) => console.error('filter failed', e));
-  }, [categories, merchants, kinds, range, groupBy, runFilter]);
-  // a new filter starts from its first page; a refresh (back from an operation) keeps how far it was scrolled
-  useEffect(() => { setShownResults(FIRST_PAGE); }, [query, categories, merchants, kinds, range, groupBy]);
+  }, [query, categories, merchants, kinds, range, groupBy, reload]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     loadedCount.current = 0; // pull-to-refresh goes back to the first page
-    try { await reload(); } finally { setRefreshing(false); }
+    try { await reload(true); } finally { setRefreshing(false); }
   }, [reload]);
 
-  // memoized: sections, the selection pruning and the day totals (a DB query) depend on it, so a new array each render
-  // re-ran them on every keystroke while a filter was on
-  // not by day: the groups of everything found, the rows in their order (shown a page at a time like the feed)
-  const groups = useMemo(() => (groupBy !== 'day' && results ? groupTransactions(results, groupBy) : null), [groupBy, results]);
-  const ordered = useMemo(() => (groups ? groups.flatMap((g) => g.rows) : results), [groups, results]);
-  const data = useMemo(() => (ordered ? ordered.slice(0, shownResults) : rows), [ordered, shownResults, rows]);
+  const data = rows;
   const listKey = JSON.stringify([query.trim(), categories, merchants, kinds, range, groupBy]);
 
   // the filters set, as chips to clear one by one
@@ -224,27 +235,20 @@ export default function TransactionsList() {
     markTransactionsSeen(unreadSelected).then(() => emitTransactionsChanged()).catch((e) => console.error('mark seen failed', e));
   };
 
-  // forget selected transactions that are no longer in the list (deleted, filtered out); a group's checkbox
-  // selects the rows of its group not shown yet too
-  const listed = ordered ?? rows;
-  useEffect(() => {
-    setSelected((prev) => {
-      const visible = new Set(listed.map((r) => r.id));
-      const next = new Set([...prev].filter((id) => visible.has(id)));
-      return next.size === prev.size ? prev : next;
-    });
-  }, [listed]);
-
-  type Section = { key: string; title: string; dayStart: number; data: TransactionRow[]; group?: NonNullable<typeof groups>[number] };
+  type Section = { key: string; title: string; dayStart: number; data: Row[]; group?: TransactionGroup };
   const sections = useMemo(() => {
     const out: Section[] = [];
     if (groups) {
-      // the groups as far as the rows shown reach
-      let left = data.length;
-      for (const g of groups) {
-        if (left <= 0) break;
-        out.push({ key: g.key, title: g.title, dayStart: 0, data: g.rows.slice(0, left), group: g });
-        left -= g.rows.length;
+      // the groups as far as the rows loaded reach
+      const byKey = new Map(groups.map((g) => [g.key, g]));
+      const by = viewRef.current.groupBy as GroupKind;
+      for (const r of data) {
+        const key = r.group_key ?? '';
+        if (out.length === 0 || out[out.length - 1].key !== key) {
+          const g = byKey.get(key);
+          out.push({ key, title: g ? groupTitle(g, by) : '', dayStart: 0, data: [], group: g });
+        }
+        out[out.length - 1].data.push(r);
       }
       return out;
     }
@@ -257,7 +261,7 @@ export default function TransactionsList() {
       out[out.length - 1].data.push(r);
     }
     return out;
-  }, [data]);
+  }, [data, groups]);
 
   // spent per day for the day headers: all of the day's transactions, not only the ones loaded or filtered,
   // converted to the app's currency (Настройки → Валюта); transactions themselves stay in their own currency
@@ -375,7 +379,14 @@ export default function TransactionsList() {
   }, [tabNavigation, editMode, from]);
 
   // a group's checkbox: all its operations, or none of them
-  function toggleGroup(ids: number[]) {
+  async function toggleGroup(key: string) {
+    let ids = groupIds.get(key);
+    if (!ids) {
+      const v = viewRef.current;
+      ids = await transactionGroupIds(v.filter, v.groupBy as GroupKind, key);
+      const got = ids;
+      setGroupIds((m) => new Map(m).set(key, got));
+    }
     const all = ids.every((id) => selected.has(id));
     const next = new Set(selected);
     for (const id of ids) if (all) next.delete(id); else next.add(id);
@@ -511,14 +522,14 @@ export default function TransactionsList() {
         renderSectionHeader={({ section }) => {
           const g = section.group;
           if (g) {
-            const ids = g.rows.map((r) => r.id);
-            const checked = ids.every((id) => selected.has(id));
-            const n = g.rows.length;
-            const total = [...g.totals].map(([cur, v]) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${formatMoneyWithCurrency(Math.abs(v), cur)}`).join(' · ');
+            const ids = groupIds.get(g.key);
+            const checked = !!ids && ids.every((id) => selected.has(id));
+            const n = g.count;
+            const total = groupTotal(g);
             return (
               <View style={[formStyles.sectionHeader, styles.dayHeader]}>
                 {selectMode ? (
-                  <TouchableOpacity onPress={() => toggleGroup(ids)} hitSlop={10} accessibilityRole="checkbox" accessibilityState={{ checked }}>
+                  <TouchableOpacity onPress={() => { toggleGroup(g.key).catch((e) => console.error('select group failed', e)); }} hitSlop={10} accessibilityRole="checkbox" accessibilityState={{ checked }}>
                     <Checkbox checked={checked} size={18} />
                   </TouchableOpacity>
                 ) : null}
@@ -558,13 +569,17 @@ export default function TransactionsList() {
           );
         }}
         onEndReached={() => { loadMore().catch((e) => console.error('load more failed', e)); }}
-        onEndReachedThreshold={0.5}
+        // the next page is read a screen before the end; rows are drawn a batch at a time, the ones far off-screen dropped
+        onEndReachedThreshold={1}
+        initialNumToRender={20}
+        maxToRenderPerBatch={20}
+        windowSize={11}
         refreshing={refreshing}
-        onRefresh={results ? undefined : onRefresh}
+        onRefresh={onRefresh}
         ListFooterComponent={loadingMore ? <ActivityIndicator style={styles.footer} /> : <View style={[styles.footer, (editMode || selectMode) && styles.footerTall]} />}
         ListEmptyComponent={
           <Text style={styles.empty}>
-            {results ? 'Ничего не найдено.' : 'Операций пока нет. Они появятся здесь после SMS или уведомления банка, или добавьте вручную ＋.'}
+            {isFilterActive(filter) ? 'Ничего не найдено.' : 'Операций пока нет. Они появятся здесь после SMS или уведомления банка, или добавьте вручную ＋.'}
           </Text>
         }
       />
