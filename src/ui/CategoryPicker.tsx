@@ -5,6 +5,8 @@ import { Category, categoryLabel, categoryUsageCounts, isTransferCategory, listC
 import { getTransferTypeId } from '../db/categoryTypes';
 import { onTransactionsChanged } from '../events';
 import CategorySheet from './CategorySheet';
+import BottomSheet, { SheetScrollView } from './BottomSheet';
+import { SheetActions } from './Button';
 import Chip from './Chip';
 import SectionHeading from './SectionHeading';
 
@@ -41,7 +43,8 @@ export default function CategoryPicker({
   const [creating, setCreating] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [transferTypeId, setTransferTypeId] = useState<number | null>(null);
-  const [expanded, setExpanded] = useState(false);
+  // "Показать все": every category in a sheet over this one
+  const [allOpen, setAllOpen] = useState(false);
 
   const load = useCallback(() => {
     Promise.all([listCategories(), getTransferTypeId(), categoryUsageCounts()])
@@ -65,9 +68,8 @@ export default function CategoryPicker({
   const available = categories.filter((c) => !excluded.has(c.id));
   const collapsible = !showAll && available.length > COLLAPSED + 1;
   // collapsed: the first COLLAPSED, plus the selected one when it's further down (the choice stays visible)
-  const shown = !collapsible || expanded ? available
+  const shown = !collapsible ? available
     : available.filter((c, i) => i < COLLAPSED || isSelected(c.id));
-  const hidden = available.length - shown.length;
 
   return (
     <View>
@@ -81,10 +83,29 @@ export default function CategoryPicker({
           <Chip label="Без категории" selected={selectedId === null} disabled={disabled} onPress={() => onSelect(null)} compact />
         ) : null}
         {collapsible ? (
-          <Chip label={expanded ? 'Свернуть' : `Показать ещё (${hidden})`} action compact disabled={disabled} onPress={() => setExpanded((v) => !v)} />
+          <Chip label="Показать все" action compact disabled={disabled} onPress={() => setAllOpen(true)} />
         ) : null}
         <Chip label="Новая категория" add compact disabled={disabled} onPress={() => setCreating(true)} />
       </View>
+      {collapsible ? (
+        // the whole list; one pick closes it, several (selectedIds) are toggled until it's closed
+        <BottomSheet visible={allOpen} onClose={() => setAllOpen(false)} title={title} style={styles.allSheet}>
+          <SheetScrollView contentContainerStyle={styles.allContent}>
+            <CategoryPicker
+              title="Все категории"
+              selectedId={selectedId}
+              selectedIds={selectedIds}
+              onSelect={(id) => { onSelect(id); if (!selectedIds) setAllOpen(false); }}
+              allowNone={allowNone}
+              transferFirst={transferFirst}
+              excludeIds={excludeIds}
+              disabled={disabled}
+              showAll
+            />
+          </SheetScrollView>
+          {selectedIds ? <SheetActions submit={{ title: 'Готово', onPress: () => setAllOpen(false) }} style={styles.allActions} /> : null}
+        </BottomSheet>
+      ) : null}
       <CategorySheet
         visible={creating}
         // a new category for a transfer goes to the transfer section
@@ -100,4 +121,7 @@ export default function CategoryPicker({
 
 const styles = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, alignItems: 'center' },
+  allSheet: { maxHeight: '80%' },
+  allContent: { paddingHorizontal: 16 },
+  allActions: { paddingHorizontal: 16 },
 });

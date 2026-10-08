@@ -9,6 +9,10 @@ import { categoryColors } from '../db/colors';
 import { emitTransactionsChanged } from '../events';
 import { SheetActions } from './Button';
 import CategoryPicker from './CategoryPicker';
+import CategoryPickerModal from './CategoryPickerModal';
+import Chip from './Chip';
+import SectionHeading from './SectionHeading';
+import { PencilIcon } from './icons';
 import { plural } from './format';
 import type { CategoryInfo } from './MerchantsScreen';
 import { colors } from './theme';
@@ -46,6 +50,8 @@ export default function MerchantCard({ merchantId, categories: given, onClose, o
   // the saved list (to tell what changed)
   const [savedList, setSavedList] = useState<number[]>([]);
   const [saving, setSaving] = useState(false);
+  // "Сменить": the categories sheet
+  const [changing, setChanging] = useState(false);
 
   // the parent passes onClose inline: kept in a ref so a parent re-render doesn't reset and reload the card
   const onCloseRef = useRef(onClose);
@@ -220,7 +226,28 @@ export default function MerchantCard({ merchantId, categories: given, onClose, o
               <Switch value={mixed} onValueChange={switchMixed} disabled={saving} trackColor={{ true: colors.accent, false: colors.border }} thumbColor={colors.bg} />
             </View>
 
-            {/* the categories right here: one for the merchant, or — different ones — several, offered for its operations */}
+            {!mixed && m.category_id !== null ? (
+              // it has one: shown with "Сменить" (every category in a sheet), as on an operation
+              <View style={styles.pickerTop}>
+                <SectionHeading title="Категория" />
+                <View style={styles.currentRow}>
+                  <Chip label={single === null ? 'Без категории' : categories.get(single)?.label ?? '…'} selected />
+                  <TouchableOpacity style={styles.changeButton} disabled={saving} onPress={() => setChanging(true)} accessibilityLabel="Сменить категорию">
+                    <PencilIcon color={colors.accent} size={16} />
+                    <Text style={styles.changeText}>Сменить</Text>
+                  </TouchableOpacity>
+                </View>
+                <CategoryPickerModal
+                  visible={changing}
+                  title="Сменить категорию"
+                  selectedId={single}
+                  allowNone
+                  onPick={(id) => { setChanging(false); setSingle(id); }}
+                  onClose={() => setChanging(false)}
+                />
+              </View>
+            ) : (
+            // none yet, or different ones: the categories right here (several, offered for its operations)
             <View style={styles.pickerTop}>
               {mixed ? <Text style={styles.hint}>Какие обычно категории у «{m.name}»?</Text> : null}
               <CategoryPicker
@@ -233,6 +260,7 @@ export default function MerchantCard({ merchantId, categories: given, onClose, o
                 disabled={saving}
               />
             </View>
+            )}
 
             <SheetActions
               submit={{ title: 'Сохранить', onPress: save, disabled: !dirty || saving }}
@@ -252,6 +280,13 @@ const styles = StyleSheet.create({
   meta: { fontSize: 14, color: colors.muted, flexShrink: 1 },
   link: { fontSize: 14, color: colors.accent },
   hint: { fontSize: 14, color: colors.muted, marginTop: 12 },
+  currentRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
+  changeButton: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16,
+    borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed',
+  },
+  changeText: { fontSize: 15, color: colors.accent },
   switchRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 16 },
   switchText: { flex: 1 },
   switchTitle: { fontSize: 16, color: colors.text },
