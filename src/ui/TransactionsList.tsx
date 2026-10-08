@@ -34,6 +34,7 @@ import { confirmDeleteTransaction, confirmDeleteTransactions } from './transacti
 import TransactionItem from './TransactionItem';
 import { toast, toastError } from './toast';
 import { showLimitAlert } from '../notifications/notifeeIntegration';
+import { NO_CATEGORY } from './strings';
 
 /** The newest operations shown first; more come in pages while scrolling. */
 const FIRST_PAGE = 10;
@@ -186,7 +187,7 @@ export default function TransactionsList() {
   const activeFilters: ActiveFilter[] = [];
   for (const cat of categories) {
     const c = categoryOptions.find((o) => o.category === cat);
-    activeFilters.push({ key: `c${cat}`, label: c ? `${c.emoji || ''} ${c.name}`.trim() : cat === 'none' ? 'Без категории' : 'Категория', clear: () => setCategories((p) => p.filter((x) => x !== cat)) });
+    activeFilters.push({ key: `c${cat}`, label: c ? `${c.emoji || ''} ${c.name}`.trim() : cat === 'none' ? NO_CATEGORY : 'Категория', clear: () => setCategories((p) => p.filter((x) => x !== cat)) });
   }
   for (const k of kinds) {
     activeFilters.push({ key: `k${k}`, label: KIND_LABELS[k] ?? k, clear: () => setKinds((p) => p.filter((x) => x !== k)) });

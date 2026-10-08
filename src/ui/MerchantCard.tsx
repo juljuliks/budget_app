@@ -18,6 +18,7 @@ import type { CategoryInfo } from './MerchantsScreen';
 import { colors } from './theme';
 import { formatMoneyWithCurrency } from './money';
 import { toast, toastError } from './toast';
+import { NO_CATEGORY } from './strings';
 
 type Props = {
   /** null = closed */
@@ -165,7 +166,7 @@ export default function MerchantCard({ merchantId, categories: given, onClose, o
       [
         { text: 'Отмена', style: 'cancel' },
         // the past ones: the new category (or none), or the one they have
-        { text: name ?? 'Без категории', onPress: () => run(apply('change')) },
+        { text: name ?? NO_CATEGORY, onPress: () => run(apply('change')) },
         { text: old, style: 'secondary', onPress: () => run(apply('keep')) },
       ],
       `Какую категорию сделать для ${n} ${plural(n, ['прошлой операции', 'прошлых операций', 'прошлых операций'])} на ${money(followers.totals)}?`);
@@ -233,7 +234,7 @@ export default function MerchantCard({ merchantId, categories: given, onClose, o
               <View style={styles.pickerTop}>
                 <SectionHeading title="Категория" />
                 <View style={styles.currentRow}>
-                  <Chip label={single === null ? 'Без категории' : categories.get(single)?.label ?? '…'} selected />
+                  <Chip label={single === null ? NO_CATEGORY : categories.get(single)?.label ?? '…'} selected />
                   <TouchableOpacity style={styles.changeButton} disabled={saving} onPress={() => setChanging(true)} accessibilityLabel="Сменить категорию">
                     <PencilIcon color={colors.accent} size={16} />
                     <Text style={styles.changeText}>Сменить</Text>

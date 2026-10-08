@@ -1,3 +1,4 @@
+import { NO_CATEGORY_EMOJI } from '../colors';
 import { getDb } from './index';
 
 export type CategorySource = 'user' | 'rule';
@@ -168,7 +169,7 @@ export async function categoriesWithTransactions(): Promise<CategoryWithCount[]>
   return rows.map((r) => ({
     category: r.category_id ?? 'none',
     name: r.category_id === null ? UNCATEGORIZED : r.name ?? '?',
-    emoji: r.emoji,
+    emoji: r.category_id === null ? NO_CATEGORY_EMOJI : r.emoji,
     type_name: r.type_name,
     deleted: r.deleted_at !== null,
     count: r.n,

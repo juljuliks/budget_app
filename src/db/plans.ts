@@ -1,6 +1,6 @@
 import { getDb } from './index';
 import { categoryColors } from './colors';
-import { NEUTRAL_COLOR } from '../colors';
+import { NEUTRAL_COLOR, NO_CATEGORY_EMOJI } from '../colors';
 import { Converter, Currency, dateKey, ensureRates, isCurrency, makeConverter } from './fx';
 
 /** The default currency: plans start in it, and stats show it until another is picked. */
@@ -501,7 +501,7 @@ export async function monthStats(year: number, month: number, currency: Currency
   const uncategorized = spentBy.get(null) ?? 0;
   if (uncategorized !== 0) {
     categories.push({
-      category_id: null, name: 'Без категории', emoji: null, type_id: null, type_name: null,
+      category_id: null, name: 'Без категории', emoji: NO_CATEGORY_EMOJI, type_id: null, type_name: null,
       spent_minor: uncategorized, limit_minor: null, plan_kind: null, plan_norm: null, color: NEUTRAL_COLOR, deleted: false,
     });
   }
@@ -552,7 +552,7 @@ export async function periodStats(from: number, to: number, currency: Currency =
   const none = spentBy.get(null) ?? 0;
   if (none !== 0) {
     categories.push({
-      category_id: null, name: 'Без категории', emoji: null, type_id: null, type_name: null, spent_minor: none,
+      category_id: null, name: 'Без категории', emoji: NO_CATEGORY_EMOJI, type_id: null, type_name: null, spent_minor: none,
       limit_minor: null, plan_kind: null, plan_norm: null, color: NEUTRAL_COLOR, deleted: false,
     });
   }

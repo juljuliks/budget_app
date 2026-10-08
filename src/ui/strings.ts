@@ -1,3 +1,4 @@
+import { NO_CATEGORY_EMOJI } from '../colors';
 import type { NormPeriod } from '../db/plans';
 
 // Shared wording, see GLOSSARY.md: one term per concept across the app.
@@ -5,7 +6,7 @@ import type { NormPeriod } from '../db/plans';
 export const CANCEL = 'Отмена';
 export const SAVE = 'Сохранить';
 export const DELETE = 'Удалить';
-export const NO_CATEGORY = 'Без категории';
+export const NO_CATEGORY = `${NO_CATEGORY_EMOJI} Без категории`;
 export const NO_SECTION = 'Без раздела';
 export const AMOUNT_HINT = 'Введите сумму, например 1500 или 12.50';
 /** before a list of amounts that couldn't be converted */

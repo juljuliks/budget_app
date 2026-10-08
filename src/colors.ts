@@ -35,6 +35,8 @@ export function untypedColors(typePalettes: string[]): string[] {
 
 /** "Без категории" and anything unknown. */
 export const NEUTRAL_COLOR = '#c3c2b7';
+/** What "Без категории" is shown with, like a category's emoji. */
+export const NO_CATEGORY_EMOJI = '⚪️';
 
 export function isPaletteKey(v: string | null | undefined): v is PaletteKey {
   return !!v && v in PALETTES;

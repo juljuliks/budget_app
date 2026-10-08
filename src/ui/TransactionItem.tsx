@@ -6,6 +6,7 @@ import Checkbox from './Checkbox';
 import { formatAmount, formatTime, isIncome, merchantLabel } from './format';
 import RowActions from './RowActions';
 import { colors } from './theme';
+import { NO_CATEGORY } from './strings';
 
 type Props = {
   tx: TransactionRow;
@@ -49,7 +50,7 @@ export default function TransactionItem({ tx, onPress, onLongPress, selectable, 
           <Text style={styles.meta} numberOfLines={1}>{category} · {formatTime(tx.occurred_at)}</Text>
         ) : (
           <View style={styles.inline}>
-            <Text style={styles.badge}>Без категории</Text>
+            <Text style={styles.badge}>{NO_CATEGORY}</Text>
             <Text style={styles.meta}> · {formatTime(tx.occurred_at)}</Text>
           </View>
         )}
