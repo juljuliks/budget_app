@@ -55,3 +55,27 @@ test('first use: the balance is found in transactions already stored', async () 
   await (await getDb()).run("DELETE FROM app_settings WHERE key = 'card_balance'");
   expect(await cardBalance()).toMatchObject({ minor: 9114, pending: 0 });
 });
+
+describe('outgoing transfers', () => {
+  const TRANSFER = 'Money Transfer:\n15.00 GEL\nMC GOLD\n03/10/2026\nNINO B';
+
+  test('a transfer after the last reported balance is subtracted (by SMS or by the bank\'s push)', async () => {
+    await sms(SPAR, '2026-10-03T15:19:00');
+    await sms(TRANSFER, '2026-10-03T16:00:00');
+    expect(await cardBalance()).toMatchObject({ minor: 9114 - 1500, pending: 1 });
+    await ingestSms({ sender: 'TBC', body: 'Money Transfer:\n5.00 GEL\nMC GOLD\n03/10/2026\nANA K', timestamp: new Date('2026-10-03T16:30:00').getTime(), source: 'push' });
+    expect(await cardBalance()).toMatchObject({ minor: 9114 - 1500 - 500, pending: 2 });
+  });
+
+  test('a transfer without a name too', async () => {
+    await sms(SPAR, '2026-10-03T15:19:00');
+    await sms('Money Transfer:\n1.00 GEL\nMC GOLD\n03/10/2026', '2026-10-03T15:40:00');
+    expect(await cardBalance()).toMatchObject({ minor: 9114 - 100, pending: 1 });
+  });
+
+  test('a transfer the bank reported before the balance is already in it', async () => {
+    await sms(TRANSFER, '2026-10-03T15:00:00');
+    await sms(SPAR, '2026-10-03T15:19:00');
+    expect(await cardBalance()).toMatchObject({ minor: 9114, pending: 0 });
+  });
+});
