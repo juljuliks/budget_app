@@ -35,6 +35,9 @@ import TransactionItem from './TransactionItem';
 import { toast, toastError } from './toast';
 import { showLimitAlert } from '../notifications/notifeeIntegration';
 import { NO_CATEGORY } from './strings';
+import BottomSheet from './BottomSheet';
+import RadioGroup from './RadioGroup';
+import { groupByMerchant } from './merchantGroups';
 
 /** The newest operations shown first; more come in pages while scrolling. */
 const FIRST_PAGE = 10;
@@ -47,8 +50,14 @@ function isFilterActive(f: Filter): boolean {
   return f.query.trim() !== '' || f.categories.length > 0 || f.merchants.length > 0 || f.kinds.length > 0 || f.range !== null;
 }
 
-async function runFilterQuery(f: Filter): Promise<TransactionRow[] | null> {
-  if (!isFilterActive(f)) return null;
+/** How the list is split into sections: by day (the feed), or by merchant (every operation matching the filters at once). */
+type GroupBy = 'day' | 'merchant';
+const GROUP_BY: Array<readonly [GroupBy, string]> = [['day', 'По дням'], ['merchant', 'По мерчантам']];
+// grouped by merchant without a filter: the whole history (a group can't be cut by a page)
+const ALL_LIMIT = 50000;
+
+async function runFilterQuery(f: Filter, groupBy: GroupBy): Promise<TransactionRow[] | null> {
+  if (!isFilterActive(f)) return groupBy === 'day' ? null : listTransactionsFiltered({}, ALL_LIMIT);
   const r = f.range ? rangeToUnix(f.range) : undefined;
   const tx: TxFilter = { categories: f.categories, merchants: f.merchants, kinds: f.kinds, from: r?.from, to: r?.to };
   return f.query.trim() ? searchTransactions(f.query, tx) : listTransactionsFiltered(tx);
@@ -74,7 +83,11 @@ export default function TransactionsList() {
   const [kinds, setKinds] = useState<string[]>([]);
   const [kindOptions, setKindOptions] = useState<Array<{ kind: string; count: number }>>([]);
   // which picker sheet is open
-  const [sheet, setSheet] = useState<'category' | 'kind' | 'date' | 'all' | null>(null);
+  const [sheet, setSheet] = useState<'category' | 'kind' | 'date' | 'all' | 'group' | null>(null);
+  // a view, not a filter: kept by "Сбросить все" and when leaving the tab
+  const [groupBy, setGroupBy] = useState<GroupBy>('day');
+  const groupByRef = useRef(groupBy);
+  groupByRef.current = groupBy;
   const [range, setRange] = useState<DayRange | null>(null);
   const [categoryOptions, setCategoryOptions] = useState<CategoryWithCount[]>([]);
   const [merchantOptions, setMerchantOptions] = useState<MerchantWithCount[]>([]);
@@ -122,7 +135,7 @@ export default function TransactionsList() {
 
   const runFilter = useCallback(async (f: Filter) => {
     const id = ++searchId.current;
-    const found = await runFilterQuery(f);
+    const found = await runFilterQuery(f, groupByRef.current);
     if (id === searchId.current) setResults(found);
   }, []);
 
@@ -168,9 +181,9 @@ export default function TransactionsList() {
   }, [query, runFilter]);
   useEffect(() => {
     runFilter(filterRef.current).catch((e) => console.error('filter failed', e));
-  }, [categories, merchants, kinds, range, runFilter]);
+  }, [categories, merchants, kinds, range, groupBy, runFilter]);
   // a new filter starts from its first page; a refresh (back from an operation) keeps how far it was scrolled
-  useEffect(() => { setShownResults(FIRST_PAGE); }, [query, categories, merchants, kinds, range]);
+  useEffect(() => { setShownResults(FIRST_PAGE); }, [query, categories, merchants, kinds, range, groupBy]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -180,8 +193,11 @@ export default function TransactionsList() {
 
   // memoized: sections, the selection pruning and the day totals (a DB query) depend on it, so a new array each render
   // re-ran them on every keystroke while a filter was on
-  const data = useMemo(() => (results ? results.slice(0, shownResults) : rows), [results, shownResults, rows]);
-  const listKey = JSON.stringify([query.trim(), categories, merchants, kinds, range]);
+  // by merchant: the groups of everything found, the rows in their order (shown a page at a time like the feed)
+  const groups = useMemo(() => (groupBy === 'merchant' && results ? groupByMerchant(results) : null), [groupBy, results]);
+  const ordered = useMemo(() => (groups ? groups.flatMap((g) => g.rows) : results), [groups, results]);
+  const data = useMemo(() => (ordered ? ordered.slice(0, shownResults) : rows), [ordered, shownResults, rows]);
+  const listKey = JSON.stringify([query.trim(), categories, merchants, kinds, range, groupBy]);
 
   // the filters set, as chips to clear one by one
   const activeFilters: ActiveFilter[] = [];
@@ -206,17 +222,30 @@ export default function TransactionsList() {
     markTransactionsSeen(unreadSelected).then(() => emitTransactionsChanged()).catch((e) => console.error('mark seen failed', e));
   };
 
-  // forget selected transactions that are no longer shown (deleted, filtered out)
+  // forget selected transactions that are no longer in the list (deleted, filtered out); a merchant's checkbox
+  // selects the rows of its group not shown yet too
+  const listed = ordered ?? rows;
   useEffect(() => {
     setSelected((prev) => {
-      const visible = new Set(data.map((r) => r.id));
+      const visible = new Set(listed.map((r) => r.id));
       const next = new Set([...prev].filter((id) => visible.has(id)));
       return next.size === prev.size ? prev : next;
     });
-  }, [data]);
+  }, [listed]);
 
+  type Section = { key: string; title: string; dayStart: number; data: TransactionRow[]; group?: NonNullable<typeof groups>[number] };
   const sections = useMemo(() => {
-    const out: Array<{ key: string; title: string; dayStart: number; data: TransactionRow[] }> = [];
+    const out: Section[] = [];
+    if (groups) {
+      // the groups as far as the rows shown reach
+      let left = data.length;
+      for (const g of groups) {
+        if (left <= 0) break;
+        out.push({ key: g.key, title: g.name ?? 'Без мерчанта', dayStart: 0, data: g.rows.slice(0, left), group: g });
+        left -= g.rows.length;
+      }
+      return out;
+    }
     for (const r of data) {
       const key = dayKey(r.occurred_at);
       if (out.length === 0 || out[out.length - 1].key !== key) {
@@ -233,7 +262,7 @@ export default function TransactionsList() {
   const currency = useDisplayCurrency();
   const [daySpent, setDaySpent] = useState<Map<string, number>>(new Map());
   useEffect(() => {
-    if (sections.length === 0) { setDaySpent(new Map()); return; }
+    if (sections.length === 0 || groups) { setDaySpent(new Map()); return; }
     const from = sections[sections.length - 1].dayStart;
     const last = new Date(sections[0].dayStart * 1000);
     const to = new Date(last.getFullYear(), last.getMonth(), last.getDate() + 1).getTime() / 1000;
@@ -245,7 +274,7 @@ export default function TransactionsList() {
       setDaySpent(m);
     }).catch((e) => console.error('day totals failed', e));
     return () => { stale = true; };
-  }, [sections, currency]);
+  }, [sections, groups, currency]);
 
   // a long press on a row starts selecting several, with that row selected
   function startSelect(id: number) {
@@ -343,6 +372,15 @@ export default function TransactionsList() {
     // toggleEditMode / goBack only use state setters, navigation and `from`
   }, [tabNavigation, editMode, from]);
 
+  // a merchant's checkbox: all its operations, or none of them
+  function toggleGroup(ids: number[]) {
+    const all = ids.every((id) => selected.has(id));
+    const next = new Set(selected);
+    for (const id of ids) if (all) next.delete(id); else next.add(id);
+    setSelected(next);
+    if (next.size === 0) setSelectMode(false);
+  }
+
   // unselecting the last one ends the selection
   function toggle(id: number) {
     const next = new Set(selected);
@@ -428,6 +466,7 @@ export default function TransactionsList() {
               <FilterButton label="Категория" count={categories.length} active={categories.length > 0} onPress={() => setSheet('category')} />
               <FilterButton label="Тип" count={kinds.length} active={kinds.length > 0} onPress={() => setSheet('kind')} />
               <FilterButton label="Дата" active={range !== null} onPress={() => setSheet('date')} />
+              <FilterButton label={GROUP_BY.find(([k]) => k === groupBy)![1]} active={groupBy !== 'day'} onPress={() => setSheet('group')} />
             </View>
             {activeFilters.length > 0 ? (
               // how many filters are set (tap: the list of them, each with ✕) and "Сбросить все"
@@ -468,6 +507,24 @@ export default function TransactionsList() {
         stickySectionHeadersEnabled
         keyboardShouldPersistTaps="handled"
         renderSectionHeader={({ section }) => {
+          const g = section.group;
+          if (g) {
+            const ids = g.rows.map((r) => r.id);
+            const checked = ids.every((id) => selected.has(id));
+            const n = g.rows.length;
+            const total = [...g.totals].map(([cur, v]) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${formatMoneyWithCurrency(Math.abs(v), cur)}`).join(' · ');
+            return (
+              <View style={[formStyles.sectionHeader, styles.dayHeader]}>
+                {selectMode ? (
+                  <TouchableOpacity onPress={() => toggleGroup(ids)} hitSlop={10} accessibilityRole="checkbox" accessibilityState={{ checked }}>
+                    <Checkbox checked={checked} size={18} />
+                  </TouchableOpacity>
+                ) : null}
+                <Text style={styles.dayTitle} numberOfLines={1}>{section.title} · {n} {plural(n, ['операция', 'операции', 'операций'])}</Text>
+                <Text style={styles.daySpent}>{total}</Text>
+              </View>
+            );
+          }
           const spent = daySpent.get(section.key) ?? 0;
           return (
             <View style={[formStyles.sectionHeader, styles.dayHeader]}>
@@ -545,6 +602,11 @@ export default function TransactionsList() {
         onClose={() => setSheet(null)}
       />
       <DateSheet visible={sheet === 'date'} value={range} onChange={setRange} onClose={() => setSheet(null)} />
+      <BottomSheet visible={sheet === 'group'} onClose={() => setSheet(null)} title="Группировать">
+        <View style={styles.groupSheet}>
+          <RadioGroup options={GROUP_BY} value={groupBy} onChange={(v) => { setGroupBy(v); setSheet(null); }} />
+        </View>
+      </BottomSheet>
       <AllFiltersSheet visible={sheet === 'all'} filters={activeFilters} onReset={resetFilters} onClose={() => setSheet(null)} />
 
       <CategoryPickerModal
@@ -609,6 +671,7 @@ const styles = StyleSheet.create({
   dayHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   dayTitle: { flex: 1, fontSize: 13, fontWeight: '600', color: colors.muted },
   daySpent: { fontSize: 13, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
+  groupSheet: { paddingHorizontal: 20, paddingBottom: 24 },
   deleteInfo: { paddingBottom: 10, gap: 4 },
   deleteTitle: { fontSize: 18, fontWeight: '600', color: colors.text },
   deleteHint: { fontSize: 13, color: colors.muted },
