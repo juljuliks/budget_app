@@ -2,7 +2,8 @@
 import { act, fireEvent, waitFor } from '@testing-library/react-native';
 import { navigationRef } from '../../src/navigation';
 import { longPress, openApp, openSettings, screen, tap, texts } from './app';
-import { base, ops } from '../../scripts/e2e/seeds';
+import { base, category, ops } from '../../scripts/e2e/seeds';
+import { setPlanAmount } from '../../src/db/plans';
 import { getDb } from '../../src/db';
 
 const q = async <T,>(sql: string, p: unknown[] = []) => (await getDb()).all<T>(sql, p as never);
@@ -241,4 +242,24 @@ describe('4.5 deleting', () => {
       expect((await cat('Покупки')).deleted_at).toBeNull();
     });
   });
+});
+
+test('4.4.2: merging categories planned differently: how to plan the merged one', async () => {
+  await openCategories(async () => {
+    await base();
+    await setPlanAmount('2026-10', await category('Одежда', '👕'), 20000, 'fixed', 'GEL', 'month');
+  });
+  await longPress('🛍️ Покупки');
+  await tap('👕 Одежда');
+  await tap('Объединить (2)');
+  expect(await screen.findByText('Суммы складываются: 700 ₾')).toBeTruthy();
+  expect(screen.getByText('Категории запланированы по-разному — как планировать объединённую:')).toBeTruthy();
+  expect(screen.getByText('Лимит · каждый день')).toBeTruthy();
+  expect(screen.getByText('как «Покупки»')).toBeTruthy();
+  expect(screen.getByText('как «Одежда»')).toBeTruthy();
+  await tap('Обязательный платёж');
+  await tap('Объединить');
+  expect(await screen.findByText('Категории объединены в «Покупки & Одежда»')).toBeTruthy();
+  expect(await q("SELECT p.limit_minor AS a, p.kind FROM plan_items p JOIN categories c ON c.id = p.category_id WHERE c.name = 'Покупки & Одежда' AND p.ym = '2026-10'"))
+    .toEqual([{ a: 70000, kind: 'fixed' }]);
 });

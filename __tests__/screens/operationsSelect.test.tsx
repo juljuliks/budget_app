@@ -161,3 +161,22 @@ test('2.6: the edit mode — a 🗑 on every row, no "+", "Готово" leaves 
   expect(await screen.findByText('Редактировать')).toBeTruthy();
   expect(screen.getByLabelText('Добавить операцию')).toBeTruthy();
 });
+
+/** GLOVO of different categories: Кафе and Продукты on its list */
+async function mixedGlovo() {
+  const db = await getDb();
+  await db.run("INSERT INTO mixed_merchants (merchant_key, created_at) VALUES ('GLOVO', 0)");
+  await db.run("INSERT INTO merchant_categories (merchant_key, category_id) SELECT 'GLOVO', id FROM categories WHERE name IN ('Кафе и рестораны', 'Продукты')");
+}
+const mixedOf = async (m: string) => (await (await getDb()).all<{ name: string }>(
+  'SELECT c.name FROM merchant_categories mc JOIN categories c ON c.id = mc.category_id WHERE mc.merchant_key = ? ORDER BY c.name', [m])).map((r) => r.name);
+
+test('2.5.12: a merchant of different categories among the selected: no question; the category joins its list', async () => {
+  await mixedGlovo();
+  await longPress('GLOVO');
+  await tap('Категория (1)');
+  await tap('👕 Одежда');
+  expect(await screen.findByText('Категория «👕 Одежда» назначена: 1 операция')).toBeTruthy();
+  expect(await ruleOf('GLOVO')).toBeNull();
+  expect(await mixedOf('GLOVO')).toContain('Одежда');
+});

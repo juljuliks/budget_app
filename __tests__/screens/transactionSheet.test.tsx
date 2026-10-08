@@ -141,3 +141,27 @@ test('2.7.14: a manual operation: no SMS', async () => {
   expect(await screen.findByText('Заметка')).toBeTruthy();
   expect(screen.queryByText('SMS')).toBeNull();
 });
+
+/** GLOVO of different categories: Кафе and Продукты on its list */
+async function mixedGlovo() {
+  const db = await getDb();
+  await db.run("INSERT INTO mixed_merchants (merchant_key, created_at) VALUES ('GLOVO', 0)");
+  await db.run("INSERT INTO merchant_categories (merchant_key, category_id) SELECT 'GLOVO', id FROM categories WHERE name IN ('Кафе и рестораны', 'Продукты')");
+}
+const mixedOf = async (m: string) => (await (await getDb()).all<{ name: string }>(
+  'SELECT c.name FROM merchant_categories mc JOIN categories c ON c.id = mc.category_id WHERE mc.merchant_key = ? ORDER BY c.name', [m])).map((r) => r.name);
+
+test('2.7.6: a merchant of different categories: its categories to tap, no question; another one joins its list', async () => {
+  await mixedGlovo();
+  await tap('GLOVO');
+  expect(await screen.findByText('У «GLOVO» разные категории: каждая новая операция спрашивает.')).toBeTruthy();
+  await tap('☕️ Кафе и рестораны');
+  expect(await screen.findByText('Категория «☕️ Кафе и рестораны» назначена')).toBeTruthy();
+  expect((await opsOf('GLOVO')).map((o) => [o.c, o.s])).toEqual([['Кафе и рестораны', 'user']]);
+  expect(await ruleOf('GLOVO')).toBeNull();
+  await tap('GLOVO');
+  await tap('Сменить');
+  await tap('👕 Одежда');
+  expect(await screen.findByText('Категория «👕 Одежда» назначена')).toBeTruthy();
+  expect(await mixedOf('GLOVO')).toEqual(['Кафе и рестораны', 'Одежда', 'Продукты']);
+});

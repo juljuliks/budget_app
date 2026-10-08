@@ -2,7 +2,8 @@
 // currency, the warning over them. Today: Thursday 15 October 2026 (setup.ts).
 import { act, waitFor, within } from '@testing-library/react-native';
 import { openApp, rowOf, screen, tap, texts } from './app';
-import { planned } from '../../scripts/e2e/seeds';
+import { buy, ops, planned, on } from '../../scripts/e2e/seeds';
+import { emitTransactionsChanged } from '../../src/events';
 import { getDb } from '../../src/db';
 import { getSetting } from '../../src/db/settings';
 
@@ -153,5 +154,74 @@ describe('5.4–5.6 hidden amounts, the currency, the warning', () => {
     expect(screen.getByText('⚠ Вне плана потрачено 380 ₾ — на 80 ₾ больше, чем выделено на незапланированное')).toBeTruthy();
     await tap('Скрыть предупреждение');
     await waitFor(() => expect(screen.queryByText(/^⚠ Вне плана/)).toBeNull());
+  });
+});
+
+describe('5.6 the warnings about the locked savings', () => {
+  // budget 3 000, 300 locked: 2 700 may be spent; 2 010 spent
+  beforeEach(openStats);
+  /** spent now on Продукты, the open screens told */
+  const spend = (lari: number) => act(async () => {
+    const c = (await (await getDb()).get<{ id: number }>("SELECT id FROM categories WHERE name = 'Продукты'"))!.id;
+    await buy('SPAR', lari, Math.floor(Date.now() / 1000) - 60, c);
+    emitTransactionsChanged();
+  });
+
+  test('near them: 10% of what may be spent left', async () => {
+    expect(screen.queryByText(/До отложенного/)).toBeNull();
+    await spend(500);
+    expect(await screen.findByText(/До отложенного осталось 190 ₾ — дальше траты пойдут из сбережений/)).toBeTruthy();
+  });
+  test('into them', async () => {
+    await spend(800);
+    expect(await screen.findByText(/Траты зашли в отложенное: из сбережений ушло 110 ₾/)).toBeTruthy();
+  });
+  test('hidden with ✕ until something new', async () => {
+    await spend(500);
+    await screen.findByText(/До отложенного осталось/);
+    await tap('Скрыть предупреждение');
+    await waitFor(() => expect(screen.queryByText(/До отложенного/)).toBeNull());
+    await spend(300);
+    expect(await screen.findByText(/Траты зашли в отложенное/)).toBeTruthy();
+  });
+});
+
+describe('periods without spending, a plan, a rate', () => {
+  const period = async (name: string) => { await tap('Выбрать период'); await tap(name); };
+
+  test('a month without spending', async () => {
+    await openApp();
+    await tap('Статистика');
+    expect(await screen.findByText('В этом месяце трат нет.')).toBeTruthy();
+  });
+  test('a day without spending', async () => {
+    await openApp();
+    await tap('Статистика');
+    await period('За день');
+    expect(await screen.findByText('За этот период трат нет.')).toBeTruthy();
+  });
+  test('a whole month of one\'s own without a plan: only the structure (a day or a week puts it all "Вне плана")', async () => {
+    await openApp(ops);
+    await tap('Статистика');
+    await period('Свой период');
+    // the calendar comes up once the period list has slid away
+    await screen.findByText('Показать');
+    await tap('‹');
+    await tap('#day-2026-09-01');
+    await tap('#day-2026-09-30');
+    await tap('Показать');
+    expect(await screen.findByText('1 сен 2026 – 30 сен 2026')).toBeTruthy();
+    expect(await screen.findByText('Плана на эти дни нет — показана только структура трат.')).toBeTruthy();
+  });
+  test('spending in a currency without a rate (offline): said, not counted', async () => {
+    await openApp(ops);
+    await tap('Статистика');
+    expect(await screen.findByText('Не учтено — нет курса валюты (нужен интернет): 10.00 $')).toBeTruthy();
+  });
+  test('a year without a full month of data: no average', async () => {
+    await openApp(async () => { await buy('SPAR', 10, on(10), null); });
+    await tap('Статистика');
+    await period('За год');
+    expect(await screen.findByText('Для среднего в месяц нужен хотя бы один полный месяц с данными.')).toBeTruthy();
   });
 });

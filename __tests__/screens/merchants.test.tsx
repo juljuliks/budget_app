@@ -191,3 +191,33 @@ describe('3.3 several merchants', () => {
     await waitFor(() => expect(screen.queryByText(/^Выбрано: /)).toBeNull());
   });
 });
+
+describe('3.2.6–3.2.7 turning "Разные категории" off', () => {
+  // GLOVO of different categories (its card loads it on opening)
+  beforeEach(async () => {
+    const db = await getDb();
+    await db.run("INSERT INTO mixed_merchants (merchant_key, created_at) VALUES ('GLOVO', 0)");
+    await db.run("INSERT INTO merchant_categories (merchant_key, category_id) SELECT 'GLOVO', id FROM categories WHERE name IN ('Кафе и рестораны', 'Продукты')");
+    await tap('GLOVO');
+    expect(await screen.findByText('Категории мерчанта')).toBeTruthy();
+    toggleSwitch(false);
+  });
+  const isMixed = async () => (await q('SELECT 1 FROM mixed_merchants WHERE merchant_key = ?', ['GLOVO'])).length === 1;
+
+  test('with a category: its new operations get it', async () => {
+    await tap('☕️ Кафе и рестораны');
+    await tap('Сохранить');
+    expect(await screen.findByText('Категория «☕️ Кафе и рестораны» для «GLOVO»')).toBeTruthy();
+    expect(screen.getByText('Новые операции мерчанта будут получать её автоматически. Разные категории выключатся.')).toBeTruthy();
+    await tap('Продолжить');
+    expect(await screen.findByText('Категория «☕️ Кафе и рестораны» назначена мерчанту «GLOVO»')).toBeTruthy();
+    expect(await isMixed()).toBe(false);
+    expect(await ruleOf('GLOVO')).toBe('Кафе и рестораны');
+  });
+  test('without one: new operations come without a category', async () => {
+    await tap('Сохранить');
+    expect(await screen.findByText('Новые операции «GLOVO» будут приходить без категории')).toBeTruthy();
+    expect(await isMixed()).toBe(false);
+    expect(await ruleOf('GLOVO')).toBeNull();
+  });
+});
