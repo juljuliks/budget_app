@@ -111,7 +111,7 @@ export default function TransactionsList() {
   const [kindOptions, setKindOptions] = useState<Array<{ kind: string; count: number }>>([]);
   // which picker sheet is open
   const [sheet, setSheet] = useState<'category' | 'kind' | 'date' | 'all' | 'group' | null>(null);
-  // a view, not a filter: kept by "Сбросить все" and when leaving the tab
+  // a view, not a filter: kept by "Сбросить все", back to by day when leaving the tab
   const [groupBy, setGroupBy] = useState<GroupBy>('day');
   const groupByRef = useRef(groupBy);
   groupByRef.current = groupBy;
@@ -479,7 +479,7 @@ export default function TransactionsList() {
   }), [tabNavigation, from]);
 
   // leaving the tab ends edit mode together with any selection
-  // Leaving for another tab starts the next visit clean: no filters, search or edit mode. A screen pushed over
+  // Leaving for another tab starts the next visit clean: no filters, search, grouping or edit mode. A screen pushed over
   // the tabs (merchants, categories) keeps them, to come back to the same list.
   useEffect(() => tabNavigation.addListener('blur', () => {
     const routes = navigationRef.getRootState()?.routes;
@@ -490,6 +490,7 @@ export default function TransactionsList() {
     setSelectMode(false);
     setSelected(new Set());
     resetFilters();
+    setGroupBy('day');
   }), [tabNavigation]);
 
   useLayoutEffect(() => {
