@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
-import { Category, categoryLabel, listCategories } from '../db/categories';
-import { CategoryType, listCategoryTypes } from '../db/categoryTypes';
-import { mergeCategories, MergeNameTakenError, mergedName, mergePlanPreview, MergeRhythm } from '../db/mergeCategories';
-import { currentYm, planConverter } from '../db/plans';
-import { emitTransactionsChanged } from '../events';
+import { Category, categoryLabel, listCategories } from '@/db/categories';
+import { CategoryType, listCategoryTypes } from '@/db/categoryTypes';
+import { MergeNameTakenError, mergedName, mergePlanPreview, MergeRhythm } from '@/db/mergeCategories';
+import { currentYm, planConverter } from '@/db/plans';
+import { mergeInto } from './merge';
 import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
 import { SheetActions } from '@/shared/ui/Button';
 import { formStyles } from '@/shared/theme/formStyles';
@@ -78,9 +78,8 @@ export default function MergeCategoriesSheet({ ids, onClose, onMerged }: {
     setSaving(true);
     try {
       const chosen = rhythms.length > 1 ? rhythms.find((w) => rhythmKey(w.rhythm) === rhythm)?.rhythm ?? null : null;
-      await mergeCategories(ids[0], ids.slice(1), name, typeKey === 'none' ? null : Number(typeKey), chosen);
+      await mergeInto(ids[0], ids.slice(1), name, typeKey === 'none' ? null : Number(typeKey), chosen);
       toast(`Категории объединены в «${name.trim()}»`);
-      emitTransactionsChanged();
       onMerged();
     } catch (e) {
       if (e instanceof MergeNameTakenError) toastError(`Категория «${e.name}» в этом разделе уже есть`);

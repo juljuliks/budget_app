@@ -1,8 +1,8 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import CategoriesScreen from '../ui/CategoriesScreen';
-import MerchantsScreen from '../ui/MerchantsScreen';
+import { CategoriesScreen } from '@/screens/categories';
+import { MerchantsScreen } from '@/screens/merchants';
 import MainTabs from './MainTabs';
 import { ModalHost } from './ModalHost';
 import { useAppStartup } from './useAppStartup';

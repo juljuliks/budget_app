@@ -1,5 +1,6 @@
 // The operation's writes: each one tells the screens the data changed.
-import { deleteTransaction, markTransactionSeen, markTransactionsSeen, setTransactionAmount, setTransactionNote } from '@/db/transactions';
+import { incrementCategoryUsage } from '@/db/categories';
+import { addManualTransaction, deleteTransaction, markTransactionSeen, markTransactionsSeen, setTransactionAmount, setTransactionNote } from '@/db/transactions';
 import { emitTransactionsChanged } from '@/events';
 
 export async function saveTransactionAmount(id: number, amountMinor: number, currency: string) {
@@ -26,5 +27,12 @@ export async function markAllSeen(ids: number[]) {
 
 export async function removeTransactions(ids: number[]) {
   for (const id of ids) await deleteTransaction(id);
+  emitTransactionsChanged();
+}
+
+/** An operation added by hand (cash, or what the bank sent no SMS for); its category counts as used. */
+export async function addTransaction(t: Parameters<typeof addManualTransaction>[0]) {
+  await addManualTransaction(t);
+  if (t.category_id !== null && t.category_id !== undefined) await incrementCategoryUsage(t.category_id);
   emitTransactionsChanged();
 }

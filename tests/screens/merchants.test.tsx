@@ -42,7 +42,7 @@ describe('3.1 the list', () => {
     expect(screen.queryByText('SPAR')).toBeNull();
     fireEvent.changeText(screen.getByPlaceholderText('Найти мерчанта'), 'zzz');
     expect(await screen.findByText('Не найдено.')).toBeTruthy();
-    await tap('Очистить');
+    await tap('Очистить поиск');
     expect(await screen.findByText('SPAR')).toBeTruthy();
   });
   test('the category filter', async () => {

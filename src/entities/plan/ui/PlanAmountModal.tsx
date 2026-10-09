@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Controller, useWatch } from 'react-hook-form';
 import { Currency } from '@/db/fx';
-import { categoryMonthlyAverage, getPlanBudget, lastPlanItem, NormPeriod, OverBudgetError, PlanKind, planConverter, plannedTotal, setPlanAmount } from '@/db/plans';
+import { categoryMonthlyAverage, getPlanBudget, lastPlanItem, NormPeriod, OverBudgetError, PlanKind, planConverter, plannedTotal } from '@/db/plans';
 import { StyleSheet, Text, View } from 'react-native';
 import { colors } from '@/shared/theme/theme';
 import { AMOUNT_HINT, PER_PERIOD, SPENDING_PATTERN } from '@/shared/lib/strings';
@@ -14,7 +14,7 @@ import TextInputModal from '@/shared/ui/TextInputModal';
 import { useLoadedForm } from '@/shared/ui/form';
 import { plural } from '@/shared/lib/format';
 import { toast } from '@/shared/ui/toast';
-import { emitTransactionsChanged } from '@/events';
+import { savePlanAmount } from '../model/commands';
 import { MONTHS_NOM, RHYTHM_DAYS } from '@/shared/lib/dates';
 
 const KINDS = [
@@ -118,14 +118,13 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
     if (minor === null) return AMOUNT_HINT;
     try {
       const { kind: k, currency, norm } = form.getValues();
-      await setPlanAmount(ym, target.category_id, minor, k, currency, norm);
+      await savePlanAmount(ym, target.category_id, minor, k, currency, norm);
     } catch (e) {
       if (!(e instanceof OverBudgetError)) throw e;
       return `Больше бюджета месяца: можно запланировать до ${free ? formatWithCurrency(free.minor, free.currency) : '0'}`;
     }
+    // the stats and reports open under the dialog count the plan too (savePlanAmount tells them)
     toast(`План «${target.label}» сохранён`);
-    // the stats and reports open under the dialog count the plan too
-    emitTransactionsChanged();
     onSaved();
     return null;
   }

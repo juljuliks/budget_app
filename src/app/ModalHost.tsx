@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { attachSheetHost, CLOSED, detachSheetHost, SheetState } from '@/shared/navigation/sheets';
-import AddTransactionSheet from '../ui/AddTransactionSheet';
+import { AddTransactionSheet } from '@/features/add-transaction';
 import { CategoryDeleteSheet } from '@/features/category-delete';
 import { CategoryTypesSheet } from '@/features/category-types';
 import { TransactionSheet } from '@/features/transaction-edit';
