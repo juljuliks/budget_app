@@ -68,7 +68,8 @@ jobs:
         run: npm ci
 
       - name: Tests
-        run: npx tsc --noEmit && npx jest --silent
+        # the types, the architecture (ARCHITECTURE.md: layers' imports, file sizes; errors stop the release), the tests
+        run: npx tsc --noEmit && npm run lint && npx jest --silent
 
       - name: Release keystore
         env:

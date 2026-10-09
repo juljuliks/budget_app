@@ -63,8 +63,8 @@ scripts/demo/docs.sh     # скриншоты для документации: �
 Приложение не удалять с телефона: вместе с ним удаляются все операции. Обновлять только установкой поверх
 (`adb install -r`), APK подписан release-ключом.
 
-**GitHub Actions:** каждый пуш в `main` собирает подписанный APK и публикует релиз `1.0.N` — его можно скачать и
-поставить прямо с телефона ([android-release.yml](.github/workflows/android-release.yml)). Скриншоты основных экранов
+**GitHub Actions:** каждый пуш в `main` проверяет типы, архитектуру (`npm run lint`) и тесты, затем собирает
+подписанный APK и публикует релиз `1.0.N` — его можно скачать и поставить прямо с телефона ([android-release.yml](.github/workflows/android-release.yml)). Скриншоты основных экранов
 на демо-базе — вручную, workflow «Screenshots» ([scripts/demo/](scripts/demo/)).
 
 ## Где что
@@ -88,6 +88,6 @@ scripts/demo/docs.sh     # скриншоты для документации: �
 
 - [GLOSSARY.md](GLOSSARY.md) — термины интерфейса (одно слово на одно понятие)
 - [IMPROVEMENTS.md](IMPROVEMENTS.md) — план улучшений
-- [ARCHITECTURE.md](ARCHITECTURE.md) — слои кода, правила размеров и план перехода `src/ui`
+- [ARCHITECTURE.md](ARCHITECTURE.md) — слои кода, куда класть файл, правила размеров (их проверяет `npm run lint`)
 - [README_ANDROID.md](README_ANDROID.md) — приём SMS на Android и сборка APK
 - [CLAUDE.md](CLAUDE.md) — заметки для Claude: правила работы, команды, тесты

@@ -3,7 +3,8 @@
 Цель — понятно, куда класть файл, импорты идут в одну сторону, нет длинных файлов. Подход — упрощённый
 Feature-Sliced Design (FSD-lite): без слоёв processes и widgets — для приложения на 4 вкладки они лишние.
 
-Часть 1 — правила (действуют всегда, для нового кода — уже сейчас). Часть 2 — план перехода со статусом шагов.
+Часть 1 — правила: их проверяет `npm run lint` (`eslint.config.js`), ошибка останавливает релиз в CI. Часть 2 — как
+код перешёл на эти слои (история и что осталось).
 
 ## 1. Правила
 
@@ -85,10 +86,10 @@ src/
 | 5 | Операции | `TransactionsList` (767) → `screens/operations/OperationsScreen` (169): `model/` — `useOperationsList`, `useSelection`, `useBulkCategory`, `useOperationsRoute`, `useTabLifecycle`, `useListRefresh`, `listData`, `groups`; `parts/` — `OperationsList`, `SectionHeader`, `FiltersBar`, `FilterSheets`, `SelectToolbar`, `BulkBar`, `HeaderActions`. Фичи: `operations-filters` (`useTransactionFilters`, `SearchBar`, `filter`), `category-delete` (`useSortOut`, `SortOutBanner`), `settings` (через `openSettings`, импорт SMS — пропом из `ModalHost`), `sms-import`, `card-balance` | готово: `bulk-select` не понадобился — выбор нужен только экрану; `SearchBar` пока только у операций (мерчанты — шаг 7); Maestro — все 6 флоу |
 | 6 | Статистика | `src/ui/stats` → `screens/stats` (`month/`, `period/`, `plan/`, `history/`, общие `parts/`: `DonutCenter`, `RefundsRow`, `PeriodNav`, `PlanAlert`). `PeriodStatsView` 870 → 80 (+ `usePeriodData`, чистый `periodView`, `periodText` с тестами, части: строка категории, строки лимитов, секции, объяснения); `PlanView` 652 → 70 (+ `usePlanData`, `planView` с тестами, `usePlanActions`, карточка бюджета, секции, шит бюджета); `StatsView` 448 → 97; `MonthReport` 399 → фича `month-report` (`reportView` с тестами, блоки); `PlanAmountModal` → `entities/plan`; `Masked` → `shared/ui`, `HideAmountsButton` → `features/hide-amounts` | готово: секции — функции, возвращающие фрагменты (`StickyScrollView` липнет только к своим `SectionHeader`) |
 | 7 | Остальное | `src/ui` больше нет: `MerchantsScreen` 332 → `screens/merchants` (`useMerchants`, `useMerchantBulk`, `activity` с тестами, строка, заголовок; поиск — общий `SearchBar`), `CategoriesScreen` → `screens/categories`, `AddTransactionSheet` → `features/add-transaction` (`useAddForm`, `DateField`, `dayLabel`), `MergeCategoriesSheet` → `features/category-merge`. Команды: `entities/merchant` (удалить, категория мерчантам), `entities/plan` (`savePlanAmount`), `entities/transaction` (`addTransaction`), `category-merge` (`mergeInto`) | готово: компоненты не зовут `emitTransactionsChanged` (кроме старта в `app`); у крестика поиска мерчантов подпись как у операций — «Очистить поиск» |
-| 8 | Закрепить | lint warn → error, lint в CI; CLAUDE.md «Где что», карта в README, пути в tests/README; убрать `src/ui` | — |
+| 8 | Закрепить | Правила lint — ошибки (импорты слоёв, размеры, хуки); у ядра размеры — предупреждения до шага 9. Lint — в CI перед сборкой релиза (`android-release.yml`). CLAUDE.md, README, скилл `architecture` — без «идёт переход» | готово |
 | 9 | Ядро: `db/plans.ts` (708) | → `plans/budget.ts`, `plans/items.ts`, `spend.ts` — вместе с IMPROVEMENTS 8.6 (одно правило «что считается тратой») | — |
 
-### Куда переедут текущие файлы `src/ui`
+### Куда переехали файлы `src/ui`
 
 - **shared/ui**: `form`, `BottomSheet`, `Button`, `Checkbox`, `Chip`, `Segmented`, `RadioGroup`, `StepSlider`, `Donut`,
   `Meter`, `HueBar`, `ColorSwatches`, `ColorPickerSheet`, `EmojiPicker` (+ `emoji/`), `RangeCalendar`,
@@ -117,6 +118,4 @@ src/
 - **screens/stats** (шаг 6): `StatsHome`, `month/StatsView`, `period/PeriodStatsView`, `plan/PlanView` (+ `PlanAddModal`), `history/HistoryView`, `parts/PlanAlert`; `month-report`, `hide-amounts` — фичи; `PlanAmountModal` — `entities/plan`.
 - **screens/merchants**: `MerchantsScreen`. **screens/categories**: `CategoriesScreen`.
 
-Пока переход не закончен: новый файл — сразу в целевой слой, если папка уже есть; иначе в `src/ui` под именем из
-этой карты, чтобы потом перенести без переименования. Трогаешь большой файл из таблицы — новое в него не дописывать,
-выносить в отдельный файл по плану.
+Переход закончен: `src/ui` нет, все файлы в своих слоях.
