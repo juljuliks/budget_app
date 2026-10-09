@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { attachSheetHost, CLOSED, detachSheetHost, SheetState } from '@/shared/navigation/sheets';
 import AddTransactionSheet from '../ui/AddTransactionSheet';
-import CategoryDeleteSheet from '../ui/CategoryDeleteSheet';
-import CategoryTypesSheet from '../ui/CategoryTypesSheet';
-import TransactionSheet from '../ui/TransactionSheet';
+import { CategoryDeleteSheet } from '@/features/category-delete';
+import { CategoryTypesSheet } from '@/features/category-types';
+import { TransactionSheet } from '@/features/transaction-edit';
 import { MonthReportSheet } from '../ui/stats/MonthReport';
+import { MerchantCard } from '@/features/merchant-card';
 
 /** Shows the sheets over the pages (see sheets.ts); mounted once in App. */
 export function ModalHost() {
@@ -23,6 +24,8 @@ export function ModalHost() {
       <CategoryTypesSheet visible={state.categoryTypes} onClose={() => close({ categoryTypes: false })} />
       <CategoryDeleteSheet categoryId={state.categoryDelete} onClose={() => close({ categoryDelete: null })} />
       <MonthReportSheet ym={state.monthReport} onClose={() => close({ monthReport: null })} />
+      {/* over the operation it was opened from; "Показать операции" closes that one too */}
+      <MerchantCard merchantId={state.merchant} onClose={() => close({ merchant: null })} onLeave={() => close({ transaction: null })} />
     </>
   );
 }

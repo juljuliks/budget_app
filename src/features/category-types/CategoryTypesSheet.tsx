@@ -2,14 +2,14 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { sheetAlert } from '@/shared/ui/sheetAlert';
 import { plural } from '@/shared/lib/format';
-import { CategoryType, countCategoriesOfType, deleteCategoryType, listCategoryTypes } from '../db/categoryTypes';
-import { emitTransactionsChanged } from '../events';
-import { paletteShades, typePalette } from '../colors';
+import { CategoryType, countCategoriesOfType, listCategoryTypes } from '@/db/categoryTypes';
+import { removeCategoryType } from './removeType';
+import { paletteShades, typePalette } from '@/colors';
 import { PaletteStrip } from '@/shared/ui/ColorSwatches';
 import BottomSheet, { SheetFlatList } from '@/shared/ui/BottomSheet';
 import { CreateButton } from '@/shared/ui/PlusButton';
 import RowActions from '@/shared/ui/RowActions';
-import TypeEditModal from './TypeEditModal';
+import { TypeEditModal } from '@/entities/category';
 import { colors } from '@/shared/theme/theme';
 import { toast } from '@/shared/ui/toast';
 
@@ -32,8 +32,7 @@ export default function CategoryTypesSheet({ visible, onClose }: { visible: bool
       [
         { text: 'Отмена', style: 'cancel' },
         { text: 'Удалить', style: 'destructive', onPress: async () => {
-          await deleteCategoryType(t.id);
-          emitTransactionsChanged();
+          await removeCategoryType(t.id);
           load();
           toast(`Раздел «${t.name}» удалён`);
         } },

@@ -11,7 +11,7 @@ import { deleteTransaction } from '../../src/db/transactions';
 import { findCategoryForMerchant } from '../../src/categorize';
 import {
   deleteEmptyText, deleteStartText, moveAllText, sortOutBanner, sortOutDoneText, sortOutLeaveText, sortOutMerchantText,
-} from '../../src/ui/categoryDeletionText';
+} from '../../src/features/category-delete/texts';
 import { freshDb } from '../helpers';
 
 // this month (a few days ago, the 1st at the earliest) and two months back

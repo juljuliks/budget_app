@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
 import { useWatch } from 'react-hook-form';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import {
-  CategoryType, createCategoryType, findCategoryTypeByName, renameCategoryType, setCategoryTypePalette,
-} from '../db/categoryTypes';
+import { CategoryType, findCategoryTypeByName } from '@/db/categoryTypes';
 import {
   colorFromHue, distinctHue, freePalettes, isCustomPalette, PALETTES, paletteShades, typePalette,
-} from '../colors';
-import { emitTransactionsChanged } from '../events';
+} from '@/colors';
+import { saveCategoryType } from '../model/commands';
 import { AutoButton, PaletteStrip } from '@/shared/ui/ColorSwatches';
 import { formStyles } from '@/shared/theme/formStyles';
 import ColorPickerSheet from '@/shared/ui/ColorPickerSheet';
@@ -45,11 +43,7 @@ export default function TypeEditModal({ visible, type, types, onClose, onSaved }
 
   async function save(name: string): Promise<string | null> {
     if (await findCategoryTypeByName(name, type?.id)) return 'Такой раздел уже есть';
-    let id = type?.id;
-    if (id === undefined) id = await createCategoryType(name);
-    else await renameCategoryType(id, name);
-    await setCategoryTypePalette(id, form.getValues('palette'));
-    emitTransactionsChanged();
+    const id = await saveCategoryType(type?.id, name, form.getValues('palette'));
     toast(type ? `Раздел «${name}» сохранён` : `Раздел «${name}» создан`);
     onSaved(id);
     return null;

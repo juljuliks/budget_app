@@ -10,7 +10,8 @@ import type { RootStackParamList } from '@/shared/navigation/navigation';
 import { formStyles } from '@/shared/theme/formStyles';
 import { colors } from '@/shared/theme/theme';
 import { CreateButton } from '@/shared/ui/PlusButton';
-import CategorySheet from './CategorySheet';
+import { CategorySheet } from '@/entities/category';
+import { startCategoryDelete } from '@/features/category-delete';
 import { openCategoryTypes } from '@/shared/navigation/sheets';
 import { onTransactionsChanged } from '../events';
 import Checkbox from '@/shared/ui/Checkbox';
@@ -118,7 +119,7 @@ export default function CategoriesScreen({ navigation }: Props) {
       categoryId={typeof shown === 'number' ? shown : undefined}
       onClose={() => setOpen(null)}
       onSaved={load}
-      onDeleted={load}
+      onDelete={typeof shown === 'number' ? () => startCategoryDelete(shown, { close: () => setOpen(null), onDeleted: load }) : undefined}
     />
     {picked.length > 1 ? (
       <View style={styles.bottomBar}>

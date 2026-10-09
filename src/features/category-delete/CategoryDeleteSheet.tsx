@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Category, categoryLabel, deleteCategory, getCategory } from '../db/categories';
-import { categoryDeletePreview, DeletePreview } from '../db/categoryDeletion';
-import { emitTransactionsChanged } from '../events';
+import { Category, categoryLabel, getCategory } from '@/db/categories';
+import { categoryDeletePreview, DeletePreview } from '@/db/categoryDeletion';
+import { removeCategory } from './deleteCategory';
 import { navigationRef } from '@/shared/navigation/navigation';
 import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
 import Button, { SheetActions } from '@/shared/ui/Button';
-import CategoryPickerModal from './CategoryPickerModal';
-import { deleteStartText, moveAllText } from './categoryDeletionText';
+import { CategoryPickerModal } from '@/entities/category';
+import { deleteStartText, moveAllText } from './texts';
 import { plural } from '@/shared/lib/format';
 import { sheetAlert } from '@/shared/ui/sheetAlert';
 import { colors } from '@/shared/theme/theme';
@@ -60,8 +60,7 @@ export default function CategoryDeleteSheet({ categoryId: openId, onClose }: Pro
   async function remove(target: number | null) {
     setSaving(true);
     try {
-      await deleteCategory(categoryId, target);
-      emitTransactionsChanged();
+      await removeCategory(categoryId, target);
       toast(`Категория «${label}» удалена`);
       onClose();
     } catch (e) {

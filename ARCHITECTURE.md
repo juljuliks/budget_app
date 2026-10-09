@@ -14,7 +14,7 @@ src/
   app/        App, вкладки, стартовые эффекты, хосты (ModalHost), кнопка настроек
   screens/    вкладки: operations/, stats/, merchants/, categories/ — только сборка из частей
   features/   сценарии пользователя: действие в несколько шагов, с вопросами и последствиями
-  entities/   transaction/, category/, merchant/, plan/ — показать или выбрать одну вещь
+  entities/   transaction/, category/, plan/ — показать, выбрать, просто изменить одну вещь
   shared/     ui/ (кит без знания о бюджете), lib/ (format, money, dates, хуки), theme/,
               navigation/ (navigationRef, хуки переходов, sheets.ts — открыть шит откуда угодно, leaveGuard)
   db/ parsers/ importer/ notifications/ native/ stats/ fx/ ingest.ts assign.ts …   — ядро, без React
@@ -26,15 +26,24 @@ src/
 |---|---|---|
 | Кнопка, шит, чип, календарь — не знает про операции и категории | `shared/ui` | `Button`, `BottomSheet`, `RangeCalendar` |
 | Чистая функция или хук без бизнес-смысла | `shared/lib` | `format`, `money`, `dates`, `useLatestRequest` |
-| Показать или выбрать одну сущность, без сценария | `entities/<сущность>` | `TransactionItem`, `CategoryPicker`, `MerchantCard` |
-| Действие пользователя в несколько шагов | `features/<действие>` | удалить категорию с разбором, объединить, импорт SMS, правка плана |
+| Показать, выбрать или просто изменить одну сущность, без сценария | `entities/<сущность>` | `TransactionItem`, `CategoryPicker`, `CategorySheet` |
+| Действие пользователя в несколько шагов | `features/<действие>` | удалить категорию с разбором, карточка мерчанта (правило), объединить, импорт SMS |
 | Вкладка и её части, которые нигде больше не нужны | `screens/<вкладка>/parts` | заголовок раздела операций, строка категории статистики |
 | Корень приложения: стек, вкладки, хосты, старт | `app` | `App.tsx`, `MainTabs`, `ModalHost`, `useAppStartup` |
 | Переходы и открытие шитов — нужны всем слоям, без UI | `shared/navigation` | `navigation.ts`, `sheets.ts`, `leaveGuard.ts` |
 | Запросы к БД, расчёты, парсеры, уведомления | ядро | `db/plans.ts`, `stats/norms.ts`, `parsers/tbc.ts` |
 
 Сомнение «entity или feature» решает вопрос: есть ли шаги, подтверждения или последствия для других данных?
-Да — feature. Сомнение «feature или часть экрана» — нужна ли она больше чем в одном месте? Нет — `screens/*/parts`.
+Да — feature. Простая форма своей сущности (создать или изменить категорию, раздел) — entity; удаление с разбором,
+правило мерчанта, меняющее прошлые операции, — feature. Сомнение «feature или часть экрана» — нужна ли она больше чем
+в одном месте? Нет — `screens/*/parts`.
+
+Когда нижнему слою нужно то, что выше, — не импорт, а:
+- проп-колбэк: `CategorySheet` (entity) получает `onDelete`, удаление с разбором (feature) передаёт экран;
+- шит через `sheets.ts`: `TransactionSheet` открывает карточку мерчанта `openMerchant(…)`, её рисует `ModalHost`.
+
+Записи в базу — командами слайса (`model/commands.ts`): запись + `emitTransactionsChanged`. Компоненты не зовут
+`emitTransactionsChanged` сами.
 
 ### Импорты
 
@@ -72,7 +81,7 @@ src/
 | 1 | `shared` | Кит, lib, theme → `src/shared/{ui,lib,theme}`. `dates.ts`: месяцы во всех падежах, дни недели, `RHYTHM_DAYS` (было 9 копий); `formatPercent` вместо `pct` / `percentOf` / `shareOfAll`. `limitAlerts`, `navigation`, `notifications` — из `shared/lib` | готово: `src/colors.ts` остался в ядре (палитра категорий, её берёт `db/`); `form.ts` — в `shared/ui` (показывает тост); импорт `ui/stats/norms` из `limitAlerts` — шаг 2 |
 | 2 | Ядро | `ui/stats/norms.ts` целиком (загрузка и расчёты лимитов по ритму, без React) → `src/stats/norms.ts`; запрос курсов НБГ → `src/fx/nbg.ts` (без импортов из `db`, чтобы не было цикла), кэш курсов остаётся в `db/fx.ts` | готово; `emitTransactionsChanged` из команд — перенесено в шаг 4 (команды сущностей) |
 | 3 | `app` | `App.tsx` → `app/App` + `MainTabs` + `useAppStartup`; `modals` → `app/ModalHost`, `SettingsButton` → `app`. `navigation`, `sheets`, `leaveGuard` → `shared/navigation`: их зовут все слои и уведомления, а импорты только вниз | готово: `app` пока импортирует экраны и шиты из `src/ui` (11 предупреждений lint — уходят шагами 4–7) |
-| 4 | `entities` | transaction, category, merchant, plan; деление `TransactionSheet` (336), `MerchantCard` (317), `CategorySheet` (269); `useOpenTransactions()`; команды сущностей (запись + `emitTransactionsChanged`) вместо ~20 вызовов из компонентов | — |
+| 4 | `entities` | `entities/{category,transaction,plan}`, `features/{transaction-edit,merchant-card,category-delete,category-types}`. `TransactionSheet` 336 → 84 строки (+ хуки `useTransaction`, `useCategoryChoice`, части), `MerchantCard` 317 → 70, `CategorySheet` 269 → 138. Карточка мерчанта открывается через `sheets` (`openMerchant`), удаление категории — проп `onDelete`. Команды слайсов (запись + `emitTransactionsChanged`) | готово: `entities/merchant` не понадобилась — карточка мерчанта с правилом для прошлых операций — feature; `emitTransactionsChanged` ещё в `src/ui` (списки, добавление, объединение, план) — уходит шагами 5–7 |
 | 5 | Операции | `TransactionsList` (767) → `screens/operations`: `OperationsScreen`, `useTransactionFilters`, `useSelection`, `SearchBar` (общий с Мерчантами), `BulkBar`, разбор категории; фильтры и мультивыбор — features. Прогон e2e | — |
 | 6 | Статистика | `PeriodStatsView` (872) → `PeriodCategoryRow`, `LimitEffect`, `CategoryInfo`, `periodText.ts` с тестами; `PlanView` (653) → кольца, `ShareField`, `SavingsSwitch`, `groupByType` в `.ts`; `StatsView` (448) → `CategoryRow`, `DonutCenter`; `MonthReport` (399) → строки отчёта; общий `styles.ts` | — |
 | 7 | Остальное | `MerchantsScreen` (334), оставшиеся features | — |
@@ -89,13 +98,15 @@ src/
 - **shared/theme**: `theme`, `formStyles`. `src/colors.ts` остаётся в ядре: палитру категорий берёт `db/`.
 - **app**: `App.tsx` (+ `MainTabs`, `useAppStartup`), `modals.tsx` → `ModalHost`, `SettingsButton`.
 - **shared/navigation**: `navigation.ts`, `sheets.ts`, `leaveGuard.ts`.
-- **entities/transaction**: `TransactionItem`, `TransactionSheet`, `transactionActions`, `transactionGroups`.
-- **entities/category**: `CategoryPicker`, `CategoryPickerModal`, `CategorySheet`, `TypeEditModal`,
-  `CategoryTypesSheet`, `categoryActions`.
-- **entities/merchant**: `MerchantCard`.
-- **entities/plan**: `stats/summaryGroups`, `stats/unplanned` (`norms` — уже в ядре, `src/stats/`).
-- **features**: `operations-filters` (`FilterSheets`), `bulk-select`, `category-delete` (`CategoryDeleteSheet`,
-  `categoryDeletionText`), `category-merge` (`MergeCategoriesSheet`), `sms-import` (`smsImportFlow`,
+- **entities/transaction**: `TransactionItem`, команды и подтверждения удаления (`transactionActions`).
+  `transactionGroups` — в `screens/operations` (группировки списка).
+- **entities/category**: `CategoryPicker`, `CategoryPickerModal`, `CategorySheet` (+ `useCategoryForm`,
+  `CategoryNameField`, `CategorySummaryRow`), `TypeEditModal`, команды, тип `CategoryInfo`.
+- **entities/plan**: `summaryGroups`, `unplanned` (`norms` — в ядре, `src/stats/`).
+- **features** (шаг 4): `transaction-edit` (`TransactionSheet`), `merchant-card` (`MerchantCard`), `category-delete`
+  (`CategoryDeleteSheet`, `categoryDeletionText`, `categoryActions` → `startCategoryDelete`), `category-types`
+  (`CategoryTypesSheet`).
+- **features** (дальше): `operations-filters` (`FilterSheets`), `bulk-select`, `category-merge` (`MergeCategoriesSheet`), `sms-import` (`smsImportFlow`,
   `PushAccessBanner`), `add-transaction` (`AddTransactionSheet`), `plan-edit` (`PlanAddModal`, `PlanAmountModal`,
   `PlanAlert`), `month-report` (`MonthReport`), `settings` (`SettingsSheet`), `hide-amounts`
   (`HideAmountsButton`, `Masked`), `card-balance` (`CardBalance`).

@@ -1,6 +1,5 @@
 import { sheetAlert } from '@/shared/ui/sheetAlert';
-import { deleteTransaction } from '../db/transactions';
-import { emitTransactionsChanged } from '../events';
+import { removeTransactions } from './commands';
 import { formatAmount, merchantLabel, plural } from '@/shared/lib/format';
 import { toast, toastError } from '@/shared/ui/toast';
 
@@ -14,8 +13,7 @@ export function confirmDeleteTransaction(
     {
       text: 'Удалить', style: 'destructive', onPress: async () => {
         try {
-          await deleteTransaction(tx.id);
-          emitTransactionsChanged();
+          await removeTransactions([tx.id]);
           toast('Операция удалена');
           onDeleted?.();
         } catch (e) {
@@ -39,8 +37,7 @@ export function confirmDeleteTransactions(
       {
         text: `Удалить (${n})`, style: 'destructive', onPress: async () => {
           try {
-            for (const t of txs) await deleteTransaction(t.id);
-            emitTransactionsChanged();
+            await removeTransactions(txs.map((t) => t.id));
             toast(`Удалено операций: ${n}`);
             onDeleted?.();
           } catch (e) {

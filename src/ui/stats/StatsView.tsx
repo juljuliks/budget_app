@@ -21,7 +21,7 @@ import { useLatestRequest } from '@/shared/lib/useLatestRequest';
 import { formStyles } from '@/shared/theme/formStyles';
 import StickyScrollView, { SectionHeader } from '@/shared/ui/StickyScrollView';
 import { MonthReportRow } from './MonthReport';
-import { splitUnplanned, unplannedShare } from './unplanned';
+import { splitUnplanned, unplannedShare } from '@/entities/plan';
 import { RHYTHM_DAYS, WEEKDAYS } from '@/shared/lib/dates';
 
 /**

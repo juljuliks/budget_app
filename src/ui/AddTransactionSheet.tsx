@@ -4,7 +4,7 @@ import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-nativ
 import { incrementCategoryUsage, topUpCategoryId } from '../db/categories';
 import { addManualTransaction } from '../db/transactions';
 import { emitTransactionsChanged } from '../events';
-import CategoryPicker from './CategoryPicker';
+import { CategoryPicker } from '@/entities/category';
 import { formStyles } from '@/shared/theme/formStyles';
 import { parseAmountInput } from '@/shared/lib/money';
 import { AMOUNT_HINT } from '@/shared/lib/strings';

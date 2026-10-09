@@ -1,4 +1,4 @@
-import { NormPeriod } from '../../db/plans';
+import { NormPeriod } from '@/db/plans';
 import { DayKey, DayRange, daysInMonth } from '@/shared/lib/dateRange';
 import { isPartOfWindow, NormPart, Norms } from '@/stats/norms';
 

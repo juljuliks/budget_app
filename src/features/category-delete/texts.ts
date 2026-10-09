@@ -1,5 +1,5 @@
-import { categoryLabel } from '../db/categories';
-import type { Bucket, DeletePreview, SortOutSummary } from '../db/categoryDeletion';
+import { categoryLabel } from '@/db/categories';
+import type { Bucket, DeletePreview, SortOutSummary } from '@/db/categoryDeletion';
 import { plural } from '@/shared/lib/format';
 import { formatMoneyWithCurrency } from '@/shared/lib/money';
 

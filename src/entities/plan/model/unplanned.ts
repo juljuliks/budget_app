@@ -1,5 +1,5 @@
-import { Currency } from '../../db/fx';
-import { CategoryStat, getPlanBudget, monthStats, parseYm, periodStats, planConverter, spentOf, StatGroup, unplannedOf } from '../../db/plans';
+import { Currency } from '@/db/fx';
+import { CategoryStat, getPlanBudget, monthStats, parseYm, periodStats, planConverter, spentOf, StatGroup, unplannedOf } from '@/db/plans';
 import { DayKey, rangeToUnix } from '@/shared/lib/dateRange';
 
 /**

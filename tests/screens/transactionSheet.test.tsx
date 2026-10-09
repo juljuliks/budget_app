@@ -136,11 +136,14 @@ test('2.7.10: a note — added, shown, found, removed', async () => {
   expect((await opsOf('SPAR'))[0].note).toBeNull();
 });
 
-test('2.7.11: the merchant\'s name opens its card', async () => {
+test('2.7.11: the merchant\'s name opens its card; "Показать операции" closes both for the list', async () => {
   await tap('SPAR');
   await tap('SPAR ›');
   expect(await screen.findByText('Разные категории')).toBeTruthy();
-  expect(screen.getByText('Показать операции ›')).toBeTruthy();
+  await tap('Показать операции ›');
+  await waitFor(() => expect(screen.queryByText('Удалить операцию')).toBeNull());
+  expect(screen.queryByText('Разные категории')).toBeNull();
+  expect(screen.getByDisplayValue('SPAR')).toBeTruthy();
 });
 
 test('2.7.12: deleting the operation', async () => {

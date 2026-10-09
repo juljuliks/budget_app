@@ -20,9 +20,9 @@ import { chart, colors } from '@/shared/theme/theme';
 import { DonutCenter, RefundsRow } from './StatsView';
 import { useLatestRequest } from '@/shared/lib/useLatestRequest';
 import { categoryLabel } from '../../db/categories';
-import { GROUP_TITLES, SummaryGroupKey, summaryGroups } from './summaryGroups';
+import { GROUP_TITLES, SummaryGroupKey, summaryGroups } from '@/entities/plan';
 import { formStyles } from '@/shared/theme/formStyles';
-import { splitUnplanned, unplannedMonth } from './unplanned';
+import { splitUnplanned, unplannedMonth } from '@/entities/plan';
 import StickyScrollView, { SectionHeader } from '@/shared/ui/StickyScrollView';
 import { MONTHS_NOM, MONTHS_PREP, RHYTHM_DAYS, WEEKDAYS } from '@/shared/lib/dates';
 

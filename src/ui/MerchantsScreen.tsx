@@ -10,18 +10,16 @@ import Button from '@/shared/ui/Button';
 import Checkbox from '@/shared/ui/Checkbox';
 import { plural } from '@/shared/lib/format';
 import { SearchIcon } from '@/shared/ui/icons';
-import MerchantCard from './MerchantCard';
+import { MerchantCard } from '@/features/merchant-card';
 import { formatMoneyWithCurrency } from '@/shared/lib/money';
 import { sheetAlert } from '@/shared/ui/sheetAlert';
-import CategoryPickerModal from './CategoryPickerModal';
+import { CategoryInfo, CategoryPickerModal } from '@/entities/category';
 import { FilterButton, OptionsSheet } from './FilterSheets';
 import { formStyles } from '@/shared/theme/formStyles';
 import { NO_CATEGORY } from '@/shared/lib/strings';
 import { colors } from '@/shared/theme/theme';
 import { toast, toastError } from '@/shared/ui/toast';
 import { SHORT_MONTHS } from '@/shared/lib/dates';
-
-export type CategoryInfo = { label: string; color: string };
 
 /** Merchants of different categories (a delivery): each operation asks. */
 const MIXED = 'Разные категории';
@@ -297,7 +295,7 @@ export default function MerchantsScreen() {
         onPick={pickCategory}
         onClose={() => setPickOpen(false)}
       />
-      <MerchantCard merchantId={cardId} categories={categories} onClose={() => setCardId(null)} onChanged={load} />
+      <MerchantCard merchantId={cardId} categories={categories} onClose={() => setCardId(null)} />
     </View>
   );
 }

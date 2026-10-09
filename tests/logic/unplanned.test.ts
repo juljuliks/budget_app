@@ -1,6 +1,6 @@
 jest.mock('../../src/shared/navigation/navigation', () => ({ navigateWhenReady: jest.fn() }));
 import type { CategoryStat, StatGroup } from '../../src/db/plans';
-import { splitUnplanned } from '../../src/ui/stats/unplanned';
+import { splitUnplanned } from '../../src/entities/plan/model/unplanned';
 
 const cat = (id: number | null, spent: number, limit: number | null, type_id: number | null = 1): CategoryStat => ({
   category_id: id, name: `c${id}`, emoji: null, type_id, type_name: null, spent_minor: spent, limit_minor: limit,
@@ -38,7 +38,7 @@ describe('unplannedMonth', () => {
     const { createCategory } = await import('../../src/db/categories');
     const { addManualTransaction } = await import('../../src/db/transactions');
     const { setPlanAmount } = await import('../../src/db/plans');
-    const { unplannedMonth } = await import('../../src/ui/stats/unplanned');
+    const { unplannedMonth } = await import('../../src/entities/plan/model/unplanned');
     const at = (day: string) => Math.floor(new Date(`${day}T12:00:00`).getTime() / 1000);
     const food = await createCategory('Еда');
     const taxi = await createCategory('Такси');

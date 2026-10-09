@@ -9,11 +9,16 @@ const LAYERS = ['app', 'screens', 'features', 'entities', 'shared'];
 const layer = (...names) => names.flatMap((n) => [`@/${n}`, `@/${n}/**`, `**/${n}/**`]);
 /** a slice's insides from outside of it: only its index.ts */
 const deep = (...names) => names.map((n) => `@/${n}/*/**`);
-/** the old src/ui: the layers do not import it (a file moved out takes its imports along) */
-const OLD_UI = ['**/ui/**', '**/ui', '!**/shared/ui/**', '!**/shared/ui'];
+/**
+ * The old src/ui: the layers do not import it (a file moved out takes its imports along). By the path up to src/ from
+ * the layer's depth — a slice's own ui/ segment (./ui/X, ../ui/X from model/) is not it.
+ */
+const OLD_UI = (up) => ['@/ui', '@/ui/**', `${up}ui`, `${up}ui/**`];
+const IN_SLICE = [...new Set([...OLD_UI('../../'), ...OLD_UI('../../../')])];
 
-const restrict = (patterns, message) => ({
-  'no-restricted-imports': ['warn', { patterns: [{ group: patterns, message }] }],
+const OLD_UI_MESSAGE = 'The old src/ui: move what this needs to its layer first (ARCHITECTURE.md §2).';
+const restrict = (patterns, message, oldUi = []) => ({
+  'no-restricted-imports': ['warn', { patterns: [{ group: patterns, message }, ...(oldUi.length ? [{ group: oldUi, message: OLD_UI_MESSAGE }] : [])] }],
 });
 
 module.exports = tseslint.config(
@@ -34,32 +39,32 @@ module.exports = tseslint.config(
   {
     files: ['src/**/*.{ts,tsx}'],
     ignores: [...LAYERS.map((l) => `src/${l}/**`), 'src/ui/**', 'src/App.tsx'],
-    rules: restrict([...layer('app', 'screens', 'features', 'entities', 'shared/ui', 'shared/theme'), ...OLD_UI],
+    rules: restrict([...layer('app', 'screens', 'features', 'entities', 'shared/ui', 'shared/theme'), '**/ui/**', '**/ui', '!**/shared/ui/**', '!**/shared/ui'],
       'The core imports no UI: move the helper to src/shared/lib or into the core.'),
   },
   {
     files: ['src/shared/**/*.{ts,tsx}'],
-    rules: restrict([...layer('app', 'screens', 'features', 'entities'), ...OLD_UI],
-      'shared knows nothing of the layers above it.'),
+    rules: restrict([...layer('app', 'screens', 'features', 'entities')],
+      'shared knows nothing of the layers above it.', OLD_UI('../../')),
   },
   {
     files: ['src/entities/**/*.{ts,tsx}'],
-    rules: restrict([...layer('app', 'screens', 'features'), '@/entities/**', ...OLD_UI],
-      'An entity imports only shared and the core; inside its slice — relative paths. Something two entities need goes down to shared.'),
+    rules: restrict([...layer('app', 'screens', 'features'), '@/entities/**'],
+      'An entity imports only shared and the core; inside its slice — relative paths. Something two entities need goes down to shared.', IN_SLICE),
   },
   {
     files: ['src/features/**/*.{ts,tsx}'],
-    rules: restrict([...layer('app', 'screens'), '@/features/**', ...deep('entities'), ...OLD_UI],
-      'A feature imports entities (through their index.ts), shared and the core — not another feature: the screen puts them together.'),
+    rules: restrict([...layer('app', 'screens'), '@/features/**', ...deep('entities')],
+      'A feature imports entities (through their index.ts), shared and the core — not another feature: the screen puts them together.', IN_SLICE),
   },
   {
     files: ['src/screens/**/*.{ts,tsx}'],
-    rules: restrict([...layer('app'), '@/screens/**', ...deep('features', 'entities'), ...OLD_UI],
-      'A screen imports features and entities through their index.ts, not another screen.'),
+    rules: restrict([...layer('app'), '@/screens/**', ...deep('features', 'entities')],
+      'A screen imports features and entities through their index.ts, not another screen.', IN_SLICE),
   },
   {
     files: ['src/app/**/*.{ts,tsx}'],
-    rules: restrict([...deep('screens', 'features', 'entities'), ...OLD_UI],
-      'From outside a slice — only through its index.ts.'),
+    rules: restrict(deep('screens', 'features', 'entities'),
+      'From outside a slice — only through its index.ts.', OLD_UI('../')),
   },
 );

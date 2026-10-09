@@ -14,9 +14,11 @@ export type SheetState = {
   categoryDelete: number | null;
   /** a month's report ('YYYY-MM'): the notification on the 1st, «История», the stats of a past month */
   monthReport: string | null;
+  /** a merchant's card (its key), over the operation it was opened from */
+  merchant: string | null;
 };
 
-export const CLOSED: SheetState = { transaction: null, addTransaction: false, categoryTypes: false, categoryDelete: null, monthReport: null };
+export const CLOSED: SheetState = { transaction: null, addTransaction: false, categoryTypes: false, categoryDelete: null, monthReport: null, merchant: null };
 
 let handler: ((patch: Partial<SheetState>) => void) | null = null;
 let pending: Partial<SheetState> = {};
@@ -30,6 +32,7 @@ export const openAddTransaction = () => open({ addTransaction: true });
 export const openCategoryTypes = () => open({ categoryTypes: true });
 export const openCategoryDelete = (categoryId: number) => open({ categoryDelete: categoryId });
 export const openMonthReport = (ym: string) => open({ monthReport: ym });
+export const openMerchant = (merchantKey: string) => open({ merchant: merchantKey });
 
 /** ModalHost registers itself; returns what was asked for before it was mounted. */
 export function attachSheetHost(h: (patch: Partial<SheetState>) => void): Partial<SheetState> {

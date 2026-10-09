@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { txCategoryLabel } from '../db/categories';
-import { isUnread, TransactionRow } from '../db/transactions';
+import { txCategoryLabel } from '@/db/categories';
+import { isUnread, TransactionRow } from '@/db/transactions';
 import Checkbox from '@/shared/ui/Checkbox';
 import { formatAmount, formatTime, isIncome, merchantLabel } from '@/shared/lib/format';
 import RowActions from '@/shared/ui/RowActions';

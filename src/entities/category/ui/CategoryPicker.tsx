@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Category, categoryLabel, categoryUsageCounts, isTopUp, isTransferCategory, listCategories } from '../db/categories';
-import { getTransferTypeId } from '../db/categoryTypes';
-import { onTransactionsChanged } from '../events';
+import { Category, categoryLabel, categoryUsageCounts, isTopUp, isTransferCategory, listCategories } from '@/db/categories';
+import { getTransferTypeId } from '@/db/categoryTypes';
+import { onTransactionsChanged } from '@/events';
 import CategorySheet from './CategorySheet';
 import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
 import { SheetActions } from '@/shared/ui/Button';

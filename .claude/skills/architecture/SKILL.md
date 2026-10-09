@@ -14,6 +14,9 @@ description: Where code goes in this app and how big it may get (FSD-lite layers
    подтверждения или последствия для других данных → feature. Нужно только одному экрану → `screens/*/parts`.
 2. Проверить импорты: только вниз (`app → screens → features → entities → shared`), не из соседнего слайса,
    снаружи — только через `index.ts`. Ядро (`db/`, `parsers/`, `notifications/`…) не импортирует React-слои.
+   Нижнему слою нужно верхнее — проп-колбэк (`CategorySheet` → `onDelete`) или шит через `sheets.ts`
+   (`openMerchant`), не импорт. Запись в базу — команда слайса (`model/commands.ts`: запись +
+   `emitTransactionsChanged`), не вызов из компонента.
 3. Прикинуть размер: файл ≤ 250 строк кода, компонент/функция ≤ 120, хук ≤ 100. Правка большого файла из
    таблицы плана — новое не дописывать в него, а выносить отдельным файлом туда, куда он переедет.
 4. Расчёты — в `.ts` (`model/`) с тестом в `tests/logic/`; тексты — в `texts.ts` и по GLOSSARY.md; цвета —

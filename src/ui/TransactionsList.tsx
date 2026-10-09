@@ -14,7 +14,7 @@ import { assignCategoryToMany, MerchantChoice, merchantsChangePreview } from '..
 import { sheetAlert } from '@/shared/ui/sheetAlert';
 import { navigationRef, TabParamList, useRootNavigation } from '@/shared/navigation/navigation';
 import Button from '@/shared/ui/Button';
-import CategoryPickerModal from './CategoryPickerModal';
+import { CategoryPickerModal } from '@/entities/category';
 import Checkbox from '@/shared/ui/Checkbox';
 import Chip from '@/shared/ui/Chip';
 import { openAddTransaction, openTransaction } from '@/shared/navigation/sheets';
@@ -30,15 +30,14 @@ import { PencilIcon, SearchIcon } from '@/shared/ui/icons';
 import { DayRange, formatRange } from '@/shared/ui/RangeCalendar';
 import { ActiveFilter, AllFiltersSheet, DateSheet, FilterButton, OptionsSheet } from './FilterSheets';
 import { colors } from '@/shared/theme/theme';
-import { confirmDeleteTransaction, confirmDeleteTransactions } from './transactionActions';
-import TransactionItem from './TransactionItem';
+import { confirmDeleteTransaction, confirmDeleteTransactions, TransactionItem } from '@/entities/transaction';
 import { toast, toastError } from '@/shared/ui/toast';
 import { showLimitAlert } from '../notifications/notifeeIntegration';
 import { NO_CATEGORY } from '@/shared/lib/strings';
 import BottomSheet from '@/shared/ui/BottomSheet';
 import RadioGroup from '@/shared/ui/RadioGroup';
 import { Bucket, categoryDeletePreview, currentIdsOfCategory, remainingInCategory, sortOutSummary } from '../db/categoryDeletion';
-import { sortOutBanner, sortOutDoneText, sortOutLeaveText, sortOutMerchantText } from './categoryDeletionText';
+import { sortOutBanner, sortOutDoneText, sortOutLeaveText, sortOutMerchantText } from '@/features/category-delete';
 import { dayKeyOf } from '@/shared/lib/dateRange';
 import OperationsSectionHeader from './OperationsSectionHeader';
 import {

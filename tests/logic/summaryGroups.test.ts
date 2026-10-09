@@ -4,7 +4,7 @@ import { setPlanAmount } from '../../src/db/plans';
 import { createCategory } from '../../src/db/categories';
 import { addManualTransaction } from '../../src/db/transactions';
 import { loadNorms } from '../../src/stats/norms';
-import { summaryGroups } from '../../src/ui/stats/summaryGroups';
+import { summaryGroups } from '../../src/entities/plan/model/summaryGroups';
 import { freshDb } from '../helpers';
 
 // October 2025: 31 days; Mon Sep 29 – Sun Oct 5
