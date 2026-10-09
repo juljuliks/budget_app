@@ -13,6 +13,6 @@
     "jsx": "react-native",
      "types": ["node", "jest"]
   },
-  "include": ["src/**/*", "__tests__/**/*"],
+  "include": ["src/**/*", "tests/**/*"],
   "exclude": ["dist"]
 }

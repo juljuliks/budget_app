@@ -11,7 +11,7 @@ type Props = {
   /** outlined instead of filled: the less usual choice next to a filled one ("Для мерчанта", "Открепить категорию") */
   outline?: boolean;
   style?: StyleProp<ViewStyle>;
-  /** for the end-to-end flows (scripts/e2e) */
+  /** for the end-to-end flows (tests/e2e) */
   testID?: string;
 };
 
