@@ -7,7 +7,7 @@ import Chip from '@/shared/ui/Chip';
 import { ChevronDownIcon, SearchIcon } from '@/shared/ui/icons';
 import RangeCalendar, { DayRange, formatRange } from '@/shared/ui/RangeCalendar';
 import { colors } from '@/shared/theme/theme';
-import { normalizeForSearch } from '../db/transactions';
+import { normalizeForSearch } from '@/db/transactions';
 
 /** "Категория ⌄" / "Мерчант · 2 ⌄" / "Дата ⌄": opens its picker sheet; blue while set. */
 export function FilterButton({ label, count, active, onPress, disabled, testID }: {

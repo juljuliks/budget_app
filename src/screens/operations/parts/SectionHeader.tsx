@@ -6,8 +6,8 @@ import { formStyles } from '@/shared/theme/formStyles';
 import { ChevronRightIcon } from '@/shared/ui/icons';
 import { formatWithCurrency } from '@/shared/lib/money';
 import { colors } from '@/shared/theme/theme';
-import { groupTotal } from './transactionGroups';
-import type { Section } from './transactionsListData';
+import { groupTotal } from '../model/groups';
+import type { Section } from '../model/listData';
 
 type Props = {
   section: Section;

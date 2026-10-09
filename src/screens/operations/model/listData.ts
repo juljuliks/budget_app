@@ -1,42 +1,22 @@
-// The operations tab's data: its filters as the database applies them, the pages it loads, the sections it draws and
+// The operations tab's data (its filters: features/operations-filters): the pages it loads, the sections it draws and
 // each day's spending for their headers.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
-  CategoryFilter, GroupKind, listGroupedPage, listTransactionsPage, PageCursor, searchTransactions, TransactionGroup,
-  TransactionRow, TxFilter,
-} from '../db/transactions';
-import { spendingEntries } from '../db/plans';
-import type { Currency } from '../db/fx';
+  GroupKind, listGroupedPage, listTransactionsPage, PageCursor, TransactionGroup, TransactionRow, TxFilter,
+} from '@/db/transactions';
+import { spendingEntries } from '@/db/plans';
+import type { Currency } from '@/db/fx';
 import { dayKey, formatDay } from '@/shared/lib/format';
-import { groupTitle } from './transactionGroups';
-import { DayRange, rangeToUnix } from '@/shared/ui/RangeCalendar';
+import { groupTitle } from './groups';
 
 /** Every view loads from the database a page at a time while scrolling. */
 export const PAGE_SIZE = 50;
-
-export type Filter = { query: string; categories: CategoryFilter[]; merchants: string[]; kinds: string[]; range: DayRange | null };
-
-/** Every filter set applies at once: text, categories (any of), merchants (any of), kinds (any of) and dates combine. */
-export function isFilterActive(f: Filter): boolean {
-  return f.query.trim() !== '' || f.categories.length > 0 || f.merchants.length > 0 || f.kinds.length > 0 || f.range !== null;
-}
 
 /** How the list is split into sections: by day (the feed), or another way (every operation matching the filters at once). */
 export type GroupBy = 'day' | GroupKind;
 export const GROUP_BY: Array<readonly [GroupBy, string]> = [
   ['day', 'По дням'], ['month', 'По месяцам'], ['merchant', 'По мерчантам'], ['category', 'По категориям'], ['kind', 'По типу'], ['amount', 'По сумме'],
 ];
-// a text search: the operations it finds (matched in JS, see searchTransactions), then paged like any filter
-const SEARCH_LIMIT = 5000;
-
-/** The filters as the database applies them. */
-export async function resolveFilter(f: Filter): Promise<TxFilter> {
-  const r = f.range ? rangeToUnix(f.range) : undefined;
-  const tx: TxFilter = { categories: f.categories, merchants: f.merchants, kinds: f.kinds, from: r?.from, to: r?.to };
-  if (f.query.trim()) tx.ids = (await searchTransactions(f.query, tx, SEARCH_LIMIT)).map((row) => row.id);
-  return tx;
-}
-
 export type Row = TransactionRow & { group_key?: string };
 export type ListView = { filter: TxFilter; groupBy: GroupBy };
 /** Where the next page starts: a keyset cursor by day (new operations don't shift it), an offset in the groups' order. */
@@ -87,20 +67,22 @@ export function buildSections(rows: Row[], groups: TransactionGroup[] | null, gr
  */
 export function useDaySpent(sections: Section[], grouped: boolean, currency: Currency, filter: TxFilter): Map<string, number> {
   const [daySpent, setDaySpent] = useState<Map<string, number>>(new Map());
+  // a new filter brings new sections: read with them (the filter itself doesn't re-read)
+  const filterRef = useRef(filter);
+  filterRef.current = filter;
   useEffect(() => {
     if (sections.length === 0 || grouped) { setDaySpent(new Map()); return undefined; }
     const from = sections[sections.length - 1].dayStart;
     const last = new Date(sections[0].dayStart * 1000);
     const to = new Date(last.getFullYear(), last.getMonth(), last.getDate() + 1).getTime() / 1000;
     let stale = false;
-    spendingEntries(from, to, currency, filter).then((rows) => {
+    spendingEntries(from, to, currency, filterRef.current).then((rows) => {
       if (stale) return;
       const m = new Map<string, number>();
       for (const r of rows) m.set(dayKey(r.occurred_at), (m.get(dayKey(r.occurred_at)) ?? 0) + r.spent_minor);
       setDaySpent(m);
     }).catch((e) => console.error('day totals failed', e));
     return () => { stale = true; };
-  // a new filter brings new sections: read with them
   }, [sections, grouped, currency]);
   return daySpent;
 }

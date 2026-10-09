@@ -100,8 +100,12 @@ export async function openSettings(row: 'Мерчанты' | 'Категории
 }
 
 /** The switch on the screen (the last one: a sheet's), toggled. */
+/** The last switch of the topmost open sheet (a closed one keeps its content drawn), else of the page. */
 export function toggleSwitch(on: boolean) {
-  const all = screen.UNSAFE_root.findAll((n: { props: { onValueChange?: unknown } }) => typeof n.props.onValueChange === 'function');
+  const sheets = screen.UNSAFE_root.findAll((n: { type: { name?: string }; props: { visible?: unknown } }) =>
+    n.type?.name === 'BottomSheet' && n.props.visible === true);
+  const root = sheets.length ? sheets[sheets.length - 1] : screen.UNSAFE_root;
+  const all = root.findAll((n: { props: { onValueChange?: unknown } }) => typeof n.props.onValueChange === 'function');
   fireEvent(all[all.length - 1], 'valueChange', on);
 }
 

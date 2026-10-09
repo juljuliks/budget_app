@@ -16,9 +16,11 @@ export type SheetState = {
   monthReport: string | null;
   /** a merchant's card (its key), over the operation it was opened from */
   merchant: string | null;
+  /** the settings (the gear in the tab headers) */
+  settings: boolean;
 };
 
-export const CLOSED: SheetState = { transaction: null, addTransaction: false, categoryTypes: false, categoryDelete: null, monthReport: null, merchant: null };
+export const CLOSED: SheetState = { transaction: null, addTransaction: false, categoryTypes: false, categoryDelete: null, monthReport: null, merchant: null, settings: false };
 
 let handler: ((patch: Partial<SheetState>) => void) | null = null;
 let pending: Partial<SheetState> = {};
@@ -33,6 +35,7 @@ export const openCategoryTypes = () => open({ categoryTypes: true });
 export const openCategoryDelete = (categoryId: number) => open({ categoryDelete: categoryId });
 export const openMonthReport = (ym: string) => open({ monthReport: ym });
 export const openMerchant = (merchantKey: string) => open({ merchant: merchantKey });
+export const openSettings = () => open({ settings: true });
 
 /** ModalHost registers itself; returns what was asked for before it was mounted. */
 export function attachSheetHost(h: (patch: Partial<SheetState>) => void): Partial<SheetState> {

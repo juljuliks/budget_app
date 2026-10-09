@@ -6,6 +6,8 @@ import { CategoryTypesSheet } from '@/features/category-types';
 import { TransactionSheet } from '@/features/transaction-edit';
 import { MonthReportSheet } from '../ui/stats/MonthReport';
 import { MerchantCard } from '@/features/merchant-card';
+import { SettingsSheet } from '@/features/settings';
+import { startSmsImport } from '@/features/sms-import';
 
 /** Shows the sheets over the pages (see sheets.ts); mounted once in App. */
 export function ModalHost() {
@@ -24,6 +26,7 @@ export function ModalHost() {
       <CategoryTypesSheet visible={state.categoryTypes} onClose={() => close({ categoryTypes: false })} />
       <CategoryDeleteSheet categoryId={state.categoryDelete} onClose={() => close({ categoryDelete: null })} />
       <MonthReportSheet ym={state.monthReport} onClose={() => close({ monthReport: null })} />
+      <SettingsSheet open={state.settings} onClose={() => close({ settings: false })} onImportSms={startSmsImport} />
       {/* over the operation it was opened from; "Показать операции" closes that one too */}
       <MerchantCard merchantId={state.merchant} onClose={() => close({ merchant: null })} onLeave={() => close({ transaction: null })} />
     </>

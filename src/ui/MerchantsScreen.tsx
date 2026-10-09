@@ -14,7 +14,7 @@ import { MerchantCard } from '@/features/merchant-card';
 import { formatMoneyWithCurrency } from '@/shared/lib/money';
 import { sheetAlert } from '@/shared/ui/sheetAlert';
 import { CategoryInfo, CategoryPickerModal } from '@/entities/category';
-import { FilterButton, OptionsSheet } from './FilterSheets';
+import { FilterButton, OptionsSheet } from '@/features/operations-filters';
 import { formStyles } from '@/shared/theme/formStyles';
 import { NO_CATEGORY } from '@/shared/lib/strings';
 import { colors } from '@/shared/theme/theme';

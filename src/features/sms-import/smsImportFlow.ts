@@ -1,5 +1,5 @@
-import { importInboxSms } from '../importer/inboxImport';
-import { readBankSms, requestInboxAccess } from '../native/smsInbox';
+import { importInboxSms } from '@/importer/inboxImport';
+import { readBankSms, requestInboxAccess } from '@/native/smsInbox';
 import { plural } from '@/shared/lib/format';
 import { sheetAlert } from '@/shared/ui/sheetAlert';
 

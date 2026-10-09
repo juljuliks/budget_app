@@ -5,6 +5,8 @@ export const colors = {
   muted: '#6B7280',
   border: '#E5E7EB',
   accent: '#2563EB',
+  /** text and icons on the accent color */
+  onAccent: '#FFFFFF',
   income: '#15803D',
   warn: '#B45309',
   warnBg: '#FEF3C7',

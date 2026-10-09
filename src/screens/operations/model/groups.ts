@@ -1,5 +1,5 @@
-import { txCategoryLabel } from '../db/categories';
-import { AMOUNT_BANDS, GroupKind, TransactionGroup } from '../db/transactions';
+import { txCategoryLabel } from '@/db/categories';
+import { AMOUNT_BANDS, GroupKind, TransactionGroup } from '@/db/transactions';
 import { KIND_LABELS } from '@/shared/lib/format';
 import { formatMoneyWithCurrency } from '@/shared/lib/money';
 import { MONTHS } from '@/shared/lib/dates';

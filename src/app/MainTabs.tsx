@@ -2,10 +2,10 @@
 import React, { useEffect, useState } from 'react';
 import { AppState, View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import TransactionsList from '../ui/TransactionsList';
+import { OperationsScreen } from '@/screens/operations';
 import StatsHome from '../ui/stats/StatsHome';
 import HideAmountsButton from '../ui/HideAmountsButton';
-import SettingsButton from './SettingsButton';
+import { SettingsButton } from '@/features/settings';
 import { HistoryIcon, StatsIcon } from '@/shared/ui/icons';
 import { colors } from '@/shared/theme/theme';
 import { countUnseenTransactions } from '@/db/transactions';
@@ -64,7 +64,7 @@ export default function MainTabs() {
       />
       <Tab.Screen
         name="Transactions"
-        component={TransactionsList}
+        component={OperationsScreen}
         options={{
           title: 'Операции',
           tabBarIcon: ({ color }) => <HistoryIcon color={color} />,

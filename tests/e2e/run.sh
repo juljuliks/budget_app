@@ -13,6 +13,8 @@
 # Output (Maestro's screenshots of a failing step, logcat, the pulled database): e2e-out/<flow>/
 set -euo pipefail
 cd "$(dirname "$0")/../.."
+# where its installer puts it (not always on the PATH)
+export PATH="$HOME/.maestro/bin:$PATH"
 PKG=com.budgetapp
 DIR="/data/data/$PKG/files"
 OUT="$PWD/e2e-out"

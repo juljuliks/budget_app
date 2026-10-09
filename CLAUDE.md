@@ -52,8 +52,9 @@ Gradle — только JDK 17: `JAVA_HOME=$(/usr/libexec/java_home -v 17)` (п�
 
 ## Где что
 
-- `src/ui/TransactionsList.tsx` — вкладка «Операции» (фильтры, группировки, мультивыбор, разбор при удалении
-  категории); данные списка — `src/ui/transactionsListData.ts`, заголовок раздела — `OperationsSectionHeader.tsx`.
+- `src/screens/operations/` — вкладка «Операции»: экран из хуков (`model/`: список, выбор, массовая категория, маршрут,
+  вкладка) и частей (`parts/`); фильтры — `src/features/operations-filters/`, разбор при удалении категории —
+  `src/features/category-delete/` (`useSortOut`).
 - `src/shared/navigation/leaveGuard.ts` — вопрос перед уходом с экрана (разбор категории): таб-бар, шестерёнка, стрелка дня.
 - `src/db/` — миграции и запросы; `src/db/report.ts` — отчёт (только для месяцев с планом, `hasMonthPlan`).
 - `android/app/src/main/java/com/budgetapp/` — `SmsReceiver`, `BankPushListener` (пакет с «tbc», title + text → парсер SMS).

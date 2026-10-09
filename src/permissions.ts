@@ -10,7 +10,7 @@ export type PermissionStatus = {
 export async function requestAppPermissions(): Promise<PermissionStatus> {
   if (Platform.OS !== 'android') return { sms: false, notifications: false };
 
-  // Only RECEIVE_SMS: new SMS arrive via SmsReceiver. READ_SMS is asked only by "Импорт SMS" (ui/smsImportFlow).
+  // Only RECEIVE_SMS: new SMS arrive via SmsReceiver. READ_SMS is asked only by "Импорт SMS" (features/sms-import).
   const wanted = [PermissionsAndroid.PERMISSIONS.RECEIVE_SMS];
   // POST_NOTIFICATIONS is a runtime permission only on Android 13 (API 33)+
   if (Platform.Version >= 33) wanted.push(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);

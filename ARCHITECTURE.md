@@ -82,7 +82,7 @@ src/
 | 2 | Ядро | `ui/stats/norms.ts` целиком (загрузка и расчёты лимитов по ритму, без React) → `src/stats/norms.ts`; запрос курсов НБГ → `src/fx/nbg.ts` (без импортов из `db`, чтобы не было цикла), кэш курсов остаётся в `db/fx.ts` | готово; `emitTransactionsChanged` из команд — перенесено в шаг 4 (команды сущностей) |
 | 3 | `app` | `App.tsx` → `app/App` + `MainTabs` + `useAppStartup`; `modals` → `app/ModalHost`, `SettingsButton` → `app`. `navigation`, `sheets`, `leaveGuard` → `shared/navigation`: их зовут все слои и уведомления, а импорты только вниз | готово: `app` пока импортирует экраны и шиты из `src/ui` (11 предупреждений lint — уходят шагами 4–7) |
 | 4 | `entities` | `entities/{category,transaction,plan}`, `features/{transaction-edit,merchant-card,category-delete,category-types}`. `TransactionSheet` 336 → 84 строки (+ хуки `useTransaction`, `useCategoryChoice`, части), `MerchantCard` 317 → 70, `CategorySheet` 269 → 138. Карточка мерчанта открывается через `sheets` (`openMerchant`), удаление категории — проп `onDelete`. Команды слайсов (запись + `emitTransactionsChanged`) | готово: `entities/merchant` не понадобилась — карточка мерчанта с правилом для прошлых операций — feature; `emitTransactionsChanged` ещё в `src/ui` (списки, добавление, объединение, план) — уходит шагами 5–7 |
-| 5 | Операции | `TransactionsList` (767) → `screens/operations`: `OperationsScreen`, `useTransactionFilters`, `useSelection`, `SearchBar` (общий с Мерчантами), `BulkBar`, разбор категории; фильтры и мультивыбор — features. Прогон e2e | — |
+| 5 | Операции | `TransactionsList` (767) → `screens/operations/OperationsScreen` (169): `model/` — `useOperationsList`, `useSelection`, `useBulkCategory`, `useOperationsRoute`, `useTabLifecycle`, `useListRefresh`, `listData`, `groups`; `parts/` — `OperationsList`, `SectionHeader`, `FiltersBar`, `FilterSheets`, `SelectToolbar`, `BulkBar`, `HeaderActions`. Фичи: `operations-filters` (`useTransactionFilters`, `SearchBar`, `filter`), `category-delete` (`useSortOut`, `SortOutBanner`), `settings` (через `openSettings`, импорт SMS — пропом из `ModalHost`), `sms-import`, `card-balance` | готово: `bulk-select` не понадобился — выбор нужен только экрану; `SearchBar` пока только у операций (мерчанты — шаг 7); Maestro — все 6 флоу |
 | 6 | Статистика | `PeriodStatsView` (872) → `PeriodCategoryRow`, `LimitEffect`, `CategoryInfo`, `periodText.ts` с тестами; `PlanView` (653) → кольца, `ShareField`, `SavingsSwitch`, `groupByType` в `.ts`; `StatsView` (448) → `CategoryRow`, `DonutCenter`; `MonthReport` (399) → строки отчёта; общий `styles.ts` | — |
 | 7 | Остальное | `MerchantsScreen` (334), оставшиеся features | — |
 | 8 | Закрепить | lint warn → error, lint в CI; CLAUDE.md «Где что», карта в README, пути в tests/README; убрать `src/ui` | — |
@@ -106,11 +106,12 @@ src/
 - **features** (шаг 4): `transaction-edit` (`TransactionSheet`), `merchant-card` (`MerchantCard`), `category-delete`
   (`CategoryDeleteSheet`, `categoryDeletionText`, `categoryActions` → `startCategoryDelete`), `category-types`
   (`CategoryTypesSheet`).
-- **features** (дальше): `operations-filters` (`FilterSheets`), `bulk-select`, `category-merge` (`MergeCategoriesSheet`), `sms-import` (`smsImportFlow`,
-  `PushAccessBanner`), `add-transaction` (`AddTransactionSheet`), `plan-edit` (`PlanAddModal`, `PlanAmountModal`,
-  `PlanAlert`), `month-report` (`MonthReport`), `settings` (`SettingsSheet`), `hide-amounts`
-  (`HideAmountsButton`, `Masked`), `card-balance` (`CardBalance`).
-- **screens/operations**: `TransactionsList`, `OperationsSectionHeader`, `transactionsListData`.
+- **features** (шаг 5): `operations-filters` (`FilterSheets`, `useTransactionFilters`, `SearchBar`), `sms-import`
+  (`smsImportFlow`, `PushAccessBanner`), `settings` (`SettingsButton`, `SettingsSheet`), `card-balance` (`CardBalance`).
+- **features** (дальше): `category-merge` (`MergeCategoriesSheet`), `add-transaction` (`AddTransactionSheet`), `plan-edit`
+  (`PlanAddModal`, `PlanAmountModal`, `PlanAlert`), `month-report` (`MonthReport`), `hide-amounts` (`HideAmountsButton`,
+  `Masked`).
+- **screens/operations**: `TransactionsList` → `OperationsScreen`, `OperationsSectionHeader` → `parts/SectionHeader`, `transactionsListData` → `model/listData`, `transactionGroups` → `model/groups`.
 - **screens/stats**: `StatsHome`, `StatsView`, `PeriodStatsView`, `PlanView`, `HistoryView`.
 - **screens/merchants**: `MerchantsScreen`. **screens/categories**: `CategoriesScreen`.
 

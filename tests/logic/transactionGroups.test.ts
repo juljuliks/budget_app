@@ -2,7 +2,7 @@ import { addManualTransaction } from '../../src/db/transactions';
 import { createCategory } from '../../src/db/categories';
 import { createCategoryType } from '../../src/db/categoryTypes';
 import { listGroupedPage, listTransactionGroups, transactionGroupIds } from '../../src/db/transactions';
-import { groupTitle, groupTotal } from '../../src/ui/transactionGroups';
+import { groupTitle, groupTotal } from '../../src/screens/operations/model/groups';
 import { freshDb } from '../helpers';
 
 const at = (y: number, m: number, d = 15) => Math.floor(new Date(y, m - 1, d, 12).getTime() / 1000);

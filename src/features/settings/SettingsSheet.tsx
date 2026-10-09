@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
-import { limitAlertsEnabled, setLimitAlertsEnabled } from '../limitAlerts';
+import { limitAlertsEnabled, setLimitAlertsEnabled } from '@/limitAlerts';
 import BottomSheet from '@/shared/ui/BottomSheet';
-import { setDisplayCurrency, useDisplayCurrency } from '../displayCurrency';
+import { setDisplayCurrency, useDisplayCurrency } from '@/displayCurrency';
 import { useRootNavigation } from '@/shared/navigation/navigation';
 import CurrencyPicker from '@/shared/ui/CurrencyPicker';
-import { startSmsImport } from './smsImportFlow';
 import { colors } from '@/shared/theme/theme';
 
 function Row({ label, onPress }: { label: string; onPress: () => void }) {
@@ -20,13 +19,15 @@ function Row({ label, onPress }: { label: string; onPress: () => void }) {
 type Props = {
   open: boolean;
   onClose: () => void;
+  /** «Импорт SMS из телефона» (the app passes the import's flow) */
+  onImportSms: () => void;
 };
 
 /**
  * Настройки (the gear in the tab headers): a sheet with Валюта — the currency the app converts amounts to, switched right
  * here — the limit notifications switch, then Мерчанты, Категории and Импорт SMS (past bank SMS from the phone).
  */
-export default function SettingsSheet({ open, onClose }: Props) {
+export default function SettingsSheet({ open, onClose, onImportSms }: Props) {
   const navigation = useRootNavigation();
   const currency = useDisplayCurrency();
   const go = (route: 'Merchants' | 'Categories') => { onClose(); navigation.navigate(route); };
@@ -67,7 +68,7 @@ export default function SettingsSheet({ open, onClose }: Props) {
       <Row label="Мерчанты" onPress={() => go('Merchants')} />
       <Row label="Категории" onPress={() => go('Categories')} />
       {/* after this sheet has closed: one sheet at a time */}
-      <Row label="Импорт SMS из телефона" onPress={() => { onClose(); setTimeout(startSmsImport, 250); }} />
+      <Row label="Импорт SMS из телефона" onPress={() => { onClose(); setTimeout(onImportSms, 250); }} />
     </BottomSheet>
   );
 }
