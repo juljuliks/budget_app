@@ -103,17 +103,23 @@ describe('5.1 transfers and "Пополнение счёта"', () => {
       await buy('GIO K', 400, on(6), debts, { kind: 'deposit' });
       // money from crypto: "Пополнение счёта", not spending
       await buy('P2P', 2752, on(7), null, { kind: 'deposit' });
+      // an ordinary category: a purchase, 82 sent for it and the 82 back — the deposit is subtracted there too
+      const nails = await createCategory('Маникюр', '💅', null);
+      await buy('INTOVIEW', 140, on(2), nails);
+      await buy('Перевод', 82, on(7), nails, { kind: 'transfer' });
+      await buy('DEMID RIABOV', 82, on(8), nails, { kind: 'deposit' });
     });
     await tap('Статистика');
-    await screen.findByText('Потрачено 2 110 / 2 460 ₾ (86%)');
+    await screen.findByText('Потрачено 2 250 / 2 460 ₾ (91%)');
   });
 
-  test('a transfer category carries its sign: sent more "−", more came back "+" (not spent, no "＋ В план")', async () => {
+  test('a transfer category carries its sign: sent more "−", more came back "+" (not spent, no "＋ В план"); a deposit put in any category is subtracted from it', async () => {
     expect(within(rowOf('👩 Переводы: Маме')).getByText('−100 ₾')).toBeTruthy();
     expect(within(rowOf('🤝 Переводы: Долги')).getByText('+300 ₾')).toBeTruthy();
     expect(within(rowOf('🤝 Переводы: Долги')).queryByText('＋ В план')).toBeNull();
-    // only the −100 is spending outside the plan
-    expect(block('Вне плана').slice(1, 3)).toEqual(['480 / 300 ₾ (160%)', 'Перерасход 180 ₾']);
+    // outside the plan: the −100 and the 140 of «Маникюр» (140 + 82 − 82)
+    expect(within(rowOf('💅 Маникюр')).getByText('140 ₾')).toBeTruthy();
+    expect(block('Вне плана').slice(1, 3)).toEqual(['620 / 300 ₾ (207%)', 'Перерасход 320 ₾']);
     expect(texts()).not.toContain('💳 Пополнение счёта');
   });
 });

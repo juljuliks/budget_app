@@ -24,17 +24,18 @@ test('a merchant\'s total subtracts refunds not settled on a purchase; settled o
   expect(m!.count).toBe(2);
 });
 
-test('a category\'s summary: all its operations counted, spending minus open refunds, deposits aside', async () => {
+test('a category\'s summary: all its operations counted, spending minus open refunds and deposits (money back)', async () => {
   await add('purchase', 10000, 'SPAR', 7);
   await add('transfer', 2000, 'ANNA', 7);
   await add('deposit', 5000, 'BOB', 7);
   await add('refund', 1500, 'SPAR', 7);
   await add('refund', 400, 'SPAR', 7, true);
   await add('purchase', 999, 'SPAR', 8);
-  expect(await categorySummary(7)).toEqual({ count: 5, totals: [{ currency: 'GEL', amount_minor: 10500 }] });
+  // 100 + 20 − 50 − 15 (the settled refund doesn't count)
+  expect(await categorySummary(7)).toEqual({ count: 5, totals: [{ currency: 'GEL', amount_minor: 5500 }] });
 });
 
-test('money back from a person (a deposit in a transfer category) is subtracted from the transfers to them', async () => {
+test('money back (a deposit put in a category: a transfer one or any other) is subtracted from it', async () => {
   const { monthStats } = await import('../../src/db/plans');
   const { getTransferTypeId } = await import('../../src/db/categoryTypes');
   const db = await getDb();
@@ -47,13 +48,15 @@ test('money back from a person (a deposit in a transfer category) is subtracted 
   await add('transfer', 10000, dema);
   await add('transfer', 3800, dema);
   await add('deposit', 10000, dema);
-  // a deposit elsewhere (a salary, one in an ordinary category) is income, not counted
-  await add('deposit', 500000, null);
+  // in an ordinary category too: sent 50 for groceries, 20 came back
   await add('deposit', 2000, food);
   await add('purchase', 5000, food);
+  // one without a category, or in "Пополнение счёта", is income: not counted
+  await add('deposit', 500000, null);
+  await add('deposit', 300000, (await db.get<{ id: number }>("SELECT id FROM categories WHERE system = 'topup'"))!.id);
   const stats = await monthStats(2026, 9, 'GEL');
   const spent = (id: number) => stats.categories.find((c) => c.category_id === id)?.spent_minor;
   expect(spent(dema)).toBe(3800);
-  expect(spent(food)).toBe(5000);
-  expect(stats.spent_minor).toBe(8800);
+  expect(spent(food)).toBe(3000);
+  expect(stats.spent_minor).toBe(6800);
 });

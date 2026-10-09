@@ -7,8 +7,8 @@ import { Converter, Currency, dateKey, ensureRates, isCurrency, makeConverter } 
 export const BUDGET_CURRENCY: Currency = 'GEL';
 
 /**
- * Kinds that count as spending; deposits are income and ignored — except one put in a money-transfer category
- * ("Переводы: Дема"): money back from that person, subtracted from it like a refund. A refund is subtracted: from its category (its
+ * Kinds that count as spending. A deposit in "Пополнение счёта" (where every one goes by default) is income, not
+ * spending; one put in another category (sent 82 for a manicure, 82 came back) is subtracted from it like a refund. A refund is subtracted: from its category (its
  * merchant's, see refundCategory), or, without one, as "Возвраты без категории" (REFUND_KEY) apart from the
  * uncategorized spending. A refund settled on its purchase (reduced or deleted, see refunds.ts) no longer counts:
  * the purchase already shows it.
@@ -61,7 +61,7 @@ const categoryKey = (r: SpendRow): number | null | typeof REFUND_KEY => (r.kind 
 /** A transaction's contribution to spending (see EXPENSE_KINDS), in its own currency. */
 function spendOf(r: SpendRow): number {
   if (r.kind === 'refund') return r.refund_settled_at !== null ? 0 : -r.amount_minor;
-  // only in a transfer category (see spendRows): money back from that person
+  // in a category other than "Пополнение счёта" (see spendRows): money back, subtracted from it
   if (r.kind === 'deposit') return -r.amount_minor;
   return EXPENSE_KINDS.includes(r.kind) ? r.amount_minor : 0;
 }
@@ -72,7 +72,7 @@ async function spendRows(from: number, to: number): Promise<SpendRow[]> {
     `SELECT id, category_id, kind, amount_minor, currency, occurred_at, refund_settled_at FROM transactions
       WHERE occurred_at >= ? AND occurred_at < ?
         AND (kind IN (${[...EXPENSE_KINDS, 'refund'].map((k) => `'${k}'`).join(',')})
-          OR (kind = 'deposit' AND category_id IN (SELECT c.id FROM categories c JOIN category_types ct ON ct.id = c.type_id WHERE ct.is_transfer = 1)))
+          OR (kind = 'deposit' AND category_id IS NOT NULL))
         AND category_id IS NOT (SELECT id FROM categories WHERE system = 'savings')
         AND category_id IS NOT (SELECT id FROM categories WHERE system = 'topup')`,
     [from, to]);

@@ -228,15 +228,15 @@ export default {
 
 /**
  * A category's operations count and what was spent in it, per currency: purchases, payments, transfers, cash
- * withdrawals minus refunds not settled on a purchase (like the stats); deposits aren't spending.
+ * withdrawals minus refunds not settled on a purchase and deposits (money back), like the stats.
  */
 export async function categorySummary(categoryId: number): Promise<{ count: number; totals: Array<{ currency: string; amount_minor: number }> }> {
   const db = await getDb();
   const count = (await db.get<{ n: number }>('SELECT count(*) AS n FROM transactions WHERE category_id = ?', [categoryId]))!.n;
   const totals = await db.all<{ currency: string; amount_minor: number }>(
-    `SELECT currency, sum(CASE WHEN kind = 'refund' THEN -amount_minor ELSE amount_minor END) AS amount_minor FROM transactions
-      WHERE category_id = ? AND (kind IN ('purchase', 'payment', 'transfer', 'withdrawal') OR (kind = 'refund' AND refund_settled_at IS NULL))
-      GROUP BY currency HAVING sum(CASE WHEN kind = 'refund' THEN -amount_minor ELSE amount_minor END) != 0
+    `SELECT currency, sum(CASE WHEN kind IN ('refund', 'deposit') THEN -amount_minor ELSE amount_minor END) AS amount_minor FROM transactions
+      WHERE category_id = ? AND (kind IN ('purchase', 'payment', 'transfer', 'withdrawal', 'deposit') OR (kind = 'refund' AND refund_settled_at IS NULL))
+      GROUP BY currency HAVING sum(CASE WHEN kind IN ('refund', 'deposit') THEN -amount_minor ELSE amount_minor END) != 0
       ORDER BY amount_minor DESC`, [categoryId]);
   return { count, totals };
 }
