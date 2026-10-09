@@ -3,7 +3,7 @@ jest.mock('../../src/navigation', () => ({ navigateWhenReady: jest.fn() }));
 import { setPlanAmount } from '../../src/db/plans';
 import { createCategory } from '../../src/db/categories';
 import { addManualTransaction } from '../../src/db/transactions';
-import { loadNorms } from '../../src/ui/stats/norms';
+import { loadNorms } from '../../src/stats/norms';
 import { summaryGroups } from '../../src/ui/stats/summaryGroups';
 import { freshDb } from '../helpers';
 

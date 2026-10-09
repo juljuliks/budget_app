@@ -5,7 +5,7 @@
 import fs from 'fs';
 import { openDatabase } from '../../src/db/driver';
 import { closeDb, useDb } from '../../src/db';
-import { setRatesFetcher } from '../../src/db/fx';
+import { setRatesFetcher } from '../../src/fx/nbg';
 import { base, done, empty } from './seeds';
 
 setRatesFetcher(async () => []);

@@ -1,6 +1,6 @@
 import { openDatabase } from '../src/db/driver';
 import { useDb, closeDb } from '../src/db';
-import { setRatesFetcher } from '../src/db/fx';
+import { setRatesFetcher } from '../src/fx/nbg';
 
 // no network in tests: rates are inserted by the tests that need them
 setRatesFetcher(async () => []);

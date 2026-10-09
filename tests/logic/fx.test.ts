@@ -1,7 +1,8 @@
 jest.mock('../../src/navigation', () => ({ navigateWhenReady: jest.fn() }));
 
 import { getDb } from '../../src/db';
-import { dateKey, ensureRates, makeConverter, setRatesFetcher } from '../../src/db/fx';
+import { dateKey, ensureRates, makeConverter } from '../../src/db/fx';
+import { setRatesFetcher } from '../../src/fx/nbg';
 import {
   addPlanItem, getPlanBudget, listPlan, monthStats, OverBudgetError, periodStats, planHistory, setPlanAmount, setPlanBudget, ymOf,
 } from '../../src/db/plans';

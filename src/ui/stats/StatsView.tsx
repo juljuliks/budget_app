@@ -6,7 +6,7 @@ import { categoryLabel } from '../../db/categories';
 import { Currency } from '../../db/fx';
 import { CategoryStat, currentYm, monthStats, MonthStats, spentOf, StatGroup, ymOf } from '../../db/plans';
 import { dayKeyOf, daysInMonth, monthDays, shortRange } from '@/shared/lib/dateRange';
-import { flatOf, limitChange, loadNorms, Norms, Pace, paceOf } from './norms';
+import { flatOf, limitChange, loadNorms, Norms, Pace, paceOf } from '@/stats/norms';
 import { onTransactionsChanged } from '../../events';
 import Donut, { DonutSegment } from '@/shared/ui/Donut';
 import Masked, { MaskedTotal } from '../Masked';

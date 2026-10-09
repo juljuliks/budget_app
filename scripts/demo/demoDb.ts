@@ -7,7 +7,7 @@ import { openDatabase } from '../../src/db/driver';
 import { closeDb, getDb, useDb } from '../../src/db';
 import { createCategory, findCategoryByName, updateCategory } from '../../src/db/categories';
 import { createCategoryType } from '../../src/db/categoryTypes';
-import { setRatesFetcher } from '../../src/db/fx';
+import { setRatesFetcher } from '../../src/fx/nbg';
 import { NormPeriod, PlanKind, setPlanAmount, setPlanBudget } from '../../src/db/plans';
 import { recordBalance } from '../../src/db/balance';
 import { addMerchantCategory, setMerchantMixed } from '../../src/db/merchants';

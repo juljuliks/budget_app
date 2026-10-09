@@ -1,4 +1,4 @@
-// Builds src/ui/emoji/emoji.json from emojibase-data (Unicode / CLDR): every emoji the picker offers, in the phone
+// Builds src/shared/ui/emoji/emoji.json from emojibase-data (Unicode / CLDR): every emoji the picker offers, in the phone
 // keyboard's groups and order, with Russian and English names and tags to search by. Skin tones and the
 // "component" group are left out. Run after updating emojibase-data: node scripts/build_emoji.js
 const fs = require('fs');
@@ -73,7 +73,7 @@ const out = en
     return [e.emoji, e.group, e.version, words];
   });
 
-const file = path.join(__dirname, '..', 'src', 'ui', 'emoji', 'emoji.json');
+const file = path.join(__dirname, '..', 'src', 'shared', 'ui', 'emoji', 'emoji.json');
 fs.mkdirSync(path.dirname(file), { recursive: true });
 fs.writeFileSync(file, JSON.stringify(out));
 console.log(`${out.length} emoji -> ${path.relative(process.cwd(), file)} (${Math.round(fs.statSync(file).size / 1024)} KB)`);

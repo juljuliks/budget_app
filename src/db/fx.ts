@@ -1,4 +1,5 @@
 import { getDb } from './index';
+import { fetchRates } from '../fx/nbg';
 
 // Currencies and conversion. Amounts are stored in their own currency; stats are shown in one the user picks,
 // converted with the official rate of the transaction's day (National Bank of Georgia, GEL per unit), cached
@@ -19,22 +20,7 @@ export function dateKey(unixSeconds: number): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-const NBG_URL = 'https://nbg.gov.ge/gw/api/ct/monetarypolicy/currencies/en/json/';
 const FOREIGN = CURRENCIES.filter((c) => c !== 'GEL');
-
-type NbgDay = Array<{ currencies: Array<{ code: string; quantity: number; rate: number }> }>;
-type Fetcher = (url: string) => Promise<unknown>;
-
-let fetcher: Fetcher = async (url) => {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`rates ${res.status}`);
-  return res.json();
-};
-
-/** Tests (no network) replace the HTTP call. */
-export function setRatesFetcher(f: Fetcher) {
-  fetcher = f;
-}
 
 /** At most this many days are fetched per call (the rest use the nearest cached day until next time). */
 const MAX_FETCH = 40;
@@ -56,12 +42,10 @@ export async function ensureRates(dates: Iterable<string>): Promise<void> {
   for (let i = 0; i < missing.length; i += PARALLEL) {
     await Promise.all(missing.slice(i, i + PARALLEL).map(async (date) => {
       try {
-        const query = FOREIGN.map((c) => `currencies=${c}`).join('&');
-        const days = (await fetcher(`${NBG_URL}?${query}&date=${date}`)) as NbgDay;
-        for (const c of days?.[0]?.currencies ?? []) {
-          if (!isCurrency(c.code) || !(c.rate > 0)) continue;
+        for (const r of await fetchRates(date, FOREIGN)) {
+          if (!isCurrency(r.code)) continue;
           await db.run('INSERT OR REPLACE INTO fx_rates (date, currency, gel_per_unit) VALUES (?, ?, ?)',
-            [date, c.code, c.rate / (c.quantity || 1)]);
+            [date, r.code, r.gelPerUnit]);
         }
       } catch (e) {
         console.warn('rates for', date, 'not loaded', e);
@@ -105,4 +89,4 @@ export async function makeConverter(): Promise<Converter> {
   };
 }
 
-export default { CURRENCIES, ensureRates, makeConverter, dateKey, setRatesFetcher };
+export default { CURRENCIES, ensureRates, makeConverter, dateKey };

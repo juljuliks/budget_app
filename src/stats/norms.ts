@@ -1,4 +1,4 @@
-import { currentYm, monthStats, NormPeriod, parseYm, periodStats, PlanKind } from '../../db/plans';
+import { currentYm, monthStats, NormPeriod, parseYm, periodStats, PlanKind } from '../db/plans';
 import { DayKey, dayKeyOf, DayRange, daysByMonth, daysInMonth, normWindow, parseDayKey, rangeDays, rangeToUnix } from '@/shared/lib/dateRange';
 import { RHYTHM_DAYS } from '@/shared/lib/dates';
 

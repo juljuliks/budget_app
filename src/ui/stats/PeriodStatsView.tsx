@@ -7,7 +7,7 @@ import { onTransactionsChanged } from '../../events';
 import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
 import Button from '@/shared/ui/Button';
 import { DayRange, dayKeyOf, daysInMonth, parseDayKey, rangeDays, rangeToUnix, shortRange } from '@/shared/lib/dateRange';
-import { flatOf, isPartOfWindow, limitChange, loadNorms, NormPart, Norms, Pace, paceOf, rhythmBar } from './norms';
+import { flatOf, isPartOfWindow, limitChange, loadNorms, NormPart, Norms, Pace, paceOf, rhythmBar } from '@/stats/norms';
 import Donut from '@/shared/ui/Donut';
 import { InfoIcon } from '@/shared/ui/icons';
 import { MaskedTotal } from '../Masked';

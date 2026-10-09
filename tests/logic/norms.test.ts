@@ -3,7 +3,7 @@ jest.mock('../../src/navigation', () => ({ navigateWhenReady: jest.fn() }));
 import { setPlanAmount } from '../../src/db/plans';
 import { createCategory } from '../../src/db/categories';
 import { addManualTransaction } from '../../src/db/transactions';
-import { flatOf, limitChange, loadNorms, rhythmBar } from '../../src/ui/stats/norms';
+import { flatOf, limitChange, loadNorms, rhythmBar } from '../../src/stats/norms';
 import { freshDb } from '../helpers';
 
 // past months (never created by looking at them): Sep 2025 has 30 days, Oct 2025 — 31; Mon Sep 29 – Sun Oct 5

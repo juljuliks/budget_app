@@ -2,7 +2,7 @@ import { getSetting, setSetting } from './db/settings';
 import { Currency, isCurrency } from './db/fx';
 import { BUDGET_CURRENCY } from './db/plans';
 import { DayKey, dayKeyOf, daysInMonth, shortRange } from '@/shared/lib/dateRange';
-import { loadNorms } from './ui/stats/norms';
+import { loadNorms } from './stats/norms';
 import { plural } from '@/shared/lib/format';
 import { formatWithCurrency } from '@/shared/lib/money';
 import { FOR_PERIOD } from '@/shared/lib/strings';

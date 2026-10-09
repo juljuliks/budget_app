@@ -1,6 +1,6 @@
 import { NormPeriod } from '../../db/plans';
 import { DayKey, DayRange, daysInMonth } from '@/shared/lib/dateRange';
-import { isPartOfWindow, NormPart, Norms } from './norms';
+import { isPartOfWindow, NormPart, Norms } from '@/stats/norms';
 
 export type SummaryGroupKey = NormPeriod | 'fixed' | 'outside';
 
