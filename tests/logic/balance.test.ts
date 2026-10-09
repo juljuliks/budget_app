@@ -85,7 +85,7 @@ describe('an SMS with only a date that came after a balance which already had it
   const DECLINED = "63.34 GEL was declined.\n\nNot enough funds.\n(*'1834')\nCarrefour(GTC)\n08/10/26";
   const CARREFOUR = '63.34GEL\n(*1834)\nCarrefour(GTC)\nBalance: 50.73GEL\n\n08/10/26 20:24';
   const DEMID = 'Deposit Money: 100.00 GEL\nMC GOLD\n08/10/2026\nDEMID RIABOV';
-  const at = async (body: string) => (await (await import('../src/db')).getDb()).get<{ at: number }>(
+  const at = async (body: string) => (await (await import('../../src/db')).getDb()).get<{ at: number }>(
     'SELECT occurred_at AS at FROM transactions WHERE raw_sms = ?', [body]);
 
   test('the real evening: 14.07 → −63.34 → 50.73, so the 100 came before; then 280 in, 100 out → 230.73', async () => {
@@ -120,8 +120,8 @@ describe('an SMS with only a date that came after a balance which already had it
 });
 
 test('migration 28: one stored after the balance that had it is put before it', async () => {
-  const { openDatabase } = await import('../src/db/driver');
-  const { migrate, MIGRATIONS } = await import('../src/db/migrations');
+  const { openDatabase } = await import('../../src/db/driver');
+  const { migrate, MIGRATIONS } = await import('../../src/db/migrations');
   const db = openDatabase(':memory:');
   await migrate(db, MIGRATIONS.slice(0, 27));
   const today = new Date();
