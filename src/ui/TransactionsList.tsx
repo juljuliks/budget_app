@@ -4,13 +4,11 @@ import { RouteProp, useFocusEffect, useNavigation, useRoute } from '@react-navig
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { HeaderBackButton } from '@react-navigation/elements';
 import {
-  categoriesWithTransactions, CategoryFilter, CategoryWithCount, GroupKind, isUnread, kindsWithTransactions, listGroupedPage, listTransactionGroups,
-  listTransactionsPage, markTransactionsSeen, merchantsWithTransactions, MerchantWithCount, PageCursor, searchTransactions, transactionDayIds, transactionGroupIds,
-  TransactionGroup, TransactionRow, TxFilter,
+  categoriesWithTransactions, CategoryFilter, CategoryWithCount, GroupKind, isUnread, kindsWithTransactions, listTransactionGroups,
+  markTransactionsSeen, merchantsWithTransactions, MerchantWithCount, transactionDayIds, transactionGroupIds, TransactionGroup,
 } from '../db/transactions';
 import { emitTransactionsChanged, onTransactionsChanged } from '../events';
 import { Category, categoryLabel, countPastTransactionsOfCategory, deleteCategory, getCategory, moveTransactionsOutOfCategory } from '../db/categories';
-import { currentYm, monthStart, spendingEntries } from '../db/plans';
 import { useDisplayCurrency } from '../displayCurrency';
 import { assignCategoryToMany, MerchantChoice, merchantsChangePreview } from '../assign';
 import { sheetAlert } from './sheetAlert';
@@ -25,11 +23,11 @@ import Fab from './Fab';
 import PushAccessBanner from './PushAccessBanner';
 import CardBalance from './CardBalance';
 import SettingsButton from './SettingsButton';
-import { dayKey, formatDay, KIND_LABELS, plural } from './format';
-import { formatMoneyWithCurrency, formatWithCurrency } from './money';
+import { KIND_LABELS, plural } from './format';
+import { formatMoneyWithCurrency } from './money';
 import { formStyles } from './formStyles';
-import { ChevronRightIcon, PencilIcon, SearchIcon } from './icons';
-import { DayRange, formatRange, rangeToUnix } from './RangeCalendar';
+import { PencilIcon, SearchIcon } from './icons';
+import { DayRange, formatRange } from './RangeCalendar';
 import { ActiveFilter, AllFiltersSheet, DateSheet, FilterButton, OptionsSheet } from './FilterSheets';
 import { colors } from './theme';
 import { confirmDeleteTransaction, confirmDeleteTransactions } from './transactionActions';
@@ -39,51 +37,13 @@ import { showLimitAlert } from '../notifications/notifeeIntegration';
 import { NO_CATEGORY } from './strings';
 import BottomSheet from './BottomSheet';
 import RadioGroup from './RadioGroup';
-import { groupTitle, groupTotal } from './transactionGroups';
 import { Bucket, categoryDeletePreview, currentIdsOfCategory, remainingInCategory, sortOutSummary } from '../db/categoryDeletion';
 import { sortOutBanner, sortOutDoneText, sortOutLeaveText, sortOutMerchantText } from './categoryDeletionText';
 import { dayKeyOf } from './dateRange';
-
-/** Every view loads from the database a page at a time while scrolling. */
-const PAGE_SIZE = 50;
-
-type Filter = { query: string; categories: CategoryFilter[]; merchants: string[]; kinds: string[]; range: DayRange | null };
-
-/** Every filter set applies at once: text, categories (any of), merchants (any of), kinds (any of) and dates combine. */
-function isFilterActive(f: Filter): boolean {
-  return f.query.trim() !== '' || f.categories.length > 0 || f.merchants.length > 0 || f.kinds.length > 0 || f.range !== null;
-}
-
-/** How the list is split into sections: by day (the feed), or another way (every operation matching the filters at once). */
-type GroupBy = 'day' | GroupKind;
-const GROUP_BY: Array<readonly [GroupBy, string]> = [
-  ['day', 'По дням'], ['month', 'По месяцам'], ['merchant', 'По мерчантам'], ['category', 'По категориям'], ['kind', 'По типу'], ['amount', 'По сумме'],
-];
-// a text search: the operations it finds (matched in JS, see searchTransactions), then paged like any filter
-const SEARCH_LIMIT = 5000;
-
-/** The filters as the database applies them. */
-async function resolveFilter(f: Filter): Promise<TxFilter> {
-  const r = f.range ? rangeToUnix(f.range) : undefined;
-  const tx: TxFilter = { categories: f.categories, merchants: f.merchants, kinds: f.kinds, from: r?.from, to: r?.to };
-  if (f.query.trim()) tx.ids = (await searchTransactions(f.query, tx, SEARCH_LIMIT)).map((row) => row.id);
-  return tx;
-}
-
-type Row = TransactionRow & { group_key?: string };
-type ListView = { filter: TxFilter; groupBy: GroupBy };
-/** Where the next page starts: a keyset cursor by day (new operations don't shift it), an offset in the groups' order. */
-type Next = PageCursor | number | null;
-
-async function fetchPage(v: ListView, from: Next, limit: number): Promise<{ rows: Row[]; next: Next }> {
-  if (v.groupBy === 'day') {
-    const p = await listTransactionsPage(typeof from === 'number' ? null : from, limit, v.filter);
-    return { rows: p.rows, next: p.nextCursor };
-  }
-  const offset = typeof from === 'number' ? from : 0;
-  const rows = await listGroupedPage(v.filter, v.groupBy, offset, limit);
-  return { rows, next: rows.length === limit ? offset + rows.length : null };
-}
+import OperationsSectionHeader from './OperationsSectionHeader';
+import {
+  buildSections, fetchPage, Filter, GROUP_BY, GroupBy, isFilterActive, ListView, Next, PAGE_SIZE, resolveFilter, Row, useDaySpent,
+} from './transactionsListData';
 
 const SEARCH_DEBOUNCE_MS = 200;
 
@@ -306,52 +266,10 @@ export default function TransactionsList() {
     markTransactionsSeen(unreadSelected).then(() => emitTransactionsChanged()).catch((e) => console.error('mark seen failed', e));
   };
 
-  type Section = { key: string; title: string; dayStart: number; data: Row[]; group?: TransactionGroup };
-  const sections = useMemo(() => {
-    const out: Section[] = [];
-    if (groups) {
-      // the groups as far as the rows loaded reach
-      const byKey = new Map(groups.map((g) => [g.key, g]));
-      const by = viewRef.current.groupBy as GroupKind;
-      for (const r of data) {
-        const key = r.group_key ?? '';
-        if (out.length === 0 || out[out.length - 1].key !== key) {
-          const g = byKey.get(key);
-          out.push({ key, title: g ? groupTitle(g, by) : '', dayStart: 0, data: [], group: g });
-        }
-        out[out.length - 1].data.push(r);
-      }
-      return out;
-    }
-    for (const r of data) {
-      const key = dayKey(r.occurred_at);
-      if (out.length === 0 || out[out.length - 1].key !== key) {
-        const d = new Date(r.occurred_at * 1000);
-        out.push({ key, title: formatDay(r.occurred_at), dayStart: new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() / 1000, data: [] });
-      }
-      out[out.length - 1].data.push(r);
-    }
-    return out;
-  }, [data, groups]);
+  const sections = useMemo(() => buildSections(data, groups, viewRef.current.groupBy), [data, groups]);
 
-  // spent per day for the day headers: all of the day's transactions, not only the ones loaded or filtered,
-  // converted to the app's currency (Настройки → Валюта); transactions themselves stay in their own currency
   const currency = useDisplayCurrency();
-  const [daySpent, setDaySpent] = useState<Map<string, number>>(new Map());
-  useEffect(() => {
-    if (sections.length === 0 || groups) { setDaySpent(new Map()); return; }
-    const from = sections[sections.length - 1].dayStart;
-    const last = new Date(sections[0].dayStart * 1000);
-    const to = new Date(last.getFullYear(), last.getMonth(), last.getDate() + 1).getTime() / 1000;
-    let stale = false;
-    spendingEntries(from, to, currency).then((rows) => {
-      if (stale) return;
-      const m = new Map<string, number>();
-      for (const r of rows) m.set(dayKey(r.occurred_at), (m.get(dayKey(r.occurred_at)) ?? 0) + r.spent_minor);
-      setDaySpent(m);
-    }).catch((e) => console.error('day totals failed', e));
-    return () => { stale = true; };
-  }, [sections, groups, currency]);
+  const daySpent = useDaySpent(sections, groups !== null, currency);
 
   // a long press on a row starts selecting several, with that row selected
   function startSelect(id: number) {
@@ -686,51 +604,22 @@ export default function TransactionsList() {
         keyExtractor={(i) => String(i.id)}
         stickySectionHeadersEnabled
         keyboardShouldPersistTaps="handled"
-        renderSectionHeader={({ section }) => {
-          const g = section.group;
-          if (g) {
-            const ids = groupIds.get(g.key);
-            const checked = !!ids && ids.every((id) => selected.has(id));
-            const n = g.count;
-            const total = groupTotal(g);
-            return (
-              <View style={[formStyles.sectionHeader, styles.dayHeader]}>
-                {/* one operation: its own checkbox picks it, the header's would repeat it */}
-                {selecting && n > 1 ? (
-                  <TouchableOpacity testID={`group-checkbox-${section.title}`} onPress={() => { toggleGroup(g.key).catch((e) => console.error('select group failed', e)); }} hitSlop={10} accessibilityRole="checkbox" accessibilityState={{ checked }}>
-                    <Checkbox checked={checked} size={18} />
-                  </TouchableOpacity>
-                ) : null}
-                <Text style={styles.dayTitle} numberOfLines={1}>{section.title} · {n} {plural(n, ['операция', 'операции', 'операций'])}</Text>
-                <Text style={styles.daySpent}>{total}</Text>
-              </View>
-            );
-          }
-          const spent = daySpent.get(section.key) ?? 0;
-          const dayIds = groupIds.get(section.key);
-          const dayChecked = dayIds ? dayIds.every((id) => selected.has(id)) : section.data.every((r) => selected.has(r.id));
-          const dayCount = dayIds?.length ?? section.data.length;
-          return (
-            <View style={[formStyles.sectionHeader, styles.dayHeader]}>
-              {/* selecting: the day's operations at once (as a group's; one operation has its own) */}
-              {selecting && dayCount > 1 ? (
-                <TouchableOpacity testID={`day-checkbox-${section.key}`} onPress={() => { toggleGroup(section.key, section.dayStart).catch((e) => console.error('select day failed', e)); }} hitSlop={10} accessibilityRole="checkbox" accessibilityState={{ checked: dayChecked }}>
-                  <Checkbox checked={dayChecked} size={18} />
-                </TouchableOpacity>
-              ) : null}
-              <Text style={styles.dayTitle}>{section.title}</Text>
-              {spent > 0 ? <Text style={styles.daySpent}>−{formatWithCurrency(spent, currency)}</Text> : null}
-              <TouchableOpacity
-                // the stats tab with this day picked
-                onPress={() => guardLeave(() => tabNavigation.navigate('Stats', { day: section.dayStart, nonce: Date.now() }))}
-                hitSlop={10}
-                accessibilityLabel={`Траты за день: ${section.title}`}
-              >
-                <ChevronRightIcon color={colors.accent} />
-              </TouchableOpacity>
-            </View>
-          );
-        }}
+        renderSectionHeader={({ section }) => (
+          <OperationsSectionHeader
+            section={section}
+            selecting={selecting}
+            ids={groupIds.get(section.key)}
+            selected={selected}
+            spent={daySpent.get(section.key) ?? 0}
+            currency={currency}
+            onToggle={() => {
+              (section.group ? toggleGroup(section.key) : toggleGroup(section.key, section.dayStart))
+                .catch((e) => console.error(section.group ? 'select group failed' : 'select day failed', e));
+            }}
+            // the stats tab with this day picked
+            onOpenDay={() => guardLeave(() => tabNavigation.navigate('Stats', { day: section.dayStart, nonce: Date.now() }))}
+          />
+        )}
         renderItem={({ item }) => {
           const open = () => openTransaction(item.id);
           return (
@@ -871,9 +760,6 @@ const styles = StyleSheet.create({
   bottomButton: { flex: 1 },
   secondaryButton: { backgroundColor: colors.muted },
   empty: { padding: 32, textAlign: 'center', color: colors.muted },
-  dayHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  dayTitle: { flex: 1, fontSize: 13, fontWeight: '600', color: colors.muted },
-  daySpent: { fontSize: 13, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
   groupSheet: { paddingHorizontal: 20, paddingBottom: 24 },
   deleteInfo: { paddingBottom: 10, gap: 4 },
   deleteTitle: { fontSize: 18, fontWeight: '600', color: colors.text },
