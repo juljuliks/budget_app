@@ -108,7 +108,8 @@
 
 ## Этап 8 — Код и инструменты
 
-1. **ESLint + Prettier** (`@react-native-community/eslint-config`, `react-hooks`), скрипты `typecheck` / `lint` / `format`.
+1. **Prettier и общие правила ESLint**: ESLint с лимитами и слоями уже есть (`eslint.config.js`); добавить
+   `typescript-eslint` recommended, Prettier и скрипт `format`.
 2. **Размер APK (~23 МБ)**: собираются все 4 ABI (`reactNativeArchitectures` в `android/gradle.properties`) → только
    arm64 или ABI splits; позже R8 с keep-правилами (Notifee, quick-sqlite).
 3. **Скрипты не только под macOS**: `java_home` только если есть, образ эмулятора по `uname -m`, `OUT_DIR` вместо `~/Desktop`.
@@ -119,18 +120,11 @@
 6. **Одно правило «что считается тратой»** (`src/db/spend.ts`): `SPEND_KINDS`, знак возврата, «непривязанный
    возврат» — сейчас продублировано в ~6 местах (`plans.ts`, `categorySummary`, `getMerchant`, `backfillRule`, `balance.ts`…).
    Хелперы `placeholders()` вместо ручной сборки списков; общий `buildCategoryStats` для `monthStats` / `periodStats`.
-7. **Большие компоненты**:
-   - `TransactionsList.tsx` (~760 строк): хуки `useTransactionFilters`, `useSelection`; `SearchBar` (общий с
-     Мерчантами), `BulkBar`; разбор удаления категории — на тех же хуках. Данные списка и заголовок раздела уже вынесены.
-   - `PeriodStatsView.tsx` (~870): `PeriodCategoryRow`, `LimitEffect`, `CategoryInfo`; текстовые хелперы → `stats/periodText.ts` с тестами.
-8. **Общие модули UI**: `ui/dates.ts` (массивы месяцев в падежах и дней недели — несколько копий), одна карта «дней
-   в ритме», `formatPercent` / `formatTotals`, типизированный `useOpenTransactions()` вместо `navigate(… as never)`
-   (`CategorySheet`), цвета `onAccent` / `accentBg` в теме, общий `statsStyles.ts`.
-9. **Архитектура**: `loadNorms` (работа с БД) из `ui/stats/norms.ts` → `src/stats/`; data-слой не возвращает тексты и
-   цвета UI; загрузка курсов из `db/fx.ts` → `src/fx/`; `emitTransactionsChanged` — из одного места (команды).
-10. **Мёртвый код**: `export default {…}` в 14 модулях, колонка `is_archived`, `'GEL'` → `BUDGET_CURRENCY`.
-11. **Тесты**: расчёты из `.tsx` (StatsView, HistoryView, PlanView) → `.ts` с тестами; покрытие в `jest.config.js`.
-12. **RN 0.71 → 0.73+** вместе с заменой `react-native-quick-sqlite` (op-sqlite): targetSdk 34+, AGP 8 — отдельный проект.
+7. **Большие компоненты, общие модули UI, архитектура** — переход на слои FSD-lite: план, карта переезда файлов и
+   статус шагов — [ARCHITECTURE.md](ARCHITECTURE.md) §2.
+8. **Мёртвый код**: `export default {…}` в 14 модулях, колонка `is_archived`, `'GEL'` → `BUDGET_CURRENCY`.
+9. **Тесты**: расчёты из `.tsx` (StatsView, HistoryView, PlanView) → `.ts` с тестами; покрытие в `jest.config.js`.
+10. **RN 0.71 → 0.73+** вместе с заменой `react-native-quick-sqlite` (op-sqlite): targetSdk 34+, AGP 8 — отдельный проект.
 
 ## По желанию
 

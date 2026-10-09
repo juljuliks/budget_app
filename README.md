@@ -51,6 +51,7 @@ React Native 0.71 (TypeScript), react-native-quick-sqlite, notifee, react-naviga
 ```sh
 npm ci
 npm test                 # Jest: логика и тесты экранов (~30 с)
+npm run lint             # ESLint: размеры файлов и границы слоёв (ARCHITECTURE.md)
 npm run emulator         # release-сборка и установка на эмулятор budget_pixel (создаётся при первом запуске)
 npm run release          # следующий budget-app-<версия>.apk на Рабочий стол и установка на эмулятор
 npm run apk              # APK на Рабочий стол
@@ -83,5 +84,6 @@ scripts/demo/docs.sh     # скриншоты для документации: �
 
 - [GLOSSARY.md](GLOSSARY.md) — термины интерфейса (одно слово на одно понятие)
 - [IMPROVEMENTS.md](IMPROVEMENTS.md) — план улучшений
+- [ARCHITECTURE.md](ARCHITECTURE.md) — слои кода, правила размеров и план перехода `src/ui`
 - [README_ANDROID.md](README_ANDROID.md) — приём SMS на Android и сборка APK
 - [CLAUDE.md](CLAUDE.md) — заметки для Claude: правила работы, команды, тесты

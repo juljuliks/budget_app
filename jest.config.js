@@ -7,6 +7,7 @@ module.exports = {
       preset: 'ts-jest',
       testEnvironment: 'node',
       testMatch: ['<rootDir>/tests/logic/**/*.test.ts'],
+      moduleNameMapper: { '^@/(.*)$': '<rootDir>/src/$1' },
     },
     {
       displayName: 'screens',
@@ -16,7 +17,11 @@ module.exports = {
       setupFilesAfterEnv: ['<rootDir>/tests/screens/afterEnv.ts'],
       transformIgnorePatterns: ['node_modules/(?!((jest-)?react-native|@react-native|@react-navigation|react-native-.*|@notifee)/)'],
       // the Node SQLite driver instead of the device's one (the preset would pick driver.native.ts)
-      moduleNameMapper: { '^(\\.{1,2}/)+(src/db/)?driver$': '<rootDir>/src/db/driver.ts' },
+      moduleNameMapper: {
+        '^(\\.{1,2}/)+(src/db/)?driver$': '<rootDir>/src/db/driver.ts',
+        '^@/db/driver$': '<rootDir>/src/db/driver.ts',
+        '^@/(.*)$': '<rootDir>/src/$1',
+      },
     },
   ],
 };

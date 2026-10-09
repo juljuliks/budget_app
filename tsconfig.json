@@ -11,7 +11,9 @@
     "outDir": "dist",
     "rootDir": ".",
     "jsx": "react-native",
-     "types": ["node", "jest"]
+    "types": ["node", "jest"],
+    "baseUrl": ".",
+    "paths": { "@/*": ["src/*"] }
   },
   "include": ["src/**/*", "tests/**/*"],
   "exclude": ["dist"]

@@ -1,6 +1,6 @@
 ---
 name: finish
-description: Definition of done for this app — run after any new feature, fix or change of behavior or texts, before saying it's done. Brings the glossary, IMPROVEMENTS.md, README, the test plan and tests, and the public documentation in line with the change.
+description: Definition of done for this app — run after any new feature, fix or change of behavior or texts, before saying it's done. Brings the glossary, IMPROVEMENTS.md, README, the test plan and tests, the architecture rules and the public documentation in line with the change.
 ---
 
 # Готово ли изменение
@@ -41,7 +41,13 @@ description: Definition of done for this app — run after any new feature, fix 
    исправления.
 4. Прогон: `npx tsc --noEmit -p .` и нужные файлы Jest; весь `npm test` — через агента `test-runner`.
 
-## 5. Публичная документация
+## 5. Архитектура — [ARCHITECTURE.md](../../../ARCHITECTURE.md)
+
+- Новые и изменённые файлы в `src/` — в своём слое, импорты только вниз, ≤ 250 строк (проверка — в скилле
+  `architecture`). Нарушение — исправить сейчас или, если это большой перенос, сказать пользователю.
+- Сделан шаг перехода → статус в таблице ARCHITECTURE.md §2.
+
+## 6. Публичная документация
 
 Страница на claude.ai: https://claude.ai/artifact/7deJ2vgzirC8qzhTz63hbj (ссылка в README).
 

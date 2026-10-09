@@ -14,8 +14,10 @@
 - Никогда не удалять приложение (`adb uninstall`, `pm clear`): пропадут данные — только `install -r`.
 - Пользователь правит код между ходами: перед правкой перечитывать файл.
 - Тексты интерфейса — по GLOSSARY.md (одно слово на одно понятие).
+- Код в `src/` — по [ARCHITECTURE.md](ARCHITECTURE.md) (слои FSD-lite, импорты вниз, файл ≤ 250 строк): перед новым
+  файлом, компонентом или переносом — скилл `architecture`. Идёт переход `src/ui` на эти слои — план и статус там же.
 - После любой фичи, фикса или смены текстов, до слов «готово» — скилл `finish`: глоссарий, IMPROVEMENTS.md, README,
-  план тестов и тесты, публичная документация.
+  план тестов и тесты, архитектура, публичная документация.
 
 ## Команды
 
@@ -24,6 +26,7 @@ npm test                                        # весь Jest (~30 с): logic 
 npx jest --selectProjects logic                 # логика: парсер, база, план, отчёт (ts-jest, node)
 npx jest --selectProjects screens tests/screens/stats.test.tsx -t "5.1"   # один файл / кейсы раздела
 npx tsc --noEmit -p .                           # типы
+npm run lint                                    # ESLint: размеры файлов и границы слоёв (ARCHITECTURE.md)
 npm run emulator                                # release-сборка и установка на эмулятор (JDK 17 сам)
 tests/e2e/run.sh [flow ...]                     # Maestro на эмуляторе — см. скилл maestro
 ```
