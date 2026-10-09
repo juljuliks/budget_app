@@ -1,7 +1,7 @@
 import React, { useEffect, useLayoutEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
-import type { TabParamList } from '../../navigation';
+import type { TabParamList } from '@/shared/navigation/navigation';
 import { currentYm, ymOf } from '../../db/plans';
 import Segmented from '@/shared/ui/Segmented';
 import { SheetActions } from '@/shared/ui/Button';

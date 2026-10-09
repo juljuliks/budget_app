@@ -3,7 +3,7 @@ import { StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { SheetActions } from '@/shared/ui/Button';
 import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
 import CategoryPicker from './CategoryPicker';
-import type { RootStackParamList } from '../navigation';
+import type { RootStackParamList } from '@/shared/navigation/navigation';
 import { colors } from '@/shared/theme/theme';
 
 type Props = {

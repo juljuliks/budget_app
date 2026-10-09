@@ -1,5 +1,5 @@
 import { AppRegistry } from 'react-native';
-import App from './src/App';
+import App from './src/app/App';
 import SmsBackgroundTask from './src/native/SmsBackgroundTask';
 // Registers notifee.onBackgroundEvent; must run at startup, before any UI
 import './src/notifications/notifeeBootstrap';

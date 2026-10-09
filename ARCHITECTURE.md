@@ -11,11 +11,12 @@ Feature-Sliced Design (FSD-lite): без слоёв processes и widgets — д�
 
 ```
 src/
-  app/        App, навигация, хосты (ModalHost, Toast, SheetAlert), sheets.ts, leaveGuard
+  app/        App, вкладки, стартовые эффекты, хосты (ModalHost), кнопка настроек
   screens/    вкладки: operations/, stats/, merchants/, categories/ — только сборка из частей
   features/   сценарии пользователя: действие в несколько шагов, с вопросами и последствиями
   entities/   transaction/, category/, merchant/, plan/ — показать или выбрать одну вещь
-  shared/     ui/ (кит без знания о бюджете), lib/ (format, money, dates, form, хуки), theme/
+  shared/     ui/ (кит без знания о бюджете), lib/ (format, money, dates, хуки), theme/,
+              navigation/ (navigationRef, хуки переходов, sheets.ts — открыть шит откуда угодно, leaveGuard)
   db/ parsers/ importer/ notifications/ native/ stats/ fx/ ingest.ts assign.ts …   — ядро, без React
 ```
 
@@ -28,7 +29,8 @@ src/
 | Показать или выбрать одну сущность, без сценария | `entities/<сущность>` | `TransactionItem`, `CategoryPicker`, `MerchantCard` |
 | Действие пользователя в несколько шагов | `features/<действие>` | удалить категорию с разбором, объединить, импорт SMS, правка плана |
 | Вкладка и её части, которые нигде больше не нужны | `screens/<вкладка>/parts` | заголовок раздела операций, строка категории статистики |
-| Корень приложения, навигация, глобальные хосты | `app` | `App.tsx`, `navigation.ts`, `sheets.ts` |
+| Корень приложения: стек, вкладки, хосты, старт | `app` | `App.tsx`, `MainTabs`, `ModalHost`, `useAppStartup` |
+| Переходы и открытие шитов — нужны всем слоям, без UI | `shared/navigation` | `navigation.ts`, `sheets.ts`, `leaveGuard.ts` |
 | Запросы к БД, расчёты, парсеры, уведомления | ядро | `db/plans.ts`, `stats/norms.ts`, `parsers/tbc.ts` |
 
 Сомнение «entity или feature» решает вопрос: есть ли шаги, подтверждения или последствия для других данных?
@@ -69,7 +71,7 @@ src/
 | 0 | Инструменты | ESLint 9 (`eslint.config.js`): `max-lines` 250, `max-lines-per-function` 120, `react-hooks`, границы слоёв — `no-restricted-imports` на каждый слой; пока всё warn. Алиас `@/` → `src/` (babel `module-resolver`, `tsconfig paths`, Jest `moduleNameMapper`). `npm run lint`, `npm run typecheck` | готово: 38 предупреждений — длинные файлы из плана, импорты ядра из `ui` (шаг 1), `exhaustive-deps` в `TransactionsList` (шаг 5) |
 | 1 | `shared` | Кит, lib, theme → `src/shared/{ui,lib,theme}`. `dates.ts`: месяцы во всех падежах, дни недели, `RHYTHM_DAYS` (было 9 копий); `formatPercent` вместо `pct` / `percentOf` / `shareOfAll`. `limitAlerts`, `navigation`, `notifications` — из `shared/lib` | готово: `src/colors.ts` остался в ядре (палитра категорий, её берёт `db/`); `form.ts` — в `shared/ui` (показывает тост); импорт `ui/stats/norms` из `limitAlerts` — шаг 2 |
 | 2 | Ядро | `ui/stats/norms.ts` целиком (загрузка и расчёты лимитов по ритму, без React) → `src/stats/norms.ts`; запрос курсов НБГ → `src/fx/nbg.ts` (без импортов из `db`, чтобы не было цикла), кэш курсов остаётся в `db/fx.ts` | готово; `emitTransactionsChanged` из команд — перенесено в шаг 4 (команды сущностей) |
-| 3 | `app` | `App.tsx` → tabs + hosts; `navigation`, `sheets`, `modals`, `leaveGuard`, `SettingsButton` | — |
+| 3 | `app` | `App.tsx` → `app/App` + `MainTabs` + `useAppStartup`; `modals` → `app/ModalHost`, `SettingsButton` → `app`. `navigation`, `sheets`, `leaveGuard` → `shared/navigation`: их зовут все слои и уведомления, а импорты только вниз | готово: `app` пока импортирует экраны и шиты из `src/ui` (11 предупреждений lint — уходят шагами 4–7) |
 | 4 | `entities` | transaction, category, merchant, plan; деление `TransactionSheet` (336), `MerchantCard` (317), `CategorySheet` (269); `useOpenTransactions()`; команды сущностей (запись + `emitTransactionsChanged`) вместо ~20 вызовов из компонентов | — |
 | 5 | Операции | `TransactionsList` (767) → `screens/operations`: `OperationsScreen`, `useTransactionFilters`, `useSelection`, `SearchBar` (общий с Мерчантами), `BulkBar`, разбор категории; фильтры и мультивыбор — features. Прогон e2e | — |
 | 6 | Статистика | `PeriodStatsView` (872) → `PeriodCategoryRow`, `LimitEffect`, `CategoryInfo`, `periodText.ts` с тестами; `PlanView` (653) → кольца, `ShareField`, `SavingsSwitch`, `groupByType` в `.ts`; `StatsView` (448) → `CategoryRow`, `DonutCenter`; `MonthReport` (399) → строки отчёта; общий `styles.ts` | — |
@@ -85,7 +87,8 @@ src/
   `CurrencyPicker`, `icons`, `toast`, `sheetAlert`.
 - **shared/lib**: `format`, `money`, `dateRange`, `dates` (бывший `stats/months`), `strings`, `useLast`, `useLatestRequest`.
 - **shared/theme**: `theme`, `formStyles`. `src/colors.ts` остаётся в ядре: палитру категорий берёт `db/`.
-- **app**: `App.tsx`, `navigation.ts`, `sheets.ts`, `modals.tsx`, `leaveGuard.ts`, `SettingsButton`.
+- **app**: `App.tsx` (+ `MainTabs`, `useAppStartup`), `modals.tsx` → `ModalHost`, `SettingsButton`.
+- **shared/navigation**: `navigation.ts`, `sheets.ts`, `leaveGuard.ts`.
 - **entities/transaction**: `TransactionItem`, `TransactionSheet`, `transactionActions`, `transactionGroups`.
 - **entities/category**: `CategoryPicker`, `CategoryPickerModal`, `CategorySheet`, `TypeEditModal`,
   `CategoryTypesSheet`, `categoryActions`.

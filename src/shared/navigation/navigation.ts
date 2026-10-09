@@ -1,7 +1,7 @@
 import { createNavigationContainerRef, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import type { DayRange } from '@/shared/lib/dateRange';
+import type { DayRange } from '../lib/dateRange';
 
 export type TabParamList = {
   /** day: open the stats of that day (a day header in the transactions list), its local midnight in unix seconds */

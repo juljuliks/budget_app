@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { openMonthReport } from '../../sheets';
+import { openMonthReport } from '@/shared/navigation/sheets';
 import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { useOpenCategoryTransactions } from '../../navigation';
+import { useOpenCategoryTransactions } from '@/shared/navigation/navigation';
 import { Currency } from '../../db/fx';
 import { currentYm, HistoryMonth, monthStats, MonthStats, parseYm, planHistory } from '../../db/plans';
 import { onTransactionsChanged } from '../../events';

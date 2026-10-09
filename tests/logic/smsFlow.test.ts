@@ -16,10 +16,10 @@ jest.mock('@notifee/react-native', () => ({
   AndroidImportance: { HIGH: 4 },
   EventType: { ACTION_PRESS: 2 },
 }), { virtual: true });
-jest.mock('../../src/navigation', () => ({ navigateWhenReady: jest.fn() }));
+jest.mock('../../src/shared/navigation/navigation', () => ({ navigateWhenReady: jest.fn() }));
 // notification actions open sheets (an operation, a refund)
 const openTransaction = jest.fn();
-jest.mock('../../src/sheets', () => ({ openTransaction: (id: number) => openTransaction(id) }));
+jest.mock('../../src/shared/navigation/sheets', () => ({ openTransaction: (id: number) => openTransaction(id) }));
 
 import SmsBackgroundTask from '../../src/native/SmsBackgroundTask';
 import { handleNotificationAction } from '../../src/notifications/notifeeIntegration';
@@ -80,7 +80,7 @@ test('merchant rule categorizes on arrival, no notification', async () => {
 
 test('an SMS that brings its merchant\'s category over the month\'s plan: a limit notification; tapping it opens the stats', async () => {
   const { currentYm, setPlanAmount } = require('../../src/db/plans');
-  const { navigateWhenReady } = require('../../src/navigation');
+  const { navigateWhenReady } = require('../../src/shared/navigation/navigation');
   const d = new Date(Date.now() - 60_000);
   const p2 = (n: number) => String(n).padStart(2, '0');
   const when = `${p2(d.getDate())}/${p2(d.getMonth() + 1)}/${String(d.getFullYear()).slice(2)} ${p2(d.getHours())}:${p2(d.getMinutes())}`;

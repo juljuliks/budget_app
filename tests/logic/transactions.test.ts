@@ -1,4 +1,4 @@
-jest.mock('../../src/navigation', () => ({ navigateWhenReady: jest.fn() }));
+jest.mock('../../src/shared/navigation/navigation', () => ({ navigateWhenReady: jest.fn() }));
 
 import { getDb } from '../../src/db';
 import {

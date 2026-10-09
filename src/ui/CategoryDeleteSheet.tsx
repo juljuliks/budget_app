@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Category, categoryLabel, deleteCategory, getCategory } from '../db/categories';
 import { categoryDeletePreview, DeletePreview } from '../db/categoryDeletion';
 import { emitTransactionsChanged } from '../events';
-import { navigationRef } from '../navigation';
+import { navigationRef } from '@/shared/navigation/navigation';
 import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
 import Button, { SheetActions } from '@/shared/ui/Button';
 import CategoryPickerModal from './CategoryPickerModal';

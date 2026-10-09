@@ -1,6 +1,6 @@
 // 4: the categories — the list, creating and changing one, the sections, merging, deleting.
 import { act, fireEvent, waitFor } from '@testing-library/react-native';
-import { navigationRef } from '../../src/navigation';
+import { navigationRef } from '../../src/shared/navigation/navigation';
 import { longPress, openApp, openSettings, screen, tap, texts } from './app';
 import { base, category, ops } from '../e2e/seeds';
 import { setPlanAmount } from '../../src/db/plans';

@@ -1,4 +1,4 @@
-jest.mock('../../src/navigation', () => ({ navigateWhenReady: jest.fn() }));
+jest.mock('../../src/shared/navigation/navigation', () => ({ navigateWhenReady: jest.fn() }));
 
 import { setPlanAmount } from '../../src/db/plans';
 import { createCategory } from '../../src/db/categories';

@@ -7,7 +7,7 @@ import { isRememberable } from '../types';
 import { categoryLabel, isTopUp, listCategories, topCategories } from '../db/categories';
 import { getDb } from '../db';
 import { assignCategory } from '../assign';
-import { openTransaction } from '../sheets';
+import { openTransaction } from '@/shared/navigation/sheets';
 import { KIND_LABELS } from '@/shared/lib/format';
 import { formatMoneyWithCurrency } from '@/shared/lib/money';
 import { limitAlertFor } from '../limitAlerts';
@@ -152,16 +152,16 @@ export async function handleNotificationAction(event: ActionEvent) {
   const { id } = event;
   // a limit notification: the stats (required here: the navigation isn't loaded in the headless SMS task)
   if (id === LIMITS_ACTION) {
-    const { navigateWhenReady } = require('../navigation') as typeof import('../navigation');
+    const { navigateWhenReady } = require('@/shared/navigation/navigation') as typeof import('@/shared/navigation/navigation');
     navigateWhenReady({ name: 'Main', params: { screen: 'Stats' } } as never);
     return;
   }
   // the month's report: the stats with the report over them
   if (id === REPORT_ACTION) {
     const ym = String(event.notification?.data?.ym ?? '');
-    const { navigateWhenReady } = require('../navigation') as typeof import('../navigation');
+    const { navigateWhenReady } = require('@/shared/navigation/navigation') as typeof import('@/shared/navigation/navigation');
     navigateWhenReady({ name: 'Main', params: { screen: 'Stats' } } as never);
-    if (ym) require('../sheets').openMonthReport(ym);
+    if (ym) require('@/shared/navigation/sheets').openMonthReport(ym);
     return;
   }
   const txId = Number(event.notification?.data?.txId);

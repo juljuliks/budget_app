@@ -8,7 +8,7 @@ import { CategoryType, listCategoryTypes } from '../db/categoryTypes';
 import { takenCategoryColors } from '../db/colors';
 import { colorFromHue, distinctHue, freeCategoryColors } from '../colors';
 import { emitTransactionsChanged } from '../events';
-import { useRootNavigation } from '../navigation';
+import { useRootNavigation } from '@/shared/navigation/navigation';
 import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
 import { SheetActions } from '@/shared/ui/Button';
 import { confirmDeleteCategory } from './categoryActions';
@@ -26,7 +26,7 @@ import { NO_SECTION } from '@/shared/lib/strings';
 import { setField } from '@/shared/ui/TextInputModal';
 import { colors } from '@/shared/theme/theme';
 import TypeEditModal from './TypeEditModal';
-import { openCategoryDelete } from './modals';
+import { openCategoryDelete } from '@/shared/navigation/sheets';
 
 type CategoryForm = { name: string; emoji: string; typeId: number | null; color: string | null };
 

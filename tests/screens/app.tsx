@@ -1,7 +1,7 @@
 // The app as the screens' tests see it: a fresh in-memory database with a seed (tests/e2e/seeds.ts), then <App />.
 import React from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
-import App from '../../src/App';
+import App from '../../src/app/App';
 import { freshDb } from '../helpers';
 import { done } from '../e2e/seeds';
 import { setHideAmounts } from '../../src/hideAmounts';

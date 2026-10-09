@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { useOpenCategoryTransactions } from '../../navigation';
+import { useOpenCategoryTransactions } from '@/shared/navigation/navigation';
 import { categoryLabel } from '../../db/categories';
 import { Currency } from '../../db/fx';
 import { CategoryStat, currentYm, monthStats, MonthStats, spentOf, StatGroup, ymOf } from '../../db/plans';

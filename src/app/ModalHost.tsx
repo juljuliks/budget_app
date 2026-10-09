@@ -1,12 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { attachSheetHost, CLOSED, detachSheetHost, SheetState } from '../sheets';
-import AddTransactionSheet from './AddTransactionSheet';
-import CategoryDeleteSheet from './CategoryDeleteSheet';
-import CategoryTypesSheet from './CategoryTypesSheet';
-import TransactionSheet from './TransactionSheet';
-import { MonthReportSheet } from './stats/MonthReport';
-
-export { openAddTransaction, openCategoryDelete, openCategoryTypes, openTransaction } from '../sheets';
+import { attachSheetHost, CLOSED, detachSheetHost, SheetState } from '@/shared/navigation/sheets';
+import AddTransactionSheet from '../ui/AddTransactionSheet';
+import CategoryDeleteSheet from '../ui/CategoryDeleteSheet';
+import CategoryTypesSheet from '../ui/CategoryTypesSheet';
+import TransactionSheet from '../ui/TransactionSheet';
+import { MonthReportSheet } from '../ui/stats/MonthReport';
 
 /** Shows the sheets over the pages (see sheets.ts); mounted once in App. */
 export function ModalHost() {

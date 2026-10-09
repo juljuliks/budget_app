@@ -3,7 +3,7 @@ import { StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { limitAlertsEnabled, setLimitAlertsEnabled } from '../limitAlerts';
 import BottomSheet from '@/shared/ui/BottomSheet';
 import { setDisplayCurrency, useDisplayCurrency } from '../displayCurrency';
-import { useRootNavigation } from '../navigation';
+import { useRootNavigation } from '@/shared/navigation/navigation';
 import CurrencyPicker from '@/shared/ui/CurrencyPicker';
 import { startSmsImport } from './smsImportFlow';
 import { colors } from '@/shared/theme/theme';

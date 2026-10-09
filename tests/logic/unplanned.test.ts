@@ -1,4 +1,4 @@
-jest.mock('../../src/navigation', () => ({ navigateWhenReady: jest.fn() }));
+jest.mock('../../src/shared/navigation/navigation', () => ({ navigateWhenReady: jest.fn() }));
 import type { CategoryStat, StatGroup } from '../../src/db/plans';
 import { splitUnplanned } from '../../src/ui/stats/unplanned';
 

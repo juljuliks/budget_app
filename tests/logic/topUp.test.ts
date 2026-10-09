@@ -15,8 +15,8 @@ jest.mock('@notifee/react-native', () => ({
   AndroidImportance: { HIGH: 4 },
   EventType: { ACTION_PRESS: 2 },
 }), { virtual: true });
-jest.mock('../../src/navigation', () => ({ navigateWhenReady: jest.fn() }));
-jest.mock('../../src/sheets', () => ({ openTransaction: jest.fn() }));
+jest.mock('../../src/shared/navigation/navigation', () => ({ navigateWhenReady: jest.fn() }));
+jest.mock('../../src/shared/navigation/sheets', () => ({ openTransaction: jest.fn() }));
 
 import SmsBackgroundTask from '../../src/native/SmsBackgroundTask';
 import { handleNotificationAction } from '../../src/notifications/notifeeIntegration';

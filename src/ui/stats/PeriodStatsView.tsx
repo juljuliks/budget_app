@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { averageFullMonths, NormPeriod, CategoryStat, parseYm, periodStats, PeriodStats, spentOf } from '../../db/plans';
 import { useDisplayCurrency } from '../../displayCurrency';
-import { useOpenCategoryTransactions } from '../../navigation';
+import { useOpenCategoryTransactions } from '@/shared/navigation/navigation';
 import { onTransactionsChanged } from '../../events';
 import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
 import Button from '@/shared/ui/Button';
