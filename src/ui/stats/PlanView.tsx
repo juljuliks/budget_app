@@ -32,7 +32,7 @@ import { toast, toastError } from '../toast';
 
 
 const RING_FREE = colors.income;
-/** "Сбережения" in place of "Не распределено" */
+/** "Сбережения" in place of "Свободно" */
 const RING_SAVINGS = '#5eead4';
 /** 🔒 locked for savings: the darker part of the savings */
 const RING_LOCKED = '#0f766e';
@@ -141,7 +141,7 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
   // locked for savings right away (🔒), in the screen's currency
   const locked = !budget || !budget.locked_minor ? 0 : toShown(budget.locked_minor, budget.currency) ?? budget.locked_minor;
   const free = shownBudget === null ? null : shownBudget - total - unplanned - locked;
-  // "Сбережения" instead of "Не распределено": what the budget leaves goes there
+  // "Сбережения" instead of "Свободно": what the budget leaves goes there
   const toSavings = !!budget?.to_savings && shownBudget !== null;
   const timing = ym < currentYm() ? 'past' : ym === currentYm() ? 'current' : 'future';
   // savings at the month's end if the rest is spent by plan: every category takes its plan (or what it already took,
@@ -152,7 +152,7 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
         - Math.max(unplanned, unplannedSpentMinor)
       : (free ?? 0) + locked;
 
-  // the bar's parts, left to right; "Не распределено" becomes "Сбережения" when the leftover goes there
+  // the bar's parts, left to right; "Свободно" becomes "Сбережения" when the leftover goes there
   const parts: Array<{ key: string; label: string; value: number; color: string; note: string; valueStyle?: object; noteStyle?: object }> = shownBudget ? [
     { key: 'planned', label: 'План', value: total, color: chart.meterFill, note: percentOf(total, shownBudget) || '0%' },
     // the plan shows what is set aside, not what is left of it (that's the stats' job)
@@ -171,7 +171,7 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
           note: percentOf(Math.max(0, free ?? 0) + locked, shownBudget) || '0%',
           valueStyle: styles.savingsValue,
         }
-        : { key: 'free', label: 'Не распределено', value: Math.max(0, free ?? 0), color: RING_FREE, note: percentOf(free ?? 0, shownBudget) || '0%', valueStyle: styles.freeValue },
+        : { key: 'free', label: 'Свободно', value: Math.max(0, free ?? 0), color: RING_FREE, note: percentOf(free ?? 0, shownBudget) || '0%', valueStyle: styles.freeValue },
     // the locked part apart when the leftover doesn't go to savings
     ...(!toSavings && locked > 0 ? [{ key: 'locked', label: 'Отложено', value: locked, color: RING_LOCKED, note: percentOf(locked, shownBudget) || '0%', valueStyle: styles.lockedValue }] : []),
   ] : [];
@@ -191,7 +191,7 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
   if (shownBudget) {
     const savingsRows = [
       ...(locked > 0 ? [{ key: 'locked', name: '🔒 Сразу', note: 'заблокировано в начале месяца', value: locked, style: styles.lockedValue }] : []),
-      ...(toSavings && (free ?? 0) > 0 ? [{ key: 'floating', name: '🌊 Из остатка', note: 'что не запланировано, плюс сэкономленное', value: free!, style: styles.savingsValue }] : []),
+      ...(toSavings && (free ?? 0) > 0 ? [{ key: 'floating', name: '🌊 Что осталось', note: 'что не запланировано, плюс сэкономленное', value: free!, style: styles.savingsValue }] : []),
     ];
     if (savingsRows.length) systemGroups.push({ title: 'Сбережения', rows: savingsRows });
     if (unplanned > 0) {
@@ -199,7 +199,7 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
         title: 'Вне плана',
         rows: [{
           // the share set aside only: the spending against it is in the stats
-          key: 'unplanned', name: '🎲 Незапланированные траты', value: unplanned, note: 'категории без плана и без категории',
+          key: 'unplanned', name: '🎲 Траты вне плана', value: unplanned, note: 'категории без плана и без категории',
         }],
       });
     }
@@ -458,7 +458,7 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
         />
         <ShareField
           form={budgetForm} name="unplanned" other="locked" planned={total} toShown={toShown} screen={currency}
-          title="На незапланированные траты" color={RING_UNPLANNED}
+          title="На траты вне плана" color={RING_UNPLANNED}
           hint={(v, cur) => (v > 0 ? `${formatWithCurrency(v, cur)} на траты вне плана — план их не займёт.`
             : 'Сколько бюджета оставить на траты вне плана. Предупреждение в статистике — только если они больше.')}
         />
@@ -556,7 +556,7 @@ type BudgetForm = { value: string; currency: Currency; toSavings: boolean; locke
 const SHARE_STOPS = [0, 10, 20, 30, 40, 50];
 
 /**
- * A part of the budget the plan can't take — "🔒 Отложить сразу", "На незапланированные траты": a % by the slider or an
+ * A part of the budget the plan can't take — "🔒 Отложить сразу", "На траты вне плана": a % by the slider or an
  * amount of one's own, switched by "% | USD". Kept in the form as an amount in the budget's currency; can't take what is
  * planned or the other part.
  */
@@ -633,7 +633,7 @@ function ShareField({ form, name, other, planned, toShown, screen, title, icon, 
   );
 }
 
-/** "Остаток — в сбережения": the budget sheet's switch, remembered for the next months. */
+/** "Что останется — в сбережения": the budget sheet's switch, remembered for the next months. */
 function SavingsSwitch({ form }: { form: ReturnType<typeof useLoadedForm<BudgetForm>> }) {
   return (
     <View style={styles.share}>
@@ -642,7 +642,7 @@ function SavingsSwitch({ form }: { form: ReturnType<typeof useLoadedForm<BudgetF
         name="toSavings"
         render={({ field }) => (
           <View style={styles.switchRow}>
-            <Text style={styles.switchLabel}>Остаток — в сбережения</Text>
+            <Text style={styles.switchLabel}>Что останется — в сбережения</Text>
             <Switch value={field.value} onValueChange={field.onChange} trackColor={{ true: RING_SAVINGS, false: colors.border }} thumbColor={colors.bg} />
           </View>
         )}

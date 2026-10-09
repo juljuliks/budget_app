@@ -74,7 +74,7 @@ function MonthRow({ month, expanded, onToggle, currency }: { month: HistoryMonth
           // the amount to distribute: what was left unplanned, and what was not spent at all
           <View style={styles.totals}>
             <Total label="Бюджет" value={money(budget)} />
-            <Total label="Не распределено" value={money(Math.max(budget - planned, 0))} />
+            <Total label="Свободно" value={money(Math.max(budget - planned, 0))} />
             <Total
               label={saved >= 0 ? 'Сэкономлено' : 'Перерасход'}
               value={`${saved < 0 ? '⚠ ' : ''}${money(Math.abs(saved))}`}

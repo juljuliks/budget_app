@@ -102,7 +102,7 @@ export default function PlanAddModal({ ym, currency: screenCurrency, visible, pl
   const add = submitForm(form, async () => {
     if (picked.some((r) => plannedAmount(r) === null)) { toastError(AMOUNT_HINT); return; }
     if (free !== null && sum > free) {
-      toastError(`Больше бюджета месяца: не распределено ${formatWithCurrency(free, sumCurrency)}`);
+      toastError(`Больше бюджета месяца: свободно ${formatWithCurrency(free, sumCurrency)}`);
       return;
     }
     try {
@@ -125,7 +125,7 @@ export default function PlanAddModal({ ym, currency: screenCurrency, visible, pl
     <BottomSheet visible={visible} onClose={onClose} title="Добавить в план" style={styles.sheet}>
         <View style={styles.head}>
           <Text style={styles.caption}>
-            {free !== null ? `Не распределено: ${formatWithCurrency(free, sumCurrency)}` : 'Бюджет месяца не задан'}
+            {free !== null ? `Свободно: ${formatWithCurrency(free, sumCurrency)}` : 'Бюджет месяца не задан'}
             {picked.length ? ` · выбрано на ${formatWithCurrency(sum, sumCurrency)}` : ''}
           </Text>
         </View>

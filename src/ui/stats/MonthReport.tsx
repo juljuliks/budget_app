@@ -135,7 +135,7 @@ export function MonthReportSheet({ ym, onClose }: { ym: string | null; onClose: 
                 <View style={styles.from}>
                   {r.savedFrom.locked > 0 ? <FromLine label="🔒 Сразу" v={r.savedFrom.locked} money={money} /> : null}
                   {/* not distributed is money the plan left without a purpose: worth planning, so red */}
-                  <FromLine label="Не распределено в плане" v={r.savedFrom.undistributed} money={money} bad />
+                  <FromLine label="Свободно в плане" v={r.savedFrom.undistributed} money={money} bad />
                   <FromLine label={r.savedFrom.plan >= 0 ? 'Категории плана потратили меньше' : 'Категории плана потратили больше'} v={r.savedFrom.plan} money={money} />
                   {r.unplannedShare > 0 || r.savedFrom.unplanned !== 0 ? (
                     <FromLine label={r.savedFrom.unplanned >= 0 ? 'Не потрачено из доли вне плана' : 'Вне плана сверх доли'} v={r.savedFrom.unplanned} money={money} info={unplannedInfo} />
@@ -269,7 +269,7 @@ function Line({ label, value, year, info, strong, indent, valueStyle }: {
   );
 }
 
-/** "+ Не распределено в плане   1 000 ₾": one part of what was put aside. */
+/** "+ Свободно в плане   1 000 ₾": one part of what was put aside. */
 function FromLine({ label, v, money, bad, info }: { label: string; v: number; money: (v: number) => string; bad?: boolean; info?: string }) {
   return (
     <View style={styles.lineRow}>

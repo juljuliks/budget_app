@@ -40,9 +40,9 @@ export default function PlanAlert({ currency }: { currency: Currency }) {
         items.push({
           key: 'over',
           text: share > 0
-            ? `Вне плана потрачено ${money(spent)} — на ${money(over)} больше, чем выделено на незапланированное`
+            ? `Вне плана потрачено ${money(spent)} — на ${money(over)} больше, чем выделено на траты вне плана`
             : budget?.unplanned_pct === 0
-              ? `Вне плана потрачено ${money(spent)}: на незапланированные траты в бюджете ничего не выделено`
+              ? `Вне плана потрачено ${money(spent)}: на траты вне плана в бюджете ничего не выделено`
               : `Вне плана потрачено ${money(spent)}`,
         });
       }

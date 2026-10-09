@@ -115,7 +115,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
           </View>
         );
       })() : (
-        <Text style={styles.hint}>Составьте план на месяц во вкладке «План», чтобы видеть остаток по категориям.</Text>
+        <Text style={styles.hint}>Составьте план на месяц во вкладке «План», чтобы видеть, сколько осталось по категориям.</Text>
       )}
 
 
