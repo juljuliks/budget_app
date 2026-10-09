@@ -82,9 +82,10 @@ export function buildSections(rows: Row[], groups: TransactionGroup[] | null, gr
 
 /**
  * Spent per day for the day headers: all of the day's transactions, not only the ones loaded or filtered, converted to
- * the app's currency (Настройки → Валюта); transactions themselves stay in their own currency. Empty when grouped.
+ * the app's currency (Настройки → Валюта); transactions themselves stay in their own currency. Only the operations the
+ * list's filters show: a day's total is what its section holds (all of it, not only the rows loaded). Empty when grouped.
  */
-export function useDaySpent(sections: Section[], grouped: boolean, currency: Currency): Map<string, number> {
+export function useDaySpent(sections: Section[], grouped: boolean, currency: Currency, filter: TxFilter): Map<string, number> {
   const [daySpent, setDaySpent] = useState<Map<string, number>>(new Map());
   useEffect(() => {
     if (sections.length === 0 || grouped) { setDaySpent(new Map()); return undefined; }
@@ -92,13 +93,14 @@ export function useDaySpent(sections: Section[], grouped: boolean, currency: Cur
     const last = new Date(sections[0].dayStart * 1000);
     const to = new Date(last.getFullYear(), last.getMonth(), last.getDate() + 1).getTime() / 1000;
     let stale = false;
-    spendingEntries(from, to, currency).then((rows) => {
+    spendingEntries(from, to, currency, filter).then((rows) => {
       if (stale) return;
       const m = new Map<string, number>();
       for (const r of rows) m.set(dayKey(r.occurred_at), (m.get(dayKey(r.occurred_at)) ?? 0) + r.spent_minor);
       setDaySpent(m);
     }).catch((e) => console.error('day totals failed', e));
     return () => { stale = true; };
+  // a new filter brings new sections: read with them
   }, [sections, grouped, currency]);
   return daySpent;
 }

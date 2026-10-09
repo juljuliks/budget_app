@@ -2,6 +2,7 @@ import { getDb } from './index';
 import { categoryColors } from './colors';
 import { NEUTRAL_COLOR, NO_CATEGORY_EMOJI } from '../colors';
 import { Converter, Currency, dateKey, ensureRates, isCurrency, makeConverter } from './fx';
+import { filterCondition, TxFilter } from './transactions';
 
 /** The default currency: plans start in it, and stats show it until another is picked. */
 export const BUDGET_CURRENCY: Currency = 'GEL';
@@ -66,16 +67,17 @@ function spendOf(r: SpendRow): number {
   return EXPENSE_KINDS.includes(r.kind) ? r.amount_minor : 0;
 }
 
-async function spendRows(from: number, to: number): Promise<SpendRow[]> {
+async function spendRows(from: number, to: number, only?: TxFilter): Promise<SpendRow[]> {
   const db = await getDb();
+  const f = only ? filterCondition(only) : { sql: '1', params: [] };
   return db.all<SpendRow>(
-    `SELECT id, category_id, kind, amount_minor, currency, occurred_at, refund_settled_at FROM transactions
-      WHERE occurred_at >= ? AND occurred_at < ?
+    `SELECT id, category_id, kind, amount_minor, currency, occurred_at, refund_settled_at FROM transactions t
+      WHERE occurred_at >= ? AND occurred_at < ? AND ${f.sql}
         AND (kind IN (${[...EXPENSE_KINDS, 'refund'].map((k) => `'${k}'`).join(',')})
           OR (kind = 'deposit' AND category_id IS NOT NULL))
         AND category_id IS NOT (SELECT id FROM categories WHERE system = 'savings')
         AND category_id IS NOT (SELECT id FROM categories WHERE system = 'topup')`,
-    [from, to]);
+    [from, to, ...f.params]);
 }
 
 type Converted = {
@@ -590,9 +592,13 @@ export async function periodStats(from: number, to: number, currency: Currency =
   };
 }
 
-/** Each transaction's contribution to spending in [from, to), converted to `currency`, for per-day totals. */
-export async function spendingEntries(from: number, to: number, currency: Currency = BUDGET_CURRENCY): Promise<Array<{ occurred_at: number; spent_minor: number }>> {
-  const { items } = await convertSpending(await spendRows(from, to), currency);
+/**
+ * Each transaction's contribution to spending in [from, to), converted to `currency`, for per-day totals; `only` the
+ * operations these filters show (the operations list's: a day's total is then what its section shows).
+ */
+export async function spendingEntries(from: number, to: number, currency: Currency = BUDGET_CURRENCY, only?: TxFilter):
+  Promise<Array<{ occurred_at: number; spent_minor: number }>> {
+  const { items } = await convertSpending(await spendRows(from, to, only), currency);
   return items.map(({ row, value }) => ({ occurred_at: row.occurred_at, spent_minor: value }));
 }
 

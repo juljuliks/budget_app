@@ -75,6 +75,17 @@ describe('2.3 the filters', () => {
     await shows(['Категория · 2', 'Возврат · ZARA', 'NETFLIX.COM', 'Применено фильтров: 2'], ['SPAR', 'WOLT']);
   });
 
+  test('2.1.3: a day\'s total is what its section shows: the spending of the filtered operations only', async () => {
+    // today without filters: SPAR 30 + the transfer 10 − the refund 5
+    expect(await screen.findByText('−35 ₾')).toBeTruthy();
+    await tap('#filter-category');
+    await tap('🛒 Продукты');
+    await tap('Готово');
+    // only SPAR's 30 under "Сегодня" (the rows show kopecks: "−30.00 ₾")
+    expect(await screen.findByText('−30 ₾')).toBeTruthy();
+    expect(screen.queryByText('−35 ₾')).toBeNull();
+  });
+
   test('"Снять выбор" in the sheet\'s header, only while something is picked', async () => {
     await tap('#filter-category');
     await screen.findByText('Категории');

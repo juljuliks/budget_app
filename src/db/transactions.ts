@@ -88,6 +88,12 @@ const FILTER_LIMIT = 2000;
 
 /** WHERE for the exact filters, combined (all must match). */
 function filterWhere(f: TxFilter): { sql: string; params: Array<number | string> } {
+  const { sql, params } = filterCondition(f);
+  return { sql: sql === '1' ? '' : `WHERE ${sql}`, params };
+}
+
+/** The filters as one condition on `t` (the transactions' alias), '1' when none: for other queries over the same operations. */
+export function filterCondition(f: TxFilter): { sql: string; params: Array<number | string> } {
   const where: string[] = [];
   const params: Array<number | string> = [];
   if (f.category === 'none') where.push('t.category_id IS NULL');
@@ -114,7 +120,7 @@ function filterWhere(f: TxFilter): { sql: string; params: Array<number | string>
     where.push(f.ids.length ? `t.id IN (${f.ids.map(() => '?').join(',')})` : '0');
     params.push(...f.ids);
   }
-  return { sql: where.length ? `WHERE ${where.join(' AND ')}` : '', params };
+  return { sql: where.length ? where.join(' AND ') : '1', params };
 }
 
 /** Exact filters (category, merchant, date range), all combined; newest first, no pagination (capped). */

@@ -269,7 +269,7 @@ export default function TransactionsList() {
   const sections = useMemo(() => buildSections(data, groups, viewRef.current.groupBy), [data, groups]);
 
   const currency = useDisplayCurrency();
-  const daySpent = useDaySpent(sections, groups !== null, currency);
+  const daySpent = useDaySpent(sections, groups !== null, currency, viewRef.current.filter);
 
   // a long press on a row starts selecting several, with that row selected
   function startSelect(id: number) {
