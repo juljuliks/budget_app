@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { colors } from './theme';
+import { colors } from '../theme/theme';
 
 type Props<T extends string> = {
   options: ReadonlyArray<readonly [T, string, string?]>;

@@ -1,17 +1,17 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { sheetAlert } from './sheetAlert';
-import { plural } from './format';
+import { sheetAlert } from '@/shared/ui/sheetAlert';
+import { plural } from '@/shared/lib/format';
 import { CategoryType, countCategoriesOfType, deleteCategoryType, listCategoryTypes } from '../db/categoryTypes';
 import { emitTransactionsChanged } from '../events';
 import { paletteShades, typePalette } from '../colors';
-import { PaletteStrip } from './ColorSwatches';
-import BottomSheet, { SheetFlatList } from './BottomSheet';
-import { CreateButton } from './PlusButton';
-import RowActions from './RowActions';
+import { PaletteStrip } from '@/shared/ui/ColorSwatches';
+import BottomSheet, { SheetFlatList } from '@/shared/ui/BottomSheet';
+import { CreateButton } from '@/shared/ui/PlusButton';
+import RowActions from '@/shared/ui/RowActions';
 import TypeEditModal from './TypeEditModal';
-import { colors } from './theme';
-import { toast } from './toast';
+import { colors } from '@/shared/theme/theme';
+import { toast } from '@/shared/ui/toast';
 
 /** Category sections ("Переводы", "Хобби", ...) in a sheet: create, edit (name and colors), delete. From the categories. */
 export default function CategoryTypesSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {

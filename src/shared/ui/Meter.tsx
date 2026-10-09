@@ -1,7 +1,7 @@
 import React from 'react';
 import { LayoutChangeEvent, StyleSheet, View } from 'react-native';
 import { WarnTriangleIcon } from './icons';
-import { chart, colors, meterColor } from './theme';
+import { chart, colors, meterColor } from '../theme/theme';
 
 type Props = {
   /** filled part, 0..1 (clamped) */

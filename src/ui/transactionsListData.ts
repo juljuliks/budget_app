@@ -7,9 +7,9 @@ import {
 } from '../db/transactions';
 import { spendingEntries } from '../db/plans';
 import type { Currency } from '../db/fx';
-import { dayKey, formatDay } from './format';
+import { dayKey, formatDay } from '@/shared/lib/format';
 import { groupTitle } from './transactionGroups';
-import { DayRange, rangeToUnix } from './RangeCalendar';
+import { DayRange, rangeToUnix } from '@/shared/ui/RangeCalendar';
 
 /** Every view loads from the database a page at a time while scrolling. */
 export const PAGE_SIZE = 50;

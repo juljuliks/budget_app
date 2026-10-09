@@ -1,7 +1,7 @@
 import { importInboxSms } from '../importer/inboxImport';
 import { readBankSms, requestInboxAccess } from '../native/smsInbox';
-import { plural } from './format';
-import { sheetAlert } from './sheetAlert';
+import { plural } from '@/shared/lib/format';
+import { sheetAlert } from '@/shared/ui/sheetAlert';
 
 const PERIODS: Array<{ text: string; months: number | null }> = [
   { text: '1 месяц', months: 1 },

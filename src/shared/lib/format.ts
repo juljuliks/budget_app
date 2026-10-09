@@ -1,4 +1,5 @@
 import { formatMoneyWithCurrency } from './money';
+import { MONTHS_GEN } from './dates';
 
 const INCOME_KINDS = new Set(['deposit', 'refund']);
 
@@ -26,7 +27,6 @@ export function dayKey(unixSeconds: number): string {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 }
 
-export const MONTHS_GEN = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
 
 // Hand-rolled: Hermes on RN 0.71 has limited Intl support
 export function formatDay(unixSeconds: number, now = new Date()): string {
@@ -60,4 +60,10 @@ export function plural(n: number, [one, few, many]: [string, string, string]): s
   if (d === 1 && dd !== 11) return one;
   if (d >= 2 && d <= 4 && (dd < 12 || dd > 14)) return few;
   return many;
+}
+
+/** "12%", "<1%" for a tiny non-zero share. */
+export function formatPercent(part: number, whole: number): string {
+  const p = whole > 0 ? Math.round((part / whole) * 100) : 0;
+  return p === 0 && part > 0 ? '<1%' : `${p}%`;
 }

@@ -1,4 +1,4 @@
-import { CURRENCY_SYMBOLS, isCurrency } from '../db/fx';
+import { CURRENCY_SYMBOLS, isCurrency } from '@/db/fx';
 
 /** "12,50" / "12.5" / "1 200" -> 1250 / 1250 / 120000 minor units; null if not a positive amount. */
 export function parseAmountInput(input: string): number | null {

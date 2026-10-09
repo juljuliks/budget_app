@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleProp, ViewStyle } from 'react-native';
-import { Currency, CURRENCY_SYMBOLS } from '../db/fx';
+import { Currency, CURRENCY_SYMBOLS } from '@/db/fx';
 import Segmented from './Segmented';
 
 // in this order on every switch

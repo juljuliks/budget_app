@@ -3,7 +3,8 @@ import { isCurrency } from '../db/fx';
 import { currentYm, parseYm, ymOf } from '../db/plans';
 import { monthReport, yearly } from '../db/report';
 import { getSetting } from '../db/settings';
-import { formatWithCurrency } from '../ui/money';
+import { formatWithCurrency } from '@/shared/lib/money';
+import { MONTHS_NOM } from '@/shared/lib/dates';
 
 /** «Отчёты»: the month's report on the 1st */
 export const REPORTS_CHANNEL_ID = 'reports';
@@ -11,7 +12,6 @@ export const REPORT_ACTION = 'month_report';
 /** the hour of the 1st the report comes at */
 const REPORT_HOUR = 10;
 
-const MONTHS_FOR = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
 
 /** 10:00 on the 1st after the month `ym`. */
 function reportTime(ym: string): number {
@@ -44,7 +44,7 @@ export async function scheduleMonthReports(now = new Date()) {
       await notifee.createTriggerNotification({
         // one per month: re-scheduling replaces it
         id: `report_${ym}`,
-        title: `Отчёт за ${MONTHS_FOR[parseYm(ym).month]}`,
+        title: `Отчёт за ${MONTHS_NOM[parseYm(ym).month]}`,
         body,
         android: {
           channelId: REPORTS_CHANNEL_ID,

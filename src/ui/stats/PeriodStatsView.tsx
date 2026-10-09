@@ -4,26 +4,27 @@ import { averageFullMonths, NormPeriod, CategoryStat, parseYm, periodStats, Peri
 import { useDisplayCurrency } from '../../displayCurrency';
 import { useOpenCategoryTransactions } from '../../navigation';
 import { onTransactionsChanged } from '../../events';
-import BottomSheet, { SheetScrollView } from '../BottomSheet';
-import Button from '../Button';
-import { DayRange, dayKeyOf, daysInMonth, parseDayKey, rangeDays, rangeToUnix, shortRange } from '../dateRange';
+import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
+import Button from '@/shared/ui/Button';
+import { DayRange, dayKeyOf, daysInMonth, parseDayKey, rangeDays, rangeToUnix, shortRange } from '@/shared/lib/dateRange';
 import { flatOf, isPartOfWindow, limitChange, loadNorms, NormPart, Norms, Pace, paceOf, rhythmBar } from './norms';
-import Donut from '../Donut';
-import { InfoIcon } from '../icons';
+import Donut from '@/shared/ui/Donut';
+import { InfoIcon } from '@/shared/ui/icons';
 import { MaskedTotal } from '../Masked';
 import { useHideAmounts } from '../../hideAmounts';
-import Meter from '../Meter';
-import { formatShort, formatWithCurrency } from '../money';
-import { NO_RATE, PER_PERIOD, SPENDING_PATTERN } from '../strings';
-import { plural } from '../format';
-import { chart, colors } from '../theme';
+import Meter from '@/shared/ui/Meter';
+import { formatShort, formatWithCurrency } from '@/shared/lib/money';
+import { NO_RATE, PER_PERIOD, SPENDING_PATTERN } from '@/shared/lib/strings';
+import { formatPercent, plural } from '@/shared/lib/format';
+import { chart, colors } from '@/shared/theme/theme';
 import { DonutCenter, RefundsRow } from './StatsView';
-import { useLatestRequest } from '../useLatestRequest';
+import { useLatestRequest } from '@/shared/lib/useLatestRequest';
 import { categoryLabel } from '../../db/categories';
-import { GROUP_TITLES, pct, SummaryGroupKey, summaryGroups } from './summaryGroups';
-import { formStyles } from '../formStyles';
+import { GROUP_TITLES, SummaryGroupKey, summaryGroups } from './summaryGroups';
+import { formStyles } from '@/shared/theme/formStyles';
 import { splitUnplanned, unplannedMonth } from './unplanned';
-import StickyScrollView, { SectionHeader } from '../StickyScrollView';
+import StickyScrollView, { SectionHeader } from '@/shared/ui/StickyScrollView';
+import { MONTHS_NOM, MONTHS_PREP, RHYTHM_DAYS, WEEKDAYS } from '@/shared/lib/dates';
 
 /** Periods up to this long are measured against the plan (its share for these days); longer ones aren't. */
 const PACE_MAX_DAYS = 31;
@@ -41,12 +42,10 @@ type Props = {
  */
 const GLYPH_ROOM = '\u00a0';
 
-const MONTHS_IN = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
 
-const WEEKDAYS = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
 
 /** days in a rhythm window */
-const RHYTHM_LEN = { day: 1, week: 7, '2weeks': 14, month: 0 } as const;
+const RHYTHM_LEN = { ...RHYTHM_DAYS, month: 0 } as const;
 
 /** what an explanation sheet is about: the line under the donut, a category, a limits block */
 type Info = 'summary' | { id: number; name: string } | { group: SummaryGroupKey };
@@ -73,7 +72,6 @@ const OVERSPENT = 'Перерасход плана месяца';
 
 const capitalize = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 
-const MONTHS_PREP = ['январе', 'феврале', 'марте', 'апреле', 'мае', 'июне', 'июле', 'августе', 'сентябре', 'октябре', 'ноябре', 'декабре'];
 
 /** One look for every ⓘ on this screen. */
 const INFO_SIZE = 18;
@@ -162,7 +160,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
     const missing = parts.filter((p) => p.limit === 0).map((p) => MONTHS_PREP[parseYm(p.ym).month]);
     return missing.length ? ` В ${missing.join(' и ')} у категории плана нет — эти дни считаются как 0.` : '';
   };
-  const monthIn = norms ? MONTHS_IN[parseYm(norms.ym).month] : '';
+  const monthIn = norms ? MONTHS_NOM[parseYm(norms.ym).month] : '';
   // under the donut: the limits by rhythm as tiles, or the average per month for a long period
   const groups = pace && norms ? summaryGroups(norms, range, stats.spent_minor, today, month ?? undefined) : [];
   const limited = groups.filter((g) => g.key !== 'outside');
@@ -293,17 +291,17 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
       {/* as in the month stats: "fact / plan ₾ (%)", the fact black without ₾, the rest muted */}
       {planned > 0 ? <Text style={overStyle(spent, planned)}>{formatShort(spent)}</Text> : money(spent)}
       {planned > 0 ? <Text style={styles.groupPlan}> / {money(planned)}</Text> : null}
-      {planned > 0 ? <Text style={[styles.groupPlan, overStyle(spent, planned)]}> ({pct(spent, Math.round(planned))})</Text> : null}
+      {planned > 0 ? <Text style={[styles.groupPlan, overStyle(spent, planned)]}> ({formatPercent(spent, Math.round(planned))})</Text> : null}
     </MaskedTotal>
   );
   /** a header's % with the amounts hidden: of its plan, or of all the spending without one */
-  const headerPct = (spent: number, planned: number) => (planned > 0 ? pct(spent, Math.round(planned)) : pct(spent, stats.spent_minor));
+  const headerPct = (spent: number, planned: number) => (planned > 0 ? formatPercent(spent, Math.round(planned)) : formatPercent(spent, stats.spent_minor));
 
   /** a row's "% плана" (its limit as on the right) or "% трат", while the amounts are hidden */
   const hiddenShare = (c: CategoryStat, plan: ReturnType<NonNullable<typeof norms>['byCategory']['get']>) => {
     const lim = !plan ? 0 : plan.kind === 'fixed' ? plan.monthLimit
       : plan.rhythm === 'month' ? 0 : isPartOfWindow(plan.window, range) ? plan.windowNorm : plan.periodNorm;
-    return lim > 0 ? `${pct(c.spent_minor, Math.round(lim))} плана` : `${pct(c.spent_minor, stats.spent_minor)} трат`;
+    return lim > 0 ? `${formatPercent(c.spent_minor, Math.round(lim))} плана` : `${formatPercent(c.spent_minor, stats.spent_minor)} трат`;
   };
 
   /** "/ limit ₾ (%)" after a category's spending, or null */
@@ -314,13 +312,13 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
     if (plan?.kind === 'fixed') {
       const paid = (c.category_id !== null && norms?.monthToDate.get(c.category_id)) || 0;
       if (plan.monthLimit <= 0 || Math.round(paid) === Math.round(plan.monthLimit) || paid !== c.spent_minor) return null;
-      return <Text style={styles.ofLimit}>{'\u00a0/\u00a0'}{m(plan.monthLimit)}{c.spent_minor > 0 ? <Text style={overStyle(c.spent_minor, plan.monthLimit)}>{` (${pct(c.spent_minor, Math.round(plan.monthLimit))})`}</Text> : GLYPH_ROOM}</Text>;
+      return <Text style={styles.ofLimit}>{'\u00a0/\u00a0'}{m(plan.monthLimit)}{c.spent_minor > 0 ? <Text style={overStyle(c.spent_minor, plan.monthLimit)}>{` (${formatPercent(c.spent_minor, Math.round(plan.monthLimit))})`}</Text> : GLYPH_ROOM}</Text>;
     }
     if (plan?.kind !== 'limit' || plan.rhythm === 'month') return null;
     const { spent, limit: lim } = limitPair(plan, c);
     if (lim <= 0) return null;
     // no "(0%)" while nothing is spent
-    return <Text style={styles.ofLimit}>{'\u00a0/\u00a0'}{m(lim)}{spent > 0 ? <Text style={overStyle(spent, lim)}>{` (${pct(spent, Math.round(lim))})`}</Text> : GLYPH_ROOM}</Text>;
+    return <Text style={styles.ofLimit}>{'\u00a0/\u00a0'}{m(lim)}{spent > 0 ? <Text style={overStyle(spent, lim)}>{` (${formatPercent(spent, Math.round(lim))})`}</Text> : GLYPH_ROOM}</Text>;
   };
   /**
    * What a day / week limit's "spent / limit" on the right is measured over: the period itself, or — a day of a
@@ -490,7 +488,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
             </TouchableOpacity>
           </>
         ) : (
-          <Text style={styles.share}>{pct(c.spent_minor, stats.spent_minor)} всех трат</Text>
+          <Text style={styles.share}>{formatPercent(c.spent_minor, stats.spent_minor)} всех трат</Text>
         )}
       </TouchableOpacity>
     );
@@ -526,7 +524,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
               <MaskedTotal style={styles.groupTotal} hiddenText={vsLimit ? headerPct(g!.spent, g!.limit) : headerPct(total, 0)}>
                 {vsLimit ? <Text style={overStyle(g!.spent, g!.limit)}>{formatShort(Math.round(g!.spent))}</Text> : money(total)}
                 {vsLimit ? <Text style={styles.groupPlan}> / {m(g!.limit)}</Text> : null}
-                {vsLimit ? <Text style={[styles.groupPlan, overStyle(g!.spent, g!.limit)]}> ({pct(g!.spent, Math.round(g!.limit))})</Text> : null}
+                {vsLimit ? <Text style={[styles.groupPlan, overStyle(g!.spent, g!.limit)]}> ({formatPercent(g!.spent, Math.round(g!.limit))})</Text> : null}
               </MaskedTotal>
               ) : null}
             </SectionHeader>

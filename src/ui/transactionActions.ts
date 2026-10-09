@@ -1,8 +1,8 @@
-import { sheetAlert } from './sheetAlert';
+import { sheetAlert } from '@/shared/ui/sheetAlert';
 import { deleteTransaction } from '../db/transactions';
 import { emitTransactionsChanged } from '../events';
-import { formatAmount, merchantLabel, plural } from './format';
-import { toast, toastError } from './toast';
+import { formatAmount, merchantLabel, plural } from '@/shared/lib/format';
+import { toast, toastError } from '@/shared/ui/toast';
 
 /** "Удалить транзакцию?" confirmation; deletes and notifies the screens, then calls onDeleted. */
 export function confirmDeleteTransaction(

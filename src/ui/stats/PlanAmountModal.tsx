@@ -3,18 +3,19 @@ import { Controller, useWatch } from 'react-hook-form';
 import { Currency } from '../../db/fx';
 import { categoryMonthlyAverage, getPlanBudget, lastPlanItem, NormPeriod, OverBudgetError, PlanKind, planConverter, plannedTotal, setPlanAmount } from '../../db/plans';
 import { StyleSheet, Text, View } from 'react-native';
-import { colors } from '../theme';
-import { AMOUNT_HINT, PER_PERIOD, SPENDING_PATTERN } from '../strings';
-import { daysInMonth } from '../dateRange';
-import { formStyles } from '../formStyles';
-import CurrencyButton from '../CurrencyButton';
-import { formatWithCurrency, parseAmountOrZero, toInputValue } from '../money';
-import RadioGroup from '../RadioGroup';
-import TextInputModal from '../TextInputModal';
-import { useLoadedForm } from '../form';
-import { plural } from '../format';
-import { toast } from '../toast';
+import { colors } from '@/shared/theme/theme';
+import { AMOUNT_HINT, PER_PERIOD, SPENDING_PATTERN } from '@/shared/lib/strings';
+import { daysInMonth } from '@/shared/lib/dateRange';
+import { formStyles } from '@/shared/theme/formStyles';
+import CurrencyButton from '@/shared/ui/CurrencyButton';
+import { formatWithCurrency, parseAmountOrZero, toInputValue } from '@/shared/lib/money';
+import RadioGroup from '@/shared/ui/RadioGroup';
+import TextInputModal from '@/shared/ui/TextInputModal';
+import { useLoadedForm } from '@/shared/ui/form';
+import { plural } from '@/shared/lib/format';
+import { toast } from '@/shared/ui/toast';
 import { emitTransactionsChanged } from '../../events';
+import { MONTHS_NOM, RHYTHM_DAYS } from '@/shared/lib/dates';
 
 const KINDS = [
   ['limit', 'Траты с лимитом', 'Еда, кафе, одежда — сумма меняется, следим, сколько осталось'],
@@ -23,12 +24,11 @@ const KINDS = [
 
 // how the category is spent: its limit in day / week stats is counted per this period
 const PATTERN_KEYS = ['day', 'week', '2weeks', 'month'] as const;
-const PATTERN_DAYS = { day: 1, week: 7, '2weeks': 14 } as const;
 
 /** The patterns, each with what the entered amount makes per its period: "Каждый день · ≈ 15 ₾ в день". */
 function patterns(minor: number | null, currency: Currency, ym: string) {
   return PATTERN_KEYS.map((p) => {
-    const per = !minor ? null : p === 'month' ? minor : Math.round((minor / daysInMonth(ym)) * PATTERN_DAYS[p]);
+    const per = !minor ? null : p === 'month' ? minor : Math.round((minor / daysInMonth(ym)) * RHYTHM_DAYS[p]);
     const title = per === null ? SPENDING_PATTERN[p].title : `${SPENDING_PATTERN[p].title} · ${p === 'month' ? '' : '≈ '}${formatWithCurrency(per, currency)} ${PER_PERIOD[p]}`;
     return [p, title, SPENDING_PATTERN[p].hint] as const;
   });
@@ -183,12 +183,11 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
   );
 }
 
-const MONTHS = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
 
 /** "сентябрь", "сентябрь 2025" ('YYYY-MM'): the year only when it isn't this one. */
 function monthName(ym: string): string {
   const [y, m] = ym.split('-').map(Number);
-  return `${MONTHS[m - 1]}${y !== new Date().getFullYear() ? ` ${y}` : ''}`;
+  return `${MONTHS_NOM[m - 1]}${y !== new Date().getFullYear() ? ` ${y}` : ''}`;
 }
 
 const styles = StyleSheet.create({

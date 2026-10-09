@@ -5,11 +5,11 @@ import { Category, categoryLabel, categoryUsageCounts, isTopUp, isTransferCatego
 import { getTransferTypeId } from '../db/categoryTypes';
 import { onTransactionsChanged } from '../events';
 import CategorySheet from './CategorySheet';
-import BottomSheet, { SheetScrollView } from './BottomSheet';
-import { SheetActions } from './Button';
-import Chip from './Chip';
-import SectionHeading from './SectionHeading';
-import { NO_CATEGORY } from './strings';
+import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
+import { SheetActions } from '@/shared/ui/Button';
+import Chip from '@/shared/ui/Chip';
+import SectionHeading from '@/shared/ui/SectionHeading';
+import { NO_CATEGORY } from '@/shared/lib/strings';
 
 type Props = {
   selectedId?: number | null;

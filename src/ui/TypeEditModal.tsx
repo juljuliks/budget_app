@@ -8,13 +8,13 @@ import {
   colorFromHue, distinctHue, freePalettes, isCustomPalette, PALETTES, paletteShades, typePalette,
 } from '../colors';
 import { emitTransactionsChanged } from '../events';
-import { AutoButton, PaletteStrip } from './ColorSwatches';
-import { formStyles } from './formStyles';
-import ColorPickerSheet from './ColorPickerSheet';
-import TextInputModal, { setField } from './TextInputModal';
-import { useLoadedForm } from './form';
-import { colors } from './theme';
-import { toast } from './toast';
+import { AutoButton, PaletteStrip } from '@/shared/ui/ColorSwatches';
+import { formStyles } from '@/shared/theme/formStyles';
+import ColorPickerSheet from '@/shared/ui/ColorPickerSheet';
+import TextInputModal, { setField } from '@/shared/ui/TextInputModal';
+import { useLoadedForm } from '@/shared/ui/form';
+import { colors } from '@/shared/theme/theme';
+import { toast } from '@/shared/ui/toast';
 
 type Props = {
   visible: boolean;

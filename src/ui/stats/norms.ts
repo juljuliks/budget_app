@@ -1,5 +1,6 @@
 import { currentYm, monthStats, NormPeriod, parseYm, periodStats, PlanKind } from '../../db/plans';
-import { DayKey, dayKeyOf, DayRange, daysByMonth, daysInMonth, normWindow, parseDayKey, rangeDays, rangeToUnix } from '../dateRange';
+import { DayKey, dayKeyOf, DayRange, daysByMonth, daysInMonth, normWindow, parseDayKey, rangeDays, rangeToUnix } from '@/shared/lib/dateRange';
+import { RHYTHM_DAYS } from '@/shared/lib/dates';
 
 /**
  * One month's share of a limit, rebalanced on what is left: (the month's plan − spent in that month before these
@@ -56,7 +57,6 @@ export type Norms = {
   monthToDate: Map<number | null, number>;
 };
 
-const RHYTHM_DAYS = { day: 1, week: 7, '2weeks': 14 } as const;
 
 /** The viewed period is a part of a rhythm window (a day of a weekly limit): it is measured as the whole window. */
 export const isPartOfWindow = (window: DayRange, range: DayRange) => window.from !== range.from || window.to !== range.to;

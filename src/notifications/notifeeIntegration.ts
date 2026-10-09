@@ -8,8 +8,8 @@ import { categoryLabel, isTopUp, listCategories, topCategories } from '../db/cat
 import { getDb } from '../db';
 import { assignCategory } from '../assign';
 import { openTransaction } from '../sheets';
-import { KIND_LABELS } from '../ui/format';
-import { formatMoneyWithCurrency } from '../ui/money';
+import { KIND_LABELS } from '@/shared/lib/format';
+import { formatMoneyWithCurrency } from '@/shared/lib/money';
 import { limitAlertFor } from '../limitAlerts';
 import { REPORT_ACTION } from './monthReportNotice';
 

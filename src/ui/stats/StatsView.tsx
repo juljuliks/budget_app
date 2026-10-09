@@ -5,23 +5,24 @@ import { useOpenCategoryTransactions } from '../../navigation';
 import { categoryLabel } from '../../db/categories';
 import { Currency } from '../../db/fx';
 import { CategoryStat, currentYm, monthStats, MonthStats, spentOf, StatGroup, ymOf } from '../../db/plans';
-import { dayKeyOf, daysInMonth, monthDays, shortRange } from '../dateRange';
+import { dayKeyOf, daysInMonth, monthDays, shortRange } from '@/shared/lib/dateRange';
 import { flatOf, limitChange, loadNorms, Norms, Pace, paceOf } from './norms';
 import { onTransactionsChanged } from '../../events';
-import Donut, { DonutSegment } from '../Donut';
+import Donut, { DonutSegment } from '@/shared/ui/Donut';
 import Masked, { MaskedTotal } from '../Masked';
 import { useHideAmounts } from '../../hideAmounts';
-import Meter from '../Meter';
-import { formatMoneyWithCurrency, formatShort, formatWithCurrency } from '../money';
-import { NO_RATE, PER_PERIOD } from '../strings';
-import { chart, colors } from '../theme';
+import Meter from '@/shared/ui/Meter';
+import { formatMoneyWithCurrency, formatShort, formatWithCurrency } from '@/shared/lib/money';
+import { formatPercent } from '@/shared/lib/format';
+import { NO_RATE, PER_PERIOD } from '@/shared/lib/strings';
+import { chart, colors } from '@/shared/theme/theme';
 import PlanAmountModal, { PlanAmountTarget } from './PlanAmountModal';
-import { useLatestRequest } from '../useLatestRequest';
-import { formStyles } from '../formStyles';
-import StickyScrollView, { SectionHeader } from '../StickyScrollView';
-import { pct } from './summaryGroups';
+import { useLatestRequest } from '@/shared/lib/useLatestRequest';
+import { formStyles } from '@/shared/theme/formStyles';
+import StickyScrollView, { SectionHeader } from '@/shared/ui/StickyScrollView';
 import { MonthReportRow } from './MonthReport';
 import { splitUnplanned, unplannedShare } from './unplanned';
+import { RHYTHM_DAYS, WEEKDAYS } from '@/shared/lib/dates';
 
 /**
  * Donut: one segment per category with spending, in section order, so a type's categories sit next to
@@ -96,10 +97,10 @@ export default function StatsView({ year, month, currency }: { year: number; mon
           <View style={styles.monthBox}>
             <Text style={styles.monthLine}>
               {'Потрачено '}
-              <MaskedTotal style={styles.groupTotal} hiddenText={pct(stats.spent_minor, plannedAll)}>
+              <MaskedTotal style={styles.groupTotal} hiddenText={formatPercent(stats.spent_minor, plannedAll)}>
                 <Text style={overStyle(stats.spent_minor, plannedAll)}>{formatShort(stats.spent_minor)}</Text>
                 <Text style={styles.rowLimit}> / {formatWithCurrency(Math.round(plannedAll), stats.currency)}</Text>
-                {stats.spent_minor > 0 ? <Text style={[styles.rowLimit, overStyle(stats.spent_minor, plannedAll)]}>{` (${pct(stats.spent_minor, plannedAll)})`}</Text> : null}
+                {stats.spent_minor > 0 ? <Text style={[styles.rowLimit, overStyle(stats.spent_minor, plannedAll)]}>{` (${formatPercent(stats.spent_minor, plannedAll)})`}</Text> : null}
               </MaskedTotal>
             </Text>
             {left < 0
@@ -129,10 +130,10 @@ export default function StatsView({ year, month, currency }: { year: number; mon
               {/* "fact / plan ₾ (%)", as in the period stats; "Скрыть суммы" leaves just the % */}
               {/* one category: its row says it all, the header just names the section */}
               {g.categories.length > 1 ? (
-              <MaskedTotal style={styles.groupTotal} hiddenText={g.planned_minor ? pct(g.spent_minor, g.planned_minor) : shareOfAll(g.spent_minor, stats.spent_minor)}>
+              <MaskedTotal style={styles.groupTotal} hiddenText={g.planned_minor ? formatPercent(g.spent_minor, g.planned_minor) : formatPercent(g.spent_minor, stats.spent_minor)}>
                 {g.planned_minor ? <Text style={overStyle(g.spent_minor, g.planned_minor)}>{formatShort(g.spent_minor)}</Text> : formatWithCurrency(g.spent_minor, stats.currency)}
                 {g.planned_minor ? <Text style={styles.rowLimit}> / {formatWithCurrency(g.planned_minor, stats.currency)}</Text> : null}
-                {g.planned_minor ? <Text style={[styles.rowLimit, overStyle(g.spent_minor, g.planned_minor)]}> ({pct(g.spent_minor, g.planned_minor)})</Text> : null}
+                {g.planned_minor ? <Text style={[styles.rowLimit, overStyle(g.spent_minor, g.planned_minor)]}> ({formatPercent(g.spent_minor, g.planned_minor)})</Text> : null}
               </MaskedTotal>
               ) : null}
             </SectionHeader>
@@ -163,10 +164,10 @@ export default function StatsView({ year, month, currency }: { year: number; mon
         <>
           <SectionHeader style={[formStyles.sectionHeader, styles.groupHeader, styles.group]}>
             <Text style={styles.groupTitle}>{UNPLANNED}</Text>
-            <MaskedTotal style={styles.groupTotal} hiddenText={share ? pct(split.spent, share) : shareOfAll(split.spent, stats.spent_minor)}>
+            <MaskedTotal style={styles.groupTotal} hiddenText={share ? formatPercent(split.spent, share) : formatPercent(split.spent, stats.spent_minor)}>
               {share ? <Text style={overStyle(split.spent, share)}>{formatShort(split.spent)}</Text> : formatWithCurrency(split.spent, stats.currency)}
               {share ? <Text style={styles.rowLimit}> / {formatWithCurrency(share, stats.currency)}</Text> : null}
-              {share ? <Text style={[styles.rowLimit, overStyle(split.spent, share)]}> ({pct(split.spent, share)})</Text> : null}
+              {share ? <Text style={[styles.rowLimit, overStyle(split.spent, share)]}> ({formatPercent(split.spent, share)})</Text> : null}
             </MaskedTotal>
           </SectionHeader>
           <View>
@@ -244,11 +245,6 @@ function fitSize(text: string, max: number): number {
   return Math.min(max, Math.floor(HOLE_TEXT_WIDTH / (text.length * CHAR_WIDTH)));
 }
 
-/** "34%": a part of the spending, for headers and rows while the amounts are hidden */
-function shareOfAll(part: number, whole: number): string {
-  return pct(part, whole);
-}
-
 export function DonutCenter({ total, picked, currency }: { total: number; picked?: { name: string; emoji: string | null; spent_minor: number }; currency: Currency }) {
   if (!picked) {
     return (
@@ -277,14 +273,10 @@ const UNPLANNED = 'Вне плана';
 
 /** " (50%)" after "spent / limit" of a flexible category; nothing while nothing is spent. */
 function planShare(spent: number, limit: number): string {
-  if (spent <= 0 || limit <= 0) return '';
-  const p = Math.round((spent / limit) * 100);
-  return ` (${p === 0 ? '<1' : p}%)`;
+  return spent > 0 && limit > 0 ? ` (${formatPercent(spent, limit)})` : '';
 }
 
-const RHYTHM_DAYS = { day: 1, week: 7, '2weeks': 14 } as const;
 const RHYTHM_NOW = { day: 'Сегодня', week: 'На этой неделе', '2weeks': 'За эти 2 недели' } as const;
-const WEEKDAYS = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
 
 type NowNorm = Norms['byCategory'] extends Map<number, infer V> ? V : never;
 
@@ -331,7 +323,7 @@ function CategoryRow({ stat, total, currency, evenPace, dim, ym, openTransaction
         ) : null}
         <Text style={styles.rowAmount}>
           {/* "Скрыть суммы": just the % — of its plan, or of all spending without one */}
-          {hidden ? (limit ? `${pct(spent, limit)} плана` : `${shareOfAll(spent, total)} трат`)
+          {hidden ? (limit ? `${formatPercent(spent, limit)} плана` : `${formatPercent(spent, total)} трат`)
             : <>{cameIn ? <Text style={styles.refundsAmount}>+{limit ? formatShort(cameIn) : formatWithCurrency(cameIn, currency)}</Text>
               : limit ? <Text style={overStyle(spent, limit)}>{formatShort(spent)}</Text>
               // transfers carry their sign, as in the operations: what went out

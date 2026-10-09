@@ -1,24 +1,24 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
-import BottomSheet, { SheetScrollView } from './BottomSheet';
-import { sheetAlert } from './sheetAlert';
+import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
+import { sheetAlert } from '@/shared/ui/sheetAlert';
 import { useNavigation } from '@react-navigation/native';
 import { addMerchantCategory, deleteMerchants, getMerchant, merchantFollowers, merchantCategories, MerchantDetails, merchantUsedCategories, removeMerchantCategory, setMerchantCategory, setMerchantMixed } from '../db/merchants';
 import { categoryLabel, categoryLabelOf, listCategories } from '../db/categories';
 import { categoryColors } from '../db/colors';
 import { emitTransactionsChanged } from '../events';
-import { SheetActions } from './Button';
+import { SheetActions } from '@/shared/ui/Button';
 import CategoryPicker from './CategoryPicker';
 import CategoryPickerModal from './CategoryPickerModal';
-import Chip from './Chip';
-import SectionHeading from './SectionHeading';
-import { PencilIcon } from './icons';
-import { plural } from './format';
+import Chip from '@/shared/ui/Chip';
+import SectionHeading from '@/shared/ui/SectionHeading';
+import { PencilIcon } from '@/shared/ui/icons';
+import { plural } from '@/shared/lib/format';
 import type { CategoryInfo } from './MerchantsScreen';
-import { colors } from './theme';
-import { formatMoneyWithCurrency } from './money';
-import { toast, toastError } from './toast';
-import { NO_CATEGORY } from './strings';
+import { colors } from '@/shared/theme/theme';
+import { formatMoneyWithCurrency } from '@/shared/lib/money';
+import { toast, toastError } from '@/shared/ui/toast';
+import { NO_CATEGORY } from '@/shared/lib/strings';
 
 type Props = {
   /** null = closed */

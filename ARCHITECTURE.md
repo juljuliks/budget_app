@@ -67,7 +67,7 @@ src/
 | # | Шаг | Что делаем | Статус |
 |---|---|---|---|
 | 0 | Инструменты | ESLint 9 (`eslint.config.js`): `max-lines` 250, `max-lines-per-function` 120, `react-hooks`, границы слоёв — `no-restricted-imports` на каждый слой; пока всё warn. Алиас `@/` → `src/` (babel `module-resolver`, `tsconfig paths`, Jest `moduleNameMapper`). `npm run lint`, `npm run typecheck` | готово: 38 предупреждений — длинные файлы из плана, импорты ядра из `ui` (шаг 1), `exhaustive-deps` в `TransactionsList` (шаг 5) |
-| 1 | `shared` | Кит, lib, theme (+ `src/colors.ts`). Новые `dates.ts`, одна карта ритмов, `formatPercent`. `limitAlerts` и `notifications` — из `shared/lib`, не из `ui` | — |
+| 1 | `shared` | Кит, lib, theme → `src/shared/{ui,lib,theme}`. `dates.ts`: месяцы во всех падежах, дни недели, `RHYTHM_DAYS` (было 9 копий); `formatPercent` вместо `pct` / `percentOf` / `shareOfAll`. `limitAlerts`, `navigation`, `notifications` — из `shared/lib` | готово: `src/colors.ts` остался в ядре (палитра категорий, её берёт `db/`); `form.ts` — в `shared/ui` (показывает тост); импорт `ui/stats/norms` из `limitAlerts` — шаг 2 |
 | 2 | Ядро | `loadNorms` → `src/stats/`, загрузка курсов из `db/fx.ts` → `src/fx/`; `emitTransactionsChanged` — из команд | — |
 | 3 | `app` | `App.tsx` → tabs + hosts; `navigation`, `sheets`, `modals`, `leaveGuard`, `SettingsButton` | — |
 | 4 | `entities` | transaction, category, merchant, plan; деление `TransactionSheet` (336), `MerchantCard` (317), `CategorySheet` (269); `useOpenTransactions()` | — |
@@ -79,18 +79,18 @@ src/
 
 ### Куда переедут текущие файлы `src/ui`
 
-- **shared/ui**: `BottomSheet`, `Button`, `Checkbox`, `Chip`, `Segmented`, `RadioGroup`, `StepSlider`, `Donut`,
+- **shared/ui**: `form`, `BottomSheet`, `Button`, `Checkbox`, `Chip`, `Segmented`, `RadioGroup`, `StepSlider`, `Donut`,
   `Meter`, `HueBar`, `ColorSwatches`, `ColorPickerSheet`, `EmojiPicker` (+ `emoji/`), `RangeCalendar`,
   `TextInputModal`, `StickyScrollView`, `SectionHeading`, `Fab`, `PlusButton`, `RowActions`, `CurrencyButton`,
   `CurrencyPicker`, `icons`, `toast`, `sheetAlert`.
-- **shared/lib**: `format`, `money`, `dateRange`, `strings`, `form`, `useLast`, `useLatestRequest`.
-- **shared/theme**: `theme`, `formStyles`, `src/colors.ts`.
+- **shared/lib**: `format`, `money`, `dateRange`, `dates` (бывший `stats/months`), `strings`, `useLast`, `useLatestRequest`.
+- **shared/theme**: `theme`, `formStyles`. `src/colors.ts` остаётся в ядре: палитру категорий берёт `db/`.
 - **app**: `App.tsx`, `navigation.ts`, `sheets.ts`, `modals.tsx`, `leaveGuard.ts`, `SettingsButton`.
 - **entities/transaction**: `TransactionItem`, `TransactionSheet`, `transactionActions`, `transactionGroups`.
 - **entities/category**: `CategoryPicker`, `CategoryPickerModal`, `CategorySheet`, `TypeEditModal`,
   `CategoryTypesSheet`, `categoryActions`.
 - **entities/merchant**: `MerchantCard`.
-- **entities/plan**: `stats/months`, `stats/summaryGroups`, `stats/unplanned`, расчётная часть `stats/norms`.
+- **entities/plan**: `stats/summaryGroups`, `stats/unplanned`, расчётная часть `stats/norms`.
 - **features**: `operations-filters` (`FilterSheets`), `bulk-select`, `category-delete` (`CategoryDeleteSheet`,
   `categoryDeletionText`), `category-merge` (`MergeCategoriesSheet`), `sms-import` (`smsImportFlow`,
   `PushAccessBanner`), `add-transaction` (`AddTransactionSheet`), `plan-edit` (`PlanAddModal`, `PlanAmountModal`,

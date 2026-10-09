@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { limitAlertsEnabled, setLimitAlertsEnabled } from '../limitAlerts';
-import BottomSheet from './BottomSheet';
+import BottomSheet from '@/shared/ui/BottomSheet';
 import { setDisplayCurrency, useDisplayCurrency } from '../displayCurrency';
 import { useRootNavigation } from '../navigation';
-import CurrencyPicker from './CurrencyPicker';
+import CurrencyPicker from '@/shared/ui/CurrencyPicker';
 import { startSmsImport } from './smsImportFlow';
-import { colors } from './theme';
+import { colors } from '@/shared/theme/theme';
 
 function Row({ label, onPress }: { label: string; onPress: () => void }) {
   return (

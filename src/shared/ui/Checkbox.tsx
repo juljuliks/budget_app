@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { colors } from './theme';
+import { colors } from '../theme/theme';
 
 export default function Checkbox({ checked, size = 22 }: { checked: boolean; size?: number }) {
   return (

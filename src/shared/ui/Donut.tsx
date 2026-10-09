@@ -1,7 +1,7 @@
 import React from 'react';
 import { GestureResponderEvent, StyleSheet, View } from 'react-native';
 import Svg, { Circle, G } from 'react-native-svg';
-import { chart } from './theme';
+import { chart } from '../theme/theme';
 
 export type DonutSegment = { key: string; value: number; color: string };
 

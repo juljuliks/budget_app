@@ -5,7 +5,7 @@ import { openApp, screen, tap } from './app';
 import { ops } from '../e2e/seeds';
 import { ingestSms } from '../../src/ingest';
 import { getDb } from '../../src/db';
-import { dayKeyOf } from '../../src/ui/dateRange';
+import { dayKeyOf } from '../../src/shared/lib/dateRange';
 import { topUpCategoryId } from '../../src/db/categories';
 
 const p2 = (n: number) => String(n).padStart(2, '0');

@@ -1,19 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { useFormState, useWatch } from 'react-hook-form';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import BottomSheet, { SheetScrollView } from '../BottomSheet';
+import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
 import { Category, categoryLabel, isSystemCategory, listCategories } from '../../db/categories';
 import { Currency } from '../../db/fx';
 import { addPlanItem, getPlanBudget, lastPlanItem, PlanBudget, planConverter, PlanKind, plannedTotal, setPlanAmount } from '../../db/plans';
-import CurrencyButton from '../CurrencyButton';
-import { SheetActions } from '../Button';
-import Checkbox from '../Checkbox';
-import { currencySymbol, formatShort, formatWithCurrency, parseAmountOrZero } from '../money';
-import { AMOUNT_HINT } from '../strings';
-import { colors } from '../theme';
-import { submitForm, useLoadedForm } from '../form';
-import { plural } from '../format';
-import { toast, toastError } from '../toast';
+import CurrencyButton from '@/shared/ui/CurrencyButton';
+import { SheetActions } from '@/shared/ui/Button';
+import Checkbox from '@/shared/ui/Checkbox';
+import { currencySymbol, formatShort, formatWithCurrency, parseAmountOrZero } from '@/shared/lib/money';
+import { AMOUNT_HINT } from '@/shared/lib/strings';
+import { colors } from '@/shared/theme/theme';
+import { submitForm, useLoadedForm } from '@/shared/ui/form';
+import { plural } from '@/shared/lib/format';
+import { toast, toastError } from '@/shared/ui/toast';
 
 type Props = {
   ym: string;

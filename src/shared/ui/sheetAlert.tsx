@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import BottomSheet from './BottomSheet';
 import Button, { SheetActions } from './Button';
-import { colors } from './theme';
+import { colors } from '../theme/theme';
 
 // Confirmations and messages as bottom sheets, called like Alert.alert. <SheetAlertHost /> (mounted once in App)
 // shows them.

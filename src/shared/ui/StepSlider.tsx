@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { LayoutChangeEvent, PanResponder, StyleSheet, Text, View } from 'react-native';
-import { colors } from './theme';
+import { colors } from '../theme/theme';
 
 const THUMB = 24;
 

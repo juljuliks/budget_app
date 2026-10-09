@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity } from 'react-native';
-import { SheetActions } from './Button';
-import BottomSheet, { SheetScrollView } from './BottomSheet';
+import { SheetActions } from '@/shared/ui/Button';
+import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
 import CategoryPicker from './CategoryPicker';
 import type { RootStackParamList } from '../navigation';
-import { colors } from './theme';
+import { colors } from '@/shared/theme/theme';
 
 type Props = {
   visible: boolean;

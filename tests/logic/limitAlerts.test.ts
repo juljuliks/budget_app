@@ -1,5 +1,5 @@
 import { currentYm, setPlanAmount } from '../../src/db/plans';
-import { daysInMonth } from '../../src/ui/dateRange';
+import { daysInMonth } from '../../src/shared/lib/dateRange';
 import { addManualTransaction } from '../../src/db/transactions';
 import { limitAlertFor, setLimitAlertsEnabled } from '../../src/limitAlerts';
 import { freshDb } from '../helpers';

@@ -1,5 +1,5 @@
 import { NormPeriod } from '../../db/plans';
-import { DayKey, DayRange, daysInMonth } from '../dateRange';
+import { DayKey, DayRange, daysInMonth } from '@/shared/lib/dateRange';
 import { isPartOfWindow, NormPart, Norms } from './norms';
 
 export type SummaryGroupKey = NormPeriod | 'fixed' | 'outside';
@@ -35,12 +35,6 @@ export type SummaryGroup = {
 };
 
 const RHYTHMS: Array<Exclude<NormPeriod, 'month'>> = ['day', 'week', '2weeks'];
-
-/** "12%", "<1%" for a tiny non-zero share. */
-export function pct(part: number, whole: number): string {
-  const p = whole > 0 ? Math.round((part / whole) * 100) : 0;
-  return p === 0 && part > 0 ? '<1%' : `${p}%`;
-}
 
 /** The month the period ends in, outside the plan: which categories have a plan, its spending so far and its share. */
 export type UnplannedMonth = { planned: Set<number>; spent: number; share: number };

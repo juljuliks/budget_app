@@ -1,8 +1,8 @@
-import { formatAmount } from '../../src/ui/format';
+import { formatAmount } from '../../src/shared/lib/format';
 import {
   currencySymbol, formatMoney, formatMoneyWithCurrency, formatWithCurrency, parseAmountInput, toInputValue,
-} from '../../src/ui/money';
-import { meterColor } from '../../src/ui/theme';
+} from '../../src/shared/lib/money';
+import { meterColor } from '../../src/shared/theme/theme';
 
 test.each([
   ['12', 1200], ['12.5', 1250], ['12,50', 1250], ['1 200', 120000], ['0.01', 1],
@@ -50,7 +50,7 @@ test('meterColor: green far from the limit, blends to red, red at and over it', 
 });
 
 test('parseAmountOrZero: empty and a zero are "none", other non-amounts are refused', () => {
-  const { parseAmountOrZero } = require('../../src/ui/money');
+  const { parseAmountOrZero } = require('../../src/shared/lib/money');
   expect(parseAmountOrZero('')).toBe(0);
   expect(parseAmountOrZero('0')).toBe(0);
   expect(parseAmountOrZero('0.00')).toBe(0);

@@ -6,26 +6,26 @@ import { categoryColors } from '../db/colors';
 import { deleteMerchants, listMerchants, MerchantActivity, merchantsCategoryPreview, MerchantRow, setMerchantsCategory } from '../db/merchants';
 import { normalizeForSearch } from '../db/transactions';
 import { emitTransactionsChanged, onTransactionsChanged } from '../events';
-import Button from './Button';
-import Checkbox from './Checkbox';
-import { plural } from './format';
-import { SearchIcon } from './icons';
+import Button from '@/shared/ui/Button';
+import Checkbox from '@/shared/ui/Checkbox';
+import { plural } from '@/shared/lib/format';
+import { SearchIcon } from '@/shared/ui/icons';
 import MerchantCard from './MerchantCard';
-import { formatMoneyWithCurrency } from './money';
-import { sheetAlert } from './sheetAlert';
+import { formatMoneyWithCurrency } from '@/shared/lib/money';
+import { sheetAlert } from '@/shared/ui/sheetAlert';
 import CategoryPickerModal from './CategoryPickerModal';
 import { FilterButton, OptionsSheet } from './FilterSheets';
-import { formStyles } from './formStyles';
-import { NO_CATEGORY } from './strings';
-import { colors } from './theme';
-import { toast, toastError } from './toast';
+import { formStyles } from '@/shared/theme/formStyles';
+import { NO_CATEGORY } from '@/shared/lib/strings';
+import { colors } from '@/shared/theme/theme';
+import { toast, toastError } from '@/shared/ui/toast';
+import { SHORT_MONTHS } from '@/shared/lib/dates';
 
 export type CategoryInfo = { label: string; color: string };
 
 /** Merchants of different categories (a delivery): each operation asks. */
 const MIXED = 'Разные категории';
 
-const SHORT_MONTHS = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
 
 /** "12 мая", with the year when it isn't this one: "12 мая 2025". */
 function shortDate(unix: number, now = new Date()): string {

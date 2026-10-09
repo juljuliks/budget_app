@@ -5,8 +5,8 @@ import { currentYm, getPlanBudget, monthStats, parseYm, planConverter, unplanned
 import { getSetting, setSetting } from '../../db/settings';
 import { Currency } from '../../db/fx';
 import { onTransactionsChanged } from '../../events';
-import { formatWithCurrency } from '../money';
-import { colors } from '../theme';
+import { formatWithCurrency } from '@/shared/lib/money';
+import { colors } from '@/shared/theme/theme';
 
 const DISMISSED_KEY = 'plan_alert_dismissed';
 /** "До отложенного осталось …" once what may be spent (budget − 🔒) is down to this share */

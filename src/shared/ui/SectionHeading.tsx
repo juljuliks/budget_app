@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GearIcon } from './icons';
-import { colors } from './theme';
+import { colors } from '../theme/theme';
 
 /** Small uppercase section title, optionally with a gear that opens its settings screen. */
 export default function SectionHeading({ title, onSettings, settingsLabel }: { title: string; onSettings?: () => void; settingsLabel?: string }) {

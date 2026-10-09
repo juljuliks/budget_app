@@ -2,7 +2,7 @@
 import { fireEvent, waitFor, within } from '@testing-library/react-native';
 import { openApp, rowOf, screen, scrollTo, tap } from './app';
 import { ops } from '../e2e/seeds';
-import { dayKeyOf } from '../../src/ui/dateRange';
+import { dayKeyOf } from '../../src/shared/lib/dateRange';
 
 const search = (text: string) => fireEvent.changeText(screen.getByPlaceholderText('Поиск: мерчант, заметка, сумма…'), text);
 /** the list shows exactly these (and not those) */

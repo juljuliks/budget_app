@@ -4,15 +4,15 @@ import { Category, categoryLabel, deleteCategory, getCategory } from '../db/cate
 import { categoryDeletePreview, DeletePreview } from '../db/categoryDeletion';
 import { emitTransactionsChanged } from '../events';
 import { navigationRef } from '../navigation';
-import BottomSheet, { SheetScrollView } from './BottomSheet';
-import Button, { SheetActions } from './Button';
+import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
+import Button, { SheetActions } from '@/shared/ui/Button';
 import CategoryPickerModal from './CategoryPickerModal';
 import { deleteStartText, moveAllText } from './categoryDeletionText';
-import { plural } from './format';
-import { sheetAlert } from './sheetAlert';
-import { colors } from './theme';
-import { useLast } from './useLast';
-import { toast, toastError } from './toast';
+import { plural } from '@/shared/lib/format';
+import { sheetAlert } from '@/shared/ui/sheetAlert';
+import { colors } from '@/shared/theme/theme';
+import { useLast } from '@/shared/lib/useLast';
+import { toast, toastError } from '@/shared/ui/toast';
 
 type Props = {
   /** the category being deleted; null = closed */

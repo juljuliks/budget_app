@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { GestureResponderEvent, StyleSheet, Text, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
-import { hexToHsv, hsvToHex } from '../colors';
+import { hexToHsv, hsvToHex } from '@/colors';
 import BottomSheet from './BottomSheet';
 import { SheetActions } from './Button';
 import HueBar from './HueBar';
-import { colors } from './theme';
+import { colors } from '../theme/theme';
 
 const SQUARE = 200;
 const MARK = 26;

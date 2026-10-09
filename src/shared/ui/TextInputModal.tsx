@@ -5,8 +5,8 @@ import BottomSheet from './BottomSheet';
 import { SheetActions } from './Button';
 import { submitForm, useLoadedForm } from './form';
 import { toastError } from './toast';
-import { formStyles } from './formStyles';
-import { colors } from './theme';
+import { formStyles } from '../theme/formStyles';
+import { colors } from '../theme/theme';
 
 /** The field this sheet edits; a form passed in may hold more (the amount's currency, the plan item kind, …). */
 export type TextFormValues = { value: string };

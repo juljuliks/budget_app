@@ -3,7 +3,7 @@ import { AppState, StyleSheet, Text, TouchableOpacity, View } from 'react-native
 import { useFocusEffect } from '@react-navigation/native';
 import { getSetting, setSetting } from '../db/settings';
 import { isPushAccessEnabled, openPushAccessSettings } from '../native/notificationAccess';
-import { colors } from './theme';
+import { colors } from '@/shared/theme/theme';
 
 const DISMISSED_KEY = 'push_banner_dismissed';
 

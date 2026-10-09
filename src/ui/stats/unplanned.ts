@@ -1,6 +1,6 @@
 import { Currency } from '../../db/fx';
 import { CategoryStat, getPlanBudget, monthStats, parseYm, periodStats, planConverter, spentOf, StatGroup, unplannedOf } from '../../db/plans';
-import { DayKey, rangeToUnix } from '../dateRange';
+import { DayKey, rangeToUnix } from '@/shared/lib/dateRange';
 
 /**
  * "Вне плана" in the stats: the categories without a plan this month and the uncategorized spending leave their

@@ -3,7 +3,7 @@ import {
   Animated, Easing, FlatList, FlatListProps, Keyboard, LayoutChangeEvent, Modal, NativeScrollEvent, NativeSyntheticEvent, PanResponder,
   Pressable, ScrollView, ScrollViewProps, StyleProp, StyleSheet, Text, View, ViewStyle,
 } from 'react-native';
-import { colors } from './theme';
+import { colors } from '../theme/theme';
 import { SHEET_INSET, ToastHost } from './toast';
 
 type Props = {

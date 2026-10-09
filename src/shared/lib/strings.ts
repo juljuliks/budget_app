@@ -1,5 +1,5 @@
-import { NO_CATEGORY_EMOJI } from '../colors';
-import type { NormPeriod } from '../db/plans';
+import { NO_CATEGORY_EMOJI } from '@/colors';
+import type { NormPeriod } from '@/db/plans';
 
 // Shared wording, see GLOSSARY.md: one term per concept across the app.
 

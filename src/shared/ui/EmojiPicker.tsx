@@ -3,7 +3,7 @@ import { FlatList, Platform, StyleSheet, Text, TextInput, TouchableOpacity, useW
 import BottomSheet, { SheetFlatList } from './BottomSheet';
 import { SheetActions } from './Button';
 import { SearchIcon } from './icons';
-import { colors } from './theme';
+import { colors } from '../theme/theme';
 // [emoji, group, emoji version, search words in Russian and English] — built by scripts/build_emoji.js
 import EMOJI from './emoji/emoji.json';
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, StatusBar, StyleSheet, Text } from 'react-native';
-import { colors } from './theme';
+import { colors } from '../theme/theme';
 
 type Toast = { id: number; message: string; error: boolean };
 

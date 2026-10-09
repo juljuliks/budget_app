@@ -1,9 +1,9 @@
 import { txCategoryLabel } from '../db/categories';
 import { AMOUNT_BANDS, GroupKind, TransactionGroup } from '../db/transactions';
-import { KIND_LABELS } from './format';
-import { formatMoneyWithCurrency } from './money';
-import { MONTHS } from './stats/months';
-import { NO_CATEGORY } from './strings';
+import { KIND_LABELS } from '@/shared/lib/format';
+import { formatMoneyWithCurrency } from '@/shared/lib/money';
+import { MONTHS } from '@/shared/lib/dates';
+import { NO_CATEGORY } from '@/shared/lib/strings';
 
 // "По сумме": 1000+, 500+, 100–500, 20–100, до 20
 const bandTitle = (i: number) => {

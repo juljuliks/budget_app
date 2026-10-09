@@ -1,8 +1,8 @@
 import React from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';
 import { setHideAmounts, useHideAmounts } from '../hideAmounts';
-import { EyeIcon, EyeOffIcon } from './icons';
-import { colors } from './theme';
+import { EyeIcon, EyeOffIcon } from '@/shared/ui/icons';
+import { colors } from '@/shared/theme/theme';
 
 /** The eye next to the gear in the stats header: blurs the budget and plan totals (see Masked). */
 export default function HideAmountsButton() {

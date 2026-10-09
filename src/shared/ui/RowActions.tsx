@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { PencilIcon, TrashIcon } from './icons';
-import { colors } from './theme';
+import { colors } from '../theme/theme';
 
 type Props = {
   onEdit?: () => void;

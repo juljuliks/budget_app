@@ -3,7 +3,7 @@ import { fireEvent, waitFor } from '@testing-library/react-native';
 import { longPress, openApp, screen, scrollTo, tap } from './app';
 import { ops } from '../e2e/seeds';
 import { getDb } from '../../src/db';
-import { dayKey } from '../../src/ui/format';
+import { dayKey } from '../../src/shared/lib/format';
 
 const db = async () => getDb();
 /** a merchant's operations: [category name, source], newest first */

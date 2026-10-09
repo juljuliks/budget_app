@@ -1,11 +1,12 @@
 import { getSetting, setSetting } from './db/settings';
 import { Currency, isCurrency } from './db/fx';
 import { BUDGET_CURRENCY } from './db/plans';
-import { DayKey, dayKeyOf, daysInMonth, shortRange } from './ui/dateRange';
+import { DayKey, dayKeyOf, daysInMonth, shortRange } from '@/shared/lib/dateRange';
 import { loadNorms } from './ui/stats/norms';
-import { plural } from './ui/format';
-import { formatWithCurrency } from './ui/money';
-import { FOR_PERIOD } from './ui/strings';
+import { plural } from '@/shared/lib/format';
+import { formatWithCurrency } from '@/shared/lib/money';
+import { FOR_PERIOD } from '@/shared/lib/strings';
+import { MONTHS_NOM } from '@/shared/lib/dates';
 
 // Notifications when a category's spending comes near its limit: 80% and 100% of the month's plan and of the
 // limit of its rhythm (a day / week / 2 weeks, the one shown in the period stats). Each threshold once — per month
@@ -25,7 +26,6 @@ export async function setLimitAlertsEnabled(on: boolean) {
 const THRESHOLDS = [100, 80] as const;
 type Level = typeof THRESHOLDS[number];
 
-const MONTHS = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
 
 /** The highest threshold reached: 100, 80 or null. */
 function levelOf(spent: number, limit: number): Level | null {
@@ -66,7 +66,7 @@ export async function limitAlertFor(categoryId: number, now = new Date()): Promi
     ? null
     : await newLevel(`limit_alert:w:${c.window.from}:${categoryId}`, levelOf(c.windowSpent, c.windowNorm));
   const money = (minor: number) => formatWithCurrency(Math.round(minor), currency);
-  const monthName = MONTHS[Number(ym.slice(5, 7)) - 1];
+  const monthName = MONTHS_NOM[Number(ym.slice(5, 7)) - 1];
 
   if (month === 100 || (month === 80 && rhythm !== 100)) {
     const left = c.monthLimit - monthSpent;

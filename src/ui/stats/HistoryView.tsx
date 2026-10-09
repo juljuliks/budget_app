@@ -6,12 +6,12 @@ import { useOpenCategoryTransactions } from '../../navigation';
 import { Currency } from '../../db/fx';
 import { currentYm, HistoryMonth, monthStats, MonthStats, parseYm, planHistory } from '../../db/plans';
 import { onTransactionsChanged } from '../../events';
-import Meter from '../Meter';
-import { formatMoneyWithCurrency, formatWithCurrency } from '../money';
-import { monthDays } from '../dateRange';
-import { NO_RATE } from '../strings';
-import { colors } from '../theme';
-import { monthTitle } from './months';
+import Meter from '@/shared/ui/Meter';
+import { formatMoneyWithCurrency, formatWithCurrency } from '@/shared/lib/money';
+import { monthDays } from '@/shared/lib/dateRange';
+import { NO_RATE } from '@/shared/lib/strings';
+import { colors } from '@/shared/theme/theme';
+import { monthTitle } from '@/shared/lib/dates';
 
 /** Planned vs actually spent, per month and (expanded) per category, in `currency`. */
 export default function HistoryView({ currency }: { currency: Currency }) {

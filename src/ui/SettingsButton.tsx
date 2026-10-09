@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
-import { GearIcon } from './icons';
+import { GearIcon } from '@/shared/ui/icons';
 import { guardLeave } from '../leaveGuard';
 import SettingsSheet from './SettingsSheet';
-import { colors } from './theme';
+import { colors } from '@/shared/theme/theme';
 
 /** Gear in the tab headers: opens the settings sheet. */
 export default function SettingsButton() {

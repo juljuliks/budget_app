@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react';
-import { NO_SECTION } from './strings';
+import { NO_SECTION } from '@/shared/lib/strings';
 import { SectionList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -7,15 +7,15 @@ import { Category, isSystemCategory, listCategories } from '../db/categories';
 import { categoryColors } from '../db/colors';
 import { listCategoryTypes } from '../db/categoryTypes';
 import type { RootStackParamList } from '../navigation';
-import { formStyles } from './formStyles';
-import { colors } from './theme';
-import { CreateButton } from './PlusButton';
+import { formStyles } from '@/shared/theme/formStyles';
+import { colors } from '@/shared/theme/theme';
+import { CreateButton } from '@/shared/ui/PlusButton';
 import CategorySheet from './CategorySheet';
 import { openCategoryTypes } from './modals';
 import { onTransactionsChanged } from '../events';
-import Checkbox from './Checkbox';
+import Checkbox from '@/shared/ui/Checkbox';
 import MergeCategoriesSheet from './MergeCategoriesSheet';
-import Button from './Button';
+import Button from '@/shared/ui/Button';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Categories'>;
 

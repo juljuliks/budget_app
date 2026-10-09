@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { StyleProp, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
-import { Currency, CURRENCY_SYMBOLS } from '../db/fx';
+import { Currency, CURRENCY_SYMBOLS } from '@/db/fx';
 import BottomSheet from './BottomSheet';
 import { CURRENCY_ORDER } from './CurrencyPicker';
 import { ChevronDownIcon } from './icons';
-import { colors } from './theme';
+import { colors } from '../theme/theme';
 
 const NAMES: Record<Currency, string> = { GEL: 'Лари', USD: 'Доллар США', EUR: 'Евро' };
 

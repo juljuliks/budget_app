@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { GestureResponderEvent, StyleSheet, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
-import { colorFromHue } from '../colors';
-import { colors } from './theme';
+import { colorFromHue } from '@/colors';
+import { colors } from '../theme/theme';
 
 const HEIGHT = 28;
 const STOPS = [0, 60, 120, 180, 240, 300, 360];

@@ -3,10 +3,10 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { cardBalance, CardBalance as Balance } from '../db/balance';
 import { onTransactionsChanged } from '../events';
-import { formatDay, formatTime, plural } from './format';
-import { formatMoneyWithCurrency } from './money';
-import { sheetAlert } from './sheetAlert';
-import { colors } from './theme';
+import { formatDay, formatTime, plural } from '@/shared/lib/format';
+import { formatMoneyWithCurrency } from '@/shared/lib/money';
+import { sheetAlert } from '@/shared/ui/sheetAlert';
+import { colors } from '@/shared/theme/theme';
 
 /** "Баланс карты 283.14 ₾" as the bank last reported it, plus the operations after that (a deposit has no balance). */
 export default function CardBalance() {

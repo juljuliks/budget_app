@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import BottomSheet, { SheetFlatList } from './BottomSheet';
-import Button from './Button';
-import Checkbox from './Checkbox';
-import Chip from './Chip';
-import { ChevronDownIcon, SearchIcon } from './icons';
-import RangeCalendar, { DayRange, formatRange } from './RangeCalendar';
-import { colors } from './theme';
+import BottomSheet, { SheetFlatList } from '@/shared/ui/BottomSheet';
+import Button from '@/shared/ui/Button';
+import Checkbox from '@/shared/ui/Checkbox';
+import Chip from '@/shared/ui/Chip';
+import { ChevronDownIcon, SearchIcon } from '@/shared/ui/icons';
+import RangeCalendar, { DayRange, formatRange } from '@/shared/ui/RangeCalendar';
+import { colors } from '@/shared/theme/theme';
 import { normalizeForSearch } from '../db/transactions';
 
 /** "Категория ⌄" / "Мерчант · 2 ⌄" / "Дата ⌄": opens its picker sheet; blue while set. */

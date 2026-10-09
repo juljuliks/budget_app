@@ -1,7 +1,7 @@
 import { categoryLabel } from '../db/categories';
 import type { Bucket, DeletePreview, SortOutSummary } from '../db/categoryDeletion';
-import { plural } from './format';
-import { formatMoneyWithCurrency } from './money';
+import { plural } from '@/shared/lib/format';
+import { formatMoneyWithCurrency } from '@/shared/lib/money';
 
 // The texts of deleting a category (CategoryDeleteSheet, the sort-out in the operations list): kept here, tested.
 

@@ -2,8 +2,8 @@ import { Category, categoryLabel, deleteCategory } from '../db/categories';
 import { categoryDeletePreview } from '../db/categoryDeletion';
 import { emitTransactionsChanged } from '../events';
 import { deleteEmptyText } from './categoryDeletionText';
-import { sheetAlert } from './sheetAlert';
-import { toast, toastError } from './toast';
+import { sheetAlert } from '@/shared/ui/sheetAlert';
+import { toast, toastError } from '@/shared/ui/toast';
 
 /**
  * Deleting a category with no operations this month: a confirmation sheet (what stays in the past, which merchants

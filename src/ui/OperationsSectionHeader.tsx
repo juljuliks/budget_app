@@ -1,11 +1,11 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Checkbox from './Checkbox';
-import { plural } from './format';
-import { formStyles } from './formStyles';
-import { ChevronRightIcon } from './icons';
-import { formatWithCurrency } from './money';
-import { colors } from './theme';
+import Checkbox from '@/shared/ui/Checkbox';
+import { plural } from '@/shared/lib/format';
+import { formStyles } from '@/shared/theme/formStyles';
+import { ChevronRightIcon } from '@/shared/ui/icons';
+import { formatWithCurrency } from '@/shared/lib/money';
+import { colors } from '@/shared/theme/theme';
 import { groupTotal } from './transactionGroups';
 import type { Section } from './transactionsListData';
 

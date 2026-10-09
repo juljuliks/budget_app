@@ -1,14 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { MONTHS } from './stats/months';
-import { colors } from './theme';
+import { MONTHS } from '../lib/dates';
+import { colors } from '../theme/theme';
 
-import { DayKey, DayRange, dayKeyOf, parseDayKey } from './dateRange';
+import { DayKey, DayRange, dayKeyOf, parseDayKey } from '../lib/dateRange';
 
 const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
-export type { DayRange } from './dateRange';
-export { formatRange, rangeToUnix } from './dateRange';
+export type { DayRange } from '../lib/dateRange';
+export { formatRange, rangeToUnix } from '../lib/dateRange';
 
 type Props = {
   value: DayRange | null;

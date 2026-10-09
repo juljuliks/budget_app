@@ -75,6 +75,7 @@ scripts/demo/docs.sh     # скриншоты для документации: �
 | `src/ingest.ts`, `src/importer/` | приём SMS и пушей, импорт из телефона |
 | `src/db/` | база: миграции, операции, категории, мерчанты, план, отчёт, возвраты, курсы валют |
 | `src/ui/` | экраны и листы; `src/ui/stats/` — статистика, план, история, отчёт |
+| `src/shared/` | общий кит интерфейса (`ui/`), форматирование денег и дат (`lib/`), тема (`theme/`); слои — [ARCHITECTURE.md](ARCHITECTURE.md) |
 | `src/notifications/` | уведомления и их кнопки, отчёт за месяц |
 | `android/app/src/main/java/com/budgetapp/` | нативная часть: `sms/`, `push/` |
 | `tests/` | все тесты: логика, экраны, Maestro; [что где и план тестов](tests/README.md) |

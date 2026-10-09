@@ -5,7 +5,7 @@ import {
   addManualTransaction, countUnseenTransactions, deleteTransaction, isUnread, listTransactionsPage, markTransactionSeen,
   normalizeForSearch, searchTransactions, listTransactionsFiltered, categoriesWithTransactions, merchantsWithTransactions, setTransactionAmount,
 } from '../../src/db/transactions';
-import { rangeToUnix } from '../../src/ui/dateRange';
+import { rangeToUnix } from '../../src/shared/lib/dateRange';
 import { createCategory } from '../../src/db/categories';
 import { createCategoryType } from '../../src/db/categoryTypes';
 import { assignCategory, assignCategoryToMany } from '../../src/assign';

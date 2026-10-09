@@ -1,4 +1,5 @@
 // Day / period helpers for the date filter (no React, usable from Node tests).
+import { SHORT_MONTHS } from './dates';
 
 /** Local calendar day as 'YYYY-MM-DD' (string compare = chronological). */
 export type DayKey = string;
@@ -18,7 +19,6 @@ export function rangeToUnix(r: DayRange): { from: number; to: number } {
   return { from: parseDayKey(r.from).getTime() / 1000, to: end.getTime() / 1000 };
 }
 
-const SHORT_MONTHS = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
 export function formatRange(r: DayRange): string {
   const f = (k: DayKey) => { const d = parseDayKey(k); return `${d.getDate()} ${SHORT_MONTHS[d.getMonth()]} ${d.getFullYear()}`; };
   return r.from === r.to ? f(r.from) : `${f(r.from)} – ${f(r.to)}`;
@@ -87,10 +87,9 @@ export function normWindow(rhythm: NormRhythm, viewed: DayRange): DayRange {
   return { from: dayKeyOf(new Date(start.getFullYear(), start.getMonth(), start.getDate() - 7)), to: week.to };
 }
 
-const SHORT = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
 /** "28 сен – 4 окт", "4 окт" (no year: windows are always near). */
 export function shortRange(r: DayRange): string {
-  const f = (k: DayKey) => { const d = parseDayKey(k); return `${d.getDate()} ${SHORT[d.getMonth()]}`; };
+  const f = (k: DayKey) => { const d = parseDayKey(k); return `${d.getDate()} ${SHORT_MONTHS[d.getMonth()]}`; };
   if (r.from === r.to) return f(r.from);
   // within one month: "1 – 4 окт"
   if (r.from.slice(0, 7) === r.to.slice(0, 7)) return `${parseDayKey(r.from).getDate()} – ${f(r.to)}`;

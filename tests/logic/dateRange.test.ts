@@ -1,6 +1,6 @@
 
 describe('stats periods', () => {
-  const { periodRange, shiftAnchor, periodLabel } = require('../../src/ui/dateRange');
+  const { periodRange, shiftAnchor, periodLabel } = require('../../src/shared/lib/dateRange');
   test('day, week (Monday to Sunday), year around a date', () => {
     const sun = new Date(2026, 9, 4); // Sunday
     expect(periodRange('day', sun)).toEqual({ from: '2026-10-04', to: '2026-10-04' });
@@ -19,7 +19,7 @@ describe('stats periods', () => {
 });
 
 describe('period norms helpers', () => {
-  const { daysByMonth, rangeDays, daysInMonth } = require('../../src/ui/dateRange');
+  const { daysByMonth, rangeDays, daysInMonth } = require('../../src/shared/lib/dateRange');
   test('a week across two months is split by month', () => {
     expect([...daysByMonth({ from: '2026-09-28', to: '2026-10-04' })]).toEqual([['2026-09', 3], ['2026-10', 4]]);
     expect(rangeDays({ from: '2026-10-04', to: '2026-10-04' })).toBe(1);
@@ -29,7 +29,7 @@ describe('period norms helpers', () => {
 });
 
 describe('norm windows', () => {
-  const { normWindow, shortRange } = require('../../src/ui/dateRange');
+  const { normWindow, shortRange } = require('../../src/shared/lib/dateRange');
   const day = { from: '2026-10-03', to: '2026-10-03' };
   const week = { from: '2026-09-28', to: '2026-10-04' };
   test('a rhythm no longer than the viewed period: the period itself', () => {
@@ -47,7 +47,7 @@ describe('norm windows', () => {
 });
 
 test('a week across two months is cut to the anchor month', () => {
-  const { weekInMonth } = require('../../src/ui/dateRange');
+  const { weekInMonth } = require('../../src/shared/lib/dateRange');
   expect(weekInMonth(new Date(2026, 9, 4))).toEqual({ from: '2026-10-01', to: '2026-10-04' });
   expect(weekInMonth(new Date(2026, 8, 29))).toEqual({ from: '2026-09-28', to: '2026-09-30' });
   expect(weekInMonth(new Date(2026, 9, 8))).toEqual({ from: '2026-10-05', to: '2026-10-11' });

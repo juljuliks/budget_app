@@ -8,27 +8,29 @@ import {
   unplannedSpent,
   setPlanBudget, setPlanPinned,
 } from '../../db/plans';
-import CurrencyButton from '../CurrencyButton';
-import Fab from '../Fab';
-import { daysInMonth } from '../dateRange';
-import { LockIcon, PencilIcon, PinIcon } from '../icons';
+import CurrencyButton from '@/shared/ui/CurrencyButton';
+import Fab from '@/shared/ui/Fab';
+import { daysInMonth } from '@/shared/lib/dateRange';
+import { LockIcon, PencilIcon, PinIcon } from '@/shared/ui/icons';
 import Masked from '../Masked';
 import { useHideAmounts } from '../../hideAmounts';
-import StepSlider from '../StepSlider';
-import Segmented from '../Segmented';
-import { formatWithCurrency, parseAmountOrZero, toInputValue } from '../money';
-import { AMOUNT_HINT, NO_SECTION, PER_PERIOD, SPENDING_PATTERN } from '../strings';
-import { sheetAlert } from '../sheetAlert';
+import StepSlider from '@/shared/ui/StepSlider';
+import Segmented from '@/shared/ui/Segmented';
+import { formatWithCurrency, parseAmountOrZero, toInputValue } from '@/shared/lib/money';
+import { formatPercent } from '@/shared/lib/format';
+import { AMOUNT_HINT, NO_SECTION, PER_PERIOD, SPENDING_PATTERN } from '@/shared/lib/strings';
+import { sheetAlert } from '@/shared/ui/sheetAlert';
 import { Controller, useWatch } from 'react-hook-form';
-import TextInputModal from '../TextInputModal';
-import { useLoadedForm } from '../form';
-import { formStyles } from '../formStyles';
-import StickyScrollView, { SectionHeader } from '../StickyScrollView';
+import TextInputModal from '@/shared/ui/TextInputModal';
+import { useLoadedForm } from '@/shared/ui/form';
+import { formStyles } from '@/shared/theme/formStyles';
+import StickyScrollView, { SectionHeader } from '@/shared/ui/StickyScrollView';
 import PlanAddModal from './PlanAddModal';
 import PlanAmountModal, { PlanAmountTarget } from './PlanAmountModal';
-import { chart, colors } from '../theme';
-import { useLatestRequest } from '../useLatestRequest';
-import { toast, toastError } from '../toast';
+import { chart, colors } from '@/shared/theme/theme';
+import { useLatestRequest } from '@/shared/lib/useLatestRequest';
+import { toast, toastError } from '@/shared/ui/toast';
+import { RHYTHM_DAYS } from '@/shared/lib/dates';
 
 
 const RING_FREE = colors.income;
@@ -45,22 +47,19 @@ const LOCK_MIN = 10;
 /** the share set aside for spending outside the plan */
 const RING_UNPLANNED = '#eda100';
 
-const NORM_DAYS = { day: 1, week: 7, '2weeks': 14 } as const;
 
 /** "лимит ≈ 46 ₾ в неделю": a flexible item's plan per its spending pattern (the month's plan / days in the month × days). */
 function normText(item: PlanItem, ym: string, currency: Currency): string {
   const amount = item.converted_minor ?? 0;
   if (!amount) return '';
   if (item.norm_period === 'month') return SPENDING_PATTERN.month.title.toLowerCase();
-  const per = (amount / daysInMonth(ym)) * NORM_DAYS[item.norm_period];
+  const per = (amount / daysInMonth(ym)) * RHYTHM_DAYS[item.norm_period];
   return `лимит ≈ ${formatWithCurrency(Math.round(per), currency)} ${PER_PERIOD[item.norm_period]}`;
 }
 
 /** Share of the amount to distribute, "35%"; "<1%" for tiny non-zero amounts. */
 function percentOf(part: number, whole: number): string {
-  if (part <= 0 || whole <= 0) return '';
-  const p = Math.round((part / whole) * 100);
-  return p === 0 ? '<1%' : `${p}%`;
+  return part > 0 && whole > 0 ? formatPercent(part, whole) : '';
 }
 
 /** Plan items in sections by category type (listPlan returns them in type order); untyped last. Totals converted. */
