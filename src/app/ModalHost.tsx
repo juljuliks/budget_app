@@ -4,7 +4,7 @@ import AddTransactionSheet from '../ui/AddTransactionSheet';
 import { CategoryDeleteSheet } from '@/features/category-delete';
 import { CategoryTypesSheet } from '@/features/category-types';
 import { TransactionSheet } from '@/features/transaction-edit';
-import { MonthReportSheet } from '../ui/stats/MonthReport';
+import { MonthReportSheet } from '@/features/month-report';
 import { MerchantCard } from '@/features/merchant-card';
 import { SettingsSheet } from '@/features/settings';
 import { startSmsImport } from '@/features/sms-import';

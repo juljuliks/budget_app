@@ -5,7 +5,6 @@ import { isRememberable } from '@/types';
 import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
 import { SheetActions } from '@/shared/ui/Button';
 import { useLast } from '@/shared/lib/useLast';
-import { openMerchant } from '@/shared/navigation/sheets';
 import { colors } from '@/shared/theme/theme';
 import { useCategoryChoice } from './model/useCategoryChoice';
 import { useTransaction } from './model/useTransaction';
@@ -46,7 +45,7 @@ export default function TransactionSheet({ txId: openId, onClose }: Props) {
   return (
     <BottomSheet visible={visible} onClose={onClose} style={styles.sheet}>
     <SheetScrollView contentContainerStyle={styles.content}>
-      <TransactionHeader tx={tx} onEditAmount={() => setAmountOpen(true)} onOpenMerchant={rememberable ? () => openMerchant(tx.merchant_key!) : undefined} />
+      <TransactionHeader tx={tx} onEditAmount={() => setAmountOpen(true)} merchantLinked={rememberable} />
       <TransactionCategory tx={tx} mixedCats={mixedCats} saving={saving} choose={choose} />
 
       {rememberable && mixedCats ? (

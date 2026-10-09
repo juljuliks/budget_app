@@ -2,21 +2,22 @@ import React, { useEffect, useLayoutEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import type { TabParamList } from '@/shared/navigation/navigation';
-import { currentYm, ymOf } from '../../db/plans';
+import { currentYm, ymOf } from '@/db/plans';
 import Segmented from '@/shared/ui/Segmented';
 import { SheetActions } from '@/shared/ui/Button';
 import BottomSheet from '@/shared/ui/BottomSheet';
 import RangeCalendar from '@/shared/ui/RangeCalendar';
 import { dayKeyOf, DayRange, parseDayKey, PeriodKind, periodLabel, periodRange, shiftAnchor, weekInMonth } from '@/shared/lib/dateRange';
-import { useDisplayCurrency } from '../../displayCurrency';
+import { useDisplayCurrency } from '@/displayCurrency';
 import { colors } from '@/shared/theme/theme';
 import { ChevronDownIcon } from '@/shared/ui/icons';
-import PeriodStatsView from './PeriodStatsView';
-import HistoryView from './HistoryView';
+import PeriodStatsView from './period/PeriodStatsView';
+import HistoryView from './history/HistoryView';
 import { monthTitle } from '@/shared/lib/dates';
-import PlanAlert from './PlanAlert';
-import PlanView from './PlanView';
-import StatsView from './StatsView';
+import PeriodNav from './parts/PeriodNav';
+import PlanAlert from './parts/PlanAlert';
+import PlanView from './plan/PlanView';
+import StatsView from './month/StatsView';
 
 const SECTIONS = [['stats', 'Статистика'], ['plan', 'План'], ['history', 'История']] as const;
 type Section = typeof SECTIONS[number][0];
@@ -116,30 +117,16 @@ export default function StatsHome() {
       {section === 'stats' ? <PlanAlert currency={currency} /> : null}
 
       {section === 'history' ? null : byPeriod && range ? (
-        <View style={styles.monthRow}>
-          {kind === 'custom' ? (
-            // a chosen range: no arrows, tap to change it
-            <TouchableOpacity style={styles.rangeButton} onPress={() => { setDraft(custom); setCalendarOpen(true); }}>
-              <Text style={styles.month}>{periodLabel(kind, range)}</Text>
-            </TouchableOpacity>
-          ) : (
-            <>
-              <TouchableOpacity onPress={() => step(-1)} hitSlop={12} accessibilityLabel="Предыдущий период"><Text style={styles.arrow}>‹</Text></TouchableOpacity>
-              <Text style={styles.month}>{periodLabel(kind, range)}</Text>
-              <TouchableOpacity onPress={() => step(1)} hitSlop={12} disabled={range.to >= today} accessibilityLabel="Следующий период">
-                <Text style={[styles.arrow, range.to >= today && styles.arrowDisabled]}>›</Text>
-              </TouchableOpacity>
-            </>
-          )}
-        </View>
+        <PeriodNav
+          unit="период"
+          label={periodLabel(kind, range)}
+          onPick={kind === 'custom' ? () => { setDraft(custom); setCalendarOpen(true); } : undefined}
+          onPrev={() => step(-1)}
+          onNext={() => step(1)}
+          nextDisabled={range.to >= today}
+        />
       ) : (
-        <View style={styles.monthRow}>
-          <TouchableOpacity onPress={() => shift(-1)} hitSlop={12} accessibilityLabel="Предыдущий месяц"><Text style={styles.arrow}>‹</Text></TouchableOpacity>
-          <Text style={styles.month}>{monthTitle(shown.year, shown.month)}</Text>
-          <TouchableOpacity onPress={() => shift(1)} hitSlop={12} disabled={shownYm >= maxYm} accessibilityLabel="Следующий месяц">
-            <Text style={[styles.arrow, shownYm >= maxYm && styles.arrowDisabled]}>›</Text>
-          </TouchableOpacity>
-        </View>
+        <PeriodNav unit="месяц" label={monthTitle(shown.year, shown.month)} onPrev={() => shift(-1)} onNext={() => shift(1)} nextDisabled={shownYm >= maxYm} />
       )}
 
       <View style={styles.body}>
@@ -181,11 +168,6 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   // close under the header title
   segmented: { marginHorizontal: 16, marginTop: 4, marginBottom: 8 },
-  monthRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, marginBottom: 8 },
-  rangeButton: { flex: 1, alignItems: 'center', paddingVertical: 6 },
-  arrow: { fontSize: 28, color: colors.accent, paddingHorizontal: 8 },
-  arrowDisabled: { color: colors.border },
-  month: { fontSize: 17, fontWeight: '600', color: colors.text },
   body: { flex: 1 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   title: { fontSize: 20, fontWeight: '500', color: colors.text },

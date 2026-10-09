@@ -1,6 +1,7 @@
 import { sheetAlert } from '@/shared/ui/sheetAlert';
 import { removeTransactions } from './commands';
-import { formatAmount, merchantLabel, plural } from '@/shared/lib/format';
+import { formatAmount, plural } from '@/shared/lib/format';
+import { merchantLabel } from './title';
 import { toast, toastError } from '@/shared/ui/toast';
 
 /** "Удалить транзакцию?" confirmation; deletes and notifies the screens, then calls onDeleted. */

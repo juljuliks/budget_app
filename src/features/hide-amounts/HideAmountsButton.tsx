@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';
-import { setHideAmounts, useHideAmounts } from '../hideAmounts';
+import { setHideAmounts, useHideAmounts } from '@/hideAmounts';
 import { EyeIcon, EyeOffIcon } from '@/shared/ui/icons';
 import { colors } from '@/shared/theme/theme';
 

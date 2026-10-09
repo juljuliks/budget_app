@@ -57,6 +57,9 @@ export type Norms = {
   monthToDate: Map<number | null, number>;
 };
 
+/** One category's limit in `Norms`. */
+export type CategoryNorm = Norms['byCategory'] extends Map<number, infer V> ? V : never;
+
 
 /** The viewed period is a part of a rhythm window (a day of a weekly limit): it is measured as the whole window. */
 export const isPartOfWindow = (window: DayRange, range: DayRange) => window.from !== range.from || window.to !== range.to;

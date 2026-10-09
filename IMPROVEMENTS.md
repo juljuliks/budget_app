@@ -123,7 +123,7 @@
 7. **Большие компоненты, общие модули UI, архитектура** — переход на слои FSD-lite: план, карта переезда файлов и
    статус шагов — [ARCHITECTURE.md](ARCHITECTURE.md) §2.
 8. **Мёртвый код**: `export default {…}` в 14 модулях, колонка `is_archived`, `'GEL'` → `BUDGET_CURRENCY`.
-9. **Тесты**: расчёты из `.tsx` (StatsView, HistoryView, PlanView) → `.ts` с тестами; покрытие в `jest.config.js`.
+9. **Тесты**: расчёты `HistoryView` → `.ts` с тестами (период, план, отчёт уже вынесены); покрытие в `jest.config.js`.
 10. **RN 0.71 → 0.73+** вместе с заменой `react-native-quick-sqlite` (op-sqlite): targetSdk 34+, AGP 8 — отдельный проект.
 
 ## По желанию

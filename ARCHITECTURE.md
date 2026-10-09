@@ -14,7 +14,7 @@ src/
   app/        App, вкладки, стартовые эффекты, хосты (ModalHost), кнопка настроек
   screens/    вкладки: operations/, stats/, merchants/, categories/ — только сборка из частей
   features/   сценарии пользователя: действие в несколько шагов, с вопросами и последствиями
-  entities/   transaction/, category/, plan/ — показать, выбрать, просто изменить одну вещь
+  entities/   transaction/, category/, merchant/, plan/ — показать, выбрать, просто изменить одну вещь
   shared/     ui/ (кит без знания о бюджете), lib/ (format, money, dates, хуки), theme/,
               navigation/ (navigationRef, хуки переходов, sheets.ts — открыть шит откуда угодно, leaveGuard)
   db/ parsers/ importer/ notifications/ native/ stats/ fx/ ingest.ts assign.ts …   — ядро, без React
@@ -81,9 +81,9 @@ src/
 | 1 | `shared` | Кит, lib, theme → `src/shared/{ui,lib,theme}`. `dates.ts`: месяцы во всех падежах, дни недели, `RHYTHM_DAYS` (было 9 копий); `formatPercent` вместо `pct` / `percentOf` / `shareOfAll`. `limitAlerts`, `navigation`, `notifications` — из `shared/lib` | готово: `src/colors.ts` остался в ядре (палитра категорий, её берёт `db/`); `form.ts` — в `shared/ui` (показывает тост); импорт `ui/stats/norms` из `limitAlerts` — шаг 2 |
 | 2 | Ядро | `ui/stats/norms.ts` целиком (загрузка и расчёты лимитов по ритму, без React) → `src/stats/norms.ts`; запрос курсов НБГ → `src/fx/nbg.ts` (без импортов из `db`, чтобы не было цикла), кэш курсов остаётся в `db/fx.ts` | готово; `emitTransactionsChanged` из команд — перенесено в шаг 4 (команды сущностей) |
 | 3 | `app` | `App.tsx` → `app/App` + `MainTabs` + `useAppStartup`; `modals` → `app/ModalHost`, `SettingsButton` → `app`. `navigation`, `sheets`, `leaveGuard` → `shared/navigation`: их зовут все слои и уведомления, а импорты только вниз | готово: `app` пока импортирует экраны и шиты из `src/ui` (11 предупреждений lint — уходят шагами 4–7) |
-| 4 | `entities` | `entities/{category,transaction,plan}`, `features/{transaction-edit,merchant-card,category-delete,category-types}`. `TransactionSheet` 336 → 84 строки (+ хуки `useTransaction`, `useCategoryChoice`, части), `MerchantCard` 317 → 70, `CategorySheet` 269 → 138. Карточка мерчанта открывается через `sheets` (`openMerchant`), удаление категории — проп `onDelete`. Команды слайсов (запись + `emitTransactionsChanged`) | готово: `entities/merchant` не понадобилась — карточка мерчанта с правилом для прошлых операций — feature; `emitTransactionsChanged` ещё в `src/ui` (списки, добавление, объединение, план) — уходит шагами 5–7 |
+| 4 | `entities` | `entities/{category,transaction,plan}`, `features/{transaction-edit,merchant-card,category-delete,category-types}`. `TransactionSheet` 336 → 84 строки (+ хуки `useTransaction`, `useCategoryChoice`, части), `MerchantCard` 317 → 70, `CategorySheet` 269 → 138. Карточка мерчанта открывается через `sheets` (`openMerchant`), удаление категории — проп `onDelete`. Команды слайсов (запись + `emitTransactionsChanged`) | готово: карточка мерчанта с правилом для прошлых операций — feature; `entities/merchant` — имя-ссылка `MerchantLink` (карточка операции и дальше везде, где мерчант виден); `emitTransactionsChanged` ещё в `src/ui` (списки, добавление, объединение, план) — уходит шагами 5–7 |
 | 5 | Операции | `TransactionsList` (767) → `screens/operations/OperationsScreen` (169): `model/` — `useOperationsList`, `useSelection`, `useBulkCategory`, `useOperationsRoute`, `useTabLifecycle`, `useListRefresh`, `listData`, `groups`; `parts/` — `OperationsList`, `SectionHeader`, `FiltersBar`, `FilterSheets`, `SelectToolbar`, `BulkBar`, `HeaderActions`. Фичи: `operations-filters` (`useTransactionFilters`, `SearchBar`, `filter`), `category-delete` (`useSortOut`, `SortOutBanner`), `settings` (через `openSettings`, импорт SMS — пропом из `ModalHost`), `sms-import`, `card-balance` | готово: `bulk-select` не понадобился — выбор нужен только экрану; `SearchBar` пока только у операций (мерчанты — шаг 7); Maestro — все 6 флоу |
-| 6 | Статистика | `PeriodStatsView` (872) → `PeriodCategoryRow`, `LimitEffect`, `CategoryInfo`, `periodText.ts` с тестами; `PlanView` (653) → кольца, `ShareField`, `SavingsSwitch`, `groupByType` в `.ts`; `StatsView` (448) → `CategoryRow`, `DonutCenter`; `MonthReport` (399) → строки отчёта; общий `styles.ts` | — |
+| 6 | Статистика | `src/ui/stats` → `screens/stats` (`month/`, `period/`, `plan/`, `history/`, общие `parts/`: `DonutCenter`, `RefundsRow`, `PeriodNav`, `PlanAlert`). `PeriodStatsView` 870 → 80 (+ `usePeriodData`, чистый `periodView`, `periodText` с тестами, части: строка категории, строки лимитов, секции, объяснения); `PlanView` 652 → 70 (+ `usePlanData`, `planView` с тестами, `usePlanActions`, карточка бюджета, секции, шит бюджета); `StatsView` 448 → 97; `MonthReport` 399 → фича `month-report` (`reportView` с тестами, блоки); `PlanAmountModal` → `entities/plan`; `Masked` → `shared/ui`, `HideAmountsButton` → `features/hide-amounts` | готово: секции — функции, возвращающие фрагменты (`StickyScrollView` липнет только к своим `SectionHeader`) |
 | 7 | Остальное | `MerchantsScreen` (334), оставшиеся features | — |
 | 8 | Закрепить | lint warn → error, lint в CI; CLAUDE.md «Где что», карта в README, пути в tests/README; убрать `src/ui` | — |
 | 9 | Ядро: `db/plans.ts` (708) | → `plans/budget.ts`, `plans/items.ts`, `spend.ts` — вместе с IMPROVEMENTS 8.6 (одно правило «что считается тратой») | — |
@@ -102,6 +102,8 @@ src/
   `transactionGroups` — в `screens/operations` (группировки списка).
 - **entities/category**: `CategoryPicker`, `CategoryPickerModal`, `CategorySheet` (+ `useCategoryForm`,
   `CategoryNameField`, `CategorySummaryRow`), `TypeEditModal`, команды, тип `CategoryInfo`.
+- **entities/merchant**: `MerchantLink` — имя мерчанта ссылкой на его карточку (`openMerchant`). Заголовок операции
+  `merchantLabel` («Оплата · TELMICO») — из `shared/lib/format` в `entities/transaction`.
 - **entities/plan**: `summaryGroups`, `unplanned` (`norms` — в ядре, `src/stats/`).
 - **features** (шаг 4): `transaction-edit` (`TransactionSheet`), `merchant-card` (`MerchantCard`), `category-delete`
   (`CategoryDeleteSheet`, `categoryDeletionText`, `categoryActions` → `startCategoryDelete`), `category-types`
@@ -112,7 +114,7 @@ src/
   (`PlanAddModal`, `PlanAmountModal`, `PlanAlert`), `month-report` (`MonthReport`), `hide-amounts` (`HideAmountsButton`,
   `Masked`).
 - **screens/operations**: `TransactionsList` → `OperationsScreen`, `OperationsSectionHeader` → `parts/SectionHeader`, `transactionsListData` → `model/listData`, `transactionGroups` → `model/groups`.
-- **screens/stats**: `StatsHome`, `StatsView`, `PeriodStatsView`, `PlanView`, `HistoryView`.
+- **screens/stats** (шаг 6): `StatsHome`, `month/StatsView`, `period/PeriodStatsView`, `plan/PlanView` (+ `PlanAddModal`), `history/HistoryView`, `parts/PlanAlert`; `month-report`, `hide-amounts` — фичи; `PlanAmountModal` — `entities/plan`.
 - **screens/merchants**: `MerchantsScreen`. **screens/categories**: `CategoriesScreen`.
 
 Пока переход не закончен: новый файл — сразу в целевой слой, если папка уже есть; иначе в `src/ui` под именем из

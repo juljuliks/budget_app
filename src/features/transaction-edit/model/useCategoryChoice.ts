@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { assignCategory, MerchantChoice, merchantChangePreview } from '@/assign';
 import { categoryLabel, getCategory } from '@/db/categories';
 import { showLimitAlert } from '@/notifications/notifeeIntegration';
-import { merchantLabel } from '@/shared/lib/format';
+import { merchantLabel } from '@/entities/transaction';
 import { sheetAlert } from '@/shared/ui/sheetAlert';
 import { toast, toastError } from '@/shared/ui/toast';
 import { merchantChoiceText } from '../texts';

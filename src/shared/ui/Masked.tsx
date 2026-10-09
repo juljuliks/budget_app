@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleProp, StyleSheet, Text, TextStyle } from 'react-native';
-import { useHideAmounts } from '../hideAmounts';
-import { colors } from '@/shared/theme/theme';
+import { useHideAmounts } from '@/hideAmounts';
+import { colors } from '../theme/theme';
 
 /**
  * An amount that "Скрыть суммы" blurs: the text turns transparent and only its soft shadow is left, so the place and

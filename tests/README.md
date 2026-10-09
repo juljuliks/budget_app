@@ -6,7 +6,7 @@
 
 | Папка | Что там | Чем запускается |
 |---|---|---|
-| [logic/](logic/) | логика без экранов: парсер SMS, база, категории, план, отчёт, лимиты, курсы | Jest, проект `logic` (ts-jest, Node) |
+| [logic/](logic/) | логика без экранов: парсер SMS, база, категории, план, отчёт, лимиты, курсы; расчёты экранов (`periodText`, `planView`, `reportView`, `dates`) | Jest, проект `logic` (ts-jest, Node) |
 | [screens/](screens/) | тесты экранов: всё приложение на SQLite в памяти, нажатия и тексты | Jest, проект `screens` (React Native Testing Library) |
 | [screens/plan/](screens/plan/) | кейсы для Jest, по разделам 1–9 | — |
 | [e2e/](e2e/) | Maestro на эмуляторе: только то, что без устройства не проверить | `tests/e2e/run.sh` |
