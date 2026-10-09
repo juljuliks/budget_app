@@ -20,10 +20,6 @@ appId: com.budgetapp
 - takeScreenshot: no-02-expanded
 - swipe:
     from:
-      text: "PASHA COFFEE"
-    direction: UP
-- swipe:
-    from:
       text: ".*Развлечения — лимит.*"
     direction: DOWN
 - waitForAnimationToEnd

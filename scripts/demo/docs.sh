@@ -3,14 +3,18 @@
 # the demo database (demoDb.ts) in place of the app's, the flows of flows/docs/ one after another, two bank SMS for
 # the notifications. The PNGs are gathered into OUT_DIR (default e2e-out/docs). The app's own data on the emulator is
 # replaced; the Messages app's notifications are muted while shooting and unmuted after.
-# Usage: scripts/demo/docs.sh [OUT_DIR]
+# Usage: scripts/demo/docs.sh [OUT_DIR]   (FLOWS="3-stats 4-notifications" scripts/demo/docs.sh — only those, the other
+# shots in OUT_DIR kept)
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 ROOT="$PWD"
 OUT="${1:-$ROOT/e2e-out/docs}"
 A="adb -s emulator-5554"; PKG=com.budgetapp; DIR=/data/data/$PKG/files; M=com.google.android.apps.messaging
 MAESTRO="$HOME/.maestro/bin/maestro"
-rm -rf "$OUT"; mkdir -p "$OUT"
+FLOWS="${FLOWS:-}"
+if [ -z "$FLOWS" ]; then rm -rf "$OUT"; fi
+mkdir -p "$OUT"
+wants() { [ -z "$FLOWS" ] || [[ " $FLOWS " == *" $1 "* ]]; }
 
 npx tsc -p scripts/demo
 node dist-demo/scripts/demo/demoDb.js "$OUT/demo.db"
@@ -33,7 +37,8 @@ shoot() {
 $A shell settings put global hide_error_dialogs 1
 $A shell pm grant $PKG android.permission.RECEIVE_SMS
 $A shell pm grant $PKG android.permission.POST_NOTIFICATIONS
-for flow in 1-operations 2-settings 3-stats; do load; shoot "$flow"; done
+for flow in 1-operations 2-settings 3-stats; do if wants "$flow"; then load; shoot "$flow"; fi; done
+wants 4-notifications || exit 0
 
 # the notifications: two bank SMS to the closed app — a new merchant (category buttons) and CAVEA (Развлечения to 85%)
 load
