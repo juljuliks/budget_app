@@ -1,0 +1,70 @@
+# The documentation's screenshots (scripts/demo/docs.sh): settings, merchants, categories.
+appId: com.budgetapp
+---
+- launchApp:
+    stopApp: false
+- tapOn: "Операции"
+- tapOn: "Настройки"
+- waitForAnimationToEnd
+- takeScreenshot: set-01-settings
+- tapOn: "Мерчанты"
+- waitForAnimationToEnd
+- takeScreenshot: mer-01-list
+- tapOn: "FABRIKA"
+- waitForAnimationToEnd
+- takeScreenshot: mer-02-card
+- pressKey: back
+- tapOn: "GLOVO"
+- waitForAnimationToEnd
+- takeScreenshot: mer-03-mixed
+- pressKey: back
+- longPressOn: "SPAR"
+- tapOn: "CARREFOUR"
+- waitForAnimationToEnd
+- takeScreenshot: mer-04-select
+- tapOn: "Отмена"
+- pressKey: back
+- tapOn: "Настройки"
+- tapOn: "Категории"
+- waitForAnimationToEnd
+- takeScreenshot: cat-01-list
+- tapOn: ".*Продукты.*"
+- waitForAnimationToEnd
+- takeScreenshot: cat-02-category
+- pressKey: back
+- tapOn: "Разделы"
+- waitForAnimationToEnd
+- takeScreenshot: cat-04-sections
+- pressKey: back
+- longPressOn: ".*Такси.*"
+- tapOn: ".*Транспорт.*"
+- waitForAnimationToEnd
+- takeScreenshot: cat-05-pick
+- tapOn: "Объединить \\(2\\)"
+- waitForAnimationToEnd
+- takeScreenshot: cat-06-merge
+- pressKey: back
+- tapOn:
+    text: "Отмена"
+    optional: true
+- tapOn: ".*Кафе и рестораны.*"
+- scrollUntilVisible:
+    element: "Удалить категорию"
+- tapOn: "Удалить категорию"
+- waitForAnimationToEnd
+- takeScreenshot: cat-07-delete
+- tapOn: "Разложить по разным категориям"
+- waitForAnimationToEnd
+- takeScreenshot: cat-08-sort-out
+- tapOn:
+    text: "FABRIKA"
+    index: 0
+- tapOn:
+    text: "FABRIKA"
+    index: 1
+- waitForAnimationToEnd
+- takeScreenshot: cat-09-sort-out-select
+- tapOn: "Отменить"
+- waitForAnimationToEnd
+- takeScreenshot: cat-10-abort
+- tapOn: "Прервать"

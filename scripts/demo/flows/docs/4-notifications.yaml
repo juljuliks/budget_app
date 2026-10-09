@@ -1,0 +1,39 @@
+# The documentation's screenshots (scripts/demo/docs.sh): the notifications in the shade (after the SMS docs.sh sends)
+# and the SMS import sheet. Only the Budget card of the shade goes into the documentation (cropped).
+appId: com.budgetapp
+---
+- swipe:
+    start: 50%, 1%
+    end: 50%, 60%
+- waitForAnimationToEnd
+- swipe:
+    from:
+      text: "Budget.*"
+    direction: DOWN
+- waitForAnimationToEnd
+- takeScreenshot: no-01-shade
+- swipe:
+    from:
+      text: "PASHA COFFEE"
+    direction: DOWN
+- waitForAnimationToEnd
+- takeScreenshot: no-02-expanded
+- swipe:
+    from:
+      text: "PASHA COFFEE"
+    direction: UP
+- swipe:
+    from:
+      text: ".*Развлечения — лимит.*"
+    direction: DOWN
+- waitForAnimationToEnd
+- takeScreenshot: no-03-limit
+- pressKey: back
+- launchApp:
+    stopApp: false
+- tapOn: "Операции"
+- tapOn: "Настройки"
+- tapOn: "Импорт SMS из телефона"
+- waitForAnimationToEnd
+- takeScreenshot: im-01-import
+- pressKey: back

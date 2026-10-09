@@ -1,0 +1,41 @@
+# The documentation's screenshots (scripts/demo/docs.sh): the operations tab on the demo database.
+appId: com.budgetapp
+---
+- launchApp:
+    stopApp: false
+- tapOn: "Операции"
+- waitForAnimationToEnd
+- takeScreenshot: ops-01-list
+- tapOn: "Тип"
+- waitForAnimationToEnd
+- takeScreenshot: ops-02-type
+- pressKey: back
+- tapOn: "По дням"
+- waitForAnimationToEnd
+- takeScreenshot: ops-03-group-sheet
+- tapOn: "По мерчантам"
+- waitForAnimationToEnd
+- takeScreenshot: ops-04-grouped
+- tapOn: "По мерчантам"
+- tapOn: "По дням"
+- waitForAnimationToEnd
+- longPressOn: "FABRIKA"
+- waitForAnimationToEnd
+- takeScreenshot: ops-05-select
+- tapOn: "Отмена"
+- tapOn: "FABRIKA"
+- waitForAnimationToEnd
+- takeScreenshot: ops-06-operation
+- pressKey: back
+- tapOn: "BURGER HOUSE"
+- waitForAnimationToEnd
+- takeScreenshot: ops-07-uncategorized
+- pressKey: back
+- tapOn: "GLOVO"
+- waitForAnimationToEnd
+- takeScreenshot: ops-08-mixed
+- pressKey: back
+- tapOn: "Добавить операцию"
+- waitForAnimationToEnd
+- takeScreenshot: ops-09-add
+- pressKey: back

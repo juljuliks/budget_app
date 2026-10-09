@@ -1,0 +1,70 @@
+# The documentation's screenshots (scripts/demo/docs.sh): the stats, the plan, the history and a month's report.
+appId: com.budgetapp
+---
+- launchApp:
+    stopApp: false
+- tapOn:
+    text: "Статистика"
+    index: 0
+- waitForAnimationToEnd
+- takeScreenshot: st-01-month
+- scroll
+- takeScreenshot: st-02-month-categories
+- scroll
+- takeScreenshot: st-03-month-bottom
+- tapOn: "Выбрать период"
+- waitForAnimationToEnd
+- takeScreenshot: st-04-period
+- tapOn: "За неделю"
+- waitForAnimationToEnd
+- takeScreenshot: st-05-week
+- scroll
+- takeScreenshot: st-06-week-categories
+- tapOn: "Выбрать период"
+- tapOn: "За день"
+- waitForAnimationToEnd
+- takeScreenshot: st-07-day
+- tapOn: "Выбрать период"
+- tapOn: "Свой период"
+- waitForAnimationToEnd
+- takeScreenshot: st-08-custom
+- pressKey: back
+- tapOn: "Выбрать период"
+- tapOn: "За месяц"
+- waitForAnimationToEnd
+- tapOn: "Скрыть суммы бюджета"
+- waitForAnimationToEnd
+- takeScreenshot: st-09-hidden
+- tapOn: "Показать суммы бюджета"
+- tapOn:
+    text: "План"
+    index: 0
+- waitForAnimationToEnd
+- takeScreenshot: pl-01-plan
+- tapOn: "Изменить бюджет месяца"
+- waitForAnimationToEnd
+- takeScreenshot: pl-04-budget
+- pressKey: back
+- tapOn: "Добавить категории в план"
+- waitForAnimationToEnd
+- takeScreenshot: pl-05-add
+- pressKey: back
+- scroll
+- takeScreenshot: pl-02-plan-categories
+- tapOn: "Изменить: .*Продукты.*"
+- waitForAnimationToEnd
+- takeScreenshot: pl-06-amount
+- pressKey: back
+- scroll
+- takeScreenshot: pl-03-plan-bottom
+- tapOn: "История"
+- waitForAnimationToEnd
+- takeScreenshot: hi-01-history
+- tapOn:
+    text: "Отчёт за месяц ›"
+    index: 0
+- waitForAnimationToEnd
+- takeScreenshot: re-01-report
+- scroll
+- takeScreenshot: re-02-report-more
+- pressKey: back
