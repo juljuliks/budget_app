@@ -8,6 +8,7 @@ import { getDb } from '../../src/db';
 import { getSetting } from '../../src/db/settings';
 import { createCategory } from '../../src/db/categories';
 import { getTransferTypeId } from '../../src/db/categoryTypes';
+import { currentYm, setPlanAmount } from '../../src/db/plans';
 
 async function openStats() {
   await openApp(planned);
@@ -175,6 +176,24 @@ describe('5.4–5.6 hidden amounts, the currency, the warning', () => {
     expect(screen.getAllByText('49% плана').length).toBeGreaterThan(0);
     expect(screen.getAllByText(/^\d+% трат$/).length).toBeGreaterThan(0);
     expect(await getSetting('hide_amounts')).toBe('1');
+  });
+
+  test('a weekly limit over its month\'s plan: hidden, its % is of the month\'s plan, as its overspend line says', async () => {
+    await openApp(async () => {
+      await planned();
+      const taxi = await createCategory('Такси', '🚕', null);
+      await setPlanAmount(currentYm(), taxi, 5000, 'limit', 'GEL', 'week');
+      await buy('BOLT', 50, on(3), taxi);
+      await buy('BOLT', 12.2, on(15, 9), taxi);
+    });
+    await tap('Статистика');
+    await period('За неделю');
+    await tap('Скрыть суммы бюджета');
+    // 62.20 of 50 this month, not today's 12.20 of the week's or the day's share of the limit
+    expect(await screen.findByText('124% плана')).toBeTruthy();
+    expect(texts()).toContain('Перерасход плана месяца');
+    await period('За день');
+    expect(await screen.findByText('124% плана')).toBeTruthy();
   });
 
   test('the currency: the stats in dollars by the day\'s rate', async () => {
