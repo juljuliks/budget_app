@@ -18,8 +18,6 @@ type Props = {
   c: CategoryStat;
   /** in a limits section of several categories the section's bar shows them all */
   noBar?: boolean;
-  /** outside the period's own limit sections (a month's overspend): just the spending on the right, no bar */
-  plainAmount?: boolean;
   /** "Жизнь: Покупки": where the sections aren't the categories' types */
   withType?: boolean;
 };
@@ -27,10 +25,10 @@ type Props = {
 const nameOf = (c: CategoryStat, withType: boolean) => (withType ? categoryLabel(c) : `${c.emoji || ''} ${c.name}`.trim());
 
 /** A category's row: tap opens its operations in the period; a limit's line has its ⓘ. */
-export function CategoryRow({ v, h, c, noBar = false, plainAmount = false, withType = v.byLimits }: Props) {
+export function CategoryRow({ v, h, c, noBar = false, withType = v.byLimits }: Props) {
   const plan = v.planOf(c);
   const name = nameOf(c, withType);
-  const ofLimit = plainAmount ? null : ofLimitOf(v, c, plan);
+  const ofLimit = ofLimitOf(v, c, plan);
   const onInfo = () => h.openInfo({ id: c.category_id!, name });
   const line = { v, c, noBar, onInfo };
   return (

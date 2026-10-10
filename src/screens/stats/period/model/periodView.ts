@@ -91,8 +91,10 @@ export function periodView({ stats, norms, month, average, range, normLabel, day
    * What a day / week limit's "spent / limit" on the right is measured over: the period itself, or — a day of a
    * weekly limit — its whole week so far, as the line under it ("Неделя 5 – 11 окт: осталось …")
    */
-  const limitPair = (plan: CategoryNorm, c: CategoryStat) => (isPartOfWindow(plan.window, range)
-    ? { spent: plan.windowSpent, limit: plan.windowNorm } : { spent: c.spent_minor, limit: plan.periodNorm });
+  const limitPair = (plan: CategoryNorm, c: CategoryStat) => (monthOver(c)
+    // over its month's plan ("Перерасход плана месяца"): the month's spending of it, as its line says
+    ? { spent: monthToDate(c), limit: plan.monthLimit }
+    : isPartOfWindow(plan.window, range) ? { spent: plan.windowSpent, limit: plan.windowNorm } : { spent: c.spent_minor, limit: plan.periodNorm });
   /** the limit on the right: a fixed payment's month plan, a day / week limit's own (see limitPair) */
   const rightLimit = (c: CategoryStat, plan?: CategoryNorm) =>
     (!plan ? 0 : plan.kind === 'fixed' ? plan.monthLimit : plan.kind === 'limit' && plan.rhythm !== 'month' ? limitPair(plan, c).limit : 0);
@@ -100,8 +102,7 @@ export function periodView({ stats, norms, month, average, range, normLabel, day
   const rightSpent = (c: CategoryStat, plan?: CategoryNorm) => (plan?.kind === 'limit' && plan.rhythm !== 'month' ? limitPair(plan, c).spent : c.spent_minor);
   /** a row's "% плана" (its limit as on the right) or "% трат", while the amounts are hidden */
   const hiddenShare = (c: CategoryStat, plan?: CategoryNorm) => {
-    // over its month's plan ("Перерасход плана месяца"): what the month spent of it, as its line says — not of the
-    // day's / week's limit (933% of a week's share of 50 ₾)
+    // over its month's plan: of the month's plan, as on the right with the amounts shown (limitPair)
     if (plan && monthOver(c)) return `${formatPercent(monthToDate(c), Math.round(plan.monthLimit))} плана`;
     const lim = !plan ? 0 : plan.kind === 'fixed' ? plan.monthLimit
       : plan.rhythm === 'month' ? 0 : isPartOfWindow(plan.window, range) ? plan.windowNorm : plan.periodNorm;

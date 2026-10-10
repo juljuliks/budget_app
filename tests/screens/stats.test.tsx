@@ -178,21 +178,31 @@ describe('5.4–5.6 hidden amounts, the currency, the warning', () => {
     expect(await getSetting('hide_amounts')).toBe('1');
   });
 
-  test('a weekly limit over its month\'s plan: hidden, its % is of the month\'s plan, as its overspend line says', async () => {
+  test('a weekly limit over its month\'s plan: of the month\'s plan, as its overspend line says — shown and hidden', async () => {
     await openApp(async () => {
       await planned();
       const taxi = await createCategory('Такси', '🚕', null);
       await setPlanAmount(currentYm(), taxi, 5000, 'limit', 'GEL', 'week');
       await buy('BOLT', 50, on(3), taxi);
       await buy('BOLT', 12.2, on(15, 9), taxi);
+      const cinema = await createCategory('Кино', '🎬', null);
+      await setPlanAmount(currentYm(), cinema, 3000, 'limit', 'GEL', 'week');
+      await buy('KINO', 40, on(13), cinema);
     });
     await tap('Статистика');
     await period('За неделю');
-    await tap('Скрыть суммы бюджета');
+    // the section: both months against both plans, 102.20 of 80
+    expect(await screen.findByText('Перерасход плана месяца')).toBeTruthy();
+    const t = texts();
+    expect(t[t.indexOf('Перерасход плана месяца') + 1]).toBe('102.20 / 80 ₾ (128%)');
     // 62.20 of 50 this month, not today's 12.20 of the week's or the day's share of the limit
-    expect(await screen.findByText('124% плана')).toBeTruthy();
-    expect(texts()).toContain('Перерасход плана месяца');
-    await period('За день');
+    const row = () => { const t = texts(); const i = t.indexOf('🚕 Такси'); return t.slice(i, i + 4); };
+    for (const name of ['За неделю', 'За день']) {
+      await period(name);
+      await screen.findByText('Перерасход плана месяца');
+      expect(row()).toEqual(['🚕 Такси', '62.20', ' / 50 ₾ (124%)', 'Перерасход на октябрь 12.20 ₾']);
+    }
+    await tap('Скрыть суммы бюджета');
     expect(await screen.findByText('124% плана')).toBeTruthy();
   });
 

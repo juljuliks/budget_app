@@ -59,10 +59,16 @@ export function limitSections(v: PeriodView, h: Handlers) {
   });
   const overspent = v.overspentCats.length ? [(
     <React.Fragment key="overspent">
-      {/* the period's spending of these categories; each row says its month's overspend */}
-      {header(OVERSPENT, plainTotal(v, v.sumSpent(v.overspentCats), v.overspentCats.length > 1))}
+      {/* as its rows: the month's spending of these categories against their month's plans */}
+      {header(OVERSPENT, v.overspentCats.length > 1 ? (
+        <SectionTotal
+          v={v}
+          spent={v.overspentCats.reduce((a, c) => a + v.monthToDate(c), 0)}
+          planned={v.overspentCats.reduce((a, c) => a + (v.planOf(c)?.monthLimit ?? 0), 0)}
+        />
+      ) : null)}
       <View>
-        {v.overspentCats.map((c) => <CategoryRow key={String(c.category_id)} v={v} h={h} c={c} noBar plainAmount />)}
+        {v.overspentCats.map((c) => <CategoryRow key={String(c.category_id)} v={v} h={h} c={c} noBar />)}
       </View>
     </React.Fragment>
   )] : [];
