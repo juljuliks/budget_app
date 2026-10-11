@@ -167,4 +167,12 @@ export const STEPS_13_ON: MigrationStep[][] = [
       for (const { id } of rows) await placeByBalances(id, db);
     },
   ],
+  // 29: indexes for the stats, the merchants and the refunds: a category's operations, a merchant's by date (it covers
+  // merchant_key alone, so that one goes), the refunds not settled yet
+  [
+    'CREATE INDEX IF NOT EXISTS idx_tx_category ON transactions(category_id)',
+    'CREATE INDEX IF NOT EXISTS idx_tx_merchant_occurred ON transactions(merchant_key, occurred_at)',
+    'DROP INDEX IF EXISTS idx_tx_merchant',
+    'CREATE INDEX IF NOT EXISTS idx_tx_kind_refund ON transactions(kind, refund_settled_at)',
+  ],
 ];

@@ -12,6 +12,18 @@ describe('migrations', () => {
     expect(tables).toEqual(expect.arrayContaining(['categories', 'merchant_rules', 'transactions', 'category_usage']));
   });
 
+  test('the operations\' indexes: by category, by merchant and date, the refunds; the lookups use them', async () => {
+    const db = openDatabase(':memory:');
+    await migrate(db);
+    const indexes = (await db.all<{ name: string }>("SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'transactions'")).map((r) => r.name);
+    expect(indexes).toEqual(expect.arrayContaining(['idx_tx_occurred', 'idx_tx_category', 'idx_tx_merchant_occurred', 'idx_tx_kind_refund']));
+    expect(indexes).not.toContain('idx_tx_merchant');
+    const plan = async (sql: string) => (await db.all<{ detail: string }>(`EXPLAIN QUERY PLAN ${sql}`)).map((r) => r.detail).join('; ');
+    expect(await plan('SELECT id FROM transactions WHERE category_id = 3')).toContain('idx_tx_category');
+    expect(await plan("SELECT id FROM transactions WHERE merchant_key = 'x' ORDER BY occurred_at DESC")).toContain('idx_tx_merchant_occurred');
+    expect(await plan("SELECT id FROM transactions WHERE kind = 'refund' AND refund_settled_at IS NULL")).toContain('idx_tx_kind_refund');
+  });
+
   test('running twice is a no-op', async () => {
     const db = openDatabase(':memory:');
     await migrate(db);
