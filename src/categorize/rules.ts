@@ -40,8 +40,8 @@ export async function createRule(matchType: MatchType, pattern: string, category
  * ones, so manual (category_source = 'user', "Без категории" included) choices are never overwritten. Only purchases / payments
  * (see isRememberable).
  */
-export async function backfillRule(matchType: MatchType, pattern: string, categoryId: number) {
-  const db = await getDb();
+export async function backfillRule(matchType: MatchType, pattern: string, categoryId: number, db?: Db) {
+  db ??= await getDb();
   // substr comparison instead of LIKE so '%' / '_' in merchant names aren't wildcards
   const [match, matchParams] = matchType === 'exact'
     ? ['merchant_key = ?', [pattern]]

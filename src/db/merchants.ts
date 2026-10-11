@@ -1,4 +1,5 @@
 import { getDb } from './index';
+import type { Db } from './types';
 import { backfillRule, createRule } from '../categorize/rules';
 import { categoryChangeTotals } from '../categorize/assign';
 import { REMEMBERABLE_KINDS } from '../domain/types';
@@ -130,7 +131,12 @@ export async function getMerchant(id: string): Promise<MerchantDetails | null> {
  * as their own ('keep': they no longer follow the merchant).
  */
 export async function setMerchantCategory(id: string, categoryId: number | null, past: 'change' | 'keep' = 'change') {
-  const db = await getDb();
+  // all or none: the rule and the operations that follow it change together
+  await (await getDb()).transaction((db) => writeMerchantCategory(db, id, categoryId, past));
+}
+
+/** setMerchantCategory's writes, inside the transaction `db`. */
+async function writeMerchantCategory(db: Db, id: string, categoryId: number | null, past: 'change' | 'keep') {
   // one category of its own: no longer of different ones
   await db.run('DELETE FROM mixed_merchants WHERE merchant_key = ?', [id]);
   if (past === 'keep') await db.run(`UPDATE transactions SET category_source = 'user' WHERE merchant_key = ? AND category_source = 'rule'`, [id]);
@@ -142,8 +148,8 @@ export async function setMerchantCategory(id: string, categoryId: number | null,
     }
     return;
   }
-  await createRule('exact', id, categoryId);
-  if (past === 'change') await backfillRule('exact', id, categoryId);
+  await createRule('exact', id, categoryId, db);
+  if (past === 'change') await backfillRule('exact', id, categoryId, db);
 }
 
 /** A merchant's operations that follow its category (not the manual choices): how many, per currency how much. */
@@ -233,7 +239,9 @@ export async function merchantsCategoryPreview(keys: string[], categoryId: numbe
 
 /** One category for several merchants (see setMerchantCategory): their new and following operations get it. */
 export async function setMerchantsCategory(keys: string[], categoryId: number) {
-  for (const k of keys) await setMerchantCategory(k, categoryId);
+  await (await getDb()).transaction(async (db) => {
+    for (const k of keys) await writeMerchantCategory(db, k, categoryId, 'change');
+  });
 }
 
 /**

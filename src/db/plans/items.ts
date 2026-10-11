@@ -1,5 +1,6 @@
 // The plan's items: listed, added, their amount, pinned, removed; within the budget.
 import { getDb } from '../index';
+import type { Db } from '../types';
 import { Currency } from '../fx';
 import { asCurrency } from './months';
 import { NormPeriod, PlanItem, PlanKind, asNorm } from './types';
@@ -31,9 +32,8 @@ export async function listPlan(ym: string, to?: Currency): Promise<PlanItem[]> {
   }));
 }
 
-async function markPlanned(ym: string) {
+async function markPlanned(ym: string, db: Db) {
   // editing a month (also a past one) makes it a planned month that later months carry over from
-  const db = await getDb();
   await db.run('INSERT OR IGNORE INTO plan_months (ym) VALUES (?)', [ym]);
 }
 
@@ -78,9 +78,11 @@ export async function addPlanItem(ym: string, categoryId: number, limitMinor?: n
       if (!(await fits(ym, categoryId, last.limit_minor, last.currency))) amount = last.limit_minor;
     }
   }
-  await db.run('INSERT OR IGNORE INTO plan_items (ym, category_id, limit_minor, kind, currency, norm_period) VALUES (?, ?, ?, ?, ?, ?)',
-    [ym, categoryId, amount, kind, cur, norm]);
-  await markPlanned(ym);
+  await db.transaction(async (t) => {
+    await t.run('INSERT OR IGNORE INTO plan_items (ym, category_id, limit_minor, kind, currency, norm_period) VALUES (?, ?, ?, ?, ?, ?)',
+      [ym, categoryId, amount, kind, cur, norm]);
+    await markPlanned(ym, t);
+  });
 }
 
 /**
@@ -96,12 +98,15 @@ export async function setPlanAmount(ym: string, categoryId: number, limitMinor: 
   const cur = currency ?? (existing ? asCurrency(existing.currency) : await planCurrency(ym));
   const over = await fits(ym, categoryId, limitMinor, cur);
   if (over) throw over;
-  await db.run(
-    `INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency, norm_period) VALUES (?, ?, ?, coalesce(?, 'limit'), ?, coalesce(?, 'day'))
-      ON CONFLICT(ym, category_id) DO UPDATE SET limit_minor = excluded.limit_minor, kind = coalesce(?, kind), currency = excluded.currency,
-        norm_period = coalesce(?, norm_period)`,
-    [ym, categoryId, limitMinor, kind ?? null, cur, normPeriod ?? null, kind ?? null, normPeriod ?? null]);
-  await markPlanned(ym);
+  // the checks above read the rates outside: the writes alone in the transaction
+  await db.transaction(async (t) => {
+    await t.run(
+      `INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency, norm_period) VALUES (?, ?, ?, coalesce(?, 'limit'), ?, coalesce(?, 'day'))
+        ON CONFLICT(ym, category_id) DO UPDATE SET limit_minor = excluded.limit_minor, kind = coalesce(?, kind), currency = excluded.currency,
+          norm_period = coalesce(?, norm_period)`,
+      [ym, categoryId, limitMinor, kind ?? null, cur, normPeriod ?? null, kind ?? null, normPeriod ?? null]);
+    await markPlanned(ym, t);
+  });
 }
 
 /** Pinned items move to the next month together with their amount. */
@@ -112,6 +117,8 @@ export async function setPlanPinned(ym: string, categoryId: number, pinned: bool
 
 export async function removePlanItem(ym: string, categoryId: number) {
   const db = await getDb();
-  await db.run('DELETE FROM plan_items WHERE ym = ? AND category_id = ?', [ym, categoryId]);
-  await markPlanned(ym);
+  await db.transaction(async (t) => {
+    await t.run('DELETE FROM plan_items WHERE ym = ? AND category_id = ?', [ym, categoryId]);
+    await markPlanned(ym, t);
+  });
 }

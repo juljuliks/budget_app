@@ -1,4 +1,6 @@
 import { getDb } from '../db';
+import type { Db } from '../db/types';
+import { currentYm } from '../db/plans';
 import { setCategoryForTransactions, setTransactionCategory } from '../db/transactions';
 import { incrementCategoryUsage } from '../db/categories';
 import { freezePastOfCategory } from '../db/categoryDeletion';
@@ -27,18 +29,21 @@ export async function assignCategory(txId: number, categoryId: number | null, ch
   const forMerchant = categoryId !== null && key !== null
     && (choice === 'merchant' || (choice === undefined && !(await findCategoryForMerchant(key))));
 
-  // a merchant of different categories: a category picked for its operation joins its list
-  if (categoryId !== null && tx?.merchant_key && isRememberable(tx.kind) && key === null) await rememberForMixed([txId], categoryId);
+  // the writes all or none: a rule without its operations moved (or the other way) would split the merchant
+  await db.transaction(async (t) => {
+    // a merchant of different categories: a category picked for its operation joins its list
+    if (categoryId !== null && tx?.merchant_key && isRememberable(tx.kind) && key === null) await rememberForMixed([txId], categoryId, t);
 
-  if (forMerchant) {
-    await createRule('exact', key!, categoryId!);
-    // this one follows the merchant from now on, like the ones the rule picked
-    await setTransactionCategory(txId, categoryId, 'rule');
-    await backfillRule('exact', key!, categoryId!);
-  } else {
-    await setTransactionCategory(txId, categoryId, 'user');
-  }
-  if (categoryId !== null) await incrementCategoryUsage(categoryId);
+    if (forMerchant) {
+      await createRule('exact', key!, categoryId!, t);
+      // this one follows the merchant from now on, like the ones the rule picked
+      await setTransactionCategory(txId, categoryId, 'rule', t);
+      await backfillRule('exact', key!, categoryId!, t);
+    } else {
+      await setTransactionCategory(txId, categoryId, 'user', t);
+    }
+    if (categoryId !== null) await incrementCategoryUsage(categoryId, 1, t);
+  });
   emitTransactionsChanged();
 }
 
@@ -161,29 +166,30 @@ export async function assignCategoryToMany(
     const withOther = new Set((await merchantsToChange(txIds, categoryId)).map((m) => m.key));
     merchants = choice === 'merchant' ? all : all.filter((m) => !withOther.has(m.key));
   }
-  if (keepPastIn !== undefined) await freezePastOfCategory(keepPastIn, merchants.map((m) => m.key));
-  await setCategoryForTransactions(txIds, categoryId);
-  for (const m of merchants) {
-    await createRule('exact', m.key, categoryId!);
-    await backfillRule('exact', m.key, categoryId!);
-  }
-  if (merchants.length > 0) {
-    // the selected ones of these merchants follow them from now on, like the ones the rule picked
-    const db = await getDb();
-    await db.run(
-      `UPDATE transactions SET category_source = 'rule' WHERE id IN (${placeholders(txIds.length)})
-        AND merchant_key IN (${placeholders(merchants.length)}) AND kind IN (${placeholders(REMEMBERABLE_KINDS.length)})`,
-      [...txIds, ...merchants.map((m) => m.key), ...REMEMBERABLE_KINDS]);
-  }
-  if (categoryId !== null) await rememberForMixed(txIds, categoryId);
-  if (categoryId !== null) await incrementCategoryUsage(categoryId);
+  // the writes all or none (see assignCategory)
+  await (await getDb()).transaction(async (t) => {
+    if (keepPastIn !== undefined) await freezePastOfCategory(keepPastIn, merchants.map((m) => m.key), currentYm(), t);
+    await setCategoryForTransactions(txIds, categoryId, t);
+    for (const m of merchants) {
+      await createRule('exact', m.key, categoryId!, t);
+      await backfillRule('exact', m.key, categoryId!, t);
+    }
+    if (merchants.length > 0) {
+      // the selected ones of these merchants follow them from now on, like the ones the rule picked
+      await t.run(
+        `UPDATE transactions SET category_source = 'rule' WHERE id IN (${placeholders(txIds.length)})
+          AND merchant_key IN (${placeholders(merchants.length)}) AND kind IN (${placeholders(REMEMBERABLE_KINDS.length)})`,
+        [...txIds, ...merchants.map((m) => m.key), ...REMEMBERABLE_KINDS]);
+    }
+    if (categoryId !== null) await rememberForMixed(txIds, categoryId, t);
+    if (categoryId !== null) await incrementCategoryUsage(categoryId, 1, t);
+  });
   emitTransactionsChanged();
   return merchants.length;
 }
 
 /** The category picked for these operations joins the lists of their merchants of different categories. */
-async function rememberForMixed(txIds: number[], categoryId: number) {
-  const db = await getDb();
+async function rememberForMixed(txIds: number[], categoryId: number, db: Db) {
   await db.run(
     `INSERT OR IGNORE INTO merchant_categories (merchant_key, category_id)
       SELECT DISTINCT t.merchant_key, ? FROM transactions t JOIN mixed_merchants m ON m.merchant_key = t.merchant_key

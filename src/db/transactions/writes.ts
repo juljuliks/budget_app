@@ -1,12 +1,13 @@
 // Changing operations: category, amount, note, read, deleted, added by hand.
 import { getDb } from '../index';
+import type { Db } from '../types';
 import { CategorySource } from './rows';
 import { placeholders } from '../sql';
 
 /** Bulk "change category" from the list: a manual choice ("Без категории" too), so no merchant rules are created. */
-export async function setCategoryForTransactions(txIds: number[], categoryId: number | null) {
+export async function setCategoryForTransactions(txIds: number[], categoryId: number | null, db?: Db) {
   if (txIds.length === 0) return;
-  const db = await getDb();
+  db ??= await getDb();
   await db.run(
     `UPDATE transactions SET category_id = ?, category_source = ? WHERE id IN (${placeholders(txIds.length)})`,
     [categoryId, 'user', ...txIds]);
@@ -51,8 +52,8 @@ export async function deleteTransaction(id: number) {
  * categoryId = null clears the category. "Без категории" picked by the user keeps source 'user', so a merchant
  * category never fills it in later; an untouched uncategorized transaction has no source.
  */
-export async function setTransactionCategory(txId: number, categoryId: number | null, source: CategorySource) {
-  const db = await getDb();
+export async function setTransactionCategory(txId: number, categoryId: number | null, source: CategorySource, db?: Db) {
+  db ??= await getDb();
   return db.run('UPDATE transactions SET category_id = ?, category_source = ? WHERE id = ?',
     [categoryId, source, txId]);
 }

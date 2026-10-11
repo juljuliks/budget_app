@@ -145,7 +145,9 @@ export async function setPlanBudget(
     const plannable = budgetMinor - unplannedOf({ amount_minor: budgetMinor, unplanned_pct: pct, unplanned_minor: own }) - locked;
     if (plannable < planned) throw new OverBudgetError(plannable, planned, currency);
   }
-  await db.run('INSERT OR IGNORE INTO plan_months (ym) VALUES (?)', [ym]);
-  await db.run('UPDATE plan_months SET budget_minor = ?, budget_currency = ?, unplanned_pct = ?, to_savings = ?, locked_minor = ?, unplanned_minor = ? WHERE ym = ?',
-    [budgetMinor, currency, pct, savings ? 1 : 0, budgetMinor === null ? 0 : locked, budgetMinor === null ? null : own, ym]);
+  await db.transaction(async (t) => {
+    await t.run('INSERT OR IGNORE INTO plan_months (ym) VALUES (?)', [ym]);
+    await t.run('UPDATE plan_months SET budget_minor = ?, budget_currency = ?, unplanned_pct = ?, to_savings = ?, locked_minor = ?, unplanned_minor = ? WHERE ym = ?',
+      [budgetMinor, currency, pct, savings ? 1 : 0, budgetMinor === null ? 0 : locked, budgetMinor === null ? null : own, ym]);
+  });
 }

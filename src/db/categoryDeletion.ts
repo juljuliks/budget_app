@@ -1,4 +1,5 @@
 import { getDb } from './index';
+import type { Db } from './types';
 import { currentYm, monthStart } from './plans';
 import { signedSpendSql } from './spending';
 import { placeholders } from './sql';
@@ -90,9 +91,9 @@ export async function sortOutSummary(sourceId: number, ids: number[]): Promise<S
  * Keeps the past in the category: its operations before this month that follow their merchant become fixed, so a
  * merchant moved elsewhere (now or later) doesn't take them along. `merchantKeys`: only those merchants' (else all).
  */
-export async function freezePastOfCategory(id: number, merchantKeys?: string[], nowYm = currentYm()) {
+export async function freezePastOfCategory(id: number, merchantKeys?: string[], nowYm = currentYm(), db?: Db) {
   if (merchantKeys && merchantKeys.length === 0) return;
-  const db = await getDb();
+  db ??= await getDb();
   const only = merchantKeys ? ` AND merchant_key IN (${placeholders(merchantKeys.length)})` : '';
   await db.run(
     `UPDATE transactions SET category_source = 'user' WHERE category_id = ? AND occurred_at < ? AND category_source = 'rule'${only}`,
