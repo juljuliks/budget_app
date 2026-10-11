@@ -1,6 +1,6 @@
 import { Currency } from '@/db/fx';
-import { CategoryStat, getPlanBudget, monthStats, parseYm, periodStats, planConverter, spentOf, StatGroup, unplannedOf } from '@/db/plans';
-import { DayKey, rangeToUnix } from '@/shared/lib/dateRange';
+import { CategoryStat, getPlanBudget, planConverter, spentOf, StatGroup, unplannedOf } from '@/db/plans';
+import type { Norms } from '@/stats/norms';
 
 /**
  * "Вне плана" in the stats: the categories without a plan this month and the uncategorized spending leave their
@@ -32,15 +32,11 @@ export async function unplannedShare(ym: string, currency: Currency): Promise<nu
 }
 
 /**
- * For a day / week: the month the period ends in — which categories have a plan, the spending outside it from the 1st
- * up to the period's end (`to`: a past period counts as of its end, not as of today) and the month's share for it.
+ * For a day / week: the month the period ends in (its norms) — which categories have a plan, the spending outside it
+ * from the 1st up to the period's end (a past period counts as of its end, not as of today) and the month's share for it.
  */
-export async function unplannedMonth(ym: string, currency: Currency, to: DayKey): Promise<{ planned: Set<number>; spent: number; share: number }> {
-  const { year, month } = parseYm(ym);
-  const { from, to: end } = rangeToUnix({ from: `${ym}-01`, to });
-  const [stats, upTo, share] = await Promise.all([monthStats(year, month, currency), periodStats(from, end, currency), unplannedShare(ym, currency)]);
-  const planned = new Set(stats.categories.filter((c) => c.category_id !== null && c.limit_minor !== null).map((c) => c.category_id!));
-  const spent = upTo.categories.filter((c) => c.category_id === null || !planned.has(c.category_id))
-    .reduce((a, c) => a + Math.max(0, c.spent_minor), 0);
-  return { planned, spent, share };
+export async function unplannedMonth(norms: Norms, currency: Currency): Promise<{ planned: Set<number>; spent: number; share: number }> {
+  const planned = new Set([...norms.byCategory].filter(([, p]) => p.monthLimit > 0).map(([id]) => id));
+  const spent = [...norms.monthToDate].filter(([id]) => id === null || !planned.has(id)).reduce((a, [, v]) => a + Math.max(0, v), 0);
+  return { planned, spent, share: await unplannedShare(norms.ym, currency) };
 }

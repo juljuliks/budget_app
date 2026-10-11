@@ -2,7 +2,7 @@
 import { getDb } from '../index';
 import { Currency } from '../fx';
 import { BUDGET_CURRENCY, currentYm, monthRange, parseYm, planRateDate, ymOf } from './months';
-import { SpendRow, convertSpending, spendRows, sumBy } from './spend';
+import { convertSpending, spendByDay, spendRows } from './spend';
 
 /**
  * Average spending per month over the full months of [fromKey, toKey] ('YYYY-MM-DD') that have data: not the
@@ -29,8 +29,8 @@ export async function averageFullMonths(fromKey: string, toKey: string, currency
   const { year: ly, month: lm } = parseYm(last);
   const [from] = monthRange(year, month);
   const [, to] = monthRange(ly, lm);
-  const { items } = await convertSpending(await spendRows(from, to), currency);
-  const total = items.reduce((sum, i) => sum + i.value, 0);
+  const { days } = await spendByDay(from, to, currency);
+  const total = days.reduce((sum, d) => sum + d.value, 0);
   const months = (ly - year) * 12 + (lm - month) + 1;
   return { average_minor: Math.round(total / months), months };
 }
@@ -89,9 +89,9 @@ export async function planHistory(nowYm = currentYm(), currency: Currency = BUDG
   const budgets = await db.all<{ ym: string; budget_minor: number; budget_currency: string }>(
     'SELECT ym, budget_minor, budget_currency FROM plan_months WHERE budget_minor IS NOT NULL');
   const planYms = [...new Set([...items.map((i) => i.ym), ...budgets.map((b) => b.ym)])];
-  const { items: spent, conv } = await convertSpending(await spendRows(0, Number.MAX_SAFE_INTEGER), currency, planYms.map(planRateDate));
-  const ymOfRow = (r: SpendRow) => { const d = new Date(r.occurred_at * 1000); return ymOf(d.getFullYear(), d.getMonth()); };
-  const spentBy = sumBy(spent, ymOfRow);
+  const { days, conv } = await spendByDay(0, Number.MAX_SAFE_INTEGER, currency, planYms.map(planRateDate));
+  const spentBy = new Map<string, number>();
+  for (const { day, value } of days) spentBy.set(day.slice(0, 7), (spentBy.get(day.slice(0, 7)) ?? 0) + value);
   const plannedBy = new Map<string, number>();
   for (const i of items) plannedBy.set(i.ym, (plannedBy.get(i.ym) ?? 0) + (conv(i.limit_minor, i.currency, currency, planRateDate(i.ym)) ?? 0));
   const budgetBy = new Map(budgets.map((b) => [b.ym, conv(b.budget_minor, b.budget_currency, currency, planRateDate(b.ym))]));

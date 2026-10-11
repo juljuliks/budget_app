@@ -34,7 +34,7 @@ export function usePeriodData(range: DayRange, currency: Currency) {
       loadNorms(range, currency).then((n) => {
         const planned = [...n.byCategory].filter(([id, p]) => p.kind === 'limit' && p.rhythm !== 'month' && p.periodNorm > 0
           && (n.monthToDate.get(id) ?? 0) > 0).map(([id]) => id);
-        return Promise.all([periodStats(from, to, currency, planned), unplannedMonth(n.ym, currency, range.to)])
+        return Promise.all([periodStats(from, to, currency, planned), unplannedMonth(n, currency)])
           .then(keep(([s, u]: [PeriodStats, UnplannedMonth]) => { setNorms(n); setMonth(u); setStats(s); }));
       }).catch((e) => console.error('load period stats failed', e));
     } else {

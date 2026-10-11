@@ -1,7 +1,7 @@
 jest.mock('../../src/shared/navigation/navigation', () => ({ navigateWhenReady: jest.fn() }));
 
 import { getDb } from '../../src/db';
-import { dateKey, ensureRates, makeConverter } from '../../src/db/fx';
+import { dateKey, ensureRates, ensureRatesLater, makeConverter } from '../../src/db/fx';
 import { setRatesFetcher } from '../../src/fx/nbg';
 import {
   addPlanItem, getPlanBudget, listPlan, monthStats, OverBudgetError, periodStats, planHistory, setPlanAmount, setPlanBudget, ymOf,
@@ -43,6 +43,27 @@ test('rates are fetched once per missing day and cached (National Bank of Georgi
   await ensureRates(['2026-09-15']);
   expect(fetcher).toHaveBeenCalledTimes(2);
   expect((await makeConverter())(100, 'USD', 'GEL', '2026-09-15')).toBe(260);
+});
+
+test('in the background: the cached rates now, the missing fetched after, and the screens told once they came', async () => {
+  await rate('2026-09-10', 'USD', 2.5);
+  let answer: (v: unknown) => void = () => {};
+  setRatesFetcher(() => new Promise((r) => { answer = r; }));
+  const fetched = jest.fn();
+  await ensureRatesLater(['2026-09-10', '2026-09-12'], fetched);
+  // not waited for: the 12th takes the 10th's rate meanwhile
+  expect((await makeConverter())(100, 'USD', 'GEL', '2026-09-12')).toBe(250);
+  // asked again meanwhile: not fetched twice
+  await ensureRatesLater(['2026-09-12'], fetched);
+  answer([{ currencies: [{ code: 'USD', quantity: 1, rate: 2.6 }] }]);
+  await new Promise((r) => setTimeout(r, 0));
+  expect(fetched).toHaveBeenCalledTimes(1);
+  expect((await makeConverter())(100, 'USD', 'GEL', '2026-09-12')).toBe(260);
+  // nothing came (the bank had no rate): nobody told
+  setRatesFetcher(async () => []);
+  await ensureRatesLater(['2026-09-13'], fetched);
+  await new Promise((r) => setTimeout(r, 0));
+  expect(fetched).toHaveBeenCalledTimes(1);
 });
 
 test('a failing request is ignored: no rate, the spending stays out of the totals as unconverted', async () => {

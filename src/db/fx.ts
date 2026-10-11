@@ -1,6 +1,7 @@
-import { getDb } from './index';
+import { Db, getDb } from './index';
 import { fetchRates } from '../fx/nbg';
 import { placeholders } from './sql';
+import { emitTransactionsChanged } from '../domain/events';
 
 // Currencies and conversion. Amounts are stored in their own currency; stats are shown in one the user picks,
 // converted with the official rate of the transaction's day (National Bank of Georgia, GEL per unit), cached
@@ -27,32 +28,60 @@ const FOREIGN = CURRENCIES.filter((c) => c !== 'GEL');
 const MAX_FETCH = 40;
 const PARALLEL = 4;
 
-/**
- * Makes sure the rates of these days are cached, fetching the missing ones (future days count as today).
- * Network errors are ignored: conversion then falls back to the nearest cached day.
- */
-export async function ensureRates(dates: Iterable<string>): Promise<void> {
-  const db = await getDb();
+/** The days among these whose rates aren't cached yet, latest first, at most MAX_FETCH (future days count as today). */
+async function missingRates(dates: Iterable<string>): Promise<string[]> {
   const today = dateKey(Date.now() / 1000);
   const wanted = [...new Set([...dates].map((d) => (d > today ? today : d)))];
-  if (wanted.length === 0) return;
-  const have = new Set((await db.all<{ date: string }>(
+  if (wanted.length === 0) return [];
+  const have = new Set((await (await getDb()).all<{ date: string }>(
     `SELECT date FROM fx_rates WHERE currency = ? AND date IN (${placeholders(wanted.length)})`,
     [FOREIGN[0], ...wanted])).map((r) => r.date));
-  const missing = wanted.filter((d) => !have.has(d)).sort().reverse().slice(0, MAX_FETCH);
-  for (let i = 0; i < missing.length; i += PARALLEL) {
-    await Promise.all(missing.slice(i, i + PARALLEL).map(async (date) => {
+  return wanted.filter((d) => !have.has(d)).sort().reverse().slice(0, MAX_FETCH);
+}
+
+/** Fetches and caches these days' rates; how many days came. Network errors are ignored (logged). */
+async function fetchDays(days: string[]): Promise<number> {
+  const db = await getDb();
+  let came = 0;
+  for (let i = 0; i < days.length; i += PARALLEL) {
+    await Promise.all(days.slice(i, i + PARALLEL).map(async (date) => {
       try {
-        for (const r of await fetchRates(date, FOREIGN)) {
-          if (!isCurrency(r.code)) continue;
-          await db.run('INSERT OR REPLACE INTO fx_rates (date, currency, gel_per_unit) VALUES (?, ?, ?)',
-            [date, r.code, r.gelPerUnit]);
+        const rates = (await fetchRates(date, FOREIGN)).filter((r) => isCurrency(r.code));
+        for (const r of rates) {
+          await db.run('INSERT OR REPLACE INTO fx_rates (date, currency, gel_per_unit) VALUES (?, ?, ?)', [date, r.code, r.gelPerUnit]);
         }
+        if (rates.length > 0) came++;
       } catch (e) {
         console.warn('rates for', date, 'not loaded', e);
       }
     }));
   }
+  return came;
+}
+
+/**
+ * Makes sure the rates of these days are cached, fetching the missing ones (future days count as today).
+ * Network errors are ignored: conversion then falls back to the nearest cached day.
+ */
+export async function ensureRates(dates: Iterable<string>): Promise<void> {
+  await fetchDays(await missingRates(dates));
+}
+
+/** Days being fetched in the background: asked again meanwhile (another query of the same screen), not fetched twice. */
+const fetching = new Set<string>();
+
+/**
+ * The stats' way: they are counted on the cached rates (a missing day takes its neighbour's) and don't wait for the
+ * network. The missing days are fetched in the background; once some came, `onFetched` — the screens count again.
+ */
+export async function ensureRatesLater(dates: Iterable<string>, onFetched: () => void = emitTransactionsChanged): Promise<void> {
+  const days = (await missingRates(dates)).filter((d) => !fetching.has(d));
+  if (days.length === 0) return;
+  days.forEach((d) => fetching.add(d));
+  fetchDays(days)
+    .then((came) => { if (came > 0) onFetched(); })
+    .catch((e) => console.warn('rates not loaded', e))
+    .finally(() => days.forEach((d) => fetching.delete(d)));
 }
 
 /** Converts minor units from one currency to another on a day; null when no rate is known at all. */
@@ -64,6 +93,19 @@ export type Converter = (amountMinor: number, from: string, to: string, date: st
  */
 export async function makeConverter(): Promise<Converter> {
   const db = await getDb();
+  // the table only grows (INSERT OR REPLACE gives a replaced row a new rowid): its count and last rowid tell a change
+  const s = await db.get<{ n: number; last: number | null }>('SELECT count(*) AS n, max(rowid) AS last FROM fx_rates');
+  const stamp = `${s?.n}|${s?.last}`;
+  if (cached?.db === db && cached.stamp === stamp) return cached.conv;
+  const conv = await buildConverter(db);
+  cached = { db, stamp, conv };
+  return conv;
+}
+
+/** The last converter built, on which connection and state of fx_rates. */
+let cached: { db: Db; stamp: string; conv: Converter } | null = null;
+
+async function buildConverter(db: Db): Promise<Converter> {
   const rows = await db.all<{ date: string; currency: string; gel_per_unit: number }>(
     'SELECT date, currency, gel_per_unit FROM fx_rates ORDER BY date');
   const byCurrency = new Map<string, Array<[string, number]>>();
@@ -90,4 +132,4 @@ export async function makeConverter(): Promise<Converter> {
   };
 }
 
-export default { CURRENCIES, ensureRates, makeConverter, dateKey };
+export default { CURRENCIES, ensureRates, ensureRatesLater, makeConverter, dateKey };

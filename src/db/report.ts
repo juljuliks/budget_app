@@ -1,5 +1,5 @@
 import { getDb } from './index';
-import { Currency, dateKey, ensureRates, makeConverter } from './fx';
+import { Currency, dateKey, ensureRatesLater, makeConverter } from './fx';
 import { getPlanBudget, monthRange, monthStats, parseYm, planConverter, unplannedOf, unplannedSpent, ymOf } from './plans';
 import { EXPENSE_KINDS } from './spending';
 import { sqlList } from './sql';
@@ -159,7 +159,7 @@ export async function monthReport(ym: string, currency: Currency): Promise<Month
     `SELECT amount_minor, currency, occurred_at FROM transactions
       WHERE occurred_at >= ? AND occurred_at < ? AND kind != 'refund' AND kind != 'deposit'
         AND category_id = (SELECT id FROM categories WHERE system = 'savings')`, [from, to]);
-  await ensureRates(moved.filter((m) => m.currency !== currency).map((m) => dateKey(m.occurred_at)));
+  await ensureRatesLater(moved.filter((m) => m.currency !== currency).map((m) => dateKey(m.occurred_at)));
   const fx = await makeConverter();
   const movedToSavings = moved.reduce((a, m) => a + (fx(m.amount_minor, m.currency, currency, dateKey(m.occurred_at)) ?? 0), 0);
 

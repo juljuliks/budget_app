@@ -1,6 +1,6 @@
 // The month's budget (the amount, the share outside the plan, the locked savings), its income, the plan's creation.
 import { getDb } from '../index';
-import { Currency, dateKey, ensureRates, makeConverter } from '../fx';
+import { Currency, dateKey, ensureRatesLater, makeConverter } from '../fx';
 import { BUDGET_CURRENCY, asCurrency, currentYm, monthRange, parseYm, planRateDate } from './months';
 import { convertSpending, spendRows, sumBy } from './spend';
 import { PlanBudget } from './types';
@@ -72,10 +72,10 @@ export async function planCurrency(ym: string): Promise<Currency> {
   return asCurrency((await db.get<{ c: string }>('SELECT budget_currency AS c FROM plan_months WHERE ym = ?', [ym]))?.c);
 }
 
-/** A converter on the month's plan date (its rate fetched if needed): plan amounts shown in another currency. */
+/** A converter on the month's plan date (its rate fetched in the background if missing): plan amounts shown in another currency. */
 export async function planConverter(ym: string): Promise<(minor: number, from: string, to: string) => number | null> {
   const date = planRateDate(ym);
-  await ensureRates([date]);
+  await ensureRatesLater([date]);
   const conv = await makeConverter();
   return (minor, from, to) => conv(minor, from, to, date);
 }
@@ -105,7 +105,7 @@ export async function monthIncome(ym: string, currency: Currency = BUDGET_CURREN
     `SELECT amount_minor, currency, occurred_at FROM transactions
       WHERE kind = 'deposit' AND occurred_at >= ? AND occurred_at < ? AND category_id = (SELECT id FROM categories WHERE system = 'topup')`,
     [from, to]);
-  await ensureRates(rows.filter((r) => r.currency !== currency).map((r) => dateKey(r.occurred_at)));
+  await ensureRatesLater(rows.filter((r) => r.currency !== currency).map((r) => dateKey(r.occurred_at)));
   const conv = await makeConverter();
   const topUp = rows.reduce((s, r) => s + (conv(r.amount_minor, r.currency, currency, dateKey(r.occurred_at)) ?? 0), 0);
   const transferIds = new Set((await db.all<{ id: number }>(

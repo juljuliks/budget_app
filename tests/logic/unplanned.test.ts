@@ -39,6 +39,8 @@ describe('unplannedMonth', () => {
     const { addManualTransaction } = await import('../../src/db/transactions');
     const { setPlanAmount } = await import('../../src/db/plans');
     const { unplannedMonth } = await import('../../src/entities/plan/model/unplanned');
+    const { loadNorms } = await import('../../src/stats/norms');
+    const upTo = async (to: string) => unplannedMonth(await loadNorms({ from: to, to }, 'GEL'), 'GEL');
     const at = (day: string) => Math.floor(new Date(`${day}T12:00:00`).getTime() / 1000);
     const food = await createCategory('Еда');
     const taxi = await createCategory('Такси');
@@ -46,9 +48,9 @@ describe('unplannedMonth', () => {
     for (const [amount, id, day] of [[1000, taxi, '2025-10-02'], [500, null, '2025-10-03'], [2000, taxi, '2025-10-10'], [700, food, '2025-10-03']] as const) {
       await addManualTransaction({ amount_minor: amount, category_id: id, occurred_at: at(day), kind: 'purchase', currency: 'GEL' });
     }
-    const u = await unplannedMonth('2025-10', 'GEL', '2025-10-03');
+    const u = await upTo('2025-10-03');
     expect(u.spent).toBe(1500);
     expect(u.planned.has(food)).toBe(true);
-    expect((await unplannedMonth('2025-10', 'GEL', '2025-10-31')).spent).toBe(3500);
+    expect((await upTo('2025-10-31')).spent).toBe(3500);
   });
 });

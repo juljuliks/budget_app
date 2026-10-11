@@ -1,9 +1,9 @@
 // What counts as spending: the rows, each one's contribution (refunds and deposits subtracted), converted.
 import { getDb } from '../index';
-import { Converter, Currency, dateKey, ensureRates, makeConverter } from '../fx';
+import { Converter, Currency, dateKey, ensureRatesLater, makeConverter } from '../fx';
 import { filterCondition, TxFilter } from '../transactions';
 import { BUDGET_CURRENCY } from './months';
-import { EXPENSE_KINDS } from '../spending';
+import { EXPENSE_KINDS, signedSpendSql } from '../spending';
 import { sqlList } from '../sql';
 
 /**
@@ -28,17 +28,47 @@ function spendOf(r: SpendRow): number {
   return (EXPENSE_KINDS as ReadonlyArray<string>).includes(r.kind) ? r.amount_minor : 0;
 }
 
-export async function spendRows(from: number, to: number, only?: TxFilter): Promise<SpendRow[]> {
-  const db = await getDb();
+/** The rows spending is made of in [from, to): the conditions of spendRows / spendByDay. */
+const spendWhere = (only?: TxFilter) => {
   const f = only ? filterCondition(only) : { sql: '1', params: [] };
-  return db.all<SpendRow>(
-    `SELECT id, category_id, kind, amount_minor, currency, occurred_at, refund_settled_at FROM transactions t
-      WHERE occurred_at >= ? AND occurred_at < ? AND ${f.sql}
+  return {
+    sql: `occurred_at >= ? AND occurred_at < ? AND ${f.sql}
         AND (kind IN (${sqlList([...EXPENSE_KINDS, 'refund'])})
           OR (kind = 'deposit' AND category_id IS NOT NULL))
         AND category_id IS NOT (SELECT id FROM categories WHERE system = 'savings')
         AND category_id IS NOT (SELECT id FROM categories WHERE system = 'topup')`,
-    [from, to, ...f.params]);
+    params: f.params,
+  };
+};
+
+export async function spendRows(from: number, to: number, only?: TxFilter): Promise<SpendRow[]> {
+  const db = await getDb();
+  const w = spendWhere(only);
+  return db.all<SpendRow>(
+    `SELECT id, category_id, kind, amount_minor, currency, occurred_at, refund_settled_at FROM transactions t WHERE ${w.sql}`,
+    [from, to, ...w.params]);
+}
+
+/**
+ * The spending of [from, to) by day, converted to `currency` (summed in SQL by day and currency, each sum on its day's
+ * rate): the totals over many months (history, averages) without reading every row.
+ */
+export async function spendByDay(from: number, to: number, currency: Currency, extraDates: string[] = []):
+  Promise<{ days: Array<{ day: string; value: number }>; conv: Converter }> {
+  const db = await getDb();
+  const w = spendWhere();
+  const sums = await db.all<{ day: string; currency: string; amount: number }>(
+    `SELECT strftime('%Y-%m-%d', occurred_at, 'unixepoch', 'localtime') AS day, currency, sum(${signedSpendSql()}) AS amount
+      FROM transactions t WHERE ${w.sql} AND NOT (kind = 'refund' AND refund_settled_at IS NOT NULL)
+      GROUP BY day, currency`, [from, to, ...w.params]);
+  await ensureRatesLater([...sums.filter((r) => r.currency !== currency).map((r) => r.day), ...extraDates]);
+  const conv = await makeConverter();
+  const days: Array<{ day: string; value: number }> = [];
+  for (const r of sums) {
+    const v = r.amount === 0 ? null : conv(r.amount, r.currency, currency, r.day);
+    if (v !== null) days.push({ day: r.day, value: v });
+  }
+  return { days, conv };
 }
 
 type Converted = {
@@ -48,9 +78,9 @@ type Converted = {
   conv: Converter;
 };
 
-/** Converts each row's spending on its day's rate (fetching rates not cached yet); `extraDates` are fetched too. */
+/** Converts each row's spending on its day's rate (cached ones; the missing are fetched in the background, see ensureRatesLater); `extraDates` too. */
 export async function convertSpending(rows: SpendRow[], to: Currency, extraDates: string[] = []): Promise<Converted> {
-  await ensureRates([...rows.filter((r) => r.currency !== to).map((r) => dateKey(r.occurred_at)), ...extraDates]);
+  await ensureRatesLater([...rows.filter((r) => r.currency !== to).map((r) => dateKey(r.occurred_at)), ...extraDates]);
   const conv = await makeConverter();
   const items: Converted['items'] = [];
   const missing = new Map<string, number>();

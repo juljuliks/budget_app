@@ -7,3 +7,4 @@ export * from './items';
 export * from './stats';
 export * from './history';
 export { spendingEntries } from './spend';
+export * from './normsData';

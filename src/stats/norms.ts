@@ -1,4 +1,5 @@
-import { currentYm, monthStats, NormPeriod, parseYm, periodStats, PlanKind } from '../db/plans';
+import type { Currency } from '../db/fx';
+import { NormPeriod, NormPlanItem, NormsData, normsData, parseYm, PlanKind, ymOf } from '../db/plans';
 import { DayKey, dayKeyOf, DayRange, daysByMonth, daysInMonth, normWindow, parseDayKey, rangeDays, rangeToUnix } from '@/shared/lib/dateRange';
 import { RHYTHM_DAYS } from '@/shared/lib/dates';
 
@@ -64,48 +65,45 @@ export type CategoryNorm = Norms['byCategory'] extends Map<number, infer V> ? V 
 /** The viewed period is a part of a rhythm window (a day of a weekly limit): it is measured as the whole window. */
 export const isPartOfWindow = (window: DayRange, range: DayRange) => window.from !== range.from || window.to !== range.to;
 
-export async function loadNorms(range: DayRange, currency: Parameters<typeof monthStats>[2]): Promise<Norms> {
+/** The months a period's norms may look at: its own, and one on each side (a rhythm window reaches into them). */
+function monthsAround(range: DayRange): string[] {
+  const f = parseYm(range.from.slice(0, 7)), t = parseYm(range.to.slice(0, 7));
+  const last = ymOf(t.year, t.month + 1);
+  const out: string[] = [];
+  for (let i = -1, m = ymOf(f.year, f.month - 1); m <= last; m = ymOf(f.year, f.month + ++i)) out.push(m);
+  return out;
+}
+
+/** Spending by category over the days of `r`, as the period stats list it: a positive sum, or a transfer's negative one. */
+function spentIn(data: NormsData, r: DayRange): Map<number | null, number> {
+  const sums = new Map<number | null, number>();
+  for (let d = parseDayKey(r.from); dayKeyOf(d) <= r.to; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1)) {
+    for (const [k, v] of data.byDay.get(dayKeyOf(d)) ?? []) sums.set(k, (sums.get(k) ?? 0) + v);
+  }
+  return new Map([...sums].filter(([k, v]) => v > 0 || (v < 0 && k !== null && data.transfer.has(k))));
+}
+
+export async function loadNorms(range: DayRange, currency: Currency): Promise<Norms> {
   const ym = range.to.slice(0, 7);
   const monthStart = `${ym}-01`;
-  const thisYm = currentYm();
-  const spentIn = async (r: DayRange) => {
-    const u = rangeToUnix(r);
-    return new Map((await periodStats(u.from, u.to, currency)).categories.map((c) => [c.category_id, c.spent_minor]));
-  };
+  const data = await normsData(monthsAround(range), currency);
   const spentCache = new Map<string, Map<number | null, number>>();
-  const spentOver = async (r: DayRange) => {
+  const spentOver = (r: DayRange) => {
     const key = `${r.from}|${r.to}`;
-    if (!spentCache.has(key)) spentCache.set(key, await spentIn(r));
+    if (!spentCache.has(key)) spentCache.set(key, spentIn(data, r));
     return spentCache.get(key)!;
   };
-
-  // each month's plan (converted), cached; a month that hasn't started isn't read (that would create its plan)
-  type Item = { name: string; limit: number; kind: PlanKind; rhythm: NormPeriod };
-  const plans = new Map<string, Map<number, Item>>();
-  const planOf = async (m: string) => {
-    if (!plans.has(m)) {
-      const items = new Map<number, Item>();
-      if (m <= thisYm) {
-        const { year, month } = parseYm(m);
-        for (const c of (await monthStats(year, month, currency)).categories) {
-          if (c.category_id === null || !c.limit_minor) continue;
-          items.set(c.category_id, { name: `${c.emoji || ''} ${c.name}`.trim(), limit: c.limit_minor, kind: c.plan_kind ?? 'limit', rhythm: c.plan_norm ?? 'day' });
-        }
-      }
-      plans.set(m, items);
-    }
-    return plans.get(m)!;
-  };
+  const planOf = (m: string): Map<number, NormPlanItem> => data.plans.get(m) ?? new Map();
   const dayBefore = (k: DayKey) => { const d = parseDayKey(k); return dayKeyOf(new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1)); };
-  const partsOf = async (id: number, r: DayRange): Promise<NormPart[]> => {
+  const partsOf = (id: number, r: DayRange): NormPart[] => {
     const out: NormPart[] = [];
     for (const [m, days] of daysByMonth(r)) {
-      const limit = (await planOf(m)).get(id)?.limit ?? 0;
+      const limit = planOf(m).get(id)?.limit ?? 0;
       const dim = daysInMonth(m);
       // the first of these days in this month, and what was spent in the month before it
       const first = r.from > `${m}-01` ? r.from : `${m}-01`;
       const firstDay = Number(first.slice(8, 10));
-      const spentBefore = firstDay > 1 ? (await spentOver({ from: `${m}-01`, to: dayBefore(first) })).get(id) ?? 0 : 0;
+      const spentBefore = firstDay > 1 ? spentOver({ from: `${m}-01`, to: dayBefore(first) }).get(id) ?? 0 : 0;
       const daysLeft = dim - firstDay + 1;
       const norm = limit > 0 ? (Math.max(0, limit - spentBefore) * days) / daysLeft : 0;
       out.push({ ym: m, days, dim, limit, spentBefore, daysLeft, norm, flat: (limit * days) / dim });
@@ -116,22 +114,22 @@ export async function loadNorms(range: DayRange, currency: Parameters<typeof mon
 
   // the categories planned in any month of the period; kind and rhythm from the latest of them
   const months = [...daysByMonth(range).keys()];
-  const items = new Map<number, Item>();
-  for (const m of months) for (const [id, item] of await planOf(m)) items.set(id, item);
+  const items = new Map<number, NormPlanItem>();
+  for (const m of months) for (const [id, item] of planOf(m)) items.set(id, item);
 
-  const lastPlan = await planOf(ym);
-  const periodSpent = await spentOver(range);
+  const lastPlan = planOf(ym);
+  const periodSpent = spentOver(range);
   // spent in the month before the period (the part of it in the month it ends in)
   const periodStartInMonth = range.from > monthStart ? range.from : monthStart;
-  const beforePeriod = periodStartInMonth > monthStart ? await spentOver({ from: monthStart, to: dayBefore(periodStartInMonth) }) : new Map<number | null, number>();
-  const partSpent = await spentOver({ from: range.from > monthStart ? range.from : monthStart, to: range.to });
+  const beforePeriod = periodStartInMonth > monthStart ? spentOver({ from: monthStart, to: dayBefore(periodStartInMonth) }) : new Map<number | null, number>();
+  const partSpent = spentOver({ from: range.from > monthStart ? range.from : monthStart, to: range.to });
   const norms: Norms = {
     ym, total: 0, flexSpent: 0, flex: [], byCategory: new Map(),
-    monthToDate: await spentOver({ from: monthStart, to: range.to }),
+    monthToDate: spentOver({ from: monthStart, to: range.to }),
   };
   for (const [id, { name, kind, rhythm }] of items) {
     // the overall pace under the donut: per day, without fixed and month-rhythm categories (one-off buys)
-    const periodParts = kind === 'limit' && rhythm !== 'month' ? await partsOf(id, range) : [];
+    const periodParts = kind === 'limit' && rhythm !== 'month' ? partsOf(id, range) : [];
     if (kind === 'limit' && rhythm !== 'month') {
       const parts = periodParts;
       const spent = periodSpent.get(id) ?? 0;
@@ -141,7 +139,7 @@ export async function loadNorms(range: DayRange, currency: Parameters<typeof mon
     }
     const monthLimit = lastPlan.get(id)?.limit ?? 0;
     const win = normWindow(rhythm, range);
-    const windowParts = rhythm === 'month' ? [] : await partsOf(id, win);
+    const windowParts = rhythm === 'month' ? [] : partsOf(id, win);
     // the limit per rhythm at the period's start and after it: what's left of the plan / days left × rhythm days
     const dim = daysInMonth(ym);
     const perRhythm = (spentSoFar: number, firstDay: number) => (Math.max(0, monthLimit - spentSoFar) / (dim - firstDay + 1)) * RHYTHM_DAYS[rhythm as Exclude<NormPeriod, 'month'>];
@@ -153,7 +151,7 @@ export async function loadNorms(range: DayRange, currency: Parameters<typeof mon
     norms.byCategory.set(id, {
       name, kind, monthLimit, spent: partSpent.get(id) ?? 0, rhythm, window: win, windowParts,
       windowNorm: rhythm === 'month' ? monthLimit : sum(windowParts),
-      windowSpent: (await spentOver(win)).get(id) ?? 0,
+      windowSpent: (spentOver(win)).get(id) ?? 0,
       periodParts, periodNorm: sum(periodParts), periodSpent: periodSpent.get(id) ?? 0,
       effect,
     });
