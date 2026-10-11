@@ -36,7 +36,7 @@ src/
 | Что это | Слой | Пример |
 |---|---|---|
 | Кнопка, шит, чип, календарь — не знает про операции и категории | `shared/ui` | `Button`, `BottomSheet`, `RangeCalendar` |
-| Чистая функция или хук без бизнес-смысла | `shared/lib` | `format`, `money`, `dates`, `useLatestRequest` |
+| Чистая функция или хук без бизнес-смысла | `shared/lib` | `format`, `money`, `dates`, `useLatestRequest`, `useStableCallback` |
 | Показать, выбрать или просто изменить одну сущность, без сценария | `entities/<сущность>` | `TransactionItem`, `CategoryPicker`, `CategorySheet` |
 | Действие пользователя в несколько шагов | `features/<действие>` | удалить категорию с разбором, карточка мерчанта (правило), объединить, импорт SMS |
 | Вкладка и её части, которые нигде больше не нужны | `screens/<вкладка>/parts` | заголовок раздела операций, строка категории статистики |
@@ -82,6 +82,11 @@ src/
 - Словари одной копией: месяцы в падежах, дни недели, «дни ритма» — `shared/lib/dates.ts`; тексты — по
   [GLOSSARY.md](GLOSSARY.md).
 - UI не ходит в БД из компонентов напрямую: запросы — в хуке `model/use*.ts` слайса или в ядре.
+- Строка длинного списка — `React.memo`, её обработчики получают саму запись (`onPress(tx)`); родитель отдаёт одни и те
+  же функции (`useStableCallback`) и `renderItem` в `useCallback` (как `TransactionItem` в `OperationsList`).
+- Статистика считает по ядру одной выборкой, а не вызовом `monthStats` / `periodStats` на каждый отрезок (нормы —
+  `db/plans/normsData.ts`); бюджет запросов — `tests/logic/statsQueries.test.ts`. Курсы — из кэша, недостающие
+  докачиваются в фоне (`ensureRatesLater`).
 
 ## 2. План перехода
 

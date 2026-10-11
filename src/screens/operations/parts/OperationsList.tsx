@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { ActivityIndicator, SectionList, StyleSheet, Text, View } from 'react-native';
 import type { Currency } from '@/db/fx';
+import type { TransactionRow } from '@/db/transactions';
 import { TransactionItem } from '@/entities/transaction';
 import { colors } from '@/shared/theme/theme';
 import type { Row, Section } from '../model/listData';
@@ -17,10 +18,11 @@ type Props = {
   currency: Currency;
   onToggleGroup: (section: Section) => void;
   onOpenDay: (dayStart: number) => void;
-  onPressRow: (id: number) => void;
-  onLongPressRow?: (id: number) => void;
+  /** the row handlers: the same functions every render (useStableCallback), or every row redraws */
+  onPressRow: (row: TransactionRow) => void;
+  onLongPressRow?: (row: TransactionRow) => void;
   /** edit mode: 🗑 on every row */
-  onDeleteRow?: (row: Row) => void;
+  onDeleteRow?: (row: TransactionRow) => void;
   loadMore: () => Promise<void>;
   refreshing: boolean;
   onRefresh: () => void;
@@ -32,6 +34,18 @@ type Props = {
 
 /** The operations by sections (days or groups), a page at a time while scrolling, pull to refresh. */
 export default function OperationsList(p: Props) {
+  const { onPressRow, onLongPressRow, onDeleteRow, selecting, selected } = p;
+  // the rows are memoized: a selection or a page loaded redraws only the rows whose props changed
+  const renderItem = useCallback(({ item }: { item: Row }) => (
+    <TransactionItem
+      tx={item}
+      onPress={onPressRow}
+      onLongPress={onLongPressRow}
+      selectable={selecting}
+      selected={selected.has(item.id)}
+      onDelete={onDeleteRow}
+    />
+  ), [onPressRow, onLongPressRow, onDeleteRow, selecting, selected]);
   return (
     <SectionList
       // a new filter remounts the list: Android sticky headers keep their old offsets when the sections
@@ -55,16 +69,7 @@ export default function OperationsList(p: Props) {
           onOpenDay={() => p.onOpenDay(section.dayStart)}
         />
       )}
-      renderItem={({ item }) => (
-        <TransactionItem
-          tx={item}
-          onPress={() => p.onPressRow(item.id)}
-          onLongPress={p.onLongPressRow ? () => p.onLongPressRow!(item.id) : undefined}
-          selectable={p.selecting}
-          selected={p.selected.has(item.id)}
-          onDelete={p.onDeleteRow ? () => p.onDeleteRow!(item) : undefined}
-        />
-      )}
+      renderItem={renderItem}
       onEndReached={() => { p.loadMore().catch((e) => console.error('load more failed', e)); }}
       // the next page is read a screen before the end; rows are drawn a batch at a time, the ones far off-screen dropped
       onEndReachedThreshold={1}

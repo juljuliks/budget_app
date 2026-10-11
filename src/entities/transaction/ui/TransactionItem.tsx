@@ -9,21 +9,24 @@ import RowActions from '@/shared/ui/RowActions';
 import { colors } from '@/shared/theme/theme';
 import { NO_CATEGORY } from '@/shared/lib/strings';
 
+/** The handlers get the row's operation: the list passes the same functions to every row, so a row redraws only when its own props change. */
 type Props = {
   tx: TransactionRow;
   /** a tap: opens the operation, or while selecting toggles it */
-  onPress: () => void;
+  onPress: (tx: TransactionRow) => void;
   /** a long press: starts selecting several, with this one selected */
-  onLongPress?: () => void;
+  onLongPress?: (tx: TransactionRow) => void;
   /** multi-select: checkbox in front */
   selectable?: boolean;
   selected?: boolean;
   /** edit mode: 🗑 at the end */
-  onDelete?: () => void;
+  onDelete?: (tx: TransactionRow) => void;
 };
 
 /** One row of the transactions list: merchant (bold + blue dot when unread), category · time, amount. */
-export default function TransactionItem({ tx, onPress, onLongPress, selectable, selected, onDelete }: Props) {
+export default React.memo(TransactionItem);
+
+function TransactionItem({ tx, onPress, onLongPress, selectable, selected, onDelete }: Props) {
   // Android delivers a press when the finger lifts after a long press too: that one would unselect the row
   const longPressed = useRef(false);
   const unread = isUnread(tx);
@@ -33,8 +36,8 @@ export default function TransactionItem({ tx, onPress, onLongPress, selectable, 
   return (
     <TouchableOpacity
       style={[styles.row, selected && styles.rowSelected]}
-      onPress={() => { if (longPressed.current) longPressed.current = false; else onPress(); }}
-      onLongPress={onLongPress ? () => { longPressed.current = true; onLongPress(); } : undefined}
+      onPress={() => { if (longPressed.current) longPressed.current = false; else onPress(tx); }}
+      onLongPress={onLongPress ? () => { longPressed.current = true; onLongPress(tx); } : undefined}
       onPressIn={() => { longPressed.current = false; }}
     >
       {selectable ? <View style={styles.checkbox}><Checkbox checked={!!selected} /></View> : null}
@@ -59,7 +62,7 @@ export default function TransactionItem({ tx, onPress, onLongPress, selectable, 
       <Text style={[styles.amount, isIncome(tx.kind) && styles.income]}>
         {formatAmount(tx.amount_minor, tx.currency, tx.kind)}
       </Text>
-      {onDelete ? <RowActions onDelete={onDelete} /> : null}
+      {onDelete ? <RowActions onDelete={() => onDelete(tx)} /> : null}
     </TouchableOpacity>
   );
 }

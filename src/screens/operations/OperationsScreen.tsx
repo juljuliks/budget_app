@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
-import { isUnread } from '@/db/transactions';
+import { isUnread, TransactionRow } from '@/db/transactions';
 import { useDisplayCurrency } from '@/shared/settings/displayCurrency';
 import { CategoryPickerModal } from '@/entities/category';
 import { confirmDeleteTransaction, confirmDeleteTransactions, markAllSeen } from '@/entities/transaction';
@@ -11,6 +11,7 @@ import { PushAccessBanner } from '@/features/sms-import';
 import type { DayRange } from '@/shared/lib/dateRange';
 import { guardLeave } from '@/shared/navigation/leaveGuard';
 import { openAddTransaction, openTransaction } from '@/shared/navigation/sheets';
+import { useStableCallback } from '@/shared/lib/useStableCallback';
 import Fab from '@/shared/ui/Fab';
 import { colors } from '@/shared/theme/theme';
 import { GroupBy, useDaySpent } from './model/listData';
@@ -80,6 +81,10 @@ export default function OperationsScreen() {
   const currency = useDisplayCurrency();
   const daySpent = useDaySpent(list.sections, list.groups !== null, currency, list.viewRef.current.filter);
   const showRowActions = sel.editMode && !selecting;
+  // the rows' handlers, the same every render (the rows are memoized): a long press starts selecting (with this row),
+  // while selecting a tap toggles, otherwise opens
+  const onPressRow = useStableCallback((tx: TransactionRow) => (selecting ? sel.toggle(tx.id) : openTransaction(tx.id)));
+  const onLongPressRow = useStableCallback((tx: TransactionRow) => sel.start(tx.id));
 
   if (list.loading) {
     return <View style={styles.center}><ActivityIndicator /></View>;
@@ -122,9 +127,8 @@ export default function OperationsScreen() {
         }}
         // the stats tab with this day picked
         onOpenDay={(dayStart) => guardLeave(() => route.tabNavigation.navigate('Stats', { day: dayStart, nonce: Date.now() }))}
-        // a long press starts selecting (with this row); while selecting a tap toggles, otherwise opens
-        onPressRow={(id) => (selecting ? sel.toggle(id) : openTransaction(id))}
-        onLongPressRow={selecting ? undefined : sel.start}
+        onPressRow={onPressRow}
+        onLongPressRow={selecting ? undefined : onLongPressRow}
         onDeleteRow={showRowActions ? confirmDeleteTransaction : undefined}
         loadMore={list.loadMore}
         refreshing={list.refreshing}

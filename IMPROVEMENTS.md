@@ -37,22 +37,6 @@
    (смена формата TBC, валюта не GEL/USD/EUR в поездке).
 6. **Гонки загрузок в HistoryView** (StatsView, PeriodStatsView, PlanView уже на `useLatestRequest`).
 
-## Этап 3 — Производительность
-
-1. **Статистика**: один экран «за день» — ~8–9 `periodStats` + 1–3 `monthStats` ≈ 60–90 SQL-запросов.
-   - `spendByDayCategory(from, to, currency)`: траты агрегированы в SQL по (день, категория, валюта), конвертированы
-     один раз; `loadNorms` считает окна префиксными суммами; планы — `SELECT … FROM plan_items WHERE ym IN (…)`.
-   - Кэш конвертера (`makeConverter` читает всю таблицу курсов на каждый вызов), сброс при вставке курсов.
-   - Курсы в фоне: статистика рисуется по кэшу, недостающие курсы докачиваются, затем `emitTransactionsChanged`.
-   - `planHistory` / `averageFullMonths` — агрегировать в SQL.
-   - Замер: счётчик запросов в драйвере в dev-режиме, до/после.
-2. **Индексы** (новая миграция): `transactions(category_id)`, `(merchant_key, occurred_at)`, `(kind, refund_settled_at)`.
-3. **Поиск** (`searchTransactions`) читает строки с `raw_sms` в JS на каждый ввод → колонка `search_text`
-   (заполняется при вставке) + фильтр в SQL с `LIMIT`.
-4. **Импорт SMS** пачками в одной транзакции; `autoCategorizeRefunds` без N+1; `getMerchant` — одна строка вместо
-   `listMerchants()` целиком.
-5. **Список операций**: `React.memo` для `TransactionItem`, стабильные `renderItem` и обработчики.
-
 ## Этап 4 — Функции
 
 1. **Редактирование операции целиком**: дата (`RangeCalendar` уже есть), мерчант / описание, тип; в ручной операции —

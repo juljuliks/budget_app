@@ -23,6 +23,8 @@ description: Where code goes in this app and how big it may get (FSD-lite layers
 4. Прикинуть размер: файл ≤ 250 строк кода, компонент/функция ≤ 120, хук ≤ 100. Подходит к пределу — делить сейчас.
 5. Расчёты — в `.ts` (`model/`) с тестом в `tests/logic/`; тексты — в `texts.ts` и по GLOSSARY.md; цвета — из темы
    (`colors.onAccent` для текста на акценте); месяцы и дни недели — `shared/lib/dates.ts`, не новая копия.
+6. Списки и статистика: строка длинного списка — `React.memo`, обработчики стабильные (`useStableCallback`); новый
+   расчёт статистики — одной выборкой, не `periodStats` в цикле: бюджет запросов — `tests/logic/statsQueries.test.ts`.
 
 ## Как делить длинный компонент
 
