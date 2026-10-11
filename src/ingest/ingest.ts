@@ -70,7 +70,15 @@ export async function ingestSms(sms: IncomingSms, opts: { quiet?: boolean; db?: 
     return { status: 'ignored' };
   }
 
-  const db = opts.db ?? await getDb();
+  // from the twin check to the balance in one transaction: an SMS and a push of one operation arriving together are
+  // stored one after the other, so the second one sees the first as its twin (inside an import: its batch's)
+  const res = await (opts.db ?? await getDb()).transaction((tx) => store(sms, parsed, balance, tx));
+  if (res.status === 'inserted') changed();
+  return res;
+}
+
+/** Stores a parsed operation (unless its SMS / push twin or the same SMS is there), inside `db`'s transaction. */
+async function store(sms: IncomingSms, parsed: ParsedTx, balance: ReturnType<typeof parseTbcBalance>, db: Db): Promise<IngestResult> {
   const hash = smsHash(sms);
 
   // Only purchases / payments: a transfer or deposit "merchant" is a person (or nothing), the same person can
@@ -86,10 +94,11 @@ export async function ingestSms(sms: IncomingSms, opts: { quiet?: boolean; db?: 
   // the bank may report one operation both by SMS and by push: keep the first
   const twin = await db.get<{ id: number; occurred_at: number }>(
     `SELECT id, occurred_at FROM transactions
-      WHERE source != ? AND kind = ? AND amount_minor = ? AND currency = ? AND coalesce(merchant_key, '') = ?
-        AND abs(occurred_at - ?) <= ?
+      WHERE merchant_key IS ? AND occurred_at BETWEEN ? AND ?
+        AND source != ? AND kind = ? AND amount_minor = ? AND currency = ?
       LIMIT 1`,
-    [source, parsed.kind, parsed.amount_minor, parsed.currency, parsed.merchant_key || '', occurredAt, CROSS_SOURCE_WINDOW_S]);
+    [parsed.merchant_key || null, occurredAt - CROSS_SOURCE_WINDOW_S, occurredAt + CROSS_SOURCE_WINDOW_S,
+      source, parsed.kind, parsed.amount_minor, parsed.currency]);
   if (twin) {
     // the push came first without a balance, the SMS has it
     if (balance) await recordBalance({ minor: balance.minor, currency: balance.currency, at: twin.occurred_at, txId: twin.id }, db);
@@ -126,7 +135,6 @@ export async function ingestSms(sms: IncomingSms, opts: { quiet?: boolean; db?: 
   // only a date: maybe a balance the bank reported already had it in (it came before that SMS)
   if (!parsed.has_time) await placeByBalances(lastInsertRowid, db);
   if (categoryId && parsed.kind !== 'refund' && parsed.kind !== 'deposit') await incrementCategoryUsage(categoryId, 1, db);
-  changed();
 
   return { status: 'inserted', txId: lastInsertRowid, categoryId, kind: parsed.kind };
 }

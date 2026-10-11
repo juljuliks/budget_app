@@ -175,6 +175,15 @@ test('the same operation by SMS and by bank push is stored once; two real purcha
   expect((await tx('SELECT count(*) AS n FROM transactions')).n).toBe(2);
 });
 
+test('an SMS and a push of one purchase arriving together: stored once (the second sees the first in its transaction)', async () => {
+  const body = '12.50GEL\n(*XXXX)\nSPAR\nBalance: 100.00GEL\n28/09/26 14:00';
+  await Promise.all([
+    SmsBackgroundTask({ sender: 'TBC SMS', body, timestamp: 1759060800000 }),
+    SmsBackgroundTask({ sender: 'push:ge.tbcbank', body, timestamp: 1759060805000, source: 'push' }),
+  ]);
+  expect((await tx('SELECT count(*) AS n FROM transactions')).n).toBe(1);
+});
+
 test('a refund without a category: just news (no buttons), tapping it opens the operation', async () => {
   await SmsBackgroundTask({ sender: 'TBC SMS', body: 'A refund of 94.78 GEL has been initiated by TEMU.COM to your MC GOLD (*1834). The amount will be credited to your account within 2–5 days.', timestamp: 1 });
   const n = displayNotification.mock.calls[0][0];
