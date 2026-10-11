@@ -37,3 +37,24 @@ export const TURN_OFF = 'Выключить';
 export const AUTO_ON = 'Автокопия включена';
 export const AUTO_OFF = 'Автокопия выключена';
 export const AUTO_FAILED = 'Автокопия не сохранилась: выберите папку заново';
+
+export const PASSWORD = 'Пароль для копий';
+export const PASSWORD_LABEL_OFF = 'Пароль для копий: не задан';
+export const PASSWORD_LABEL_ON = 'Пароль для копий: задан';
+export const PASSWORD_INFO =
+  'Копии и автокопии будут зашифрованы: файл откроется только с паролем, на любом телефоне. Запишите его — без пароля такую копию не восстановить. Копии, сохранённые раньше, и экспорт CSV не шифруются.';
+export const PASSWORD_ON_INFO = 'Копии и автокопии шифруются. Без пароля их не восстановить.';
+export const SET_PASSWORD = 'Задать пароль';
+export const CHANGE_PASSWORD = 'Сменить пароль';
+export const REMOVE_PASSWORD = 'Убрать пароль';
+export const SET_PASSWORD_INFO = 'Не короче 8 символов; лучше несколько слов. Запишите его: без пароля копию не восстановить.';
+export const PASSWORD_FIELD = 'Пароль';
+export const PASSWORD_REPEAT = 'Повторите пароль';
+export const MIN_PASSWORD = 8;
+export const PASSWORD_SHORT = 'Пароль — не короче 8 символов';
+export const PASSWORD_MISMATCH = 'Пароли не совпадают';
+export const PASSWORD_SET = 'Пароль для копий задан';
+export const PASSWORD_REMOVED = 'Пароль для копий убран';
+export const ENTER_PASSWORD = 'Пароль копии';
+export const ENTER_PASSWORD_INFO = 'Копия зашифрована: введите пароль, заданный при её сохранении.';
+export const WRONG_PASSWORD = 'Неверный пароль';

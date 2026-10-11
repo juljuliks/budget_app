@@ -1,13 +1,14 @@
 // "Автокопия" (Настройки → Резервная копия): once a week, when the app is opened, a copy into the folder the user
 // picked; the two newest kept (src/backup/auto.ts).
 import {
-  AUTO_BACKUP_KEEP, AUTO_BACKUP_PREFIX, autoBackup, autoBackupDue, exportDatabase, markAutoBackupMade, setAutoBackupFolder,
+  AUTO_BACKUP_KEEP, AUTO_BACKUP_PREFIX, autoBackup, autoBackupDue, markAutoBackupMade, setAutoBackupFolder,
 } from '@/backup';
-import { deleteFile, filePath, folderName, pickFolder, releaseFolder, saveToFolder } from '@/native/backup';
+import { folderName, pickFolder, releaseFolder, saveToFolder } from '@/native/backup';
 import { formatDay } from '@/shared/lib/format';
 import { CANCEL } from '@/shared/lib/strings';
 import { sheetAlert } from '@/shared/ui/sheetAlert';
 import { toast, toastError } from '@/shared/ui/toast';
+import { makeCopy } from './password';
 import { dateKey, run, timeKey } from './run';
 import { AUTO, AUTO_FAILED, AUTO_FIRST, AUTO_GONE, AUTO_INFO, AUTO_OFF, AUTO_ON, CHANGE_FOLDER, PICK_FOLDER, TURN_OFF, autoStatus } from './texts';
 
@@ -35,9 +36,7 @@ export async function runAutoBackupIfDue(at = now()): Promise<void> {
 
 /** A new file in the folder first, then the older ones beyond AUTO_BACKUP_KEEP go: a whole copy is always there. */
 async function writeCopy(folder: string, at: number) {
-  await deleteFile(AUTO_COPY);
-  await exportDatabase(filePath(AUTO_COPY));
-  await saveToFolder(folder, AUTO_COPY, `${AUTO_BACKUP_PREFIX}${dateKey(at)}-${timeKey(at)}.db`, AUTO_BACKUP_PREFIX, AUTO_BACKUP_KEEP);
+  await saveToFolder(folder, await makeCopy(AUTO_COPY), `${AUTO_BACKUP_PREFIX}${dateKey(at)}-${timeKey(at)}.db`, AUTO_BACKUP_PREFIX, AUTO_BACKUP_KEEP);
   await markAutoBackupMade(at);
 }
 

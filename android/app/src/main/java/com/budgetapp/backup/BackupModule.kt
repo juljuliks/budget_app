@@ -146,6 +146,62 @@ class BackupModule(private val ctx: ReactApplicationContext) : ReactContextBaseJ
         }.start()
     }
 
+    /** Is the backups' password set (see BackupCrypto). */
+    @ReactMethod
+    fun hasPassword(promise: Promise) {
+        promise.resolve(BackupCrypto.hasPassword(ctx))
+    }
+
+    /** Sets the backups' password, or clears it (null). Slow on purpose (the key derivation): off the main thread. */
+    @ReactMethod
+    fun setPassword(password: String?, promise: Promise) {
+        Thread {
+            try {
+                BackupCrypto.setPassword(ctx, password)
+                promise.resolve(true)
+            } catch (e: Exception) {
+                promise.reject("E_PASSWORD_SET", e)
+            }
+        }.start()
+    }
+
+    /** Is the file `name` of the files dir an encrypted copy. */
+    @ReactMethod
+    fun isEncrypted(name: String, promise: Promise) {
+        promise.resolve(BackupCrypto.isEncrypted(File(ctx.filesDir, name)))
+    }
+
+    /** Encrypts `source` into `target` (files of the files dir) with the stored key; deletes `source`. */
+    @ReactMethod
+    fun encryptFile(source: String, target: String, promise: Promise) {
+        Thread {
+            val from = File(ctx.filesDir, source)
+            try {
+                BackupCrypto.encrypt(ctx, from, File(ctx.filesDir, target))
+                promise.resolve(true)
+            } catch (e: Exception) {
+                promise.reject("E_ENCRYPT", e)
+            } finally {
+                from.delete()
+            }
+        }.start()
+    }
+
+    /** Decrypts `source` into `target` with the password; false when the password is wrong. */
+    @ReactMethod
+    fun decryptFile(source: String, target: String, password: String, promise: Promise) {
+        Thread {
+            try {
+                BackupCrypto.decrypt(File(ctx.filesDir, source), File(ctx.filesDir, target), password)
+                promise.resolve(true)
+            } catch (e: BackupCrypto.WrongPassword) {
+                promise.resolve(false)
+            } catch (e: Exception) {
+                promise.reject("E_DECRYPT", e)
+            }
+        }.start()
+    }
+
     /** Deletes a file of the files dir (a copy left from an interrupted backup: VACUUM INTO needs the name free). */
     @ReactMethod
     fun deleteFile(name: String, promise: Promise) {

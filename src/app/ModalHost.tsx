@@ -7,7 +7,7 @@ import { TransactionSheet } from '@/features/transaction-edit';
 import { MonthReportSheet } from '@/features/month-report';
 import { MerchantCard } from '@/features/merchant-card';
 import { SettingsSheet } from '@/features/settings';
-import { startBackup } from '@/features/backup';
+import { PasswordHost, startBackup } from '@/features/backup';
 import { startSmsImport } from '@/features/sms-import';
 
 /** Shows the sheets over the pages (see sheets.ts); mounted once in App. */
@@ -29,6 +29,8 @@ export function ModalHost() {
       <MonthReportSheet ym={state.monthReport} onClose={() => close({ monthReport: null })} />
       <SettingsSheet open={state.settings} onClose={() => close({ settings: false })} onImportSms={startSmsImport} onBackup={startBackup} />
       {/* over the operation it was opened from; "Показать операции" closes that one too */}
+      {/* the backups' password, asked by the backup's flows */}
+      <PasswordHost />
       <MerchantCard merchantId={state.merchant} onClose={() => close({ merchant: null })} onLeave={() => close({ transaction: null })} />
     </>
   );

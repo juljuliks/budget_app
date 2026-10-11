@@ -12,6 +12,11 @@ type Native = {
   folderName(folder: string): Promise<string | null>;
   releaseFolder(folder: string): Promise<boolean>;
   saveToFolder(folder: string, name: string, title: string, prefix: string, keep: number): Promise<boolean>;
+  hasPassword(): Promise<boolean>;
+  setPassword(password: string | null): Promise<boolean>;
+  isEncrypted(name: string): Promise<boolean>;
+  encryptFile(source: string, target: string): Promise<boolean>;
+  decryptFile(source: string, target: string, password: string): Promise<boolean>;
 };
 
 const native = NativeModules.Backup as Native | undefined;
@@ -52,3 +57,18 @@ export const releaseFolder = (folder: string) => need().releaseFolder(folder);
 /** The file `name` of the files dir into the folder as `title`; then only the newest `keep` files named `prefix…` stay. */
 export const saveToFolder = (folder: string, name: string, title: string, prefix: string, keep: number) =>
   need().saveToFolder(folder, name, title, prefix, keep);
+
+/** Is the backups' password set (kept by the native side, apart from the database). */
+export const hasPassword = () => need().hasPassword();
+
+/** Sets the backups' password, or clears it (null). */
+export const setPassword = (password: string | null) => need().setPassword(password);
+
+/** Is the file `name` of the files dir an encrypted copy. */
+export const isEncrypted = (name: string) => need().isEncrypted(name);
+
+/** Encrypts `source` into `target` with the password's key; `source` is deleted. */
+export const encryptFile = (source: string, target: string) => need().encryptFile(source, target);
+
+/** Decrypts `source` into `target`; false when the password is wrong. */
+export const decryptFile = (source: string, target: string, password: string) => need().decryptFile(source, target, password);

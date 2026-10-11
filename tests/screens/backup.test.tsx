@@ -3,6 +3,7 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { fireEvent } from '@testing-library/react-native';
 import { openApp, screen, tap, texts } from './app';
 import { ops } from '../e2e/seeds';
 import { markAutoBackupMade, setAutoBackupFolder } from '../../src/backup';
@@ -20,6 +21,11 @@ const mockNative = {
   folderName: jest.fn(async (): Promise<string | null> => 'Download'),
   releaseFolder: jest.fn(async () => true),
   saveToFolder: jest.fn(async () => true),
+  hasPassword: jest.fn(async () => false),
+  setPassword: jest.fn(async () => true),
+  isEncrypted: jest.fn(async () => false),
+  encryptFile: jest.fn(async () => true),
+  decryptFile: jest.fn(async () => true),
 };
 jest.mock('../../src/native/backup', () => ({
   DB_FILE: 'app.db',
@@ -33,6 +39,11 @@ jest.mock('../../src/native/backup', () => ({
   folderName: () => mockNative.folderName(),
   releaseFolder: (...a: unknown[]) => (mockNative.releaseFolder as (...x: unknown[]) => Promise<boolean>)(...a),
   saveToFolder: (...a: unknown[]) => (mockNative.saveToFolder as (...x: unknown[]) => Promise<boolean>)(...a),
+  hasPassword: () => mockNative.hasPassword(),
+  setPassword: (...a: unknown[]) => (mockNative.setPassword as (...x: unknown[]) => Promise<boolean>)(...a),
+  isEncrypted: (...a: unknown[]) => (mockNative.isEncrypted as (...x: unknown[]) => Promise<boolean>)(...a),
+  encryptFile: (...a: unknown[]) => (mockNative.encryptFile as (...x: unknown[]) => Promise<boolean>)(...a),
+  decryptFile: (...a: unknown[]) => (mockNative.decryptFile as (...x: unknown[]) => Promise<boolean>)(...a),
 }));
 const mockCheck = jest.fn<Promise<string | null>, [string]>(async () => null);
 jest.mock('../../src/backup/database', () => ({
@@ -138,4 +149,58 @@ test('9.9.7 on opening the app: a copy a week after the last one, not sooner; a 
   await runAutoBackupIfDue(now + 8 * 86400);
   expect(mockNative.saveToFolder).toHaveBeenCalledTimes(2);
   expect(await screen.findByText(/Автокопия не сохранилась: выберите папку заново/)).toBeTruthy();
+});
+
+const type = (placeholder: string, text: string) => fireEvent.changeText(screen.getByPlaceholderText(placeholder), text);
+
+test('9.9.8 "Пароль для копий": a password and its confirmation, at least 8 characters, the same twice', async () => {
+  await openBackup();
+  await tap('Пароль для копий: не задан');
+  expect(await screen.findByText(/Копии и автокопии будут зашифрованы/)).toBeTruthy();
+  await tap('Задать пароль');
+  await screen.findByPlaceholderText('Повторите пароль');
+  type('Пароль', 'short');
+  type('Повторите пароль', 'short');
+  await tap('Задать пароль');
+  expect(await screen.findByText(/Пароль — не короче 8 символов/)).toBeTruthy();
+  type('Пароль', 'синий кит 42');
+  type('Повторите пароль', 'синий кот 42');
+  await tap('Задать пароль');
+  expect(await screen.findByText(/Пароли не совпадают/)).toBeTruthy();
+  expect(mockNative.setPassword).not.toHaveBeenCalled();
+  type('Повторите пароль', 'синий кит 42');
+  await tap('Задать пароль');
+  expect(await screen.findByText('Пароль для копий задан')).toBeTruthy();
+  expect(mockNative.setPassword).toHaveBeenCalledWith('синий кит 42');
+});
+
+test('9.9.9 with the password set: the copy saved encrypted', async () => {
+  mockNative.hasPassword.mockResolvedValue(true);
+  await openBackup();
+  expect(screen.getByText('Пароль для копий: задан')).toBeTruthy();
+  await tap('Сохранить копию');
+  await screen.findAllByText('Копия сохранена');
+  expect(mockNative.encryptFile).toHaveBeenCalledWith('backup-copy.db', 'backup-copy.db.enc');
+  expect(mockNative.saveFile).toHaveBeenCalledWith('backup-copy.db.enc', expect.stringMatching(/^budget-.*\.db$/), 'application/octet-stream');
+  mockNative.hasPassword.mockResolvedValue(false);
+});
+
+test('9.9.10 an encrypted copy restored: its password asked, asked again when wrong', async () => {
+  mockNative.isEncrypted.mockResolvedValueOnce(true);
+  mockNative.decryptFile.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+  await openBackup();
+  await tap('Восстановить из копии');
+  expect(await screen.findByText('Копия зашифрована: введите пароль, заданный при её сохранении.')).toBeTruthy();
+  type('Пароль', 'не тот пароль');
+  await tap('Открыть');
+  expect(await screen.findByText(/Неверный пароль/)).toBeTruthy();
+  await screen.findByPlaceholderText('Пароль');
+  type('Пароль', 'синий кит 42');
+  await tap('Открыть');
+  expect(await screen.findByText('Восстановить из копии?')).toBeTruthy();
+  expect(mockNative.decryptFile).toHaveBeenLastCalledWith('restore-check.db', 'restore-plain.db', 'синий кит 42');
+  await tap('Восстановить');
+  await new Promise((r) => setTimeout(r, 50));
+  expect(mockCheck).toHaveBeenLastCalledWith('restore-plain.db');
+  expect(mockNative.replaceDatabase).toHaveBeenCalledWith('restore-plain.db');
 });
