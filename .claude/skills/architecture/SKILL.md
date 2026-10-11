@@ -39,5 +39,6 @@ description: Where code goes in this app and how big it may get (FSD-lite layers
 
 ## Проверка при `finish`
 
-`npm run lint` — ошибок 0. Предупреждения остались только о длинных файлах `src/db/` (шаг 9 в ARCHITECTURE.md §2);
-трогаешь такой файл — новое в него не дописывать, выносить отдельным модулем.
+`npm run lint` — ни ошибок, ни предупреждений. Модуль подходит к 250 строкам — делить на папку с `index.ts`,
+реэкспортирующим части (как `db/plans/`, `db/transactions/`): импорты снаружи не меняются. Новая миграция —
+в конец `db/migrations/steps-13-on.ts`.

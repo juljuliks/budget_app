@@ -4,7 +4,7 @@
 Feature-Sliced Design (FSD-lite): без слоёв processes и widgets — для приложения на 4 вкладки они лишние.
 
 Часть 1 — правила: их проверяет `npm run lint` (`eslint.config.js`), ошибка останавливает релиз в CI. Часть 2 — как
-код перешёл на эти слои (история и что осталось).
+код перешёл на эти слои (история).
 
 ## 1. Правила
 
@@ -87,7 +87,7 @@ src/
 | 6 | Статистика | `src/ui/stats` → `screens/stats` (`month/`, `period/`, `plan/`, `history/`, общие `parts/`: `DonutCenter`, `RefundsRow`, `PeriodNav`, `PlanAlert`). `PeriodStatsView` 870 → 80 (+ `usePeriodData`, чистый `periodView`, `periodText` с тестами, части: строка категории, строки лимитов, секции, объяснения); `PlanView` 652 → 70 (+ `usePlanData`, `planView` с тестами, `usePlanActions`, карточка бюджета, секции, шит бюджета); `StatsView` 448 → 97; `MonthReport` 399 → фича `month-report` (`reportView` с тестами, блоки); `PlanAmountModal` → `entities/plan`; `Masked` → `shared/ui`, `HideAmountsButton` → `features/hide-amounts` | готово: секции — функции, возвращающие фрагменты (`StickyScrollView` липнет только к своим `SectionHeader`) |
 | 7 | Остальное | `src/ui` больше нет: `MerchantsScreen` 332 → `screens/merchants` (`useMerchants`, `useMerchantBulk`, `activity` с тестами, строка, заголовок; поиск — общий `SearchBar`), `CategoriesScreen` → `screens/categories`, `AddTransactionSheet` → `features/add-transaction` (`useAddForm`, `DateField`, `dayLabel`), `MergeCategoriesSheet` → `features/category-merge`. Команды: `entities/merchant` (удалить, категория мерчантам), `entities/plan` (`savePlanAmount`), `entities/transaction` (`addTransaction`), `category-merge` (`mergeInto`) | готово: компоненты не зовут `emitTransactionsChanged` (кроме старта в `app`); у крестика поиска мерчантов подпись как у операций — «Очистить поиск» |
 | 8 | Закрепить | Правила lint — ошибки (импорты слоёв, размеры, хуки); у ядра размеры — предупреждения до шага 9. Lint — в CI перед сборкой релиза (`android-release.yml`). CLAUDE.md, README, скилл `architecture` — без «идёт переход» | готово |
-| 9 | Ядро: `db/plans.ts` (708) | → `plans/budget.ts`, `plans/items.ts`, `spend.ts` — вместе с IMPROVEMENTS 8.6 (одно правило «что считается тратой») | — |
+| 9 | Ядро: длинные файлы базы | `db/plans.ts` (708) → `db/plans/` (`months`, `spend`, `types`, `budget`, `items`, `stats`, `history`); `db/transactions.ts` → `db/transactions/` (`sql`, `rows`, `filter`, `writes`, `groups`); `db/migrations.ts` → `db/migrations/` (`steps-1-12`, `steps-13-on` — новые дописываются сюда, `index` склеивает). `index.ts` реэкспортирует: импорты `db/plans`, `db/transactions`, `db/migrations` не изменились. Неиспользуемые `export default` убраны | готово: lint без ошибок и предупреждений, размеры — ошибка везде. Одно правило «что считается тратой» (IMPROVEMENTS 8.6) — отдельно: меняет расчёты |
 
 ### Куда переехали файлы `src/ui`
 

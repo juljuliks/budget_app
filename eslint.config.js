@@ -1,6 +1,5 @@
 // The architecture rules of ARCHITECTURE.md §1: the file sizes, the hooks, and the layers' imports (only down, not
-// into a neighbour slice, from outside a slice only through its index.ts). Errors in the UI layers; the core's file
-// sizes are warnings until its long files are split (ARCHITECTURE.md §2, step 9).
+// into a neighbour slice, from outside a slice only through its index.ts). All errors: CI stops the release on one.
 const tseslint = require('typescript-eslint');
 const reactHooks = require('eslint-plugin-react-hooks');
 
@@ -33,13 +32,6 @@ module.exports = tseslint.config(
       'max-lines-per-function': ['error', { max: 120, skipBlankLines: true, skipComments: true, IIFEs: true }],
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'error',
-    },
-  },
-  // the core's long files (db/plans, transactions, migrations): warnings until they are split
-  {
-    files: ['src/db/**/*.ts'],
-    rules: {
-      'max-lines': ['warn', { max: 250, skipBlankLines: true, skipComments: true }],
     },
   },
   // the core (db, parsers, notifications, …): no React layers at all; shared/lib is fine

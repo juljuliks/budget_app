@@ -7,6 +7,11 @@ appId: com.budgetapp
       android.permission.READ_SMS: unset
       android.permission.RECEIVE_SMS: unset
 # the start asks for the SMS permission the hook took away (to have the SMS only in the phone)
+# a fresh install starts slower: the system's question may come a few seconds later
+- extendedWaitUntil:
+    visible: "Allow"
+    timeout: 15000
+    optional: true
 - tapOn:
     text: "Allow"
     optional: true

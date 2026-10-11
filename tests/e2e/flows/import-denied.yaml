@@ -5,6 +5,11 @@ appId: com.budgetapp
     permissions:
       android.permission.READ_SMS: unset
       android.permission.RECEIVE_SMS: unset
+# a fresh install starts slower: the system's question may come a few seconds later
+- extendedWaitUntil:
+    visible: "Don.t allow"
+    timeout: 15000
+    optional: true
 - tapOn:
     text: "Don.t allow"
     optional: true
