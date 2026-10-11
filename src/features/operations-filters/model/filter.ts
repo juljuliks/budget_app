@@ -9,7 +9,7 @@ export function isFilterActive(f: Filter): boolean {
   return f.query.trim() !== '' || f.categories.length > 0 || f.merchants.length > 0 || f.kinds.length > 0 || f.range !== null;
 }
 
-// a text search: the operations it finds (matched in JS, see searchTransactions), then paged like any filter
+// a text search: the operations it finds (see searchTransactions), then paged like any filter
 const SEARCH_LIMIT = 5000;
 
 /** The filters as the database applies them. */

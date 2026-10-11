@@ -21,7 +21,7 @@ export async function setTransactionAmount(id: number, amountMinor: number, curr
 /** Free-text note shown under the SMS; empty clears it. */
 export async function setTransactionNote(id: number, note: string) {
   const db = await getDb();
-  await db.run('UPDATE transactions SET note = ? WHERE id = ?', [note.trim() || null, id]);
+  await db.run('UPDATE transactions SET note = ?, search_text = NULL WHERE id = ?', [note.trim() || null, id]);
 }
 
 /** Opening a transaction marks it read. Returns true if it was unread. */

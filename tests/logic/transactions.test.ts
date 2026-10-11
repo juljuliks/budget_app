@@ -136,6 +136,20 @@ describe('searchTransactions', () => {
     expect((await searchTransactions('Без категории')).map((r) => r.raw_merchant)).toEqual(['AdamDent LLC']);
   });
 
+  test('a note found once written, the old one not any more; a renamed category by its new name; at most `limit`', async () => {
+    await seed();
+    const { setTransactionNote } = await import('../../src/db/transactions');
+    const spar = (await searchTransactions('spar'))[0].id;
+    await setTransactionNote(spar, 'Подарок маме');
+    expect((await searchTransactions('подарок')).map((r) => r.id)).toEqual([spar]);
+    await setTransactionNote(spar, 'Ужин');
+    expect(await searchTransactions('подарок')).toEqual([]);
+    await (await getDb()).run("UPDATE categories SET name = 'Укулеле' WHERE name = 'Гитара'");
+    expect((await searchTransactions('укулеле')).map((r) => r.raw_merchant)).toEqual(['струны Ёлка']);
+    expect(await searchTransactions('гитара')).toEqual([]);
+    expect(await searchTransactions('gel', {}, 1)).toHaveLength(1);
+  });
+
   test('normalizeForSearch', () => {
     expect(normalizeForSearch('  Ёжик  В тумане ')).toBe('ежик в тумане');
   });

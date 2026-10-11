@@ -2,10 +2,10 @@
 import { NO_CATEGORY_EMOJI } from '../../domain/colors';
 import { getDb } from '../index';
 import type { TransactionRow } from './rows';
-import { FROM_TX, NEWEST_FIRST, SELECT_TX, TX_COLUMNS } from './sql';
+import { NEWEST_FIRST, SELECT_TX } from './sql';
 import { placeholders } from '../sql';
 
-/** Lowercase + ё→е. Done in JS: SQLite LIKE / lower() only fold ASCII, so Cyrillic search would be case-sensitive. */
+/** Lowercase + ё→е. Done in JS: SQLite LIKE / lower() only fold ASCII, so search_text is stored folded (searchTextOf). */
 export function normalizeForSearch(s: string): string {
   return s.toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ').trim();
 }
@@ -81,28 +81,51 @@ export async function listTransactionsFiltered(f: TxFilter, limit = FILTER_LIMIT
   return db.all<TransactionRow>(`${SELECT_TX} ${sql} ${NEWEST_FIRST} LIMIT ?`, [...params, limit]);
 }
 
+/** What an operation is found by, besides its category: the SMS, the note, the merchant / description, normalized. */
+export const searchTextOf = (r: { raw_sms: string | null; note: string | null; raw_merchant: string | null }) =>
+  normalizeForSearch([r.raw_sms, r.note, r.raw_merchant].filter(Boolean).join(' '));
+
 /**
- * Transactions whose SMS text, merchant / description, category or category type contain every
- * word of the query, among those matching the exact filters. Newest first, at most SEARCH_LIMIT rows.
+ * Fills search_text where it is missing: new operations, and ones whose note or merchant changed (those writes clear it).
+ * Done here, before a search, so that no write can leave it stale.
+ */
+async function fillSearchText(): Promise<void> {
+  const db = await getDb();
+  const rows = await db.all<{ id: number; raw_sms: string | null; note: string | null; raw_merchant: string | null }>(
+    'SELECT id, raw_sms, note, raw_merchant FROM transactions WHERE search_text IS NULL');
+  if (rows.length === 0) return;
+  await db.transaction(async (tx) => {
+    for (const r of rows) await tx.run('UPDATE transactions SET search_text = ? WHERE id = ?', [searchTextOf(r), r.id]);
+  });
+}
+
+/**
+ * Transactions whose SMS text, note, merchant / description, category or category type contain every word of the
+ * query, among those matching the exact filters. Newest first, at most SEARCH_LIMIT rows. The words are matched in SQL
+ * on search_text; the categories (renamed any time) by their names here, as a list of ids.
  */
 export async function searchTransactions(query: string, f: TxFilter = {}, limit = SEARCH_LIMIT): Promise<TransactionRow[]> {
   const words = normalizeForSearch(query).split(' ').filter(Boolean);
   if (words.length === 0) return [];
-  const { sql, params } = filterWhere(f);
+  await fillSearchText();
   const db = await getDb();
-  const rows = await db.all<TransactionRow & { raw_sms: string; note: string | null }>(
-    `SELECT t.raw_sms, t.note, ${TX_COLUMNS} ${FROM_TX} ${sql} ${NEWEST_FIRST}`, params);
-  const out: TransactionRow[] = [];
-  for (const r of rows) {
-    const haystack = normalizeForSearch(
-      [r.raw_sms, r.note, r.raw_merchant, r.category_name, r.category_type_name, r.category_id === null ? UNCATEGORIZED : '']
-        .filter(Boolean).join(' '));
-    if (words.every((w) => haystack.includes(w))) {
-      out.push(r);
-      if (out.length >= limit) break;
-    }
+  const cats = (await db.all<{ id: number; name: string; type_name: string | null }>(
+    'SELECT c.id, c.name, ct.name AS type_name FROM categories c LEFT JOIN category_types ct ON ct.id = c.type_id'))
+    .map((c) => ({ id: c.id, text: normalizeForSearch(`${c.name} ${c.type_name ?? ''}`) }));
+  const none = normalizeForSearch(UNCATEGORIZED);
+  const { sql, params } = filterCondition(f);
+  const conds: string[] = [];
+  const wordParams: Array<string | number> = [];
+  for (const w of words) {
+    const ids = cats.filter((c) => c.text.includes(w)).map((c) => c.id);
+    const any = ['instr(t.search_text, ?) > 0'];
+    wordParams.push(w);
+    if (ids.length) { any.push(`t.category_id IN (${placeholders(ids.length)})`); wordParams.push(...ids); }
+    if (none.includes(w)) any.push('t.category_id IS NULL');
+    conds.push(`(${any.join(' OR ')})`);
   }
-  return out;
+  return db.all<TransactionRow>(
+    `${SELECT_TX} WHERE ${sql} AND ${conds.join(' AND ')} ${NEWEST_FIRST} LIMIT ?`, [...params, ...wordParams, limit]);
 }
 
 /** Kinds that occur, with their counts, for the "Тип" filter. */

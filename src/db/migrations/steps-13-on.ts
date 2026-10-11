@@ -175,4 +175,6 @@ export const STEPS_13_ON: MigrationStep[][] = [
     'DROP INDEX IF EXISTS idx_tx_merchant',
     'CREATE INDEX IF NOT EXISTS idx_tx_kind_refund ON transactions(kind, refund_settled_at)',
   ],
+  // 30: what the search matches (the SMS, the note, the merchant, folded: see searchTransactions); filled when searched
+  ['ALTER TABLE transactions ADD COLUMN search_text TEXT'],
 ];

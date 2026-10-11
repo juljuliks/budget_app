@@ -235,7 +235,7 @@ export async function deleteMerchants(keys: string[]): Promise<number> {
   await db.transaction(async (tx) => {
     for (const key of keys) {
       const res = await tx.run(
-        `UPDATE transactions SET merchant_key = NULL, raw_merchant = NULL,
+        `UPDATE transactions SET merchant_key = NULL, raw_merchant = NULL, search_text = NULL,
             category_source = CASE WHEN category_id IS NULL THEN NULL ELSE 'user' END
           WHERE merchant_key = ?`, [key]);
       changed += res.changes;
