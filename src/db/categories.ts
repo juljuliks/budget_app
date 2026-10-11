@@ -1,5 +1,7 @@
 import { getDb } from './index';
 import { currentYm, monthStart } from './plans';
+import { categorySpendingSql, signedSpendSql } from './spending';
+import { placeholders } from './sql';
 
 export type Category = {
   id: number;
@@ -171,7 +173,7 @@ export async function deleteCategory(id: number, targetId: number | null, nowYm 
 export async function moveTransactionsOutOfCategory(txIds: number[], fromId: number, toId: number | null) {
   if (txIds.length === 0) return;
   const db = await getDb();
-  const marks = txIds.map(() => '?').join(',');
+  const marks = placeholders(txIds.length);
   await db.transaction(async (tx) => {
     const keys = (await tx.all<{ k: string }>(
       `SELECT DISTINCT merchant_key AS k FROM transactions
@@ -183,7 +185,7 @@ export async function moveTransactionsOutOfCategory(txIds: number[], fromId: num
         WHERE id IN (${marks}) AND category_id = ?`,
       [toId, toId, ...txIds, fromId]);
     if (keys.length > 0) {
-      const keyMarks = keys.map(() => '?').join(',');
+      const keyMarks = placeholders(keys.length);
       if (toId === null) {
         await tx.run(`DELETE FROM merchant_rules WHERE category_id = ? AND match_type = 'exact' AND pattern IN (${keyMarks})`, [fromId, ...keys]);
       } else {
@@ -234,9 +236,9 @@ export async function categorySummary(categoryId: number): Promise<{ count: numb
   const db = await getDb();
   const count = (await db.get<{ n: number }>('SELECT count(*) AS n FROM transactions WHERE category_id = ?', [categoryId]))!.n;
   const totals = await db.all<{ currency: string; amount_minor: number }>(
-    `SELECT currency, sum(CASE WHEN kind IN ('refund', 'deposit') THEN -amount_minor ELSE amount_minor END) AS amount_minor FROM transactions
-      WHERE category_id = ? AND (kind IN ('purchase', 'payment', 'transfer', 'withdrawal', 'deposit') OR (kind = 'refund' AND refund_settled_at IS NULL))
-      GROUP BY currency HAVING sum(CASE WHEN kind IN ('refund', 'deposit') THEN -amount_minor ELSE amount_minor END) != 0
+    `SELECT currency, sum(${signedSpendSql()}) AS amount_minor FROM transactions
+      WHERE category_id = ? AND ${categorySpendingSql()}
+      GROUP BY currency HAVING sum(${signedSpendSql()}) != 0
       ORDER BY amount_minor DESC`, [categoryId]);
   return { count, totals };
 }

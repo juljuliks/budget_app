@@ -3,16 +3,15 @@ import { getDb } from '../index';
 import { Converter, Currency, dateKey, ensureRates, makeConverter } from '../fx';
 import { filterCondition, TxFilter } from '../transactions';
 import { BUDGET_CURRENCY } from './months';
+import { EXPENSE_KINDS } from '../spending';
+import { sqlList } from '../sql';
 
 /**
- * Kinds that count as spending. A deposit in "Пополнение счёта" (where every one goes by default) is income, not
- * spending; one put in another category (sent 82 for a manicure, 82 came back) is subtracted from it like a refund. A refund is subtracted: from its category (its
- * merchant's, see refundCategory), or, without one, as "Возвраты без категории" (REFUND_KEY) apart from the
- * uncategorized spending. A refund settled on its purchase (reduced or deleted, see refunds.ts) no longer counts:
- * the purchase already shows it.
+ * The stats' view of spending (src/db/spending.ts has the rule): a deposit in "Пополнение счёта" (where every one goes by
+ * default) is income, not spending; one put in another category (sent 82 for a manicure, 82 came back) is subtracted
+ * from it like a refund. A refund is subtracted: from its category (its merchant's, see refundCategory), or, without
+ * one, as "Возвраты без категории" (REFUND_KEY) apart from the uncategorized spending.
  */
-const EXPENSE_KINDS = ['purchase', 'payment', 'withdrawal', 'transfer'];
-
 export type SpendRow = { id: number; category_id: number | null; kind: string; amount_minor: number; currency: string; occurred_at: number; refund_settled_at: number | null };
 
 /** The key refunds without a category are summed under (instead of null, "Без категории"). */
@@ -26,7 +25,7 @@ function spendOf(r: SpendRow): number {
   if (r.kind === 'refund') return r.refund_settled_at !== null ? 0 : -r.amount_minor;
   // in a category other than "Пополнение счёта" (see spendRows): money back, subtracted from it
   if (r.kind === 'deposit') return -r.amount_minor;
-  return EXPENSE_KINDS.includes(r.kind) ? r.amount_minor : 0;
+  return (EXPENSE_KINDS as ReadonlyArray<string>).includes(r.kind) ? r.amount_minor : 0;
 }
 
 export async function spendRows(from: number, to: number, only?: TxFilter): Promise<SpendRow[]> {
@@ -35,7 +34,7 @@ export async function spendRows(from: number, to: number, only?: TxFilter): Prom
   return db.all<SpendRow>(
     `SELECT id, category_id, kind, amount_minor, currency, occurred_at, refund_settled_at FROM transactions t
       WHERE occurred_at >= ? AND occurred_at < ? AND ${f.sql}
-        AND (kind IN (${[...EXPENSE_KINDS, 'refund'].map((k) => `'${k}'`).join(',')})
+        AND (kind IN (${sqlList([...EXPENSE_KINDS, 'refund'])})
           OR (kind = 'deposit' AND category_id IS NOT NULL))
         AND category_id IS NOT (SELECT id FROM categories WHERE system = 'savings')
         AND category_id IS NOT (SELECT id FROM categories WHERE system = 'topup')`,

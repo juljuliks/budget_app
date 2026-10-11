@@ -2,10 +2,13 @@ import { getDb } from './index';
 import { backfillRule, createRule } from '../categorize';
 import { categoryChangeTotals } from '../assign';
 import { REMEMBERABLE_KINDS } from '../types';
+import { merchantSpendingSql, signedSpendSql } from './spending';
+import { sqlList } from './sql';
 
 // The "Мерчанты" screen: merchants of purchases / payments (the only ones with a category), by category.
 
-const KINDS = `(${REMEMBERABLE_KINDS.map((k) => `'${k}'`).join(',')})`;
+/** a merchant's own operations: what its category is remembered for */
+const KINDS = `(${sqlList(REMEMBERABLE_KINDS)})`;
 
 export type MerchantRow = {
   /** the merchant_key */
@@ -101,9 +104,9 @@ export async function getMerchant(id: string): Promise<MerchantDetails | null> {
   const db = await getDb();
   // spent there: purchases / payments minus refunds not settled on a purchase (a settled one already reduced it)
   const totals = await db.all<{ currency: string; amount_minor: number }>(
-    `SELECT currency, sum(CASE WHEN t.kind = 'refund' THEN -amount_minor ELSE amount_minor END) AS amount_minor FROM transactions t
-      WHERE t.merchant_key = ? AND (t.kind IN ${KINDS} OR (t.kind = 'refund' AND t.refund_settled_at IS NULL))
-      GROUP BY currency HAVING sum(CASE WHEN t.kind = 'refund' THEN -amount_minor ELSE amount_minor END) != 0
+    `SELECT currency, sum(${signedSpendSql('t')}) AS amount_minor FROM transactions t
+      WHERE t.merchant_key = ? AND ${merchantSpendingSql('t')}
+      GROUP BY currency HAVING sum(${signedSpendSql('t')}) != 0
       ORDER BY amount_minor DESC`, [id]);
   return { ...row, totals };
 }
@@ -122,7 +125,7 @@ export async function setMerchantCategory(id: string, categoryId: number | null,
     await db.run("DELETE FROM merchant_rules WHERE match_type = 'exact' AND pattern = ?", [id]);
     if (past === 'change') {
       await db.run(`UPDATE transactions SET category_id = NULL, category_source = NULL WHERE merchant_key = ? AND category_source = 'rule'
-        AND (kind IN ${KINDS} OR (kind = 'refund' AND refund_settled_at IS NULL))`, [id]);
+        AND ${merchantSpendingSql()}`, [id]);
     }
     return;
   }
@@ -134,9 +137,9 @@ export async function setMerchantCategory(id: string, categoryId: number | null,
 export async function merchantFollowers(id: string): Promise<{ count: number; totals: Array<{ currency: string; amount_minor: number }> }> {
   const db = await getDb();
   const rows = await db.all<{ currency: string; amount_minor: number; n: number }>(
-    `SELECT currency, sum(CASE WHEN kind = 'refund' THEN -amount_minor ELSE amount_minor END) AS amount_minor, count(*) AS n FROM transactions
+    `SELECT currency, sum(${signedSpendSql()}) AS amount_minor, count(*) AS n FROM transactions
       WHERE merchant_key = ? AND category_source = 'rule' AND category_id IS NOT NULL
-        AND (kind IN ${KINDS} OR (kind = 'refund' AND refund_settled_at IS NULL))
+        AND ${merchantSpendingSql()}
       GROUP BY currency ORDER BY amount_minor DESC`, [id]);
   return { count: rows.reduce((a, r) => a + r.n, 0), totals: rows.map(({ currency, amount_minor }) => ({ currency, amount_minor })) };
 }

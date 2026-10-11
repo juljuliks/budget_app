@@ -1,6 +1,7 @@
 import { getDb } from './index';
 import { Category, findCategoryByName, isSystemCategory, listCategories } from './categories';
 import { currentYm, NormPeriod, planConverter, PlanKind } from './plans';
+import { placeholders } from './sql';
 
 /** How a merged category is planned: a limit with its spending pattern, or an obligatory payment. */
 export type MergeRhythm = { kind: PlanKind; norm: NormPeriod };
@@ -27,7 +28,7 @@ export async function mergeCategories(targetId: number, sourceIds: number[], nam
   if (clash && !all.includes(clash.id)) throw new MergeNameTakenError(name.trim());
 
   const db = await getDb();
-  const marks = all.map(() => '?').join(',');
+  const marks = placeholders(all.length);
   const items = await db.all<Item>(
     `SELECT ym, category_id, limit_minor, currency, kind, norm_period, pinned FROM plan_items WHERE category_id IN (${marks}) ORDER BY ym`, all);
   // each month's merged item, computed before the transaction (the rates may need loading)
@@ -45,7 +46,7 @@ export async function mergeCategories(targetId: number, sourceIds: number[], nam
     });
   }
 
-  const sourceMarks = sources.map(() => '?').join(',');
+  const sourceMarks = placeholders(sources.length);
   await db.transaction(async (tx) => {
     await tx.run(`UPDATE transactions SET category_id = ? WHERE category_id IN (${sourceMarks})`, [targetId, ...sources]);
     await tx.run(`UPDATE merchant_rules SET category_id = ? WHERE category_id IN (${sourceMarks})`, [targetId, ...sources]);
@@ -71,7 +72,7 @@ export async function mergePlanPreview(ids: number[], ym = currentYm()) {
   if (ids.length === 0) return [];
   const db = await getDb();
   return db.all<{ category_id: number; limit_minor: number; currency: string; kind: PlanKind; norm_period: NormPeriod }>(
-    `SELECT category_id, limit_minor, currency, kind, norm_period FROM plan_items WHERE ym = ? AND category_id IN (${ids.map(() => '?').join(',')})`,
+    `SELECT category_id, limit_minor, currency, kind, norm_period FROM plan_items WHERE ym = ? AND category_id IN (${placeholders(ids.length)})`,
     [ym, ...ids]);
 }
 

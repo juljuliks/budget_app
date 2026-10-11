@@ -1,5 +1,6 @@
 import { getDb } from './index';
 import { fetchRates } from '../fx/nbg';
+import { placeholders } from './sql';
 
 // Currencies and conversion. Amounts are stored in their own currency; stats are shown in one the user picks,
 // converted with the official rate of the transaction's day (National Bank of Georgia, GEL per unit), cached
@@ -36,7 +37,7 @@ export async function ensureRates(dates: Iterable<string>): Promise<void> {
   const wanted = [...new Set([...dates].map((d) => (d > today ? today : d)))];
   if (wanted.length === 0) return;
   const have = new Set((await db.all<{ date: string }>(
-    `SELECT date FROM fx_rates WHERE currency = ? AND date IN (${wanted.map(() => '?').join(',')})`,
+    `SELECT date FROM fx_rates WHERE currency = ? AND date IN (${placeholders(wanted.length)})`,
     [FOREIGN[0], ...wanted])).map((r) => r.date));
   const missing = wanted.filter((d) => !have.has(d)).sort().reverse().slice(0, MAX_FETCH);
   for (let i = 0; i < missing.length; i += PARALLEL) {

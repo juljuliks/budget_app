@@ -117,13 +117,9 @@
    `kind` / `amount`; миграция 9 не должна зависеть от текущего парсера; миграции только при старте UI.
 5. **Чтение без побочных эффектов**: `getPlanBudget` / `listPlan` создают план месяца (`ensureMonthPlan`) — только из
    команд плана и при старте; `cardBalance` не пишет настройку при чтении.
-6. **Одно правило «что считается тратой»**: виды трат, знак возврата и депозита, «непривязанный возврат» — в
-   `src/db/plans/spend.ts` (`EXPENSE_KINDS`, `spendOf`) для статистики, но продублировано ещё в ~5 местах
-   (`categorySummary`, `getMerchant`, `backfillRule`, `balance.ts`…). Хелперы `placeholders()` вместо ручной сборки
-   списков; общий `buildCategoryStats` для `monthStats` / `periodStats`.
-7. **Мёртвый код**: `export default {…}` в ~11 модулях (у `plans`, `transactions` уже убраны), колонка `is_archived`, `'GEL'` → `BUDGET_CURRENCY`.
-8. **Тесты**: расчёты `HistoryView` → `.ts` с тестами (период, план, отчёт уже вынесены); покрытие в `jest.config.js`.
-9. **RN 0.71 → 0.73+** вместе с заменой `react-native-quick-sqlite` (op-sqlite): targetSdk 34+, AGP 8 — отдельный проект.
+6. **Мёртвый код**: `export default {…}` в ~11 модулях (у `plans`, `transactions` уже убраны), колонка `is_archived`, `'GEL'` → `BUDGET_CURRENCY`.
+7. **Тесты**: расчёты `HistoryView` → `.ts` с тестами (период, план, отчёт уже вынесены); покрытие в `jest.config.js`.
+8. **RN 0.71 → 0.73+** вместе с заменой `react-native-quick-sqlite` (op-sqlite): targetSdk 34+, AGP 8 — отдельный проект.
 
 ## По желанию
 

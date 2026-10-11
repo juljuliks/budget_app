@@ -1,6 +1,8 @@
 import { getDb } from './index';
 import { Currency, dateKey, ensureRates, makeConverter } from './fx';
 import { getPlanBudget, monthRange, monthStats, parseYm, planConverter, unplannedOf, unplannedSpent, ymOf } from './plans';
+import { EXPENSE_KINDS } from './spending';
+import { sqlList } from './sql';
 
 // The month's report (the notification on the 1st, «История», the stats of a past month): what was put aside and what
 // kept more from being put aside — limits overspent, spending outside the plan past its share — and what that is a year.
@@ -147,7 +149,7 @@ export async function monthReport(ym: string, currency: Currency): Promise<Month
   const db = await getDb();
   const uncategorizedCount = (await db.get<{ n: number }>(
     `SELECT count(*) AS n FROM transactions WHERE occurred_at >= ? AND occurred_at < ? AND category_id IS NULL
-      AND kind IN ('purchase', 'payment', 'withdrawal', 'transfer')`, [from, to]))?.n ?? 0;
+      AND kind IN (${sqlList(EXPENSE_KINDS)})`, [from, to]))?.n ?? 0;
 
   const underPlan = stats.categories.filter((c) => c.plan_kind === 'limit' && c.limit_minor !== null && c.spent_minor < c.limit_minor)
     .map(cat).sort((a, b) => (b.limit - b.spent) - (a.limit - a.spent));

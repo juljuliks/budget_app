@@ -1,6 +1,6 @@
-import { REMEMBERABLE_KINDS } from './types';
 import { getDb } from './db';
 import type { Db } from './db/types';
+import { merchantSpendingSql } from './db/spending';
 
 export type MatchType = 'exact' | 'prefix';
 
@@ -50,7 +50,7 @@ export async function backfillRule(matchType: MatchType, pattern: string, catego
     // purchases / payments, and refunds not settled on a purchase (they are subtracted from the merchant's category)
     `UPDATE transactions SET category_id = ?, category_source = 'rule'
       WHERE ${match}
-        AND (kind IN (${REMEMBERABLE_KINDS.map((k) => `'${k}'`).join(',')}) OR (kind = 'refund' AND refund_settled_at IS NULL))
+        AND ${merchantSpendingSql()}
         AND (category_source IS NULL OR category_source = 'rule')`,
     [categoryId, ...matchParams]);
   return res.changes;

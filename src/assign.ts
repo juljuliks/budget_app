@@ -5,6 +5,8 @@ import { freezePastOfCategory } from './db/categoryDeletion';
 import { createRule, backfillRule, findCategoryForMerchant, isMixedMerchant } from './categorize';
 import { emitTransactionsChanged } from './events';
 import { isRememberable, REMEMBERABLE_KINDS } from './types';
+import { merchantSpendingSql, signedSpendSql } from './db/spending';
+import { placeholders } from './db/sql';
 
 /**
  * What a merchant rule is for: it picks the category of the merchant's new transactions automatically.
@@ -83,13 +85,13 @@ export async function merchantChangePreview(txId: number, categoryId: number | n
 export async function categoryChangeTotals(merchantKey: string, categoryId: number, alsoTxId = -1) {
   const db = await getDb();
   return db.all<{ currency: string; amount_minor: number; n: number }>(
-    `SELECT currency, sum(CASE WHEN kind = 'refund' THEN -amount_minor ELSE amount_minor END) AS amount_minor, count(*) AS n FROM transactions
+    `SELECT currency, sum(${signedSpendSql()}) AS amount_minor, count(*) AS n FROM transactions
       WHERE merchant_key = ?
-        AND (kind IN (${REMEMBERABLE_KINDS.map(() => '?').join(',')}) OR (kind = 'refund' AND refund_settled_at IS NULL))
+        AND ${merchantSpendingSql()}
         AND (id = ? OR category_source IS NULL OR category_source = 'rule')
         AND (category_id IS NULL OR category_id != ?)
-      GROUP BY currency ORDER BY sum(CASE WHEN kind = 'refund' THEN -amount_minor ELSE amount_minor END) DESC`,
-    [merchantKey, ...REMEMBERABLE_KINDS, alsoTxId, categoryId]);
+      GROUP BY currency ORDER BY sum(${signedSpendSql()}) DESC`,
+    [merchantKey, alsoTxId, categoryId]);
 }
 
 /**
@@ -100,7 +102,7 @@ async function merchantsToChange(txIds: number[], categoryId: number, withoutToo
   if (txIds.length === 0) return [];
   const db = await getDb();
   const rows = await db.all<{ kind: string; merchant_key: string | null; raw_merchant: string | null }>(
-    `SELECT kind, merchant_key, raw_merchant FROM transactions WHERE id IN (${txIds.map(() => '?').join(',')})`, txIds);
+    `SELECT kind, merchant_key, raw_merchant FROM transactions WHERE id IN (${placeholders(txIds.length)})`, txIds);
   const out = new Map<string, string>();
   for (const r of rows) {
     if (!r.merchant_key || !isRememberable(r.kind) || out.has(r.merchant_key) || await isMixedMerchant(r.merchant_key)) continue;
@@ -169,8 +171,8 @@ export async function assignCategoryToMany(
     // the selected ones of these merchants follow them from now on, like the ones the rule picked
     const db = await getDb();
     await db.run(
-      `UPDATE transactions SET category_source = 'rule' WHERE id IN (${txIds.map(() => '?').join(',')})
-        AND merchant_key IN (${merchants.map(() => '?').join(',')}) AND kind IN (${REMEMBERABLE_KINDS.map(() => '?').join(',')})`,
+      `UPDATE transactions SET category_source = 'rule' WHERE id IN (${placeholders(txIds.length)})
+        AND merchant_key IN (${placeholders(merchants.length)}) AND kind IN (${placeholders(REMEMBERABLE_KINDS.length)})`,
       [...txIds, ...merchants.map((m) => m.key), ...REMEMBERABLE_KINDS]);
   }
   if (categoryId !== null) await rememberForMixed(txIds, categoryId);
@@ -185,6 +187,6 @@ async function rememberForMixed(txIds: number[], categoryId: number) {
   await db.run(
     `INSERT OR IGNORE INTO merchant_categories (merchant_key, category_id)
       SELECT DISTINCT t.merchant_key, ? FROM transactions t JOIN mixed_merchants m ON m.merchant_key = t.merchant_key
-        WHERE t.id IN (${txIds.map(() => '?').join(',')}) AND t.kind IN (${REMEMBERABLE_KINDS.map(() => '?').join(',')})`,
+        WHERE t.id IN (${placeholders(txIds.length)}) AND t.kind IN (${placeholders(REMEMBERABLE_KINDS.length)})`,
     [categoryId, ...txIds, ...REMEMBERABLE_KINDS]);
 }

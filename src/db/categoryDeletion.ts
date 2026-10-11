@@ -1,10 +1,12 @@
 import { getDb } from './index';
 import { currentYm, monthStart } from './plans';
+import { signedSpendSql } from './spending';
+import { placeholders } from './sql';
 
 /** How many operations and how much (spent minus refunds and deposits, per currency, the biggest first). */
 export type Bucket = { n: number; totals: Array<{ currency: string; amount_minor: number }> };
 
-const SPENT = "sum(CASE WHEN t.kind IN ('refund', 'deposit') THEN -t.amount_minor ELSE t.amount_minor END)";
+const SPENT = `sum(${signedSpendSql('t')})`;
 
 async function bucket(where: string, params: Array<number | string>): Promise<Bucket> {
   const db = await getDb();
@@ -63,7 +65,7 @@ export type SortOutSummary = {
 export async function sortOutSummary(sourceId: number, ids: number[]): Promise<SortOutSummary> {
   if (ids.length === 0) return { moved: [], deleted: { n: 0, totals: [] } };
   const db = await getDb();
-  const marks = ids.map(() => '?').join(',');
+  const marks = placeholders(ids.length);
   const rows = await db.all<{ category_id: number | null; name: string | null; emoji: string | null; type_name: string | null; currency: string; amount_minor: number; n: number }>(
     `SELECT t.category_id, c.name, c.emoji, ct.name AS type_name, t.currency, ${SPENT} AS amount_minor, count(*) AS n
       FROM transactions t LEFT JOIN categories c ON c.id = t.category_id LEFT JOIN category_types ct ON ct.id = c.type_id
@@ -91,7 +93,7 @@ export async function sortOutSummary(sourceId: number, ids: number[]): Promise<S
 export async function freezePastOfCategory(id: number, merchantKeys?: string[], nowYm = currentYm()) {
   if (merchantKeys && merchantKeys.length === 0) return;
   const db = await getDb();
-  const only = merchantKeys ? ` AND merchant_key IN (${merchantKeys.map(() => '?').join(',')})` : '';
+  const only = merchantKeys ? ` AND merchant_key IN (${placeholders(merchantKeys.length)})` : '';
   await db.run(
     `UPDATE transactions SET category_source = 'user' WHERE category_id = ? AND occurred_at < ? AND category_source = 'rule'${only}`,
     [id, monthStart(nowYm), ...(merchantKeys ?? [])]);

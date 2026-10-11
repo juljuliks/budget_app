@@ -2,6 +2,7 @@ import { getDb } from './index';
 import type { Db } from './types';
 import { getSetting, setSetting } from './settings';
 import { parseTbc, parseTbcBalance } from '../parsers/tbc';
+import { placeholders } from './sql';
 
 // The card balance, kept in sync with the bank: every SMS that reports "Balance: …" (purchases, balance-only SMS)
 // sets it exactly; operations after it (a deposit has no balance in its SMS) are added on top until the next one.
@@ -118,7 +119,7 @@ export async function placeByBalances(txId: number, db?: Db): Promise<void> {
       const picked = candidates.filter((_, j) => mask & (1 << j));
       if (own + picked.reduce((sum, r) => sum + signed(r), 0) !== gap) continue;
       const ids = [txId, ...picked.map((r) => r.id)];
-      await db.run(`UPDATE transactions SET occurred_at = ? WHERE id IN (${ids.map(() => '?').join(',')})`, [a.at - 1, ...ids]);
+      await db.run(`UPDATE transactions SET occurred_at = ? WHERE id IN (${placeholders(ids.length)})`, [a.at - 1, ...ids]);
       return;
     }
   }

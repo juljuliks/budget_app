@@ -57,4 +57,5 @@ Gradle — только JDK 17: `JAVA_HOME=$(/usr/libexec/java_home -v 17)` (п�
   `src/features/category-delete/` (`useSortOut`).
 - `src/shared/navigation/leaveGuard.ts` — вопрос перед уходом с экрана (разбор категории): таб-бар, шестерёнка, стрелка дня.
 - `src/db/` — миграции и запросы; `src/db/report.ts` — отчёт (только для месяцев с планом, `hasMonthPlan`).
+- `src/db/spending.ts` — что считается тратой (категории и мерчанта): запросы берут правило отсюда, не пишут своё.
 - `android/app/src/main/java/com/budgetapp/` — `SmsReceiver`, `BankPushListener` (пакет с «tbc», title + text → парсер SMS).

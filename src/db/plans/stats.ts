@@ -7,6 +7,7 @@ import { BUDGET_CURRENCY, asCurrency, monthRange, planRateDate, ymOf } from './m
 import { REFUND_KEY, categoryKey, convertSpending, spendRows, sumBy } from './spend';
 import { NormPeriod, PlanKind, asNorm } from './types';
 import { ensureMonthPlan } from './budget';
+import { placeholders } from '../sql';
 
 export type CategoryStat = {
   category_id: number | null; // null = uncategorized
@@ -80,6 +81,28 @@ export function unplannedSpent(stats: MonthStats): number {
   return stats.categories.filter((c) => c.limit_minor === null).reduce((a, c) => a + Math.max(0, c.spent_minor), 0);
 }
 
+type CategoryRow = { id: number; name: string; emoji: string | null; type_id: number | null; type_name: string | null; deleted_at: number | null; is_transfer: number | null };
+
+/** A category's row of stats; `plan` (its amount in the stats' currency, kind, rhythm) when it is in the month's plan. */
+function categoryStat(c: CategoryRow, spent: number, colorOf: Map<number, string>, plan?: { limit: number; kind: PlanKind | null; norm: string | null }): CategoryStat {
+  return {
+    category_id: c.id, name: c.name, emoji: c.emoji, type_id: c.type_id, type_name: c.type_name, spent_minor: spent,
+    limit_minor: plan ? plan.limit : null, plan_kind: plan ? plan.kind : null, plan_norm: plan ? asNorm(plan.norm) : null,
+    color: colorOf.get(c.id) ?? NEUTRAL_COLOR, deleted: c.deleted_at !== null, transfer: c.is_transfer === 1,
+  };
+}
+
+/** The spending without a category, as a row of its own. */
+const uncategorizedStat = (spent: number): CategoryStat => ({
+  category_id: null, name: 'Без категории', emoji: NO_CATEGORY_EMOJI, type_id: null, type_name: null,
+  spent_minor: spent, limit_minor: null, plan_kind: null, plan_norm: null, color: NEUTRAL_COLOR, deleted: false, transfer: false,
+});
+
+/** Refunds without a category: subtracted from the total, shown apart ("Возвраты без категории"). */
+const refundsUnassignedOf = (spentBy: Map<number | null | typeof REFUND_KEY, number>) => Math.max(0, -(spentBy.get(REFUND_KEY) ?? 0));
+
+const listTypes = async () => (await getDb()).all<{ id: number; name: string }>('SELECT id, name FROM category_types ORDER BY sort_order, name');
+
 /** The month's spending and plan by category, in `currency` (spending on each day's rate, the plan on planRateDate). */
 export async function monthStats(year: number, month: number, currency: Currency = BUDGET_CURRENCY): Promise<MonthStats> {
   const ym = ymOf(year, month);
@@ -89,11 +112,11 @@ export async function monthStats(year: number, month: number, currency: Currency
   const planDate = planRateDate(ym);
   const { items, missing, conv } = await convertSpending(await spendRows(from, to), currency, [planDate]);
   const spentBy = sumBy(items, categoryKey);
-  const refundsUnassigned = Math.max(0, -(spentBy.get(REFUND_KEY) ?? 0));
+  const refundsUnassigned = refundsUnassignedOf(spentBy);
 
   const colorOf = await categoryColors();
 
-  const cats = await db.all<{ id: number; name: string; emoji: string | null; type_id: number | null; type_name: string | null; limit_minor: number | null; plan_currency: string | null; plan_kind: PlanKind | null; plan_norm: string | null; deleted_at: number | null; is_transfer: number | null }>(
+  const cats = await db.all<CategoryRow & { limit_minor: number | null; plan_currency: string | null; plan_kind: PlanKind | null; plan_norm: string | null }>(
     `SELECT c.id, c.name, c.emoji, c.type_id, ct.name AS type_name, p.limit_minor, p.currency AS plan_currency, p.kind AS plan_kind,
         p.norm_period AS plan_norm, c.deleted_at, ct.is_transfer
       FROM categories c
@@ -105,23 +128,13 @@ export async function monthStats(year: number, month: number, currency: Currency
     const s = spentBy.get(c.id) ?? 0;
     const limit = c.limit_minor ? conv(c.limit_minor, asCurrency(c.plan_currency), currency, planDate) : null;
     if (s === 0 && limit === null) continue;
-    categories.push({
-      category_id: c.id, name: c.name, emoji: c.emoji, type_id: c.type_id, type_name: c.type_name, spent_minor: s, limit_minor: limit,
-      plan_kind: limit === null ? null : c.plan_kind,
-      plan_norm: limit === null ? null : asNorm(c.plan_norm),
-      color: colorOf.get(c.id) ?? NEUTRAL_COLOR, deleted: c.deleted_at !== null, transfer: c.is_transfer === 1,
-    });
+    categories.push(categoryStat(c, s, colorOf, limit === null ? undefined : { limit, kind: c.plan_kind, norm: c.plan_norm }));
   }
   const uncategorized = spentBy.get(null) ?? 0;
-  if (uncategorized !== 0) {
-    categories.push({
-      category_id: null, name: 'Без категории', emoji: NO_CATEGORY_EMOJI, type_id: null, type_name: null,
-      spent_minor: uncategorized, limit_minor: null, plan_kind: null, plan_norm: null, color: NEUTRAL_COLOR, deleted: false, transfer: false,
-    });
-  }
+  if (uncategorized !== 0) categories.push(uncategorizedStat(uncategorized));
   categories.sort((a, b) => b.spent_minor - a.spent_minor || (b.limit_minor ?? 0) - (a.limit_minor ?? 0));
 
-  const types = await db.all<{ id: number; name: string }>('SELECT id, name FROM category_types ORDER BY sort_order, name');
+  const types = await listTypes();
 
   return {
     ym,
@@ -153,24 +166,15 @@ export async function periodStats(from: number, to: number, currency: Currency =
   const db = await getDb();
   const { items, missing } = await convertSpending(await spendRows(from, to), currency);
   const spentBy = sumBy(items, categoryKey);
-  const refundsUnassigned = Math.max(0, -(spentBy.get(REFUND_KEY) ?? 0));
+  const refundsUnassigned = refundsUnassignedOf(spentBy);
   const ids = [...new Set([...spentBy.keys(), ...planned])].filter((id): id is number => typeof id === 'number');
-  const cats = ids.length === 0 ? [] : await db.all<{ id: number; name: string; emoji: string | null; type_id: number | null; type_name: string | null; deleted_at: number | null; is_transfer: number | null }>(
+  const cats = ids.length === 0 ? [] : await db.all<CategoryRow>(
     `SELECT c.id, c.name, c.emoji, c.type_id, ct.name AS type_name, c.deleted_at, ct.is_transfer FROM categories c
-      LEFT JOIN category_types ct ON ct.id = c.type_id WHERE c.id IN (${ids.map(() => '?').join(',')})`, ids);
+      LEFT JOIN category_types ct ON ct.id = c.type_id WHERE c.id IN (${placeholders(ids.length)})`, ids);
   const colorOf = await categoryColors();
-  const categories: CategoryStat[] = cats.map((c) => ({
-    category_id: c.id, name: c.name, emoji: c.emoji, type_id: c.type_id, type_name: c.type_name, spent_minor: spentBy.get(c.id) ?? 0,
-    limit_minor: null, plan_kind: null, plan_norm: null, color: colorOf.get(c.id) ?? NEUTRAL_COLOR, deleted: c.deleted_at !== null,
-    transfer: c.is_transfer === 1,
-  }));
+  const categories: CategoryStat[] = cats.map((c) => categoryStat(c, spentBy.get(c.id) ?? 0, colorOf));
   const none = spentBy.get(null) ?? 0;
-  if (none !== 0) {
-    categories.push({
-      category_id: null, name: 'Без категории', emoji: NO_CATEGORY_EMOJI, type_id: null, type_name: null, spent_minor: none,
-      limit_minor: null, plan_kind: null, plan_norm: null, color: NEUTRAL_COLOR, deleted: false, transfer: false,
-    });
-  }
+  if (none !== 0) categories.push(uncategorizedStat(none));
   const positive = categories.filter((c) => c.spent_minor > 0).sort((a, b) => b.spent_minor - a.spent_minor);
   // transfers that brought in more than went out: listed ("+"), not in the total
   const cameIn = categories.filter((c) => c.transfer && c.spent_minor < 0).sort((a, b) => a.spent_minor - b.spent_minor);
@@ -178,7 +182,7 @@ export async function periodStats(from: number, to: number, currency: Currency =
   const untouched = categories.filter((c) => c.category_id !== null && c.spent_minor <= 0 && planned.includes(c.category_id) && !c.deleted)
     .map((c) => ({ ...c, spent_minor: 0 })).sort((a, b) => a.name.localeCompare(b.name));
   const listed = [...positive, ...cameIn, ...untouched];
-  const types = await db.all<{ id: number; name: string }>('SELECT id, name FROM category_types ORDER BY sort_order, name');
+  const types = await listTypes();
   return {
     currency, groups: groupByType(listed, types), categories: listed,
     spent_minor: positive.reduce((s, c) => s + c.spent_minor, 0) - refundsUnassigned, refunds_unassigned_minor: refundsUnassigned,

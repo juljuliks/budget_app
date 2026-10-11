@@ -3,6 +3,7 @@ import { NO_CATEGORY_EMOJI } from '../../colors';
 import { getDb } from '../index';
 import type { TransactionRow } from './rows';
 import { FROM_TX, NEWEST_FIRST, SELECT_TX, TX_COLUMNS } from './sql';
+import { placeholders } from '../sql';
 
 /** Lowercase + ё→е. Done in JS: SQLite LIKE / lower() only fold ASCII, so Cyrillic search would be case-sensitive. */
 export function normalizeForSearch(s: string): string {
@@ -52,22 +53,22 @@ export function filterCondition(f: TxFilter): { sql: string; params: Array<numbe
   if (f.categories?.length) {
     const ids = f.categories.filter((c): c is number => c !== 'none');
     const any: string[] = [];
-    if (ids.length) { any.push(`t.category_id IN (${ids.map(() => '?').join(',')})`); params.push(...ids); }
+    if (ids.length) { any.push(`t.category_id IN (${placeholders(ids.length)})`); params.push(...ids); }
     if (f.categories.includes('none')) any.push('t.category_id IS NULL');
     where.push(`(${any.join(' OR ')})`);
   }
   if (f.kinds?.length) {
-    where.push(`t.kind IN (${f.kinds.map(() => '?').join(',')})`);
+    where.push(`t.kind IN (${placeholders(f.kinds.length)})`);
     params.push(...f.kinds);
   }
   if (f.merchants?.length) {
-    where.push(`t.merchant_key IN (${f.merchants.map(() => '?').join(',')})`);
+    where.push(`t.merchant_key IN (${placeholders(f.merchants.length)})`);
     params.push(...f.merchants);
   }
   if (f.from !== undefined) { where.push('t.occurred_at >= ?'); params.push(f.from); }
   if (f.to !== undefined) { where.push('t.occurred_at < ?'); params.push(f.to); }
   if (f.ids) {
-    where.push(f.ids.length ? `t.id IN (${f.ids.map(() => '?').join(',')})` : '0');
+    where.push(f.ids.length ? `t.id IN (${placeholders(f.ids.length)})` : '0');
     params.push(...f.ids);
   }
   return { sql: where.length ? where.join(' AND ') : '1', params };

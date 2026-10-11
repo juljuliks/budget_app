@@ -1,13 +1,14 @@
 // Changing operations: category, amount, note, read, deleted, added by hand.
 import { getDb } from '../index';
 import { CategorySource } from './rows';
+import { placeholders } from '../sql';
 
 /** Bulk "change category" from the list: a manual choice ("Без категории" too), so no merchant rules are created. */
 export async function setCategoryForTransactions(txIds: number[], categoryId: number | null) {
   if (txIds.length === 0) return;
   const db = await getDb();
   await db.run(
-    `UPDATE transactions SET category_id = ?, category_source = ? WHERE id IN (${txIds.map(() => '?').join(',')})`,
+    `UPDATE transactions SET category_id = ?, category_source = ? WHERE id IN (${placeholders(txIds.length)})`,
     [categoryId, 'user', ...txIds]);
 }
 
@@ -36,7 +37,7 @@ export async function markTransactionsSeen(ids: number[]): Promise<number> {
   if (ids.length === 0) return 0;
   const db = await getDb();
   const { changes } = await db.run(
-    `UPDATE transactions SET seen_at = ? WHERE seen_at IS NULL AND id IN (${ids.map(() => '?').join(',')})`,
+    `UPDATE transactions SET seen_at = ? WHERE seen_at IS NULL AND id IN (${placeholders(ids.length)})`,
     [Math.floor(Date.now() / 1000), ...ids]);
   return changes;
 }
