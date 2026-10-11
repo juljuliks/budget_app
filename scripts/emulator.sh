@@ -37,6 +37,7 @@ echo "Emulator $SERIAL booted."
 cd "$ROOT_DIR/android"
 if [ "$VARIANT" = "release" ]; then
   # SKIP_BUILD=1: the release APK was just built (scripts/release.sh), install it as is
+  # needs the release key in ~/.gradle/gradle.properties; without it: ./gradlew assembleRelease -PallowDebugSigning
   [ "${SKIP_BUILD:-}" = "1" ] || ./gradlew assembleRelease -q
   APK=app/build/outputs/apk/release/app-release.apk
 else

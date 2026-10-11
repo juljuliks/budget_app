@@ -61,7 +61,8 @@ android {
             signingConfig signingConfigs.debug
         }
         release {
-            // Without the release key configured, fall back to debug signing so the build still works
+            // Without the release key: debug signing only when asked for (-PallowDebugSigning), see the check below.
+            // An APK signed with the debug key can't update the phone's app (installed with the release key)
             signingConfig signingConfigs.findByName('release') ?: signingConfigs.debug
             minifyEnabled false
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
@@ -82,3 +83,13 @@ dependencies {
 }
 
 apply from: file("../../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesAppBuildGradle(project)
+
+// A release build without the release key stops here instead of quietly signing with the debug key
+gradle.taskGraph.whenReady { graph ->
+    def releasing = graph.allTasks.any { it.project == project && it.name ==~ /(assemble|bundle|package)Release/ }
+    if (releasing && android.signingConfigs.findByName('release') == null && !project.hasProperty('allowDebugSigning')) {
+        throw new GradleException(
+            "No release key: set BUDGETAPP_RELEASE_STORE_FILE / _STORE_PASSWORD / _KEY_ALIAS / _KEY_PASSWORD in " +
+            "~/.gradle/gradle.properties, or build with -PallowDebugSigning (such an APK can't update the phone's app)")
+    }
+}
