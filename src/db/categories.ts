@@ -1,4 +1,5 @@
 import { getDb } from './index';
+import type { Db } from './types';
 import { currentYm, monthStart } from './plans';
 import { categorySpendingSql, signedSpendSql } from './spending';
 import { placeholders } from './sql';
@@ -33,8 +34,8 @@ export const isTopUp = (c: { system?: string | null }) => c.system === TOP_UP;
 export const isSystemCategory = (c: { system?: string | null }) => !!c.system;
 
 /** The id of "Пополнение счёта". */
-export async function topUpCategoryId(): Promise<number | null> {
-  const db = await getDb();
+export async function topUpCategoryId(db?: Db): Promise<number | null> {
+  db ??= await getDb();
   return (await db.get<{ id: number }>("SELECT id FROM categories WHERE system = 'topup'"))?.id ?? null;
 }
 
@@ -196,8 +197,8 @@ export async function moveTransactionsOutOfCategory(txIds: number[], fromId: num
   if (toId !== null) await incrementCategoryUsage(toId);
 }
 
-export async function incrementCategoryUsage(categoryId: number, by = 1) {
-  const db = await getDb();
+export async function incrementCategoryUsage(categoryId: number, by = 1, db?: Db) {
+  db ??= await getDb();
   await db.run(
     `INSERT INTO category_usage (category_id, usage_count) VALUES (?, ?)
       ON CONFLICT(category_id) DO UPDATE SET usage_count = usage_count + excluded.usage_count`,

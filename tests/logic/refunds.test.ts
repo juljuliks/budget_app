@@ -87,6 +87,33 @@ test('autoCategorizeRefunds: old refunds get their merchant\'s category; settled
   expect([await cat(open), await cat(settled), await cat(cleared)]).toEqual([4, null, null]);
 });
 
+test('autoCategorizeRefunds takes what refundCategory would: the rule (the longest prefix), not for a mixed merchant, else the latest purchase in 90 days', async () => {
+  const { autoCategorizeRefunds, refundCategory } = require('../../src/db/refunds');
+  const { createRule } = require('../../src/categorize/rules');
+  const db = await getDb();
+  await createRule('prefix', 'BOLT', 2);
+  await createRule('prefix', 'BOLT FOOD', 3);
+  await createRule('exact', 'MIXED SHOP', 5);
+  await db.run("INSERT INTO mixed_merchants (merchant_key, created_at) VALUES ('MIXED SHOP', 1)");
+  await add('purchase', 1000, 'MIXED SHOP', NOW - 2 * DAY, 6);
+  await add('purchase', 1000, 'MIXED SHOP', NOW - DAY, 7);
+  await add('purchase', 1000, 'OLD SHOP', NOW - 100 * DAY, 8);
+  const refunds = [
+    await add('refund', 100, 'BOLT FOOD 12', NOW), await add('refund', 100, 'BOLT TAXI', NOW),
+    await add('refund', 100, 'MIXED SHOP', NOW), await add('refund', 100, 'OLD SHOP', NOW),
+  ];
+  const expected = [];
+  for (const id of refunds) {
+    const r = (await db.get<{ merchant_key: string; occurred_at: number }>('SELECT merchant_key, occurred_at FROM transactions WHERE id = ?', [id]))!;
+    expected.push(await refundCategory(r.merchant_key, r.occurred_at));
+  }
+  expect(expected).toEqual([3, 2, 7, null]);
+  expect(await autoCategorizeRefunds()).toBe(3);
+  const cats = [];
+  for (const id of refunds) cats.push((await db.get<{ c: number | null }>('SELECT category_id AS c FROM transactions WHERE id = ?', [id]))!.c);
+  expect(cats).toEqual(expected);
+});
+
 test('setting a merchant\'s category also gives it to its open refunds (settled ones and manual choices stay)', async () => {
   const { setMerchantCategory } = require('../../src/db/merchants');
   const open = await add('refund', 300, 'TEMU COM', NOW);

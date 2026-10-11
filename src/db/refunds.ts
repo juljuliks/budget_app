@@ -1,6 +1,8 @@
 import { getDb } from './index';
+import type { Db } from './types';
 import { REMEMBERABLE_KINDS } from '../domain/types';
 import { findCategoryForMerchant } from '../categorize/rules';
+import { sqlList } from './sql';
 
 /** How far back a refund looks for a purchase at its merchant to take the category from. */
 export const REFUND_LOOKBACK_DAYS = 90;
@@ -28,34 +30,39 @@ export async function getRefund(id: number): Promise<Refund | undefined> {
  * else the category of the latest purchase / payment at that merchant within REFUND_LOOKBACK_DAYS before it; null
  * when unknown (counted as "Возвраты без категории").
  */
-export async function refundCategory(merchantKey: string | null | undefined, occurredAt: number): Promise<number | null> {
+export async function refundCategory(merchantKey: string | null | undefined, occurredAt: number, db?: Db): Promise<number | null> {
   if (!merchantKey) return null;
-  const rule = await findCategoryForMerchant(merchantKey);
+  db ??= await getDb();
+  const rule = await findCategoryForMerchant(merchantKey, db);
   if (rule) return rule.category_id;
-  const db = await getDb();
   const last = await db.get<{ category_id: number }>(
     `SELECT category_id FROM transactions
-      WHERE merchant_key = ? AND kind IN (${REMEMBERABLE_KINDS.map((k) => `'${k}'`).join(',')})
+      WHERE merchant_key = ? AND kind IN (${sqlList(REMEMBERABLE_KINDS)})
         AND category_id IS NOT NULL AND occurred_at >= ? AND occurred_at <= ?
       ORDER BY occurred_at DESC, id DESC LIMIT 1`,
     [merchantKey, occurredAt - REFUND_LOOKBACK_DAYS * 86400, occurredAt]);
   return last?.category_id ?? null;
 }
 
-/** Refunds that came before refundCategory (or before their merchant got a category) get one now. Idempotent. */
+/** refundCategory in SQL, for the refund row `transactions` being updated. */
+const REFUND_CATEGORY_SQL = `coalesce(
+    CASE WHEN EXISTS (SELECT 1 FROM mixed_merchants m WHERE m.merchant_key = transactions.merchant_key) THEN NULL ELSE coalesce(
+      (SELECT category_id FROM merchant_rules WHERE match_type = 'exact' AND pattern = transactions.merchant_key),
+      (SELECT category_id FROM merchant_rules WHERE match_type = 'prefix' AND substr(transactions.merchant_key, 1, length(pattern)) = pattern
+        ORDER BY length(pattern) DESC LIMIT 1)) END,
+    (SELECT p.category_id FROM transactions p
+      WHERE p.merchant_key = transactions.merchant_key AND p.kind IN (${sqlList(REMEMBERABLE_KINDS)})
+        AND p.category_id IS NOT NULL AND p.occurred_at >= transactions.occurred_at - ${REFUND_LOOKBACK_DAYS * 86400} AND p.occurred_at <= transactions.occurred_at
+      ORDER BY p.occurred_at DESC, p.id DESC LIMIT 1))`;
+
+/** Refunds that came before refundCategory (or before their merchant got a category) get one now, in one statement. Idempotent. */
 export async function autoCategorizeRefunds(): Promise<number> {
   const db = await getDb();
-  const rows = await db.all<{ id: number; merchant_key: string | null; occurred_at: number }>(
-    `SELECT id, merchant_key, occurred_at FROM transactions
-      WHERE kind = 'refund' AND category_id IS NULL AND category_source IS NULL AND refund_settled_at IS NULL`);
-  let n = 0;
-  for (const r of rows) {
-    const categoryId = await refundCategory(r.merchant_key, r.occurred_at);
-    if (categoryId === null) continue;
-    await db.run("UPDATE transactions SET category_id = ?, category_source = 'rule' WHERE id = ? AND category_id IS NULL", [categoryId, r.id]);
-    n++;
-  }
-  return n;
+  const { changes } = await db.run(
+    `UPDATE transactions SET category_id = ${REFUND_CATEGORY_SQL}, category_source = 'rule'
+      WHERE kind = 'refund' AND category_id IS NULL AND category_source IS NULL AND refund_settled_at IS NULL
+        AND merchant_key IS NOT NULL AND ${REFUND_CATEGORY_SQL} IS NOT NULL`);
+  return changes;
 }
 
 export default { getRefund, refundCategory, autoCategorizeRefunds };

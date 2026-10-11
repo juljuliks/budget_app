@@ -11,8 +11,8 @@ export async function isMixedMerchant(merchantKey: string, db?: Db): Promise<boo
 }
 
 /** The merchant's category, by the transaction's merchant_key; none for a merchant of different categories. */
-export async function findCategoryForMerchant(merchantKey: string): Promise<{ category_id: number; source: 'rule' } | null> {
-  const db = await getDb();
+export async function findCategoryForMerchant(merchantKey: string, db?: Db): Promise<{ category_id: number; source: 'rule' } | null> {
+  db ??= await getDb();
   if (await isMixedMerchant(merchantKey, db)) return null;
   const exact = await db.get<{ category_id: number }>(
     'SELECT category_id FROM merchant_rules WHERE match_type = ? AND pattern = ?', ['exact', merchantKey]);

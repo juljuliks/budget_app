@@ -37,27 +37,39 @@ export type MerchantActivity = {
   to: number;
 };
 
-/** The newest SMS spelling of each merchant_key. */
-async function namesByKey(): Promise<Map<string, string>> {
+/** Every merchant_key, or only `key`: a condition on `t` and its params. */
+const onlyKey = (key?: string) => (key === undefined ? { sql: 't.merchant_key IS NOT NULL', params: [] } : { sql: 't.merchant_key = ?', params: [key] });
+
+/** The newest SMS spelling of each merchant_key (or of `key`). */
+async function namesByKey(key?: string): Promise<Map<string, string>> {
   const db = await getDb();
+  const w = onlyKey(key);
   const rows = await db.all<{ k: string; name: string | null }>(
     `SELECT merchant_key AS k, (SELECT raw_merchant FROM transactions x WHERE x.merchant_key = t.merchant_key
         ORDER BY x.occurred_at DESC LIMIT 1) AS name
-      FROM transactions t WHERE merchant_key IS NOT NULL GROUP BY merchant_key`);
+      FROM transactions t WHERE ${w.sql} GROUP BY merchant_key`, w.params);
   return new Map(rows.map((r) => [r.k, r.name || r.k]));
 }
 
 /** Every merchant with purchases / payments, the most frequent first. */
 export async function listMerchants(): Promise<MerchantRow[]> {
+  return merchantRows();
+}
+
+/** The merchants' rows (all, or the one of `key`). */
+async function merchantRows(key?: string): Promise<MerchantRow[]> {
   const db = await getDb();
-  const names = await namesByKey();
+  const w = onlyKey(key);
+  const names = await namesByKey(key);
   const counts = await db.all<{ mid: string; n: number }>(
     `SELECT t.merchant_key AS mid, count(*) AS n FROM transactions t
-      WHERE t.merchant_key IS NOT NULL AND t.kind IN ${KINDS} GROUP BY mid`);
-  const activityOf = await merchantActivity();
-  const rules = await db.all<{ pattern: string; category_id: number }>("SELECT pattern, category_id FROM merchant_rules WHERE match_type = 'exact'");
+      WHERE ${w.sql} AND t.kind IN ${KINDS} GROUP BY mid`, w.params);
+  const activityOf = await merchantActivity(key);
+  const rules = await db.all<{ pattern: string; category_id: number }>(
+    `SELECT pattern, category_id FROM merchant_rules WHERE match_type = 'exact'${key === undefined ? '' : ' AND pattern = ?'}`, w.params);
   const ruleOf = new Map(rules.map((r) => [r.pattern, r.category_id]));
-  const mixed = new Set((await db.all<{ k: string }>('SELECT merchant_key AS k FROM mixed_merchants')).map((r) => r.k));
+  const mixed = new Set((await db.all<{ k: string }>(
+    `SELECT merchant_key AS k FROM mixed_merchants${key === undefined ? '' : ' WHERE merchant_key = ?'}`, w.params)).map((r) => r.k));
   return counts.map(({ mid, n }) => ({
     id: mid, name: names.get(mid) ?? mid, count: n, category_id: mixed.has(mid) ? null : ruleOf.get(mid) ?? null, mixed: mixed.has(mid),
     activity: activityOf.get(mid) ?? NO_ACTIVITY,
@@ -66,16 +78,17 @@ export async function listMerchants(): Promise<MerchantRow[]> {
 
 const NO_ACTIVITY: MerchantActivity = { recent: false, count: 0, totals: [], from: 0, to: 0 };
 
-/** Each merchant id's purchases / payments: of the last RECENT_DAYS days if any, else of all time. */
-async function merchantActivity(now = Date.now()): Promise<Map<string, MerchantActivity>> {
+/** Each merchant id's (or `key`'s) purchases / payments: of the last RECENT_DAYS days if any, else of all time. */
+async function merchantActivity(key?: string, now = Date.now()): Promise<Map<string, MerchantActivity>> {
   const db = await getDb();
+  const w = onlyKey(key);
   const since = Math.floor(now / 1000) - RECENT_DAYS * 86400;
   const rows = await db.all<{ mid: string; currency: string; recent: number; n: number; amount: number; recent_amount: number; first: number; last: number; recent_first: number | null }>(
     `SELECT t.merchant_key AS mid, currency, count(*) AS n, sum(amount_minor) AS amount,
         sum(occurred_at >= ?) AS recent, sum(CASE WHEN occurred_at >= ? THEN amount_minor ELSE 0 END) AS recent_amount,
         min(occurred_at) AS first, max(occurred_at) AS last, min(CASE WHEN occurred_at >= ? THEN occurred_at END) AS recent_first
-      FROM transactions t WHERE t.merchant_key IS NOT NULL AND t.kind IN ${KINDS} GROUP BY mid, currency`,
-    [since, since, since]);
+      FROM transactions t WHERE ${w.sql} AND t.kind IN ${KINDS} GROUP BY mid, currency`,
+    [since, since, since, ...w.params]);
   const byMid = new Map<string, typeof rows>();
   for (const r of rows) byMid.set(r.mid, [...(byMid.get(r.mid) ?? []), r]);
   const out = new Map<string, MerchantActivity>();
@@ -99,7 +112,7 @@ export type MerchantDetails = MerchantRow & {
 };
 
 export async function getMerchant(id: string): Promise<MerchantDetails | null> {
-  const row = (await listMerchants()).find((m) => m.id === id);
+  const [row] = await merchantRows(id);
   if (!row) return null;
   const db = await getDb();
   // spent there: purchases / payments minus refunds not settled on a purchase (a settled one already reduced it)

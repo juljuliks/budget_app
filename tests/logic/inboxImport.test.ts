@@ -47,3 +47,14 @@ test('an operation stored first by push is not doubled by its SMS', async () => 
   // and its balance is taken
   expect(await cardBalance()).toMatchObject({ minor: 28314, pending: 0 });
 });
+
+test('a big inbox in batches: every SMS, an SMS repeated in the same batch stored once, a live one waits for its batch', async () => {
+  const shops = Array.from({ length: 120 }, (_, i) => inbox(`1.${String(i % 100).padStart(2, '0')}GEL\n(*1834)\nSHOP ${i}\n\n0${1 + (i % 9)}/10/26 1${i % 10}:${String(i % 60).padStart(2, '0')}`, `2026-10-0${1 + (i % 9)}T12:00:00`));
+  const [r] = await Promise.all([
+    importInboxSms([...shops, shops[5]]),
+    // a live SMS during the import: stored between the batches, not inside one (nor lost with it)
+    ingestSms({ sender: 'TBC SMS', body: BAR, timestamp: ms('2026-10-03T17:19:00') }),
+  ]);
+  expect(r).toEqual({ inserted: 120, duplicate: 1, ignored: 0 });
+  expect(await count()).toBe(121);
+});

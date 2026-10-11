@@ -1,13 +1,14 @@
 import { getDb } from './index';
+import type { Db } from './types';
 
-/** Small key/value app settings (e.g. a dismissed hint). */
-export async function getSetting(key: string): Promise<string | null> {
-  const db = await getDb();
+/** Small key/value app settings (e.g. a dismissed hint). `db`: a transaction's handle inside one. */
+export async function getSetting(key: string, db?: Db): Promise<string | null> {
+  db ??= await getDb();
   return (await db.get<{ value: string | null }>('SELECT value FROM app_settings WHERE key = ?', [key]))?.value ?? null;
 }
 
-export async function setSetting(key: string, value: string | null) {
-  const db = await getDb();
+export async function setSetting(key: string, value: string | null, db?: Db) {
+  db ??= await getDb();
   await db.run('INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value', [key, value]);
 }
 

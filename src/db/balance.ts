@@ -24,13 +24,13 @@ export type CardBalance = {
 /** Operations that move the card's money; a refund is only "initiated" in its SMS and arrives later. */
 const SIGN: Record<string, number> = { deposit: 1, purchase: -1, payment: -1, transfer: -1, withdrawal: -1 };
 
-async function readAnchor(): Promise<BalanceAnchor | null> {
-  const v = await getSetting(KEY);
+async function readAnchor(db?: Db): Promise<BalanceAnchor | null> {
+  db ??= await getDb();
+  const v = await getSetting(KEY, db);
   if (v) {
     try { return JSON.parse(v) as BalanceAnchor; } catch { /* rebuilt below */ }
   }
   // first use: the latest stored SMS with a balance
-  const db = await getDb();
   const rows = await db.all<{ id: number; occurred_at: number; raw_sms: string }>(
     `SELECT id, occurred_at, raw_sms FROM transactions
       WHERE bank != 'manual' AND raw_sms LIKE '%alance%'
@@ -39,17 +39,18 @@ async function readAnchor(): Promise<BalanceAnchor | null> {
     const b = parseTbcBalance(r.raw_sms);
     if (!b) continue;
     const anchor = { minor: b.minor, currency: b.currency, at: r.occurred_at, txId: r.id };
-    await setSetting(KEY, JSON.stringify(anchor));
+    await setSetting(KEY, JSON.stringify(anchor), db);
     return anchor;
   }
   return null;
 }
 
 /** Remembers a balance the bank reported, unless a later one is already known (SMS can arrive out of order). */
-export async function recordBalance(anchor: BalanceAnchor): Promise<void> {
-  const current = await readAnchor();
+export async function recordBalance(anchor: BalanceAnchor, db?: Db): Promise<void> {
+  db ??= await getDb();
+  const current = await readAnchor(db);
   if (current && current.at > anchor.at) return;
-  await setSetting(KEY, JSON.stringify(anchor));
+  await setSetting(KEY, JSON.stringify(anchor), db);
 }
 
 /** The card balance now: the last reported one plus the bank operations after it; null until an SMS reports one. */
