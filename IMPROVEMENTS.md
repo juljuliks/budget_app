@@ -5,24 +5,10 @@
 
 ## Этап 1 — Не потерять данные (P0)
 
-1. **Резервная копия / восстановление / экспорт.** Ничего нет, `allowBackup="false"` в `AndroidManifest.xml` — новый
-   телефон = потеря всего.
-   - Настройки → «Резервная копия»: `VACUUM INTO` копия `app.db` → Share/SAF; «Восстановить» из файла (с проверкой
-     схемы и копией текущей БД).
-   - «Экспорт CSV» операций (дата, сумма, валюта, категория, мерчант, заметка).
-   - Android Auto Backup с `dataExtractionRules`, только БД.
-2. **Локальная release-сборка без ключа** подписывается debug-ключом (`android/app/build.gradle`, `signingConfigs.debug`
-   как запасной). CI без секретов уже останавливается; локально — падать без `BUDGETAPP_RELEASE_*`, кроме явного
-   `-PallowDebugSigning`.
-3. **Версия в Настройках.** `versionCode` = число коммитов, `versionName` = `1.0.N` уже есть; показать её в листе
-   «Настройки».
-4. **Дубли SMS + push** (`src/ingest/ingest.ts`): проверка «двойника» и INSERT — отдельные запросы очереди, при одновременном
-   приходе вставятся оба. Обернуть в `db.transaction`; `abs(occurred_at - ?) <= ?` → `BETWEEN` (использует индекс).
-5. **Разбор push**: тело = `title\ntext` (`BankPushListener.kt`), а `PAYMENT`/`CONVERSION`/`ONE_TIME_CODE` якорятся на
-   `^` (`tbc.ts`) → push «Payment» классифицируется иначе, OTP и конвертации не отсекаются. Парсить title и text
-   отдельно; повтор того же уведомления дедуплицировать по `sbn.key`.
-6. **Многошаговые записи без транзакции**: `assignCategory` (`src/categorize/assign.ts`), `setMerchantCategory`
-   (`src/db/merchants.ts`), `setPlanBudget` / `setPlanAmount` (`plans.ts`), `balance.ts`.
+1. **Разбор push** (ждёт реальных текстов пушей TBC: заголовок и текст — оплата, конвертация, код): тело = `title\ntext`
+   (`BankPushListener.kt`), а `PAYMENT`/`CONVERSION`/`ONE_TIME_CODE` якорятся на `^` (`tbc.ts`) → push «Payment»
+   классифицируется иначе, OTP и конвертации не отсекаются. Парсить title и text отдельно; повтор того же уведомления
+   дедуплицировать по `sbn.key`.
 
 ## Этап 2 — Надёжность и обратная связь
 

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { appVersion } from '@/native/appInfo';
 import { limitAlertsEnabled, setLimitAlertsEnabled } from '@/notifications/limitAlerts';
 import BottomSheet from '@/shared/ui/BottomSheet';
 import { setDisplayCurrency, useDisplayCurrency } from '@/shared/settings/displayCurrency';
@@ -21,13 +22,16 @@ type Props = {
   onClose: () => void;
   /** «Импорт SMS из телефона» (the app passes the import's flow) */
   onImportSms: () => void;
+  /** «Резервная копия»: save, restore, CSV (the app passes the backup's flow) */
+  onBackup: () => void;
 };
 
 /**
  * Настройки (the gear in the tab headers): a sheet with Валюта — the currency the app converts amounts to, switched right
- * here — the limit notifications switch, then Мерчанты, Категории and Импорт SMS (past bank SMS from the phone).
+ * here — the limit notifications switch, then Мерчанты, Категории, Импорт SMS (past bank SMS from the phone) and
+ * Резервная копия; the installed version at the bottom.
  */
-export default function SettingsSheet({ open, onClose, onImportSms }: Props) {
+export default function SettingsSheet({ open, onClose, onImportSms, onBackup }: Props) {
   const navigation = useRootNavigation();
   const currency = useDisplayCurrency();
   const go = (route: 'Merchants' | 'Categories') => { onClose(); navigation.navigate(route); };
@@ -69,6 +73,9 @@ export default function SettingsSheet({ open, onClose, onImportSms }: Props) {
       <Row label="Категории" onPress={() => go('Categories')} />
       {/* after this sheet has closed: one sheet at a time */}
       <Row label="Импорт SMS из телефона" onPress={() => { onClose(); setTimeout(onImportSms, 250); }} />
+      <Row label="Резервная копия" onPress={() => { onClose(); setTimeout(onBackup, 250); }} />
+      {/* which build is installed: the phone's and the emulator's can differ */}
+      <Text style={styles.version}>Версия {appVersion()}</Text>
     </BottomSheet>
   );
 }
@@ -89,4 +96,5 @@ const styles = StyleSheet.create({
   rowLabel: { flex: 1, fontSize: 16, color: colors.text },
   label: { fontSize: 16, color: colors.text },
   chevron: { fontSize: 20, color: colors.muted, width: 20, textAlign: 'right' },
+  version: { fontSize: 13, color: colors.muted, textAlign: 'center', paddingVertical: 14, borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
 });

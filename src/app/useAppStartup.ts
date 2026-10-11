@@ -1,5 +1,5 @@
 // What the app does once on start: the notification channel and permissions, the refunds' categories, the notification
-// that opened the app and the ones pressed while it is open, the month reports.
+// that opened the app and the ones pressed while it is open, the month reports, the weekly automatic copy.
 import { useEffect } from 'react';
 import { AppState } from 'react-native';
 import notifee, { EventType } from '@notifee/react-native';
@@ -10,6 +10,7 @@ import { requestAppPermissions } from '@/native/permissions';
 import { emitTransactionsChanged, onTransactionsChanged } from '@/domain/events';
 import { autoCategorizeRefunds } from '@/db/refunds';
 import { flushPendingNavigation } from '@/shared/navigation/navigation';
+import { runAutoBackupIfDue } from '@/features/backup';
 
 export function useAppStartup() {
   useEffect(() => {
@@ -34,8 +35,14 @@ export function useAppStartup() {
     scheduleMonthReports();
     const offReport = onTransactionsChanged(() => { scheduleMonthReports(); });
 
+    // the weekly automatic copy, if it is on and due: on start and on coming back (the app is seldom started anew)
+    runAutoBackupIfDue();
     // a press handled by the background handler may have queued a screen while we were in background
-    const appState = AppState.addEventListener('change', (s) => { if (s === 'active') flushPendingNavigation(); });
+    const appState = AppState.addEventListener('change', (s) => {
+      if (s !== 'active') return;
+      flushPendingNavigation();
+      runAutoBackupIfDue();
+    });
 
     return () => { unsubscribe(); appState.remove(); offReport(); };
   }, []);
