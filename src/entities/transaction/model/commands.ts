@@ -1,7 +1,7 @@
 // The operation's writes: each one tells the screens the data changed.
 import { incrementCategoryUsage } from '@/db/categories';
 import { addManualTransaction, deleteTransaction, markTransactionSeen, markTransactionsSeen, setTransactionAmount, setTransactionNote } from '@/db/transactions';
-import { emitTransactionsChanged } from '@/events';
+import { emitTransactionsChanged } from '@/domain/events';
 
 export async function saveTransactionAmount(id: number, amountMinor: number, currency: string) {
   await setTransactionAmount(id, amountMinor, currency);

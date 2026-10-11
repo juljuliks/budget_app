@@ -11,7 +11,7 @@ import {
   countCategoriesOfType, createCategoryType, deleteCategoryType, findCategoryTypeByName, getTransferTypeId,
   listCategoryTypes, renameCategoryType,
 } from '../../src/db/categoryTypes';
-import { createRule } from '../../src/categorize';
+import { createRule } from '../../src/categorize/rules';
 import { monthStats, ymOf } from '../../src/db/plans';
 import { freshDb } from '../helpers';
 

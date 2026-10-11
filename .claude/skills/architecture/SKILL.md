@@ -17,6 +17,8 @@ description: Where code goes in this app and how big it may get (FSD-lite layers
    снаружи — только через `index.ts`, между слоями — через `@/`. Ядро (`db/`, `parsers/`, `notifications/`…) не
    импортирует React-слои. Нижнему слою нужно верхнее — проп-колбэк (`CategorySheet` → `onDelete`) или шит через
    `sheets.ts` (`openMerchant`, `openSettings`; рисует `app/ModalHost`), не импорт.
+   Код без React — в свой домен ядра (`db/`, `domain/`, `ingest/`, `categorize/`, …, список — ARCHITECTURE.md §1);
+   в корне `src` файлов нет. Хук над настройкой — `shared/settings`.
 3. Запись в базу — команда слайса (`model/commands.ts`: запись + `emitTransactionsChanged`), не вызов из компонента.
 4. Прикинуть размер: файл ≤ 250 строк кода, компонент/функция ≤ 120, хук ≤ 100. Подходит к пределу — делить сейчас.
 5. Расчёты — в `.ts` (`model/`) с тестом в `tests/logic/`; тексты — в `texts.ts` и по GLOSSARY.md; цвета — из темы

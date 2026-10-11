@@ -3,7 +3,7 @@
 import { act, waitFor, within } from '@testing-library/react-native';
 import { openApp, rowOf, screen, tap, texts } from './app';
 import { buy, ops, planned, on } from '../e2e/seeds';
-import { emitTransactionsChanged } from '../../src/events';
+import { emitTransactionsChanged } from '../../src/domain/events';
 import { getDb } from '../../src/db';
 import { getSetting } from '../../src/db/settings';
 import { createCategory } from '../../src/db/categories';

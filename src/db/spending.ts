@@ -2,7 +2,7 @@
 // - a category's: purchases, payments, withdrawals, transfers; refunds and deposits put in it subtract (money back);
 // - a merchant's: its purchases and payments (what its category is remembered for, REMEMBERABLE_KINDS), minus refunds.
 // A refund settled on its purchase (the purchase reduced or deleted, see refunds.ts) no longer counts by itself.
-import { REMEMBERABLE_KINDS } from '../types';
+import { REMEMBERABLE_KINDS } from '../domain/types';
 import { sqlList } from './sql';
 
 /** Kinds that are spending by themselves. */

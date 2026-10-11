@@ -16,9 +16,19 @@ const OLD_UI = (up) => ['@/ui', '@/ui/**', `${up}ui`, `${up}ui/**`];
 const IN_SLICE = [...new Set([...OLD_UI('../../'), ...OLD_UI('../../../')])];
 
 const OLD_UI_MESSAGE = 'The old src/ui: move what this needs to its layer first (ARCHITECTURE.md §2).';
-const restrict = (patterns, message, oldUi = []) => ({
-  'no-restricted-imports': ['error', { patterns: [{ group: patterns, message }, ...(oldUi.length ? [{ group: oldUi, message: OLD_UI_MESSAGE }] : [])] }],
+const restrict = (patterns, message, oldUi = [], paths = []) => ({
+  'no-restricted-imports': ['error', {
+    patterns: [{ group: patterns, message }, ...(oldUi.length ? [{ group: oldUi, message: OLD_UI_MESSAGE }] : [])],
+    paths,
+  }],
 });
+/** the core is no UI: no React; the platform's API only where it is the point (native/, notifications/) */
+const NO_REACT = { name: 'react', message: 'The core has no React: a hook goes to src/shared (e.g. shared/settings) or a slice.' };
+const NO_RN = { name: 'react-native', message: 'The platform\'s API in the core: only in src/native or src/notifications.' };
+const CORE_UI = [...LAYERS.flatMap((l) => [`@/${l}`, `@/${l}/**`]).filter((g) => !g.startsWith('@/shared')),
+  '@/shared/ui', '@/shared/ui/**', '@/shared/theme', '@/shared/theme/**', '@/shared/settings', '@/shared/settings/**',
+  '**/app/**', '**/screens/**', '**/features/**', '**/entities/**', '**/shared/ui/**', '**/shared/theme/**', '**/shared/settings/**'];
+const CORE_MESSAGE = 'The core imports no UI: move the helper to src/shared/lib or into the core.';
 
 module.exports = tseslint.config(
   { ignores: ['node_modules/**', 'android/**', 'ios/**', 'dist/**', 'coverage/**', '**/*.js'] },
@@ -34,12 +44,15 @@ module.exports = tseslint.config(
       'react-hooks/exhaustive-deps': 'error',
     },
   },
-  // the core (db, parsers, notifications, …): no React layers at all; shared/lib is fine
+  // the core (db, ingest, categorize, parsers, …): no React layers, no React; shared/lib and shared/navigation are fine
   {
     files: ['src/**/*.{ts,tsx}'],
-    ignores: LAYERS.map((l) => `src/${l}/**`),
-    rules: restrict([...layer('app', 'screens', 'features', 'entities', 'shared/ui', 'shared/theme'), '**/ui/**', '**/ui', '!**/shared/ui/**', '!**/shared/ui'],
-      'The core imports no UI: move the helper to src/shared/lib or into the core.'),
+    ignores: [...LAYERS.map((l) => `src/${l}/**`), 'src/native/**', 'src/notifications/**'],
+    rules: restrict(CORE_UI, CORE_MESSAGE, [], [NO_REACT, NO_RN]),
+  },
+  {
+    files: ['src/native/**/*.{ts,tsx}', 'src/notifications/**/*.{ts,tsx}'],
+    rules: restrict(CORE_UI, CORE_MESSAGE, [], [NO_REACT]),
   },
   {
     files: ['src/shared/**/*.{ts,tsx}'],

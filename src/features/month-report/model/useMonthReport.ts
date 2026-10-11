@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { MonthReport, monthReport } from '@/db/report';
-import { useDisplayCurrency } from '@/displayCurrency';
-import { onTransactionsChanged } from '@/events';
+import { useDisplayCurrency } from '@/shared/settings/displayCurrency';
+import { onTransactionsChanged } from '@/domain/events';
 
 /** The report of `ym` (null = none yet), reloaded when operations or plans change. */
 export function useMonthReport(ym: string | null): MonthReport | null {

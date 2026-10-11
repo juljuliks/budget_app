@@ -4,8 +4,8 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import App from '../../src/app/App';
 import { freshDb } from '../helpers';
 import { done } from '../e2e/seeds';
-import { setHideAmounts } from '../../src/hideAmounts';
-import { setDisplayCurrency } from '../../src/displayCurrency';
+import { setHideAmounts } from '../../src/shared/settings/hideAmounts';
+import { setDisplayCurrency } from '../../src/shared/settings/displayCurrency';
 
 /** The app on a fresh database filled by `seed`, the operations shown. */
 export async function openApp(seed?: () => Promise<void>) {

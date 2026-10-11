@@ -1,6 +1,6 @@
 // Picking the operation's category: for this operation only, or for its merchant too (asked when that changes others).
 import { useEffect, useState } from 'react';
-import { assignCategory, MerchantChoice, merchantChangePreview } from '@/assign';
+import { assignCategory, MerchantChoice, merchantChangePreview } from '@/categorize/assign';
 import { categoryLabel, getCategory } from '@/db/categories';
 import { showLimitAlert } from '@/notifications/notifeeIntegration';
 import { merchantLabel } from '@/entities/transaction';

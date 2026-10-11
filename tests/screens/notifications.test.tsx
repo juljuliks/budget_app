@@ -89,7 +89,7 @@ describe('8.3 the limits', () => {
   });
   test('turned off: none', async () => {
     await freshDb(); await planned(); await done();
-    const { setLimitAlertsEnabled } = require('../../src/limitAlerts');
+    const { setLimitAlertsEnabled } = require('../../src/notifications/limitAlerts');
     await setLimitAlertsEnabled(false);
     await sms(`200.00GEL\n(*1234)\nSPAR\n${today}`);
     expect(display).not.toHaveBeenCalled();

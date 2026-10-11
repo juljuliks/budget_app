@@ -1,13 +1,13 @@
-import parseTbc, { parseTbcBalance } from './parsers/tbc';
-import { placeByBalances, recordBalance } from './db/balance';
-import { refundCategory } from './db/refunds';
-import type { ParsedTx } from './types';
+import parseTbc, { parseTbcBalance } from '../parsers/tbc';
+import { placeByBalances, recordBalance } from '../db/balance';
+import { refundCategory } from '../db/refunds';
+import type { ParsedTx } from '../domain/types';
 import { sha256Hex } from './hash';
-import { getDb } from './db';
-import { findCategoryForMerchant } from './categorize';
-import { isRememberable } from './types';
-import { incrementCategoryUsage, topUpCategoryId } from './db/categories';
-import { emitTransactionsChanged } from './events';
+import { getDb } from '../db';
+import { findCategoryForMerchant } from '../categorize/rules';
+import { isRememberable } from '../domain/types';
+import { incrementCategoryUsage, topUpCategoryId } from '../db/categories';
+import { emitTransactionsChanged } from '../domain/events';
 
 export type IncomingSms = {
   sender: string;

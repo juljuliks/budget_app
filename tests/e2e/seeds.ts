@@ -5,7 +5,7 @@ import { getDb } from '../../src/db';
 import { createCategory, findCategoryByName, topUpCategoryId, updateCategory } from '../../src/db/categories';
 import { currentYm, setPlanAmount, setPlanBudget } from '../../src/db/plans';
 import { addManualTransaction, markTransactionsSeen } from '../../src/db/transactions';
-import { backfillRule, createRule } from '../../src/categorize';
+import { backfillRule, createRule } from '../../src/categorize/rules';
 
 export const now = new Date();
 /** this month: the 1st, `hour` o'clock (the operations come before any of today's) */
@@ -19,7 +19,7 @@ const unread = new Set<number>();
 export async function buy(merchant: string, lari: number, at: number, categoryId: number | null = null,
   opts: { kind?: 'purchase' | 'payment' | 'refund' | 'deposit' | 'transfer' | 'withdrawal'; currency?: string; unread?: boolean; note?: string } = {}) {
   const kind = opts.kind ?? 'purchase';
-  // a deposit from the bank goes to "Пополнение счёта" (src/ingest.ts)
+  // a deposit from the bank goes to "Пополнение счёта" (src/ingest/ingest.ts)
   if (kind === 'deposit' && categoryId === null) categoryId = await topUpCategoryId();
   const id = await addManualTransaction({ amount_minor: Math.round(lari * 100), currency: opts.currency ?? 'GEL', category_id: categoryId, occurred_at: at, kind: kind === 'payment' ? 'purchase' : kind });
   if (kind === 'payment') await (await getDb()).run("UPDATE transactions SET kind = 'payment' WHERE id = ?", [id]);

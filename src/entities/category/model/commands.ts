@@ -1,7 +1,7 @@
 // The category's writes: each one tells the screens the data changed.
 import { createCategory, updateCategory } from '@/db/categories';
 import { createCategoryType, renameCategoryType, setCategoryTypePalette } from '@/db/categoryTypes';
-import { emitTransactionsChanged } from '@/events';
+import { emitTransactionsChanged } from '@/domain/events';
 
 export type CategoryFields = { name: string; emoji: string; typeId: number | null; color: string | null };
 

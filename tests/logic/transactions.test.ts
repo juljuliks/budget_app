@@ -8,9 +8,9 @@ import {
 import { rangeToUnix } from '../../src/shared/lib/dateRange';
 import { createCategory } from '../../src/db/categories';
 import { createCategoryType } from '../../src/db/categoryTypes';
-import { assignCategory, assignCategoryToMany } from '../../src/assign';
-import { onTransactionsChanged } from '../../src/events';
-import { ingestSms } from '../../src/ingest';
+import { assignCategory, assignCategoryToMany } from '../../src/categorize/assign';
+import { onTransactionsChanged } from '../../src/domain/events';
+import { ingestSms } from '../../src/ingest/ingest';
 import { openDatabase } from '../../src/db/driver';
 import { migrate, MIGRATIONS } from '../../src/db/migrations';
 import { freshDb } from '../helpers';

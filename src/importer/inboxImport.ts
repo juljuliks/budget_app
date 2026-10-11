@@ -1,6 +1,6 @@
 import { getDb } from '../db';
-import { emitTransactionsChanged } from '../events';
-import { ingestSms, IngestResult } from '../ingest';
+import { emitTransactionsChanged } from '../domain/events';
+import { ingestSms, IngestResult } from '../ingest/ingest';
 import { autoCategorizeRefunds } from '../db/refunds';
 import type { InboxSms } from '../native/smsInbox';
 

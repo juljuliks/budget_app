@@ -1,14 +1,14 @@
 jest.mock('../../src/shared/navigation/navigation', () => ({ navigateWhenReady: jest.fn() }));
 
 import { getDb } from '../../src/db';
-import { ingestSms } from '../../src/ingest';
-import { assignCategory, assignCategoryToMany } from '../../src/assign';
+import { ingestSms } from '../../src/ingest/ingest';
+import { assignCategory, assignCategoryToMany } from '../../src/categorize/assign';
 import { createCategory, deleteCategory } from '../../src/db/categories';
 import { categoryDeletePreview, currentIdsOfCategory, remainingInCategory, sortOutSummary } from '../../src/db/categoryDeletion';
 import { setMerchantCategory } from '../../src/db/merchants';
 import { currentYm, setPlanAmount } from '../../src/db/plans';
 import { deleteTransaction } from '../../src/db/transactions';
-import { findCategoryForMerchant } from '../../src/categorize';
+import { findCategoryForMerchant } from '../../src/categorize/rules';
 import {
   deleteEmptyText, deleteStartText, moveAllText, sortOutBanner, sortOutDoneText, sortOutLeaveText, sortOutMerchantText,
 } from '../../src/features/category-delete/texts';

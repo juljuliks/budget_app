@@ -6,8 +6,8 @@ import notifee, { EventType } from '@notifee/react-native';
 import { createNotificationChannel } from '@/notifications/notifeeBootstrap';
 import { scheduleMonthReports } from '@/notifications/monthReportNotice';
 import { handleNotificationAction } from '@/notifications/notifeeIntegration';
-import { requestAppPermissions } from '@/permissions';
-import { emitTransactionsChanged, onTransactionsChanged } from '@/events';
+import { requestAppPermissions } from '@/native/permissions';
+import { emitTransactionsChanged, onTransactionsChanged } from '@/domain/events';
 import { autoCategorizeRefunds } from '@/db/refunds';
 import { flushPendingNavigation } from '@/shared/navigation/navigation';
 

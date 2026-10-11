@@ -4,7 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { currentYm, getPlanBudget, monthStats, parseYm, planConverter, unplannedOf, unplannedSpent } from '@/db/plans';
 import { getSetting, setSetting } from '@/db/settings';
 import { Currency } from '@/db/fx';
-import { onTransactionsChanged } from '@/events';
+import { onTransactionsChanged } from '@/domain/events';
 import { formatWithCurrency } from '@/shared/lib/money';
 import { colors } from '@/shared/theme/theme';
 

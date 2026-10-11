@@ -1,6 +1,6 @@
 // "Категория (N)" for the selected operations: like for one, asks first when their merchants have another category.
 import { useState } from 'react';
-import { assignCategoryToMany, MerchantChoice, merchantsChangePreview } from '@/assign';
+import { assignCategoryToMany, MerchantChoice, merchantsChangePreview } from '@/categorize/assign';
 import { categoryLabel, getCategory } from '@/db/categories';
 import { sortOutMerchantText } from '@/features/category-delete';
 import { showLimitAlert } from '@/notifications/notifeeIntegration';

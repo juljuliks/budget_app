@@ -1,5 +1,5 @@
 // The list's filters as SQL, the text search, what the filters offer (kinds, categories, merchants with counts).
-import { NO_CATEGORY_EMOJI } from '../../colors';
+import { NO_CATEGORY_EMOJI } from '../../domain/colors';
 import { getDb } from '../index';
 import type { TransactionRow } from './rows';
 import { FROM_TX, NEWEST_FIRST, SELECT_TX, TX_COLUMNS } from './sql';

@@ -23,8 +23,8 @@ jest.mock('../../src/shared/navigation/sheets', () => ({ openTransaction: (id: n
 
 import SmsBackgroundTask from '../../src/native/SmsBackgroundTask';
 import { handleNotificationAction } from '../../src/notifications/notifeeIntegration';
-import { backfillRule, createRule } from '../../src/categorize';
-import { assignCategory, merchantChangePreview } from '../../src/assign';
+import { backfillRule, createRule } from '../../src/categorize/rules';
+import { assignCategory, merchantChangePreview } from '../../src/categorize/assign';
 import { createCategory } from '../../src/db/categories';
 import { getTransferTypeId } from '../../src/db/categoryTypes';
 import { getDb } from '../../src/db';

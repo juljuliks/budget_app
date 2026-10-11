@@ -1,5 +1,5 @@
 // The question "for this operation or for the merchant?".
-import type { merchantChangePreview } from '@/assign';
+import type { merchantChangePreview } from '@/categorize/assign';
 import { plural } from '@/shared/lib/format';
 import { formatMoneyWithCurrency } from '@/shared/lib/money';
 

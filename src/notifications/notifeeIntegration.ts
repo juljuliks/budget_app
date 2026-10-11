@@ -1,20 +1,20 @@
 // Helper integration points for notifee notifications.
 import notifee, { AndroidImportance } from '@notifee/react-native';
 import { buildCategorySuggestions } from './notifyHelper';
-import { isMixedMerchant } from '../categorize';
+import { isMixedMerchant } from '../categorize/rules';
 import { merchantCategories } from '../db/merchants';
-import { isRememberable } from '../types';
+import { isRememberable } from '../domain/types';
 import { categoryLabel, isTopUp, listCategories, topCategories } from '../db/categories';
 import { getDb } from '../db';
-import { assignCategory } from '../assign';
+import { assignCategory } from '../categorize/assign';
 import { openTransaction } from '@/shared/navigation/sheets';
 import { KIND_LABELS } from '@/shared/lib/format';
 import { formatMoneyWithCurrency } from '@/shared/lib/money';
-import { limitAlertFor } from '../limitAlerts';
+import { limitAlertFor } from './limitAlerts';
 import { REPORT_ACTION } from './monthReportNotice';
 
 export const CHANNEL_ID = 'transactions';
-/** «Лимиты»: a category near / over its plan or its rhythm's limit (src/limitAlerts.ts) */
+/** «Лимиты»: a category near / over its plan or its rhythm's limit (src/notifications/limitAlerts.ts) */
 export const LIMITS_CHANNEL_ID = 'limits';
 const LIMITS_ACTION = 'limits';
 export const ALL_CATEGORIES_ACTION = 'all_categories';

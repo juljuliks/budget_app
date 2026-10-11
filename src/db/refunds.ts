@@ -1,6 +1,6 @@
 import { getDb } from './index';
-import { REMEMBERABLE_KINDS } from '../types';
-import { findCategoryForMerchant } from '../categorize';
+import { REMEMBERABLE_KINDS } from '../domain/types';
+import { findCategoryForMerchant } from '../categorize/rules';
 
 /** How far back a refund looks for a purchase at its merchant to take the category from. */
 export const REFUND_LOOKBACK_DAYS = 90;

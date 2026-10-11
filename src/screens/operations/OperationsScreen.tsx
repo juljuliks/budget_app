@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { isUnread } from '@/db/transactions';
-import { useDisplayCurrency } from '@/displayCurrency';
+import { useDisplayCurrency } from '@/shared/settings/displayCurrency';
 import { CategoryPickerModal } from '@/entities/category';
 import { confirmDeleteTransaction, confirmDeleteTransactions, markAllSeen } from '@/entities/transaction';
 import { CardBalance } from '@/features/card-balance';

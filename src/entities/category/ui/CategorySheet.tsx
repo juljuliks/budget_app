@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { categoryLabel } from '@/db/categories';
-import { colorFromHue, distinctHue, freeCategoryColors } from '@/colors';
+import { colorFromHue, distinctHue, freeCategoryColors } from '@/domain/colors';
 import { useRootNavigation } from '@/shared/navigation/navigation';
 import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
 import { SheetActions } from '@/shared/ui/Button';

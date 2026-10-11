@@ -13,7 +13,7 @@ export const colors = {
   danger: '#B91C1C',
 };
 
-// Chart colors. Category colors (palettes per type) live in src/colors.ts.
+// Chart colors. Category colors (palettes per type) live in src/domain/colors.ts.
 export const chart = {
   track: '#f0efec',
   meterFill: '#2a78d6',

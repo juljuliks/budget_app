@@ -1,6 +1,6 @@
 import parseTbc from '../../src/parsers/tbc';
-import { normalizeMerchant } from '../../src/normalize';
-import { resolveOccurredAt } from '../../src/ingest';
+import { normalizeMerchant } from '../../src/parsers/normalize';
+import { resolveOccurredAt } from '../../src/ingest/ingest';
 
 const purchase = (amountLine: string, merchant = 'SPAR', date = '28/09/26 13:49') =>
   `${amountLine}\n(*XXXX)\n${merchant}\nBalance: 10.00GEL\n${date}`;

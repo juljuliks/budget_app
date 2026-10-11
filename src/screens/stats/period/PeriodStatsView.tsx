@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
-import { useDisplayCurrency } from '@/displayCurrency';
-import { useHideAmounts } from '@/hideAmounts';
+import { useDisplayCurrency } from '@/shared/settings/displayCurrency';
+import { useHideAmounts } from '@/shared/settings/hideAmounts';
 import { DayRange, dayKeyOf } from '@/shared/lib/dateRange';
 import { formatWithCurrency } from '@/shared/lib/money';
 import { NO_RATE } from '@/shared/lib/strings';

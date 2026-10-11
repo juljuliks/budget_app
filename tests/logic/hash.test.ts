@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { sha256Hex } from '../../src/hash';
+import { sha256Hex } from '../../src/ingest/hash';
 
 const node = (s: string) => crypto.createHash('sha256').update(s).digest('hex');
 

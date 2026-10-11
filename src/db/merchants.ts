@@ -1,7 +1,7 @@
 import { getDb } from './index';
-import { backfillRule, createRule } from '../categorize';
-import { categoryChangeTotals } from '../assign';
-import { REMEMBERABLE_KINDS } from '../types';
+import { backfillRule, createRule } from '../categorize/rules';
+import { categoryChangeTotals } from '../categorize/assign';
+import { REMEMBERABLE_KINDS } from '../domain/types';
 import { merchantSpendingSql, signedSpendSql } from './spending';
 import { sqlList } from './sql';
 

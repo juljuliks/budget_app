@@ -13,7 +13,7 @@ import { CreateButton } from '@/shared/ui/PlusButton';
 import { CategorySheet } from '@/entities/category';
 import { startCategoryDelete } from '@/features/category-delete';
 import { openCategoryTypes } from '@/shared/navigation/sheets';
-import { onTransactionsChanged } from '@/events';
+import { onTransactionsChanged } from '@/domain/events';
 import Checkbox from '@/shared/ui/Checkbox';
 import { MergeCategoriesSheet } from '@/features/category-merge';
 import Button from '@/shared/ui/Button';

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getSetting, setSetting } from './db/settings';
+import { getSetting, setSetting } from '@/db/settings';
 
 // "Скрыть суммы" (the eye in the stats header): the budget and plan totals are blurred, e.g. to show the stats to
 // someone. Remembered, and every screen using it follows a change at once.

@@ -2,7 +2,7 @@
 import {
   addMerchantCategory, merchantCategories, removeMerchantCategory, setMerchantCategory, setMerchantMixed,
 } from '@/db/merchants';
-import { emitTransactionsChanged } from '@/events';
+import { emitTransactionsChanged } from '@/domain/events';
 import { removeMerchants } from '@/entities/merchant';
 
 /** Of different categories, with exactly this list (each new operation asks among them). */

@@ -8,7 +8,7 @@ import { SheetActions } from '@/shared/ui/Button';
 import BottomSheet from '@/shared/ui/BottomSheet';
 import RangeCalendar from '@/shared/ui/RangeCalendar';
 import { dayKeyOf, DayRange, parseDayKey, PeriodKind, periodLabel, periodRange, shiftAnchor, weekInMonth } from '@/shared/lib/dateRange';
-import { useDisplayCurrency } from '@/displayCurrency';
+import { useDisplayCurrency } from '@/shared/settings/displayCurrency';
 import { colors } from '@/shared/theme/theme';
 import { ChevronDownIcon } from '@/shared/ui/icons';
 import PeriodStatsView from './period/PeriodStatsView';

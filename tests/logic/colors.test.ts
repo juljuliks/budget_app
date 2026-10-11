@@ -1,4 +1,4 @@
-import { buildCategoryColors, freeCategoryColors, freePalettes, PALETTE_ORDER, PALETTES, UNTYPED_COLORS } from '../../src/colors';
+import { buildCategoryColors, freeCategoryColors, freePalettes, PALETTE_ORDER, PALETTES, UNTYPED_COLORS } from '../../src/domain/colors';
 
 test('a type colors its categories with its palette shades, in order; own color wins; untyped get base colors', () => {
   const colors = buildCategoryColors(
@@ -45,7 +45,7 @@ test('a category is offered its type shades and free palettes, minus colors othe
 });
 
 test('hex <-> HSL round trip; colors from a hue', () => {
-  const { hexToHsl, hslToHex, colorFromHue } = require('../../src/colors');
+  const { hexToHsl, hslToHex, colorFromHue } = require('../../src/domain/colors');
   for (const hex of ['#2a78d6', '#eb6834', '#1baf7a', '#000000', '#ffffff']) {
     const [h, s, l] = hexToHsl(hex);
     expect(hslToHex(h, s, l)).toBe(hex);
@@ -54,7 +54,7 @@ test('hex <-> HSL round trip; colors from a hue', () => {
 });
 
 test('a custom palette: five shades of its base, used for its type\'s categories', () => {
-  const { shadesFromBase, paletteShades, typePalette, hexToHsl } = require('../../src/colors');
+  const { shadesFromBase, paletteShades, typePalette, hexToHsl } = require('../../src/domain/colors');
   const shades = shadesFromBase('#3a7bd5');
   expect(shades).toHaveLength(5);
   expect(new Set(shades).size).toBe(5);
@@ -67,7 +67,7 @@ test('a custom palette: five shades of its base, used for its type\'s categories
 });
 
 test('a random hue: anywhere on the wheel, not on a color in use, away from the current one', () => {
-  const { distinctHue, colorFromHue, hexToHsl } = require('../../src/colors');
+  const { distinctHue, colorFromHue, hexToHsl } = require('../../src/domain/colors');
   const gap = (a: number, b: number) => { const d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d; };
   // a crowded wheel: a color every 30° still leaves every part of it reachable
   const taken = Array.from({ length: 12 }, (_, i) => colorFromHue(i * 30));

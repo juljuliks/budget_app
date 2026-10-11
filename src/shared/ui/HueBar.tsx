@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { GestureResponderEvent, StyleSheet, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
-import { colorFromHue } from '@/colors';
+import { colorFromHue } from '@/domain/colors';
 import { colors } from '../theme/theme';
 
 const HEIGHT = 28;

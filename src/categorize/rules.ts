@@ -1,6 +1,6 @@
-import { getDb } from './db';
-import type { Db } from './db/types';
-import { merchantSpendingSql } from './db/spending';
+import { getDb } from '../db';
+import type { Db } from '../db/types';
+import { merchantSpendingSql } from '../db/spending';
 
 export type MatchType = 'exact' | 'prefix';
 

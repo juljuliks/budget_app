@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ActivityIndicator, Text } from 'react-native';
 import { currentYm } from '@/db/plans';
-import { useDisplayCurrency } from '@/displayCurrency';
+import { useDisplayCurrency } from '@/shared/settings/displayCurrency';
 import { PlanAmountModal, PlanAmountTarget } from '@/entities/plan';
 import { monthDays } from '@/shared/lib/dateRange';
 import { navigateWhenReady } from '@/shared/navigation/navigation';

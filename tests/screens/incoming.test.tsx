@@ -3,7 +3,7 @@
 import { act, fireEvent, waitFor } from '@testing-library/react-native';
 import { openApp, screen, tap } from './app';
 import { ops } from '../e2e/seeds';
-import { ingestSms } from '../../src/ingest';
+import { ingestSms } from '../../src/ingest/ingest';
 import { getDb } from '../../src/db';
 import { dayKeyOf } from '../../src/shared/lib/dateRange';
 import { topUpCategoryId } from '../../src/db/categories';

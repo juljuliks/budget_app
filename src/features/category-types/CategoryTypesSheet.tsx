@@ -4,7 +4,7 @@ import { sheetAlert } from '@/shared/ui/sheetAlert';
 import { plural } from '@/shared/lib/format';
 import { CategoryType, countCategoriesOfType, listCategoryTypes } from '@/db/categoryTypes';
 import { removeCategoryType } from './removeType';
-import { paletteShades, typePalette } from '@/colors';
+import { paletteShades, typePalette } from '@/domain/colors';
 import { PaletteStrip } from '@/shared/ui/ColorSwatches';
 import BottomSheet, { SheetFlatList } from '@/shared/ui/BottomSheet';
 import { CreateButton } from '@/shared/ui/PlusButton';

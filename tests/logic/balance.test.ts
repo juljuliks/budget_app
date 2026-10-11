@@ -1,4 +1,4 @@
-import { ingestSms } from '../../src/ingest';
+import { ingestSms } from '../../src/ingest/ingest';
 import { cardBalance } from '../../src/db/balance';
 import { parseTbcBalance } from '../../src/parsers/tbc';
 import { addManualTransaction } from '../../src/db/transactions';

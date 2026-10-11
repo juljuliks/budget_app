@@ -1,6 +1,6 @@
 // Node-only: imports SMS fixtures into the local DB (see scripts/run_importer.js).
 import fs from 'fs';
-import { ingestSms, IngestResult } from '../ingest';
+import { ingestSms, IngestResult } from '../ingest/ingest';
 
 export async function importFixtures(fixturesPath: string) {
   const items: Array<{ raw_sms: string; sender?: string; timestamp?: number }> =

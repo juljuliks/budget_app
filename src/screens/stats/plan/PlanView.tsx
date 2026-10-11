@@ -3,7 +3,7 @@ import { ActivityIndicator, Text, View } from 'react-native';
 import { categoryLabel } from '@/db/categories';
 import type { Currency } from '@/db/fx';
 import { PlanAmountModal, PlanAmountTarget } from '@/entities/plan';
-import { useHideAmounts } from '@/hideAmounts';
+import { useHideAmounts } from '@/shared/settings/hideAmounts';
 import Fab from '@/shared/ui/Fab';
 import StickyScrollView from '@/shared/ui/StickyScrollView';
 import { usePlanActions } from './model/usePlanActions';

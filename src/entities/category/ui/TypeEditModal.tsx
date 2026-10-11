@@ -4,7 +4,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { CategoryType, findCategoryTypeByName } from '@/db/categoryTypes';
 import {
   colorFromHue, distinctHue, freePalettes, isCustomPalette, PALETTES, paletteShades, typePalette,
-} from '@/colors';
+} from '@/domain/colors';
 import { saveCategoryType } from '../model/commands';
 import { AutoButton, PaletteStrip } from '@/shared/ui/ColorSwatches';
 import { formStyles } from '@/shared/theme/formStyles';

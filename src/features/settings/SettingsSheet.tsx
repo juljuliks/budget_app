@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
-import { limitAlertsEnabled, setLimitAlertsEnabled } from '@/limitAlerts';
+import { limitAlertsEnabled, setLimitAlertsEnabled } from '@/notifications/limitAlerts';
 import BottomSheet from '@/shared/ui/BottomSheet';
-import { setDisplayCurrency, useDisplayCurrency } from '@/displayCurrency';
+import { setDisplayCurrency, useDisplayCurrency } from '@/shared/settings/displayCurrency';
 import { useRootNavigation } from '@/shared/navigation/navigation';
 import CurrencyPicker from '@/shared/ui/CurrencyPicker';
 import { colors } from '@/shared/theme/theme';

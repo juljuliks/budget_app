@@ -10,7 +10,7 @@ import {
 import { createCategory, deleteCategory, topUpCategoryId } from '../../src/db/categories';
 import { addManualTransaction } from '../../src/db/transactions';
 import { freshDb } from '../helpers';
-import { NEUTRAL_COLOR } from '../../src/colors';
+import { NEUTRAL_COLOR } from '../../src/domain/colors';
 
 const NOW = currentYm(new Date());
 const at = (year: number, month: number, day = 10) => Math.floor(new Date(year, month, day, 12).getTime() / 1000);

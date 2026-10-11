@@ -1,6 +1,6 @@
 // The merchants' writes: each one tells the screens the data changed.
 import { deleteMerchants, setMerchantsCategory } from '@/db/merchants';
-import { emitTransactionsChanged } from '@/events';
+import { emitTransactionsChanged } from '@/domain/events';
 
 /** Their operations stay with their categories, without a merchant; new SMS from them make them again. */
 export async function removeMerchants(ids: string[]) {

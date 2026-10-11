@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { averageFullMonths, periodStats, PeriodStats } from '@/db/plans';
 import type { Currency } from '@/db/fx';
-import { onTransactionsChanged } from '@/events';
+import { onTransactionsChanged } from '@/domain/events';
 import { unplannedMonth, UnplannedMonth } from '@/entities/plan';
 import { DayRange, rangeDays, rangeToUnix } from '@/shared/lib/dateRange';
 import { useLatestRequest } from '@/shared/lib/useLatestRequest';

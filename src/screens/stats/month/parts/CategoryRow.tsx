@@ -3,7 +3,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import { categoryLabel } from '@/db/categories';
 import type { Currency } from '@/db/fx';
 import { CategoryStat, spentOf } from '@/db/plans';
-import { useHideAmounts } from '@/hideAmounts';
+import { useHideAmounts } from '@/shared/settings/hideAmounts';
 import { monthDays } from '@/shared/lib/dateRange';
 import { RHYTHM_DAYS, WEEKDAYS } from '@/shared/lib/dates';
 import { formatPercent } from '@/shared/lib/format';

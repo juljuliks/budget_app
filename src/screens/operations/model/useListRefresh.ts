@@ -2,7 +2,7 @@
 // filter or grouping (text: debounced while typing), with nothing selected.
 import { useCallback, useEffect, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { onTransactionsChanged } from '@/events';
+import { onTransactionsChanged } from '@/domain/events';
 
 const SEARCH_DEBOUNCE_MS = 200;
 

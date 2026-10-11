@@ -1,6 +1,6 @@
 import { freshDb } from '../helpers';
 import { getDb } from '../../src/db';
-import { createRule } from '../../src/categorize';
+import { createRule } from '../../src/categorize/rules';
 import { createCategory, listCategories } from '../../src/db/categories';
 import { mergeCategories, MergeNameTakenError, mergedName } from '../../src/db/mergeCategories';
 

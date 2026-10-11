@@ -1,7 +1,7 @@
 import { currentYm, setPlanAmount } from '../../src/db/plans';
 import { daysInMonth } from '../../src/shared/lib/dateRange';
 import { addManualTransaction } from '../../src/db/transactions';
-import { limitAlertFor, setLimitAlertsEnabled } from '../../src/limitAlerts';
+import { limitAlertFor, setLimitAlertsEnabled } from '../../src/notifications/limitAlerts';
 import { freshDb } from '../helpers';
 
 // loadNorms reads the current month from the clock: the operations are today

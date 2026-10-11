@@ -21,7 +21,7 @@ import { styles } from './parts/styles';
 
 /**
  * Donut: one segment per category with spending, in section order, so a type's categories sit next to
- * each other in their palette's shades (src/colors.ts).
+ * each other in their palette's shades (src/domain/colors.ts).
  */
 function donutSegments(groups: StatGroup[]): DonutSegment[] {
   return groups.flatMap((g) => g.categories)

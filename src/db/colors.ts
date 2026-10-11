@@ -1,5 +1,5 @@
 import { getDb } from './index';
-import { buildCategoryColors } from '../colors';
+import { buildCategoryColors } from '../domain/colors';
 
 /** Every category's color, deleted ones too (they keep past months' spending). Same order as listCategories. */
 export async function categoryColors(): Promise<Map<number, string>> {

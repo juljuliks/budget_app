@@ -1,5 +1,5 @@
 // The schema's history, migrations 13 and on (shipped ones are never edited).
-import { REMEMBERABLE_KINDS } from '../../types';
+import { REMEMBERABLE_KINDS } from '../../domain/types';
 import type { MigrationStep } from './step';
 
 /** Migrations 13 and on: a new one is appended here (when this file nears 250 lines, the next file starts). */

@@ -18,7 +18,17 @@ src/
   entities/   transaction/, category/, merchant/, plan/ — показать, выбрать, просто изменить одну вещь
   shared/     ui/ (кит без знания о бюджете), lib/ (format, money, dates, хуки), theme/,
               navigation/ (navigationRef, хуки переходов, sheets.ts — открыть шит откуда угодно, leaveGuard)
-  db/ parsers/ importer/ notifications/ native/ stats/ fx/ ingest.ts assign.ts …   — ядро, без React
+              settings/ (хуки над настройками: валюта показа, «скрыть суммы»)
+  ядро, без React, по доменам:
+  db/          база: миграции и запросы (plans/, transactions/, spending.ts — что считается тратой)
+  domain/      общие основы: виды операций (types), палитра категорий (colors), сигнал «данные изменились» (events)
+  ingest/      приём SMS и пушей: разбор, дубли по хешу, запись
+  parsers/     разбор SMS банка, чистка имени мерчанта
+  importer/    импорт SMS из телефона
+  categorize/  правила мерчантов и назначение категорий
+  stats/       лимиты по ритму (norms)
+  fx/          курсы НБГ
+  notifications/, native/   уведомления (и о лимитах), Android: SMS, пуши, разрешения — только здесь react-native
 ```
 
 **Куда класть:**
@@ -32,7 +42,8 @@ src/
 | Вкладка и её части, которые нигде больше не нужны | `screens/<вкладка>/parts` | заголовок раздела операций, строка категории статистики |
 | Корень приложения: стек, вкладки, хосты, старт | `app` | `App.tsx`, `MainTabs`, `ModalHost`, `useAppStartup` |
 | Переходы и открытие шитов — нужны всем слоям, без UI | `shared/navigation` | `navigation.ts`, `sheets.ts`, `leaveGuard.ts` |
-| Запросы к БД, расчёты, парсеры, уведомления | ядро | `db/plans.ts`, `stats/norms.ts`, `parsers/tbc.ts` |
+| Запросы к БД, расчёты, парсеры, уведомления | ядро, свой домен | `db/plans/`, `stats/norms.ts`, `parsers/tbc.ts` |
+| Хук над настройкой (валюта, «скрыть суммы») | `shared/settings` | `useDisplayCurrency`, `useHideAmounts` |
 
 Сомнение «entity или feature» решает вопрос: есть ли шаги, подтверждения или последствия для других данных?
 Да — feature. Простая форма своей сущности (создать или изменить категорию, раздел) — entity; удаление с разбором,
@@ -48,6 +59,8 @@ src/
 
 ### Импорты
 
+- В корне `src` файлов нет: всё в слое или в домене ядра. Ядро не импортирует `react`; `react-native` — только
+  `native/` и `notifications/`.
 - Только вниз: `app → screens → features → entities → shared`. Ядро импортируют все слои React; ядро и `shared`
   не импортируют ничего из слоёв выше.
 - Соседние слайсы одного слоя друг друга не импортируют (feature из feature, entity из entity) — их собирает слой
@@ -79,7 +92,7 @@ src/
 | # | Шаг | Что делаем | Статус |
 |---|---|---|---|
 | 0 | Инструменты | ESLint 9 (`eslint.config.js`): `max-lines` 250, `max-lines-per-function` 120, `react-hooks`, границы слоёв — `no-restricted-imports` на каждый слой; пока всё warn. Алиас `@/` → `src/` (babel `module-resolver`, `tsconfig paths`, Jest `moduleNameMapper`). `npm run lint`, `npm run typecheck` | готово: 38 предупреждений — длинные файлы из плана, импорты ядра из `ui` (шаг 1), `exhaustive-deps` в `TransactionsList` (шаг 5) |
-| 1 | `shared` | Кит, lib, theme → `src/shared/{ui,lib,theme}`. `dates.ts`: месяцы во всех падежах, дни недели, `RHYTHM_DAYS` (было 9 копий); `formatPercent` вместо `pct` / `percentOf` / `shareOfAll`. `limitAlerts`, `navigation`, `notifications` — из `shared/lib` | готово: `src/colors.ts` остался в ядре (палитра категорий, её берёт `db/`); `form.ts` — в `shared/ui` (показывает тост); импорт `ui/stats/norms` из `limitAlerts` — шаг 2 |
+| 1 | `shared` | Кит, lib, theme → `src/shared/{ui,lib,theme}`. `dates.ts`: месяцы во всех падежах, дни недели, `RHYTHM_DAYS` (было 9 копий); `formatPercent` вместо `pct` / `percentOf` / `shareOfAll`. `limitAlerts`, `navigation`, `notifications` — из `shared/lib` | готово: `src/domain/colors.ts` остался в ядре (палитра категорий, её берёт `db/`); `form.ts` — в `shared/ui` (показывает тост); импорт `ui/stats/norms` из `limitAlerts` — шаг 2 |
 | 2 | Ядро | `ui/stats/norms.ts` целиком (загрузка и расчёты лимитов по ритму, без React) → `src/stats/norms.ts`; запрос курсов НБГ → `src/fx/nbg.ts` (без импортов из `db`, чтобы не было цикла), кэш курсов остаётся в `db/fx.ts` | готово; `emitTransactionsChanged` из команд — перенесено в шаг 4 (команды сущностей) |
 | 3 | `app` | `App.tsx` → `app/App` + `MainTabs` + `useAppStartup`; `modals` → `app/ModalHost`, `SettingsButton` → `app`. `navigation`, `sheets`, `leaveGuard` → `shared/navigation`: их зовут все слои и уведомления, а импорты только вниз | готово: `app` пока импортирует экраны и шиты из `src/ui` (11 предупреждений lint — уходят шагами 4–7) |
 | 4 | `entities` | `entities/{category,transaction,plan}`, `features/{transaction-edit,merchant-card,category-delete,category-types}`. `TransactionSheet` 336 → 84 строки (+ хуки `useTransaction`, `useCategoryChoice`, части), `MerchantCard` 317 → 70, `CategorySheet` 269 → 138. Карточка мерчанта открывается через `sheets` (`openMerchant`), удаление категории — проп `onDelete`. Команды слайсов (запись + `emitTransactionsChanged`) | готово: карточка мерчанта с правилом для прошлых операций — feature; `entities/merchant` — имя-ссылка `MerchantLink` (карточка операции и дальше везде, где мерчант виден); `emitTransactionsChanged` ещё в `src/ui` (списки, добавление, объединение, план) — уходит шагами 5–7 |
@@ -96,7 +109,7 @@ src/
   `TextInputModal`, `StickyScrollView`, `SectionHeading`, `Fab`, `PlusButton`, `RowActions`, `CurrencyButton`,
   `CurrencyPicker`, `icons`, `toast`, `sheetAlert`.
 - **shared/lib**: `format`, `money`, `dateRange`, `dates` (бывший `stats/months`), `strings`, `useLast`, `useLatestRequest`.
-- **shared/theme**: `theme`, `formStyles`. `src/colors.ts` остаётся в ядре: палитру категорий берёт `db/`.
+- **shared/theme**: `theme`, `formStyles`. `colors.ts` остаётся в ядре (`src/domain/`): палитру категорий берёт `db/`.
 - **app**: `App.tsx` (+ `MainTabs`, `useAppStartup`), `modals.tsx` → `ModalHost`, `SettingsButton`.
 - **shared/navigation**: `navigation.ts`, `sheets.ts`, `leaveGuard.ts`.
 - **entities/transaction**: `TransactionItem`, команды и подтверждения удаления (`transactionActions`).

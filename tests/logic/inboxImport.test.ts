@@ -1,4 +1,4 @@
-import { ingestSms } from '../../src/ingest';
+import { ingestSms } from '../../src/ingest/ingest';
 import { importInboxSms } from '../../src/importer/inboxImport';
 import { cardBalance } from '../../src/db/balance';
 import { getDb } from '../../src/db';

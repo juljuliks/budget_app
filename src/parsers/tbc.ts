@@ -1,5 +1,5 @@
-import { Kind, ParsedTx } from '../types';
-import { normalizeMerchant } from '../normalize';
+import { Kind, ParsedTx } from '../domain/types';
+import { normalizeMerchant } from './normalize';
 
 // Amount + currency, either "44.00GEL" / "1,234.56 GEL" or "GEL 44.00" / "$9.99".
 // Thousands separators: comma or (narrow) no-break space, always followed by exactly 3 digits,

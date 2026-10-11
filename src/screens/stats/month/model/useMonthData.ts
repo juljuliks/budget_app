@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import type { Currency } from '@/db/fx';
 import { currentYm, monthStats, MonthStats, ymOf } from '@/db/plans';
-import { onTransactionsChanged } from '@/events';
+import { onTransactionsChanged } from '@/domain/events';
 import { unplannedShare } from '@/entities/plan';
 import { dayKeyOf } from '@/shared/lib/dateRange';
 import { useLatestRequest } from '@/shared/lib/useLatestRequest';

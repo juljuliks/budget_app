@@ -2,7 +2,7 @@ import { getDb } from './index';
 
 export type CategoryType = {
   id: number; name: string; is_transfer: number; sort_order: number;
-  /** palette key (src/colors.ts); null = by position */
+  /** palette key (src/domain/colors.ts); null = by position */
   palette: string | null;
 };
 

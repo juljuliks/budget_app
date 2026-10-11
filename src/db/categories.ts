@@ -13,7 +13,7 @@ export type Category = {
   /** 1 when the category's type is the transfer type: offered for money transfers (see isTransferCategory) */
   type_is_transfer: number;
   deleted_at: number | null;
-  /** own color; null = from the type's palette (see src/colors.ts) */
+  /** own color; null = from the type's palette (see src/domain/colors.ts) */
   color: string | null;
   /** 'savings' for "Сбережения", 'topup' for "Пополнение счёта" (system categories: can't be deleted or renamed), else null */
   system: string | null;

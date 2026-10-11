@@ -5,7 +5,7 @@ import { categoryLabel, listCategories } from '@/db/categories';
 import { categoryColors } from '@/db/colors';
 import { listMerchants, MerchantRow } from '@/db/merchants';
 import { normalizeForSearch } from '@/db/transactions';
-import { onTransactionsChanged } from '@/events';
+import { onTransactionsChanged } from '@/domain/events';
 import type { CategoryInfo } from '@/entities/category';
 import { NO_CATEGORY } from '@/shared/lib/strings';
 import { colors } from '@/shared/theme/theme';

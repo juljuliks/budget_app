@@ -3,9 +3,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { getTransaction } from '@/db/transactions';
 import { categoryLabel, getCategory } from '@/db/categories';
 import { merchantCategories } from '@/db/merchants';
-import { findCategoryForMerchant, isMixedMerchant } from '@/categorize';
-import { isRememberable } from '@/types';
-import { onTransactionsChanged } from '@/events';
+import { findCategoryForMerchant, isMixedMerchant } from '@/categorize/rules';
+import { isRememberable } from '@/domain/types';
+import { onTransactionsChanged } from '@/domain/events';
 import { markSeen } from '@/entities/transaction';
 
 export type Tx = NonNullable<Awaited<ReturnType<typeof getTransaction>>>;

@@ -1,12 +1,12 @@
 jest.mock('../../src/shared/navigation/navigation', () => ({ navigateWhenReady: jest.fn() }));
 
 import { getDb } from '../../src/db';
-import { ingestSms } from '../../src/ingest';
-import { assignCategory, categoryChangeTotals, merchantChangePreview } from '../../src/assign';
+import { ingestSms } from '../../src/ingest/ingest';
+import { assignCategory, categoryChangeTotals, merchantChangePreview } from '../../src/categorize/assign';
 import {
   addMerchantCategory, deleteMerchants, listMerchants, merchantCategories, merchantFollowers, merchantsCategoryPreview, removeMerchantCategory, setMerchantCategory, setMerchantMixed, setMerchantsCategory,
 } from '../../src/db/merchants';
-import { findCategoryForMerchant } from '../../src/categorize';
+import { findCategoryForMerchant } from '../../src/categorize/rules';
 import { freshDb } from '../helpers';
 
 let ts = 1;
@@ -147,7 +147,7 @@ test('a merchant without a category: nothing asked, the pick becomes its categor
 
 describe('bulk category change: the selected operations only, or their merchants too', () => {
   test('"и для мерчантов": both merchants get the rule, their other followers move, manual choices stay', async () => {
-    const { assignCategoryToMany, merchantsChangePreview } = await import('../../src/assign');
+    const { assignCategoryToMany, merchantsChangePreview } = await import('../../src/categorize/assign');
     const a = await sms('SPAR');
     const b = await sms('SPAR');
     const c = await sms('WOLT');
@@ -168,7 +168,7 @@ describe('bulk category change: the selected operations only, or their merchants
   });
 
   test('"только для выбранных": no rules, the others stay', async () => {
-    const { assignCategoryToMany } = await import('../../src/assign');
+    const { assignCategoryToMany } = await import('../../src/categorize/assign');
     const a = await sms('SPAR');
     const b = await sms('SPAR');
     expect(await assignCategoryToMany([a], 2, 'only')).toBe(0);
@@ -177,7 +177,7 @@ describe('bulk category change: the selected operations only, or their merchants
   });
 
   test('nothing asked: a merchant without a category gets it, one with another keeps its own', async () => {
-    const { assignCategoryToMany } = await import('../../src/assign');
+    const { assignCategoryToMany } = await import('../../src/categorize/assign');
     const a = await sms('SPAR');
     const b = await sms('SPAR');
     const c = await sms('WOLT');
@@ -189,7 +189,7 @@ describe('bulk category change: the selected operations only, or their merchants
   });
 
   test('no merchant to ask about: "Без категории" or no merchants', async () => {
-    const { merchantsChangePreview } = await import('../../src/assign');
+    const { merchantsChangePreview } = await import('../../src/categorize/assign');
     const a = await sms('SPAR');
     expect(await merchantsChangePreview([a], null)).toBeNull();
     expect(await merchantsChangePreview([], 2)).toBeNull();

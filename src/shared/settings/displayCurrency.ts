@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { getSetting, setSetting } from './db/settings';
-import { Currency, isCurrency } from './db/fx';
+import { getSetting, setSetting } from '@/db/settings';
+import { Currency, isCurrency } from '@/db/fx';
 
 // The currency amounts are converted to across the app (stats, plan, history, day totals and day stats), picked
 // in Настройки → Валюта and remembered. Every screen using it follows a change at once.

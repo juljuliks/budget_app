@@ -1,12 +1,12 @@
-import { getDb } from './db';
-import { setCategoryForTransactions, setTransactionCategory } from './db/transactions';
-import { incrementCategoryUsage } from './db/categories';
-import { freezePastOfCategory } from './db/categoryDeletion';
-import { createRule, backfillRule, findCategoryForMerchant, isMixedMerchant } from './categorize';
-import { emitTransactionsChanged } from './events';
-import { isRememberable, REMEMBERABLE_KINDS } from './types';
-import { merchantSpendingSql, signedSpendSql } from './db/spending';
-import { placeholders } from './db/sql';
+import { getDb } from '../db';
+import { setCategoryForTransactions, setTransactionCategory } from '../db/transactions';
+import { incrementCategoryUsage } from '../db/categories';
+import { freezePastOfCategory } from '../db/categoryDeletion';
+import { createRule, backfillRule, findCategoryForMerchant, isMixedMerchant } from './rules';
+import { emitTransactionsChanged } from '../domain/events';
+import { isRememberable, REMEMBERABLE_KINDS } from '../domain/types';
+import { merchantSpendingSql, signedSpendSql } from '../db/spending';
+import { placeholders } from '../db/sql';
 
 /**
  * What a merchant rule is for: it picks the category of the merchant's new transactions automatically.

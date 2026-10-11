@@ -1,4 +1,4 @@
-import { ingestSms } from '../ingest';
+import { ingestSms } from '../ingest/ingest';
 import { createNotificationChannel } from '../notifications/notifeeBootstrap';
 import { showDepositNotification, showLimitAlert, showUncategorizedTransactionNotification } from '../notifications/notifeeIntegration';
 import { scheduleMonthReports } from '../notifications/monthReportNotice';

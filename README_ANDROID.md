@@ -69,7 +69,7 @@ adb reverse tcp:8081 tcp:8081     # если устройство подключ
 - `adb logcat -s SmsReceiver ReactNativeJS` — лог приёмника и headless-задачи
 - эмулятор: `./scripts/send_test_sms.sh` (консоль эмулятора не принимает пробел в отправителе, поэтому `TBC`)
 
-Чек-лист разрешений: `RECEIVE_SMS`, `POST_NOTIFICATIONS` (Android 13+) — запрашиваются при старте приложения (`src/permissions.ts`). На Xiaomi/Huawei/Samsung дополнительно отключите оптимизацию батареи для приложения.
+Чек-лист разрешений: `RECEIVE_SMS`, `POST_NOTIFICATIONS` (Android 13+) — запрашиваются при старте приложения (`src/native/permissions.ts`). На Xiaomi/Huawei/Samsung дополнительно отключите оптимизацию батареи для приложения.
 
 Релизный APK (для установки на свой телефон)
 ---------------------------------

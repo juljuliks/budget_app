@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { cardBalance, CardBalance as Balance } from '@/db/balance';
-import { onTransactionsChanged } from '@/events';
+import { onTransactionsChanged } from '@/domain/events';
 import { formatDay, formatTime, plural } from '@/shared/lib/format';
 import { formatMoneyWithCurrency } from '@/shared/lib/money';
 import { sheetAlert } from '@/shared/ui/sheetAlert';

@@ -9,7 +9,7 @@ import { SettingsButton } from '@/features/settings';
 import { HistoryIcon, StatsIcon } from '@/shared/ui/icons';
 import { colors } from '@/shared/theme/theme';
 import { countUnseenTransactions } from '@/db/transactions';
-import { onTransactionsChanged } from '@/events';
+import { onTransactionsChanged } from '@/domain/events';
 import { guardLeave, hasLeaveGuard } from '@/shared/navigation/leaveGuard';
 import type { TabParamList } from '@/shared/navigation/navigation';
 

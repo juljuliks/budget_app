@@ -1,7 +1,7 @@
 // A month's or a period's spending by category and section, against the plan.
 import { getDb } from '../index';
 import { categoryColors } from '../colors';
-import { NEUTRAL_COLOR, NO_CATEGORY_EMOJI } from '../../colors';
+import { NEUTRAL_COLOR, NO_CATEGORY_EMOJI } from '../../domain/colors';
 import { Currency } from '../fx';
 import { BUDGET_CURRENCY, asCurrency, monthRange, planRateDate, ymOf } from './months';
 import { REFUND_KEY, categoryKey, convertSpending, spendRows, sumBy } from './spend';
@@ -22,7 +22,7 @@ export type CategoryStat = {
   plan_kind: PlanKind | null;
   /** a flexible plan item's norm rhythm for period stats; null without a plan */
   plan_norm: NormPeriod | null;
-  /** chart color: the type's palette shade or the category's own (src/colors.ts) */
+  /** chart color: the type's palette shade or the category's own (src/domain/colors.ts) */
   color: string;
   /** deleted category that still has spending in this month: can't be added to a plan */
   deleted: boolean;

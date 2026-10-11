@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleProp, StyleSheet, Text, TextStyle } from 'react-native';
-import { useHideAmounts } from '@/hideAmounts';
+import { useHideAmounts } from '../settings/hideAmounts';
 import { colors } from '../theme/theme';
 
 /**

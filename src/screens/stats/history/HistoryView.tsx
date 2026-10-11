@@ -5,7 +5,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useOpenCategoryTransactions } from '@/shared/navigation/navigation';
 import { Currency } from '@/db/fx';
 import { currentYm, HistoryMonth, monthStats, MonthStats, parseYm, planHistory } from '@/db/plans';
-import { onTransactionsChanged } from '@/events';
+import { onTransactionsChanged } from '@/domain/events';
 import Meter from '@/shared/ui/Meter';
 import { formatMoneyWithCurrency, formatWithCurrency } from '@/shared/lib/money';
 import { monthDays } from '@/shared/lib/dateRange';

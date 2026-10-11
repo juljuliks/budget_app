@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { confirmDeleteTransaction } from '@/entities/transaction';
-import { isRememberable } from '@/types';
+import { isRememberable } from '@/domain/types';
 import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
 import { SheetActions } from '@/shared/ui/Button';
 import { useLast } from '@/shared/lib/useLast';

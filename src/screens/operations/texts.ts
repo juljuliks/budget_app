@@ -1,5 +1,5 @@
 // The operations tab's questions.
-import type { merchantsChangePreview } from '@/assign';
+import type { merchantsChangePreview } from '@/categorize/assign';
 import { plural } from '@/shared/lib/format';
 import { formatMoneyWithCurrency } from '@/shared/lib/money';
 

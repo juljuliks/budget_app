@@ -1,6 +1,6 @@
 import { Category, categoryLabel, currentTransactionsOfCategory, deleteCategory, getCategory } from '@/db/categories';
 import { categoryDeletePreview } from '@/db/categoryDeletion';
-import { emitTransactionsChanged } from '@/events';
+import { emitTransactionsChanged } from '@/domain/events';
 import { deleteEmptyText } from './texts';
 import { sheetAlert } from '@/shared/ui/sheetAlert';
 import { toast, toastError } from '@/shared/ui/toast';

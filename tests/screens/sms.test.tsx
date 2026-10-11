@@ -3,7 +3,7 @@
 import { act, within } from '@testing-library/react-native';
 import { openApp, rowOf, screen } from './app';
 import { getDb } from '../../src/db';
-import { ingestSms } from '../../src/ingest';
+import { ingestSms } from '../../src/ingest/ingest';
 import { autoCategory } from '../e2e/seeds';
 
 const sms = (body: string, minutesAgo = 0) => act(async () => { await ingestSms({ sender: 'TBC', body, timestamp: Date.now() - minutesAgo * 60000 }); });

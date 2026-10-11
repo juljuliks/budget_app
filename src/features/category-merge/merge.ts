@@ -1,5 +1,5 @@
 import { mergeCategories } from '@/db/mergeCategories';
-import { emitTransactionsChanged } from '@/events';
+import { emitTransactionsChanged } from '@/domain/events';
 
 /** Several categories into the first one, named and typed anew; throws MergeNameTakenError for a name in use. */
 export async function mergeInto(...args: Parameters<typeof mergeCategories>) {
