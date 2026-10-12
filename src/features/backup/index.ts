@@ -1,3 +1,3 @@
-export { startBackup } from './backupFlow';
-export { runAutoBackupIfDue } from './autoBackup';
+export { default as BackupSheet } from './ui/BackupSheet';
 export { PasswordHost } from './ui/PasswordHost';
+export { runAutoBackupIfDue } from './autoBackup';

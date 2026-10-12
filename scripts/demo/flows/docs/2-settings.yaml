@@ -10,7 +10,7 @@ appId: com.budgetapp
 - tapOn: "Резервная копия"
 - waitForAnimationToEnd
 - takeScreenshot: set-02-backup
-- tapOn: "Отмена"
+- pressKey: back
 - waitForAnimationToEnd
 - tapOn: "Настройки"
 - waitForAnimationToEnd

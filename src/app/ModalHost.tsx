@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { attachSheetHost, CLOSED, detachSheetHost, SheetState } from '@/shared/navigation/sheets';
+import { attachSheetHost, CLOSED, detachSheetHost, openBackup, SheetState } from '@/shared/navigation/sheets';
 import { AddTransactionSheet } from '@/features/add-transaction';
 import { CategoryDeleteSheet } from '@/features/category-delete';
 import { CategoryTypesSheet } from '@/features/category-types';
@@ -7,7 +7,7 @@ import { TransactionSheet } from '@/features/transaction-edit';
 import { MonthReportSheet } from '@/features/month-report';
 import { MerchantCard } from '@/features/merchant-card';
 import { SettingsSheet } from '@/features/settings';
-import { PasswordHost, startBackup } from '@/features/backup';
+import { BackupSheet, PasswordHost } from '@/features/backup';
 import { startSmsImport } from '@/features/sms-import';
 
 /** Shows the sheets over the pages (see sheets.ts); mounted once in App. */
@@ -27,10 +27,11 @@ export function ModalHost() {
       <CategoryTypesSheet visible={state.categoryTypes} onClose={() => close({ categoryTypes: false })} />
       <CategoryDeleteSheet categoryId={state.categoryDelete} onClose={() => close({ categoryDelete: null })} />
       <MonthReportSheet ym={state.monthReport} onClose={() => close({ monthReport: null })} />
-      <SettingsSheet open={state.settings} onClose={() => close({ settings: false })} onImportSms={startSmsImport} onBackup={startBackup} />
-      {/* over the operation it was opened from; "Показать операции" closes that one too */}
+      <SettingsSheet open={state.settings} onClose={() => close({ settings: false })} onImportSms={startSmsImport} onBackup={openBackup} />
+      <BackupSheet visible={state.backup} onClose={() => close({ backup: false })} />
       {/* the backups' password, asked by the backup's flows */}
       <PasswordHost />
+      {/* over the operation it was opened from; "Показать операции" closes that one too */}
       <MerchantCard merchantId={state.merchant} onClose={() => close({ merchant: null })} onLeave={() => close({ transaction: null })} />
     </>
   );

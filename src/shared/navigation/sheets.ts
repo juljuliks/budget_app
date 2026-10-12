@@ -18,9 +18,11 @@ export type SheetState = {
   merchant: string | null;
   /** the settings (the gear in the tab headers) */
   settings: boolean;
+  /** "Резервная копия" (from the settings): save, restore, CSV, the automatic copy, the password */
+  backup: boolean;
 };
 
-export const CLOSED: SheetState = { transaction: null, addTransaction: false, categoryTypes: false, categoryDelete: null, monthReport: null, merchant: null, settings: false };
+export const CLOSED: SheetState = { transaction: null, addTransaction: false, categoryTypes: false, categoryDelete: null, monthReport: null, merchant: null, settings: false, backup: false };
 
 let handler: ((patch: Partial<SheetState>) => void) | null = null;
 let pending: Partial<SheetState> = {};
@@ -36,6 +38,7 @@ export const openCategoryDelete = (categoryId: number) => open({ categoryDelete:
 export const openMonthReport = (ym: string) => open({ monthReport: ym });
 export const openMerchant = (merchantKey: string) => open({ merchant: merchantKey });
 export const openSettings = () => open({ settings: true });
+export const openBackup = () => open({ backup: true });
 
 /** ModalHost registers itself; returns what was asked for before it was mounted. */
 export function attachSheetHost(h: (patch: Partial<SheetState>) => void): Partial<SheetState> {

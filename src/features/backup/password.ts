@@ -6,10 +6,8 @@ import { CANCEL } from '@/shared/lib/strings';
 import { sheetAlert } from '@/shared/ui/sheetAlert';
 import { toast, toastError } from '@/shared/ui/toast';
 import { run } from './run';
-import {
-  CHANGE_PASSWORD, PASSWORD, PASSWORD_INFO, PASSWORD_ON_INFO, PASSWORD_REMOVED, PASSWORD_SET, REMOVE_PASSWORD, SET_PASSWORD,
-  WRONG_PASSWORD,
-} from './texts';
+import { backupSettingsChanged } from './model/changes';
+import { PASSWORD, PASSWORD_INFO, PASSWORD_REMOVED, PASSWORD_SET, SET_PASSWORD, WRONG_PASSWORD } from './texts';
 import { askPassword } from './ui/PasswordHost';
 
 /**
@@ -44,27 +42,23 @@ export async function openCopy(name: string, plain: string): Promise<string | nu
   }
 }
 
-/** The password's sheet: set one, or change / remove it. */
-export async function openPassword(): Promise<void> {
-  if (!(await hasPassword())) {
-    sheetAlert(PASSWORD, PASSWORD_INFO, [{ text: SET_PASSWORD, onPress: run('password set', choose) }, { text: CANCEL, style: 'cancel' }]);
-    return;
-  }
-  sheetAlert(PASSWORD, PASSWORD_ON_INFO, [
-    { text: CHANGE_PASSWORD, style: 'secondary', onPress: run('password change', choose) },
-    { text: REMOVE_PASSWORD, style: 'destructive', onPress: run('password remove', remove) },
-    { text: CANCEL, style: 'cancel' },
-  ]);
+/** The switch turned on: what the password does, then the password and its confirmation (on only once set). */
+export function askPasswordOn() {
+  sheetAlert(PASSWORD, PASSWORD_INFO, [{ text: SET_PASSWORD, onPress: run('password set', choosePassword) }, { text: CANCEL, style: 'cancel' }]);
 }
 
-async function choose() {
+/** A new password ("Задать пароль", "Сменить пароль"): asked twice. */
+export async function choosePassword() {
   const password = await askPassword('set');
   if (password === null) return;
   await setPassword(password);
+  backupSettingsChanged();
   toast(PASSWORD_SET);
 }
 
-async function remove() {
+/** The switch turned off: new copies aren't encrypted (the ones made are, and still need it). */
+export async function removePassword() {
   await setPassword(null);
+  backupSettingsChanged();
   toast(PASSWORD_REMOVED);
 }
