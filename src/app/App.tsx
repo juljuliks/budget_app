@@ -9,6 +9,7 @@ import { ModalHost } from './ModalHost';
 import { useAppStartup } from './useAppStartup';
 import { SheetAlertHost } from '@/shared/ui/sheetAlert';
 import { ToastHost } from '@/shared/ui/toast';
+import { LockHost } from '@/features/app-lock';
 import { navigationRef, flushPendingNavigation, RootStackParamList } from '@/shared/navigation/navigation';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -32,6 +33,8 @@ export default function App() {
       <SheetAlertHost />
       {/* toasts of the pages; each sheet draws its own over itself */}
       <ToastHost />
+      {/* the lock screen and the PIN windows, over all of it */}
+      <LockHost />
     </NavigationContainer>
   );
 }

@@ -125,3 +125,26 @@ describe('8.2 the month\'s report on the 1st', () => {
     await waitFor(() => expect(screen.getByText('за месяц')).toBeTruthy());
   });
 });
+
+describe('8.4 "Скрывать суммы в уведомлениях" (Блокировка)', () => {
+  const { memoryLock } = require('../../src/native/appLock') as typeof import('../../src/native/appLock');
+  beforeEach(() => Object.assign(memoryLock, { pin: '1234', hideNotifications: true }));
+  afterEach(() => memoryLock.reset());
+
+  test('an operation: its type and merchant, no amount; a limit: "Суммы — в приложении"; the report too', async () => {
+    await freshDb(); await planned(); await done();
+    await sms(`12.00GEL\n(*1234)\nNEWSHOP\n${today}`);
+    expect(shown()[0].slice(0, 2)).toEqual(['Покупка', 'NEWSHOP']);
+    display.mockClear();
+    await sms(`10.00GEL\n(*1234)\nZARA\n${today}`);
+    expect(shown()).toEqual([['👕 Одежда — план на октябрь превышен', 'Суммы — в приложении', []]]);
+    await scheduleMonthReports(new Date(2026, 9, 15));
+    expect((notifee.createTriggerNotification as jest.Mock).mock.calls[0][0].body).toBe('Суммы — в приложении');
+  });
+  test('the lock off: the amounts as before', async () => {
+    memoryLock.reset();
+    await freshDb(); await ops(); await done();
+    await sms(`12.00GEL\n(*1234)\nNEWSHOP\n${today}`);
+    expect(shown()[0][0]).toBe('Покупка — 12.00 ₾');
+  });
+});

@@ -5,6 +5,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { OperationsScreen } from '@/screens/operations';
 import { StatsHome } from '@/screens/stats';
 import { HideAmountsButton } from '@/features/hide-amounts';
+import { confirmShowAmounts } from '@/features/app-lock';
 import { SettingsButton } from '@/features/settings';
 import { HistoryIcon, StatsIcon } from '@/shared/ui/icons';
 import { colors } from '@/shared/theme/theme';
@@ -59,7 +60,7 @@ export default function MainTabs() {
           title: 'Статистика',
           tabBarIcon: ({ color }) => <StatsIcon color={color} />,
           // the eye blurs the budget and plan totals, e.g. to show the stats to someone
-          headerRight: () => <View style={[headerRightStyle, statsHeaderRight]}><HideAmountsButton /><SettingsButton /></View>,
+          headerRight: () => <View style={[headerRightStyle, statsHeaderRight]}><HideAmountsButton confirmShow={confirmShowAmounts} /><SettingsButton /></View>,
         }}
       />
       <Tab.Screen

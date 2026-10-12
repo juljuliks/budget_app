@@ -1,7 +1,7 @@
 // 9.10: a load that failed — "Не удалось загрузить" and "Повторить" instead of a spinner forever; an operation that's
 // gone. Today: Thursday 15 October 2026 (setup.ts).
-import { act } from '@testing-library/react-native';
-import { openApp, screen, tap, toggleSwitch } from './app';
+import { act, fireEvent } from '@testing-library/react-native';
+import { openApp, screen, tap } from './app';
 import { ops, planned } from '../e2e/seeds';
 import { getDb } from '../../src/db';
 import { openTransaction } from '../../src/shared/navigation/sheets';
@@ -49,9 +49,9 @@ test('9.10.4: a setting that didn\'t save: said in a red toast, the switch back 
   await screen.findByText('Уведомлять о лимитах');
   jest.spyOn(console, 'error').mockImplementation(() => {});
   await (await getDb()).run('ALTER TABLE app_settings RENAME TO app_settings_off');
-  toggleSwitch(false);
+  const sw = screen.getByLabelText('Уведомлять о лимитах');
+  fireEvent(sw, 'valueChange', false);
   expect(await screen.findByText('⚠️  Не удалось сохранить')).toBeTruthy();
-  const sw = screen.UNSAFE_root.findAll((n: { props: { onValueChange?: unknown } }) => typeof n.props.onValueChange === 'function');
-  expect(sw[sw.length - 1].props.value).toBe(true);
+  expect(screen.getByLabelText('Уведомлять о лимитах').props.value).toBe(true);
   await (await getDb()).run('ALTER TABLE app_settings_off RENAME TO app_settings');
 });

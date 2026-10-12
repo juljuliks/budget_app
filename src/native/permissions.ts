@@ -1,4 +1,5 @@
 import { PermissionsAndroid, Platform } from 'react-native';
+import { whileOutside } from './appLock';
 
 export type PermissionStatus = {
   sms: boolean;
@@ -15,7 +16,7 @@ export async function requestAppPermissions(): Promise<PermissionStatus> {
   // POST_NOTIFICATIONS is a runtime permission only on Android 13 (API 33)+
   if (Platform.Version >= 33) wanted.push(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
 
-  const result = await PermissionsAndroid.requestMultiple(wanted);
+  const result = await whileOutside(() => PermissionsAndroid.requestMultiple(wanted));
   const granted = (p: string) => result[p as keyof typeof result] === PermissionsAndroid.RESULTS.GRANTED;
 
   return {

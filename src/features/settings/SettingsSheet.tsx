@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { ReactNode, useEffect, useState } from 'react';
 import { StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { appVersion } from '@/native/appInfo';
 import { limitAlertsEnabled, setLimitAlertsEnabled } from '@/notifications/limitAlerts';
-import BottomSheet from '@/shared/ui/BottomSheet';
+import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
 import { setDisplayCurrency, useDisplayCurrency } from '@/shared/settings/displayCurrency';
 import { useRootNavigation } from '@/shared/navigation/navigation';
 import CurrencyPicker from '@/shared/ui/CurrencyPicker';
@@ -26,14 +26,16 @@ type Props = {
   onImportSms: () => void;
   /** «Резервная копия»: save, restore, CSV (the app passes the backup's flow) */
   onBackup: () => void;
+  /** «Блокировка» (the app passes the lock's section) */
+  lock: ReactNode;
 };
 
 /**
  * Настройки (the gear in the tab headers): a sheet with Валюта — the currency the app converts amounts to, switched right
- * here — the limit notifications switch, then Мерчанты, Категории, Импорт SMS (past bank SMS from the phone) and
+ * here — the limit notifications switch, «Блокировка», then Мерчанты, Категории, Импорт SMS (past bank SMS from the phone) and
  * Резервная копия; the installed version at the bottom.
  */
-export default function SettingsSheet({ open, onClose, onImportSms, onBackup }: Props) {
+export default function SettingsSheet({ open, onClose, onImportSms, onBackup, lock }: Props) {
   const navigation = useRootNavigation();
   const currency = useDisplayCurrency();
   const go = (route: 'Merchants' | 'Categories' | 'MessageTemplates') => { onClose(); navigation.navigate(route); };
@@ -49,37 +51,41 @@ export default function SettingsSheet({ open, onClose, onImportSms, onBackup }: 
 
   return (
     <BottomSheet visible={open} title="Настройки" onClose={onClose}>
-      <View style={styles.currency}>
-        <Text style={styles.label}>Валюта</Text>
-        <Text style={styles.hint}>
-          Статистика, план, история и суммы за день пересчитываются в неё по курсу Нацбанка Грузии. Операции
-          остаются в своей валюте.
-        </Text>
-        <CurrencyPicker value={currency} onChange={(c) => { setDisplayCurrency(c).catch(toastFailure('save currency', SAVE_FAILED)); }} />
-      </View>
-      <View style={styles.switchRow}>
-        <View style={styles.flex}>
-          <Text style={styles.label}>Уведомлять о лимитах</Text>
-          <Text style={styles.switchHint}>
-            Когда траты категории доходят до 80% и 100% плана на месяц или лимита на день / неделю
+      {/* with the lock's settings open it is taller than the screen */}
+      <SheetScrollView>
+        <View style={styles.currency}>
+          <Text style={styles.label}>Валюта</Text>
+          <Text style={styles.hint}>
+            Статистика, план, история и суммы за день пересчитываются в неё по курсу Нацбанка Грузии. Операции
+            остаются в своей валюте.
           </Text>
+          <CurrencyPicker value={currency} onChange={(c) => { setDisplayCurrency(c).catch(toastFailure('save currency', SAVE_FAILED)); }} />
         </View>
-        <Switch
-          value={alerts}
-          onValueChange={toggleAlerts}
-          trackColor={{ true: colors.accent, false: colors.border }}
-          thumbColor="#FFFFFF"
-          accessibilityLabel="Уведомлять о лимитах"
-        />
-      </View>
-      <Row label="Мерчанты" onPress={() => go('Merchants')} />
-      <Row label="Категории" onPress={() => go('Categories')} />
-      <Row label="Шаблоны сообщений" onPress={() => go('MessageTemplates')} />
-      {/* after this sheet has closed: one sheet at a time */}
-      <Row label="Импорт SMS из телефона" onPress={() => { onClose(); setTimeout(onImportSms, 250); }} />
-      <Row label="Резервная копия" onPress={() => { onClose(); setTimeout(onBackup, 250); }} />
-      {/* which build is installed: the phone's and the emulator's can differ */}
-      <Text style={styles.version}>Версия {appVersion()}</Text>
+        <View style={styles.switchRow}>
+          <View style={styles.flex}>
+            <Text style={styles.label}>Уведомлять о лимитах</Text>
+            <Text style={styles.switchHint}>
+              Когда траты категории доходят до 80% и 100% плана на месяц или лимита на день / неделю
+            </Text>
+          </View>
+          <Switch
+            value={alerts}
+            onValueChange={toggleAlerts}
+            trackColor={{ true: colors.accent, false: colors.border }}
+            thumbColor="#FFFFFF"
+            accessibilityLabel="Уведомлять о лимитах"
+          />
+        </View>
+        {lock}
+        <Row label="Мерчанты" onPress={() => go('Merchants')} />
+        <Row label="Категории" onPress={() => go('Categories')} />
+        <Row label="Шаблоны сообщений" onPress={() => go('MessageTemplates')} />
+        {/* after this sheet has closed: one sheet at a time */}
+        <Row label="Импорт SMS из телефона" onPress={() => { onClose(); setTimeout(onImportSms, 250); }} />
+        <Row label="Резервная копия" onPress={() => { onClose(); setTimeout(onBackup, 250); }} />
+        {/* which build is installed: the phone's and the emulator's can differ */}
+        <Text style={styles.version}>Версия {appVersion()}</Text>
+      </SheetScrollView>
     </BottomSheet>
   );
 }

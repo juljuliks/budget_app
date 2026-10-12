@@ -34,15 +34,15 @@ export async function longPress(what: string | RegExp) {
 type Element = ReturnType<typeof screen.getByText>;
 
 /**
- * The element, waiting for it to show: in the topmost open sheet when one is open (it covers the page and its
- * header), else the last match on the page.
+ * The element, waiting for it to show: in the topmost open sheet or PIN window when one is open (it covers the page
+ * and its header), else the last match on the page.
  */
 async function find(what: string | RegExp) {
   return waitFor(() => {
     if (typeof what === 'string' && what.startsWith('#')) return screen.getByTestId(what.slice(1));
-    // the open sheets (one sliding away is still drawn but not open)
+    // the open sheets (one sliding away is still drawn but not open) and the PIN windows over them (LockHost, last)
     const sheets = screen.UNSAFE_root.findAll((n: { type: { name?: string }; props: { visible?: unknown } }) =>
-      n.type?.name === 'BottomSheet' && n.props.visible === true);
+      (n.type?.name === 'BottomSheet' || n.type?.name === 'PinScreen') && n.props.visible === true);
     // a sheet open: only in the topmost one (what is under it can't be tapped; and its content may still be loading)
     for (const scope of sheets.length ? [within(sheets[sheets.length - 1])] : [screen]) {
       const byText = scope.queryAllByText(what);

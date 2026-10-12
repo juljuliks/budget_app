@@ -5,10 +5,13 @@ import { monthReport, yearly } from '../db/report';
 import { getSetting } from '../db/settings';
 import { formatWithCurrency } from '@/shared/lib/money';
 import { MONTHS_NOM } from '@/shared/lib/dates';
+import { hideNotificationAmounts } from '../native/appLock';
 
 /** «Отчёты»: the month's report on the 1st */
 export const REPORTS_CHANNEL_ID = 'reports';
 export const REPORT_ACTION = 'month_report';
+/** "Скрывать суммы в уведомлениях" (Блокировка): the body instead of the amounts */
+export const AMOUNTS_HIDDEN = 'Суммы — в приложении';
 /** the hour of the 1st the report comes at */
 const REPORT_HOUR = 10;
 
@@ -31,6 +34,7 @@ export async function scheduleMonthReports(now = new Date()) {
     const prev = month === 0 ? ymOf(year - 1, 11) : ymOf(year, month - 1);
     const stored = await getSetting('display_currency');
     const currency = isCurrency(stored) ? stored : 'GEL';
+    const hide = await hideNotificationAmounts();
     for (const ym of [prev, cur]) {
       const at = reportTime(ym);
       if (at <= now.getTime()) continue;
@@ -38,7 +42,7 @@ export async function scheduleMonthReports(now = new Date()) {
       // no plan that month (or it was removed since): no report
       if (!r.hasPlan) { await notifee.cancelTriggerNotification(`report_${ym}`); continue; }
       const money = (v: number) => formatWithCurrency(Math.round(v), currency);
-      const body = r.saved === null ? `Потрачено ${money(r.spent)}`
+      const body = hide ? AMOUNTS_HIDDEN : r.saved === null ? `Потрачено ${money(r.spent)}`
         : r.saved < 0 ? `Бюджет превышен на ${money(-r.saved)}`
           : `Отложено ${money(r.saved)} (≈ ${money(yearly(r.saved))} за год)${r.couldSaveMore > 0 ? `. Могли ещё ${money(r.couldSaveMore)}` : ''}`;
       await notifee.createTriggerNotification({

@@ -9,6 +9,7 @@ import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint
 import com.facebook.react.defaults.DefaultReactNativeHost
 import com.facebook.soloader.SoLoader
 import com.budgetapp.backup.BackupPackage
+import com.budgetapp.lock.AppLockPackage
 import com.budgetapp.push.NotificationAccessPackage
 import com.budgetapp.sms.SmsInboxPackage
 
@@ -19,7 +20,7 @@ class MainApplication : Application(), ReactApplication {
 
         // Autolinked packages (Notifee, Picker, ...)
         override fun getPackages(): List<ReactPackage> =
-            PackageList(this).packages + NotificationAccessPackage() + SmsInboxPackage() + AppInfoPackage() + BackupPackage()
+            PackageList(this).packages + NotificationAccessPackage() + SmsInboxPackage() + AppInfoPackage() + BackupPackage() + AppLockPackage()
 
         override fun getJSMainModuleName(): String = "index"
 

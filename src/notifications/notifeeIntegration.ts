@@ -11,9 +11,12 @@ import { openTransaction } from '@/shared/navigation/sheets';
 import { KIND_LABELS } from '@/shared/lib/format';
 import { formatMoneyWithCurrency } from '@/shared/lib/money';
 import { limitAlertFor } from './limitAlerts';
-import { REPORT_ACTION } from './monthReportNotice';
+import { AMOUNTS_HIDDEN, REPORT_ACTION } from './monthReportNotice';
+import { hideNotificationAmounts } from '../native/appLock';
 
 export const CHANNEL_ID = 'transactions';
+/** " — 25.00 ₾" after the title; nothing when the amounts are hidden */
+const amountPart = (hide: boolean, minor: number, currency: string) => (hide ? '' : ` — ${formatMoneyWithCurrency(minor, currency)}`);
 /** «Лимиты»: a category near / over its plan or its rhythm's limit (src/notifications/limitAlerts.ts) */
 export const LIMITS_CHANNEL_ID = 'limits';
 const LIMITS_ACTION = 'limits';
@@ -45,12 +48,13 @@ export async function showUncategorizedTransactionNotification(txId: number) {
   }));
   // "➡️ К категориям": the transaction with the full category list (a new category can be created there too)
   actions.push({ title: '➡️ К категориям', pressAction: { id: ALL_CATEGORIES_ACTION, launchActivity: 'default' } });
+  const hide = await hideNotificationAmounts();
 
   await notifee.displayNotification({
     // one notification per transaction; re-showing replaces instead of stacking
     id: `tx_${txId}`,
-    // "Перевод — 25.00 ₾" / "Оплата — 25.69 ₾", the merchant or person below when known
-    title: `${KIND_LABELS[tx.kind] ?? 'Операция'} — ${formatMoneyWithCurrency(tx.amount_minor, tx.currency)}`,
+    // "Перевод — 25.00 ₾" / "Оплата — 25.69 ₾" ("Оплата": the amounts hidden), the merchant or person below when known
+    title: `${KIND_LABELS[tx.kind] ?? 'Операция'}${amountPart(hide, tx.amount_minor, tx.currency)}`,
     body: mixed ? `${tx.raw_merchant || tx.merchant_key} · выберите категорию` : tx.raw_merchant || ' ',
     android: {
       channelId: CHANNEL_ID,
@@ -81,9 +85,10 @@ export async function showDepositNotification(txId: number) {
     pressAction: { id: `suggest_${s.id}` },
   }));
   actions.push({ title: '➡️ К категориям', pressAction: { id: ALL_CATEGORIES_ACTION, launchActivity: 'default' } });
+  const hide = await hideNotificationAmounts();
   await notifee.displayNotification({
     id: `tx_${txId}`,
-    title: `Пополнение — ${formatMoneyWithCurrency(tx.amount_minor, tx.currency)}${category ? ` → ${categoryLabel(category)}` : ''}`,
+    title: `Пополнение${amountPart(hide, tx.amount_minor, tx.currency)}${category ? ` → ${categoryLabel(category)}` : ''}`,
     body: tx.raw_merchant || ' ',
     android: {
       channelId: CHANNEL_ID,
@@ -103,7 +108,7 @@ export async function showDepositNotification(txId: number) {
 async function showRefundNotification(txId: number, tx: { amount_minor: number; currency: string; raw_merchant: string | null }) {
   await notifee.displayNotification({
     id: `tx_${txId}`,
-    title: `Возврат — ${formatMoneyWithCurrency(tx.amount_minor, tx.currency)}`,
+    title: `Возврат${amountPart(await hideNotificationAmounts(), tx.amount_minor, tx.currency)}`,
     body: tx.raw_merchant ? `${tx.raw_merchant} · без категории` : 'Без категории',
     android: {
       channelId: CHANNEL_ID,
@@ -129,7 +134,7 @@ export async function showLimitAlert(categoryId: number | null) {
       // one per category: a newer one replaces it
       id: `limit_${categoryId}`,
       title: alert.title,
-      body: alert.body,
+      body: (await hideNotificationAmounts()) ? AMOUNTS_HIDDEN : alert.body,
       android: {
         channelId: LIMITS_CHANNEL_ID,
         smallIcon: 'ic_notification',

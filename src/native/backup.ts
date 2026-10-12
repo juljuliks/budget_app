@@ -1,4 +1,5 @@
 import { NativeModules } from 'react-native';
+import { whileOutside } from './appLock';
 
 // BackupModule (android/.../backup): the system "save as" / "open" dialogs and putting a backup in place of the database.
 type Native = {
@@ -33,13 +34,13 @@ export const DB_FILE = 'app.db';
 export const filePath = (name: string) => `${need().filesDir}/${name}`;
 
 /** "Save as": the file `name` of the files dir, offered as `title`; false if cancelled. The file is deleted. */
-export const saveFile = (name: string, title: string, mime: string) => need().saveFile(name, title, mime);
+export const saveFile = (name: string, title: string, mime: string) => whileOutside(() => need().saveFile(name, title, mime));
 
 /** "Save as" for a text; false if cancelled. */
-export const saveText = (text: string, title: string, mime: string) => need().saveText(text, title, mime);
+export const saveText = (text: string, title: string, mime: string) => whileOutside(() => need().saveText(text, title, mime));
 
 /** "Open": the picked file is copied to `name` in the files dir; false if cancelled. */
-export const pickFile = (name: string) => need().pickFile(name);
+export const pickFile = (name: string) => whileOutside(() => need().pickFile(name));
 
 export const deleteFile = (name: string) => need().deleteFile(name);
 
@@ -47,7 +48,7 @@ export const deleteFile = (name: string) => need().deleteFile(name);
 export const replaceDatabase = (source: string) => need().replaceDatabase(source, DB_FILE);
 
 /** A folder for the automatic copies (its URI, the permission kept); null if cancelled. */
-export const pickFolder = () => need().pickFolder();
+export const pickFolder = () => whileOutside(() => need().pickFolder());
 
 /** The folder's name ("Download"); null when it is gone or no longer allowed. */
 export const folderName = (folder: string) => need().folderName(folder);

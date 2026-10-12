@@ -17,6 +17,8 @@ jest.mock('@notifee/react-native', () => ({
   EventType: { ACTION_PRESS: 2 },
 }), { virtual: true });
 jest.mock('../../src/shared/navigation/navigation', () => ({ navigateWhenReady: jest.fn() }));
+// "Скрывать суммы в уведомлениях" is native (react-native isn't loaded here): off
+jest.mock('../../src/native/appLock', () => ({ hideNotificationAmounts: async () => false }));
 // notification actions open sheets (an operation, a refund)
 const openTransaction = jest.fn();
 jest.mock('../../src/shared/navigation/sheets', () => ({ openTransaction: (id: number) => openTransaction(id) }));
