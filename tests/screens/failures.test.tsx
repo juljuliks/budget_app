@@ -6,11 +6,20 @@ import { ops, planned } from '../e2e/seeds';
 import { getDb } from '../../src/db';
 import { openTransaction } from '../../src/shared/navigation/sheets';
 
-/** The operations unreadable until `fix` (the database "fails"); what the app logs meanwhile is expected. */
+/**
+ * The operations unreadable until `fix` (the database "fails"); what the app logs meanwhile is expected. Legacy
+ * renaming: the views over them (spend_parts) keep the old name, so they fail too.
+ */
 async function breakOperations() {
   jest.spyOn(console, 'error').mockImplementation(() => {});
-  await (await getDb()).run('ALTER TABLE transactions RENAME TO transactions_off');
-  return async () => (await getDb()).run('ALTER TABLE transactions_off RENAME TO transactions');
+  const rename = async (from: string, to: string) => {
+    const db = await getDb();
+    await db.run('PRAGMA legacy_alter_table = ON');
+    await db.run(`ALTER TABLE ${from} RENAME TO ${to}`);
+    await db.run('PRAGMA legacy_alter_table = OFF');
+  };
+  await rename('transactions', 'transactions_off');
+  return () => rename('transactions_off', 'transactions');
 }
 
 test('9.10.1: the stats failed to load: said, and "Повторить" loads them', async () => {

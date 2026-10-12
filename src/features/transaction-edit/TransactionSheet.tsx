@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { confirmDeleteTransaction } from '@/entities/transaction';
+import { confirmDeleteTransaction, confirmUnsplit, splitParts } from '@/entities/transaction';
 import { isRememberable } from '@/domain/types';
 import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
 import { SheetActions } from '@/shared/ui/Button';
@@ -11,6 +11,7 @@ import { useCategoryChoice } from './model/useCategoryChoice';
 import { useTransaction } from './model/useTransaction';
 import AmountModal from './ui/AmountModal';
 import NoteSection from './ui/NoteSection';
+import SplitSheet from './ui/SplitSheet';
 import TransactionCategory from './ui/TransactionCategory';
 import TransactionHeader from './ui/TransactionHeader';
 
@@ -31,6 +32,7 @@ export default function TransactionSheet({ txId: openId, onClose }: Props) {
   const { tx, merchantCategory, mixedCats, reload, failed } = useTransaction(txId, visible);
   const { saving, choose } = useCategoryChoice(txId, tx ?? null, visible, onClose);
   const [amountOpen, setAmountOpen] = useState(false);
+  const [splitOpen, setSplitOpen] = useState(false);
 
   if (!tx) {
     return (
@@ -44,12 +46,13 @@ export default function TransactionSheet({ txId: openId, onClose }: Props) {
   const merchantName = tx.raw_merchant || tx.merchant_key;
   // only purchases / payments are remembered for their merchant (see assignCategory)
   const rememberable = !!tx.merchant_key && isRememberable(tx.kind);
+  const split = splitParts(tx) !== null;
 
   return (
     <BottomSheet visible={visible} onClose={onClose} style={styles.sheet}>
     <SheetScrollView contentContainerStyle={styles.content}>
       <TransactionHeader tx={tx} onEditAmount={() => setAmountOpen(true)} merchantLinked={rememberable} />
-      <TransactionCategory tx={tx} mixedCats={mixedCats} saving={saving} choose={choose} />
+      <TransactionCategory tx={tx} mixedCats={mixedCats} saving={saving} choose={choose} onSplit={() => setSplitOpen(true)} />
 
       {rememberable && mixedCats ? (
         <Text style={styles.merchantInfo}>У «{merchantName}» разные категории: каждая новая операция спрашивает.</Text>
@@ -69,8 +72,12 @@ export default function TransactionSheet({ txId: openId, onClose }: Props) {
 
       <NoteSection txId={tx.id} note={tx.note} onSaved={reload} />
       <AmountModal visible={amountOpen} tx={tx} onClose={() => setAmountOpen(false)} onSaved={reload} />
+      <SplitSheet visible={splitOpen} tx={tx} onClose={() => setSplitOpen(false)} />
 
-      <SheetActions submit={null} extra={[{ title: 'Удалить операцию', danger: true, onPress: () => confirmDeleteTransaction(tx, onClose) }]} />
+      <SheetActions submit={null} extra={[
+        ...(split ? [{ title: 'Убрать разделение', onPress: () => confirmUnsplit(tx) }] : []),
+        { title: 'Удалить операцию', danger: true, onPress: () => confirmDeleteTransaction(tx, onClose) },
+      ]} />
     </SheetScrollView>
     </BottomSheet>
   );

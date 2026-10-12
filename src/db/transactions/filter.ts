@@ -43,17 +43,32 @@ export function filterWhere(f: TxFilter): { sql: string; params: Array<number | 
   return { sql: sql === '1' ? '' : `WHERE ${sql}`, params };
 }
 
-/** The filters as one condition on `t` (the transactions' alias), '1' when none: for other queries over the same operations. */
-export function filterCondition(f: TxFilter): { sql: string; params: Array<number | string> } {
+/**
+ * `t` in one of these categories: on the operations, a split one by any of its parts' too; on their parts (spend_parts,
+ * `parts`), the part's own. The ids are pushed onto `params`.
+ */
+function inCategories(ids: number[], params: Array<number | string>, parts: boolean): string {
+  const marks = placeholders(ids.length);
+  params.push(...ids);
+  if (parts) return `t.category_id IN (${marks})`;
+  params.push(...ids);
+  return `(t.category_id IN (${marks}) OR t.id IN (SELECT tx_id FROM transaction_parts WHERE category_id IN (${marks})))`;
+}
+
+/**
+ * The filters as one condition on `t` (the transactions' alias), '1' when none: for other queries over the same
+ * operations. `parts`: `t` is spend_parts (a split operation's parts, as its spending is counted).
+ */
+export function filterCondition(f: TxFilter, parts = false): { sql: string; params: Array<number | string> } {
   const where: string[] = [];
   const params: Array<number | string> = [];
   if (f.category === 'none') where.push('t.category_id IS NULL');
-  else if (f.category !== undefined) { where.push('t.category_id = ?'); params.push(f.category); }
+  else if (f.category !== undefined) where.push(inCategories([f.category], params, parts));
   if (f.merchant !== undefined) { where.push('t.merchant_key = ?'); params.push(f.merchant); }
   if (f.categories?.length) {
     const ids = f.categories.filter((c): c is number => c !== 'none');
     const any: string[] = [];
-    if (ids.length) { any.push(`t.category_id IN (${placeholders(ids.length)})`); params.push(...ids); }
+    if (ids.length) any.push(inCategories(ids, params, parts));
     if (f.categories.includes('none')) any.push('t.category_id IS NULL');
     where.push(`(${any.join(' OR ')})`);
   }
@@ -120,7 +135,7 @@ export async function searchTransactions(query: string, f: TxFilter = {}, limit 
     const ids = cats.filter((c) => c.text.includes(w)).map((c) => c.id);
     const any = ['instr(t.search_text, ?) > 0'];
     wordParams.push(w);
-    if (ids.length) { any.push(`t.category_id IN (${placeholders(ids.length)})`); wordParams.push(...ids); }
+    if (ids.length) any.push(inCategories(ids, wordParams, false));
     if (none.includes(w)) any.push('t.category_id IS NULL');
     conds.push(`(${any.join(' OR ')})`);
   }
@@ -143,12 +158,12 @@ export type CategoryWithCount = {
   count: number;
 };
 
-/** Categories that have at least one transaction (deleted ones too: they keep past transactions), plus "Без категории". */
+/** Categories that have at least one transaction or a part of one (deleted ones too: they keep past transactions), plus "Без категории". */
 export async function categoriesWithTransactions(): Promise<CategoryWithCount[]> {
   const db = await getDb();
   const rows = await db.all<{ category_id: number | null; name: string | null; emoji: string | null; type_name: string | null; deleted_at: number | null; n: number }>(
     `SELECT t.category_id, c.name, c.emoji, ct.name AS type_name, c.deleted_at, count(*) AS n
-      FROM transactions t
+      FROM spend_parts t
       LEFT JOIN categories c ON c.id = t.category_id
       LEFT JOIN category_types ct ON ct.id = c.type_id
       GROUP BY t.category_id

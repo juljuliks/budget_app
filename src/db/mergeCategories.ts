@@ -2,6 +2,7 @@ import { getDb } from './index';
 import { Category, findCategoryByName, isSystemCategory, listCategories } from './categories';
 import { currentYm, NormPeriod, planConverter, PlanKind } from './plans';
 import { placeholders } from './sql';
+import { moveParts } from './parts';
 
 /** How a merged category is planned: a limit with its spending pattern, or an obligatory payment. */
 export type MergeRhythm = { kind: PlanKind; norm: NormPeriod };
@@ -49,6 +50,7 @@ export async function mergeCategories(targetId: number, sourceIds: number[], nam
   const sourceMarks = placeholders(sources.length);
   await db.transaction(async (tx) => {
     await tx.run(`UPDATE transactions SET category_id = ? WHERE category_id IN (${sourceMarks})`, [targetId, ...sources]);
+    await moveParts(tx, sources, targetId);
     await tx.run(`UPDATE merchant_rules SET category_id = ? WHERE category_id IN (${sourceMarks})`, [targetId, ...sources]);
     await tx.run(`UPDATE OR IGNORE merchant_categories SET category_id = ? WHERE category_id IN (${sourceMarks})`, [targetId, ...sources]);
     await tx.run(`DELETE FROM merchant_categories WHERE category_id IN (${sourceMarks})`, sources);

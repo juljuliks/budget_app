@@ -50,7 +50,7 @@
 | 2.1 список | `operationsList.test.tsx` |
 | 2.2–2.4 поиск, фильтры, группировки | `operationsFind.test.tsx` |
 | 2.5–2.6 мультивыбор, «Редактировать» | `operationsSelect.test.tsx` |
-| 2.7 карточка операции | `transactionSheet.test.tsx` |
+| 2.7 карточка операции | `transactionSheet.test.tsx`; разделение: что где считается — `logic/splitTransactions.test.ts`, редактор и строка — `logic/splitDraft.test.ts` |
 | 3 мерчанты | `merchants.test.tsx` |
 | 4.1–4.4 категории, разделы, объединение, удаление без операций | `categories.test.tsx` |
 | 4.5 удаление с операциями: всё в одну, разбор, прерывание | `categoryDelete.test.tsx`, `categories.test.tsx` |

@@ -3,11 +3,26 @@ import { incrementCategoryUsage } from '@/db/categories';
 import {
   addManualTransaction, DeletedTransaction, deleteTransactions, markTransactionSeen, markTransactionsSeen, restoreTransactions, setTransactionAmount, setTransactionNote,
 } from '@/db/transactions';
+import { getParts, splitTransaction, TxPart, unsplitTransactions } from '@/db/parts';
 import { emitTransactionsChanged } from '@/domain/events';
 
 export async function saveTransactionAmount(id: number, amountMinor: number, currency: string) {
   await setTransactionAmount(id, amountMinor, currency);
   emitTransactionsChanged();
+}
+
+/** "Разделить по категориям": `categoryId` gets what the `parts` (other categories) leave. */
+export async function splitOperation(id: number, categoryId: number, parts: TxPart[]) {
+  await splitTransaction(id, categoryId, parts);
+  emitTransactionsChanged();
+}
+
+/** "Убрать разделение": the whole amount back in the operation's own category; the parts it had, to put back. */
+export async function unsplitOperation(id: number): Promise<TxPart[]> {
+  const parts = await getParts(id);
+  await unsplitTransactions([id]);
+  emitTransactionsChanged();
+  return parts;
 }
 
 /** An empty note removes it. */

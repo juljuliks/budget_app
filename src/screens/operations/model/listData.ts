@@ -25,11 +25,17 @@ export type Next = PageCursor | number | null;
 export async function fetchPage(v: ListView, from: Next, limit: number): Promise<{ rows: Row[]; next: Next }> {
   if (v.groupBy === 'day') {
     const p = await listTransactionsPage(typeof from === 'number' ? null : from, limit, v.filter);
-    return { rows: p.rows, next: p.nextCursor };
+    return { rows: withFocus(p.rows, v.filter), next: p.nextCursor };
   }
   const offset = typeof from === 'number' ? from : 0;
   const rows = await listGroupedPage(v.filter, v.groupBy, offset, limit);
-  return { rows, next: rows.length === limit ? offset + rows.length : null };
+  return { rows: withFocus(rows, v.filter), next: rows.length === limit ? offset + rows.length : null };
+}
+
+/** Filtered by categories: a split operation shows its parts in them (TransactionItem). */
+function withFocus<R extends TransactionRow>(rows: R[], f: TxFilter): R[] {
+  const focus = [f.category, ...(f.categories ?? [])].filter((c): c is number => typeof c === 'number');
+  return focus.length ? rows.map((r) => (r.parts ? { ...r, focus } : r)) : rows;
 }
 
 export type Section = { key: string; title: string; dayStart: number; data: Row[]; group?: TransactionGroup };

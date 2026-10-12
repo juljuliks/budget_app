@@ -1,7 +1,7 @@
 // An operation's row, the list's pages (a keyset cursor by day), one operation, the unread ones.
 import { getDb } from '../index';
 import { TxFilter, filterWhere } from './filter';
-import { CATEGORY_COLUMNS, FROM_TX, NEWEST_FIRST, SELECT_TX } from './sql';
+import { CATEGORY_COLUMNS, FROM_TX, NEWEST_FIRST, PARTS_COLUMN, SELECT_TX } from './sql';
 
 export type CategorySource = 'user' | 'rule';
 
@@ -25,6 +25,10 @@ export type TransactionRow = {
   category_name: string | null;
   category_emoji: string | null;
   category_type_name: string | null;
+  /** a split operation's parts in other categories (PARTS_COLUMN; parseParts), null = not split */
+  parts: string | null;
+  /** the list filtered by categories: those (a split operation shows its parts in them) */
+  focus?: number[];
 };
 
 /** Position of the last row of a page; pass it back to get the next (older) page. */
@@ -53,7 +57,7 @@ export async function listTransactionsPage(cursor: PageCursor | null, limit = 50
 export async function getTransaction(id: number) {
   const db = await getDb();
   return db.get<TransactionRow & { raw_sms: string }>(
-    `SELECT t.*, ${CATEGORY_COLUMNS} ${FROM_TX} WHERE t.id = ?`, [id]);
+    `SELECT t.*, ${CATEGORY_COLUMNS}, ${PARTS_COLUMN} ${FROM_TX} WHERE t.id = ?`, [id]);
 }
 
 /**

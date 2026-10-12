@@ -4,7 +4,7 @@ import { currentYm, monthStart } from './plans';
 import { signedSpendSql } from './spending';
 import { placeholders } from './sql';
 
-/** How many operations and how much (spent minus refunds and deposits, per currency, the biggest first). */
+/** How many operations and how much (spent minus refunds and deposits, per currency, the biggest first); split ones by their part. */
 export type Bucket = { n: number; totals: Array<{ currency: string; amount_minor: number }> };
 
 const SPENT = `sum(${signedSpendSql('t')})`;
@@ -12,7 +12,7 @@ const SPENT = `sum(${signedSpendSql('t')})`;
 async function bucket(where: string, params: Array<number | string>): Promise<Bucket> {
   const db = await getDb();
   const rows = await db.all<{ currency: string; amount_minor: number; n: number }>(
-    `SELECT t.currency, ${SPENT} AS amount_minor, count(*) AS n FROM transactions t WHERE ${where}
+    `SELECT t.currency, ${SPENT} AS amount_minor, count(*) AS n FROM spend_parts t WHERE ${where}
       GROUP BY t.currency ORDER BY amount_minor DESC`, params);
   return { n: rows.reduce((a, r) => a + r.n, 0), totals: rows.map(({ currency, amount_minor }) => ({ currency, amount_minor })) };
 }

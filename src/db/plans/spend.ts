@@ -28,9 +28,9 @@ function spendOf(r: SpendRow): number {
   return (EXPENSE_KINDS as ReadonlyArray<string>).includes(r.kind) ? r.amount_minor : 0;
 }
 
-/** The rows spending is made of in [from, to): the conditions of spendRows / spendByDay. */
+/** The rows spending is made of in [from, to): the conditions of spendRows / spendByDay, on spend_parts (a split operation's parts). */
 const spendWhere = (only?: TxFilter) => {
-  const f = only ? filterCondition(only) : { sql: '1', params: [] };
+  const f = only ? filterCondition(only, true) : { sql: '1', params: [] };
   return {
     sql: `occurred_at >= ? AND occurred_at < ? AND ${f.sql}
         AND (kind IN (${sqlList([...EXPENSE_KINDS, 'refund'])})
@@ -45,7 +45,7 @@ export async function spendRows(from: number, to: number, only?: TxFilter): Prom
   const db = await getDb();
   const w = spendWhere(only);
   return db.all<SpendRow>(
-    `SELECT id, category_id, kind, amount_minor, currency, occurred_at, refund_settled_at FROM transactions t WHERE ${w.sql}`,
+    `SELECT id, category_id, kind, amount_minor, currency, occurred_at, refund_settled_at FROM spend_parts t WHERE ${w.sql}`,
     [from, to, ...w.params]);
 }
 
@@ -59,7 +59,7 @@ export async function spendByDay(from: number, to: number, currency: Currency, e
   const w = spendWhere();
   const sums = await db.all<{ day: string; currency: string; amount: number }>(
     `SELECT strftime('%Y-%m-%d', occurred_at, 'unixepoch', 'localtime') AS day, currency, sum(${signedSpendSql()}) AS amount
-      FROM transactions t WHERE ${w.sql} AND NOT (kind = 'refund' AND refund_settled_at IS NOT NULL)
+      FROM spend_parts t WHERE ${w.sql} AND NOT (kind = 'refund' AND refund_settled_at IS NOT NULL)
       GROUP BY day, currency`, [from, to, ...w.params]);
   await ensureRatesLater([...sums.filter((r) => r.currency !== currency).map((r) => r.day), ...extraDates]);
   const conv = await makeConverter();

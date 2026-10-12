@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { txCategoryLabel } from '@/db/categories';
+import { EXPENSE_KINDS } from '@/db/spending';
 import { CategoryPicker, CategoryPickerModal } from '@/entities/category';
+import { splitParts } from '@/entities/transaction';
 import Chip from '@/shared/ui/Chip';
 import SectionHeading from '@/shared/ui/SectionHeading';
-import { PencilIcon } from '@/shared/ui/icons';
+import { PencilIcon, SplitIcon } from '@/shared/ui/icons';
 import { colors } from '@/shared/theme/theme';
 import type { Tx } from '../model/useTransaction';
+import SplitView from './SplitView';
 
 type Props = {
   tx: Tx;
@@ -14,20 +17,32 @@ type Props = {
   mixedCats: Array<{ id: number; label: string }> | null;
   saving: boolean;
   choose: (categoryId: number | null) => void;
+  /** opens "Разделить по категориям" */
+  onSplit: () => void;
 };
 
 /**
  * The operation's category: a settled refund says so; a merchant of different categories offers its ones; a categorized
- * one shows it with "Сменить"; none yet — the categories right away.
+ * one shows it with "Сменить"; none yet — the categories right away. Spending can be split between categories
+ * ("Разделить по категориям"); a split one shows its parts.
  */
-export default function TransactionCategory({ tx, mixedCats, saving, choose }: Props) {
+export default function TransactionCategory({ tx, mixedCats, saving, choose, onSplit }: Props) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const category = txCategoryLabel(tx);
+  const parts = splitParts(tx);
+  const splitLink = (EXPENSE_KINDS as ReadonlyArray<string>).includes(tx.kind) ? (
+    <TouchableOpacity style={styles.splitLink} onPress={onSplit} disabled={saving}>
+      <SplitIcon color={colors.accent} size={16} />
+      <Text style={styles.changeText}>Разделить по категориям</Text>
+    </TouchableOpacity>
+  ) : null;
 
   // settled on its purchase earlier (the purchase was reduced / deleted): it no longer counts by itself
   if (tx.refund_settled_at) return <Text style={styles.refundDone}>✓ Возврат учтён в покупке</Text>;
+  if (parts) return <SplitView parts={parts} total={tx.amount_minor} currency={tx.currency} onEdit={onSplit} />;
   if (!category && !mixedCats?.length) {
     return (
+      <>
       <CategoryPicker
         title="Выберите категорию"
         selectedId={tx.category_id}
@@ -38,6 +53,8 @@ export default function TransactionCategory({ tx, mixedCats, saving, choose }: P
         deposit={tx.kind === 'deposit'}
         disabled={saving}
       />
+      {splitLink}
+      </>
     );
   }
   return (
@@ -59,6 +76,7 @@ export default function TransactionCategory({ tx, mixedCats, saving, choose }: P
           <Text style={styles.changeText}>Сменить</Text>
         </TouchableOpacity>
       </View>
+      {splitLink}
       <CategoryPickerModal
         visible={pickerOpen}
         title="Сменить категорию"
@@ -81,5 +99,6 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed',
   },
   changeText: { fontSize: 15, color: colors.accent },
+  splitLink: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: 12, paddingVertical: 4 },
   refundDone: { fontSize: 15, color: colors.income, fontWeight: '600' },
 });

@@ -142,3 +142,11 @@ export const CloseIcon = ({ color, size = 22 }: P) => (
     <Path d="M6 6l12 12M18 6 6 18" />
   </Svg>
 );
+
+/** An operation split between categories (after Lucide "split", ISC license). */
+export const SplitIcon = ({ color, size = 16 }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M16 3h5v5M8 3H3v5" />
+    <Path d="M12 22v-8.3a4 4 0 0 0-1.172-2.872L3 3M15 9l6-6" />
+  </Svg>
+);

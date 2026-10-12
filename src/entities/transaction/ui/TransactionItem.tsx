@@ -4,7 +4,10 @@ import { txCategoryLabel } from '@/db/categories';
 import { isUnread, TransactionRow } from '@/db/transactions';
 import Checkbox from '@/shared/ui/Checkbox';
 import { formatAmount, formatTime, isIncome } from '@/shared/lib/format';
+import { formatMoneyWithCurrency } from '@/shared/lib/money';
 import { rowTitle } from '../model/title';
+import { splitRow } from '../model/parts';
+import { SplitIcon } from '@/shared/ui/icons';
 import RowActions from '@/shared/ui/RowActions';
 import { colors } from '@/shared/theme/theme';
 import { NO_CATEGORY } from '@/shared/lib/strings';
@@ -33,6 +36,8 @@ function TransactionItem({ tx, onPress, onLongPress, selectable, selected, onDel
   // new and categorized by a merchant rule, not by the user: worth a glance
   const auto = tx.seen_at === null && tx.category_source === 'rule';
   const category = txCategoryLabel(tx);
+  // split: its categories; in a list of some categories, its parts in them
+  const split = splitRow(tx);
   return (
     <TouchableOpacity
       style={[styles.row, selected && styles.rowSelected]}
@@ -50,6 +55,12 @@ function TransactionItem({ tx, onPress, onLongPress, selectable, selected, onDel
         {tx.refund_settled_at ? (
           // a refund settled on its purchase earlier: it no longer counts by itself
           <Text style={styles.meta} numberOfLines={1}>✓ учтён в покупке · {formatTime(tx.occurred_at)}</Text>
+        ) : split ? (
+          <View style={styles.inline}>
+            <SplitIcon color={colors.muted} size={13} />
+            <Text style={[styles.meta, styles.splitMeta]} numberOfLines={1}>{split.label}</Text>
+            <Text style={[styles.meta, styles.splitTime]}> · {formatTime(tx.occurred_at)}</Text>
+          </View>
         ) : category ? (
           <Text style={styles.meta} numberOfLines={1}>{category} · {formatTime(tx.occurred_at)}</Text>
         ) : (
@@ -59,9 +70,12 @@ function TransactionItem({ tx, onPress, onLongPress, selectable, selected, onDel
           </View>
         )}
       </View>
-      <Text style={[styles.amount, isIncome(tx.kind) && styles.income]}>
-        {formatAmount(tx.amount_minor, tx.currency, tx.kind)}
-      </Text>
+      <View style={styles.amountBox}>
+        <Text style={[styles.amount, isIncome(tx.kind) && styles.income]}>
+          {formatAmount(split?.amount_minor ?? tx.amount_minor, tx.currency, tx.kind)}
+        </Text>
+        {split?.part ? <Text style={styles.whole}>из {formatMoneyWithCurrency(tx.amount_minor, tx.currency)}</Text> : null}
+      </View>
       {onDelete ? <RowActions onDelete={() => onDelete(tx)} /> : null}
     </TouchableOpacity>
   );
@@ -89,6 +103,10 @@ const styles = StyleSheet.create({
     fontSize: 12, color: colors.warn, backgroundColor: colors.warnBg,
     paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4, overflow: 'hidden',
   },
+  splitMeta: { flexShrink: 1, marginTop: 0, marginLeft: 4 },
+  splitTime: { flexShrink: 0, marginTop: 0 },
+  amountBox: { alignItems: 'flex-end' },
   amount: { fontSize: 16, color: colors.text, fontVariant: ['tabular-nums'] },
+  whole: { fontSize: 12, color: colors.muted, marginTop: 2, fontVariant: ['tabular-nums'] },
   income: { color: colors.income },
 });

@@ -22,3 +22,14 @@ export function bulkMerchantText(change: Change, toLabel: string, selected: numb
 export const SEARCH_PLACEHOLDER = 'Поиск: мерчант, описание, сумма…';
 export const EMPTY_FILTERED = 'Ничего не найдено.';
 export const EMPTY = 'Операций пока нет. Они появятся здесь после SMS или уведомления банка, или добавьте вручную ＋.';
+
+/** A category for the selected operations, some of them split: they go whole into it. */
+export function bulkSplitText(split: number, toLabel: string | null) {
+  return {
+    title: split === 1 ? 'Одна из операций разделена' : `${split} ${plural(split, ['операция разделена', 'операции разделены', 'операций разделены'])}`,
+    message: toLabel
+      ? `Разделение уберётся: вся сумма перейдёт в «${toLabel}».`
+      : 'Разделение уберётся: операции останутся без категории.',
+    ok: 'Продолжить',
+  };
+}

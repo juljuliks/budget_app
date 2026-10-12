@@ -154,9 +154,9 @@ export async function monthReport(ym: string, currency: Currency): Promise<Month
   const underPlan = stats.categories.filter((c) => c.plan_kind === 'limit' && c.limit_minor !== null && c.spent_minor < c.limit_minor)
     .map(cat).sort((a, b) => (b.limit - b.spent) - (a.limit - a.spent));
 
-  // operations in "Сбережения", each on its day's rate
+  // operations in "Сбережения" (a split one's part there), each on its day's rate
   const moved = await db.all<{ amount_minor: number; currency: string; occurred_at: number }>(
-    `SELECT amount_minor, currency, occurred_at FROM transactions
+    `SELECT amount_minor, currency, occurred_at FROM spend_parts
       WHERE occurred_at >= ? AND occurred_at < ? AND kind != 'refund' AND kind != 'deposit'
         AND category_id = (SELECT id FROM categories WHERE system = 'savings')`, [from, to]);
   await ensureRatesLater(moved.filter((m) => m.currency !== currency).map((m) => dateKey(m.occurred_at)));

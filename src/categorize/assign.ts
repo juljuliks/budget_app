@@ -169,7 +169,7 @@ export async function assignCategoryToMany(
   // the writes all or none (see assignCategory)
   await (await getDb()).transaction(async (t) => {
     if (keepPastIn !== undefined) await freezePastOfCategory(keepPastIn, merchants.map((m) => m.key), currentYm(), t);
-    await setCategoryForTransactions(txIds, categoryId, t);
+    await setCategoryForTransactions(txIds, categoryId, t, keepPastIn);
     for (const m of merchants) {
       await createRule('exact', m.key, categoryId!, t);
       await backfillRule('exact', m.key, categoryId!, t);

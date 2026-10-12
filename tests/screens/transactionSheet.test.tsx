@@ -193,3 +193,32 @@ test('2.7.6: a merchant of different categories: its categories to tap, no quest
   expect(await screen.findByText('Категория «👕 Одежда» назначена')).toBeTruthy();
   expect(await mixedOf('GLOVO')).toEqual(['Кафе и рестораны', 'Одежда', 'Продукты']);
 });
+
+describe('2.7.16 split between categories', () => {
+  test('"Разделить по категориям": the own category gets the rest; saved — the card shows the parts; "Убрать разделение" asks, "Отменить" puts them back', async () => {
+    await tap('SPAR');
+    await tap('Разделить по категориям');
+    expect(await screen.findByText('остальное')).toBeTruthy();
+    await tap('+ Ещё категория');
+    await tap('👕 Одежда');
+    fireEvent.changeText(await screen.findByLabelText('Сумма: 👕 Одежда'), '42');
+    expect(await screen.findByText('Части больше суммы операции на 12.00\u00a0₾')).toBeTruthy();
+    fireEvent.changeText(screen.getByLabelText('Сумма: 👕 Одежда'), '12');
+    expect(await screen.findByText('18.00\u00a0₾')).toBeTruthy();
+    await tap('Сохранить');
+    expect(await screen.findByText('Разделена · 2 категории')).toBeTruthy();
+    expect(texts().slice(texts().indexOf('Разделена · 2 категории'))).toEqual(expect.arrayContaining(['🛒 Продукты', '60%', '18.00 ₾', '👕 Одежда', '40%', '12.00 ₾']));
+    const parts = () => (getDb()).then((db) => db.all('SELECT amount_minor FROM transaction_parts'));
+    expect(await parts()).toEqual([{ amount_minor: 1200 }]);
+    await tap('Убрать разделение');
+    expect(await screen.findByText('Убрать разделение?')).toBeTruthy();
+    expect(screen.getByText('Вся сумма вернётся в «🛒 Продукты».')).toBeTruthy();
+    await tap('Убрать');
+    await waitFor(async () => expect(await parts()).toEqual([]));
+    expect(await screen.findByText('Сменить')).toBeTruthy();
+    expect(screen.getByText('Разделение убрано')).toBeTruthy();
+    await tap('Отменить');
+    await waitFor(async () => expect(await parts()).toEqual([{ amount_minor: 1200 }]));
+    expect(await screen.findByText('Разделена · 2 категории')).toBeTruthy();
+  });
+});

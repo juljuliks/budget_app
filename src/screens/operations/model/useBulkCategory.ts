@@ -2,12 +2,13 @@
 import { useState } from 'react';
 import { assignCategoryToMany, MerchantChoice, merchantsChangePreview } from '@/categorize/assign';
 import { categoryLabel, getCategory } from '@/db/categories';
+import { countSplit } from '@/db/parts';
 import { sortOutMerchantText } from '@/features/category-delete';
 import { showLimitAlert } from '@/notifications/notifeeIntegration';
 import { plural } from '@/shared/lib/format';
 import { sheetAlert } from '@/shared/ui/sheetAlert';
 import { toast, toastError } from '@/shared/ui/toast';
-import { bulkMerchantText } from '../texts';
+import { bulkMerchantText, bulkSplitText } from '../texts';
 
 type Options = {
   selected: Set<number>;
@@ -39,8 +40,20 @@ export function useBulkCategory({ selected, sortOut, onMovedOut, onDone }: Optio
     }
   }
 
+  // split ones among them go whole into it: asked first (sorting out moves only their part in the category deleted)
   async function apply(categoryId: number | null) {
     setOpen(false);
+    const split = sortOut ? 0 : await countSplit([...selected]).catch((e) => { console.error('split count failed', e); return 0; });
+    if (split === 0) { await applyWhole(categoryId); return; }
+    const to = categoryId === null ? undefined : await getCategory(categoryId);
+    const t = bulkSplitText(split, to ? categoryLabel(to) : null);
+    sheetAlert(t.title, t.message, [
+      { text: 'Отмена', style: 'cancel' },
+      { text: t.ok, onPress: () => { applyWhole(categoryId); } },
+    ]);
+  }
+
+  async function applyWhole(categoryId: number | null) {
     const change = await merchantsChangePreview([...selected], categoryId).catch((e) => { console.error('preview failed', e); return null; });
     if (!change) { await assign(categoryId); return; }
     const to = await getCategory(categoryId!);

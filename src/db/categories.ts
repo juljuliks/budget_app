@@ -2,6 +2,7 @@ import { getDb } from './index';
 import type { Db } from './types';
 import { currentYm, monthStart } from './plans';
 import { categorySpendingSql, signedSpendSql } from './spending';
+import { moveParts } from './parts';
 import { placeholders } from './sql';
 
 export type Category = {
@@ -109,12 +110,12 @@ export async function updateCategory(id: number, fields: { name: string; emoji?:
     [fields.name.trim(), fields.emoji?.trim() || null, fields.typeId, fields.color ?? null, id]);
 }
 
-/** Transactions of the category from the current month on (those a delete would move). */
+/** Transactions of the category from the current month on (those a delete would move); a split one's part in it. */
 export async function currentTransactionsOfCategory(id: number, nowYm = currentYm()) {
   const db = await getDb();
   const from = monthStart(nowYm);
   return db.all<{ id: number; amount_minor: number; currency: string; kind: string; raw_merchant: string | null; occurred_at: number }>(
-    `SELECT id, amount_minor, currency, kind, raw_merchant, occurred_at FROM transactions
+    `SELECT id, amount_minor, currency, kind, raw_merchant, occurred_at FROM spend_parts
       WHERE category_id = ? AND occurred_at >= ? ORDER BY occurred_at DESC`, [id, from]);
 }
 
@@ -122,7 +123,7 @@ export async function countPastTransactionsOfCategory(id: number, nowYm = curren
   const db = await getDb();
   const from = monthStart(nowYm);
   return (await db.get<{ n: number }>(
-    'SELECT count(*) AS n FROM transactions WHERE category_id = ? AND occurred_at < ?', [id, from]))!.n;
+    'SELECT count(*) AS n FROM spend_parts WHERE category_id = ? AND occurred_at < ?', [id, from]))!.n;
 }
 
 /**
@@ -147,6 +148,8 @@ export async function deleteCategory(id: number, targetId: number | null, nowYm 
       `UPDATE transactions SET category_id = ?, category_source = CASE WHEN ? IS NULL THEN NULL ELSE category_source END
         WHERE category_id = ? AND occurred_at >= ?`,
       [targetId, targetId, id, from]);
+    // parts of split operations in it go along
+    await moveParts(tx, [id], targetId, 't.occurred_at >= ?', [from]);
     if (targetId === null) {
       await tx.run('DELETE FROM merchant_rules WHERE category_id = ?', [id]);
     } else {
@@ -157,7 +160,8 @@ export async function deleteCategory(id: number, targetId: number | null, nowYm 
     await tx.run('DELETE FROM plan_items WHERE category_id = ? AND ym >= ?', [id, nowYm]);
     await tx.run('DELETE FROM category_usage WHERE category_id = ?', [id]);
 
-    const pastTx = await tx.get('SELECT 1 FROM transactions WHERE category_id = ? LIMIT 1', [id]);
+    const pastTx = await tx.get('SELECT 1 FROM transactions WHERE category_id = ? LIMIT 1', [id])
+      ?? await tx.get('SELECT 1 FROM transaction_parts WHERE category_id = ? LIMIT 1', [id]);
     const pastPlan = await tx.get('SELECT 1 FROM plan_items WHERE category_id = ? LIMIT 1', [id]);
     if (pastTx || pastPlan) {
       await tx.run('UPDATE categories SET deleted_at = ? WHERE id = ?', [Math.floor(Date.now() / 1000), id]);
@@ -185,6 +189,7 @@ export async function moveTransactionsOutOfCategory(txIds: number[], fromId: num
       `UPDATE transactions SET category_id = ?, category_source = CASE WHEN ? IS NULL THEN NULL ELSE category_source END
         WHERE id IN (${marks}) AND category_id = ?`,
       [toId, toId, ...txIds, fromId]);
+    await moveParts(tx, [fromId], toId, `t.id IN (${marks})`, txIds);
     if (keys.length > 0) {
       const keyMarks = placeholders(keys.length);
       if (toId === null) {
@@ -231,13 +236,13 @@ export default {
 
 /**
  * A category's operations count and what was spent in it, per currency: purchases, payments, transfers, cash
- * withdrawals minus refunds not settled on a purchase and deposits (money back), like the stats.
+ * withdrawals minus refunds not settled on a purchase and deposits (money back), like the stats; split ones by their part.
  */
 export async function categorySummary(categoryId: number): Promise<{ count: number; totals: Array<{ currency: string; amount_minor: number }> }> {
   const db = await getDb();
-  const count = (await db.get<{ n: number }>('SELECT count(*) AS n FROM transactions WHERE category_id = ?', [categoryId]))!.n;
+  const count = (await db.get<{ n: number }>('SELECT count(*) AS n FROM spend_parts WHERE category_id = ?', [categoryId]))!.n;
   const totals = await db.all<{ currency: string; amount_minor: number }>(
-    `SELECT currency, sum(${signedSpendSql()}) AS amount_minor FROM transactions
+    `SELECT currency, sum(${signedSpendSql()}) AS amount_minor FROM spend_parts
       WHERE category_id = ? AND ${categorySpendingSql()}
       GROUP BY currency HAVING sum(${signedSpendSql()}) != 0
       ORDER BY amount_minor DESC`, [categoryId]);
