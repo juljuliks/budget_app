@@ -29,13 +29,13 @@ async function tx(categoryId: number | null, occurredAt: number, amount = 100) {
 beforeEach(() => freshDb());
 
 describe('types', () => {
-  test('fresh DB has the transfer type, empty (its seeded "Прочие" went: deposits are "Пополнение счёта"), and the system ones', async () => {
+  test('fresh DB has the transfer type with only "Между своими картами" (its seeded "Прочие" went: deposits are "Пополнение счёта"), and the system ones', async () => {
     const transfer = await getTransferTypeId();
     expect(await listCategoryTypes()).toEqual([{ id: transfer, name: 'Переводы', is_transfer: 1, sort_order: 100, palette: null }]);
-    expect((await listCategories()).filter(isTransferCategory)).toEqual([]);
-    expect((await listCategories()).filter((c) => c.system).map((c) => [categoryLabel(c), c.system])).toEqual([
-      ['🏦 Сбережения', 'savings'], ['💳 Пополнение счёта', 'topup'],
-    ]);
+    expect((await listCategories()).filter(isTransferCategory).map((c) => c.system)).toEqual(['own']);
+    expect((await listCategories()).filter((c) => c.system).map((c) => [categoryLabel(c), c.system]).sort()).toEqual([
+      ['🏦 Сбережения', 'savings'], ['💳 Пополнение счёта', 'topup'], ['🔁 Переводы: Между своими картами', 'own'],
+    ].sort());
   });
 
   test('label: emoji + type prefix', () => {

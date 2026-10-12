@@ -14,8 +14,8 @@ import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.uimanager.ViewManager
 
 /**
- * JS side: the bank's SMS already in the phone's inbox (Импорт SMS в Настройках), oldest first. Only senders
- * SmsReceiver accepts: personal SMS never leave the inbox.
+ * JS side: the banks' SMS already in the phone's inbox (Импорт SMS в Настройках), oldest first. Only the senders of
+ * the banks on (BankSources): personal SMS never leave the inbox.
  */
 class SmsInboxModule(private val ctx: ReactApplicationContext) : ReactContextBaseJavaModule(ctx) {
     override fun getName() = "SmsInbox"
@@ -41,7 +41,7 @@ class SmsInboxModule(private val ctx: ReactApplicationContext) : ReactContextBas
                 val iSent = c.getColumnIndexOrThrow(Telephony.Sms.DATE_SENT)
                 while (c.moveToNext()) {
                     val sender = c.getString(iAddress) ?: continue
-                    if (!SmsReceiver.isBankSender(sender)) continue
+                    if (!BankSources.isBankSender(ctx, sender)) continue
                     out.pushMap(Arguments.createMap().apply {
                         putString("sender", sender)
                         putString("body", c.getString(iBody) ?: "")

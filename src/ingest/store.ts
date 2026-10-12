@@ -76,13 +76,13 @@ export async function store(sms: IncomingSms, parsed: ParsedTx, balance: { minor
   const twin = await db.get<{ id: number; occurred_at: number }>(
     `SELECT id, occurred_at FROM transactions
       WHERE merchant_key IS ? AND occurred_at BETWEEN ? AND ?
-        AND source != ? AND kind = ? AND amount_minor = ? AND currency = ?
+        AND source != ? AND kind = ? AND amount_minor = ? AND currency = ? AND bank = ?
       LIMIT 1`,
     [parsed.merchant_key || null, occurredAt - CROSS_SOURCE_WINDOW_S, occurredAt + CROSS_SOURCE_WINDOW_S,
-      source, parsed.kind, parsed.amount_minor, parsed.currency]);
+      source, parsed.kind, parsed.amount_minor, parsed.currency, parsed.bank]);
   if (twin) {
     // the push came first without a balance, the SMS has it
-    if (balance) await recordBalance({ minor: balance.minor, currency: balance.currency, at: twin.occurred_at, txId: twin.id }, db);
+    if (balance) await recordBalance({ minor: balance.minor, currency: balance.currency, at: twin.occurred_at, txId: twin.id }, db, parsed.bank);
     return { status: 'duplicate', txId: twin.id };
   }
 
@@ -112,7 +112,7 @@ export async function store(sms: IncomingSms, parsed: ParsedTx, balance: { minor
     return { status: 'duplicate', txId: existing!.id };
   }
   // the balance after this operation, as the bank reports it
-  if (balance) await recordBalance({ minor: balance.minor, currency: balance.currency, at: occurredAt, txId: lastInsertRowid }, db);
+  if (balance) await recordBalance({ minor: balance.minor, currency: balance.currency, at: occurredAt, txId: lastInsertRowid }, db, parsed.bank);
   // only a date: maybe a balance the bank reported already had it in (it came before that SMS)
   if (!parsed.has_time) await placeByBalances(lastInsertRowid, db);
   if (categoryId && parsed.kind !== 'refund' && parsed.kind !== 'deposit') await incrementCategoryUsage(categoryId, 1, db);

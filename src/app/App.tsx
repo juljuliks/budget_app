@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { CategoriesScreen } from '@/screens/categories';
 import { MerchantsScreen } from '@/screens/merchants';
 import { MessageTemplatesScreen, UnparsedMessageScreen, UnparsedScreen } from '@/screens/messages';
+import { BanksScreen } from '@/screens/banks';
 import MainTabs from './MainTabs';
 import { ModalHost } from './ModalHost';
 import { useAppStartup } from './useAppStartup';
@@ -26,6 +27,7 @@ export default function App() {
         <Stack.Screen name="Unparsed" component={UnparsedScreen} options={{ title: 'Не распознано' }} />
         <Stack.Screen name="UnparsedMessage" component={UnparsedMessageScreen} options={{ title: '' }} />
         <Stack.Screen name="MessageTemplates" component={MessageTemplatesScreen} options={{ title: 'Шаблоны сообщений' }} />
+        <Stack.Screen name="Banks" component={BanksScreen} options={{ title: 'Банки' }} />
       </Stack.Navigator>
       {/* the sheets over the pages (an operation, a new one, a refund, sections, deleting a category) */}
       <ModalHost />

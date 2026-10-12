@@ -1,14 +1,17 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useBanks } from '@/features/banks';
 import { FilterButton } from '@/features/operations-filters';
 import { colors } from '@/shared/theme/theme';
 import { GROUP_BY, GroupBy } from '../model/listData';
 
-export type FilterSheet = 'category' | 'kind' | 'date' | 'all' | 'group';
+export type FilterSheet = 'category' | 'kind' | 'bank' | 'date' | 'all' | 'group';
 
 type Props = {
   categories: number;
   kinds: number;
+  /** how many banks picked (the "Банк" button: when several are read) */
+  banks: number;
   dated: boolean;
   groupBy: GroupBy;
   /** a sort-out: the category is set by it */
@@ -25,12 +28,14 @@ type Props = {
  * Each button opens its picker in a sheet; all the filters set apply together. Merchants are found by the text search
  * (it matches the merchant name); a merchant card still opens the list filtered by its merchant, shown as a chip.
  */
-export default function FiltersBar({ categories, kinds, dated, groupBy, categoryLocked, applied, onOpen, onReset, children }: Props) {
+export default function FiltersBar({ categories, kinds, banks, dated, groupBy, categoryLocked, applied, onOpen, onReset, children }: Props) {
+  const { several } = useBanks();
   return (
     <>
       <View style={styles.buttons}>
         <FilterButton label="Категория" count={categories} active={categories > 0} disabled={categoryLocked} onPress={() => onOpen('category')} testID="filter-category" />
         <FilterButton label="Тип" count={kinds} active={kinds > 0} onPress={() => onOpen('kind')} testID="filter-kind" />
+ {several || banks > 0 ? <FilterButton label="Банк" count={banks} active={banks > 0} onPress={() => onOpen('bank')} testID="filter-bank" /> : null}
         <FilterButton label="Дата" active={dated} onPress={() => onOpen('date')} testID="filter-date" />
         <FilterButton label={GROUP_BY.find(([k]) => k === groupBy)![1]} active={groupBy !== 'day'} onPress={() => onOpen('group')} testID="filter-group" />
       </View>

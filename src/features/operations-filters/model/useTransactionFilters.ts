@@ -1,8 +1,9 @@
 // The operations' filters: what is set, what can be picked (with counts), the chips of the set ones, resets.
 import { MutableRefObject, useCallback, useRef, useState } from 'react';
 import {
-  categoriesWithTransactions, CategoryFilter, CategoryWithCount, kindsWithTransactions, merchantsWithTransactions, MerchantWithCount,
+  banksWithTransactions, categoriesWithTransactions, CategoryFilter, CategoryWithCount, kindsWithTransactions, merchantsWithTransactions, MerchantWithCount,
 } from '@/db/transactions';
+import { bankById } from '@/domain/banks';
 import { DayRange, formatRange } from '@/shared/lib/dateRange';
 import { KIND_LABELS } from '@/shared/lib/format';
 import { NO_CATEGORY } from '@/shared/lib/strings';
@@ -19,11 +20,13 @@ export function useTransactionFilters(lockedRef: MutableRefObject<DayRange | nul
   const [categories, setCategories] = useState<CategoryFilter[]>([]);
   const [merchants, setMerchants] = useState<string[]>([]);
   const [kinds, setKinds] = useState<string[]>([]);
+  const [banks, setBanks] = useState<string[]>([]);
   const [range, setRange] = useState<DayRange | null>(null);
   const [categoryOptions, setCategoryOptions] = useState<CategoryWithCount[]>([]);
   const [merchantOptions, setMerchantOptions] = useState<MerchantWithCount[]>([]);
   const [kindOptions, setKindOptions] = useState<Array<{ kind: string; count: number }>>([]);
-  const filter: Filter = { query, categories, merchants, kinds, range };
+  const [bankOptions, setBankOptions] = useState<Array<{ bank: string; count: number }>>([]);
+  const filter: Filter = { query, categories, merchants, kinds, banks, range };
   // read by the list's reload without making it change (and re-run focus effects) on every keystroke
   const filterRef = useRef(filter);
   filterRef.current = filter;
@@ -32,12 +35,13 @@ export function useTransactionFilters(lockedRef: MutableRefObject<DayRange | nul
     categoriesWithTransactions().then(setCategoryOptions).catch((e) => console.error('load category filter failed', e));
     merchantsWithTransactions().then(setMerchantOptions).catch((e) => console.error('load merchant filter failed', e));
     kindsWithTransactions().then(setKindOptions).catch((e) => console.error('load kind filter failed', e));
+    banksWithTransactions().then(setBankOptions).catch((e) => console.error('load bank filter failed', e));
   }, []);
 
   /** Only these set, the rest cleared. */
   const setOnly = useCallback((f: Partial<Filter>) => {
     setQuery(f.query ?? ''); setCategories(f.categories ?? []); setMerchants(f.merchants ?? []);
-    setKinds(f.kinds ?? []); setRange(f.range ?? null);
+    setKinds(f.kinds ?? []); setBanks(f.banks ?? []); setRange(f.range ?? null);
   }, []);
   const reset = useCallback(() => setOnly({}), [setOnly]);
 
@@ -45,7 +49,7 @@ export function useTransactionFilters(lockedRef: MutableRefObject<DayRange | nul
   function resetExtra() {
     const m = lockedRef.current;
     if (!m) { reset(); return; }
-    setQuery(''); setMerchants([]); setKinds([]); setRange(m);
+    setQuery(''); setMerchants([]); setKinds([]); setBanks([]); setRange(m);
   }
 
   // the dates of a sort-out: this month or a part of it
@@ -68,6 +72,9 @@ export function useTransactionFilters(lockedRef: MutableRefObject<DayRange | nul
     for (const k of kinds) {
       active.push({ key: `k${k}`, label: KIND_LABELS[k] ?? k, clear: () => setKinds((p) => p.filter((x) => x !== k)) });
     }
+    for (const b of banks) {
+      active.push({ key: `b${b}`, label: bankById(b)?.name ?? b, clear: () => setBanks((p) => p.filter((x) => x !== b)) });
+    }
     for (const mer of merchants) {
       const m = merchantOptions.find((o) => o.merchant === mer);
       active.push({ key: `m${mer}`, label: m?.name ?? 'Мерчант', clear: () => setMerchants((p) => p.filter((x) => x !== mer)) });
@@ -80,7 +87,7 @@ export function useTransactionFilters(lockedRef: MutableRefObject<DayRange | nul
   };
 
   return {
-    filter, filterRef, query, setQuery, categories, setCategories, merchants, kinds, setKinds, range,
-    categoryOptions, kindOptions, loadOptions, setOnly, reset, resetExtra, changeRange, activeFilters,
+    filter, filterRef, query, setQuery, categories, setCategories, merchants, kinds, setKinds, banks, setBanks, range,
+    categoryOptions, kindOptions, bankOptions, loadOptions, setOnly, reset, resetExtra, changeRange, activeFilters,
   };
 }

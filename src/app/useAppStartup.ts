@@ -11,10 +11,13 @@ import { emitTransactionsChanged, onTransactionsChanged } from '@/domain/events'
 import { autoCategorizeRefunds } from '@/db/refunds';
 import { flushPendingNavigation } from '@/shared/navigation/navigation';
 import { runAutoBackupIfDue } from '@/features/backup';
+import { syncNativeBanks } from '@/features/banks';
 
 export function useAppStartup() {
   useEffect(() => {
     createNotificationChannel();
+    // which banks' SMS and pushes the native side lets through
+    syncNativeBanks().catch((e) => console.error('banks sync failed', e));
     requestAppPermissions().catch(() => {});
     // refunds that came before their merchant had a category (or before this existed) get one
     autoCategorizeRefunds().then((n) => { if (n > 0) emitTransactionsChanged(); }).catch((e) => console.error('refund categories failed', e));

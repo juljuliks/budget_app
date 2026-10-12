@@ -44,7 +44,7 @@ export default function OperationsScreen() {
   const [sheet, setSheet] = useState<FilterSheet | null>(null);
   const lockRef = useRef<DayRange | null>(null);
   const filters = useTransactionFilters(lockRef);
-  const { query, categories, merchants, kinds, range } = filters;
+  const { query, categories, merchants, kinds, banks, range } = filters;
   const list = useOperationsList(filters.filterRef, groupByRef);
   const route = useOperationsRoute(filters.reset);
   const so = useSortOut<GroupBy>({
@@ -73,12 +73,12 @@ export default function OperationsScreen() {
     alsoRefresh: [filters.loadOptions, so.refreshRemaining],
     clearSelection: sel.clear,
     query,
-    view: [categories, merchants, kinds, range, groupBy],
+    view: [categories, merchants, kinds, banks, range, groupBy],
   });
 
   const rows = list.rows;
   const active = filters.activeFilters(sortOut?.month ?? null);
-  const listKey = JSON.stringify([query.trim(), categories, merchants, kinds, range, groupBy, list.remount]);
+  const listKey = JSON.stringify([query.trim(), categories, merchants, kinds, banks, range, groupBy, list.remount]);
   // "Отметить просмотренными (N)": the unread ones among the selected
   const unreadSelected = useMemo(() => rows.filter((r) => selected.has(r.id) && isUnread(r)).map((r) => r.id), [rows, selected]);
   const selectedRows = rows.filter((r) => selected.has(r.id));
@@ -103,7 +103,7 @@ export default function OperationsScreen() {
         <SearchBar value={query} onChange={filters.setQuery} placeholder={SEARCH_PLACEHOLDER} />
         <FiltersBar
           categories={categories.length}
-          kinds={kinds.length}
+          kinds={kinds.length} banks={banks.length}
           dated={range !== null}
           groupBy={groupBy}
           categoryLocked={!!sortOut}

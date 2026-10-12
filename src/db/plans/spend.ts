@@ -36,7 +36,8 @@ const spendWhere = (only?: TxFilter) => {
         AND (kind IN (${sqlList([...EXPENSE_KINDS, 'refund'])})
           OR (kind = 'deposit' AND category_id IS NOT NULL))
         AND category_id IS NOT (SELECT id FROM categories WHERE system = 'savings')
-        AND category_id IS NOT (SELECT id FROM categories WHERE system = 'topup')`,
+        AND category_id IS NOT (SELECT id FROM categories WHERE system = 'topup')
+        AND category_id IS NOT (SELECT id FROM categories WHERE system = 'own')`,
     params: f.params,
   };
 };

@@ -31,6 +31,9 @@ export const isSavings = (c: { system?: string | null }) => c.system === SAVINGS
  */
 export const TOP_UP = 'topup';
 export const isTopUp = (c: { system?: string | null }) => c.system === TOP_UP;
+
+/** "Между своими картами": money between one's own cards (other banks) — not spending, not income. */
+export const OWN_TRANSFER = 'own';
 /** A category of the system: "Сбережения", "Пополнение счёта" (not deleted, merged, planned, offered for purchases). */
 export const isSystemCategory = (c: { system?: string | null }) => !!c.system;
 

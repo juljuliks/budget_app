@@ -5,11 +5,12 @@ import android.content.Intent
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
+import com.budgetapp.sms.BankSources
 import com.budgetapp.sms.SmsHeadlessService
 import com.facebook.react.HeadlessJsTaskService
 
 /**
- * Reads push notifications of the bank app (enabled by the user in "Доступ к уведомлениям") and hands
+ * Reads push notifications of the banks' apps (the banks on: BankSources; access given in "Доступ к уведомлениям") and hands
  * their text to the same Headless JS task as SMS. Every other app's notifications are dropped right here:
  * nothing about them is stored or passed on.
  */
@@ -17,7 +18,7 @@ class BankPushListener : NotificationListenerService() {
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         val n = sbn ?: return
-        if (!isBankApp(n.packageName)) return
+        if (!BankSources.isBankApp(this, n.packageName)) return
         // group summaries repeat the last message
         if (n.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0) return
 
@@ -44,8 +45,5 @@ class BankPushListener : NotificationListenerService() {
 
     companion object {
         private const val TAG = "BankPushListener"
-
-        /** TBC apps ("ge.tbcbank...", "com.tbc..."); matched loosely until the exact package is confirmed. */
-        fun isBankApp(pkg: String?): Boolean = pkg != null && pkg.lowercase().contains("tbc")
     }
 }

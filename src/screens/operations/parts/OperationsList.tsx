@@ -2,7 +2,9 @@ import React, { useCallback } from 'react';
 import { ActivityIndicator, SectionList, StyleSheet, Text, View } from 'react-native';
 import type { Currency } from '@/db/fx';
 import type { TransactionRow } from '@/db/transactions';
+import { bankById } from '@/domain/banks';
 import { TransactionItem } from '@/entities/transaction';
+import { useBanks } from '@/features/banks';
 import { LOAD_FAILED } from '@/shared/lib/strings';
 import { colors } from '@/shared/theme/theme';
 import { toastFailure } from '@/shared/ui/toast';
@@ -37,17 +39,20 @@ type Props = {
 /** The operations by sections (days or groups), a page at a time while scrolling, pull to refresh. */
 export default function OperationsList(p: Props) {
   const { onPressRow, onLongPressRow, onDeleteRow, selecting, selected } = p;
+  // several banks read: each row says whose it is
+  const { several } = useBanks();
   // the rows are memoized: a selection or a page loaded redraws only the rows whose props changed
   const renderItem = useCallback(({ item }: { item: Row }) => (
     <TransactionItem
       tx={item}
+      bankLabel={several && item.bank !== 'manual' ? bankById(item.bank)?.short : undefined}
       onPress={onPressRow}
       onLongPress={onLongPressRow}
       selectable={selecting}
       selected={selected.has(item.id)}
       onDelete={onDeleteRow}
     />
-  ), [onPressRow, onLongPressRow, onDeleteRow, selecting, selected]);
+  ), [onPressRow, onLongPressRow, onDeleteRow, selecting, selected, several]);
   return (
     <SectionList
       // a new filter remounts the list: Android sticky headers keep their old offsets when the sections

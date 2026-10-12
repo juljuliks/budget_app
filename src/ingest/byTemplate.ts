@@ -5,6 +5,7 @@ import {
   addTemplate, countTemplateMatch, deleteUnparsed, listTemplates, listUnparsed, MessageSource, MessageTemplate, saveUnparsed, UnparsedMessage,
 } from '../db/messages';
 import type { Kind, ParsedTx } from '../domain/types';
+import { bankOfSender } from '../domain/banks';
 import { emitTransactionsChanged } from '../domain/events';
 import { balanceByTemplate, buildTemplate, matchTemplate, readByTemplate, Role } from '../parsers/template';
 import { IncomingSms, IngestResult, smsHash, store } from './store';
@@ -13,14 +14,14 @@ import { IncomingSms, IngestResult, smsHash, store } from './store';
 async function apply(t: MessageTemplate, sms: IncomingSms, db: Db): Promise<IngestResult | null> {
   if (t.action === 'hide') return matchTemplate(t.spec, sms.body) ? { status: 'ignored', kept: 'hidden' } : null;
   const parsed = readByTemplate(t.spec, t.kind ?? 'purchase', sms.body);
-  return parsed ? store(sms, parsed, balanceByTemplate(t.spec, sms.body), db) : null;
+  return parsed ? store(sms, { ...parsed, bank: bankOfSender(sms.sender).id }, balanceByTemplate(t.spec, sms.body), db) : null;
 }
 
 /** On arrival: the first of the user's templates that fits reads it; none — it waits in "Не распознано". */
 export async function readByTemplates(sms: IncomingSms, outer?: Db): Promise<IngestResult> {
   const source: MessageSource = sms.source ?? 'sms';
   return (outer ?? await getDb()).transaction(async (db) => {
-    for (const t of await listTemplates(source, db)) {
+    for (const t of await listTemplates(source, db, bankOfSender(sms.sender).id)) {
       const res = await apply(t, sms, db);
       if (!res) continue;
       await countTemplateMatch(t.id, 1, db);
@@ -40,6 +41,10 @@ export async function readByTemplates(sms: IncomingSms, outer?: Db): Promise<Ing
 const asSms = (m: { source: MessageSource; sender: string; body: string; received_at: number }, hash?: string): IncomingSms =>
   ({ sender: m.sender, body: m.body, timestamp: m.received_at * 1000, source: m.source, hash });
 
+/** The kept messages a template of `m` may read: from the same source (SMS / push) and bank. */
+const sameKind = (a: { source: MessageSource; sender: string }, b: { source: MessageSource; sender: string }) =>
+  a.source === b.source && bankOfSender(a.sender).id === bankOfSender(b.sender).id;
+
 /** A template being made: a "hide such" one (`kind` null) is the whole text, nothing marked. */
 function templateDraft(body: string, marks: Record<number, Role>, kind: Kind | null) {
   const spec = buildTemplate(body, kind ? marks : {});
@@ -47,9 +52,9 @@ function templateDraft(body: string, marks: Record<number, Role>, kind: Kind | n
 }
 
 /** The kept messages a template would take now (the preview before saving it), with what each gives. */
-export async function previewTemplate(message: { source: MessageSource; body: string }, marks: Record<number, Role>, kind: Kind | null) {
+export async function previewTemplate(message: { source: MessageSource; sender: string; body: string }, marks: Record<number, Role>, kind: Kind | null) {
   const { spec } = templateDraft(message.body, marks, kind);
-  return (await listUnparsed()).filter((m) => m.source === message.source).flatMap((m): Array<{ message: UnparsedMessage; parsed: ParsedTx | null }> => {
+  return (await listUnparsed()).filter((m) => sameKind(m, message)).flatMap((m): Array<{ message: UnparsedMessage; parsed: ParsedTx | null }> => {
     if (!kind) return matchTemplate(spec, m.body) ? [{ message: m, parsed: null }] : [];
     const parsed = readByTemplate(spec, kind, m.body);
     return parsed ? [{ message: m, parsed }] : [];
@@ -60,13 +65,14 @@ export async function previewTemplate(message: { source: MessageSource; body: st
  * Saves a template and reads the kept messages like it (operations made, hidden ones dropped); how many it took.
  * `kind` null: a "hide such" one.
  */
-export async function saveTemplate(message: { source: MessageSource; body: string }, marks: Record<number, Role>, kind: Kind | null): Promise<number> {
+export async function saveTemplate(message: { source: MessageSource; sender: string; body: string }, marks: Record<number, Role>, kind: Kind | null): Promise<number> {
   const draft = templateDraft(message.body, marks, kind);
-  const kept = (await listUnparsed()).filter((m) => m.source === message.source);
+  const kept = (await listUnparsed()).filter((m) => sameKind(m, message));
+  const bank = bankOfSender(message.sender).id;
   const db = await getDb();
   const taken = await db.transaction(async (tx) => {
-    const id = await addTemplate({ source: message.source, action: draft.action, kind, spec: draft.spec, example: message.body }, tx);
-    const t = (await listTemplates(message.source, tx)).find((x) => x.id === id)!;
+    const id = await addTemplate({ source: message.source, bank, action: draft.action, kind, spec: draft.spec, example: message.body }, tx);
+    const t = (await listTemplates(message.source, tx, bank)).find((x) => x.id === id)!;
     const done: number[] = [];
     for (const m of kept) {
       const hash = (await tx.get<{ hash: string }>('SELECT hash FROM unparsed_messages WHERE id = ?', [m.id]))!.hash;
@@ -88,7 +94,7 @@ export async function addFromMessage(message: { id: number; source: MessageSourc
   const db = await getDb();
   const res = await db.transaction(async (tx) => {
     const hash = (await tx.get<{ hash: string }>('SELECT hash FROM unparsed_messages WHERE id = ?', [message.id]))?.hash;
-    const r = await store(asSms(message, hash), parsed, balanceByTemplate(spec, message.body), tx);
+    const r = await store(asSms(message, hash), { ...parsed, bank: bankOfSender(message.sender).id }, balanceByTemplate(spec, message.body), tx);
     await deleteUnparsed([message.id], tx);
     return r;
   });

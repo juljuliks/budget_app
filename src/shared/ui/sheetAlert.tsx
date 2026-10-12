@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { ReactNode, useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import BottomSheet from './BottomSheet';
 import Button, { SheetActions } from './Button';
@@ -9,16 +9,18 @@ import { colors } from '../theme/theme';
 
 /** 'secondary': outlined, for the less usual choice next to a filled one */
 export type SheetButton = { text: string; style?: 'cancel' | 'destructive' | 'secondary' | 'default'; onPress?: () => void };
-type Request = { title: string; message?: string; buttons: SheetButton[]; question?: string };
+/** under the message, above the buttons (e.g. a note with a link); `close` closes the sheet first */
+export type SheetExtra = (close: () => void) => ReactNode;
+type Request = { title: string; message?: string; buttons: SheetButton[]; question?: string; extra?: SheetExtra };
 
 let show: ((r: Request) => void) | null = null;
 
 /**
  * Like Alert.alert(title, message, buttons): a sheet with the buttons stacked, the cancel one last. `question`: what
- * the buttons answer, in bold after the message.
+ * the buttons answer, in bold after the message; `extra`: something more under it.
  */
-export function sheetAlert(title: string, message?: string, buttons: SheetButton[] = [{ text: 'Понятно' }], question?: string) {
-  show?.({ title, message, buttons, question });
+export function sheetAlert(title: string, message?: string, buttons: SheetButton[] = [{ text: 'Понятно' }], question?: string, extra?: SheetExtra) {
+  show?.({ title, message, buttons, question, extra });
 }
 
 export function SheetAlertHost() {
@@ -43,6 +45,7 @@ export function SheetAlertHost() {
             {req.question ? <Text style={styles.question}>{req.message ? ' ' : ''}{req.question}</Text> : null}
           </Text>
         ) : null}
+        {req?.extra?.(close)}
         {/* the same buttons as every sheet (SheetActions): filled, outlined for 'secondary', red for 'destructive' */}
         {actions.map((b) => (
           <Button

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { listTemplates, MessageTemplate } from '@/db/messages';
+import { bankById } from '@/domain/banks';
 import { onTransactionsChanged } from '@/domain/events';
 import { DELETE_INFO, removeTemplates, RESET, RESET_INFO, RESET_QUESTION, sourceLabel, TEMPLATES_HINT } from '@/features/message-templates';
 import { formatDay, KIND_LABELS } from '@/shared/lib/format';
@@ -13,7 +14,7 @@ import { sheetAlert } from '@/shared/ui/sheetAlert';
 import { toast, toastFailure } from '@/shared/ui/toast';
 import { colors } from '@/shared/theme/theme';
 
-const titleOf = (t: MessageTemplate) => `${t.action === 'hide' ? 'Не операция' : KIND_LABELS[t.kind ?? ''] ?? 'Операция'} · ${sourceLabel(t.source)}`;
+const titleOf = (t: MessageTemplate) => `${t.action === 'hide' ? 'Не операция' : KIND_LABELS[t.kind ?? ''] ?? 'Операция'} · ${sourceLabel(t.source, bankById(t.bank)?.name)}`;
 const usedOf = (t: MessageTemplate) => `${t.action === 'hide' ? 'Скрыто' : 'Разобрано'}: ${t.matched}${t.last_matched_at ? ` · последнее — ${formatDay(t.last_matched_at).toLowerCase()}` : ''}`;
 
 /** Настройки → «Шаблоны сообщений»: the user's templates with the message each was made from; removed one by one or all. */

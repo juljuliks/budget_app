@@ -7,7 +7,8 @@ import { placeholders } from './sql';
 // The card balance, kept in sync with the bank: every SMS that reports "Balance: …" (purchases, balance-only SMS)
 // sets it exactly; operations after it (a deposit has no balance in its SMS) are added on top until the next one.
 
-const KEY = 'card_balance';
+/** Each bank's card its own; TBC's under the old key (the only one before). */
+const keyOf = (bank: string) => (bank === 'tbc' ? 'card_balance' : `card_balance:${bank}`);
 
 /** The last balance the bank reported: after the transaction `txId` (or as of `at` for a balance-only SMS). */
 export type BalanceAnchor = { minor: number; currency: string; at: number; txId: number | null };
@@ -24,45 +25,52 @@ export type CardBalance = {
 /** Operations that move the card's money; a refund is only "initiated" in its SMS and arrives later. */
 const SIGN: Record<string, number> = { deposit: 1, purchase: -1, payment: -1, transfer: -1, withdrawal: -1 };
 
-async function readAnchor(db?: Db): Promise<BalanceAnchor | null> {
+async function readAnchor(bank: string, db?: Db): Promise<BalanceAnchor | null> {
   db ??= await getDb();
-  const v = await getSetting(KEY, db);
+  const v = await getSetting(keyOf(bank), db);
   if (v) {
     try { return JSON.parse(v) as BalanceAnchor; } catch { /* rebuilt below */ }
   }
-  // first use: the latest stored SMS with a balance
+  // first use: the latest stored SMS with a balance (TBC's: the one parser that reads balances)
+  if (bank !== 'tbc') return null;
   const rows = await db.all<{ id: number; occurred_at: number; raw_sms: string }>(
     `SELECT id, occurred_at, raw_sms FROM transactions
-      WHERE bank != 'manual' AND raw_sms LIKE '%alance%'
+      WHERE bank = 'tbc' AND raw_sms LIKE '%alance%'
       ORDER BY occurred_at DESC, id DESC LIMIT 20`);
   for (const r of rows) {
     const b = parseTbcBalance(r.raw_sms);
     if (!b) continue;
     const anchor = { minor: b.minor, currency: b.currency, at: r.occurred_at, txId: r.id };
-    await setSetting(KEY, JSON.stringify(anchor), db);
+    await setSetting(keyOf(bank), JSON.stringify(anchor), db);
     return anchor;
   }
   return null;
 }
 
-/** Remembers a balance the bank reported, unless a later one is already known (SMS can arrive out of order). */
-export async function recordBalance(anchor: BalanceAnchor, db?: Db): Promise<void> {
+/**
+ * Remembers a balance the bank reported, unless a later one is already known (SMS can arrive out of order). Each bank's
+ * card its own.
+ */
+export async function recordBalance(anchor: BalanceAnchor, db?: Db, bank = 'tbc'): Promise<void> {
   db ??= await getDb();
-  const current = await readAnchor(db);
+  const current = await readAnchor(bank, db);
   if (current && current.at > anchor.at) return;
-  await setSetting(KEY, JSON.stringify(anchor), db);
+  await setSetting(keyOf(bank), JSON.stringify(anchor), db);
 }
 
-/** The card balance now: the last reported one plus the bank operations after it; null until an SMS reports one. */
-export async function cardBalance(): Promise<CardBalance | null> {
-  const anchor = await readAnchor();
+/**
+ * A bank's card balance now: the last reported one plus that bank's operations after it; null until a message
+ * reports one.
+ */
+export async function cardBalance(bank = 'tbc'): Promise<CardBalance | null> {
+  const anchor = await readAnchor(bank);
   if (!anchor) return null;
   const db = await getDb();
   const after = await db.all<{ kind: string; amount_minor: number }>(
     `SELECT kind, amount_minor FROM transactions
-      WHERE bank != 'manual' AND currency = ?
+      WHERE bank = ? AND currency = ?
         AND (occurred_at > ? OR (occurred_at = ? AND ? IS NOT NULL AND id > ?))`,
-    [anchor.currency, anchor.at, anchor.at, anchor.txId, anchor.txId ?? 0]);
+    [bank, anchor.currency, anchor.at, anchor.at, anchor.txId, anchor.txId ?? 0]);
   let minor = anchor.minor;
   let pending = 0;
   for (const t of after) {
@@ -85,7 +93,8 @@ export async function placeByBalances(txId: number, db?: Db): Promise<void> {
   db ??= await getDb();
   const tx = await db.get<{ kind: string; amount_minor: number; currency: string; occurred_at: number; raw_sms: string; bank: string }>(
     'SELECT kind, amount_minor, currency, occurred_at, raw_sms, bank FROM transactions WHERE id = ?', [txId]);
-  if (!tx || tx.bank === 'manual' || !SIGN[tx.kind]) return;
+  // TBC's: the one parser that knows a message without a time
+  if (!tx || tx.bank !== 'tbc' || !SIGN[tx.kind]) return;
   const parsed = parseTbc(tx.raw_sms);
   if (!parsed || parsed.has_time || !parsed.occurred_at) return;
   // the day it's put on: the text's date, or the day it came when that date was still to come (resolveOccurredAt)
@@ -96,7 +105,7 @@ export async function placeByBalances(txId: number, db?: Db): Promise<void> {
   // the bank's operations up to the end of that day (a week back for the balance before it), in their order
   const rows = await db.all<{ id: number; kind: string; amount_minor: number; occurred_at: number; raw_sms: string }>(
     `SELECT id, kind, amount_minor, occurred_at, raw_sms FROM transactions
-      WHERE bank != 'manual' AND currency = ? AND occurred_at >= ? AND occurred_at < ?
+      WHERE bank = 'tbc' AND currency = ? AND occurred_at >= ? AND occurred_at < ?
       ORDER BY occurred_at, id`, [tx.currency, dayStart - 7 * 86400, dayEnd]);
   const signed = (r: { kind: string; amount_minor: number }) => (SIGN[r.kind] ?? 0) * r.amount_minor;
   const anchors = rows.flatMap((r, i) => {
@@ -136,7 +145,7 @@ export async function placeNextDayDated(db: Db, nowMs = Date.now()): Promise<voi
   const now = new Date(nowMs);
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() / 1000;
   const rows = await db.all<{ id: number; occurred_at: number; raw_sms: string }>(
-    "SELECT id, occurred_at, raw_sms FROM transactions WHERE bank != 'manual' AND occurred_at >= ?", [todayStart]);
+    "SELECT id, occurred_at, raw_sms FROM transactions WHERE bank = 'tbc' AND occurred_at >= ?", [todayStart]);
   for (const r of rows) {
     const p = parseTbc(r.raw_sms);
     const at = new Date(r.occurred_at * 1000);

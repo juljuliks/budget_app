@@ -7,7 +7,8 @@ export const UNPARSED = 'Не распознано';
 export const TEMPLATES = 'Шаблоны сообщений';
 export const UNPARSED_HINT = 'Сообщения банка, из которых не получилась операция. Отметьте в тексте сумму и валюту — такие будут разбираться сами. Хранятся 30 дней.';
 
-export const sourceLabel = (s: MessageSource) => (s === 'push' ? 'Уведомление TBC' : 'SMS · TBC');
+/** "SMS · TBC", "Уведомление Bank of Georgia": where a message came from (its bank's name, TBC by default). */
+export const sourceLabel = (s: MessageSource, bank = 'TBC') => (s === 'push' ? `Уведомление ${bank}` : `SMS · ${bank}`);
 
 /** The roles a word can be marked with, and their colors (told apart by lightness too) */
 export const ROLES: Array<{ role: Role; label: string; bg: string; fg: string; line: string }> = [
@@ -39,7 +40,7 @@ export const HIDE = 'Скрывать';
 export const RESET = 'Сбросить все шаблоны';
 export const RESET_QUESTION = 'Сбросить все шаблоны?';
 export const RESET_INFO = 'Свои правила разбора и скрытия удалятся, сообщения снова будут попадать в «Не распознано». Созданные операции останутся.';
-export const TEMPLATES_HINT = 'Свои правила разбора, из отмеченных вами сообщений. Работают после встроенного разбора TBC.';
+export const TEMPLATES_HINT = 'Свои правила разбора, из отмеченных вами сообщений, у каждого банка свои. У TBC работают после встроенного разбора, у других банков — сразу.';
 export const DELETE_INFO = 'Удаление шаблона не трогает уже созданные операции; новые такие сообщения снова попадут в «Не распознано».';
 
 /** "Отметьте сумму, валюту и мерчанта" */

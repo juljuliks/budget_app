@@ -32,13 +32,13 @@ type Props = {
 
 /**
  * Настройки (the gear in the tab headers): a sheet with Валюта — the currency the app converts amounts to, switched right
- * here — the limit notifications switch, «Блокировка», then Мерчанты, Категории, Импорт SMS (past bank SMS from the phone) and
+ * here — the limit notifications switch, «Блокировка», then Банки, Мерчанты, Категории, Шаблоны сообщений, Импорт SMS (past bank SMS from the phone) and
  * Резервная копия; the installed version at the bottom.
  */
 export default function SettingsSheet({ open, onClose, onImportSms, onBackup, lock }: Props) {
   const navigation = useRootNavigation();
   const currency = useDisplayCurrency();
-  const go = (route: 'Merchants' | 'Categories' | 'MessageTemplates') => { onClose(); navigation.navigate(route); };
+  const go = (route: 'Merchants' | 'Categories' | 'MessageTemplates' | 'Banks') => { onClose(); navigation.navigate(route); };
   const [alerts, setAlerts] = useState(true);
   useEffect(() => {
     if (open) limitAlertsEnabled().then(setAlerts).catch(toastFailure('load limit alerts setting', LOAD_FAILED));
@@ -77,6 +77,7 @@ export default function SettingsSheet({ open, onClose, onImportSms, onBackup, lo
           />
         </View>
         {lock}
+        <Row label="Банки" onPress={() => go('Banks')} />
         <Row label="Мерчанты" onPress={() => go('Merchants')} />
         <Row label="Категории" onPress={() => go('Categories')} />
         <Row label="Шаблоны сообщений" onPress={() => go('MessageTemplates')} />

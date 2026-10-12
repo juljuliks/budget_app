@@ -28,6 +28,8 @@ export type TxFilter = {
   merchants?: string[];
   /** any of these kinds ('purchase', 'refund', …) */
   kinds?: string[];
+  /** any of these banks ('tbc', 'bog'; BankId) */
+  banks?: string[];
   /** unix seconds, [from, to) */
   from?: number;
   to?: number;
@@ -75,6 +77,10 @@ export function filterCondition(f: TxFilter, parts = false): { sql: string; para
   if (f.kinds?.length) {
     where.push(`t.kind IN (${placeholders(f.kinds.length)})`);
     params.push(...f.kinds);
+  }
+  if (f.banks?.length) {
+    where.push(`t.bank IN (${placeholders(f.banks.length)})`);
+    params.push(...f.banks);
   }
   if (f.merchants?.length) {
     where.push(`t.merchant_key IN (${placeholders(f.merchants.length)})`);
@@ -141,6 +147,13 @@ export async function searchTransactions(query: string, f: TxFilter = {}, limit 
   }
   return db.all<TransactionRow>(
     `${SELECT_TX} WHERE ${sql} AND ${conds.join(' AND ')} ${NEWEST_FIRST} LIMIT ?`, [...params, ...wordParams, limit]);
+}
+
+/** The banks whose operations there are (not the manual ones), with their counts, for the "Банк" filter. */
+export async function banksWithTransactions(): Promise<Array<{ bank: string; count: number }>> {
+  const db = await getDb();
+  return db.all<{ bank: string; count: number }>(
+    "SELECT bank, count(*) AS count FROM transactions WHERE bank != 'manual' GROUP BY bank ORDER BY count DESC");
 }
 
 /** Kinds that occur, with their counts, for the "Тип" filter. */

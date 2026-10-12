@@ -116,11 +116,11 @@ describe('"Пополнение счёта"', () => {
     expect(await db.get("SELECT category_id FROM transactions WHERE kind = 'deposit'")).toEqual({ category_id: mom });
   });
 
-  it('a deposit without a sender too; with no transfer categories the push just opens it', async () => {
+  it('a deposit without a sender too; with no transfer categories of one\'s own, "Между своими картами" and the list', async () => {
     await (await getDb()).run('DELETE FROM categories WHERE id = ?', [mom]);
     await SmsBackgroundTask({ sender: 'TBC SMS', body: 'Deposit Money: 50.00 GEL\nMC GOLD\n03/10/2026', timestamp: 2 });
     expect(await (await getDb()).get("SELECT category_id FROM transactions WHERE kind = 'deposit'")).toEqual({ category_id: topUp });
-    expect(displayNotification.mock.calls[0][0].android.actions.map((a: any) => a.title)).toEqual(['➡️ К категориям']);
+    expect(displayNotification.mock.calls[0][0].android.actions.map((a: any) => a.title)).toEqual(['🔁 Переводы: Между своими картами', '➡️ К категориям']);
   });
 });
 

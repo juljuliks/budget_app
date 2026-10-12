@@ -24,12 +24,14 @@ type Props = {
   selected?: boolean;
   /** edit mode: 🗑 at the end */
   onDelete?: (tx: TransactionRow) => void;
+  /** several banks read: whose it is ("TBC", "BoG") before its category */
+  bankLabel?: string;
 };
 
 /** One row of the transactions list: merchant (bold + blue dot when unread), category · time, amount. */
 export default React.memo(TransactionItem);
 
-function TransactionItem({ tx, onPress, onLongPress, selectable, selected, onDelete }: Props) {
+function TransactionItem({ tx, onPress, onLongPress, selectable, selected, onDelete, bankLabel }: Props) {
   // Android delivers a press when the finger lifts after a long press too: that one would unselect the row
   const longPressed = useRef(false);
   const unread = isUnread(tx);
@@ -50,6 +52,7 @@ function TransactionItem({ tx, onPress, onLongPress, selectable, selected, onDel
         <View style={styles.titleRow}>
           {unread ? <View style={styles.unreadDot} accessibilityLabel="Новая" /> : null}
           <Text style={[styles.merchant, unread && styles.merchantUnread]} numberOfLines={1}>{rowTitle(tx)}</Text>
+          {bankLabel ? <Text style={styles.bank} accessibilityLabel={`Банк: ${bankLabel}`}>{bankLabel}</Text> : null}
           {auto ? <Text style={styles.auto} accessibilityLabel="Категория мерчанта, назначена автоматически">🤖 авто</Text> : null}
         </View>
         {tx.refund_settled_at ? (
@@ -107,6 +110,10 @@ const styles = StyleSheet.create({
   splitTime: { flexShrink: 0, marginTop: 0 },
   amountBox: { alignItems: 'flex-end' },
   amount: { fontSize: 16, color: colors.text, fontVariant: ['tabular-nums'] },
+  bank: {
+    marginLeft: 8, fontSize: 11, fontWeight: '700', color: colors.muted, borderWidth: 1, borderColor: colors.border,
+    paddingHorizontal: 5, borderRadius: 4, overflow: 'hidden',
+  },
   whole: { fontSize: 12, color: colors.muted, marginTop: 2, fontVariant: ['tabular-nums'] },
   income: { color: colors.income },
 });

@@ -26,7 +26,8 @@ class SmsReceiver : BroadcastReceiver() {
 
         // A long SMS arrives as several PDUs; join them per sender into one message.
         parts.groupBy { it.originatingAddress ?: "" }.forEach { (sender, messages) ->
-            if (!isBankSender(sender)) return@forEach
+            // only the banks on in "Банки": personal SMS never reach the parser
+            if (!BankSources.isBankSender(context, sender)) return@forEach
 
             val body = messages.joinToString("") { it.messageBody ?: "" }
             val timestamp = messages.first().timestampMillis
@@ -49,14 +50,5 @@ class SmsReceiver : BroadcastReceiver() {
 
     companion object {
         private const val TAG = "SmsReceiver"
-
-        // Alphanumeric sender IDs of supported banks ("TBC SMS" in real SMS).
-        // Deliberately no phone-number patterns: personal SMS must never reach the parser.
-        private val BANK_SENDERS = listOf(
-            Regex("""^TBC ?(SMS|BANK)?$""", RegexOption.IGNORE_CASE),
-        )
-
-        fun isBankSender(sender: String): Boolean =
-            BANK_SENDERS.any { it.matches(sender.trim()) }
     }
 }

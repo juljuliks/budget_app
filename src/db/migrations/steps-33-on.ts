@@ -37,4 +37,26 @@ export const STEPS_33_ON: MigrationStep[][] = [
   // 34: a transfer TBC dated the next day was put at 00:00 of it: "after" the balances that already have it in (taken
   // twice from the card's balance). Moved to the day it came and placed by the balances (placeNextDayDated)
   [(db) => placeNextDayDated(db)],
+  // 35: other banks. A template reads its own bank's messages (all made so far are TBC's). "Между своими картами"
+  // (categories.system = 'own'): money from one's card to one's other card — not spending, not income; put by hand,
+  // in the transfers' section. A category already so named becomes it
+  [
+    "ALTER TABLE message_templates ADD COLUMN bank TEXT NOT NULL DEFAULT 'tbc'",
+    async (db) => {
+      const own = await db.get<{ id: number }>(
+        "SELECT id FROM categories WHERE deleted_at IS NULL AND system IS NULL AND lower(name) = 'между своими картами' LIMIT 1");
+      if (own) await db.run("UPDATE categories SET system = 'own' WHERE id = ?", [own.id]);
+      else {
+        await db.run(
+          `INSERT INTO categories (name, emoji, system, sort_order, type_id)
+            VALUES ('Между своими картами', '🔁', 'own', 102, (SELECT id FROM category_types WHERE is_transfer = 1 ORDER BY id LIMIT 1))`);
+      }
+    },
+  ],
+  // 36: "Не распознано" keeps a message 30 days from when it was kept, not from its date: an import of months (another
+  // bank's SMS before its template) all waits for the template
+  [
+    'ALTER TABLE unparsed_messages ADD COLUMN kept_at INTEGER',
+    'UPDATE unparsed_messages SET kept_at = received_at',
+  ],
 ];

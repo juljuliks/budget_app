@@ -10,12 +10,17 @@ export type MessageSource = 'sms' | 'push';
 /** A message kept for marking: the bank's text as it came. */
 export type UnparsedMessage = { id: number; source: MessageSource; sender: string; body: string; received_at: number };
 
-/** A message not read is kept this long: it may hold a one-time code, nothing to keep forever. */
+/**
+ * A message not read is kept this long from when it was kept (an import of months: all of them wait for a template):
+ * it may hold a one-time code, nothing to keep forever.
+ */
 export const UNPARSED_KEEP_S = 30 * 86400;
 
 export type MessageTemplate = {
   id: number;
   source: MessageSource;
+  /** whose messages it reads (BankId) */
+  bank: string;
   /** 'operation': read as an operation of `kind`; 'hide': such messages are dropped ("Не операция") */
   action: 'operation' | 'hide';
   kind: Kind | null;
@@ -26,23 +31,23 @@ export type MessageTemplate = {
   last_matched_at: number | null;
 };
 
-/** Keeps a message nothing read (the same one twice — once). */
-export async function saveUnparsed(m: Omit<UnparsedMessage, 'id'> & { hash: string }, db?: Db) {
+/** Keeps a message nothing read (the same one twice — once), from now on. */
+export async function saveUnparsed(m: Omit<UnparsedMessage, 'id'> & { hash: string }, db?: Db, now = Math.floor(Date.now() / 1000)) {
   db ??= await getDb();
-  await db.run('INSERT OR IGNORE INTO unparsed_messages (source, sender, body, received_at, hash) VALUES (?, ?, ?, ?, ?)',
-    [m.source, m.sender, m.body, m.received_at, m.hash]);
+  await db.run('INSERT OR IGNORE INTO unparsed_messages (source, sender, body, received_at, hash, kept_at) VALUES (?, ?, ?, ?, ?, ?)',
+    [m.source, m.sender, m.body, m.received_at, m.hash, now]);
 }
 
-/** Newest first; the ones older than UNPARSED_KEEP_S are dropped first. */
+/** Newest first; the ones kept longer than UNPARSED_KEEP_S are dropped first. */
 export async function listUnparsed(now = Math.floor(Date.now() / 1000)): Promise<UnparsedMessage[]> {
   const db = await getDb();
-  await db.run('DELETE FROM unparsed_messages WHERE received_at < ?', [now - UNPARSED_KEEP_S]);
+  await db.run('DELETE FROM unparsed_messages WHERE kept_at < ?', [now - UNPARSED_KEEP_S]);
   return db.all<UnparsedMessage>('SELECT id, source, sender, body, received_at FROM unparsed_messages ORDER BY received_at DESC, id DESC');
 }
 
 export async function countUnparsed(now = Math.floor(Date.now() / 1000)): Promise<number> {
   const db = await getDb();
-  return (await db.get<{ n: number }>('SELECT count(*) AS n FROM unparsed_messages WHERE received_at >= ?', [now - UNPARSED_KEEP_S]))!.n;
+  return (await db.get<{ n: number }>('SELECT count(*) AS n FROM unparsed_messages WHERE kept_at >= ?', [now - UNPARSED_KEEP_S]))!.n;
 }
 
 export async function getUnparsed(id: number): Promise<UnparsedMessage | undefined> {
@@ -58,20 +63,24 @@ export async function deleteUnparsed(ids: number[], db?: Db) {
 type TemplateRow = Omit<MessageTemplate, 'spec'> & { pattern: string; slots: string };
 const toTemplate = ({ pattern, slots, ...r }: TemplateRow): MessageTemplate => ({ ...r, spec: { pattern, slots: JSON.parse(slots) } });
 
-/** The templates for messages of this source (all when not given), the oldest first: the first that fits reads it. */
-export async function listTemplates(source?: MessageSource, db?: Db): Promise<MessageTemplate[]> {
+/**
+ * The templates for messages of this source and bank (all when not given: each bank's messages are read by its own),
+ * the oldest first: the first that fits reads it.
+ */
+export async function listTemplates(source?: MessageSource, db?: Db, bank?: string): Promise<MessageTemplate[]> {
   db ??= await getDb();
+  const where = [source ? 'source = ?' : '', bank ? 'bank = ?' : ''].filter(Boolean);
   const rows = await db.all<TemplateRow>(
-    `SELECT id, source, action, kind, pattern, slots, example, matched, last_matched_at FROM message_templates
-      ${source ? 'WHERE source = ?' : ''} ORDER BY id`, source ? [source] : []);
+    `SELECT id, source, bank, action, kind, pattern, slots, example, matched, last_matched_at FROM message_templates
+      ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ORDER BY id`, [source, bank].filter((x): x is string => !!x));
   return rows.map(toTemplate);
 }
 
-export async function addTemplate(t: Pick<MessageTemplate, 'source' | 'action' | 'kind' | 'spec' | 'example'>, db?: Db): Promise<number> {
+export async function addTemplate(t: Pick<MessageTemplate, 'source' | 'bank' | 'action' | 'kind' | 'spec' | 'example'>, db?: Db): Promise<number> {
   db ??= await getDb();
   const { lastInsertRowid } = await db.run(
-    'INSERT INTO message_templates (source, action, kind, pattern, slots, example, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    [t.source, t.action, t.kind, t.spec.pattern, JSON.stringify(t.spec.slots), t.example, Math.floor(Date.now() / 1000)]);
+    'INSERT INTO message_templates (source, bank, action, kind, pattern, slots, example, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    [t.source, t.bank, t.action, t.kind, t.spec.pattern, JSON.stringify(t.spec.slots), t.example, Math.floor(Date.now() / 1000)]);
   return lastInsertRowid;
 }
 

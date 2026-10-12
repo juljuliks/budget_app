@@ -30,11 +30,12 @@ test('a bank message nothing read is kept (once); a code, a declined payment are
   expect(await ops()).toEqual([]);
 });
 
-test('kept 30 days', async () => {
+test('kept 30 days from when it was kept: an old SMS imported waits for its template too', async () => {
+  const kept = Math.floor(Date.now() / 1000);
   await push(PUSH('45.00', 'GEL', 'FABRIKA', '09'));
-  const now = Math.floor(T0 / 1000);
-  expect(await countUnparsed(now + UNPARSED_KEEP_S - 60)).toBe(1);
-  expect(await listUnparsed(now + UNPARSED_KEEP_S + 60)).toEqual([]);
+  await ingestSms({ sender: 'TBC SMS', body: PUSH('9.00', 'GEL', 'OLD', '09'), timestamp: Date.now() - 90 * 86400 * 1000 });
+  expect(await countUnparsed(kept + UNPARSED_KEEP_S - 60)).toBe(2);
+  expect(await listUnparsed(kept + UNPARSED_KEEP_S + 60)).toEqual([]);
 });
 
 test('a template: the kept ones like it become operations (with their balance), the new ones are read on arrival', async () => {

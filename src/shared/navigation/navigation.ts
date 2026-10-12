@@ -34,6 +34,8 @@ export type RootStackParamList = {
   UnparsedMessage: { id: number };
   /** the user's templates for them ("Шаблоны сообщений", from the settings) */
   MessageTemplates: undefined;
+  /** whose SMS and pushes are read ("Банки", from the settings) */
+  Banks: undefined;
 };
 
 export const navigationRef = createNavigationContainerRef<RootStackParamList>();

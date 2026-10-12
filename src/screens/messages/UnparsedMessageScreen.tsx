@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { bankOfSender } from '@/domain/banks';
 import { getUnparsed, UnparsedMessage } from '@/db/messages';
 import { MarkMessage, sourceLabel } from '@/features/message-templates';
 import { formatDay, formatTime } from '@/shared/lib/format';
@@ -21,7 +22,7 @@ export default function UnparsedMessageScreen({ route, navigation }: Props) {
   }, [route.params.id, started, fail]);
   useEffect(load, [load]);
   useEffect(() => {
-    if (message) navigation.setOptions({ title: `${sourceLabel(message.source)} · ${formatDay(message.received_at)}, ${formatTime(message.received_at)}` });
+    if (message) navigation.setOptions({ title: `${sourceLabel(message.source, bankOfSender(message.sender).name)} · ${formatDay(message.received_at)}, ${formatTime(message.received_at)}` });
   }, [message, navigation]);
 
   if (message === null) return <Text style={styles.gone}>Этого сообщения уже нет: его разобрал шаблон или прошло 30 дней.</Text>;

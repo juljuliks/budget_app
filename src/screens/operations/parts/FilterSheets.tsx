@@ -4,6 +4,7 @@ import { categoryLabel } from '@/db/categories';
 import { ActiveFilter, AllFiltersSheet, DateSheet, OptionsSheet, useTransactionFilters } from '@/features/operations-filters';
 import BottomSheet from '@/shared/ui/BottomSheet';
 import RadioGroup from '@/shared/ui/RadioGroup';
+import { bankById } from '@/domain/banks';
 import { KIND_LABELS } from '@/shared/lib/format';
 import { GROUP_BY, GroupBy } from '../model/listData';
 import type { FilterSheet } from './FiltersBar';
@@ -20,7 +21,7 @@ type Props = {
 
 const toggleIn = <T,>(list: T[], v: T) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 
-/** The pickers of the filter buttons: categories, kinds, dates, the grouping, and the list of the filters set. */
+/** The pickers of the filter buttons: categories, kinds, banks, dates, the grouping, and the list of the filters set. */
 export default function FilterSheets({ sheet, active, filters: f, groupBy, onGroupBy, onClose }: Props) {
   return (
     <>
@@ -40,6 +41,15 @@ export default function FilterSheets({ sheet, active, filters: f, groupBy, onGro
         selected={f.kinds}
         onToggle={(k) => f.setKinds((p) => toggleIn(p, k))}
         onClear={() => f.setKinds([])}
+        onClose={onClose}
+      />
+      <OptionsSheet
+        visible={sheet === 'bank'}
+        title="Банк"
+        options={f.bankOptions.map((o) => ({ key: o.bank, label: bankById(o.bank)?.name ?? o.bank, count: o.count }))}
+        selected={f.banks}
+        onToggle={(k) => f.setBanks((p) => toggleIn(p, k))}
+        onClear={() => f.setBanks([])}
         onClose={onClose}
       />
       <DateSheet visible={sheet === 'date'} value={f.range} onChange={f.changeRange} onClose={onClose} />

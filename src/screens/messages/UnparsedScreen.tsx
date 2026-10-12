@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { bankOfSender } from '@/domain/banks';
 import { listUnparsed, UnparsedMessage } from '@/db/messages';
 import { onTransactionsChanged } from '@/domain/events';
 import { sourceLabel, UNPARSED_HINT } from '@/features/message-templates';
@@ -30,7 +31,7 @@ export default function UnparsedScreen() {
       renderItem={({ item }) => (
         <TouchableOpacity style={styles.row} onPress={() => navigation.navigate('UnparsedMessage', { id: item.id })}>
           <View style={styles.top}>
-            <Text style={[styles.badge, item.source === 'push' && styles.push]}>{sourceLabel(item.source).toUpperCase()}</Text>
+            <Text style={[styles.badge, item.source === 'push' && styles.push]}>{sourceLabel(item.source, bankOfSender(item.sender).name).toUpperCase()}</Text>
             <Text style={styles.time}>{formatDay(item.received_at)}, {formatTime(item.received_at)}</Text>
           </View>
           <Text style={styles.body} numberOfLines={4}>{item.body}</Text>

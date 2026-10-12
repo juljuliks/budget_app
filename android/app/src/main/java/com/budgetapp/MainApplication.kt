@@ -11,6 +11,7 @@ import com.facebook.soloader.SoLoader
 import com.budgetapp.backup.BackupPackage
 import com.budgetapp.lock.AppLockPackage
 import com.budgetapp.push.NotificationAccessPackage
+import com.budgetapp.sms.BankSourcesPackage
 import com.budgetapp.sms.SmsInboxPackage
 
 class MainApplication : Application(), ReactApplication {
@@ -20,7 +21,7 @@ class MainApplication : Application(), ReactApplication {
 
         // Autolinked packages (Notifee, Picker, ...)
         override fun getPackages(): List<ReactPackage> =
-            PackageList(this).packages + NotificationAccessPackage() + SmsInboxPackage() + AppInfoPackage() + BackupPackage() + AppLockPackage()
+            PackageList(this).packages + NotificationAccessPackage() + SmsInboxPackage() + AppInfoPackage() + BackupPackage() + AppLockPackage() + BankSourcesPackage()
 
         override fun getJSMainModuleName(): String = "index"
 

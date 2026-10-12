@@ -93,8 +93,8 @@ export function texts(): string[] {
     .map((n) => flat(n).replace(/\s/g, ' '));
 }
 
-/** Настройки → a screen of them ("Мерчанты", "Категории"). */
-export async function openSettings(row: 'Мерчанты' | 'Категории') {
+/** Настройки → a screen of them ("Мерчанты", "Категории", "Банки"). */
+export async function openSettings(row: 'Мерчанты' | 'Категории' | 'Банки') {
   await tap('Настройки');
   await tap(row);
 }

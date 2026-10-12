@@ -1,7 +1,9 @@
+import React from 'react';
 import { importInboxSms } from '@/importer/inboxImport';
 import { readBankSms, requestInboxAccess } from '@/native/smsInbox';
 import { plural } from '@/shared/lib/format';
 import { sheetAlert } from '@/shared/ui/sheetAlert';
+import ImportBanksNote from './ImportBanksNote';
 
 const PERIODS: Array<{ text: string; months: number | null }> = [
   { text: '1 месяц', months: 1 },
@@ -10,7 +12,7 @@ const PERIODS: Array<{ text: string; months: number | null }> = [
   { text: 'Всё время', months: null },
 ];
 
-/** "Импорт SMS" (Настройки): pick a period, allow reading SMS, then the bank's past SMS become transactions. */
+/** "Импорт SMS" (Настройки): pick a period, allow reading SMS, then the past SMS of the banks on become transactions. */
 export function startSmsImport() {
   sheetAlert(
     'Импорт SMS из телефона',
@@ -19,6 +21,9 @@ export function startSmsImport() {
       ...PERIODS.map((p) => ({ text: p.text, onPress: () => { run(p.months).catch((e) => fail(e)); } })),
       { text: 'Отмена', style: 'cancel' as const },
     ],
+    undefined,
+    // the banks it reads: the ones on in "Банки"
+    (close) => <ImportBanksNote close={close} />,
   );
 }
 
@@ -30,7 +35,7 @@ async function run(months: number | null) {
   const since = months === null ? 0 : (() => { const d = new Date(); d.setMonth(d.getMonth() - months); return d.getTime(); })();
   const messages = await readBankSms(since);
   if (messages.length === 0) {
-    sheetAlert('SMS банка не найдены', 'За этот период в телефоне нет SMS от TBC.');
+    sheetAlert('SMS банка не найдены', 'За этот период в телефоне нет SMS от банков, которые читаются (Настройки → «Банки»).');
     return;
   }
   const r = await importInboxSms(messages);
