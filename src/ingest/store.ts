@@ -39,9 +39,11 @@ const sameLocalDay = (a: Date, b: Date) =>
   a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 
 /**
- * Unix seconds for the transaction. The SMS text wins when it has a time. Date-only SMS
- * (transfers, deposits) and SMS without a date use the SMS receive time when it's on the
- * same day / available, so they don't all pile up at 00:00 or at "now" during an import.
+ * Unix seconds for the transaction. The SMS text wins when it has a time. Date-only SMS / pushes
+ * (transfers, deposits) and ones without a date use the SMS receive time when it's on the same day /
+ * available, so they don't all pile up at 00:00 or at "now" during an import. A date still to come
+ * (TBC dates a late transfer the next day: "13/10/2026" came 12.10 at 19:30) — now: the receive
+ * time, else the current one.
  */
 export function resolveOccurredAt(parsed: Pick<ParsedTx, 'occurred_at' | 'has_time'>, smsTimestampMs?: number, nowMs = Date.now()): number {
   const received = smsTimestampMs ? new Date(smsTimestampMs) : null;
@@ -50,6 +52,7 @@ export function resolveOccurredAt(parsed: Pick<ParsedTx, 'occurred_at' | 'has_ti
     if (!parsed.has_time && received && sameLocalDay(fromText, received)) {
       return Math.floor(received.getTime() / 1000);
     }
+    if (fromText.getTime() > nowMs) return Math.floor((received ? received.getTime() : nowMs) / 1000);
     return Math.floor(fromText.getTime() / 1000);
   }
   return Math.floor((received ? received.getTime() : nowMs) / 1000);

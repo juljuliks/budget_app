@@ -103,6 +103,14 @@ describe('resolveOccurredAt', () => {
       .toBe(sec(local(2026, 9, 28, 18, 5)));
   });
 
+  test('a date still to come (a late TBC transfer dated the next day): now — the receive time, else the current one', () => {
+    const now = local(2026, 10, 12, 19, 31);
+    expect(resolveOccurredAt({ occurred_at: '2026-10-13T00:00:00', has_time: false }, local(2026, 10, 12, 19, 30), now))
+      .toBe(sec(local(2026, 10, 12, 19, 30)));
+    expect(resolveOccurredAt({ occurred_at: '2026-10-13T00:00:00', has_time: false }, undefined, now)).toBe(sec(now));
+    expect(resolveOccurredAt({ occurred_at: '2026-10-13T09:00:00', has_time: true }, undefined, now)).toBe(sec(now));
+  });
+
   test('date-only SMS received on another day keeps its own date', () => {
     expect(resolveOccurredAt({ occurred_at: '2026-09-28T00:00:00', has_time: false }, local(2026, 9, 29, 9, 0)))
       .toBe(sec(local(2026, 9, 28)));

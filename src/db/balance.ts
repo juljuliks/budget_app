@@ -88,7 +88,8 @@ export async function placeByBalances(txId: number, db?: Db): Promise<void> {
   if (!tx || tx.bank === 'manual' || !SIGN[tx.kind]) return;
   const parsed = parseTbc(tx.raw_sms);
   if (!parsed || parsed.has_time || !parsed.occurred_at) return;
-  const day = new Date(parsed.occurred_at);
+  // the day it's put on: the text's date, or the day it came when that date was still to come (resolveOccurredAt)
+  const day = new Date(tx.occurred_at * 1000);
   const dayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate()).getTime() / 1000;
   const dayEnd = new Date(day.getFullYear(), day.getMonth(), day.getDate() + 1).getTime() / 1000;
 
@@ -123,5 +124,24 @@ export async function placeByBalances(txId: number, db?: Db): Promise<void> {
       await db.run(`UPDATE transactions SET occurred_at = ? WHERE id IN (${placeholders(ids.length)})`, [a.at - 1, ...ids]);
       return;
     }
+  }
+}
+
+/**
+ * Operations with only a date put at 00:00 of a day not begun before `nowMs`'s day (TBC dates a late transfer the
+ * next day; before resolveOccurredAt took the time it came instead): moved to the end of the day before, then placed
+ * by the balances like a new one. Migration 34.
+ */
+export async function placeNextDayDated(db: Db, nowMs = Date.now()): Promise<void> {
+  const now = new Date(nowMs);
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() / 1000;
+  const rows = await db.all<{ id: number; occurred_at: number; raw_sms: string }>(
+    "SELECT id, occurred_at, raw_sms FROM transactions WHERE bank != 'manual' AND occurred_at >= ?", [todayStart]);
+  for (const r of rows) {
+    const p = parseTbc(r.raw_sms);
+    const at = new Date(r.occurred_at * 1000);
+    if (!p || p.has_time || !p.occurred_at || at.getHours() !== 0 || at.getMinutes() !== 0) continue;
+    await db.run('UPDATE transactions SET occurred_at = ? WHERE id = ?', [r.occurred_at - 1, r.id]);
+    await placeByBalances(r.id, db);
   }
 }

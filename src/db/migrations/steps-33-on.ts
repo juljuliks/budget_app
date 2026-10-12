@@ -1,5 +1,6 @@
 // The schema's history, migrations 33 and on (shipped ones are never edited).
 import type { MigrationStep } from './step';
+import { placeNextDayDated } from '../balance';
 
 /** Migrations 33 and on: a new one is appended here (when this file nears 250 lines, the next file starts). */
 export const STEPS_33_ON: MigrationStep[][] = [
@@ -33,4 +34,7 @@ export const STEPS_33_ON: MigrationStep[][] = [
         t.merchant_detached, t.search_text
       FROM transaction_parts p JOIN transactions t ON t.id = p.tx_id`,
   ],
+  // 34: a transfer TBC dated the next day was put at 00:00 of it: "after" the balances that already have it in (taken
+  // twice from the card's balance). Moved to the day it came and placed by the balances (placeNextDayDated)
+  [(db) => placeNextDayDated(db)],
 ];
