@@ -104,8 +104,9 @@ test('9.11.3: with a sensor — "Входить по отпечатку?" → "�
 });
 
 test('9.11.4: left longer than "Спрашивать после сворачивания" → the PIN; wrong ones counted, 5 → a wait; sooner — not asked', async () => {
+  Object.assign(memoryLock, { delayS: 60 });
   await withLock();
-  // 1 minute by default: back after 30 s — no lock screen
+  // 1 minute: back after 30 s — no lock screen
   await leaveAndReturn(30);
   hidden('Введите PIN-код');
   await leaveAndReturn(61);
@@ -122,10 +123,11 @@ test('9.11.4: left longer than "Спрашивать после сворачив
   expect(screen.getByLabelText('Введено цифр: 0')).toBeTruthy();
 });
 
-test('9.11.4: the right PIN opens the app; "Сразу" — asked every time it comes back', async () => {
+test('9.11.4: the right PIN opens the app; "Всегда" (the default) — asked every time it comes back', async () => {
   await withLock();
   await openOptions();
-  await tap('Сразу');
+  await tap('1 мин');
+  await tap('Всегда');
   await leaveAndReturn(1);
   expect(await screen.findByText('Введите PIN-код')).toBeTruthy();
   await typePin('1234');
@@ -138,6 +140,29 @@ test('9.11.4: the right PIN opens the app; "Сразу" — asked every time it 
 test('9.11.5: the fingerprint on — the system window right away on coming back; recognised — the app', async () => {
   await withLock({ bio: true });
   await leaveAndReturn(61);
+  await act(async () => {});
+  hidden('Введите PIN-код');
+});
+
+test('9.11.5: "Всегда" with the fingerprint — not asked into the background (Android drops it), asked on coming back', async () => {
+  await withLock({ bio: true });
+  const state = AppState as unknown as { currentState: string };
+  state.currentState = 'background';
+  memoryLock.asked = 0;
+  await appState('background');
+  expect(await screen.findByText('Введите PIN-код')).toBeTruthy();
+  expect(memoryLock.asked).toBe(0);
+  state.currentState = 'active';
+  await appState('active');
+  await act(async () => {});
+  expect(memoryLock.asked).toBe(1);
+  hidden('Введите PIN-код');
+  // and the next time too (a while after the fingerprint window): the lock still follows the app
+  state.currentState = 'background';
+  await appState('background', 5);
+  expect(await screen.findByText('Введите PIN-код')).toBeTruthy();
+  state.currentState = 'active';
+  await appState('active');
   await act(async () => {});
   hidden('Введите PIN-код');
 });

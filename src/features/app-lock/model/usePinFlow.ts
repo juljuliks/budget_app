@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 import { authenticate, checkPin, lockState } from '@/native/appLock';
 import { sheetAlert } from '@/shared/ui/sheetAlert';
 import type { PinScreenProps } from '../ui/PinScreen';
@@ -27,6 +28,8 @@ export function usePinFlow(ask: Ask | null, done: () => void): (PinScreenProps &
   };
   const biometric = async () => {
     if (!ask || ask.kind === 'create' || !biometricOn() || busy.current) return;
+    // locked on leaving ("Всегда"): asked when the app is back (LockHost renews the ask), not into the background
+    if (AppState.currentState === 'background') return;
     busy.current = true;
     const title = ask.kind === 'unlock' ? UNLOCK_TITLE : ask.title;
     const r = await authenticate(title, BIO_SUBTITLE, USE_PIN).finally(() => { busy.current = false; });

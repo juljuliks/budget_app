@@ -31,19 +31,20 @@ type Native = {
   authenticate(title: string, subtitle: string, negative: string): Promise<BiometricResult>;
 };
 
-export const DEFAULT_DELAY_S = 60;
+/** "Всегда": the PIN on every coming back */
+export const DEFAULT_DELAY_S = 0;
 const ATTEMPTS = 5;
 
 /** System windows open over the app now (whileOutside), and until when the app counts as just back from one. */
 let outside = 0;
 let backUntil = 0;
 
-/** In memory, for tests: the same rules, no hashing. `biometricAvailable` and `nextBiometric` set by a test. */
+/** In memory, for tests: the same rules, no hashing. `biometricAvailable` and `nextBiometric` set by a test, `asked` counts the fingerprint windows. */
 export const memoryLock = {
   pin: null as string | null, biometric: false, delayS: DEFAULT_DELAY_S, hideNotifications: false, failures: 0,
-  biometricAvailable: false, nextBiometric: 'ok' as BiometricResult,
+  biometricAvailable: false, nextBiometric: 'ok' as BiometricResult, asked: 0,
   reset() {
-    Object.assign(memoryLock, { pin: null, biometric: false, delayS: DEFAULT_DELAY_S, hideNotifications: false, failures: 0, biometricAvailable: false, nextBiometric: 'ok' });
+    Object.assign(memoryLock, { pin: null, biometric: false, delayS: DEFAULT_DELAY_S, hideNotifications: false, failures: 0, biometricAvailable: false, nextBiometric: 'ok', asked: 0 });
     outside = 0;
     backUntil = 0;
   },
@@ -70,7 +71,7 @@ const memory: Native = {
   setBiometric: async (on) => { memoryLock.biometric = on; return true; },
   setDelay: async (s) => { memoryLock.delayS = s; return true; },
   setHideNotifications: async (on) => { memoryLock.hideNotifications = on; return true; },
-  authenticate: async () => memoryLock.nextBiometric,
+  authenticate: async () => { memoryLock.asked += 1; return memoryLock.nextBiometric; },
 };
 
 const native = (NativeModules.AppLock as Native | undefined) ?? memory;

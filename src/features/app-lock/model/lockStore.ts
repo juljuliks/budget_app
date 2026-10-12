@@ -37,7 +37,7 @@ export function watchAppState(onActive: () => void): () => void {
       // a system window over the app (a file picker, the fingerprint) isn't leaving it
       if (isOutside()) return;
       backgroundAt = Date.now();
-      // "Сразу": locked already, nothing shows for a moment on coming back
+      // "Всегда": locked already, nothing shows for a moment on coming back
       if (shouldLock(cache.pin, cache.delayS, backgroundAt, backgroundAt)) setLocked(true);
     } else if (s === 'active') {
       if (shouldLock(cache.pin, cache.delayS, backgroundAt, Date.now())) setLocked(true);

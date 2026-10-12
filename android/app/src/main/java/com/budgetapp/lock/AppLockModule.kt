@@ -5,6 +5,7 @@ import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_WEAK
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.Lifecycle
 import com.facebook.react.ReactPackage
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.NativeModule
@@ -71,6 +72,12 @@ class AppLockModule(private val ctx: ReactApplicationContext) : ReactContextBase
     fun authenticate(title: String, subtitle: String, negative: String, promise: Promise) {
         val activity = currentActivity as? FragmentActivity ?: return promise.resolve("error")
         UiThreadUtil.runOnUiThread {
+            // the app in the background (screen off, another app): Android drops the window without a word and the
+            // promise would never settle — the app then thinks a system window is still over it
+            if (activity.supportFragmentManager.isStateSaved || !activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                promise.resolve("error")
+                return@runOnUiThread
+            }
             val prompt = BiometricPrompt(activity, ContextCompat.getMainExecutor(activity), object : BiometricPrompt.AuthenticationCallback() {
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                     LockStore.resetFailures(ctx)

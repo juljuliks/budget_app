@@ -17,7 +17,8 @@ object LockStore {
     private const val ITERATIONS = 100_000
     const val ATTEMPTS = 5
     private const val BLOCK_MS = 30_000L
-    const val DEFAULT_DELAY_S = 60
+    /** "Всегда": the PIN on every coming back */
+    const val DEFAULT_DELAY_S = 0
 
     private fun prefs(ctx: Context) = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
