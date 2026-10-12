@@ -28,6 +28,12 @@ export type RootStackParamList = {
   Categories: undefined;
   /** Merchants with their categories; merging into groups */
   Merchants: undefined;
+  /** bank messages no operation came from ("Не распознано") */
+  Unparsed: undefined;
+  /** one of them, marked */
+  UnparsedMessage: { id: number };
+  /** the user's templates for them ("Шаблоны сообщений", from the settings) */
+  MessageTemplates: undefined;
 };
 
 export const navigationRef = createNavigationContainerRef<RootStackParamList>();

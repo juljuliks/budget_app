@@ -36,7 +36,7 @@ type Props = {
 export default function SettingsSheet({ open, onClose, onImportSms, onBackup }: Props) {
   const navigation = useRootNavigation();
   const currency = useDisplayCurrency();
-  const go = (route: 'Merchants' | 'Categories') => { onClose(); navigation.navigate(route); };
+  const go = (route: 'Merchants' | 'Categories' | 'MessageTemplates') => { onClose(); navigation.navigate(route); };
   const [alerts, setAlerts] = useState(true);
   useEffect(() => {
     if (open) limitAlertsEnabled().then(setAlerts).catch(toastFailure('load limit alerts setting', LOAD_FAILED));
@@ -74,6 +74,7 @@ export default function SettingsSheet({ open, onClose, onImportSms, onBackup }: 
       </View>
       <Row label="Мерчанты" onPress={() => go('Merchants')} />
       <Row label="Категории" onPress={() => go('Categories')} />
+      <Row label="Шаблоны сообщений" onPress={() => go('MessageTemplates')} />
       {/* after this sheet has closed: one sheet at a time */}
       <Row label="Импорт SMS из телефона" onPress={() => { onClose(); setTimeout(onImportSms, 250); }} />
       <Row label="Резервная копия" onPress={() => { onClose(); setTimeout(onBackup, 250); }} />

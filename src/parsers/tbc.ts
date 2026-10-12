@@ -97,10 +97,15 @@ function classify(text: string): Kind | null {
   return null;
 }
 
+/** A message known not to be an operation: declined, a conversion between own accounts, a one-time code. */
+export function isNotOperation(raw_sms: string): boolean {
+  const text = raw_sms.replace(/\r\n?/g, '\n').trim();
+  return !text || DECLINED.test(text) || CONVERSION.test(text) || ONE_TIME_CODE.test(text);
+}
+
 export function parseTbc(raw_sms: string): ParsedTx | null {
   const text = raw_sms.replace(/\r\n?/g, '\n').trim();
-  if (!text) return null;
-  if (DECLINED.test(text) || CONVERSION.test(text) || ONE_TIME_CODE.test(text)) return null;
+  if (isNotOperation(text)) return null;
 
   const lines = text.split(/\n+/).map((l) => l.trim()).filter(Boolean);
   // balance-only SMS end up here too: amounts on "Balance:" lines are skipped

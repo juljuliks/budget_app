@@ -39,7 +39,8 @@ async function run(months: number | null) {
     [
       `Прочитано SMS банка: ${messages.length}.`,
       r.duplicate ? `Уже были в приложении: ${r.duplicate}.` : '',
-      r.ignored ? `Не операции (баланс, коды, отклонённые) или не распознаны: ${r.ignored}.` : '',
+      r.ignored ? `Не операции (баланс, коды, отклонённые): ${r.ignored}.` : '',
+      r.unparsed ? `Не распознаны: ${r.unparsed} — они в «Не распознано» над операциями.` : '',
     ].filter(Boolean).join('\n'),
   );
 }

@@ -9,6 +9,7 @@ import { CardBalance } from '@/features/card-balance';
 import { SortOutBanner, useSortOut } from '@/features/category-delete';
 import { isFilterActive, SearchBar, useTransactionFilters } from '@/features/operations-filters';
 import { PushAccessBanner } from '@/features/sms-import';
+import { UnparsedBanner } from '@/features/message-templates';
 import type { DayRange } from '@/shared/lib/dateRange';
 import { guardLeave } from '@/shared/navigation/leaveGuard';
 import { openAddTransaction, openTransaction } from '@/shared/navigation/sheets';
@@ -97,6 +98,7 @@ export default function OperationsScreen() {
     <View style={styles.list}>
       <View style={styles.header}>
         <PushAccessBanner />
+        <UnparsedBanner />
         <CardBalance />
         <SearchBar value={query} onChange={filters.setQuery} placeholder={SEARCH_PLACEHOLDER} />
         <FiltersBar

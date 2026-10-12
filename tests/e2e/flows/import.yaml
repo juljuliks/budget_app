@@ -35,7 +35,7 @@ appId: com.budgetapp
 - extendedWaitUntil:
     visible: "Добавлено 3 операции"
     timeout: 20000
-- assertVisible: "(?s)Прочитано SMS банка: 5\\..*Не операции \\(баланс, коды, отклонённые\\) или не распознаны: 2\\."
+- assertVisible: "(?s)Прочитано SMS банка: 5\\..*Не операции \\(баланс, коды, отклонённые\\): 2\\."
 - tapOn: "Понятно"
 # past operations: no "new" marks, no badge; the merchant's category applied
 - assertVisible: "CARREFOUR"

@@ -185,4 +185,28 @@ export const STEPS_13_ON: MigrationStep[][] = [
       raw_merchant = NULL, search_text = NULL
       WHERE bank = 'manual' AND raw_merchant IS NOT NULL`,
   ],
+  // 32: bank messages no operation came from ("Не распознано", kept 30 days) and the user's templates for them
+  // ("Шаблоны сообщений": a pattern from one marked message, read as an operation of `kind` or hidden)
+  [
+    `CREATE TABLE IF NOT EXISTS unparsed_messages (
+      id INTEGER PRIMARY KEY,
+      source TEXT NOT NULL CHECK (source IN ('sms', 'push')),
+      sender TEXT NOT NULL,
+      body TEXT NOT NULL,
+      received_at INTEGER NOT NULL,
+      hash TEXT NOT NULL UNIQUE
+    )`,
+    `CREATE TABLE IF NOT EXISTS message_templates (
+      id INTEGER PRIMARY KEY,
+      source TEXT NOT NULL CHECK (source IN ('sms', 'push')),
+      action TEXT NOT NULL CHECK (action IN ('operation', 'hide')),
+      kind TEXT,
+      pattern TEXT NOT NULL,
+      slots TEXT NOT NULL,
+      example TEXT NOT NULL,
+      matched INTEGER NOT NULL DEFAULT 0,
+      last_matched_at INTEGER,
+      created_at INTEGER NOT NULL
+    )`,
+  ],
 ];

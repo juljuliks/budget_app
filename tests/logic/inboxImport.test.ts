@@ -20,8 +20,10 @@ test('past SMS become transactions; the card balance comes with them', async () 
     inbox(DEPOSIT, '2026-10-03T17:16:00'),
     inbox(BAR, '2026-10-03T17:19:00'),
     inbox('Balance: 283.14GEL\n03/10/26 17:20', '2026-10-03T17:20:00'),
+    // nothing reads it: kept for marking ("Не распознано")
+    inbox('Cashback 5% at partners until 31/10', '2026-10-03T18:00:00'),
   ]);
-  expect(r).toEqual({ inserted: 3, duplicate: 0, ignored: 1 });
+  expect(r).toEqual({ inserted: 3, duplicate: 0, ignored: 1, unparsed: 1 });
   expect(await count()).toBe(3);
   expect(await cardBalance()).toMatchObject({ minor: 28314, pending: 0 });
   // imported ones are already read: no unread badge
@@ -32,10 +34,10 @@ test('importing twice, or SMS already received live, adds nothing', async () => 
   // received live: the receiver passes the service-centre time, the inbox has it as date_sent
   await ingestSms({ sender: 'TBC SMS', body: SPAR, timestamp: ms('2026-10-03T15:19:00') });
   const first = await importInboxSms([inbox(SPAR, '2026-10-03T15:19:00'), inbox(BAR, '2026-10-03T17:19:00')]);
-  expect(first).toEqual({ inserted: 1, duplicate: 1, ignored: 0 });
+  expect(first).toEqual({ inserted: 1, duplicate: 1, ignored: 0, unparsed: 0 });
   // a device reporting another time for the same SMS: caught by the text
   const again = await importInboxSms([inbox(SPAR, '2026-10-03T15:19:00', 7000), inbox(BAR, '2026-10-03T17:19:00')]);
-  expect(again).toEqual({ inserted: 0, duplicate: 2, ignored: 0 });
+  expect(again).toEqual({ inserted: 0, duplicate: 2, ignored: 0, unparsed: 0 });
   expect(await count()).toBe(2);
 });
 
@@ -55,6 +57,6 @@ test('a big inbox in batches: every SMS, an SMS repeated in the same batch store
     // a live SMS during the import: stored between the batches, not inside one (nor lost with it)
     ingestSms({ sender: 'TBC SMS', body: BAR, timestamp: ms('2026-10-03T17:19:00') }),
   ]);
-  expect(r).toEqual({ inserted: 120, duplicate: 1, ignored: 0 });
+  expect(r).toEqual({ inserted: 120, duplicate: 1, ignored: 0, unparsed: 0 });
   expect(await count()).toBe(121);
 });
