@@ -4,10 +4,13 @@ import { Text, TouchableOpacity } from 'react-native';
 import { CategoryStat, parseYm } from '@/db/plans';
 import { parseDayKey, rangeDays } from '@/shared/lib/dateRange';
 import { MONTHS_PREP, WEEKDAYS } from '@/shared/lib/dates';
+import { formatPercent } from '@/shared/lib/format';
 import { InfoIcon } from '@/shared/ui/icons';
 import Meter from '@/shared/ui/Meter';
 import { colors } from '@/shared/theme/theme';
 import { CategoryNorm, isPartOfWindow, paceOf, rhythmBar } from '@/stats/norms';
+import { useHideAmounts } from '@/shared/settings/hideAmounts';
+import { hiddenLeft, limitMove } from '../../model/hiddenText';
 import type { PeriodView } from '../model/periodView';
 import { ofLimitOf } from './OfLimit';
 import { INFO_SIZE, paceStyle, styles } from './styles';
@@ -29,6 +32,8 @@ function InfoLine({ onInfo, children, textStyle }: { onInfo: () => void; childre
  * whole rhythm window so far: a weekly category is meant to be spent unevenly, a day's share of it would read as overspend.
  */
 export function RhythmLine({ v, c, plan, noBar, onInfo }: Props) {
+  // "Скрыть суммы": the overspend just named, what's left as a share of the limit, a moved limit by how much
+  const hidden = useHideAmounts();
   const mtd = v.monthToDate(c);
   const whole = isPartOfWindow(plan.window, v.range);
   const limit = Math.round(whole ? plan.windowNorm : plan.periodNorm);
@@ -46,7 +51,7 @@ export function RhythmLine({ v, c, plan, noBar, onInfo }: Props) {
       <>
         {noBar ? null : <Meter ratio={1} over={plan.monthLimit / mtd} height={8} color={c.color} />}
         <InfoLine onInfo={onInfo}>
-          <Text style={[styles.pace, styles.paceAhead]}>Перерасход на {v.monthIn} {v.money(mtd - plan.monthLimit)}</Text>
+          <Text style={[styles.pace, styles.paceAhead]}>Перерасход на {v.monthIn}{hidden ? '' : ` ${v.money(mtd - plan.monthLimit)}`}</Text>
         </InfoLine>
       </>
     );
@@ -64,7 +69,11 @@ export function RhythmLine({ v, c, plan, noBar, onInfo }: Props) {
       <InfoLine onInfo={onInfo}>
         {/* as in the month stats: the limit first — how the period moved it: at its start (crossed out) → for the rest
             of the month after it — then what's left */}
-        {effect ? (
+        {effect && hidden ? (moved && limitMove(effect.before, effect.after!) ? (
+          <>
+            <Text style={effect.after! < effect.before ? styles.paceAhead : styles.paceOk}>{`Лимит ${limitMove(effect.before, effect.after!)}`}</Text>{'\n'}
+          </>
+        ) : null) : effect ? (
           <>
             {/* "старый → новый": no "Лимит" word, it's plain what it is */}
             {moved ? <><Text style={styles.crossed}>{v.m(effect.before)}</Text>{' → '}</> : 'Лимит '}
@@ -76,7 +85,8 @@ export function RhythmLine({ v, c, plan, noBar, onInfo }: Props) {
         {limit > 0 ? (
           <>
             <Text style={[styles.pace, paceStyle(p)]}>
-              {(left < 0 ? `перерасход ${v.money(-left)}` : ongoing ? `осталось ${v.money(left)}` : `сэкономлено ${v.money(left)}`).replace(/^./, (ch) => (label ? ch : ch.toUpperCase()))}
+              {(hidden ? hiddenLeft(left, limit, ongoing ? 'осталось' : 'сэкономлено')
+                : left < 0 ? `перерасход ${v.money(-left)}` : ongoing ? `осталось ${v.money(left)}` : `сэкономлено ${v.money(left)}`).replace(/^./, (ch) => (label ? ch : ch.toUpperCase()))}
             </Text>
             {left >= 0 && ongoing && rangeDays({ from: whole ? plan.window.from : v.range.from, to: end }) > 1 ? ` · до ${WEEKDAYS[parseDayKey(end).getDay()]}` : ''}
           </>
@@ -88,6 +98,7 @@ export function RhythmLine({ v, c, plan, noBar, onInfo }: Props) {
 
 /** "Крупно, раз в месяц": not split by days, the month's plan so far. */
 export function MonthLine({ v, c, plan, noBar, onInfo }: Props) {
+  const hidden = useHideAmounts();
   const left = Math.round(plan.windowNorm) - plan.windowSpent;
   const p = paceOf(plan.windowSpent, plan.windowNorm, v.monthToDate(c), plan.monthLimit);
   const bar = rhythmBar(plan, v.range, c.spent_minor);
@@ -96,7 +107,7 @@ export function MonthLine({ v, c, plan, noBar, onInfo }: Props) {
       {noBar || bar.ratio <= 0 ? null : <Meter ratio={bar.ratio} base={bar.base} height={8} color={c.color} />}
       <InfoLine onInfo={onInfo}>
         <Text style={[styles.pace, paceStyle(p)]}>
-          На {v.monthIn} {left < 0 ? `перерасход ${v.money(-left)}` : `осталось ${v.money(left)}`}
+          На {v.monthIn} {hidden ? hiddenLeft(left, plan.windowNorm) : left < 0 ? `перерасход ${v.money(-left)}` : `осталось ${v.money(left)}`}
         </Text>
       </InfoLine>
     </>
@@ -105,6 +116,7 @@ export function MonthLine({ v, c, plan, noBar, onInfo }: Props) {
 
 /** A fixed payment: the month's plan, not split by days; "paid / plan" is on the right already. */
 export function FixedLine({ v, c, plan, noBar, onInfo }: Props) {
+  const hidden = useHideAmounts();
   const mtd = v.monthToDate(c);
   const ofLimit = ofLimitOf(v, c, plan);
   return (
@@ -116,11 +128,11 @@ export function FixedLine({ v, c, plan, noBar, onInfo }: Props) {
       <InfoLine onInfo={onInfo} textStyle={styles.share}>
         {plan.monthLimit <= 0 ? `в ${MONTHS_PREP[parseYm(v.norms!.ym).month]} плана нет`
           // "paid / plan" on the right: what's still to pay this month, like a limit's "осталось"
-          : ofLimit ? (mtd < plan.monthLimit ? <>Осталось оплатить {v.money(plan.monthLimit - mtd)}<Text> · до {v.monthEndShort}</Text></> : null)
+          : ofLimit ? (mtd < plan.monthLimit ? <>{hidden ? `Осталось оплатить ${formatPercent(plan.monthLimit - mtd, plan.monthLimit)}` : `Осталось оплатить ${v.money(plan.monthLimit - mtd)}`}<Text> · до {v.monthEndShort}</Text></> : null)
             : Math.round(mtd) === Math.round(plan.monthLimit) ? `Оплачено · ${v.monthIn}`
-              : `${v.money(mtd)} из ${v.money(plan.monthLimit)} на ${v.monthIn}`}
+              : hidden ? `${formatPercent(mtd, plan.monthLimit)} на ${v.monthIn}` : `${v.money(mtd)} из ${v.money(plan.monthLimit)} на ${v.monthIn}`}
         {/* an overspend, as in every other row */}
-        {plan.monthLimit > 0 && mtd > plan.monthLimit ? <Text style={[styles.pace, styles.paceAhead]}>{`${ofLimit ? '' : '\n'}Перерасход ${v.money(mtd - plan.monthLimit)}`}</Text> : null}
+        {plan.monthLimit > 0 && mtd > plan.monthLimit ? <Text style={[styles.pace, styles.paceAhead]}>{`${ofLimit ? '' : '\n'}Перерасход${hidden ? '' : ` ${v.money(mtd - plan.monthLimit)}`}`}</Text> : null}
       </InfoLine>
     </>
   );

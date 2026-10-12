@@ -4,7 +4,10 @@ import { currentYm, MonthStats } from '@/db/plans';
 import { daysInMonth, shortRange } from '@/shared/lib/dateRange';
 import { formatPercent } from '@/shared/lib/format';
 import { formatShort, formatWithCurrency } from '@/shared/lib/money';
-import Masked, { MaskedTotal } from '@/shared/ui/Masked';
+import { MaskedTotal } from '@/shared/ui/Masked';
+import { useHideAmounts } from '@/shared/settings/hideAmounts';
+import { capitalize } from '../../period/model/periodText';
+import { hiddenLeft } from '../../model/hiddenText';
 import Meter from '@/shared/ui/Meter';
 import { chart } from '@/shared/theme/theme';
 import { overStyle, styles } from './styles';
@@ -17,6 +20,7 @@ type Props = { stats: MonthStats; ym: string; plannedAll: number; evenPace?: num
  */
 export default function MonthTotal({ stats, ym, plannedAll, evenPace }: Props) {
   const left = Math.round(plannedAll) - stats.spent_minor;
+  const hidden = useHideAmounts();
   const lastDay = `${ym}-${String(daysInMonth(ym)).padStart(2, '0')}`;
   const money = (minor: number) => formatWithCurrency(minor, stats.currency);
   return (
@@ -33,11 +37,12 @@ export default function MonthTotal({ stats, ym, plannedAll, evenPace }: Props) {
         ? <Meter ratio={1} over={plannedAll / stats.spent_minor} height={8} color={chart.meterFill} />
         : <Meter ratio={stats.spent_minor / plannedAll} height={8} color={chart.meterFill} marker={evenPace} />}
       <Text style={styles.rowStatus}>
+        {/* "Скрыть суммы": the overspend just named, what's left as a share of the plan */}
         {left < 0
-          ? <Text style={styles.overLine}>Перерасход <Masked style={styles.overLine}>{money(-left)}</Masked></Text>
+          ? <Text style={styles.overLine}>Перерасход{hidden ? '' : ` ${money(-left)}`}</Text>
           : ym < currentYm()
-            ? <>Сэкономлено <Masked style={styles.rowStatus}>{money(left)}</Masked></>
-            : <>Осталось <Masked style={styles.rowStatus}>{money(left)}</Masked> · до {shortRange({ from: lastDay, to: lastDay })}</>}
+            ? (hidden ? capitalize(hiddenLeft(left, plannedAll, 'сэкономлено')) : `Сэкономлено ${money(left)}`)
+            : <>{hidden ? capitalize(hiddenLeft(left, plannedAll)) : `Осталось ${money(left)}`} · до {shortRange({ from: lastDay, to: lastDay })}</>}
       </Text>
     </View>
   );

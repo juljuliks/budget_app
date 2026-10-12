@@ -175,6 +175,17 @@ describe('5.4–5.6 hidden amounts, the currency, the warning', () => {
     expect(screen.getByText('76%')).toBeTruthy();
     expect(screen.getAllByText('49% плана').length).toBeGreaterThan(0);
     expect(screen.getAllByText(/^\d+% трат$/).length).toBeGreaterThan(0);
+    // the lines under the bars: what's left as a share of the limit, an overspend just named — no amounts
+    const lines = texts().filter((t) => /осталось|сэкономлено|перерасход|лимит/i.test(t));
+    expect(lines.filter((t) => /₾/.test(t))).toEqual([]);
+    expect(lines.some((t) => /^Осталось \d+% · до /.test(t))).toBe(true);
+    expect(lines.some((t) => /^осталось \d+%/.test(t))).toBe(true);
+    // the week too: the limits' lines and the sections' totals
+    await period('За неделю');
+    await screen.findAllByText(/^\d+% плана$/);
+    const week = texts().filter((t) => /осталось|сэкономлено|перерасход|лимит/i.test(t));
+    expect(week.filter((t) => /₾/.test(t))).toEqual([]);
+    expect(week.some((t) => /осталось \d+%/i.test(t))).toBe(true);
     expect(await getSetting('hide_amounts')).toBe('1');
   });
 
@@ -204,6 +215,8 @@ describe('5.4–5.6 hidden amounts, the currency, the warning', () => {
     }
     await tap('Скрыть суммы бюджета');
     expect(await screen.findByText('124% плана')).toBeTruthy();
+    // the overspend just named
+    expect(row().slice(0, 3)).toEqual(['🚕 Такси', '124% плана', 'Перерасход на октябрь']);
   });
 
   test('the currency: the stats in dollars by the day\'s rate', async () => {

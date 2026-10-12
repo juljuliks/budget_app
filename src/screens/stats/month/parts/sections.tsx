@@ -5,7 +5,8 @@ import { Text, View } from 'react-native';
 import type { CategoryStat, MonthStats, StatGroup } from '@/db/plans';
 import { formatPercent } from '@/shared/lib/format';
 import { formatShort, formatWithCurrency } from '@/shared/lib/money';
-import Masked, { MaskedTotal } from '@/shared/ui/Masked';
+import { MaskedTotal } from '@/shared/ui/Masked';
+import { hiddenLeft } from '../../model/hiddenText';
 import Meter from '@/shared/ui/Meter';
 import { SectionHeader } from '@/shared/ui/StickyScrollView';
 import { formStyles } from '@/shared/theme/formStyles';
@@ -45,7 +46,11 @@ export function typeSections(stats: MonthStats, groups: StatGroup[], rowOf: RowO
 }
 
 /** "Вне плана": the categories without a plan and the uncategorized, against the budget's share for them. */
-export function unplannedSection(stats: MonthStats, split: { unplanned: CategoryStat[]; spent: number }, share: number, rowOf: RowOf) {
+export function unplannedSection(
+  stats: MonthStats, split: { unplanned: CategoryStat[]; spent: number }, share: number, rowOf: RowOf,
+  /** "Скрыть суммы": the line under the header without amounts */
+  hidden: boolean,
+) {
   if (!split.unplanned.length && !(share > 0)) return null;
   const money = (minor: number) => formatWithCurrency(minor, stats.currency);
   return (
@@ -61,8 +66,9 @@ export function unplannedSection(stats: MonthStats, split: { unplanned: Category
               : <Meter ratio={split.spent / share} height={6} color={chart.meterFill} />) : null}
             <Text style={styles.rowStatus}>
               {split.spent > share
-                ? <Text style={styles.overLine}>Перерасход <Masked style={styles.overLine}>{money(split.spent - share)}</Masked></Text>
-                : <>осталось <Masked style={styles.rowStatus}>{money(share - split.spent)}</Masked></>}
+                ? <Text style={styles.overLine}>Перерасход{hidden ? '' : ` ${money(split.spent - share)}`}</Text>
+                // "Скрыть суммы": its share of the plan's part outside it
+                : hidden ? hiddenLeft(share - split.spent, share) : `осталось ${money(share - split.spent)}`}
             </Text>
           </View>
         ) : null}

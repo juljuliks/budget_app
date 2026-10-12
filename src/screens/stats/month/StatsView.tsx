@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
+import { useHideAmounts } from '@/shared/settings/hideAmounts';
 import Loading from '@/shared/ui/Loading';
 import { categoryLabel } from '@/db/categories';
 import type { Currency } from '@/db/fx';
@@ -32,6 +33,7 @@ function donutSegments(groups: StatGroup[]): DonutSegment[] {
 
 /** A month's spending: the donut, the month against its plan, the categories by section, "Вне плана". */
 export default function StatsView({ year, month, currency }: { year: number; month: number; currency: Currency }) {
+  const hidden = useHideAmounts();
   const { stats, share, today, load, failed } = useMonthData(year, month, currency);
   // "＋ В план" on a category without a plan amount
   const [planTarget, setPlanTarget] = useState<PlanAmountTarget | null>(null);
@@ -83,7 +85,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
       )}
 
       {stats.categories.length === 0 ? <Text style={styles.hint}>В этом месяце трат нет.</Text> : typeSections(stats, split.groups, rowOf)}
-      {unplannedSection(stats, split, share, rowOf)}
+      {unplannedSection(stats, split, share, rowOf, hidden)}
 
       <RefundsRow amount={stats.refunds_unassigned_minor} currency={stats.currency} onPress={() => openTransactions(null, monthDays(ym), ['refund'])} />
       {stats.other_currencies.length > 0 ? (

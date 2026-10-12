@@ -6,6 +6,9 @@ import { parseDayKey } from '@/shared/lib/dateRange';
 import { WEEKDAYS } from '@/shared/lib/dates';
 import { InfoIcon } from '@/shared/ui/icons';
 import { colors } from '@/shared/theme/theme';
+import { formatPercent } from '@/shared/lib/format';
+import { useHideAmounts } from '@/shared/settings/hideAmounts';
+import { hiddenLeft, limitMove } from '../../model/hiddenText';
 import type { PeriodView } from '../model/periodView';
 import { capitalize } from '../model/periodText';
 import { INFO_SIZE, styles } from './styles';
@@ -14,6 +17,8 @@ type Props = { v: PeriodView; g: SummaryGroup; onInfo: () => void };
 
 /** A limits section's total: the bar of its categories, what's left or the overspend, how the period moved the limit. */
 export default function LimitSummary({ v, g, onInfo }: Props) {
+  // "Скрыть суммы": the overspend just named, what's left as a share of the limit, a moved limit by how much
+  const hidden = useHideAmounts();
   const limit = Math.round(g.limit);
   if (limit <= 0) return null;
   const left = limit - g.spent;
@@ -41,7 +46,11 @@ export default function LimitSummary({ v, g, onInfo }: Props) {
       <TouchableOpacity style={styles.paceRow} onPress={onInfo} accessibilityLabel="Как считается раздел">
         <Text style={[styles.share, styles.paceText]}>
           {/* as in the category rows: the limit first, then what's left */}
-          {g.change && rhythm ? (
+          {g.change && rhythm && hidden ? (moved && limitMove(g.change.before, g.change.after!) ? (
+            <>
+              <Text style={g.change.after! < g.change.before ? styles.paceAhead : styles.paceOk}>{`Лимит ${limitMove(g.change.before, g.change.after!)}`}</Text>{'\n'}
+            </>
+          ) : null) : g.change && rhythm ? (
             <>
               {/* "старый → новый": no "Лимит" word, it's plain what it is */}
               {moved ? <><Text style={styles.crossed}>{v.m(g.change.before)}</Text>{' → '}</> : 'Лимит '}
@@ -51,7 +60,9 @@ export default function LimitSummary({ v, g, onInfo }: Props) {
           ) : null}
           {rhythm ? label : `${capitalize(v.monthIn)}: `}
           <Text style={[styles.pace, over ? styles.paceAhead : g.key === 'fixed' ? undefined : styles.paceOk]}>
-            {(over ? `перерасход ${v.money(-left)}` : g.key === 'fixed' ? (left > 0 ? `осталось оплатить ${v.money(left)}` : 'всё оплачено')
+            {(hidden ? (g.key === 'fixed' ? (over ? 'перерасход' : left > 0 ? `осталось оплатить ${formatPercent(left, limit)}` : 'всё оплачено')
+              : hiddenLeft(left, limit, g.ongoing ? 'осталось' : 'сэкономлено'))
+              : over ? `перерасход ${v.money(-left)}` : g.key === 'fixed' ? (left > 0 ? `осталось оплатить ${v.money(left)}` : 'всё оплачено')
               : g.ongoing ? `осталось ${v.money(left)}` : `сэкономлено ${v.money(left)}`).replace(/^./, (ch) => (label || !rhythm ? ch : ch.toUpperCase()))}
           </Text>
           {!over && g.ongoing && g.key !== 'fixed' && (g.key !== 'day' || v.days > 1) ? ` · до ${until}` : ''}

@@ -12,6 +12,7 @@ import { PER_PERIOD } from '@/shared/lib/strings';
 import type { useOpenCategoryTransactions } from '@/shared/navigation/navigation';
 import Meter from '@/shared/ui/Meter';
 import { CategoryNorm, flatOf, limitChange, Pace, paceOf } from '@/stats/norms';
+import { hiddenLeft, limitMove } from '../../model/hiddenText';
 import { overStyle, styles } from './styles';
 
 /** " (50%)" after "spent / limit" of a flexible category; nothing while nothing is spent. */
@@ -77,7 +78,7 @@ export default function CategoryRow({ stat, total, currency, evenPace, dim, ym, 
         <>
           {/* as everywhere: the bar scaled to the spending, a tick at the plan; the overspend bold orange */}
           <Meter ratio={1} over={limit / spent} height={8} color={stat.color} />
-          <Text style={[styles.rowStatus, styles.overLine]}>Перерасход {formatWithCurrency(spent - limit, currency)}</Text>
+          <Text style={[styles.rowStatus, styles.overLine]}>Перерасход{hidden ? '' : ` ${formatWithCurrency(spent - limit, currency)}`}</Text>
         </>
       ) : null}
       {limit && !fixed ? (
@@ -88,8 +89,9 @@ export default function CategoryRow({ stat, total, currency, evenPace, dim, ym, 
             : ratio > 0 ? <Meter ratio={ratio} height={8} marker={stat.plan_norm === 'month' ? undefined : evenPace} /> : null}
           <Text style={styles.rowStatus}>
             {ratio > 1
-              ? <Text style={styles.overLine}>Перерасход {formatWithCurrency(spent - limit, currency)}</Text>
-              : `осталось ${formatWithCurrency(limit - spent, currency)}`}
+              ? <Text style={styles.overLine}>Перерасход{hidden ? '' : ` ${formatWithCurrency(spent - limit, currency)}`}</Text>
+              // "Скрыть суммы": its share of the plan
+              : hidden ? hiddenLeft(limit - spent, limit) : `осталось ${formatWithCurrency(limit - spent, currency)}`}
             {/* a category spent daily / weekly: its limit per that period, "лимит ≈ 113 ₾ в неделю" */}
             {/* the current month: this window's limit, rebalanced on what's left of the month; a past one: the plan's share */}
             {/* the month's plan overspent: no limits any more, just the overspend */}
@@ -99,6 +101,11 @@ export default function CategoryRow({ stat, total, currency, evenPace, dim, ym, 
               const value = current ? current.windowNorm : flat;
               // more than 5% off the plan's share: "лимит 113 ₾ (crossed out) → 95 ₾"
               const change = limitChange(value, flat);
+              // "Скрыть суммы": just how much it moved, "лимит ↓ 16%"; unmoved — nothing
+              if (hidden) {
+                const move = change ? limitMove(flat, value) : '';
+                return move ? <Text style={[styles.rowStatusMuted, change === 'down' ? styles.paceAhead : styles.paceOk]}>{` · лимит ${move}`}</Text> : null;
+              }
               return (
                 <Text style={styles.rowStatusMuted}>
                   {/* "старый → новый": no "лимит" word, it's plain what it is */}
@@ -117,7 +124,8 @@ export default function CategoryRow({ stat, total, currency, evenPace, dim, ym, 
             const p: Pace = paceOf(now.windowSpent, now.windowNorm, monthToDate, now.monthLimit);
             return (
               <Text style={[styles.rowStatus, styles.paceLine, p === 'ok' ? styles.paceOk : p === 'ahead' ? styles.paceAhead : styles.dangerText]}>
-                {RHYTHM_NOW[rhythm]} {left < 0 ? `перерасход ${formatWithCurrency(-left, currency)}` : `осталось ${formatWithCurrency(left, currency)}`}
+                {RHYTHM_NOW[rhythm]} {hidden ? hiddenLeft(left, now.windowNorm)
+                  : left < 0 ? `перерасход ${formatWithCurrency(-left, currency)}` : `осталось ${formatWithCurrency(left, currency)}`}
                 {left >= 0 && rhythm !== 'day' ? <Text style={styles.rowStatusMuted}> · до {WEEKDAYS[new Date(`${now.window.to}T12:00:00`).getDay()]}</Text> : null}
               </Text>
             );

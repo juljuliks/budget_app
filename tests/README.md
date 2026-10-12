@@ -54,7 +54,7 @@
 | 3 мерчанты | `merchants.test.tsx` |
 | 4.1–4.4 категории, разделы, объединение, удаление без операций | `categories.test.tsx` |
 | 4.5 удаление с операциями: всё в одну, разбор, прерывание | `categoryDelete.test.tsx`, `categories.test.tsx` |
-| 5 статистика | `stats.test.tsx` |
+| 5 статистика | `stats.test.tsx`; строки без сумм при закрытом глазе — `logic/hiddenText.test.ts` |
 | 6 план | `plan.test.tsx` |
 | 7 отчёт и история | `report.test.tsx` |
 | 8 уведомления: что в них, кнопки, лимиты, отчёт 1-го | `notifications.test.tsx` |
