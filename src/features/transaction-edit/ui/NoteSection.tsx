@@ -7,33 +7,34 @@ import { PencilIcon } from '@/shared/ui/icons';
 import { toast } from '@/shared/ui/toast';
 import { colors } from '@/shared/theme/theme';
 
-/** The operation's note: shown with a pencil, or "＋ Добавить заметку"; edited in a sheet (empty removes it). */
+/** The operation's note ("Описание"; a manual operation's is the one entered with it): shown with a pencil, or
+ * "＋ Добавить описание"; edited in a sheet (empty removes it). */
 export default function NoteSection({ txId, note, onSaved }: { txId: number; note: string | null; onSaved: () => void }) {
   const [open, setOpen] = useState(false);
 
   async function save(text: string): Promise<string | null> {
     await saveTransactionNote(txId, text);
-    toast(text ? 'Заметка сохранена' : 'Заметка удалена');
+    toast(text ? 'Описание сохранено' : 'Описание удалено');
     onSaved();
     return null;
   }
 
   return (
     <>
-      <SectionHeading title="Заметка" />
+      <SectionHeading title="Описание" />
       {note ? (
-        <TouchableOpacity style={styles.note} onPress={() => setOpen(true)} accessibilityLabel="Изменить заметку">
+        <TouchableOpacity style={styles.note} onPress={() => setOpen(true)} accessibilityLabel="Изменить описание">
           <Text style={styles.noteText}>{note}</Text>
           <PencilIcon color={colors.muted} size={16} />
         </TouchableOpacity>
       ) : (
         <TouchableOpacity onPress={() => setOpen(true)} hitSlop={8}>
-          <Text style={styles.link}>＋ Добавить заметку</Text>
+          <Text style={styles.link}>＋ Добавить описание</Text>
         </TouchableOpacity>
       )}
       <TextInputModal
         visible={open}
-        title="Заметка"
+        title="Описание"
         initialValue={note ?? ''}
         placeholder="Например, подарок маме"
         multiline

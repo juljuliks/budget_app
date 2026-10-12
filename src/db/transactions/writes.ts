@@ -73,8 +73,8 @@ export async function addManualTransaction(tx: {
   const description = tx.description?.trim() || null;
   const { lastInsertRowid } = await db.run(
     `INSERT INTO transactions
-      (bank, kind, amount_minor, currency, raw_merchant, merchant_key, category_id, category_source, occurred_at, raw_sms, sms_hash, seen_at)
-      VALUES ('manual', ?, ?, ?, ?, NULL, ?, ?, ?, '', ?, ?)`,
+      (bank, kind, amount_minor, currency, note, category_id, category_source, occurred_at, raw_sms, sms_hash, seen_at)
+      VALUES ('manual', ?, ?, ?, ?, ?, ?, ?, '', ?, ?)`,
     [tx.kind ?? 'purchase', tx.amount_minor, tx.currency ?? 'GEL', description, tx.category_id,
      tx.category_id === null ? null : 'user', occurredAt, `manual:${now}:${Math.random().toString(36).slice(2)}`,
      // entered by the user, so already "seen"

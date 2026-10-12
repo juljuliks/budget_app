@@ -113,7 +113,7 @@ test('9.9.5 "Экспорт CSV": the operations as a table, operations-<date>.c
   const [text, title, mime] = mockNative.saveText.mock.calls[0] as unknown as [string, string, string];
   expect(title).toMatch(/^operations-\d{4}-\d{2}-\d{2}\.csv$/);
   expect(mime).toBe('text/csv');
-  expect(text.startsWith('﻿Дата;Сумма;Валюта;Тип;Категория;Раздел;Мерчант;Заметка\r\n')).toBe(true);
+  expect(text.startsWith('﻿Дата;Сумма;Валюта;Тип;Категория;Раздел;Мерчант;Описание\r\n')).toBe(true);
   expect(text.split('\r\n').length).toBeGreaterThan(3);
 });
 

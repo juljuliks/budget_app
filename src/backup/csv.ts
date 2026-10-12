@@ -13,7 +13,7 @@ export type CsvOperation = {
   note: string | null;
 };
 
-const HEADER = ['Дата', 'Сумма', 'Валюта', 'Тип', 'Категория', 'Раздел', 'Мерчант', 'Заметка'];
+const HEADER = ['Дата', 'Сумма', 'Валюта', 'Тип', 'Категория', 'Раздел', 'Мерчант', 'Описание'];
 
 const p2 = (n: number) => String(n).padStart(2, '0');
 const dateOf = (unix: number) => {

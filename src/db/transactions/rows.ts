@@ -13,6 +13,8 @@ export type TransactionRow = {
   currency: string;
   raw_merchant: string | null;
   merchant_key: string | null;
+  /** "Описание": the user's text; a manual operation's is the one entered with it (its row's title) */
+  note: string | null;
   category_id: number | null;
   category_source: CategorySource | null;
   occurred_at: number;
@@ -50,7 +52,7 @@ export async function listTransactionsPage(cursor: PageCursor | null, limit = 50
 
 export async function getTransaction(id: number) {
   const db = await getDb();
-  return db.get<TransactionRow & { raw_sms: string; note: string | null }>(
+  return db.get<TransactionRow & { raw_sms: string }>(
     `SELECT t.*, ${CATEGORY_COLUMNS} ${FROM_TX} WHERE t.id = ?`, [id]);
 }
 

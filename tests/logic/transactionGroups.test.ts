@@ -1,3 +1,4 @@
+import { getDb } from '../../src/db';
 import { addManualTransaction } from '../../src/db/transactions';
 import { createCategory } from '../../src/db/categories';
 import { createCategoryType } from '../../src/db/categoryTypes';
@@ -7,8 +8,12 @@ import { freshDb } from '../helpers';
 
 const at = (y: number, m: number, d = 15) => Math.floor(new Date(y, m - 1, d, 12).getTime() / 1000);
 let day = 0;
-const add = (description: string | null, amount: number, more: { kind?: 'purchase' | 'refund'; category_id?: number | null; currency?: string; occurred_at?: number } = {}) =>
-  addManualTransaction({ amount_minor: amount, currency: more.currency ?? 'GEL', category_id: more.category_id ?? null, occurred_at: more.occurred_at ?? at(2026, 9, 1) + ++day * 3600, description: description ?? undefined, kind: more.kind });
+/** An operation of this merchant (a manual one given a merchant, as a bank one has) */
+async function add(merchant: string | null, amount: number, more: { kind?: 'purchase' | 'refund'; category_id?: number | null; currency?: string; occurred_at?: number } = {}) {
+  const id = await addManualTransaction({ amount_minor: amount, currency: more.currency ?? 'GEL', category_id: more.category_id ?? null, occurred_at: more.occurred_at ?? at(2026, 9, 1) + ++day * 3600, kind: more.kind });
+  await (await getDb()).run('UPDATE transactions SET raw_merchant = ? WHERE id = ?', [merchant, id]);
+  return id;
+}
 
 beforeEach(async () => { await freshDb(); day = 0; });
 

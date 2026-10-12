@@ -4,7 +4,7 @@ import { txCategoryLabel } from '@/db/categories';
 import { isUnread, TransactionRow } from '@/db/transactions';
 import Checkbox from '@/shared/ui/Checkbox';
 import { formatAmount, formatTime, isIncome } from '@/shared/lib/format';
-import { merchantLabel } from '../model/title';
+import { rowTitle } from '../model/title';
 import RowActions from '@/shared/ui/RowActions';
 import { colors } from '@/shared/theme/theme';
 import { NO_CATEGORY } from '@/shared/lib/strings';
@@ -44,7 +44,7 @@ function TransactionItem({ tx, onPress, onLongPress, selectable, selected, onDel
       <View style={styles.main}>
         <View style={styles.titleRow}>
           {unread ? <View style={styles.unreadDot} accessibilityLabel="Новая" /> : null}
-          <Text style={[styles.merchant, unread && styles.merchantUnread]} numberOfLines={1}>{merchantLabel(tx)}</Text>
+          <Text style={[styles.merchant, unread && styles.merchantUnread]} numberOfLines={1}>{rowTitle(tx)}</Text>
           {auto ? <Text style={styles.auto} accessibilityLabel="Категория мерчанта, назначена автоматически">🤖 авто</Text> : null}
         </View>
         {tx.refund_settled_at ? (

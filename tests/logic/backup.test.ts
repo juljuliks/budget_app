@@ -55,12 +55,13 @@ test('an older backup passes: it is migrated when opened', async () => {
 });
 
 test('CSV: a header, ";" between cells, a decimal comma, spending negative, quotes where needed, a BOM', async () => {
-  const id = await addManualTransaction({ amount_minor: 1250, category_id: 1, description: 'Кафе "Ромашка"; летняя', occurred_at: at('2026-10-03T09:30:00') });
+  const id = await addManualTransaction({ amount_minor: 1250, category_id: 1, occurred_at: at('2026-10-03T09:30:00') });
+  await (await getDb()).run('UPDATE transactions SET raw_merchant = ? WHERE id = ?', ['Кафе "Ромашка"; летняя', id]);
   await setTransactionNote(id, 'с Аней\nи Борей');
   await addManualTransaction({ amount_minor: 10000, kind: 'deposit', category_id: null, occurred_at: at('2026-10-04T10:05:00') });
   const csv = operationsCsv(await csvOperations());
   const category = (await (await getDb()).get<{ name: string }>('SELECT name FROM categories WHERE id = 1'))!.name;
-  expect(csv.startsWith('﻿Дата;Сумма;Валюта;Тип;Категория;Раздел;Мерчант;Заметка\r\n')).toBe(true);
+  expect(csv.startsWith('﻿Дата;Сумма;Валюта;Тип;Категория;Раздел;Мерчант;Описание\r\n')).toBe(true);
   const rows = csv.slice(1).split('\r\n');
   expect(rows[1]).toMatch(new RegExp(`^2026-10-03 09:30;-12,50;GEL;Покупка;${category};[^;]*;"Кафе ""Ромашка""; летняя";"с Аней\\nи Борей"$`));
   expect(rows[2]).toBe('2026-10-04 10:05;100,00;GEL;Пополнение;Без категории;;;');

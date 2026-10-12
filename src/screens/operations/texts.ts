@@ -19,6 +19,6 @@ export function bulkMerchantText(change: Change, toLabel: string, selected: numb
   };
 }
 
-export const SEARCH_PLACEHOLDER = 'Поиск: мерчант, заметка, сумма…';
+export const SEARCH_PLACEHOLDER = 'Поиск: мерчант, описание, сумма…';
 export const EMPTY_FILTERED = 'Ничего не найдено.';
 export const EMPTY = 'Операций пока нет. Они появятся здесь после SMS или уведомления банка, или добавьте вручную ＋.';

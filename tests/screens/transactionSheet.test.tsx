@@ -24,7 +24,7 @@ test('2.7.1: the card — the amount, the merchant as a link, the date, the cate
   expect(screen.getByText('Категория мерчанта «SPAR»: 🛒 Продукты. Новые операции мерчанта получают её автоматически.')).toBeTruthy();
   expect(screen.getByText('SMS')).toBeTruthy();
   expect(screen.getByText('SPAR 30')).toBeTruthy();
-  expect(screen.getByText('＋ Добавить заметку')).toBeTruthy();
+  expect(screen.getByText('＋ Добавить описание')).toBeTruthy();
   expect(screen.getByText('Удалить операцию')).toBeTruthy();
 });
 
@@ -123,16 +123,16 @@ test('2.7.9: the amount and its currency', async () => {
 
 test('2.7.10: a note — added, shown, found, removed', async () => {
   await tap('SPAR');
-  await tap('＋ Добавить заметку');
+  await tap('＋ Добавить описание');
   fireEvent.changeText(await screen.findByPlaceholderText('Например, подарок маме'), 'к празднику');
   await tap('Сохранить');
-  expect(await screen.findByText('Заметка сохранена')).toBeTruthy();
+  expect(await screen.findByText('Описание сохранено')).toBeTruthy();
   expect(await screen.findByText('к празднику')).toBeTruthy();
   expect((await opsOf('SPAR'))[0].note).toBe('к празднику');
-  await tap('Изменить заметку');
+  await tap('Изменить описание');
   fireEvent.changeText(screen.getByDisplayValue('к празднику'), '');
   await tap('Сохранить');
-  expect(await screen.findByText('Заметка удалена')).toBeTruthy();
+  expect(await screen.findByText('Описание удалено')).toBeTruthy();
   expect((await opsOf('SPAR'))[0].note).toBeNull();
 });
 
@@ -160,7 +160,7 @@ test('2.7.14: a manual operation: no SMS', async () => {
   const db = await getDb();
   await db.run("UPDATE transactions SET raw_sms = '' WHERE raw_merchant = 'WOLT'");
   await tap('WOLT');
-  expect(await screen.findByText('Заметка')).toBeTruthy();
+  expect(await screen.findByText('Описание')).toBeTruthy();
   expect(screen.queryByText('SMS')).toBeNull();
 });
 

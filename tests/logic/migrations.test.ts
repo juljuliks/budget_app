@@ -93,6 +93,25 @@ describe('migrations', () => {
       .toEqual(['rule', 'user', 'user', 'user']);
   });
 
+  test('migration 31: a manual operation\'s description moves into its note (before a note it had), a bank one\'s merchant stays', async () => {
+    const db = openDatabase(':memory:');
+    await migrate(db, MIGRATIONS.slice(0, 30));
+    const add = (bank: string, merchant: string | null, note: string | null, hash: string) => db.run(
+      `INSERT INTO transactions (bank, kind, amount_minor, currency, raw_merchant, note, occurred_at, raw_sms, sms_hash, search_text)
+        VALUES (?, 'purchase', 100, 'GEL', ?, ?, 1, '', ?, 'x')`, [bank, merchant, note, hash]);
+    await add('manual', 'Рынок', null, 'a');
+    await add('manual', 'Рынок', 'для дачи', 'b');
+    await add('manual', null, 'кофе', 'c');
+    await add('TBC', 'SPAR', 'вино', 'd');
+    await migrate(db);
+    expect(await db.all('SELECT raw_merchant AS m, note, search_text AS s FROM transactions ORDER BY sms_hash')).toEqual([
+      { m: null, note: 'Рынок', s: null },
+      { m: null, note: 'Рынок\nдля дачи', s: null },
+      { m: null, note: 'кофе', s: 'x' },
+      { m: 'SPAR', note: 'вино', s: 'x' },
+    ]);
+  });
+
   test('a failing migration is rolled back and version is not bumped', async () => {
     const db = openDatabase(':memory:');
     const broken = [...MIGRATIONS, ['CREATE TABLE extra (id INTEGER)', 'NOT VALID SQL']];

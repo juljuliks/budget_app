@@ -4,7 +4,7 @@ import { openApp, rowOf, screen, scrollTo, tap } from './app';
 import { ops } from '../e2e/seeds';
 import { dayKeyOf } from '../../src/shared/lib/dateRange';
 
-const search = (text: string) => fireEvent.changeText(screen.getByPlaceholderText('Поиск: мерчант, заметка, сумма…'), text);
+const search = (text: string) => fireEvent.changeText(screen.getByPlaceholderText('Поиск: мерчант, описание, сумма…'), text);
 /** the list shows exactly these (and not those) */
 async function shows(yes: string[], no: string[] = []) {
   await waitFor(() => {

@@ -30,7 +30,7 @@ test('2.1.6: unread ones in the badge; opening one marks it read', async () => {
   // the transfer and GLOVO: new and without a category
   await waitFor(() => expect(screen.getByText('2')).toBeTruthy());
   await tap('GLOVO');
-  expect(await screen.findByText('Заметка')).toBeTruthy();
+  expect(await screen.findByText('Описание')).toBeTruthy();
   await waitFor(async () => {
     const r = await (await getDb()).get<{ seen: number }>("SELECT seen_at IS NOT NULL AS seen FROM transactions WHERE raw_merchant = 'GLOVO'");
     expect(r?.seen).toBe(1);

@@ -16,7 +16,7 @@ export async function openApp(seed?: () => Promise<void>) {
   await setHideAmounts(false);
   await setDisplayCurrency('GEL');
   render(<App />);
-  await screen.findByPlaceholderText('Поиск: мерчант, заметка, сумма…');
+  await screen.findByPlaceholderText('Поиск: мерчант, описание, сумма…');
 }
 
 /** Taps the element with this text (or label, or "#test id"), waiting for it to show. */

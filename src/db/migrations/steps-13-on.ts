@@ -177,4 +177,12 @@ export const STEPS_13_ON: MigrationStep[][] = [
   ],
   // 30: what the search matches (the SMS, the note, the merchant, folded: see searchTransactions); filled when searched
   ['ALTER TABLE transactions ADD COLUMN search_text TEXT'],
+  // 31: a manual operation's "Описание" is its note ("Описание" in its card), not a merchant: moved there, before the
+  // note when it had one
+  [
+    `UPDATE transactions SET
+      note = CASE WHEN coalesce(note, '') = '' THEN raw_merchant ELSE raw_merchant || char(10) || note END,
+      raw_merchant = NULL, search_text = NULL
+      WHERE bank = 'manual' AND raw_merchant IS NOT NULL`,
+  ],
 ];

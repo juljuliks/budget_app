@@ -69,9 +69,14 @@ describe('1.5 a manual operation', () => {
     expect(await screen.findByText('Операция добавлена')).toBeTruthy();
     expect(await screen.findByText('Рынок')).toBeTruthy();
     const row = await (await getDb()).get<Record<string, unknown>>(
-      "SELECT kind, amount_minor AS a, currency AS c, merchant_key AS k, category_source AS s, seen_at IS NOT NULL AS seen, occurred_at AS at FROM transactions WHERE raw_merchant = 'Рынок'");
-    expect(row).toMatchObject({ kind: 'purchase', a: 1250, c: 'GEL', k: null, s: 'user', seen: 1 });
+      "SELECT kind, amount_minor AS a, currency AS c, raw_merchant AS m, merchant_key AS k, category_source AS s, seen_at IS NOT NULL AS seen, occurred_at AS at FROM transactions WHERE note = 'Рынок'");
+    expect(row).toMatchObject({ kind: 'purchase', a: 1250, c: 'GEL', m: null, k: null, s: 'user', seen: 1 });
     expect(Math.abs(Date.now() / 1000 - (row!.at as number))).toBeLessThan(60);
+    // the card: "Покупка" as its title, "Рынок" under "Описание"
+    await tap('Рынок');
+    expect(await screen.findByText('Описание')).toBeTruthy();
+    expect(screen.getByText('Покупка')).toBeTruthy();
+    expect(screen.getByLabelText('Изменить описание')).toBeTruthy();
   });
   test('a deposit yesterday, in dollars: in "Пополнение счёта"', async () => {
     await open();
