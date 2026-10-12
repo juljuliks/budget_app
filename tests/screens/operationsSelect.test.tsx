@@ -123,17 +123,22 @@ test('2.5.11: "Без категории" for the selected', async () => {
   expect(await opsOf('SPAR')).toEqual([[null, 'user']]);
 });
 
-test('2.5.14: deleting the selected, after asking', async () => {
+test('2.5.14: deleting the selected, after asking; "Отменить" brings them back', async () => {
   await screen.findByText('SPAR');
+  const before = [await opsOf('SPAR'), await opsOf('WOLT')];
   await longPress('SPAR');
   await tap('WOLT');
   await tap('Удалить (2)');
   expect(await screen.findByText('Удалить 2 операции?')).toBeTruthy();
-  expect(screen.getByText('Они пропадут из истории и статистики. Отменить это нельзя.')).toBeTruthy();
+  expect(screen.getByText('Они пропадут из истории и статистики.')).toBeTruthy();
   await tap('Удалить (2)');
   expect(await screen.findByText('Удалено операций: 2')).toBeTruthy();
   expect(await opsOf('SPAR')).toEqual([]);
   expect(await opsOf('WOLT')).toEqual([]);
+  await tap('Отменить');
+  expect(await screen.findByText('Восстановлено операций: 2')).toBeTruthy();
+  expect([await opsOf('SPAR'), await opsOf('WOLT')]).toEqual(before);
+  expect(await screen.findByText('SPAR')).toBeTruthy();
 });
 
 test('2.5.15: a new filter ends the selection', async () => {

@@ -1,8 +1,8 @@
 jest.mock('../../src/shared/navigation/navigation', () => ({ navigateWhenReady: jest.fn() }));
 
 import { getDb } from '../../src/db';
-import { dateKey, ensureRates, ensureRatesLater, makeConverter } from '../../src/db/fx';
-import { setRatesFetcher } from '../../src/fx/nbg';
+import { dateKey, ensureRates, ensureRatesLater, forgetRateFailures, makeConverter, RETRY_AFTER_MS } from '../../src/db/fx';
+import { RATES_TIMEOUT_MS, setRatesFetcher } from '../../src/fx/nbg';
 import {
   addPlanItem, getPlanBudget, listPlan, monthStats, OverBudgetError, periodStats, planHistory, setPlanAmount, setPlanBudget, ymOf,
 } from '../../src/db/plans';
@@ -16,6 +16,7 @@ const at = (y: number, m: number, d: number) => Math.floor(new Date(y, m, d, 12)
 beforeEach(async () => {
   await freshDb();
   setRatesFetcher(async () => []);
+  forgetRateFailures();
 });
 
 test('converter: the day\'s rate, else the nearest earlier, else the nearest later; GEL is 1; cross rates', async () => {
@@ -75,6 +76,47 @@ test('a failing request is ignored: no rate, the spending stays out of the total
   expect(s.spent_minor).toBe(500);
   expect(s.other_currencies).toEqual([{ currency: 'USD', spent_minor: 1000 }]);
   warn.mockRestore();
+});
+
+test('offline: a failed day isn\'t asked again for a while, and after a batch that all failed the rest isn\'t tried', async () => {
+  const fetcher = jest.fn(async () => { throw new Error('offline'); });
+  setRatesFetcher(fetcher);
+  const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+  const now = jest.spyOn(Date, 'now');
+  const t0 = new Date(2026, 9, 15, 12).getTime();
+  now.mockReturnValue(t0);
+  const days = Array.from({ length: 10 }, (_, i) => `2026-09-${String(i + 10).padStart(2, '0')}`);
+  await ensureRates(days);
+  expect(fetcher).toHaveBeenCalledTimes(4); // the first batch only
+  await ensureRates(days);
+  expect(fetcher).toHaveBeenCalledTimes(4);
+  // later: tried again, and now the network is there
+  now.mockReturnValue(t0 + RETRY_AFTER_MS + 1);
+  setRatesFetcher(async () => [{ currencies: [{ code: 'USD', quantity: 1, rate: 2.6 }] }]);
+  await ensureRates(['2026-09-10']);
+  expect((await makeConverter())(100, 'USD', 'GEL', '2026-09-10')).toBe(260);
+  now.mockRestore();
+  warn.mockRestore();
+});
+
+test('a request that hangs is given up after the timeout', async () => {
+  jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] });
+  const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+  setRatesFetcher(() => new Promise(() => {}));
+  const done = ensureRates(['2026-09-10']);
+  await jest.advanceTimersByTimeAsync(RATES_TIMEOUT_MS + 1);
+  await done;
+  expect(warn).toHaveBeenCalledWith('rates for', '2026-09-10', 'not loaded', expect.objectContaining({ message: 'rates timeout' }));
+  jest.useRealTimers();
+  warn.mockRestore();
+});
+
+test('an answer for another day (today\'s rates not published yet) isn\'t kept as this day\'s', async () => {
+  setRatesFetcher(async (url: string) => [{ date: url.endsWith('2026-09-11') ? '2026-09-10T00:00:00.000Z' : '2026-09-12T00:00:00.000Z',
+    currencies: [{ code: 'USD', quantity: 1, rate: 2.6 }] }]);
+  await ensureRates(['2026-09-11', '2026-09-12']);
+  const days = await (await getDb()).all<{ date: string }>("SELECT date FROM fx_rates WHERE currency = 'USD'");
+  expect(days.map((d) => d.date)).toEqual(['2026-09-12']);
 });
 
 test('stats in any currency: each transaction on its day\'s rate, the plan on the month\'s plan date', async () => {

@@ -12,7 +12,8 @@ import { plural } from '@/shared/lib/format';
 import { sheetAlert } from '@/shared/ui/sheetAlert';
 import { colors } from '@/shared/theme/theme';
 import { useLast } from '@/shared/lib/useLast';
-import { toast, toastError } from '@/shared/ui/toast';
+import { toast, toastError, toastFailure } from '@/shared/ui/toast';
+import { LOAD_FAILED, SAVE_FAILED } from '@/shared/lib/strings';
 
 type Props = {
   /** the category being deleted; null = closed */
@@ -40,7 +41,7 @@ export default function CategoryDeleteSheet({ categoryId: openId, onClose }: Pro
     setSaving(false);
     Promise.all([getCategory(categoryId), categoryDeletePreview(categoryId)])
       .then(([c, p]) => { setCategory(c ?? null); setPreview(p); })
-      .catch((e) => console.error('load category to delete failed', e));
+      .catch(toastFailure('load category to delete', LOAD_FAILED));
   }, [visible, categoryId]);
 
   const label = category ? categoryLabel(category) : '…';
@@ -97,7 +98,7 @@ export default function CategoryDeleteSheet({ categoryId: openId, onClose }: Pro
         allowNone
         excludeIds={[categoryId]}
         saveTitle="Сохранить"
-        onPick={(id) => { confirmMoveAll(id).catch((e) => console.error('confirm move failed', e)); }}
+        onPick={(id) => { confirmMoveAll(id).catch(toastFailure('confirm move', SAVE_FAILED)); }}
         onClose={() => setPicking(false)}
       />
     </>

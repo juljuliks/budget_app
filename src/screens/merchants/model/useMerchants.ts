@@ -7,8 +7,9 @@ import { listMerchants, MerchantRow } from '@/db/merchants';
 import { normalizeForSearch } from '@/db/transactions';
 import { onTransactionsChanged } from '@/domain/events';
 import type { CategoryInfo } from '@/entities/category';
-import { NO_CATEGORY } from '@/shared/lib/strings';
+import { NO_CATEGORY, LOAD_FAILED } from '@/shared/lib/strings';
 import { colors } from '@/shared/theme/theme';
+import { toastFailure } from '@/shared/ui/toast';
 
 /** Merchants of different categories (a delivery): each operation asks. */
 export const MIXED = 'Разные категории';
@@ -32,7 +33,7 @@ export function useMerchants() {
       setMerchants(m);
       setOrder(cats.map((c) => c.id));
       setCategories(new Map(cats.map((c) => [c.id, { label: categoryLabel(c), color: colorOf.get(c.id) ?? colors.border }])));
-    }).catch((e) => console.error('load merchants failed', e));
+    }).catch(toastFailure('load merchants', LOAD_FAILED));
   }, []);
   useFocusEffect(load);
   useEffect(() => onTransactionsChanged(load), [load]);

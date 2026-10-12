@@ -1,11 +1,11 @@
 // The plan's changes from its screen: the month's budget, an item removed, an item pinned.
 import type { UseFormReturn } from 'react-hook-form';
 import { categoryLabel } from '@/db/categories';
-import { OverBudgetError, PlanItem, removePlanItem, setPlanBudget, setPlanPinned } from '@/db/plans';
+import { OverBudgetError, PlanItem, removePlanItem, restorePlanItem, setPlanBudget, setPlanPinned } from '@/db/plans';
 import { formatWithCurrency, parseAmountOrZero } from '@/shared/lib/money';
-import { AMOUNT_HINT } from '@/shared/lib/strings';
+import { AMOUNT_HINT, SAVE_FAILED, UNDO } from '@/shared/lib/strings';
 import { sheetAlert } from '@/shared/ui/sheetAlert';
-import { toast, toastError } from '@/shared/ui/toast';
+import { toast, toastError, toastFailure } from '@/shared/ui/toast';
 import { BudgetForm, SHARE_STOPS } from './budgetForm';
 
 export function usePlanActions(ym: string, load: () => void) {
@@ -43,16 +43,34 @@ export function usePlanActions(ym: string, load: () => void) {
     return null;
   }
 
+  /** Removed, with "Отменить" in the toast: the item comes back as it was (its amount, 📌, how it is spent). */
+  async function remove(item: PlanItem) {
+    const label = categoryLabel(item);
+    try {
+      const row = await removePlanItem(ym, item.category_id);
+      toast(`«${label}» убрана из плана`, row ? {
+        label: UNDO,
+        onPress: () => {
+          restorePlanItem(row).then(() => { toast(`«${label}» снова в плане`); load(); })
+            .catch(toastFailure('restore plan item', 'Не удалось восстановить'));
+        },
+      } : undefined);
+    } catch (e) {
+      console.error('remove plan item failed', e);
+      toastError(SAVE_FAILED);
+    }
+    load();
+  }
+
   // a category repeated every month (📌) is asked about: removing it also stops it carrying over
   function removeItem(item: PlanItem) {
-    const done = `«${categoryLabel(item)}» убрана из плана`;
-    if (!item.pinned) { run(removePlanItem(ym, item.category_id), done); return; }
+    if (!item.pinned) { remove(item); return; }
     sheetAlert(
       `Убрать «${categoryLabel(item)}» из плана?`,
       'Эта категория повторяется каждый месяц (📌). Она пропадёт из плана этого месяца и не перейдёт в следующие. Операции не изменятся.',
       [
         { text: 'Отмена', style: 'cancel' },
-        { text: 'Убрать из плана', style: 'destructive', onPress: () => { run(removePlanItem(ym, item.category_id), done); } },
+        { text: 'Убрать из плана', style: 'destructive', onPress: () => { remove(item); } },
       ]);
   }
 

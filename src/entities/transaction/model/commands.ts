@@ -1,6 +1,8 @@
 // The operation's writes: each one tells the screens the data changed.
 import { incrementCategoryUsage } from '@/db/categories';
-import { addManualTransaction, deleteTransaction, markTransactionSeen, markTransactionsSeen, setTransactionAmount, setTransactionNote } from '@/db/transactions';
+import {
+  addManualTransaction, DeletedTransaction, deleteTransactions, markTransactionSeen, markTransactionsSeen, restoreTransactions, setTransactionAmount, setTransactionNote,
+} from '@/db/transactions';
 import { emitTransactionsChanged } from '@/domain/events';
 
 export async function saveTransactionAmount(id: number, amountMinor: number, currency: string) {
@@ -25,8 +27,16 @@ export async function markAllSeen(ids: number[]) {
   emitTransactionsChanged();
 }
 
-export async function removeTransactions(ids: number[]) {
-  for (const id of ids) await deleteTransaction(id);
+/** Deletes; what was deleted, to put back with `bringBackTransactions`. */
+export async function removeTransactions(ids: number[]): Promise<DeletedTransaction[]> {
+  const rows = await deleteTransactions(ids);
+  emitTransactionsChanged();
+  return rows;
+}
+
+/** "Отменить" after deleting: the operations as they were. */
+export async function bringBackTransactions(rows: DeletedTransaction[]) {
+  await restoreTransactions(rows);
   emitTransactionsChanged();
 }
 

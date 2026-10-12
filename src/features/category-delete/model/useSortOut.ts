@@ -6,9 +6,10 @@ import { Bucket, categoryDeletePreview, currentIdsOfCategory, remainingInCategor
 import { DayRange, dayKeyOf } from '@/shared/lib/dateRange';
 import { setLeaveGuard } from '@/shared/navigation/leaveGuard';
 import { sheetAlert } from '@/shared/ui/sheetAlert';
-import { toast, toastError } from '@/shared/ui/toast';
+import { toast, toastError, toastFailure } from '@/shared/ui/toast';
 import { removeCategory } from '../deleteCategory';
 import { sortOutDoneText, sortOutLeaveText } from '../texts';
+import { LOAD_FAILED } from '@/shared/lib/strings';
 
 export type SortOut<V> = { id: number; label: string; ids: number[]; month: DayRange; before: V };
 
@@ -58,7 +59,7 @@ export function useSortOut<V>({ incoming, nonce, current, start, restore, clear,
       setRemaining(null);
       setSortOut({ id: c.id, label: categoryLabel(c), ids, month, before: cb.current.current() });
       cb.current.start(c.id, month);
-    })().catch((e) => console.error('start sort-out failed', e));
+    })().catch(toastFailure('start sort-out', LOAD_FAILED));
     return () => { live = false; };
   }, [incoming, nonce]);
   useEffect(refreshRemaining, [sortOut, refreshRemaining]);
@@ -118,7 +119,7 @@ export function useSortOut<V>({ incoming, nonce, current, start, restore, clear,
           },
         },
       ]);
-    })().catch((e) => console.error('sort-out summary failed', e));
+    })().catch(toastFailure('sort-out summary', LOAD_FAILED));
   }, [sortOut, remaining, leave]);
 
   return { sortOut, ref, remaining, refreshRemaining, drop, abort, leave, askLeave };

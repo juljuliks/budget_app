@@ -1,6 +1,7 @@
 // The plan's items: listed, added, their amount, pinned, removed; within the budget.
 import { getDb } from '../index';
-import type { Db } from '../types';
+import type { Db, SqlParam } from '../types';
+import { placeholders } from '../sql';
 import { Currency } from '../fx';
 import { asCurrency } from './months';
 import { NormPeriod, PlanItem, PlanKind, asNorm } from './types';
@@ -115,10 +116,22 @@ export async function setPlanPinned(ym: string, categoryId: number, pinned: bool
   await db.run('UPDATE plan_items SET pinned = ? WHERE ym = ? AND category_id = ?', [pinned ? 1 : 0, ym, categoryId]);
 }
 
-export async function removePlanItem(ym: string, categoryId: number) {
+export async function removePlanItem(ym: string, categoryId: number): Promise<RemovedPlanItem | null> {
   const db = await getDb();
-  await db.transaction(async (t) => {
+  return db.transaction(async (t) => {
+    const row = await t.get<RemovedPlanItem>('SELECT * FROM plan_items WHERE ym = ? AND category_id = ?', [ym, categoryId]);
     await t.run('DELETE FROM plan_items WHERE ym = ? AND category_id = ?', [ym, categoryId]);
     await markPlanned(ym, t);
+    return row ?? null;
   });
+}
+
+/** A plan item's whole row as it was removed: "Отменить" puts it back (amount, currency, 📌, how it is spent). */
+export type RemovedPlanItem = Record<string, SqlParam>;
+
+/** Puts a removed item back as it was (its month already has it again: left as it is). */
+export async function restorePlanItem(row: RemovedPlanItem) {
+  const cols = Object.keys(row);
+  const db = await getDb();
+  await db.run(`INSERT OR IGNORE INTO plan_items (${cols.join(', ')}) VALUES (${placeholders(cols.length)})`, cols.map((c) => row[c]));
 }

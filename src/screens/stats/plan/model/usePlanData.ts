@@ -4,6 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { Currency } from '@/db/fx';
 import { getPlanBudget, listPlan, monthIncome, monthStats, parseYm, PlanBudget, planConverter, PlanItem, unplannedSpent } from '@/db/plans';
 import { useLatestRequest } from '@/shared/lib/useLatestRequest';
+import { useLoadFailed } from '@/shared/lib/useLoadFailed';
 
 export type SpentBy = { byCategory: Map<number, number>; total: number };
 
@@ -20,9 +21,11 @@ export function usePlanData(ym: string, currency: Currency) {
   const [spentBy, setSpentBy] = useState<SpentBy>({ byCategory: new Map(), total: 0 });
 
   const latest = useLatestRequest();
+  const { failed, started, fail } = useLoadFailed('load plan');
   const load = useCallback(() => {
     // answers of a previous month / currency (switched quickly) are dropped
     const keep = latest();
+    started();
     const { year, month } = parseYm(ym);
     Promise.all([listPlan(ym, currency), getPlanBudget(ym), monthIncome(ym, currency), planConverter(ym), monthStats(year, month, currency)])
       .then(keep(([plan, b, inc, conv, stats]: [Awaited<ReturnType<typeof listPlan>>, Awaited<ReturnType<typeof getPlanBudget>>, number, Awaited<ReturnType<typeof planConverter>>, Awaited<ReturnType<typeof monthStats>>]) => {
@@ -30,11 +33,11 @@ export function usePlanData(ym: string, currency: Currency) {
         setSpentBy({ byCategory: new Map(stats.categories.filter((c) => c.category_id !== null).map((c) => [c.category_id!, c.spent_minor])), total: stats.spent_minor });
         setToShown(() => (minor: number, from: Currency) => conv(minor, from, currency));
       }))
-      .catch((e) => console.error('load plan failed', e));
-  }, [ym, currency, latest]);
+      .catch(keep(fail));
+  }, [ym, currency, latest, started, fail]);
 
   // on focus, and again whenever load changes while focused (useFocusEffect re-runs on a new callback): no extra useEffect
   useFocusEffect(load);
 
-  return { items, budget, toShown, income, unplannedSpentMinor, spentBy, load };
+  return { items, budget, toShown, income, unplannedSpentMinor, spentBy, load, failed };
 }

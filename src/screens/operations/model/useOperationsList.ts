@@ -15,6 +15,8 @@ export function useOperationsList(filterRef: MutableRefObject<Filter>, groupByRe
   // what the rows loaded were read with: the next pages and a group's checkbox use the same
   const viewRef = useRef<ListView>({ filter: {}, groupBy: 'day' });
   const [loading, setLoading] = useState(true);
+  // the first load failed: "Не удалось загрузить · Повторить" instead of the spinner
+  const [failed, setFailed] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   // Drops results of requests superseded by a newer reload
@@ -30,11 +32,18 @@ export function useOperationsList(filterRef: MutableRefObject<Filter>, groupByRe
   // re-reads as many as were loaded, so the list keeps its scroll depth instead of snapping back to one page
   const reload = useCallback(async (keepDepth: boolean) => {
     const id = ++requestId.current;
+    setFailed(false);
     const groupBy = groupByRef.current;
-    const filter = await resolveFilter(filterRef.current);
-    const view: ListView = { filter, groupBy };
-    const limit = keepDepth ? Math.max(PAGE_SIZE, loadedCount.current) : PAGE_SIZE;
-    const [page, found] = await Promise.all([fetchPage(view, null, limit), groupBy === 'day' ? null : listTransactionGroups(filter, groupBy)]);
+    let view: ListView, page: Awaited<ReturnType<typeof fetchPage>>, found: TransactionGroup[] | null;
+    try {
+      const filter = await resolveFilter(filterRef.current);
+      view = { filter, groupBy };
+      const limit = keepDepth ? Math.max(PAGE_SIZE, loadedCount.current) : PAGE_SIZE;
+      [page, found] = await Promise.all([fetchPage(view, null, limit), groupBy === 'day' ? null : listTransactionGroups(filter, groupBy)]);
+    } catch (e) {
+      if (id === requestId.current) setFailed(true);
+      throw e;
+    }
     if (id !== requestId.current) return;
     viewRef.current = view;
     if (movedOut.current && page.rows.length < loadedCount.current) setRemount((n) => n + 1);
@@ -75,5 +84,5 @@ export function useOperationsList(filterRef: MutableRefObject<Filter>, groupByRe
   const sections = useMemo(() => buildSections(rows, groups, viewRef.current.groupBy), [rows, groups]);
   const markMovedOut = () => { movedOut.current = true; };
 
-  return { rows, groups, sections, viewRef, groupIds, setGroupIds, loading, loadingMore, refreshing, remount, reload, loadMore, onRefresh, markMovedOut };
+  return { rows, groups, sections, viewRef, groupIds, setGroupIds, loading, failed, loadingMore, refreshing, remount, reload, loadMore, onRefresh, markMovedOut };
 }

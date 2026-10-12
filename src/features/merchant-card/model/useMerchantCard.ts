@@ -5,6 +5,8 @@ import { categoryLabel, categoryLabelOf, listCategories } from '@/db/categories'
 import { categoryColors } from '@/db/colors';
 import type { CategoryInfo } from '@/entities/category';
 import { colors } from '@/shared/theme/theme';
+import { toastFailure } from '@/shared/ui/toast';
+import { LOAD_FAILED } from '@/shared/lib/strings';
 
 export function useMerchantCard(merchantId: string | null, given: Map<number, CategoryInfo> | undefined, onClose: () => void) {
   const [m, setM] = useState<MerchantDetails | null>(null);
@@ -31,7 +33,7 @@ export function useMerchantCard(merchantId: string | null, given: Map<number, Ca
       setSingle(d.category_id);
       setList(cs.map((c) => c.id));
       setSavedList(cs.map((c) => c.id));
-    }).catch((e) => console.error('load merchant failed', e));
+    }).catch(toastFailure('load merchant', LOAD_FAILED));
   }, [merchantId]);
 
   // opened from an operation: the labels aren't passed in
@@ -39,7 +41,7 @@ export function useMerchantCard(merchantId: string | null, given: Map<number, Ca
     if (given || merchantId === null) return;
     Promise.all([listCategories(), categoryColors()])
       .then(([cats, colorOf]) => setLoaded(new Map(cats.map((c) => [c.id, { label: categoryLabel(c), color: colorOf.get(c.id) ?? colors.border }]))))
-      .catch((e) => console.error('load categories failed', e));
+      .catch(toastFailure('load categories', LOAD_FAILED));
   }, [given, merchantId]);
 
   // a new merchant: start clean
@@ -55,7 +57,7 @@ export function useMerchantCard(merchantId: string | null, given: Map<number, Ca
   // switched on with an empty list: the categories its operations have, picked already
   function switchMixed(on: boolean) {
     setMixed(on);
-    if (on && m && list.length === 0) merchantUsedCategories(m.id).then(setList).catch((e) => console.error('load used categories failed', e));
+    if (on && m && list.length === 0) merchantUsedCategories(m.id).then(setList).catch(toastFailure('load used categories', LOAD_FAILED));
   }
 
   function toggle(id: number | null) {

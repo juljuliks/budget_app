@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
+import Loading from '@/shared/ui/Loading';
 import { categoryLabel } from '@/db/categories';
 import type { Currency } from '@/db/fx';
 import { PlanAmountModal, PlanAmountTarget } from '@/entities/plan';
@@ -31,7 +32,7 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
   const [editingItem, setEditingItem] = useState<PlanAmountTarget | null>(null);
   const [addOpen, setAddOpen] = useState(false);
 
-  if (!items) return <View style={styles.center}><ActivityIndicator /></View>;
+  if (!items) return <Loading failed={data.failed} onRetry={load} />;
   const p = planView({ ...data, items, ym, currency, hidden });
   const openBudget = () => setBudgetOpen(true);
 

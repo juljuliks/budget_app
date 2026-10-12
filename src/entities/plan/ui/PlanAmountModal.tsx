@@ -4,7 +4,7 @@ import { Currency } from '@/db/fx';
 import { categoryMonthlyAverage, getPlanBudget, lastPlanItem, NormPeriod, OverBudgetError, PlanKind, planConverter, plannedTotal } from '@/db/plans';
 import { StyleSheet, Text, View } from 'react-native';
 import { colors } from '@/shared/theme/theme';
-import { AMOUNT_HINT, PER_PERIOD, SPENDING_PATTERN } from '@/shared/lib/strings';
+import { AMOUNT_HINT, PER_PERIOD, SPENDING_PATTERN, LOAD_FAILED } from '@/shared/lib/strings';
 import { daysInMonth } from '@/shared/lib/dateRange';
 import { formStyles } from '@/shared/theme/formStyles';
 import CurrencyButton from '@/shared/ui/CurrencyButton';
@@ -13,7 +13,7 @@ import RadioGroup from '@/shared/ui/RadioGroup';
 import TextInputModal from '@/shared/ui/TextInputModal';
 import { useLoadedForm } from '@/shared/ui/form';
 import { plural } from '@/shared/lib/format';
-import { toast } from '@/shared/ui/toast';
+import { toast, toastFailure } from '@/shared/ui/toast';
 import { savePlanAmount } from '../model/commands';
 import { MONTHS_NOM, RHYTHM_DAYS } from '@/shared/lib/dates';
 
@@ -109,7 +109,7 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
         if (!target.kind) form.setValue('kind', last.kind, dirty);
         if (!target.norm_period) form.setValue('norm', last.norm_period, dirty);
       }
-    })().catch((e) => console.error('load plan budget failed', e));
+    })().catch(toastFailure('load plan budget', LOAD_FAILED));
   }, [ym, target, form, shown]);
 
   async function save(text: string): Promise<string | null> {

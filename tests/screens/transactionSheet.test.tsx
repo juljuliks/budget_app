@@ -146,7 +146,8 @@ test('2.7.11: the merchant\'s name opens its card; "Показать опера�
   expect(screen.getByDisplayValue('SPAR')).toBeTruthy();
 });
 
-test('2.7.12: deleting the operation', async () => {
+test('2.7.12: deleting the operation; "Отменить" brings it back as it was', async () => {
+  const before = await (await getDb()).all("SELECT * FROM transactions WHERE raw_merchant = 'SPAR'");
   await tap('SPAR');
   await tap('Удалить операцию');
   expect(await screen.findByText('Удалить операцию?')).toBeTruthy();
@@ -154,6 +155,11 @@ test('2.7.12: deleting the operation', async () => {
   await tap('Удалить');
   expect(await screen.findByText('Операция удалена')).toBeTruthy();
   expect(await opsOf('SPAR')).toEqual([]);
+  // 10 seconds for it, running out at the bottom of the toast
+  expect(screen.getByTestId('toast-time-left', { includeHiddenElements: true })).toBeTruthy();
+  await tap('Отменить');
+  expect(await screen.findByText('Операция восстановлена')).toBeTruthy();
+  expect(await (await getDb()).all("SELECT * FROM transactions WHERE raw_merchant = 'SPAR'")).toEqual(before);
 });
 
 test('2.7.14: a manual operation: no SMS', async () => {

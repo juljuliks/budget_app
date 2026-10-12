@@ -8,6 +8,13 @@ export const SAVE = 'Сохранить';
 export const DELETE = 'Удалить';
 export const NO_CATEGORY = `${NO_CATEGORY_EMOJI} Без категории`;
 export const NO_SECTION = 'Без раздела';
+/** a screen's data didn't load (shared/ui/Loading), and its button */
+export const LOAD_FAILED = 'Не удалось загрузить';
+export const RETRY = 'Повторить';
+/** a change didn't save (a red toast) */
+export const SAVE_FAILED = 'Не удалось сохранить';
+/** the button in the toast after deleting: puts it back */
+export const UNDO = 'Отменить';
 export const AMOUNT_HINT = 'Введите сумму, например 1500 или 12.50';
 /** before a list of amounts that couldn't be converted */
 export const NO_RATE = 'Не учтено — нет курса валюты (нужен интернет):';

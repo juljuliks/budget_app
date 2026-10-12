@@ -13,7 +13,7 @@ import { styles } from './ui/styles';
  * «История»).
  */
 export default function MonthReportRow({ ym }: { ym: string }) {
-  const r = useMonthReport(ym);
+  const r = useMonthReport(ym).report;
   // no plan that month: no report
   if (!r || !r.hasPlan) return null;
   const money = (v: number) => formatWithCurrency(v, r.currency);

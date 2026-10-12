@@ -1,12 +1,15 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { openMonthReport } from '@/shared/navigation/sheets';
-import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useOpenCategoryTransactions } from '@/shared/navigation/navigation';
 import { Currency } from '@/db/fx';
 import { currentYm, HistoryMonth, monthStats, MonthStats, parseYm, planHistory } from '@/db/plans';
 import { onTransactionsChanged } from '@/domain/events';
+import Loading from '@/shared/ui/Loading';
 import Meter from '@/shared/ui/Meter';
+import { useLatestRequest } from '@/shared/lib/useLatestRequest';
+import { useLoadFailed } from '@/shared/lib/useLoadFailed';
 import { formatMoneyWithCurrency, formatWithCurrency } from '@/shared/lib/money';
 import { monthDays } from '@/shared/lib/dateRange';
 import { NO_RATE } from '@/shared/lib/strings';
@@ -18,13 +21,18 @@ export default function HistoryView({ currency }: { currency: Currency }) {
   const [months, setMonths] = useState<HistoryMonth[] | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
 
+  const latest = useLatestRequest();
+  const { failed, started, fail } = useLoadFailed('load history');
   const load = useCallback(() => {
-    planHistory(undefined, currency).then(setMonths).catch((e) => console.error('load history failed', e));
-  }, [currency]);
+    // answers of a previous currency (switched quickly) are dropped
+    const keep = latest();
+    started();
+    planHistory(undefined, currency).then(keep(setMonths)).catch(keep(fail));
+  }, [currency, latest, started, fail]);
   useFocusEffect(load);
   useEffect(() => onTransactionsChanged(load), [load]);
 
-  if (!months) return <View style={styles.center}><ActivityIndicator /></View>;
+  if (!months) return <Loading failed={failed} onRetry={load} />;
 
   return (
     <FlatList
@@ -99,13 +107,18 @@ function MonthDetails({ ym, currency }: { ym: string; currency: Currency }) {
   // tap a category: its transactions (category filter), same as on the stats screen
   const openTransactions = useOpenCategoryTransactions();
   const [stats, setStats] = useState<MonthStats | null>(null);
-  useEffect(() => {
+  const latest = useLatestRequest();
+  const { failed, started, fail } = useLoadFailed('load month');
+  const load = useCallback(() => {
+    const keep = latest();
+    started();
     const { year, month } = parseYm(ym);
-    monthStats(year, month, currency).then(setStats).catch((e) => console.error('load month failed', e));
-  }, [ym, currency]);
+    monthStats(year, month, currency).then(keep(setStats)).catch(keep(fail));
+  }, [ym, currency, latest, started, fail]);
+  useEffect(load, [load]);
 
   const money = (minor: number) => formatWithCurrency(minor, currency);
-  if (!stats) return <ActivityIndicator style={styles.detailsLoading} />;
+  if (!stats) return <Loading inline failed={failed} onRetry={load} />;
   if (stats.categories.length === 0) return <Text style={styles.hint}>Нет трат и плана.</Text>;
 
   return (
@@ -162,7 +175,6 @@ const styles = StyleSheet.create({
   reportLink: { alignSelf: 'flex-start', marginTop: 8 },
   reportText: { fontSize: 14, color: colors.accent },
   content: { paddingHorizontal: 16, paddingBottom: 32 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   hint: { color: colors.muted, fontSize: 14, textAlign: 'center', marginVertical: 12 },
   month: { paddingBottom: 14 },
   // a grey band across the screen, like the days on the operations
@@ -180,7 +192,6 @@ const styles = StyleSheet.create({
   good: { color: colors.income },
   // white with a border: the sections are grey bands in it, like the days on the operations
   details: { marginTop: 10, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 10, overflow: 'hidden' },
-  detailsLoading: { marginTop: 10 },
   detailRow: { flexDirection: 'row', paddingVertical: 4 },
   detailHead: { fontSize: 12, color: colors.muted },
   detailName: { flex: 1, fontSize: 14, color: colors.text, marginRight: 8 },

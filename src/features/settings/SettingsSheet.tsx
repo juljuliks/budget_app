@@ -7,6 +7,8 @@ import { setDisplayCurrency, useDisplayCurrency } from '@/shared/settings/displa
 import { useRootNavigation } from '@/shared/navigation/navigation';
 import CurrencyPicker from '@/shared/ui/CurrencyPicker';
 import { colors } from '@/shared/theme/theme';
+import { toastFailure } from '@/shared/ui/toast';
+import { LOAD_FAILED, SAVE_FAILED } from '@/shared/lib/strings';
 
 function Row({ label, onPress }: { label: string; onPress: () => void }) {
   return (
@@ -37,11 +39,12 @@ export default function SettingsSheet({ open, onClose, onImportSms, onBackup }: 
   const go = (route: 'Merchants' | 'Categories') => { onClose(); navigation.navigate(route); };
   const [alerts, setAlerts] = useState(true);
   useEffect(() => {
-    if (open) limitAlertsEnabled().then(setAlerts).catch((e) => console.error('load limit alerts setting failed', e));
+    if (open) limitAlertsEnabled().then(setAlerts).catch(toastFailure('load limit alerts setting', LOAD_FAILED));
   }, [open]);
   const toggleAlerts = (on: boolean) => {
     setAlerts(on);
-    setLimitAlertsEnabled(on).catch((e) => console.error('save limit alerts setting failed', e));
+    // not saved: the switch goes back
+    setLimitAlertsEnabled(on).catch((e) => { setAlerts(!on); toastFailure('save limit alerts setting', SAVE_FAILED)(e); });
   };
 
   return (
@@ -52,7 +55,7 @@ export default function SettingsSheet({ open, onClose, onImportSms, onBackup }: 
           Статистика, план, история и суммы за день пересчитываются в неё по курсу Нацбанка Грузии. Операции
           остаются в своей валюте.
         </Text>
-        <CurrencyPicker value={currency} onChange={(c) => { setDisplayCurrency(c).catch((e) => console.error('save currency failed', e)); }} />
+        <CurrencyPicker value={currency} onChange={(c) => { setDisplayCurrency(c).catch(toastFailure('save currency', SAVE_FAILED)); }} />
       </View>
       <View style={styles.switchRow}>
         <View style={styles.flex}>

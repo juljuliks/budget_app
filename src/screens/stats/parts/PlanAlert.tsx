@@ -7,6 +7,8 @@ import { Currency } from '@/db/fx';
 import { onTransactionsChanged } from '@/domain/events';
 import { formatWithCurrency } from '@/shared/lib/money';
 import { colors } from '@/shared/theme/theme';
+import { toastFailure } from '@/shared/ui/toast';
+import { SAVE_FAILED } from '@/shared/lib/strings';
 
 const DISMISSED_KEY = 'plan_alert_dismissed';
 /** "До отложенного осталось …" once what may be spent (budget − 🔒) is down to this share */
@@ -59,7 +61,7 @@ export default function PlanAlert({ currency }: { currency: Currency }) {
     <View style={styles.box} accessibilityRole="alert">
       <Text style={styles.text}>⚠ {alert.text}</Text>
       <TouchableOpacity
-        onPress={() => { setAlert(null); setSetting(DISMISSED_KEY, alert.key).catch((e) => console.error('save alert dismissal failed', e)); }}
+        onPress={() => { setAlert(null); setSetting(DISMISSED_KEY, alert.key).catch(toastFailure('save alert dismissal', SAVE_FAILED)); }}
         hitSlop={10}
         accessibilityLabel="Скрыть предупреждение"
       >

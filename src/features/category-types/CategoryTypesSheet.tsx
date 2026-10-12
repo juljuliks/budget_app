@@ -11,7 +11,8 @@ import { CreateButton } from '@/shared/ui/PlusButton';
 import RowActions from '@/shared/ui/RowActions';
 import { TypeEditModal } from '@/entities/category';
 import { colors } from '@/shared/theme/theme';
-import { toast } from '@/shared/ui/toast';
+import { toast, toastFailure } from '@/shared/ui/toast';
+import { LOAD_FAILED } from '@/shared/lib/strings';
 
 /** Category sections ("Переводы", "Хобби", ...) in a sheet: create, edit (name and colors), delete. From the categories. */
 export default function CategoryTypesSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
@@ -20,7 +21,7 @@ export default function CategoryTypesSheet({ visible, onClose }: { visible: bool
   const [editing, setEditing] = useState<{ type?: CategoryType } | null>(null);
 
   const load = useCallback(() => {
-    listCategoryTypes().then(setTypes).catch((e) => console.error('load types failed', e));
+    listCategoryTypes().then(setTypes).catch(toastFailure('load types', LOAD_FAILED));
   }, []);
   useEffect(() => { if (visible) load(); }, [visible, load]);
 

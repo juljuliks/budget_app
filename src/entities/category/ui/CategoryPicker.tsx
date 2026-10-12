@@ -9,7 +9,8 @@ import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
 import { SheetActions } from '@/shared/ui/Button';
 import Chip from '@/shared/ui/Chip';
 import SectionHeading from '@/shared/ui/SectionHeading';
-import { NO_CATEGORY } from '@/shared/lib/strings';
+import { NO_CATEGORY, LOAD_FAILED } from '@/shared/lib/strings';
+import { toastFailure } from '@/shared/ui/toast';
 
 type Props = {
   selectedId?: number | null;
@@ -66,7 +67,7 @@ export default function CategoryPicker({
           : byUsage);
         setTransferTypeId(transferType);
       })
-      .catch((e) => console.error('load categories failed', e));
+      .catch(toastFailure('load categories', LOAD_FAILED));
   }, [transferFirst, deposit, showAll]);
 
   // on focus, and again whenever load changes while focused (useFocusEffect re-runs on a new callback): no extra useEffect

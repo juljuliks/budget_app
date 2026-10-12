@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { onTransactionsChanged } from '@/domain/events';
+import { LOAD_FAILED } from '@/shared/lib/strings';
+import { toastFailure } from '@/shared/ui/toast';
 
 const SEARCH_DEBOUNCE_MS = 200;
 
@@ -30,7 +32,7 @@ export function useListRefresh({ reload, alsoRefresh, clearSelection, query, vie
   useEffect(() => {
     if (firstRun.current) { firstRun.current = false; return undefined; }
     clearSelection();
-    const t = setTimeout(() => { reload(false).catch((e) => console.error('filter failed', e)); }, query ? SEARCH_DEBOUNCE_MS : 0);
+    const t = setTimeout(() => { reload(false).catch(toastFailure('filter', LOAD_FAILED)); }, query ? SEARCH_DEBOUNCE_MS : 0);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the view's parts, listed by the caller
   }, [query, ...view, reload, clearSelection]);

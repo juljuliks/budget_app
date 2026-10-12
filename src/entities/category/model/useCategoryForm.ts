@@ -6,8 +6,9 @@ import { CategoryType, listCategoryTypes } from '@/db/categoryTypes';
 import { takenCategoryColors } from '@/db/colors';
 import { submitForm, useLoadedForm } from '@/shared/ui/form';
 import { setField } from '@/shared/ui/TextInputModal';
-import { toast, toastError } from '@/shared/ui/toast';
+import { toast, toastError, toastFailure } from '@/shared/ui/toast';
 import { CategoryFields, saveCategory } from './commands';
+import { LOAD_FAILED } from '@/shared/lib/strings';
 
 export type CategorySummary = { count: number; totals: Array<{ currency: string; amount_minor: number }> };
 
@@ -42,7 +43,7 @@ export function useCategoryForm({ visible, categoryId, initialTypeId, onClose, o
       // the selected type was deleted meanwhile
       const cur = form.getValues('typeId');
       if (cur !== null && cur !== undefined && !t.some((x) => x.id === cur)) form.setValue('typeId', null);
-    }).catch((e) => console.error('load types failed', e));
+    }).catch(toastFailure('load types', LOAD_FAILED));
   }, [form]);
 
   // on open: what is saved, its operations, the sections and the colors in use
@@ -51,13 +52,13 @@ export function useCategoryForm({ visible, categoryId, initialTypeId, onClose, o
     if (!visible) return;
     setSummary(null);
     loadTypes();
-    takenCategoryColors(categoryId).then(setTaken).catch((e) => console.error('load colors failed', e));
+    takenCategoryColors(categoryId).then(setTaken).catch(toastFailure('load colors', LOAD_FAILED));
     setSystemKind(null);
     if (isNew) { setSaved({ name: '', emoji: '', typeId: initialTypeId ?? null, color: null }); return; }
     getCategory(categoryId).then((c) => {
       if (c) { setSaved({ name: c.name, emoji: c.emoji ?? '', typeId: c.type_id, color: c.color }); setSystemKind(isSystemCategory(c) ? c.system : null); }
-    }).catch((e) => console.error('load category failed', e));
-    categorySummary(categoryId).then(setSummary).catch((e) => console.error('load category summary failed', e));
+    }).catch(toastFailure('load category', LOAD_FAILED));
+    categorySummary(categoryId).then(setSummary).catch(toastFailure('load category summary', LOAD_FAILED));
   }, [visible, categoryId, isNew, initialTypeId, loadTypes]);
 
   const save = submitForm(form, async (v) => {

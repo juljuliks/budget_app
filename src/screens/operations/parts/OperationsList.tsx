@@ -3,7 +3,9 @@ import { ActivityIndicator, SectionList, StyleSheet, Text, View } from 'react-na
 import type { Currency } from '@/db/fx';
 import type { TransactionRow } from '@/db/transactions';
 import { TransactionItem } from '@/entities/transaction';
+import { LOAD_FAILED } from '@/shared/lib/strings';
 import { colors } from '@/shared/theme/theme';
+import { toastFailure } from '@/shared/ui/toast';
 import type { Row, Section } from '../model/listData';
 import SectionHeader from './SectionHeader';
 
@@ -70,7 +72,7 @@ export default function OperationsList(p: Props) {
         />
       )}
       renderItem={renderItem}
-      onEndReached={() => { p.loadMore().catch((e) => console.error('load more failed', e)); }}
+      onEndReached={() => { p.loadMore().catch(toastFailure('load more', LOAD_FAILED)); }}
       // the next page is read a screen before the end; rows are drawn a batch at a time, the ones far off-screen dropped
       onEndReachedThreshold={1}
       initialNumToRender={20}

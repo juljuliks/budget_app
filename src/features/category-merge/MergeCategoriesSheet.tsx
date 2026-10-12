@@ -10,9 +10,9 @@ import { SheetActions } from '@/shared/ui/Button';
 import { formStyles } from '@/shared/theme/formStyles';
 import { formatWithCurrency } from '@/shared/lib/money';
 import RadioGroup from '@/shared/ui/RadioGroup';
-import { NO_SECTION, SPENDING_PATTERN } from '@/shared/lib/strings';
+import { NO_SECTION, SPENDING_PATTERN, LOAD_FAILED } from '@/shared/lib/strings';
 import { colors } from '@/shared/theme/theme';
-import { toast, toastError } from '@/shared/ui/toast';
+import { toast, toastError, toastFailure } from '@/shared/ui/toast';
 
 const rhythmKey = (r: MergeRhythm) => `${r.kind}:${r.norm}`;
 const rhythmTitle = (r: MergeRhythm) => (r.kind === 'fixed' ? 'Обязательный платёж' : `Лимит · ${SPENDING_PATTERN[r.norm].title.toLowerCase()}`);
@@ -65,7 +65,7 @@ export default function MergeCategoriesSheet({ ids, onClose, onMerged }: {
       }
       setRhythms(ways);
       setRhythm(ways[0] ? rhythmKey(ways[0].rhythm) : '');
-    })().catch((e) => console.error('load merge failed', e));
+    })().catch(toastFailure('load merge', LOAD_FAILED));
   }, [visible, ids]);
 
   // the sections of the categories picked, when they differ

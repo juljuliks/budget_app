@@ -1,6 +1,6 @@
 // Changing operations: category, amount, note, read, deleted, added by hand.
 import { getDb } from '../index';
-import type { Db } from '../types';
+import type { Db, SqlParam } from '../types';
 import { CategorySource } from './rows';
 import { placeholders } from '../sql';
 
@@ -46,6 +46,35 @@ export async function markTransactionsSeen(ids: number[]): Promise<number> {
 export async function deleteTransaction(id: number) {
   const db = await getDb();
   await db.run('DELETE FROM transactions WHERE id = ?', [id]);
+}
+
+/** A deleted operation's whole row, to put it back as it was ("Отменить" in the toast). */
+export type DeletedTransaction = Record<string, SqlParam>;
+
+/** Deletes these operations in one go; their rows, for restoreTransactions. */
+export async function deleteTransactions(ids: number[]): Promise<DeletedTransaction[]> {
+  if (ids.length === 0) return [];
+  const db = await getDb();
+  return db.transaction(async (t) => {
+    const rows = await t.all<DeletedTransaction>(`SELECT * FROM transactions WHERE id IN (${placeholders(ids.length)})`, ids);
+    await t.run(`DELETE FROM transactions WHERE id IN (${placeholders(ids.length)})`, ids);
+    return rows;
+  });
+}
+
+/**
+ * Puts deleted operations back with their ids (a refund's link to its purchase holds). One that came again meanwhile
+ * (the same SMS imported) is left as it is.
+ */
+export async function restoreTransactions(rows: DeletedTransaction[]) {
+  if (rows.length === 0) return;
+  const db = await getDb();
+  await db.transaction(async (t) => {
+    for (const row of rows) {
+      const cols = Object.keys(row);
+      await t.run(`INSERT OR IGNORE INTO transactions (${cols.join(', ')}) VALUES (${placeholders(cols.length)})`, cols.map((c) => row[c]));
+    }
+  });
 }
 
 /**

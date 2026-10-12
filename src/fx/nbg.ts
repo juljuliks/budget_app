@@ -2,7 +2,7 @@
 
 const NBG_URL = 'https://nbg.gov.ge/gw/api/ct/monetarypolicy/currencies/en/json/';
 
-type NbgDay = Array<{ currencies: Array<{ code: string; quantity: number; rate: number }> }>;
+type NbgDay = Array<{ date?: string; currencies: Array<{ code: string; quantity: number; rate: number }> }>;
 type Fetcher = (url: string) => Promise<unknown>;
 
 let fetcher: Fetcher = async (url) => {
@@ -11,16 +11,30 @@ let fetcher: Fetcher = async (url) => {
   return res.json();
 };
 
+/** A request that hangs (a captive Wi-Fi, a bad connection) is given up after this long. */
+export const RATES_TIMEOUT_MS = 10_000;
+
 /** Tests (no network) replace the HTTP call. */
 export function setRatesFetcher(f: Fetcher) {
   fetcher = f;
 }
 
-/** A day's lari per unit of these currencies, as the bank gives them (bad rates left out). */
+/**
+ * A day's lari per unit of these currencies, as the bank gives them (bad rates left out). None when the bank answers
+ * with another day's rates (today's not published yet): they would be kept as this day's for good.
+ */
 export async function fetchRates(date: string, codes: readonly string[]): Promise<Array<{ code: string; gelPerUnit: number }>> {
   const query = codes.map((c) => `currencies=${c}`).join('&');
-  const days = (await fetcher(`${NBG_URL}?${query}&date=${date}`)) as NbgDay;
+  const days = (await withTimeout(fetcher(`${NBG_URL}?${query}&date=${date}`), RATES_TIMEOUT_MS)) as NbgDay;
+  const answered = days?.[0]?.date?.slice(0, 10);
+  if (answered && answered !== date) return [];
   return (days?.[0]?.currencies ?? [])
     .filter((c) => c.rate > 0)
     .map((c) => ({ code: c.code, gelPerUnit: c.rate / (c.quantity || 1) }));
+}
+
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error('rates timeout')), ms); });
+  return Promise.race([p, timeout]).finally(() => clearTimeout(timer));
 }

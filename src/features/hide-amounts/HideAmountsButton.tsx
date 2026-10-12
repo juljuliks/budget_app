@@ -3,13 +3,15 @@ import { StyleSheet, TouchableOpacity } from 'react-native';
 import { setHideAmounts, useHideAmounts } from '@/shared/settings/hideAmounts';
 import { EyeIcon, EyeOffIcon } from '@/shared/ui/icons';
 import { colors } from '@/shared/theme/theme';
+import { toastFailure } from '@/shared/ui/toast';
+import { SAVE_FAILED } from '@/shared/lib/strings';
 
 /** The eye next to the gear in the stats header: blurs the budget and plan totals (see Masked). */
 export default function HideAmountsButton() {
   const hidden = useHideAmounts();
   return (
     <TouchableOpacity
-      onPress={() => { setHideAmounts(!hidden).catch((e) => console.error('save hide amounts failed', e)); }}
+      onPress={() => { setHideAmounts(!hidden).catch(toastFailure('save hide amounts', SAVE_FAILED)); }}
       hitSlop={10}
       style={styles.button}
       accessibilityRole="switch"

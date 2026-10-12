@@ -7,11 +7,14 @@ import { findCategoryForMerchant, isMixedMerchant } from '@/categorize/rules';
 import { isRememberable } from '@/domain/types';
 import { onTransactionsChanged } from '@/domain/events';
 import { markSeen } from '@/entities/transaction';
+import { useLoadFailed } from '@/shared/lib/useLoadFailed';
 
 export type Tx = NonNullable<Awaited<ReturnType<typeof getTransaction>>>;
 
 export function useTransaction(txId: number, visible: boolean) {
-  const [tx, setTx] = useState<Tx | null>(null);
+  // undefined = loading; null = not there (deleted, opened from an old notification)
+  const [tx, setTx] = useState<Tx | null | undefined>(undefined);
+  const { failed, started, fail } = useLoadFailed('load transaction');
   // the merchant's category (its rule): new transactions of the merchant get it automatically
   const [merchantCategory, setMerchantCategory] = useState<string | null>(null);
   // a merchant of different categories: the ones its operations had (picked with a tap)
@@ -19,7 +22,8 @@ export function useTransaction(txId: number, visible: boolean) {
 
   const load = useCallback(async () => {
     const t = await getTransaction(txId);
-    setTx(t ?? null);
+    // gone while open (deleted from this sheet: it slides away): the last one stays on screen
+    setTx((prev) => t ?? (prev === undefined ? null : prev));
     const rule = t?.merchant_key && isRememberable(t.kind) ? await findCategoryForMerchant(t.merchant_key) : null;
     const c = rule ? await getCategory(rule.category_id) : undefined;
     setMerchantCategory(c ? categoryLabel(c) : null);
@@ -29,20 +33,22 @@ export function useTransaction(txId: number, visible: boolean) {
   }, [txId]);
 
   const reload = useCallback(() => {
-    load().catch((e) => console.error('load transaction failed', e));
-  }, [load]);
+    started();
+    load().catch(fail);
+  }, [load, started, fail]);
 
   // on open: what it is now; opening it marks it read (list dot, tab badge)
   useEffect(() => {
     if (!visible) return;
-    setTx(null);
+    setTx(undefined);
+    started();
     (async () => {
       const t = await load();
       if (t && t.seen_at === null) await markSeen(txId);
-    })().catch((e) => console.error('load transaction failed', e));
-  }, [visible, txId, load]);
+    })().catch(fail);
+  }, [visible, txId, load, started, fail]);
   // while open: a category or a merchant changed elsewhere (the category sheet, a merchant's card)
   useEffect(() => (visible ? onTransactionsChanged(reload) : undefined), [visible, reload]);
 
-  return { tx, merchantCategory, mixedCats, reload };
+  return { tx, merchantCategory, mixedCats, reload, failed };
 }

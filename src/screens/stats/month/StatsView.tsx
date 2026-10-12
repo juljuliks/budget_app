@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
+import Loading from '@/shared/ui/Loading';
 import { categoryLabel } from '@/db/categories';
 import type { Currency } from '@/db/fx';
 import { CategoryStat, currentYm, spentOf, StatGroup, ymOf } from '@/db/plans';
@@ -31,7 +32,7 @@ function donutSegments(groups: StatGroup[]): DonutSegment[] {
 
 /** A month's spending: the donut, the month against its plan, the categories by section, "Вне плана". */
 export default function StatsView({ year, month, currency }: { year: number; month: number; currency: Currency }) {
-  const { stats, share, today, load } = useMonthData(year, month, currency);
+  const { stats, share, today, load, failed } = useMonthData(year, month, currency);
   // "＋ В план" on a category without a plan amount
   const [planTarget, setPlanTarget] = useState<PlanAmountTarget | null>(null);
   // the donut segment tapped: its category's spending and share in the hole
@@ -39,7 +40,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
   const segments = useMemo(() => (stats ? donutSegments(stats.groups) : []), [stats]);
   const openTransactions = useOpenCategoryTransactions();
 
-  if (!stats) return <View style={styles.center}><ActivityIndicator /></View>;
+  if (!stats) return <Loading failed={failed} onRetry={load} />;
 
   // the categories without a plan and the uncategorized: one "Вне плана" section at the bottom, with the budget's share
   const split = splitUnplanned(stats.groups, (c) => c.limit_minor !== null);

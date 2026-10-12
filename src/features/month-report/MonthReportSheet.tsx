@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Text } from 'react-native';
+import { Text } from 'react-native';
 import { currentYm } from '@/db/plans';
 import { useDisplayCurrency } from '@/shared/settings/displayCurrency';
 import { PlanAmountModal, PlanAmountTarget } from '@/entities/plan';
 import { monthDays } from '@/shared/lib/dateRange';
 import { navigateWhenReady } from '@/shared/navigation/navigation';
 import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
+import Loading from '@/shared/ui/Loading';
 import { reportTitle, reportView } from './model/reportView';
 import { useMonthReport } from './model/useMonthReport';
 import GoodBlock from './ui/GoodBlock';
@@ -15,7 +16,7 @@ import { styles } from './ui/styles';
 
 /** The month's report in a sheet (sheets.ts → openMonthReport): from the notification, «История», the stats. */
 export default function MonthReportSheet({ ym, onClose }: { ym: string | null; onClose: () => void }) {
-  const r = useMonthReport(ym);
+  const { report: r, failed, load } = useMonthReport(ym);
   const currency = useDisplayCurrency();
   const [planTarget, setPlanTarget] = useState<PlanAmountTarget | null>(null);
   const v = r ? reportView(r, currency) : null;
@@ -29,7 +30,7 @@ export default function MonthReportSheet({ ym, onClose }: { ym: string | null; o
 
   return (
     <BottomSheet visible={ym !== null} onClose={onClose} title={ym ? `Отчёт · ${reportTitle(ym)}` : ''}>
-      {!r || !v ? <ActivityIndicator style={styles.loading} /> : !r.hasPlan ? (
+      {!r || !v ? <Loading inline style={styles.loading} failed={failed} onRetry={load} /> : !r.hasPlan ? (
         // an old notification of a month whose plan is gone
         <Text style={[styles.hint, styles.content]}>Плана на этот месяц не было — отчёта нет.</Text>
       ) : (

@@ -6,6 +6,7 @@ import { onTransactionsChanged } from '@/domain/events';
 import { unplannedMonth, UnplannedMonth } from '@/entities/plan';
 import { DayRange, rangeDays, rangeToUnix } from '@/shared/lib/dateRange';
 import { useLatestRequest } from '@/shared/lib/useLatestRequest';
+import { useLoadFailed } from '@/shared/lib/useLoadFailed';
 import { loadNorms, Norms } from '@/stats/norms';
 
 /** Periods up to this long are measured against the plan (its share for these days); longer ones aren't. */
@@ -24,9 +25,11 @@ export function usePeriodData(range: DayRange, currency: Currency) {
   const pace = days <= PACE_MAX_DAYS && sameMonth;
 
   const latest = useLatestRequest();
+  const { failed, started, fail } = useLoadFailed('load period stats');
   const load = useCallback(() => {
     // answers of a previous period (switched quickly) are dropped
     const keep = latest();
+    started();
     const { from, to } = rangeToUnix(range);
     if (pace) {
       // a day / week / 2-week limit not touched in the period but spent earlier in the month is listed too (0 ₾):
@@ -36,16 +39,16 @@ export function usePeriodData(range: DayRange, currency: Currency) {
           && (n.monthToDate.get(id) ?? 0) > 0).map(([id]) => id);
         return Promise.all([periodStats(from, to, currency, planned), unplannedMonth(n, currency)])
           .then(keep(([s, u]: [PeriodStats, UnplannedMonth]) => { setNorms(n); setMonth(u); setStats(s); }));
-      }).catch((e) => console.error('load period stats failed', e));
+      }).catch(keep(fail));
     } else {
       setNorms(null);
       setMonth(null);
-      periodStats(from, to, currency).then(keep(setStats)).catch((e) => console.error('load period stats failed', e));
+      periodStats(from, to, currency).then(keep(setStats)).catch(keep(fail));
     }
     if (!pace) averageFullMonths(range.from, range.to, currency).then(keep(setAverage)).catch((e) => console.error('load average failed', e));
-  }, [range, currency, pace, latest]);
+  }, [range, currency, pace, latest, started, fail]);
   useEffect(load, [load]);
   useEffect(() => onTransactionsChanged(load), [load]);
 
-  return { stats, norms, month, average, days, pace };
+  return { stats, norms, month, average, days, pace, load, failed };
 }

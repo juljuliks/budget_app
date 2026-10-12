@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react';
-import { NO_SECTION } from '@/shared/lib/strings';
+import { NO_SECTION, LOAD_FAILED } from '@/shared/lib/strings';
 import { SectionList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -17,6 +17,7 @@ import { onTransactionsChanged } from '@/domain/events';
 import Checkbox from '@/shared/ui/Checkbox';
 import { MergeCategoriesSheet } from '@/features/category-merge';
 import Button from '@/shared/ui/Button';
+import { toastFailure } from '@/shared/ui/toast';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Categories'>;
 
@@ -53,7 +54,7 @@ export default function CategoriesScreen({ navigation }: Props) {
   const load = useCallback(() => {
     Promise.all([listCategories(), categoryColors(), listCategoryTypes()])
       .then(([c, colorMap, t]) => { setCats(c); setColorOf(colorMap); setTypes(t.map((x) => x.name)); })
-      .catch((e) => console.error('load categories failed', e));
+      .catch(toastFailure('load categories', LOAD_FAILED));
   }, []);
   useFocusEffect(load);
   // a category deleted / a section edited in a sheet over this page

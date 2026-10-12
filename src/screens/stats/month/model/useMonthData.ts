@@ -7,6 +7,7 @@ import { onTransactionsChanged } from '@/domain/events';
 import { unplannedShare } from '@/entities/plan';
 import { dayKeyOf } from '@/shared/lib/dateRange';
 import { useLatestRequest } from '@/shared/lib/useLatestRequest';
+import { useLoadFailed } from '@/shared/lib/useLoadFailed';
 import { loadNorms, Norms } from '@/stats/norms';
 
 export function useMonthData(year: number, month: number, currency: Currency) {
@@ -17,20 +18,22 @@ export function useMonthData(year: number, month: number, currency: Currency) {
   const [today, setToday] = useState<Norms | null>(null);
 
   const latest = useLatestRequest();
+  const { failed, started, fail } = useLoadFailed('load stats');
   const load = useCallback(() => {
     // answers of a previous month (switched quickly) are dropped
     const keep = latest();
-    monthStats(year, month, currency).then(keep(setStats)).catch((e) => console.error('load stats failed', e));
+    started();
+    monthStats(year, month, currency).then(keep(setStats)).catch(keep(fail));
     unplannedShare(ymOf(year, month), currency).then(keep(setShare)).catch((e) => console.error('load unplanned share failed', e));
     if (ymOf(year, month) === currentYm()) {
       const d = dayKeyOf(new Date());
       loadNorms({ from: d, to: d }, currency).then(keep(setToday)).catch((e) => console.error('load norms failed', e));
     } else setToday(null);
-  }, [year, month, currency, latest]);
+  }, [year, month, currency, latest, started, fail]);
 
   // on focus, and again whenever load changes while focused (useFocusEffect re-runs on a new callback): no extra useEffect
   useFocusEffect(load);
   useEffect(() => onTransactionsChanged(load), [load]);
 
-  return { stats, share, today, load };
+  return { stats, share, today, load, failed };
 }

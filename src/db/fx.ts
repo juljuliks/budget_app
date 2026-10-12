@@ -27,8 +27,22 @@ const FOREIGN = CURRENCIES.filter((c) => c !== 'GEL');
 /** At most this many days are fetched per call (the rest use the nearest cached day until next time). */
 const MAX_FETCH = 40;
 const PARALLEL = 4;
+/** A day whose request failed isn't asked again for this long: offline, every stats screen would try all its days. */
+export const RETRY_AFTER_MS = 10 * 60_000;
 
-/** The days among these whose rates aren't cached yet, latest first, at most MAX_FETCH (future days count as today). */
+/** When each day's request last failed (the network, not "no rate"). */
+const failedAt = new Map<string, number>();
+const failedRecently = (d: string) => Date.now() - (failedAt.get(d) ?? -Infinity) < RETRY_AFTER_MS;
+
+/** Tests: start without remembered failures. */
+export function forgetRateFailures() {
+  failedAt.clear();
+}
+
+/**
+ * The days among these whose rates aren't cached yet (and didn't fail just now), latest first, at most MAX_FETCH
+ * (future days count as today).
+ */
 async function missingRates(dates: Iterable<string>): Promise<string[]> {
   const today = dateKey(Date.now() / 1000);
   const wanted = [...new Set([...dates].map((d) => (d > today ? today : d)))];
@@ -36,25 +50,36 @@ async function missingRates(dates: Iterable<string>): Promise<string[]> {
   const have = new Set((await (await getDb()).all<{ date: string }>(
     `SELECT date FROM fx_rates WHERE currency = ? AND date IN (${placeholders(wanted.length)})`,
     [FOREIGN[0], ...wanted])).map((r) => r.date));
-  return wanted.filter((d) => !have.has(d)).sort().reverse().slice(0, MAX_FETCH);
+  return wanted.filter((d) => !have.has(d) && !failedRecently(d)).sort().reverse().slice(0, MAX_FETCH);
 }
 
-/** Fetches and caches these days' rates; how many days came. Network errors are ignored (logged). */
+/**
+ * Fetches and caches these days' rates; how many days came. Network errors are logged and remembered (RETRY_AFTER_MS);
+ * a batch that all failed means no network: the days left aren't tried either.
+ */
 async function fetchDays(days: string[]): Promise<number> {
   const db = await getDb();
   let came = 0;
   for (let i = 0; i < days.length; i += PARALLEL) {
-    await Promise.all(days.slice(i, i + PARALLEL).map(async (date) => {
+    const batch = days.slice(i, i + PARALLEL);
+    const failed = await Promise.all(batch.map(async (date) => {
       try {
         const rates = (await fetchRates(date, FOREIGN)).filter((r) => isCurrency(r.code));
         for (const r of rates) {
           await db.run('INSERT OR REPLACE INTO fx_rates (date, currency, gel_per_unit) VALUES (?, ?, ?)', [date, r.code, r.gelPerUnit]);
         }
         if (rates.length > 0) came++;
+        return false;
       } catch (e) {
         console.warn('rates for', date, 'not loaded', e);
+        failedAt.set(date, Date.now());
+        return true;
       }
     }));
+    if (failed.every(Boolean)) {
+      days.slice(i + PARALLEL).forEach((d) => failedAt.set(d, Date.now()));
+      break;
+    }
   }
   return came;
 }

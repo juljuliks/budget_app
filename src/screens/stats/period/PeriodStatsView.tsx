@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
+import Loading from '@/shared/ui/Loading';
 import { useDisplayCurrency } from '@/shared/settings/displayCurrency';
 import { useHideAmounts } from '@/shared/settings/hideAmounts';
 import { DayRange, dayKeyOf } from '@/shared/lib/dateRange';
@@ -44,7 +45,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
   const segments = useMemo(() => (stats?.groups ?? []).flatMap((g) => g.categories)
     .map((c) => ({ key: String(c.category_id), value: c.spent_minor, color: c.color })), [stats]);
 
-  if (!stats) return <View style={styles.center}><ActivityIndicator /></View>;
+  if (!stats) return <Loading failed={data.failed} onRetry={data.load} />;
   const v = periodView({ ...data, stats, range, normLabel, today: dayKeyOf(new Date()) });
   const h: Handlers = { hidden, openInfo: setInfo, openTransactions: (id) => openTransactions(id, range) };
   const picked = selected === null ? undefined : stats.categories.find((c) => String(c.category_id) === selected);

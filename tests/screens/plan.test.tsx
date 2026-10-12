@@ -156,11 +156,16 @@ describe('6.3 the categories in the plan', () => {
     expect(await item(pinned)).toBeUndefined();
   });
 
-  test('removing one not repeated: at once', async () => {
+  test('removing one not repeated: at once; "Отменить" brings it back as it was', async () => {
+    const before = await item('Одежда');
     await tap('Изменить: 👕 Одежда');
     await tap('Удалить из плана');
     expect(await screen.findByText('«👕 Одежда» убрана из плана')).toBeTruthy();
     expect(await item('Одежда')).toBeUndefined();
+    await tap('Отменить');
+    expect(await screen.findByText('«👕 Одежда» снова в плане')).toBeTruthy();
+    expect(await item('Одежда')).toEqual(before);
+    expect(await screen.findByLabelText('Изменить: 👕 Одежда')).toBeTruthy();
   });
 
   test('adding several: what is free, the amounts; more than is free refused', async () => {

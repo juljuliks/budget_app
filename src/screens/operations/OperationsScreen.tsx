@@ -1,5 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import Loading from '@/shared/ui/Loading';
 import { isUnread, TransactionRow } from '@/db/transactions';
 import { useDisplayCurrency } from '@/shared/settings/displayCurrency';
 import { CategoryPickerModal } from '@/entities/category';
@@ -27,6 +28,8 @@ import FiltersBar, { FilterSheet } from './parts/FiltersBar';
 import OperationsList from './parts/OperationsList';
 import SelectToolbar from './parts/SelectToolbar';
 import { EMPTY, EMPTY_FILTERED, SEARCH_PLACEHOLDER } from './texts';
+import { toastFailure } from '@/shared/ui/toast';
+import { LOAD_FAILED, SAVE_FAILED } from '@/shared/lib/strings';
 
 /**
  * The operations tab: the search and the filters, the list by day or grouped, selecting several, sorting out a
@@ -87,7 +90,7 @@ export default function OperationsScreen() {
   const onLongPressRow = useStableCallback((tx: TransactionRow) => sel.start(tx.id));
 
   if (list.loading) {
-    return <View style={styles.center}><ActivityIndicator /></View>;
+    return <Loading style={styles.center} failed={list.failed} onRetry={() => { list.reload(false).catch((e) => console.error('reload transactions failed', e)); }} />;
   }
 
   return (
@@ -123,7 +126,7 @@ export default function OperationsScreen() {
         currency={currency}
         onToggleGroup={(section) => {
           (section.group ? sel.toggleGroup(section.key) : sel.toggleGroup(section.key, section.dayStart))
-            .catch((e) => console.error(section.group ? 'select group failed' : 'select day failed', e));
+            .catch(toastFailure(section.group ? 'select group' : 'select day', LOAD_FAILED));
         }}
         // the stats tab with this day picked
         onOpenDay={(dayStart) => guardLeave(() => route.tabNavigation.navigate('Stats', { day: dayStart, nonce: Date.now() }))}
@@ -142,7 +145,7 @@ export default function OperationsScreen() {
         <BulkBar
           count={selected.size}
           unread={unreadSelected.length}
-          onRead={() => { markAllSeen(unreadSelected).catch((e) => console.error('mark seen failed', e)); }}
+          onRead={() => { markAllSeen(unreadSelected).catch(toastFailure('mark seen', SAVE_FAILED)); }}
           onCategory={() => bulk.setOpen(true)}
           onDelete={sortOut ? undefined : () => confirmDeleteTransactions(selectedRows, sel.clear)}
         />

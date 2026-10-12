@@ -9,11 +9,11 @@ import CurrencyButton from '@/shared/ui/CurrencyButton';
 import { SheetActions } from '@/shared/ui/Button';
 import Checkbox from '@/shared/ui/Checkbox';
 import { currencySymbol, formatShort, formatWithCurrency, parseAmountOrZero } from '@/shared/lib/money';
-import { AMOUNT_HINT } from '@/shared/lib/strings';
+import { AMOUNT_HINT, LOAD_FAILED } from '@/shared/lib/strings';
 import { colors } from '@/shared/theme/theme';
 import { submitForm, useLoadedForm } from '@/shared/ui/form';
 import { plural } from '@/shared/lib/format';
-import { toast, toastError } from '@/shared/ui/toast';
+import { toast, toastError, toastFailure } from '@/shared/ui/toast';
 
 type Props = {
   ym: string;
@@ -69,7 +69,7 @@ export default function PlanAddModal({ ym, currency: screenCurrency, visible, pl
       setFree(b === null ? null : Math.max(b.plannable_minor - (await plannedTotal(ym, undefined, b.currency)), 0));
       const c = await planConverter(ym);
       setConv(() => c);
-    })().catch((e) => console.error('load plan categories failed', e));
+    })().catch(toastFailure('load plan categories', LOAD_FAILED));
     // plannedIds only matter when opened
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, ym]);

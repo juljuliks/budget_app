@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { confirmDeleteTransaction } from '@/entities/transaction';
 import { isRememberable } from '@/domain/types';
 import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
 import { SheetActions } from '@/shared/ui/Button';
+import Loading from '@/shared/ui/Loading';
 import { useLast } from '@/shared/lib/useLast';
 import { colors } from '@/shared/theme/theme';
 import { useCategoryChoice } from './model/useCategoryChoice';
@@ -27,14 +28,16 @@ export default function TransactionSheet({ txId: openId, onClose }: Props) {
   // kept while the sheet slides away
   const txId = useLast(openId) ?? -1;
   const visible = openId !== null;
-  const { tx, merchantCategory, mixedCats, reload } = useTransaction(txId, visible);
-  const { saving, choose } = useCategoryChoice(txId, tx, visible, onClose);
+  const { tx, merchantCategory, mixedCats, reload, failed } = useTransaction(txId, visible);
+  const { saving, choose } = useCategoryChoice(txId, tx ?? null, visible, onClose);
   const [amountOpen, setAmountOpen] = useState(false);
 
   if (!tx) {
     return (
       <BottomSheet visible={visible} onClose={onClose} title="Операция">
-        <View style={styles.center}><ActivityIndicator /></View>
+        {tx === null
+          ? <Text style={styles.gone}>Операция не найдена: возможно, её удалили.</Text>
+          : <Loading inline style={styles.center} failed={failed} onRetry={reload} />}
       </BottomSheet>
     );
   }
@@ -76,7 +79,8 @@ export default function TransactionSheet({ txId: openId, onClose }: Props) {
 const styles = StyleSheet.create({
   sheet: { maxHeight: '92%' },
   content: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 8 },
-  center: { height: 160, alignItems: 'center', justifyContent: 'center' },
+  center: { height: 160, justifyContent: 'center', paddingHorizontal: 20 },
+  gone: { fontSize: 15, color: colors.muted, textAlign: 'center', paddingHorizontal: 20, paddingVertical: 48 },
   heading: { fontSize: 13, fontWeight: '600', color: colors.muted, marginTop: 24, marginBottom: 8, textTransform: 'uppercase' },
   merchantInfo: { fontSize: 13, color: colors.muted, marginTop: 10 },
   sms: { fontSize: 13, color: colors.muted, backgroundColor: colors.surface, padding: 12, borderRadius: 8 },

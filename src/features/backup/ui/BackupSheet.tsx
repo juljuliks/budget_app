@@ -14,6 +14,8 @@ import {
   RESTORE_BACKUP, SAVE_BACKUP,
 } from '../texts';
 import SwitchRow from './SwitchRow';
+import { toastFailure } from '@/shared/ui/toast';
+import { LOAD_FAILED } from '@/shared/lib/strings';
 
 type Settings = { auto: { on: boolean; text: string }; password: boolean };
 
@@ -26,7 +28,7 @@ export default function BackupSheet({ visible, onClose }: { visible: boolean; on
   const load = useCallback(() => {
     Promise.all([autoBackupStatus(), hasPassword()])
       .then(([auto, password]) => setSettings({ auto, password }))
-      .catch((e) => console.error('load backup settings failed', e));
+      .catch(toastFailure('load backup settings', LOAD_FAILED));
   }, []);
   useEffect(() => { if (visible) load(); }, [visible, load]);
   useEffect(() => onBackupSettingsChanged(load), [load]);
