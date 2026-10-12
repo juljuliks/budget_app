@@ -1,22 +1,16 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { openMonthReport } from '@/shared/navigation/sheets';
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, Text } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { useOpenCategoryTransactions } from '@/shared/navigation/navigation';
 import { Currency } from '@/db/fx';
-import { currentYm, HistoryMonth, monthStats, MonthStats, parseYm, planHistory } from '@/db/plans';
+import { HistoryMonth, planHistory } from '@/db/plans';
 import { onTransactionsChanged } from '@/domain/events';
 import Loading from '@/shared/ui/Loading';
-import Meter from '@/shared/ui/Meter';
 import { useLatestRequest } from '@/shared/lib/useLatestRequest';
 import { useLoadFailed } from '@/shared/lib/useLoadFailed';
-import { formatMoneyWithCurrency, formatWithCurrency } from '@/shared/lib/money';
-import { monthDays } from '@/shared/lib/dateRange';
-import { NO_RATE } from '@/shared/lib/strings';
-import { colors } from '@/shared/theme/theme';
-import { monthTitle } from '@/shared/lib/dates';
+import MonthRow from './parts/MonthRow';
+import { styles } from './parts/styles';
 
-/** Planned vs actually spent, per month and (expanded) per category, in `currency`. */
+/** Planned vs actually spent and what went to savings, per month and (expanded) per category, in `currency`. */
 export default function HistoryView({ currency }: { currency: Currency }) {
   const [months, setMonths] = useState<HistoryMonth[] | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -51,153 +45,3 @@ export default function HistoryView({ currency }: { currency: Currency }) {
     />
   );
 }
-
-function MonthRow({ month, expanded, onToggle, currency }: { month: HistoryMonth; expanded: boolean; onToggle: () => void; currency: Currency }) {
-  const { year, month: m } = parseYm(month.ym);
-  const { planned_minor: planned, spent_minor: spent } = month;
-  const diff = planned - spent;
-  const budget = month.budget_minor;
-  // not spent out of the amount to distribute (both the unplanned part and underspent categories)
-  const saved = (budget ?? 0) - spent;
-  const money = (minor: number) => formatWithCurrency(minor, currency);
-
-  return (
-    <View style={styles.month}>
-      <TouchableOpacity onPress={onToggle}>
-        <View style={styles.monthTop}>
-          <Text style={styles.monthTitle}>{monthTitle(year, m)}</Text>
-          <Text style={styles.chevron}>{expanded ? '⌃' : '⌄'}</Text>
-        </View>
-        <View style={styles.totals}>
-          <Total label="План" value={planned ? money(planned) : '—'} />
-          <Total label="Потрачено" value={money(spent)} />
-          <Total
-            label={planned ? (diff >= 0 ? 'Осталось' : 'Перерасход') : ''}
-            value={planned ? `${diff < 0 ? '⚠ ' : ''}${money(Math.abs(diff))}` : ''}
-            danger={planned > 0 && diff < 0}
-          />
-        </View>
-        {planned ? <Meter ratio={spent / planned} /> : null}
-        {budget !== null ? (
-          // the amount to distribute: what was left unplanned, and what was not spent at all
-          <View style={styles.totals}>
-            <Total label="Бюджет" value={money(budget)} />
-            <Total label="Свободно" value={money(Math.max(budget - planned, 0))} />
-            <Total
-              label={saved >= 0 ? 'Сэкономлено' : 'Перерасход'}
-              value={`${saved < 0 ? '⚠ ' : ''}${money(Math.abs(saved))}`}
-              danger={saved < 0}
-              good={saved > 0}
-            />
-          </View>
-        ) : null}
-      </TouchableOpacity>
-      {/* a month that is over and had a plan (a budget or a category with an amount) */}
-      {month.ym < currentYm() && (month.budget_minor !== null || month.planned_minor > 0) ? (
-        <TouchableOpacity style={styles.reportLink} onPress={() => openMonthReport(month.ym)} hitSlop={6}>
-          <Text style={styles.reportText}>Отчёт за месяц ›</Text>
-        </TouchableOpacity>
-      ) : null}
-      {expanded ? <MonthDetails ym={month.ym} currency={currency} /> : null}
-    </View>
-  );
-}
-
-function MonthDetails({ ym, currency }: { ym: string; currency: Currency }) {
-  // tap a category: its transactions (category filter), same as on the stats screen
-  const openTransactions = useOpenCategoryTransactions();
-  const [stats, setStats] = useState<MonthStats | null>(null);
-  const latest = useLatestRequest();
-  const { failed, started, fail } = useLoadFailed('load month');
-  const load = useCallback(() => {
-    const keep = latest();
-    started();
-    const { year, month } = parseYm(ym);
-    monthStats(year, month, currency).then(keep(setStats)).catch(keep(fail));
-  }, [ym, currency, latest, started, fail]);
-  useEffect(load, [load]);
-
-  const money = (minor: number) => formatWithCurrency(minor, currency);
-  if (!stats) return <Loading inline failed={failed} onRetry={load} />;
-  if (stats.categories.length === 0) return <Text style={styles.hint}>Нет трат и плана.</Text>;
-
-  return (
-    <View style={styles.details}>
-      <View style={styles.detailRow}>
-        <Text style={[styles.detailName, styles.detailHead]}>Категория</Text>
-        <Text style={[styles.detailNum, styles.detailHead]}>План</Text>
-        <Text style={[styles.detailNum, styles.detailHead]}>Потрачено</Text>
-      </View>
-      {stats.groups.map((g) => (
-        <View key={`${g.type_id}-${g.title}`}>
-          <View style={[styles.detailRow, styles.groupRow]}>
-            <Text style={[styles.detailName, styles.groupTitle]} numberOfLines={1}>{g.title}</Text>
-            <Text style={[styles.detailNum, styles.groupTitle]}>{g.planned_minor ? money(g.planned_minor) : '—'}</Text>
-            <Text style={[styles.detailNum, styles.groupTitle]}>{money(g.spent_minor)}</Text>
-          </View>
-          {g.categories.map((c) => {
-            const over = c.limit_minor !== null && c.spent_minor > c.limit_minor;
-            return (
-              <TouchableOpacity
-                key={String(c.category_id)}
-                style={styles.detailRow}
-                onPress={() => openTransactions(c.category_id, monthDays(ym))}
-              >
-                <Text style={styles.detailName} numberOfLines={1}>{`${c.emoji || ''} ${c.name}`.trim()}</Text>
-                <Text style={styles.detailNum}>{c.limit_minor ? money(c.limit_minor) : '—'}</Text>
-                <Text style={[styles.detailNum, over && styles.danger]}>
-                  {over ? '⚠ ' : ''}{money(c.spent_minor)}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      ))}
-      {stats.other_currencies.length > 0 ? (
-        <Text style={styles.note}>
-          {NO_RATE} {stats.other_currencies.map((o) => formatMoneyWithCurrency(o.spent_minor, o.currency)).join(', ')}
-        </Text>
-      ) : null}
-    </View>
-  );
-}
-
-function Total({ label, value, danger, good }: { label: string; value: string; danger?: boolean; good?: boolean }) {
-  return (
-    <View style={styles.total}>
-      <Text style={styles.caption}>{label}</Text>
-      <Text style={[styles.totalValue, danger && styles.danger, good && styles.good]}>{value}</Text>
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  reportLink: { alignSelf: 'flex-start', marginTop: 8 },
-  reportText: { fontSize: 14, color: colors.accent },
-  content: { paddingHorizontal: 16, paddingBottom: 32 },
-  hint: { color: colors.muted, fontSize: 14, textAlign: 'center', marginVertical: 12 },
-  month: { paddingBottom: 14 },
-  // a grey band across the screen, like the days on the operations
-  monthTop: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    marginHorizontal: -16, paddingHorizontal: 16, paddingVertical: 8, backgroundColor: colors.surface, marginBottom: 4,
-  },
-  monthTitle: { fontSize: 14, fontWeight: '600', color: colors.muted },
-  chevron: { fontSize: 16, color: colors.muted },
-  totals: { flexDirection: 'row', marginTop: 6 },
-  total: { flex: 1 },
-  caption: { fontSize: 12, color: colors.muted },
-  totalValue: { fontSize: 15, color: colors.text, marginTop: 2 },
-  danger: { color: colors.danger },
-  good: { color: colors.income },
-  // white with a border: the sections are grey bands in it, like the days on the operations
-  details: { marginTop: 10, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 10, overflow: 'hidden' },
-  detailRow: { flexDirection: 'row', paddingVertical: 4 },
-  detailHead: { fontSize: 12, color: colors.muted },
-  detailName: { flex: 1, fontSize: 14, color: colors.text, marginRight: 8 },
-  detailNum: { width: 92, textAlign: 'right', fontSize: 14, color: colors.text, fontVariant: ['tabular-nums'] },
-  note: { fontSize: 12, color: colors.muted, marginTop: 6 },
-  groupRow: { marginTop: 6, marginHorizontal: -10, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: colors.surface },
-  groupTitle: { fontSize: 12, fontWeight: '600', color: colors.muted },
-});
-

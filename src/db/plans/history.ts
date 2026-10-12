@@ -3,6 +3,8 @@ import { getDb } from '../index';
 import { Currency } from '../fx';
 import { BUDGET_CURRENCY, currentYm, monthRange, parseYm, planRateDate, ymOf } from './months';
 import { convertSpending, spendByDay, spendRows } from './spend';
+import { unplannedOf } from './budget';
+import { monthStats, spentOf } from './stats';
 
 /**
  * Average spending per month over the full months of [fromKey, toKey] ('YYYY-MM-DD') that have data: not the
@@ -74,6 +76,14 @@ export type HistoryMonth = {
   spent_minor: number;
   /** amount to distribute; null = not set */
   budget_minor: number | null;
+  /** locked for savings at the month's start (🔒 "Сразу"); 0 without */
+  locked_minor: number;
+  /** the share set aside for spending outside the plan */
+  unplanned_minor: number;
+  /** the leftover goes to savings (the budget's switch) */
+  to_savings: boolean;
+  /** the current month only: obligatory payments planned and not paid yet (not leftover, they're still to go) */
+  unpaid_fixed_minor: number;
 };
 
 /** Every month from the first transaction / plan up to the current month, newest first, in `currency`. */
@@ -86,8 +96,9 @@ export async function planHistory(nowYm = currentYm(), currency: Currency = BUDG
   if (!first?.ym) return [];
 
   const items = await db.all<{ ym: string; limit_minor: number; currency: string }>('SELECT ym, limit_minor, currency FROM plan_items');
-  const budgets = await db.all<{ ym: string; budget_minor: number; budget_currency: string }>(
-    'SELECT ym, budget_minor, budget_currency FROM plan_months WHERE budget_minor IS NOT NULL');
+  const budgets = await db.all<{
+    ym: string; budget_minor: number; budget_currency: string; locked_minor: number; to_savings: number; unplanned_pct: number; unplanned_minor: number | null;
+  }>('SELECT ym, budget_minor, budget_currency, locked_minor, to_savings, unplanned_pct, unplanned_minor FROM plan_months WHERE budget_minor IS NOT NULL');
   const planYms = [...new Set([...items.map((i) => i.ym), ...budgets.map((b) => b.ym)])];
   const { days, conv } = await spendByDay(0, Number.MAX_SAFE_INTEGER, currency, planYms.map(planRateDate));
   const spentBy = new Map<string, number>();
@@ -95,11 +106,27 @@ export async function planHistory(nowYm = currentYm(), currency: Currency = BUDG
   const plannedBy = new Map<string, number>();
   for (const i of items) plannedBy.set(i.ym, (plannedBy.get(i.ym) ?? 0) + (conv(i.limit_minor, i.currency, currency, planRateDate(i.ym)) ?? 0));
   const budgetBy = new Map(budgets.map((b) => [b.ym, conv(b.budget_minor, b.budget_currency, currency, planRateDate(b.ym))]));
+  const savingsBy = new Map(budgets.map((b) => {
+    const toShown = (v: number) => conv(v, b.budget_currency, currency, planRateDate(b.ym)) ?? 0;
+    const share = unplannedOf({ amount_minor: b.budget_minor, unplanned_pct: b.unplanned_pct, unplanned_minor: b.unplanned_minor });
+    return [b.ym, { locked_minor: toShown(b.locked_minor), unplanned_minor: toShown(share), to_savings: b.to_savings === 1 }];
+  }));
+  // the current month: what the obligatory payments still need (each one's plan less what's paid of it)
+  let unpaidFixed = 0;
+  if (budgetBy.has(nowYm)) {
+    const { year: ny, month: nm } = parseYm(nowYm);
+    const stats = await monthStats(ny, nm, currency);
+    unpaidFixed = stats.categories.filter((c) => c.plan_kind === 'fixed' && c.limit_minor)
+      .reduce((a, c) => a + Math.max(0, c.limit_minor! - spentOf(c)), 0);
+  }
 
   const out: HistoryMonth[] = [];
   let { year, month } = parseYm(nowYm);
   for (let ym = nowYm; ym >= first.ym; ym = ymOf(year, --month)) {
-    out.push({ ym, planned_minor: plannedBy.get(ym) ?? 0, spent_minor: spentBy.get(ym) ?? 0, budget_minor: budgetBy.get(ym) ?? null });
+    out.push({
+      ym, planned_minor: plannedBy.get(ym) ?? 0, spent_minor: spentBy.get(ym) ?? 0, budget_minor: budgetBy.get(ym) ?? null,
+      locked_minor: 0, unplanned_minor: 0, to_savings: false, ...savingsBy.get(ym), unpaid_fixed_minor: ym === nowYm ? unpaidFixed : 0,
+    });
   }
   return out;
 }

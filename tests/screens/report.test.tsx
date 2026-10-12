@@ -11,15 +11,33 @@ async function openHistory() {
   await screen.findByText('Сентябрь 2026');
 }
 const after = (label: string, n: number) => { const t = texts(); const i = t.indexOf(label); return t.slice(i + 1, i + 1 + n); };
+/** the same in the report sheet, over the History (the month's line has "В сбережения" too) */
+const inReport = (label: string, n: number) => { const t = texts(); const i = t.lastIndexOf(label); return t.slice(i + 1, i + 1 + n); };
 
 describe('7.2 the history', () => {
   beforeEach(openHistory);
 
   test('every month from the first: plan, spent, what\'s left or the overspend; with a budget, saved', async () => {
-    expect(after('Октябрь 2026', 7)).toEqual(['⌄', 'План', '2 160 ₾', 'Потрачено', '2 010 ₾', 'Осталось', '150 ₾']);
-    expect(after('Сентябрь 2026', 7)).toEqual(['⌄', 'План', '1 700 ₾', 'Потрачено', '1 850 ₾', 'Перерасход', '⚠ 150 ₾']);
-    expect(after('Перерасход', 7)).toEqual(['⚠ 150 ₾', 'Бюджет', '3 000 ₾', 'Свободно', '1 300 ₾', 'Сэкономлено', '1 150 ₾']);
-    expect(after('Август 2026', 5)).toEqual(['⌄', 'План', '—', 'Потрачено', '400 ₾']);
+    expect(after('Октябрь 2026', 6)).toEqual(['План', '2 160 ₾', 'Потрачено', '2 010 ₾', 'Осталось', '150 ₾']);
+    expect(after('Сентябрь 2026', 6)).toEqual(['План', '1 700 ₾', 'Потрачено', '1 850 ₾', 'Перерасход', '⚠ 150 ₾']);
+    expect(after('Перерасход', 7)).toEqual(['⚠ 150 ₾', 'Бюджет', '3 000 ₾', 'Свободно', '1 300 ₾', 'В сбережения', '1 150 ₾']);
+    expect(after('Август 2026', 4)).toEqual(['План', '—', 'Потрачено', '400 ₾']);
+  });
+
+  test('the savings: "В сбережения" in the month\'s line, opened — 🔒 and 🌊 against the plan; this month "пока"', async () => {
+    // October is on: the obligatory payment not paid yet (a 30 ₾ subscription) isn't leftover
+    expect(after('Октябрь 2026', 12).slice(-2)).toEqual(['В сбережения', 'пока 960 ₾']);
+    await tap('Сентябрь 2026');
+    await screen.findByText('Всего в сбережения');
+    const sep = () => { const t = texts(); const i = t.indexOf('Сбережения'); return t.slice(i, i + 10); };
+    expect(sep()).toEqual(['Сбережения', 'План', 'Отложено', '🌊 Что осталось', 'не потрачено к концу месяца', '1 300 ₾', '1 150 ₾', 'Всего в сбережения', '', '1 150 ₾']);
+    await tap('Сентябрь 2026');
+    await tap('Октябрь 2026');
+    await screen.findByText('Пока в сбережения');
+    const oct = texts().slice(texts().indexOf('Сбережения'));
+    expect(oct.slice(0, 8)).toEqual(['Сбережения', 'План', 'Сейчас', '🔒 Сразу', 'в начале месяца', '300 ₾', '300 ₾', '🌊 Что осталось']);
+    expect(oct).toContain('Пока в сбережения');
+    expect(oct.some((t) => /^Месяц идёт: из «Что осталось» вычтены обязательные платежи, которые ещё не оплачены \(30 ₾\)/.test(t))).toBe(true);
   });
 
   test('the report only for a month that is over and had a plan', async () => {
@@ -44,7 +62,7 @@ describe('7.1 the report', () => {
   });
 
   test('what was put aside, a year of it, and where it came from (adding up to it)', async () => {
-    expect(after('В сбережения', 2)).toEqual(['1 150 ₾', '≈ 13 800 ₾ за год в таком темпе']);
+    expect(inReport('В сбережения', 2)).toEqual(['1 150 ₾', '≈ 13 800 ₾ за год в таком темпе']);
     expect(after('Свободно в плане', 1)).toEqual(['+1 300 ₾']);
     expect(after('Категории плана потратили меньше', 1)).toEqual(['+50 ₾']);
     expect(after('Вне плана сверх доли', 1)).toEqual(['−200 ₾']);

@@ -11,6 +11,8 @@ export const colors = {
   warn: '#B45309',
   warnBg: '#FEF3C7',
   danger: '#B91C1C',
+  /** a band of savings ("Сбережения" in the History) */
+  savingsBg: '#ECFDF5',
 };
 
 // Chart colors. Category colors (palettes per type) live in src/domain/colors.ts.
