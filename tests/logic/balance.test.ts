@@ -141,16 +141,16 @@ test('migration 28: one stored after the balance that had it is put before it', 
 test('migration 34: a transfer TBC dated the next day, stored at its 00:00, is put before the balance that has it', async () => {
   const { getDb } = await import('../../src/db');
   const { placeNextDayDated } = await import('../../src/db/balance');
-  await sms('10.00GEL\n(*1834)\nCAFE\nBalance: 2367.82GEL\n\n12/10/26 11:00', '2026-10-12T11:00:10');
-  await sms('8.50 GEL\nMC GOLD (***1834)\nLTD ZOOMART 12/10/26 21:01\nBalance: 1609.32 GEL', '2026-10-12T21:01:10');
-  await sms('15.19 GEL\nMC GOLD (***1834)\nSPAR 12/10/26 21:06\nBalance: 1594.13 GEL', '2026-10-12T21:06:10');
+  await sms('10.00GEL\n(*1834)\nCAFE\nBalance: 2367.82GEL\n\n12/09/26 11:00', '2026-09-12T11:00:10');
+  await sms('8.50 GEL\nMC GOLD (***1834)\nLTD ZOOMART 12/09/26 21:01\nBalance: 1609.32 GEL', '2026-09-12T21:01:10');
+  await sms('15.19 GEL\nMC GOLD (***1834)\nSPAR 12/09/26 21:06\nBalance: 1594.13 GEL', '2026-09-12T21:06:10');
   const db = await getDb();
-  const TRANSFER = 'Money Transfer:\n750.00 GEL\nMC GOLD\n13/10/2026';
+  const TRANSFER = 'Money Transfer:\n750.00 GEL\nMC GOLD\n13/09/2026';
   await db.run(`INSERT INTO transactions (bank, kind, amount_minor, currency, occurred_at, raw_sms, sms_hash, source)
-    VALUES ('tbc', 'transfer', 75000, 'GEL', ?, ?, 'x', 'push')`, [new Date('2026-10-13T00:00:00').getTime() / 1000, TRANSFER]);
+    VALUES ('tbc', 'transfer', 75000, 'GEL', ?, ?, 'x', 'push')`, [new Date('2026-09-13T00:00:00').getTime() / 1000, TRANSFER]);
   expect(await cardBalance()).toMatchObject({ minor: 84413, pending: 1 });
-  await placeNextDayDated(db, new Date('2026-10-12T22:19:00').getTime());
+  await placeNextDayDated(db, new Date('2026-09-12T22:19:00').getTime());
   expect(await cardBalance()).toMatchObject({ minor: 159413, pending: 0 });
   expect((await db.get<{ at: number }>('SELECT occurred_at AS at FROM transactions WHERE raw_sms = ?', [TRANSFER]))!.at)
-    .toBe(new Date('2026-10-12T21:01:00').getTime() / 1000 - 1);
+    .toBe(new Date('2026-09-12T21:01:00').getTime() / 1000 - 1);
 });
