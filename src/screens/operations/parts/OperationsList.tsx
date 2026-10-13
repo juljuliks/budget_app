@@ -61,7 +61,8 @@ export default function OperationsList(p: Props) {
       testID="operations-list"
       style={styles.list}
       sections={p.sections}
-      keyExtractor={(i) => String(i.id)}
+      // by category a split operation is in several groups
+      keyExtractor={(i) => (i.group_key ? `${i.id}:${i.group_key}` : String(i.id))}
       stickySectionHeadersEnabled
       keyboardShouldPersistTaps="handled"
       renderSectionHeader={({ section }) => (

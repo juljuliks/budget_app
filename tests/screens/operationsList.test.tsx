@@ -64,3 +64,23 @@ test('2.1.10: a split operation — its categories in the row; from the stats\' 
   expect(within(rowOf('SPAR')).getByText('−12.00\u00a0₾')).toBeTruthy();
   expect(within(rowOf('SPAR')).getByText('из 30.00\u00a0₾')).toBeTruthy();
 });
+
+test('2.1.10: grouped by category, a split operation is in each of its parts\' groups with that part', async () => {
+  await openApp(async () => {
+    await ops();
+    const db = await getDb();
+    const id = (await db.get<{ id: number }>("SELECT id FROM transactions WHERE raw_merchant = 'SPAR'"))!.id;
+    const clothes = (await db.get<{ id: number }>("SELECT id FROM categories WHERE name = 'Одежда'"))!.id;
+    const food = (await db.get<{ id: number }>("SELECT id FROM categories WHERE name = 'Продукты'"))!.id;
+    await splitTransaction(id, food, [{ category_id: clothes, amount_minor: 1200 }]);
+    // the groups on one page
+    await db.run("DELETE FROM transactions WHERE raw_merchant = 'MARKET'");
+  });
+  await tap('#filter-group');
+  await tap('По категориям');
+  await waitFor(() => expect(screen.getAllByText('SPAR')).toHaveLength(2));
+  // the rows (a group's header may show the same sum)
+  expect(screen.getAllByText('−12.00\u00a0₾').length).toBeGreaterThan(0);
+  expect(screen.getAllByText('−18.00\u00a0₾').length).toBeGreaterThan(0);
+  expect(screen.getAllByText('из 30.00\u00a0₾')).toHaveLength(2);
+});

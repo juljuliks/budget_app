@@ -34,10 +34,11 @@ export function operationsCsv(rows: CsvOperation[]): string {
   return `﻿${lines.map((l) => l.map(cell).join(';')).join('\r\n')}\r\n`;
 }
 
-/** Every operation, oldest first. */
+/** Every operation, oldest first; a split one a row per part (its category, its amount), its own category first. */
 export async function csvOperations(): Promise<CsvOperation[]> {
   return (await getDb()).all<CsvOperation>(
     `SELECT t.occurred_at, t.amount_minor, t.currency, t.kind, c.name AS category, ct.name AS type_name, t.raw_merchant AS merchant, t.note
-      FROM transactions t LEFT JOIN categories c ON c.id = t.category_id LEFT JOIN category_types ct ON ct.id = c.type_id
-      ORDER BY t.occurred_at, t.id`);
+      FROM spend_parts t JOIN transactions w ON w.id = t.id
+      LEFT JOIN categories c ON c.id = t.category_id LEFT JOIN category_types ct ON ct.id = c.type_id
+      ORDER BY t.occurred_at, t.id, t.category_id IS NOT w.category_id, t.category_id`);
 }

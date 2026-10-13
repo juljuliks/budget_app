@@ -3,10 +3,12 @@ import { freshDb } from '../helpers';
 import { getDb } from '../../src/db';
 import { createCategory, deleteCategory, moveTransactionsOutOfCategory, categorySummary } from '../../src/db/categories';
 import { mergeCategories } from '../../src/db/mergeCategories';
+import { csvOperations } from '../../src/backup';
 import { countSplit, getParts, splitTransaction, unsplitTransactions } from '../../src/db/parts';
 import { spendRows, spendingEntries } from '../../src/db/plans/spend';
 import {
-  categoriesWithTransactions, deleteTransactions, getTransaction, listTransactionsFiltered, restoreTransactions,
+  categoriesWithTransactions, deleteTransactions, getTransaction, listGroupedPage, listTransactionGroups, listTransactionsFiltered,
+  restoreTransactions, transactionGroupIds,
   setCategoryForTransactions, setTransactionAmount, setTransactionCategory,
 } from '../../src/db/transactions';
 
@@ -111,4 +113,24 @@ test('a category deleted or merged: its parts move along, into the own category 
   await splitTransaction(a, food, [{ category_id: home, amount_minor: 2200 }]);
   await deleteCategory(home, null, '2026-10');
   expect(await getParts(a)).toEqual([]);
+});
+
+test('grouped by category: in each of its parts\' groups, the totals by the parts; filtered by one — only that part', async () => {
+  const id = await purchase(food, 8640);
+  await purchase(home, 1000);
+  await splitTransaction(id, food, [{ category_id: home, amount_minor: 2200 }]);
+  const groups = await listTransactionGroups({}, 'category');
+  expect(groups.map((g) => [g.category_name, g.count, g.totals[0].total])).toEqual(expect.arrayContaining([
+    ['Еда', 1, -6440], ['Хозтовары', 2, -3200],
+  ]));
+  const page = await listGroupedPage({}, 'category', 0);
+  expect(page.filter((r) => r.id === id).map((r) => r.group_key).sort()).toEqual([String(food), String(home)].sort());
+  expect(await transactionGroupIds({}, 'category', String(home))).toHaveLength(2);
+  expect((await listTransactionGroups({ categories: [home] }, 'category')).map((g) => g.category_name)).toEqual(['Хозтовары']);
+});
+
+test('CSV: a split operation a row per part, its own category first', async () => {
+  const id = await purchase(food, 8640);
+  await splitTransaction(id, food, [{ category_id: home, amount_minor: 2200 }]);
+  expect((await csvOperations()).map((o) => [o.category, o.amount_minor])).toEqual([['Еда', 6440], ['Хозтовары', 2200]]);
 });

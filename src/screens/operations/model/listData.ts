@@ -29,7 +29,11 @@ export async function fetchPage(v: ListView, from: Next, limit: number): Promise
   }
   const offset = typeof from === 'number' ? from : 0;
   const rows = await listGroupedPage(v.filter, v.groupBy, offset, limit);
-  return { rows: withFocus(rows, v.filter), next: rows.length === limit ? offset + rows.length : null };
+  // by category a split operation is in each of its parts' groups: there, that part
+  const focused = v.groupBy === 'category'
+    ? rows.map((r) => (r.parts && r.group_key !== 'none' ? { ...r, focus: [Number(r.group_key)] } : r))
+    : withFocus(rows, v.filter);
+  return { rows: focused, next: rows.length === limit ? offset + rows.length : null };
 }
 
 /** Filtered by categories: a split operation shows its parts in them (TransactionItem). */
