@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { FlatList, Text } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Currency } from '@/db/fx';
-import { HistoryMonth, planHistory } from '@/db/plans';
+import { HistoryMonth, monthToClose, planHistory } from '@/db/plans';
 import { onTransactionsChanged } from '@/domain/events';
 import Loading from '@/shared/ui/Loading';
 import { useLatestRequest } from '@/shared/lib/useLatestRequest';
@@ -21,7 +21,8 @@ export default function HistoryView({ currency }: { currency: Currency }) {
     // answers of a previous currency (switched quickly) are dropped
     const keep = latest();
     started();
-    planHistory(undefined, currency).then(keep(setMonths)).catch(keep(fail));
+    // the months with nothing to ask are closed first: no "Итоги не подведены" on them
+    monthToClose().then(() => planHistory(undefined, currency)).then(keep(setMonths)).catch(keep(fail));
   }, [currency, latest, started, fail]);
   useFocusEffect(load);
   useEffect(() => onTransactionsChanged(load), [load]);

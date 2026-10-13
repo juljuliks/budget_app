@@ -25,14 +25,14 @@ export function usePlanActions(ym: string, load: () => void) {
   async function saveBudget(text: string, form: UseFormReturn<BudgetForm>): Promise<string | null> {
     const minor = parseAmountOrZero(text);
     if (minor === null) return AMOUNT_HINT;
-    const { unplanned: shareText, toSavings: savings, currency: cur, locked: lockedText } = form.getValues();
+    const { unplanned: shareText, currency: cur, locked: lockedText } = form.getValues();
     const lockedMinor = parseAmountOrZero(lockedText ?? '');
     const shareMinor = parseAmountOrZero(shareText ?? '');
     if (lockedMinor === null || shareMinor === null) return AMOUNT_HINT;
     // a share right on a stop is kept as a % (it follows the budget), any other as the amount
     const pct = SHARE_STOPS.find((p) => Math.round((minor * p) / 100) === shareMinor);
     try {
-      await setPlanBudget(ym, minor === 0 ? null : minor, cur, pct ?? 0, savings, lockedMinor, pct === undefined ? shareMinor : null);
+      await setPlanBudget(ym, minor === 0 ? null : minor, cur, pct ?? 0, undefined, lockedMinor, pct === undefined ? shareMinor : null);
     } catch (e) {
       if (!(e instanceof OverBudgetError)) throw e;
       return `По категориям уже запланировано ${formatWithCurrency(e.planned_minor, e.currency)} — `

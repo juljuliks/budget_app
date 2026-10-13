@@ -2,7 +2,7 @@
 import { getDb } from '../index';
 import { Converter, Currency, dateKey, ensureRatesLater, makeConverter } from '../fx';
 import { filterCondition, TxFilter } from '../transactions';
-import { BUDGET_CURRENCY } from './months';
+import { BUDGET_CURRENCY, monthRange, parseYm } from './months';
 import { EXPENSE_KINDS, signedSpendSql } from '../spending';
 import { sqlList } from '../sql';
 
@@ -109,4 +109,17 @@ export async function spendingEntries(from: number, to: number, currency: Curren
   Promise<Array<{ occurred_at: number; spent_minor: number }>> {
   const { items } = await convertSpending(await spendRows(from, to, only), currency);
   return items.map(({ row, value }) => ({ occurred_at: row.occurred_at, spent_minor: value }));
+}
+
+/** Operations in "Сбережения" in `ym` (a split one's part there), each on its day's rate: money moved to savings by hand. */
+export async function movedToSavings(ym: string, currency: Currency): Promise<number> {
+  const { year, month } = parseYm(ym);
+  const [from, to] = monthRange(year, month);
+  const moved = await (await getDb()).all<{ amount_minor: number; currency: string; occurred_at: number }>(
+    `SELECT amount_minor, currency, occurred_at FROM spend_parts
+      WHERE occurred_at >= ? AND occurred_at < ? AND kind != 'refund' AND kind != 'deposit'
+        AND category_id = (SELECT id FROM categories WHERE system = 'savings')`, [from, to]);
+  await ensureRatesLater(moved.filter((m) => m.currency !== currency).map((m) => dateKey(m.occurred_at)));
+  const fx = await makeConverter();
+  return moved.reduce((a, m) => a + (fx(m.amount_minor, m.currency, currency, dateKey(m.occurred_at)) ?? 0), 0);
 }

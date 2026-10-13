@@ -1,7 +1,7 @@
 // 6: the plan — the month's budget (what's locked, the share outside the plan, the leftover to savings), the
 // categories in it, adding them, the next month. Today: 15 October 2026.
 import { act, fireEvent, waitFor } from '@testing-library/react-native';
-import { openApp, screen, tap, texts, toggleSwitch } from './app';
+import { openApp, screen, tap, texts } from './app';
 import { base, planned } from '../e2e/seeds';
 import { getDb } from '../../src/db';
 
@@ -38,16 +38,24 @@ describe('6.1 the month\'s budget', () => {
     await openPlan();
     expect(after('План', 2)).toEqual(['72%', '2 160 ₾']);
     expect(after('Вне плана', 2)).toEqual(['10%', '300 ₾']);
-    expect(after('Сбережения', 2)).toEqual(['18%', '540 ₾']);
+    // the overspend took 130 of them (see the next test): planned struck, what is left
+    expect(after('Сбережения', 3)).toEqual(['14%', '540 ₾', '410 ₾']);
     expect(after('🔒 Сразу', 2)).toEqual(['заблокировано в начале месяца · 10% бюджета', '300 ₾']);
-    expect(after('🌊 Что осталось', 2)).toEqual(['что не запланировано, плюс сэкономленное · 8% бюджета', '240 ₾']);
+    expect(after('🌊 Что осталось', 3)).toEqual(['не запланировано — решите в итогах месяца · 4% бюджета', '240 ₾', '110 ₾']);
     expect(after('🎲 Траты вне плана', 2)).toEqual(['категории без плана и без категории · 10% бюджета', '300 ₾']);
   });
 
-  test('the forecast: what the overspend leaves of the savings by the month\'s end', async () => {
+  test('savings the overspend took part of: ⓘ — by how much, what took it; a category\'s tap opens its plan', async () => {
     await openPlan();
+    expect(screen.queryByText(/^Сбережения к концу месяца/)).toBeNull();
+    await tap('Почему сбережения меньше');
     // 3 000 − (620 + 310 + 800 + 450 + 30) − 380 outside the plan
-    expect(screen.getByText('Сбережения к концу месяца ≈ 410 ₾, если тратить по плану')).toBeTruthy();
+    expect(await screen.findByText('Сбережения меньше на 130 ₾')).toBeTruthy();
+    expect(screen.getByText('Эти категории потратили больше плана. Если дальше тратить по плану, в сбережения пойдёт 410 ₾ вместо 540 ₾')).toBeTruthy();
+    expect(screen.getByText('доля 300 ₾ · потрачено 380 ₾')).toBeTruthy();
+    expect(screen.getByText('план 400 ₾ · потрачено 450 ₾')).toBeTruthy();
+    await tap('План: Одежда');
+    expect(await screen.findByDisplayValue('400')).toBeTruthy();
   });
 
   test('less than what is planned with the locked and the share: refused', async () => {
@@ -105,15 +113,11 @@ describe('6.2 locked for savings, the share outside the plan, the leftover', () 
     expect(await month()).toMatchObject({ u: 25000 });
   });
 
-  test('the leftover not to savings: "Свободно" and "Отложено" apart', async () => {
+  test('the leftover: always in "Сбережения" — where it goes is asked in "Итоги месяца", no switch in the budget', async () => {
     await tap('Изменить бюджет месяца');
-    await screen.findByText('Что останется — в сбережения');
-    toggleSwitch(false);
-    await tap('Сохранить');
-    expect(await screen.findByText('Бюджет месяца сохранён')).toBeTruthy();
-    expect((await month())!.s).toBe(0);
-    expect(after('Свободно', 2)).toEqual(['8%', '240 ₾']);
-    expect(after('Отложено', 2)).toEqual(['10%', '300 ₾']);
+    await screen.findByText('На траты вне плана');
+    expect(screen.queryByText('Что останется — в сбережения')).toBeNull();
+    expect(screen.queryByText('Свободно')).toBeNull();
   });
 });
 

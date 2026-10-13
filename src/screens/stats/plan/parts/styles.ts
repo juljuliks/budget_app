@@ -12,8 +12,6 @@ export const styles = StyleSheet.create({
   lockRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 },
   lockOwn: { fontSize: 14, color: colors.muted },
   lockInput: { flex: 1, paddingVertical: 6 },
-  switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 },
-  switchLabel: { fontSize: 15, color: colors.text, flex: 1 },
   screen: { flex: 1 },
   // room under the last row for the "+"
   content: { paddingHorizontal: 16, paddingBottom: 88 },
@@ -42,11 +40,18 @@ export const styles = StyleSheet.create({
   legendPair: { flexDirection: 'row', alignItems: 'center' },
   // the second dot covers a third of the first, a ring of the card's colour between them
   legendOver: { width: 12, height: 12, borderRadius: 6, marginLeft: -5, borderWidth: 2, borderColor: colors.surface },
-  partLabel: { flex: 1, fontSize: 14, color: colors.muted },
-  // the amounts right-aligned in a column, the shares before them in one too
-  partValue: { minWidth: 84, textAlign: 'right', fontSize: 14, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
-  // a share ("43%") or a word ("сэкономлено") left of the amount
-  partNote: { textAlign: 'right', fontSize: 13, color: colors.muted, fontVariant: ['tabular-nums'] },
+  partLabel: { fontSize: 14, color: colors.muted },
+  // the amounts right-aligned at the edge; the shares in a column right by the names
+  partValues: { flex: 1, flexDirection: 'row', alignItems: 'baseline', justifyContent: 'flex-end', gap: 6 },
+  partValue: { textAlign: 'right', fontSize: 14, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
+  // as planned, struck: the overspend took part of it
+  partWas: { fontSize: 12, color: colors.muted, textDecorationLine: 'line-through', fontVariant: ['tabular-nums'] },
+  partInfo: { width: 16 },
+  // the legend's names laid out unseen: the widest sets the names' column
+  measure: { position: 'absolute', opacity: 0, alignItems: 'flex-start' },
+  rowInfo: { paddingLeft: 8 },
+  // a share ("43%") or a word ("сэкономлено") right by the name
+  partNote: { minWidth: 34, textAlign: 'right', fontSize: 13, color: colors.muted, fontVariant: ['tabular-nums'] },
   note: { fontSize: 12, color: colors.muted, marginTop: 8 },
   overText: { color: colors.warn },
   savingsValue: { color: RING_LOCKED },

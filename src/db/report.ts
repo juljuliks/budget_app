@@ -1,7 +1,8 @@
 import { getDb } from './index';
-import { Currency, dateKey, ensureRatesLater, makeConverter } from './fx';
-import { getPlanBudget, monthRange, monthStats, parseYm, planConverter, unplannedOf, unplannedSpent, ymOf } from './plans';
+import { Currency } from './fx';
+import { getPlanBudget, monthRange, movedToSavings, monthStats, parseYm, planConverter, unplannedOf, unplannedSpent, ymOf } from './plans';
 import { EXPENSE_KINDS } from './spending';
+import { SavingsPlanFact, savingsPlanFact } from './reportSavings';
 import { sqlList } from './sql';
 
 // The month's report (the notification on the 1st, «История», the stats of a past month): what was put aside and what
@@ -64,14 +65,17 @@ export type MonthReport = {
   unpaid: ReportCategory[];
   /** operations in "Сбережения" this month: money moved to savings by hand (part of `saved`, not on top of it) */
   movedToSavings: number;
-  /** the leftover goes to "Сбережения" (the budget's switch) */
+  /** the leftover goes to "Сбережения" (its "Итоги месяца" didn't keep it as is) */
   toSavings: boolean;
   /**
-   * Where `saved` comes from, exactly (they add up to it): what the plan left undistributed, what the planned categories
-   * didn't spend (minus their overspend), and what is left of the share outside the plan (minus spending past it).
+   * Where `saved` comes from, exactly (they add up to it): 🔒, what the plan left undistributed, what the planned categories
+   * didn't spend (minus their overspend), what is left of the share outside the plan (minus spending past it), and the
+   * funds' contributions as planned. All but 🔒 and the funds: "Что осталось".
    * null without a budget.
    */
-  savedFrom: { locked: number; undistributed: number; plan: number; unplanned: number } | null;
+  savedFrom: { locked: number; undistributed: number; plan: number; unplanned: number; funds: number } | null;
+  /** a month over: its savings and funds, planned and put aside ("Итоги месяца"); null — on, or nothing to save */
+  planFact: SavingsPlanFact | null;
   /** locked for savings (🔒) this month, in `currency`; 0 without a lock */
   locked: number;
   /** spending went into the locked savings by this much (spent more than budget − locked); 0 when untouched */
@@ -154,14 +158,10 @@ export async function monthReport(ym: string, currency: Currency): Promise<Month
   const underPlan = stats.categories.filter((c) => c.plan_kind === 'limit' && c.limit_minor !== null && c.spent_minor < c.limit_minor)
     .map(cat).sort((a, b) => (b.limit - b.spent) - (a.limit - a.spent));
 
-  // operations in "Сбережения" (a split one's part there), each on its day's rate
-  const moved = await db.all<{ amount_minor: number; currency: string; occurred_at: number }>(
-    `SELECT amount_minor, currency, occurred_at FROM spend_parts
-      WHERE occurred_at >= ? AND occurred_at < ? AND kind != 'refund' AND kind != 'deposit'
-        AND category_id = (SELECT id FROM categories WHERE system = 'savings')`, [from, to]);
-  await ensureRatesLater(moved.filter((m) => m.currency !== currency).map((m) => dateKey(m.occurred_at)));
-  const fx = await makeConverter();
-  const movedToSavings = moved.reduce((a, m) => a + (fx(m.amount_minor, m.currency, currency, dateKey(m.occurred_at)) ?? 0), 0);
+  const moved = await movedToSavings(ym, currency);
+  const planFact = await savingsPlanFact(ym, currency);
+  // the funds' contributions: part of what is put aside, not of what the plan left
+  const funds = planFact ? planFact.fundsPlanned : stats.funds.reduce((a, f) => a + f.contribution_minor, 0);
 
   return {
     ym, currency, hasPlan, budget, spent: stats.spent_minor, saved,
@@ -180,15 +180,18 @@ export async function monthReport(ym: string, currency: Currency): Promise<Month
     underPlan,
     // without data for the month a payment may just not be in the app yet
     unpaid: hasData ? stats.categories.filter((c) => c.plan_kind === 'fixed' && c.spent_minor <= 0).map(cat) : [],
-    movedToSavings,
-    toSavings: planBudget?.to_savings ?? true,
+    movedToSavings: moved,
+    // as its "Итоги месяца" said (not closed yet: as going there)
+    toSavings: (await db.get<{ r: string | null }>('SELECT rest_choice AS r FROM month_closes WHERE ym = ? AND closed_at IS NOT NULL', [ym]))?.r !== 'keep',
     locked,
     lockedTouched: budget === null || locked <= 0 ? 0 : Math.max(0, stats.spent_minor - (budget - locked)),
     savedFrom: budget === null ? null : {
       locked,
-      undistributed: budget - stats.planned_minor - share - locked,
+      undistributed: budget - stats.planned_minor - share - locked - funds,
       plan: stats.categories.filter((c) => c.limit_minor !== null).reduce((a, c) => a + c.limit_minor! - c.spent_minor, 0),
       unplanned: share - outside,
+      funds,
     },
+    planFact,
   };
 }

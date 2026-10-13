@@ -20,7 +20,9 @@ describe('7.2 the history', () => {
   test('every month from the first: plan, spent, what\'s left or the overspend; with a budget, saved', async () => {
     expect(after('Октябрь 2026', 6)).toEqual(['План', '2 160 ₾', 'Потрачено', '2 010 ₾', 'Осталось', '150 ₾']);
     expect(after('Сентябрь 2026', 6)).toEqual(['План', '1 700 ₾', 'Потрачено', '1 850 ₾', 'Перерасход', '⚠ 150 ₾']);
-    expect(after('Перерасход', 7)).toEqual(['⚠ 150 ₾', 'Бюджет', '3 000 ₾', 'Свободно', '1 300 ₾', 'В сбережения', '1 150 ₾']);
+    // its "Итоги" not done: "?" and the way to them
+    expect(after('Перерасход', 7)).toEqual(['⚠ 150 ₾', 'Бюджет', '3 000 ₾', 'Свободно', '1 300 ₾', 'В сбережения', '1 150 ₾ ?']);
+    expect(after('Итоги не подведены: удалось ли отложить, взносы в копилки', 1)).toEqual(['Подвести итоги ›']);
     expect(after('Август 2026', 4)).toEqual(['План', '—', 'Потрачено', '400 ₾']);
   });
 
@@ -61,11 +63,14 @@ describe('7.1 the report', () => {
     await screen.findByText('Отчёт · Сентябрь 2026');
   });
 
-  test('what was put aside, a year of it, and where it came from (adding up to it)', async () => {
+  test('what was put aside, a year of it, and where it came from (adding up to it): the plan, no fact until its "Итоги"', async () => {
     expect(inReport('В сбережения', 2)).toEqual(['1 150 ₾', '≈ 13 800 ₾ за год в таком темпе']);
-    expect(after('Свободно в плане', 1)).toEqual(['+1 300 ₾']);
-    expect(after('Категории плана потратили меньше', 1)).toEqual(['+50 ₾']);
+    expect(after('🌊 Что осталось', 2)).toEqual(['1 150 ₾', '—']);
+    expect(after('Свободно в плане', 1)).toEqual(['1 300 ₾']);
+    expect(after('Категории плана потратили меньше', 1)).toEqual(['50 ₾']);
     expect(after('Вне плана сверх доли', 1)).toEqual(['−200 ₾']);
+    expect(after('Всего', 2)).toEqual(['1 150 ₾', '—']);
+    expect(screen.getByText('Итоги не подведены: факт появится, когда ответите, что удалось отложить')).toBeTruthy();
   });
 
   test('what to improve: the overspent limits, outside the plan past its share, its biggest categories to plan', async () => {

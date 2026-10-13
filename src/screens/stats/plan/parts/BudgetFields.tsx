@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Switch, Text, TextInput, View } from 'react-native';
+import { Text, TextInput, View } from 'react-native';
 import { Controller, useWatch } from 'react-hook-form';
 import type { Currency } from '@/db/fx';
 import { formatWithCurrency, parseAmountOrZero, toInputValue } from '@/shared/lib/money';
@@ -10,7 +10,6 @@ import { useLoadedForm } from '@/shared/ui/form';
 import { formStyles } from '@/shared/theme/formStyles';
 import { colors } from '@/shared/theme/theme';
 import { BudgetForm, SHARE_STOPS } from '../model/budgetForm';
-import { RING_SAVINGS } from './palette';
 import { styles } from './styles';
 
 /**
@@ -87,25 +86,6 @@ export function ShareField({ form, name, other, planned, toShown, screen, title,
           ? `Не помещается: свободно ${formatWithCurrency(room, cur)} — остальное занято планом${other === 'locked' ? ' и отложенным' : ' и долей вне плана'}.`
           : hint(mine, cur)}
       </Text>
-    </View>
-  );
-}
-
-/** "Что останется — в сбережения": the budget sheet's switch, remembered for the next months. */
-export function SavingsSwitch({ form }: { form: ReturnType<typeof useLoadedForm<BudgetForm>> }) {
-  return (
-    <View style={styles.share}>
-      <Controller
-        control={form.control}
-        name="toSavings"
-        render={({ field }) => (
-          <View style={styles.switchRow}>
-            <Text style={styles.switchLabel}>Что останется — в сбережения</Text>
-            <Switch value={field.value} onValueChange={field.onChange} trackColor={{ true: RING_SAVINGS, false: colors.border }} thumbColor={colors.bg} />
-          </View>
-        )}
-      />
-      <Text style={formStyles.hint}>Что не запланировано и не потрачено, откладывается в категорию «Сбережения». Запоминается на следующие месяцы.</Text>
     </View>
   );
 }

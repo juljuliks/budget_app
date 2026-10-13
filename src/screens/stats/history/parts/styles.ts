@@ -4,6 +4,10 @@ import { colors } from '@/shared/theme/theme';
 export const styles = StyleSheet.create({
   reportLink: { alignSelf: 'flex-start', marginTop: 8 },
   reportText: { fontSize: 14, color: colors.accent },
+  links: { flexDirection: 'row', gap: 20 },
+  // "Итоги не подведены"
+  openClose: { marginTop: 10, gap: 4, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: colors.warnBg },
+  openCloseText: { fontSize: 14, color: colors.warn },
   content: { paddingHorizontal: 16, paddingBottom: 32 },
   hint: { color: colors.muted, fontSize: 14, textAlign: 'center', marginVertical: 12 },
   month: { paddingBottom: 14 },

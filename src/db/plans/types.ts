@@ -48,4 +48,6 @@ export type PlanBudget = {
   plannable_minor: number;
   /** what the budget leaves (not planned, not spent) goes to "Сбережения" */
   to_savings: boolean;
+  /** what the month before sent ("Итоги месяца"), in the budget's currency: owed, moved in; in `plannable_minor` */
+  carry: { from_ym: string; debt_minor: number; plus_minor: number } | null;
 };

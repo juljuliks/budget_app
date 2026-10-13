@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
-import { openMonthReport } from '@/shared/navigation/sheets';
+import { openMonthClose, openMonthReport } from '@/shared/navigation/sheets';
 import { Currency } from '@/db/fx';
 import { currentYm, HistoryMonth, parseYm } from '@/db/plans';
 import Meter from '@/shared/ui/Meter';
@@ -24,8 +24,9 @@ function Total({ label, value, danger, good, muted }: { label: string; value: st
 type Props = { month: HistoryMonth; expanded: boolean; onToggle: () => void; currency: Currency };
 
 /**
- * A month of the History: the plan against the spending, the budget, and what went to savings ("В сбережения" when the
- * leftover goes there, else "Сэкономлено"; the current month "пока", less the obligatory payments not paid yet).
+ * A month of the History: the plan against the spending, the budget, and what went to savings as its "Итоги месяца" said
+ * ("В сбережения", "Перенесено", "Сэкономлено"; the current month "пока", less the obligatory payments not paid yet).
+ * Not closed yet: "Итоги не подведены" and "Подвести итоги ›"; closed — "Изменить итоги ›".
  */
 export default function MonthRow({ month, expanded, onToggle, currency }: Props) {
   const { year, month: m } = parseYm(month.ym);
@@ -64,19 +65,35 @@ export default function MonthRow({ month, expanded, onToggle, currency }: Props)
             <Total label="Свободно" value={money(Math.max(budget - planned, 0))} />
             <Total
               label={savings.label}
-              value={`${savings.total < 0 ? '⚠ ' : ''}${savings.pending ? 'пока ' : ''}${money(Math.abs(savings.total))}`}
+              value={`${savings.total < 0 ? '⚠ ' : ''}${savings.pending ? 'пока ' : ''}${money(Math.abs(savings.value))}${savings.open ? ' ?' : ''}`}
               danger={savings.total < 0}
-              good={savings.total > 0 && !savings.pending}
-              muted={savings.pending && savings.total >= 0}
+              good={savings.value > 0 && !savings.pending && !savings.open}
+              muted={(savings.pending || savings.open) && savings.total >= 0}
             />
           </View>
         ) : null}
       </TouchableOpacity>
-      {/* a month that is over and had a plan (a budget or a category with an amount) */}
+      {/* a month over whose "Итоги" aren't done */}
+      {month.close && !month.close.closed ? (
+        <View style={styles.openClose}>
+          <Text style={styles.openCloseText}>Итоги не подведены: удалось ли отложить, взносы в копилки</Text>
+          <TouchableOpacity onPress={() => openMonthClose(month.ym)} hitSlop={6} accessibilityRole="button">
+            <Text style={styles.reportText}>Подвести итоги ›</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+      {/* a month that is over and had a plan (a budget or a category with an amount); its "Итоги" can be changed */}
       {month.ym < currentYm() && (month.budget_minor !== null || month.planned_minor > 0) ? (
-        <TouchableOpacity style={styles.reportLink} onPress={() => openMonthReport(month.ym)} hitSlop={6}>
-          <Text style={styles.reportText}>Отчёт за месяц ›</Text>
-        </TouchableOpacity>
+        <View style={styles.links}>
+          <TouchableOpacity style={styles.reportLink} onPress={() => openMonthReport(month.ym)} hitSlop={6}>
+            <Text style={styles.reportText}>Отчёт за месяц ›</Text>
+          </TouchableOpacity>
+          {month.close?.closed ? (
+            <TouchableOpacity style={styles.reportLink} onPress={() => openMonthClose(month.ym)} hitSlop={6}>
+              <Text style={styles.reportText}>Изменить итоги ›</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
       ) : null}
       {expanded ? <MonthDetails ym={month.ym} currency={currency} savings={savings} /> : null}
     </View>

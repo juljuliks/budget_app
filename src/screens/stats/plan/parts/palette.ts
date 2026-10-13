@@ -1,13 +1,14 @@
 // The plan's colors and the budget bar's sizes.
-import { colors } from '@/shared/theme/theme';
+import { chart, colors } from '@/shared/theme/theme';
 
-export const RING_FREE = colors.income;
 /** "Сбережения" in place of "Свободно" */
 export const RING_SAVINGS = '#5eead4';
 /** 🔒 locked for savings: the darker part of the savings */
 export const RING_LOCKED = '#0f766e';
 /** the funds' contributions ("Копилки") */
 export const RING_FUNDS = colors.fund;
+/** an overspend the month before left to this one */
+export const RING_DEBT = chart.critical;
 /** the share set aside for spending outside the plan */
 export const RING_UNPLANNED = '#eda100';
 /** the budget's bar, and the 🔒 over its locked part: twice as tall */

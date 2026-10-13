@@ -85,8 +85,8 @@ test('where "Отложено" comes from adds up to it', async () => {
   await addManualTransaction({ amount_minor: 90000, category_id: null, occurred_at: at('2026-09-04') });
   const r = await monthReport('2026-09', 'GEL');
   const f = r.savedFrom!;
-  expect(f).toEqual({ locked: 0, undistributed: 340000, plan: -5000, unplanned: -40000 });
-  expect(f.locked + f.undistributed + f.plan + f.unplanned).toBe(r.saved);
+  expect(f).toEqual({ locked: 0, undistributed: 340000, plan: -5000, unplanned: -40000, funds: 0 });
+  expect(f.locked + f.undistributed + f.plan + f.unplanned + f.funds).toBe(r.saved);
 });
 
 test('locked savings: in the breakdown, and touched when spending passes budget − locked', async () => {
@@ -95,7 +95,7 @@ test('locked savings: in the breakdown, and touched when spending passes budget 
   const r = await monthReport('2026-09', 'GEL');
   const f = r.savedFrom!;
   expect(f.locked).toBe(30000);
-  expect(f.locked + f.undistributed + f.plan + f.unplanned).toBe(r.saved);
+  expect(f.locked + f.undistributed + f.plan + f.unplanned + f.funds).toBe(r.saved);
   expect(r.lockedTouched).toBe(5000);
 });
 

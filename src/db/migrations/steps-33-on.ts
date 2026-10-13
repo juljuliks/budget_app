@@ -90,4 +90,40 @@ export const STEPS_33_ON: MigrationStep[][] = [
     'DROP TABLE plan_items',
     'ALTER TABLE plan_items_new RENAME TO plan_items',
   ],
+  // 38: "Итоги месяца": a month over is closed with answers — did the funds' contributions go in (fund_confirms: what
+  // went, 0 = nothing), what covers an overspend, where the leftover goes, was the saving put aside. Closed: closed_at,
+  // and what goes to the next month (carry_*: an overspend owed, the leftover moved, in the budget's currency). The
+  // months before this one are closed as they were: the leftover as the budget's switch had it, the contributions as planned
+  [
+    `CREATE TABLE IF NOT EXISTS month_closes (
+      ym TEXT PRIMARY KEY,
+      over_cover TEXT CHECK (over_cover IN ('savings', 'next', 'covered')),
+      over_rest_cover TEXT CHECK (over_rest_cover IN ('next', 'covered')),
+      rest_choice TEXT CHECK (rest_choice IN ('savings', 'next', 'keep')),
+      saved TEXT CHECK (saved IN ('yes', 'other', 'no')),
+      saved_minor INTEGER,
+      confirmed_minor INTEGER,
+      closed_at INTEGER,
+      carry_debt_minor INTEGER NOT NULL DEFAULT 0,
+      carry_plus_minor INTEGER NOT NULL DEFAULT 0,
+      carry_currency TEXT
+    )`,
+    `CREATE TABLE IF NOT EXISTS fund_confirms (
+      category_id INTEGER NOT NULL,
+      ym TEXT NOT NULL,
+      saved_minor INTEGER NOT NULL CHECK (saved_minor >= 0),
+      PRIMARY KEY (category_id, ym)
+    )`,
+    async (db) => {
+      const now = new Date();
+      const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      await db.run(
+        `INSERT OR IGNORE INTO month_closes (ym, rest_choice, closed_at)
+          SELECT ym, CASE WHEN to_savings = 1 THEN 'savings' ELSE 'keep' END, ? FROM plan_months WHERE ym < ?`,
+        [Math.floor(now.getTime() / 1000), ym]);
+      await db.run(
+        "INSERT OR IGNORE INTO fund_confirms (category_id, ym, saved_minor) SELECT category_id, ym, limit_minor FROM plan_items WHERE kind = 'fund' AND ym < ?",
+        [ym]);
+    },
+  ],
 ];

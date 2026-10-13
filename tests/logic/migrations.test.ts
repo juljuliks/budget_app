@@ -159,4 +159,18 @@ describe('migrations', () => {
     expect(await row(reduced)).toEqual({ amount_minor: 300, category_id: 8, refund_settled_at: null });
     expect(await row(full)).toEqual({ amount_minor: 500, category_id: null, refund_settled_at: 5 });
   });
+  test('migration 38: the months before this one are closed — the leftover as the switch had it, the contributions as planned', async () => {
+    jest.useFakeTimers({ now: new Date('2026-10-15T12:00:00'), advanceTimers: true });
+    const db = openDatabase(':memory:');
+    await migrate(db, MIGRATIONS.slice(0, 37));
+    await db.run("INSERT INTO plan_months (ym, budget_minor, to_savings) VALUES ('2026-08', 100000, 0), ('2026-09', 100000, 1), ('2026-10', 100000, 1)");
+    await db.run("INSERT INTO plan_items (ym, category_id, limit_minor, kind) VALUES ('2026-09', 1, 5000, 'fund'), ('2026-10', 1, 6000, 'fund')");
+    await migrate(db);
+    jest.useRealTimers();
+    expect(await db.all('SELECT ym, rest_choice, closed_at IS NOT NULL AS closed FROM month_closes ORDER BY ym')).toEqual([
+      { ym: '2026-08', rest_choice: 'keep', closed: 1 },
+      { ym: '2026-09', rest_choice: 'savings', closed: 1 },
+    ]);
+    expect(await db.all('SELECT ym, saved_minor FROM fund_confirms')).toEqual([{ ym: '2026-09', saved_minor: 5000 }]);
+  });
 });

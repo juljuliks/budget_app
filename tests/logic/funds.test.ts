@@ -2,7 +2,7 @@
 import { freshDb } from '../helpers';
 import { getDb } from '../../src/db';
 import {
-  contributionOf, deleteFund, fundLedger, getFund, listPlan, monthStats, monthsBetween, planHistory, restoreFund, setFund, setPlanBudget,
+  answerFund, contributionOf, deleteFund, fundLedger, getFund, listPlan, monthStats, monthsBetween, planHistory, restoreFund, setFund, setPlanBudget,
 } from '../../src/db/plans';
 import { createCategory } from '../../src/db/categories';
 import { addManualTransaction } from '../../src/db/transactions';
@@ -43,9 +43,12 @@ test('made: its plan item is the contribution, "Уже отложено" lowers 
 test('the months: contributions in, spending out; past what is saved — a shortage, the month\'s', async () => {
   const id = await createCategory('Страховка', '📄');
   const db = await getDb();
-  // made in August, the past months' contributions as they were planned
+  // made in August, the past months' contributions as they were planned, confirmed in their closes
   await db.run("INSERT INTO funds (category_id, target_minor, currency, due, start_minor, since_ym) VALUES (?, 60000, 'GEL', '2027-03-15', 0, '2026-08')", [id]);
-  for (const ym of ['2026-08', '2026-09']) await db.run("INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency) VALUES (?, ?, 5000, 'fund', 'GEL')", [ym, id]);
+  for (const ym of ['2026-08', '2026-09']) {
+    await db.run("INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency) VALUES (?, ?, 5000, 'fund', 'GEL')", [ym, id]);
+    await answerFund(ym, id, 5000);
+  }
   await spend(4000, id, '2026-09-20T12:00:00');
   await spend(9000, id, '2026-09-25T12:00:00');
   await spend(1000, id, '2026-09-26T12:00:00', 'refund');
@@ -63,6 +66,7 @@ test('deleted: what it saved up to last month goes to this month\'s savings, its
   await db.run("INSERT INTO funds (category_id, target_minor, currency, due, start_minor, since_ym) VALUES (?, 150000, 'GEL', '2027-01-31', 10000, '2026-09')", [id]);
   await db.run("INSERT INTO plan_months (ym) VALUES ('2026-09')");
   await db.run("INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency) VALUES ('2026-09', ?, 35000, 'fund', 'GEL')", [id]);
+  await answerFund('2026-09', id, 35000);
   await setPlanBudget('2026-10', 500000);
   await listPlan('2026-10');
   await listPlan('2026-11');
@@ -84,6 +88,7 @@ test('the month\'s stats: a fund\'s spending apart, not in the totals but its sh
   await db.run("INSERT INTO funds (category_id, target_minor, currency, due, start_minor, since_ym) VALUES (?, 300000, 'GEL', '2027-07-31', 100000, '2026-09')", [fund]);
   await db.run("INSERT INTO plan_months (ym, budget_minor) VALUES ('2026-09', 500000)");
   await db.run("INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency) VALUES ('2026-09', ?, 20000, 'fund', 'GEL')", [fund]);
+  await answerFund('2026-09', fund, 20000);
   await db.run("INSERT INTO plan_items (ym, category_id, limit_minor, currency) VALUES ('2026-09', ?, 50000, 'GEL')", [food]);
   await spend(30000, food, '2026-09-05T12:00:00');
   await spend(130000, fund, '2026-09-20T12:00:00');
@@ -108,6 +113,7 @@ test('deleted this month: the history gives what it saved to this month\'s savin
   await db.run("INSERT INTO funds (category_id, target_minor, currency, due, start_minor, since_ym) VALUES (?, 150000, 'GEL', '2027-01-31', 10000, '2026-09')", [id]);
   await db.run("INSERT INTO plan_months (ym) VALUES ('2026-09')");
   await db.run("INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency) VALUES ('2026-09', ?, 35000, 'fund', 'GEL')", [id]);
+  await answerFund('2026-09', id, 35000);
   await setPlanBudget('2026-10', 500000);
   await deleteFund(id);
   const [oct] = await planHistory();

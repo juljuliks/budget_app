@@ -4,7 +4,7 @@ import { Currency, dateKey, ensureRatesLater, makeConverter } from '../fx';
 import { BUDGET_CURRENCY, asCurrency, currentYm, monthRange, parseYm, planRateDate } from './months';
 import { convertSpending, spendRows, sumBy } from './spend';
 import { PlanBudget } from './types';
-import { refreshFundItems } from './funds';
+import { refreshFundItems, ymBefore } from './funds';
 
 /** The unplanned share of a budget, in its currency. */
 export const unplannedOf = (b: Pick<PlanBudget, 'amount_minor' | 'unplanned_pct' | 'unplanned_minor'>) =>
@@ -50,16 +50,35 @@ async function createMonthPlan(ym: string): Promise<void> {
   });
 }
 
+/**
+ * What the month before sent to `ym` when it was closed ("Итоги месяца"): an overspend owed ("Из бюджета октября") and
+ * the leftover moved ("Перенести на октябрь"), in `currency`. null — nothing.
+ */
+export async function carryIn(ym: string, currency: Currency): Promise<PlanBudget['carry']> {
+  const db = await getDb();
+  const from = ymBefore(ym);
+  const r = await db.get<{ debt: number; plus: number; currency: string }>(
+    `SELECT carry_debt_minor AS debt, carry_plus_minor AS plus, carry_currency AS currency FROM month_closes
+      WHERE ym = ? AND closed_at IS NOT NULL AND carry_currency IS NOT NULL AND (carry_debt_minor > 0 OR carry_plus_minor > 0)`, [from]);
+  if (!r) return null;
+  const conv = r.currency === currency ? null : await planConverter(ym);
+  const to = (v: number) => (conv ? conv(v, r.currency, currency) ?? v : v);
+  return { from_ym: from, debt_minor: to(r.debt), plus_minor: to(r.plus) };
+}
+
 export async function storedBudget(ym: string): Promise<PlanBudget | null> {
   const db = await getDb();
   const row = await db.get<{ budget_minor: number | null; budget_currency: string | null; unplanned_pct: number; to_savings: number; locked_minor: number; unplanned_minor: number | null }>(
     'SELECT budget_minor, budget_currency, unplanned_pct, to_savings, locked_minor, unplanned_minor FROM plan_months WHERE ym = ?', [ym]);
   if (row?.budget_minor == null) return null;
   const share = unplannedOf({ amount_minor: row.budget_minor, unplanned_pct: row.unplanned_pct, unplanned_minor: row.unplanned_minor });
+  const currency = asCurrency(row.budget_currency);
+  const carry = await carryIn(ym, currency);
   return {
-    amount_minor: row.budget_minor, currency: asCurrency(row.budget_currency), unplanned_pct: row.unplanned_pct,
+    amount_minor: row.budget_minor, currency, unplanned_pct: row.unplanned_pct,
     unplanned_minor: row.unplanned_minor, locked_minor: row.locked_minor,
-    plannable_minor: row.budget_minor - share - row.locked_minor, to_savings: row.to_savings === 1,
+    plannable_minor: row.budget_minor - share - row.locked_minor + (carry?.plus_minor ?? 0) - (carry?.debt_minor ?? 0),
+    to_savings: row.to_savings === 1, carry,
   };
 }
 
@@ -150,7 +169,9 @@ export async function setPlanBudget(
   const locked = Math.max(0, lockedMinor ?? stored?.l ?? 0);
   if (budgetMinor !== null) {
     const planned = await plannedTotal(ym, undefined, currency);
-    const plannable = budgetMinor - unplannedOf({ amount_minor: budgetMinor, unplanned_pct: pct, unplanned_minor: own }) - locked;
+    const carry = await carryIn(ym, currency);
+    const plannable = budgetMinor - unplannedOf({ amount_minor: budgetMinor, unplanned_pct: pct, unplanned_minor: own }) - locked
+      + (carry?.plus_minor ?? 0) - (carry?.debt_minor ?? 0);
     if (plannable < planned) throw new OverBudgetError(plannable, planned, currency);
   }
   await db.transaction(async (t) => {

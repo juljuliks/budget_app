@@ -7,6 +7,7 @@ import { ops, planned } from '../e2e/seeds';
 import SmsBackgroundTask from '../../src/native/SmsBackgroundTask';
 import { handleNotificationAction } from '../../src/notifications/notifeeIntegration';
 import { scheduleMonthReports } from '../../src/notifications/monthReportNotice';
+import { setPlanBudget } from '../../src/db/plans';
 import { getDb } from '../../src/db';
 import { freshDb } from '../helpers';
 import { done } from '../e2e/seeds';
@@ -97,16 +98,29 @@ describe('8.3 the limits', () => {
 });
 
 describe('8.2 the month\'s report on the 1st', () => {
-  test('scheduled for 10:00 on the 1st with what is put aside so far', async () => {
+  test('a month with a budget: its "Итоги" instead, at 10:00 on the 1st — what goes to savings as planned', async () => {
     await freshDb(); await planned(); await done();
     await scheduleMonthReports();
     const calls = (notifee.createTriggerNotification as jest.Mock).mock.calls;
     expect(calls).toHaveLength(1);
     const [n, trigger] = calls[0];
-    expect(n.id).toBe('report_2026-10');
-    expect(n.title).toBe('Отчёт за октябрь');
-    expect(nb(n.body)).toMatch(/^Отложено 990 ₾ \(≈ 11 880 ₾ за год\)\. Могли ещё \d+ ₾$/);
+    expect(n).toMatchObject({ id: 'report_2026-10', title: 'Итоги октября — удалось отложить?', data: { kind: 'close', ym: '2026-10' } });
+    expect(nb(n.body)).toMatch(/^В сбережения по плану [\d ]+ ₾$/);
     expect(new Date(trigger.timestamp)).toEqual(new Date(2026, 10, 1, 10));
+  });
+
+  test('nothing to ask (a plan without a budget or funds): the report, with what is spent', async () => {
+    await freshDb(); await planned(); await setPlanBudget('2026-10', null); await done();
+    await scheduleMonthReports();
+    const [n] = (notifee.createTriggerNotification as jest.Mock).mock.calls[0];
+    expect(n.title).toBe('Отчёт за октябрь');
+    expect(nb(n.body)).toMatch(/^Потрачено [\d ]+ ₾$/);
+  });
+
+  test('the "Итоги" one\'s tap: the month\'s "Итоги"; closed by then — its report', async () => {
+    await openApp(planned);
+    await act(() => handleNotificationAction({ id: 'month_report', notification: { data: { kind: 'close', ym: '2026-09' } } }));
+    expect(await screen.findByText('Итоги · Сентябрь 2026')).toBeTruthy();
   });
   test('a month without a plan: none, a scheduled one cancelled', async () => {
     await freshDb(); await ops(); await done();

@@ -6,6 +6,7 @@ import { merchantCategories } from '../db/merchants';
 import { isRememberable } from '../domain/types';
 import { categoryLabel, isTopUp, listCategories, topCategories } from '../db/categories';
 import { getDb } from '../db';
+import { monthClose } from '../db/plans';
 import { assignCategory } from '../categorize/assign';
 import { openTransaction } from '@/shared/navigation/sheets';
 import { KIND_LABELS } from '@/shared/lib/format';
@@ -161,12 +162,15 @@ export async function handleNotificationAction(event: ActionEvent) {
     navigateWhenReady({ name: 'Main', params: { screen: 'Stats' } } as never);
     return;
   }
-  // the month's report: the stats with the report over them
+  // the month's report (or its "Итоги", until they're done): the stats with it over them
   if (id === REPORT_ACTION) {
     const ym = String(event.notification?.data?.ym ?? '');
     const { navigateWhenReady } = require('@/shared/navigation/navigation') as typeof import('@/shared/navigation/navigation');
     navigateWhenReady({ name: 'Main', params: { screen: 'Stats' } } as never);
-    if (ym) require('@/shared/navigation/sheets').openMonthReport(ym);
+    if (!ym) return;
+    const sheets = require('@/shared/navigation/sheets') as typeof import('@/shared/navigation/sheets');
+    const open = event.notification?.data?.kind === 'close' && !(await monthClose(ym)).closed;
+    if (open) sheets.openMonthClose(ym); else sheets.openMonthReport(ym);
     return;
   }
   const txId = Number(event.notification?.data?.txId);

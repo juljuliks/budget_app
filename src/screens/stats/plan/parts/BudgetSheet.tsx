@@ -7,7 +7,7 @@ import CurrencyButton from '@/shared/ui/CurrencyButton';
 import TextInputModal from '@/shared/ui/TextInputModal';
 import { useLoadedForm } from '@/shared/ui/form';
 import type { BudgetForm } from '../model/budgetForm';
-import { SavingsSwitch, ShareField } from './BudgetFields';
+import { ShareField } from './BudgetFields';
 import { RING_LOCKED, RING_UNPLANNED } from './palette';
 
 type Props = {
@@ -22,13 +22,13 @@ type Props = {
   onClose: () => void;
 };
 
-/** The month's budget: the amount and its currency, "Отложить сразу", the share outside the plan, where the rest goes. */
+/** The month's budget: the amount and its currency, "Отложить сразу", the share outside the plan (the rest: "Итоги месяца"). */
 export default function BudgetSheet({ visible, budget, currency, planned, hint, toShown, onSubmit, onClose }: Props) {
   // the amount and the currency it was entered in
   const form = useLoadedForm<BudgetForm>(visible ? {
     value: toInputValue(budget?.amount_minor), currency: budget?.currency ?? currency,
     unplanned: budget && unplannedOf(budget) ? toInputValue(unplannedOf(budget)) : '',
-    toSavings: budget?.to_savings ?? true, locked: budget?.locked_minor ? toInputValue(budget.locked_minor) : '',
+    locked: budget?.locked_minor ? toInputValue(budget.locked_minor) : '',
   } : null, visible);
   return (
     <TextInputModal
@@ -57,7 +57,6 @@ export default function BudgetSheet({ visible, budget, currency, planned, hint, 
         hint={(v, cur) => (v > 0 ? `${formatWithCurrency(v, cur)} на траты вне плана — план их не займёт.`
           : 'Сколько бюджета оставить на траты вне плана. Предупреждение в статистике — только если они больше.')}
       />
-      <SavingsSwitch form={form} />
     </TextInputModal>
   );
 }

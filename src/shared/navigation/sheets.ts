@@ -14,6 +14,8 @@ export type SheetState = {
   categoryDelete: number | null;
   /** a month's report ('YYYY-MM'): the notification on the 1st, «История», the stats of a past month */
   monthReport: string | null;
+  /** "Итоги месяца" of a month over ('YYYY-MM'): the notification on the 1st, the banner, «История» */
+  monthClose: string | null;
   /** a merchant's card (its key), over the operation it was opened from */
   merchant: string | null;
   /** the settings (the gear in the tab headers) */
@@ -24,7 +26,7 @@ export type SheetState = {
   lockOptions: boolean;
 };
 
-export const CLOSED: SheetState = { transaction: null, addTransaction: false, categoryTypes: false, categoryDelete: null, monthReport: null, merchant: null, settings: false, backup: false, lockOptions: false };
+export const CLOSED: SheetState = { transaction: null, addTransaction: false, categoryTypes: false, categoryDelete: null, monthReport: null, monthClose: null, merchant: null, settings: false, backup: false, lockOptions: false };
 
 let handler: ((patch: Partial<SheetState>) => void) | null = null;
 let pending: Partial<SheetState> = {};
@@ -38,6 +40,7 @@ export const openAddTransaction = () => open({ addTransaction: true });
 export const openCategoryTypes = () => open({ categoryTypes: true });
 export const openCategoryDelete = (categoryId: number) => open({ categoryDelete: categoryId });
 export const openMonthReport = (ym: string) => open({ monthReport: ym });
+export const openMonthClose = (ym: string) => open({ monthClose: ym });
 export const openMerchant = (merchantKey: string) => open({ merchant: merchantKey });
 export const openSettings = () => open({ settings: true });
 export const openBackup = () => open({ backup: true });

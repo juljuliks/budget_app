@@ -15,6 +15,7 @@ import PeriodStatsView from './period/PeriodStatsView';
 import HistoryView from './history/HistoryView';
 import { monthTitle } from '@/shared/lib/dates';
 import PeriodNav from './parts/PeriodNav';
+import CloseBanner from './parts/CloseBanner';
 import PlanAlert from './parts/PlanAlert';
 import PlanView from './plan/PlanView';
 import StatsView from './month/StatsView';
@@ -114,6 +115,8 @@ export default function StatsHome() {
   return (
     <View style={styles.screen}>
       <Segmented options={SECTIONS} value={section} onChange={setSection} style={styles.segmented} />
+      {/* the 1st to the 3rd: a month over to close, over every section */}
+      <CloseBanner />
       {section === 'stats' ? <PlanAlert currency={currency} /> : null}
 
       {section === 'history' ? null : byPeriod && range ? (

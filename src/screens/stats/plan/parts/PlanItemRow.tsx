@@ -4,7 +4,7 @@ import { categoryLabel } from '@/db/categories';
 import type { Currency } from '@/db/fx';
 import type { PlanItem } from '@/db/plans';
 import { formatWithCurrency } from '@/shared/lib/money';
-import { LockIcon, PinIcon } from '@/shared/ui/icons';
+import { InfoIcon, LockIcon, PinIcon } from '@/shared/ui/icons';
 import { colors } from '@/shared/theme/theme';
 import { normText, percentOf, PlanView, SystemRow } from '../model/planView';
 import { styles, toneStyle } from './styles';
@@ -64,20 +64,30 @@ export function PlanItemRow({ p, item, ym, currency, hidden, toShown, onOpen, on
   );
 }
 
-/** A system "category" (savings, the share outside the plan): a lock in the pin's place, a tap opens the budget. */
-export function SystemRowView({ p, r, hidden, onOpen }: { p: PlanView; r: SystemRow; hidden: boolean; onOpen: () => void }) {
+/**
+ * A system "category" (savings, the share outside the plan, what the month before sent): a lock in the pin's place, a tap
+ * opens the budget (what the month before sent: how it's covered).
+ */
+export function SystemRowView({ p, r, hidden, onOpen, onLess }: { p: PlanView; r: SystemRow; hidden: boolean; onOpen: () => void; onLess: () => void }) {
   return (
     <TouchableOpacity style={styles.row} onPress={onOpen} accessibilityLabel={`Изменить: ${r.name}`}>
       <View style={styles.pin}><LockIcon color={colors.muted} size={20} /></View>
       <View style={styles.nameBox}>
         <Text style={styles.name} numberOfLines={1}>{r.name}</Text>
-        <Text style={styles.percent}>{[r.note, `${percentOf(r.value, p.shownBudget!) || '0%'} бюджета`].filter(Boolean).join(' · ')}</Text>
+        <Text style={styles.percent}>{[r.note, r.carry === 'plus' ? '' : `${percentOf(r.value, p.shownBudget!) || '0%'} бюджета`].filter(Boolean).join(' · ')}</Text>
       </View>
       {hidden ? null : (
         <View style={styles.amountBox}>
-          <Text style={[styles.amount, toneStyle(r.tone)]}>{p.money(r.value)}</Text>
+          {/* the overspend took part of it: as planned, struck */}
+          {r.was !== undefined ? <Text style={styles.partWas}>{p.money(r.was)}</Text> : null}
+          <Text style={[styles.amount, toneStyle(r.tone)]}>{`${r.carry === 'plus' ? '+' : ''}${p.money(r.value)}`}</Text>
         </View>
       )}
+      {r.was !== undefined ? (
+        <TouchableOpacity onPress={onLess} hitSlop={8} style={styles.rowInfo} accessibilityRole="button" accessibilityLabel="Почему сбережения меньше">
+          <InfoIcon color={colors.accent} size={18} />
+        </TouchableOpacity>
+      ) : null}
     </TouchableOpacity>
   );
 }

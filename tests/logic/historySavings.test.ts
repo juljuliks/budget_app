@@ -4,7 +4,7 @@ import { monthSavings } from '../../src/screens/stats/history/model/savings';
 
 const month = (m: Partial<HistoryMonth>): HistoryMonth => ({
   ym: '2026-09', planned_minor: 460000, spent_minor: 730400, budget_minor: 1041000,
-  locked_minor: 100000, unplanned_minor: 0, to_savings: true, unpaid_fixed_minor: 0, funds_minor: 0, released: [], ...m,
+  locked_minor: 100000, unplanned_minor: 0, close: null, unpaid_fixed_minor: 0, funds_minor: 0, released: [], ...m,
 });
 
 test('🔒 and the leftover going to savings: "В сбережения" is both', () => {
@@ -14,12 +14,21 @@ test('🔒 and the leftover going to savings: "В сбережения" is both'
   });
 });
 
-test('only 🔒: "Сэкономлено", the whole of it, the section still there', () => {
-  expect(monthSavings(month({ to_savings: false }), false)).toMatchObject({ label: 'Сэкономлено', total: 310600, section: true });
+const closed = (rest_choice: 'savings' | 'next' | 'keep', saved_minor: number | null = null) => ({ close: { closed: true, rest_choice, saved_minor } });
+
+test('its "Итоги": the leftover kept as is — "Сэкономлено", the section still there for 🔒; none — no section', () => {
+  expect(monthSavings(month(closed('keep')), false)).toMatchObject({ label: 'Сэкономлено', total: 310600, section: true, open: false });
+  expect(monthSavings(month({ ...closed('keep'), locked_minor: 0 }), false)).toMatchObject({ label: 'Сэкономлено', section: false });
 });
 
-test('no savings in the plan: "Сэкономлено", no section', () => {
-  expect(monthSavings(month({ to_savings: false, locked_minor: 0 }), false)).toMatchObject({ label: 'Сэкономлено', section: false });
+test('its "Итоги": the leftover moved — "Перенесено" is the leftover (🔒 stays); put aside less — what was', () => {
+  expect(monthSavings(month(closed('next')), false)).toMatchObject({ label: 'Перенесено', total: 310600, value: 210600 });
+  expect(monthSavings(month(closed('savings', 250000)), false)).toMatchObject({ label: 'В сбережения', value: 250000, saved: 250000 });
+});
+
+test('a month over not closed: "Итоги не подведены", the leftover counted as going to savings', () => {
+  expect(monthSavings(month({ close: { closed: false, rest_choice: null, saved_minor: null } }), false))
+    .toMatchObject({ label: 'В сбережения', open: true, value: 310600 });
 });
 
 test('the spending took part of 🔒, then went past the budget', () => {

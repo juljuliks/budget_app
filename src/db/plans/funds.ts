@@ -1,7 +1,8 @@
 // "Копилки": a category saved up for — how much by when. Every month with a plan puts a contribution in it (its plan
 // item, kind 'fund'): what is left to save over the months left, in whole units. Its spending is taken from what is saved;
-// spending past it is the month's (a shortage, over the plan). Past months keep their contribution; the current one
-// and the coming ones are counted again as the spending changes. Deleted: what was saved goes to that month's savings.
+// spending past it is the month's (a shortage, over the plan). A past month's contribution is what its close said went in
+// ("Итоги месяца", fund_confirms; no answer — nothing); the current one and the coming ones are counted again as the
+// spending changes. Deleted: what was saved goes to that month's savings.
 import { getDb } from '../index';
 import type { Db } from '../types';
 import { Currency } from '../fx';
@@ -74,8 +75,8 @@ export async function allFunds(): Promise<Fund[]> {
 
 /**
  * The fund month by month from its start up to `until` (the current month by default; a deleted one: the month before
- * it was deleted). A past month's contribution is its plan item's; the current one's and the coming ones' are counted
- * from what is saved at their start. A month without a plan item puts nothing in.
+ * it was deleted). A past month's contribution is what its close confirmed went in (none yet: nothing); the current
+ * one's and the coming ones' are counted from what is saved at their start. A month without a plan item puts nothing in.
  */
 export async function fundLedger(fund: Fund, until = currentYm(), nowYm = currentYm()): Promise<FundLedger> {
   const db = await getDb();
@@ -83,6 +84,9 @@ export async function fundLedger(fund: Fund, until = currentYm(), nowYm = curren
   const items = new Map((await db.all<{ ym: string; limit_minor: number }>(
     "SELECT ym, limit_minor FROM plan_items WHERE category_id = ? AND kind = 'fund' AND ym >= ? AND ym <= ?",
     [fund.category_id, fund.since_ym, last])).map((r) => [r.ym, r.limit_minor]));
+  const confirmed = new Map((await db.all<{ ym: string; saved_minor: number }>(
+    'SELECT ym, saved_minor FROM fund_confirms WHERE category_id = ? AND ym >= ? AND ym <= ?',
+    [fund.category_id, fund.since_ym, last])).map((r) => [r.ym, r.saved_minor]));
   const { year: ly, month: lm } = parseYm(last);
   const rows = last < fund.since_ym ? [] : await spendRows(monthStart(fund.since_ym), monthRange(ly, lm)[1], { categories: [fund.category_id] });
   const { items: spent } = await convertSpending(rows.filter((r) => r.category_id === fund.category_id), fund.currency);
@@ -95,7 +99,7 @@ export async function fundLedger(fund: Fund, until = currentYm(), nowYm = curren
   for (let ym = fund.since_ym; ym <= last; ym = nextYm(ym)) {
     const start = balance;
     const planned = items.get(ym);
-    const contribution = planned === undefined ? 0 : ym >= nowYm ? contributionOf(fund, ym, balance) : planned;
+    const contribution = ym < nowYm ? confirmed.get(ym) ?? 0 : planned === undefined ? 0 : contributionOf(fund, ym, balance);
     balance += contribution;
     const [, end] = monthRange(parseYm(ym).year, parseYm(ym).month);
     let out = 0;

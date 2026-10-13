@@ -5,6 +5,7 @@ import { CategoryDeleteSheet } from '@/features/category-delete';
 import { CategoryTypesSheet } from '@/features/category-types';
 import { TransactionSheet } from '@/features/transaction-edit';
 import { MonthReportSheet } from '@/features/month-report';
+import { MonthCloseSheet } from '@/features/month-close';
 import { MerchantCard } from '@/features/merchant-card';
 import { SettingsSheet } from '@/features/settings';
 import { BackupSheet, PasswordHost } from '@/features/backup';
@@ -28,6 +29,7 @@ export function ModalHost() {
       <CategoryTypesSheet visible={state.categoryTypes} onClose={() => close({ categoryTypes: false })} />
       <CategoryDeleteSheet categoryId={state.categoryDelete} onClose={() => close({ categoryDelete: null })} />
       <MonthReportSheet ym={state.monthReport} onClose={() => close({ monthReport: null })} />
+      <MonthCloseSheet ym={state.monthClose} onClose={() => close({ monthClose: null })} />
       <SettingsSheet open={state.settings} onClose={() => close({ settings: false })} onImportSms={startSmsImport} onBackup={openBackup}
         // "Настроить": after the settings have closed, one sheet at a time
         lock={<LockSettings open={state.settings} onOptions={() => { close({ settings: false }); setTimeout(openLockOptions, 250); }} />}

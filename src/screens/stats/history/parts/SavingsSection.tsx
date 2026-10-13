@@ -5,6 +5,16 @@ import type { MonthSavings } from '../model/savings';
 
 type Props = { s: MonthSavings; money: (minor: number) => string };
 
+function Extra({ name, value }: { name: string; value: string }) {
+  return (
+    <View style={styles.detailRow}>
+      <Text style={[styles.detailName, styles.detailText]}>{name}</Text>
+      <Text style={styles.detailNum} />
+      <Text style={styles.detailNum}>{value}</Text>
+    </View>
+  );
+}
+
 /**
  * The opened month's "Сбережения", under its categories: 🔒 "Сразу" and 🌊 "Что осталось" against the plan, and what
  * they make; a fund deleted that month gives what it had saved. The current month: "Сейчас", the obligatory payments not
@@ -52,10 +62,16 @@ export default function SavingsSection({ s, money }: Props) {
         </View>
       ))}
       <View style={[styles.detailRow, styles.totalRow]}>
-        <Text style={[styles.detailName, styles.strong]}>{s.pending ? `Пока ${s.label === 'В сбережения' ? 'в сбережения' : 'сэкономлено'}` : s.label === 'Перерасход' ? 'Перерасход бюджета' : s.label === 'В сбережения' ? 'Всего в сбережения' : 'Сэкономлено'}</Text>
+        <Text style={[styles.detailName, styles.strong]}>
+          {s.pending ? 'Пока в сбережения' : s.label === 'Перерасход' ? 'Перерасход бюджета' : s.label === 'В сбережения' ? 'Всего в сбережения'
+            : s.label === 'Перенесено' ? 'Не потрачено' : 'Сэкономлено'}
+        </Text>
         <Text style={styles.detailNum} />
         <Text style={[styles.detailNum, styles.strong, over ? styles.danger : styles.good]}>{money(s.total)}</Text>
       </View>
+      {/* what its "Итоги" said: the leftover moved, what was put aside */}
+      {s.label === 'Перенесено' ? <Extra name="Перенесено в следующий месяц" value={money(s.value)} /> : null}
+      {s.saved !== null && s.saved !== s.total ? <Extra name="Удалось отложить" value={money(s.saved)} /> : null}
       {s.pending && s.unpaidFixed > 0 ? (
         <Text style={styles.note}>
           Месяц идёт: из «Что осталось» вычтены обязательные платежи, которые ещё не оплачены ({money(s.unpaidFixed)}). Итог — в конце месяца.

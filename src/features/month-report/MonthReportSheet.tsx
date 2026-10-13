@@ -5,6 +5,7 @@ import { useDisplayCurrency } from '@/shared/settings/displayCurrency';
 import { PlanAmountModal, PlanAmountTarget } from '@/entities/plan';
 import { monthDays } from '@/shared/lib/dateRange';
 import { navigateWhenReady } from '@/shared/navigation/navigation';
+import { openMonthClose } from '@/shared/navigation/sheets';
 import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
 import Loading from '@/shared/ui/Loading';
 import { reportTitle, reportView } from './model/reportView';
@@ -21,6 +22,13 @@ export default function MonthReportSheet({ ym, onClose }: { ym: string | null; o
   const [planTarget, setPlanTarget] = useState<PlanAmountTarget | null>(null);
   const v = r ? reportView(r, currency) : null;
 
+  // "Подвести итоги ›": the report closes, the month's "Итоги" open (one sheet at a time)
+  function closeMonth() {
+    if (!ym) return;
+    onClose();
+    setTimeout(() => openMonthClose(ym), 250);
+  }
+
   // the month's operations without a category, on the operations page
   function sortOut() {
     if (!ym) return;
@@ -35,7 +43,7 @@ export default function MonthReportSheet({ ym, onClose }: { ym: string | null; o
         <Text style={[styles.hint, styles.content]}>Плана на этот месяц не было — отчёта нет.</Text>
       ) : (
         <SheetScrollView contentContainerStyle={styles.content}>
-          <ReportHero v={v} />
+          <ReportHero v={v} onCloseMonth={closeMonth} />
           {v.improve ? <ImproveBlock v={v} currency={currency} onPlan={setPlanTarget} onSortOut={sortOut} /> : null}
           {v.good ? <GoodBlock v={v} /> : null}
         </SheetScrollView>

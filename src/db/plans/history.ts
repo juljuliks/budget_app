@@ -6,6 +6,7 @@ import { convertSpending, spendByDay, spendRows } from './spend';
 import { unplannedOf } from './budget';
 import { monthStats, spentOf } from './stats';
 import { allFunds, fundLedger } from './funds';
+import type { RestChoice } from './close';
 
 /**
  * Average spending per month over the full months of [fromKey, toKey] ('YYYY-MM-DD') that have data: not the
@@ -81,8 +82,11 @@ export type HistoryMonth = {
   locked_minor: number;
   /** the share set aside for spending outside the plan */
   unplanned_minor: number;
-  /** the leftover goes to savings (the budget's switch) */
-  to_savings: boolean;
+  /**
+   * a month over with a plan: its "Итоги месяца" — closed or not, where the leftover went (null: not asked), what was put
+   * aside (null: not asked); null for the current month and one without a plan
+   */
+  close: { closed: boolean; rest_choice: RestChoice | null; saved_minor: number | null } | null;
   /** the current month only: obligatory payments planned and not paid yet (not leftover, they're still to go) */
   unpaid_fixed_minor: number;
   /** put in the funds this month (their contributions: in spent_minor, the funds' own spending is not) */
@@ -102,8 +106,8 @@ export async function planHistory(nowYm = currentYm(), currency: Currency = BUDG
 
   const items = await db.all<{ ym: string; limit_minor: number; currency: string }>('SELECT ym, limit_minor, currency FROM plan_items');
   const budgets = await db.all<{
-    ym: string; budget_minor: number; budget_currency: string; locked_minor: number; to_savings: number; unplanned_pct: number; unplanned_minor: number | null;
-  }>('SELECT ym, budget_minor, budget_currency, locked_minor, to_savings, unplanned_pct, unplanned_minor FROM plan_months WHERE budget_minor IS NOT NULL');
+    ym: string; budget_minor: number; budget_currency: string; locked_minor: number; unplanned_pct: number; unplanned_minor: number | null;
+  }>('SELECT ym, budget_minor, budget_currency, locked_minor, unplanned_pct, unplanned_minor FROM plan_months WHERE budget_minor IS NOT NULL');
   const planYms = [...new Set([...items.map((i) => i.ym), ...budgets.map((b) => b.ym)])];
   const { days, conv } = await spendByDay(0, Number.MAX_SAFE_INTEGER, currency, planYms.map(planRateDate));
   const spentBy = new Map<string, number>();
@@ -114,8 +118,21 @@ export async function planHistory(nowYm = currentYm(), currency: Currency = BUDG
   const savingsBy = new Map(budgets.map((b) => {
     const toShown = (v: number) => conv(v, b.budget_currency, currency, planRateDate(b.ym)) ?? 0;
     const share = unplannedOf({ amount_minor: b.budget_minor, unplanned_pct: b.unplanned_pct, unplanned_minor: b.unplanned_minor });
-    return [b.ym, { locked_minor: toShown(b.locked_minor), unplanned_minor: toShown(share), to_savings: b.to_savings === 1 }];
+    return [b.ym, { locked_minor: toShown(b.locked_minor), unplanned_minor: toShown(share) }];
   }));
+  // the months' "Итоги": what was put aside is in the budget's currency
+  const closes = new Map((await db.all<{ ym: string; closed_at: number | null; rest_choice: RestChoice | null; confirmed_minor: number | null }>(
+    'SELECT ym, closed_at, rest_choice, confirmed_minor FROM month_closes')).map((r) => [r.ym, r]));
+  const closeOf = (ym: string): HistoryMonth['close'] => {
+    if (ym >= nowYm || !planYms.includes(ym)) return null;
+    const r = closes.get(ym);
+    const b = budgets.find((x) => x.ym === ym);
+    const saved = r?.confirmed_minor ?? null;
+    return {
+      closed: r?.closed_at != null, rest_choice: r?.closed_at != null ? r.rest_choice : null,
+      saved_minor: saved === null || !b ? null : conv(saved, b.budget_currency, currency, planRateDate(ym)) ?? saved,
+    };
+  };
   // the current month: what the obligatory payments still need (each one's plan less what's paid of it)
   let unpaidFixed = 0;
   if (budgetBy.has(nowYm)) {
@@ -146,7 +163,7 @@ export async function planHistory(nowYm = currentYm(), currency: Currency = BUDG
   for (let ym = nowYm; ym >= first.ym; ym = ymOf(year, --month)) {
     out.push({
       ym, planned_minor: plannedBy.get(ym) ?? 0, spent_minor: spentBy.get(ym) ?? 0, budget_minor: budgetBy.get(ym) ?? null,
-      locked_minor: 0, unplanned_minor: 0, to_savings: false, ...savingsBy.get(ym), unpaid_fixed_minor: ym === nowYm ? unpaidFixed : 0,
+      locked_minor: 0, unplanned_minor: 0, ...savingsBy.get(ym), close: closeOf(ym), unpaid_fixed_minor: ym === nowYm ? unpaidFixed : 0,
       funds_minor: fundsBy.get(ym) ?? 0, released: releasedBy.get(ym) ?? [],
     });
   }

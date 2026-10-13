@@ -1,8 +1,9 @@
 // A month's plan: its items, its budget, what came in and what was spent (in the screen's currency).
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import type { Currency } from '@/db/fx';
 import { getPlanBudget, listPlan, monthIncome, monthStats, parseYm, PlanBudget, planConverter, PlanItem, unplannedSpent } from '@/db/plans';
+import { onTransactionsChanged } from '@/domain/events';
 import { useLatestRequest } from '@/shared/lib/useLatestRequest';
 import { useLoadFailed } from '@/shared/lib/useLoadFailed';
 
@@ -39,8 +40,10 @@ export function usePlanData(ym: string, currency: Currency) {
       .catch(keep(fail));
   }, [ym, currency, latest, started, fail]);
 
-  // on focus, and again whenever load changes while focused (useFocusEffect re-runs on a new callback): no extra useEffect
+  // on focus, and again whenever load changes while focused (useFocusEffect re-runs on a new callback)
   useFocusEffect(load);
+  // a sheet over it changed the month (the month before's "Итоги": what it sends here)
+  useEffect(() => onTransactionsChanged(load), [load]);
 
   return { items, budget, toShown, income, unplannedSpentMinor, spentBy, load, failed };
 }

@@ -231,21 +231,21 @@ describe('planHistory', () => {
       ymOf(back2.getFullYear(), back2.getMonth()),
     ]);
     expect(h[0]).toEqual({
-      ym: NOW, planned_minor: 800, spent_minor: 300, budget_minor: null, locked_minor: 0, unplanned_minor: 0, to_savings: false, unpaid_fixed_minor: 0,
+      ym: NOW, planned_minor: 800, spent_minor: 300, budget_minor: null, locked_minor: 0, unplanned_minor: 0, close: null, unpaid_fixed_minor: 0,
       funds_minor: 0, released: [],
     });
     expect(h[1]).toEqual(expect.objectContaining({ planned_minor: 0, spent_minor: 0 }));
     expect(h[2]).toEqual(expect.objectContaining({ planned_minor: 0, spent_minor: 1000 }));
   });
 
-  test('the savings of a month: 🔒, the leftover\'s switch, the share outside the plan; this month — the obligatory still to pay', async () => {
+  test('the savings of a month: 🔒, the share outside the plan; this month — the obligatory still to pay', async () => {
     const now = new Date();
     await setPlanBudget(NOW, 500000, 'GEL', 10, true, 100000);
     const rent = await createCategory('Аренда', '🏠', null);
     await setPlanAmount(NOW, rent, 150000, 'fixed');
     await spend(50000, rent, now.getFullYear(), now.getMonth());
     expect((await planHistory())[0]).toEqual(expect.objectContaining({
-      budget_minor: 500000, locked_minor: 100000, to_savings: true, unplanned_minor: 50000, unpaid_fixed_minor: 100000,
+      budget_minor: 500000, locked_minor: 100000, close: null, unplanned_minor: 50000, unpaid_fixed_minor: 100000,
     }));
   });
 

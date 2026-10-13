@@ -13,6 +13,8 @@ export const colors = {
   danger: '#B91C1C',
   /** a band of savings ("Сбережения" in the History) */
   savingsBg: '#ECFDF5',
+  /** amounts going to savings ("Итоги месяца") */
+  savingsText: '#0f766e',
   /** "Копилки": the funds' color, its light ground and the ring's track, its text */
   fund: '#7c3aed',
   fundBg: '#F5F3FF',

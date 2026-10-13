@@ -12,8 +12,10 @@ import { usePlanData } from './model/usePlanData';
 import { planView } from './model/planView';
 import BudgetCard from './parts/BudgetCard';
 import BudgetSheet from './parts/BudgetSheet';
+import SavingsLessSheet from './parts/SavingsLessSheet';
 import { fundSection, itemSections, systemSections } from './parts/sections';
 import { FundSheet } from '@/features/fund';
+import { CarrySheet } from '@/features/month-close';
 import type { PlanItem } from '@/db/plans';
 import { styles } from './parts/styles';
 import PlanAddModal from './PlanAddModal';
@@ -41,6 +43,10 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
   const [addOpen, setAddOpen] = useState(false);
   // the fund opened (its card): the category
   const [fundOpen, setFundOpen] = useState<PlanItem | null>(null);
+  // what the month before sent, opened: its overspend or its leftover
+  const [carryOpen, setCarryOpen] = useState<'debt' | 'plus' | null>(null);
+  // ⓘ of the savings the overspend took part of
+  const [lessOpen, setLessOpen] = useState(false);
 
   if (!items) return <Loading failed={data.failed} onRetry={load} />;
   const p = planView({ ...data, items, ym, currency, hidden });
@@ -49,12 +55,12 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
   return (
     <View style={styles.screen}>
     <StickyScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      <BudgetCard p={p} budget={budget} currency={currency} hidden={hidden} onEdit={openBudget} />
+      <BudgetCard p={p} budget={budget} currency={currency} hidden={hidden} onEdit={openBudget} onLess={() => setLessOpen(true)} />
       <Text style={styles.pinNote}>📌 — переходит в следующий месяц с той же суммой</Text>
 
       {items.length === 0 ? <Text style={styles.hint}>План пуст. Нажмите ＋, чтобы добавить категории и суммы.</Text> : null}
       {fundSection(p, hidden, setFundOpen)}
-      {systemSections(p, hidden, openBudget)}
+      {systemSections(p, hidden, openBudget, setCarryOpen, () => setLessOpen(true))}
       {itemSections(p, {
         ym, currency, hidden, toShown,
         onOpen: (item) => setEditingItem(editTarget(item)),
@@ -80,6 +86,11 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
         onClose={() => setFundOpen(null)}
         onEdit={() => { const f = fundOpen; setFundOpen(null); if (f) setEditingItem(editTarget(f)); }}
       />
+      <SavingsLessSheet
+        less={p.less} visible={lessOpen} money={p.money} onClose={() => setLessOpen(false)}
+        onOpen={(id) => { const item = items.find((i) => i.category_id === id); if (item) setEditingItem(editTarget(item)); }}
+      />
+      <CarrySheet fromYm={carryOpen ? budget?.carry?.from_ym ?? null : null} kind={carryOpen ?? 'debt'} onClose={() => setCarryOpen(null)} />
     </StickyScrollView>
     {/* like the "+" on the transactions screen: several categories with amounts at once */}
     <Fab onPress={() => setAddOpen(true)} accessibilityLabel="Добавить категории в план" />
