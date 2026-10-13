@@ -63,14 +63,20 @@ describe('6.5 funds', () => {
     expect(await fund()).toMatchObject({ closed_ym: null });
   });
 
-  test('the stats: its spending apart, "Из копилок … — не из бюджета месяца"', async () => {
+  test('the stats: a fund spent from — its spending apart, "Из копилок … — не из бюджета месяца"; one not spent from — not there', async () => {
     await openApp(async () => {
       await planned();
-      const { id } = (await (await getDb()).get<{ id: number }>("SELECT id FROM categories WHERE name = 'Одежда'"))!;
+      const db = await getDb();
+      const { id } = (await db.get<{ id: number }>("SELECT id FROM categories WHERE name = 'Одежда'"))!;
       await setFund('2026-10', id, { target_minor: 150000, currency: 'GEL', due: '2027-01-31', start_minor: 30000 });
+      const subs = (await db.get<{ id: number }>("SELECT id FROM categories WHERE name = 'Подписки'"))!.id;
+      await setFund('2026-10', subs, { target_minor: 12000, currency: 'GEL', due: '2027-03-31', start_minor: 0 });
     });
     await tap('Статистика');
     expect(await screen.findByText(`Из копилок 450${N}₾ — не из бюджета месяца`)).toBeTruthy();
-    expect(screen.getByText(`в копилке 150${N}₾`)).toBeTruthy();
+    expect(screen.getByText('👕 Одежда')).toBeTruthy();
+    expect(screen.queryByText(/^в копилке/)).toBeNull();
+    // what is put in a fund is saving: a fund nothing was spent from isn't in the stats
+    expect(screen.queryByText('📺 Подписки')).toBeNull();
   });
 });

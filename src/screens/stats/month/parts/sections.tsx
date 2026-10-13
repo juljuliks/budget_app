@@ -79,10 +79,17 @@ export function unplannedSection(
   );
 }
 
-/** "Копилки": what was spent from each fund this month; not in the month's totals, but what it lacked. */
+/** The funds spent from this month: what is put in them is saving, not spending — the plan, «История» and the report show it. */
+export const spentFunds = (stats: MonthStats) => stats.funds.filter((f) => f.spent_minor > 0);
+
+/**
+ * "Копилки": what was spent from each fund this month (only those spent from); not in the month's totals, but what it
+ * lacked.
+ */
 export function fundsSection(stats: MonthStats, rowOf: (f: FundStat) => React.ReactElement) {
-  if (!stats.funds.length) return null;
-  const spent = stats.funds.reduce((a, f) => a + f.spent_minor, 0);
+  const funds = spentFunds(stats);
+  if (!funds.length) return null;
+  const spent = funds.reduce((a, f) => a + f.spent_minor, 0);
   return (
     <>
       {header('Копилки', spent > 0 ? (
@@ -90,7 +97,7 @@ export function fundsSection(stats: MonthStats, rowOf: (f: FundStat) => React.Re
           {formatWithCurrency(spent, stats.currency)}<Text style={styles.rowLimit}> из копилок</Text>
         </MaskedTotal>
       ) : null)}
-      <View>{stats.funds.map(rowOf)}</View>
+      <View>{funds.map(rowOf)}</View>
     </>
   );
 }

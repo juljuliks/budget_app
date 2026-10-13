@@ -45,10 +45,15 @@ describe('6.1 the month\'s budget', () => {
     expect(after('🎲 Траты вне плана', 2)).toEqual(['категории без плана и без категории · 10% бюджета', '300 ₾']);
   });
 
-  test('savings the overspend took part of: ⓘ — by how much, what took it; a category\'s tap opens its plan', async () => {
+  test('savings the overspend took part of: a tap on its line — by how much, what took it; a category\'s tap opens its plan', async () => {
     await openPlan();
     expect(screen.queryByText(/^Сбережения к концу месяца/)).toBeNull();
+    // the savings section's struck line: its ⓘ
     await tap('Почему сбережения меньше');
+    expect(await screen.findByText('Сбережения меньше на 130 ₾')).toBeTruthy();
+    await tap('Понятно');
+    // the legend's line: a tap on it
+    await tap('Сбережения: почему меньше');
     // 3 000 − (620 + 310 + 800 + 450 + 30) − 380 outside the plan
     expect(await screen.findByText('Сбережения меньше на 130 ₾')).toBeTruthy();
     expect(screen.getByText('Эти категории потратили больше плана. Если дальше тратить по плану, в сбережения пойдёт 410 ₾ вместо 540 ₾')).toBeTruthy();
@@ -82,6 +87,20 @@ describe('6.2 locked for savings, the share outside the plan, the leftover', () 
   const sliders = () => screen.UNSAFE_root.findAll((n: { props: { accessibilityRole?: string; onAccessibilityAction?: unknown } }) =>
     n.props.accessibilityRole === 'adjustable' && typeof n.props.onAccessibilityAction === 'function');
   const step = (i: number, actionName: 'increment' | 'decrement') => act(() => { fireEvent(sliders()[i], 'accessibilityAction', { nativeEvent: { actionName } }); });
+
+  test('"max": all that the plan and the other part leave, as an amount; typed by hand — an amount again', async () => {
+    await tap('Изменить бюджет месяца');
+    await screen.findByText('300 ₾ сразу в сбережения: план и траты вне плана их не займут.');
+    const [lockedMax] = screen.getAllByRole('tab', { name: 'max' });
+    await tap(lockedMax);
+    // 3 000 − 2 160 planned − 300 the share outside the plan
+    expect(await screen.findByDisplayValue('540')).toBeTruthy();
+    // nothing left for the share outside the plan to grow into
+    expect(screen.getAllByRole('tab', { name: 'max' })[1].props.accessibilityState).toMatchObject({ disabled: true });
+    await tap('Сохранить');
+    expect(await screen.findByText('Бюджет месяца сохранён')).toBeTruthy();
+    expect(await month()).toMatchObject({ l: 54000 });
+  });
 
   test('what doesn\'t fit can\'t be picked; less is', async () => {
     await tap('Изменить бюджет месяца');

@@ -7,7 +7,7 @@ import { BAR_HEIGHT, LOCK_BADGE, RING_LOCKED } from './palette';
 export const styles = StyleSheet.create({
   share: { marginTop: 4 },
   lockTitle: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12 },
-  lockMode: { marginLeft: 'auto', width: 120 },
+  lockMode: { marginLeft: 'auto', width: 168 },
   lockLabel: { marginBottom: 0, marginTop: 0, flexShrink: 1 },
   lockRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 },
   lockOwn: { fontSize: 14, color: colors.muted },
@@ -46,7 +46,6 @@ export const styles = StyleSheet.create({
   partValue: { textAlign: 'right', fontSize: 14, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
   // as planned, struck: the overspend took part of it
   partWas: { fontSize: 12, color: colors.muted, textDecorationLine: 'line-through', fontVariant: ['tabular-nums'] },
-  partInfo: { width: 16 },
   // the legend's names laid out unseen: the widest sets the names' column
   measure: { position: 'absolute', opacity: 0, alignItems: 'flex-start' },
   rowInfo: { paddingLeft: 8 },

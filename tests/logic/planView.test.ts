@@ -70,3 +70,10 @@ test('the overspend takes the savings: 🌊 first, then 🔒; the biggest oversp
   expect(big.overs.map((o) => o.key)).toEqual(['1', 'unplanned']);
   expect(savingsLess({ items, spentBy: spentBy(30050, 0), unplanned: 0, unplannedSpent: 0, free: 1000, locked: 0 })).toBeNull();
 });
+
+test('what the budget sheet\'s parts can\'t take: the plan, the funds, what the month before owes, less what it moved in', () => {
+  const fund = item({ category_id: 3, kind: 'fund', converted_minor: 5000 });
+  expect(view([item({}), fund], budget({})).claimed).toBe(36000);
+  expect(view([item({})], budget({ carry: { from_ym: '2029-12', debt_minor: 4000, plus_minor: 0 } })).claimed).toBe(35000);
+  expect(view([item({})], budget({ carry: { from_ym: '2029-12', debt_minor: 0, plus_minor: 10000 } })).claimed).toBe(21000);
+});

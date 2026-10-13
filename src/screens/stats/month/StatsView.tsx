@@ -19,7 +19,7 @@ import { useMonthData } from './model/useMonthData';
 import CategoryRow from './parts/CategoryRow';
 import MonthTotal from './parts/MonthTotal';
 import FundStatRow from './parts/FundStatRow';
-import { fundsSection, typeSections, unplannedSection } from './parts/sections';
+import { fundsSection, spentFunds, typeSections, unplannedSection } from './parts/sections';
 import { styles } from './parts/styles';
 
 /**
@@ -91,7 +91,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
       {fundsSection(stats, (f) => (
         <FundStatRow key={f.category_id} f={f} ym={ym} currency={stats.currency} hidden={hidden} openTransactions={openTransactions} />
       ))}
-      {stats.categories.length === 0 && !stats.funds.length ? <Text style={styles.hint}>В этом месяце трат нет.</Text> : typeSections(stats, split.groups, rowOf)}
+      {stats.categories.length === 0 && !spentFunds(stats).length ? <Text style={styles.hint}>В этом месяце трат нет.</Text> : typeSections(stats, split.groups, rowOf)}
       {unplannedSection(stats, split, share, rowOf, hidden)}
 
       <RefundsRow amount={stats.refunds_unassigned_minor} currency={stats.currency} onPress={() => openTransactions(null, monthDays(ym), ['refund'])} />

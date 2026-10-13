@@ -68,7 +68,7 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
       })}
 
       <BudgetSheet
-        visible={budgetOpen} budget={budget} currency={currency} planned={p.total} hint={p.budgetHint} toShown={toShown}
+        visible={budgetOpen} budget={budget} currency={currency} planned={p.claimed} hint={p.budgetHint} toShown={toShown}
         onSubmit={actions.saveBudget} onClose={() => setBudgetOpen(false)}
       />
       <PlanAmountModal

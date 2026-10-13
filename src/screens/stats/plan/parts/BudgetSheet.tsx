@@ -14,7 +14,7 @@ type Props = {
   visible: boolean;
   budget: PlanBudget | null;
   currency: Currency;
-  /** what is planned, in the screen's currency */
+  /** what is planned (the funds, the month before's carry too), in the screen's currency */
   planned: number;
   hint: string;
   toShown: (minor: number, from: Currency) => number | null;

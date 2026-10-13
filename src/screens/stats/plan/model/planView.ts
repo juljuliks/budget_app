@@ -148,7 +148,11 @@ export function planView({ ym, currency, items: all, budget, toShown, income, un
   // under the budget: the leftover moved in on top of its own amount
   const budgetSub = carry && plus > 0 && ownBudget !== null ? `${money(ownBudget)} + ${money(plus)} из ${genOf(carry.from_ym)}` : null;
 
-  return { money, total, fundsTotal, funds, shownBudget, budgetSub, unplanned, locked, free, timing, parts, less, systemGroups, budgetHint, groups: groupByType(items) };
+  // what the budget sheet's parts (🔒, the share outside the plan) can't take, in the screen's currency: the plan, the
+  // funds, what the month before owes, less the leftover it moved in (that one is room)
+  const claimed = total + fundsTotal + debt - plus;
+
+  return { money, total, fundsTotal, funds, shownBudget, budgetSub, claimed, unplanned, locked, free, timing, parts, less, systemGroups, budgetHint, groups: groupByType(items) };
 }
 
 export type PlanView = ReturnType<typeof planView>;

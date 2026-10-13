@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Text, TextInput, View } from 'react-native';
 import { Controller, useWatch } from 'react-hook-form';
 import type { Currency } from '@/db/fx';
@@ -14,14 +14,14 @@ import { styles } from './styles';
 
 /**
  * A part of the budget the plan can't take — "🔒 Отложить сразу", "На траты вне плана": a % by the slider or an
- * amount of one's own, switched by "% | USD". Kept in the form as an amount in the budget's currency; can't take what is
- * planned or the other part.
+ * amount of one's own, or "max" — all that is free (off with nothing free), switched by "% | USD | max". Kept in the form
+ * as an amount in the budget's currency; can't take what is planned or the other part.
  */
 export function ShareField({ form, name, other, planned, toShown, screen, title, icon, color, hint }: {
   form: ReturnType<typeof useLoadedForm<BudgetForm>>;
   name: 'locked' | 'unplanned';
   other: 'locked' | 'unplanned';
-  /** what is planned, in the screen's currency */
+  /** what is planned (the funds, the month before's carry too), in the screen's currency */
   planned: number;
   toShown: (minor: number, from: Currency) => number | null;
   screen: Currency;
@@ -43,8 +43,11 @@ export function ShareField({ form, name, other, planned, toShown, screen, title,
   const maxStop = amount > 0 ? SHARE_STOPS.filter((p) => stopOf(p) <= room).pop() ?? 0 : 50;
   const set = (minor: number) => form.setValue(name, minor ? toInputValue(minor) : '', { shouldDirty: true });
   // an amount between the stops opens as an amount
-  const [mode, setMode] = useState<'pct' | 'amount'>(stop === undefined ? 'amount' : 'pct');
-  function switchMode(m: 'pct' | 'amount') {
+  const [mode, setMode] = useState<'pct' | 'amount' | 'max'>(stop === undefined ? 'amount' : 'pct');
+  // "max": all that is free, following it (the budget or the other part changed); off with nothing free (or all of it in)
+  useEffect(() => { if (mode === 'max' && mine !== room) set(room); }, [mode, mine, room]); // eslint-disable-line react-hooks/exhaustive-deps
+  function switchMode(m: 'pct' | 'amount' | 'max') {
+    if (m === 'max') set(room);
     // to the slider: the nearest stop that fits
     if (m === 'pct' && stop === undefined && amount > 0) {
       const near = SHARE_STOPS.reduce((b, p) => (Math.abs(stopOf(p) - mine) < Math.abs(stopOf(b) - mine) ? p : b), 0);
@@ -57,7 +60,10 @@ export function ShareField({ form, name, other, planned, toShown, screen, title,
       <View style={styles.lockTitle}>
         {icon ? <LockIcon color={color} size={14} /> : null}
         <Text style={[formStyles.label, styles.lockLabel]}>{title}</Text>
-        <Segmented options={[['pct', '%'], ['amount', cur]] as const} value={mode} onChange={switchMode} style={styles.lockMode} />
+        <Segmented
+          options={[['pct', '%'], ['amount', cur], ['max', 'max']] as const} value={mode} onChange={switchMode} style={styles.lockMode}
+          disabled={(room <= 0 || room === mine) && mode !== 'max' ? ['max'] : []}
+        />
       </View>
       {mode === 'pct' ? (
         <StepSlider values={SHARE_STOPS} value={stop ?? -1} onChange={(p) => set(stopOf(p))} max={maxStop} label={(v) => `${v}%`} color={color} />
@@ -70,7 +76,8 @@ export function ShareField({ form, name, other, planned, toShown, screen, title,
               <TextInput
                 style={[formStyles.input, styles.lockInput]}
                 value={field.value}
-                onChangeText={field.onChange}
+                // typed by hand: an amount of one's own, not "max" any more
+                onChangeText={(t) => { field.onChange(t); if (mode === 'max') setMode('amount'); }}
                 placeholder="0"
                 placeholderTextColor={colors.muted}
                 keyboardType="decimal-pad"
