@@ -7,6 +7,7 @@ import type { PlanItem } from '@/db/plans';
 import { SectionHeader } from '@/shared/ui/StickyScrollView';
 import { formStyles } from '@/shared/theme/formStyles';
 import { percentOf, PlanView } from '../model/planView';
+import { FundItemRow } from './FundItemRow';
 import { PlanItemRow, SystemRowView } from './PlanItemRow';
 import { styles } from './styles';
 
@@ -69,4 +70,22 @@ export function itemSections(p: PlanView, { ym, currency, hidden, toShown, onOpe
       </View>
     </React.Fragment>
   ));
+}
+
+/** "Копилки": the funds' contributions this month, with their share of the budget; a tap opens the fund. */
+export function fundSection(p: PlanView, hidden: boolean, onOpen: (item: PlanItem) => void) {
+  if (!p.funds.length) return null;
+  return (
+    <React.Fragment key="funds">
+      {header('Копилки', (
+        <Text style={styles.groupTotal}>
+          {hidden && p.shownBudget ? null : p.money(p.fundsTotal)}
+          {p.shownBudget && p.fundsTotal ? <Text style={styles.groupShare}>{hidden ? '' : ' · '}{percentOf(p.fundsTotal, p.shownBudget)}</Text> : null}
+        </Text>
+      ))}
+      <View>
+        {p.funds.map((item) => <FundItemRow key={item.category_id} p={p} item={item} hidden={hidden} onOpen={() => onOpen(item)} />)}
+      </View>
+    </React.Fragment>
+  );
 }

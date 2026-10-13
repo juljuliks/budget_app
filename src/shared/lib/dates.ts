@@ -19,3 +19,9 @@ export const RHYTHM_DAYS = { day: 1, week: 7, '2weeks': 14 } as const;
 export function monthTitle(year: number, month: number): string {
   return `${MONTHS[month]} ${year}`;
 }
+
+/** «31 июля 2027» of a day key 'YYYY-MM-DD': a fund's date, always with the year */
+export function dayTitle(key: string): string {
+  const [y, m, d] = key.split('-').map(Number);
+  return `${d} ${MONTHS_GEN[m - 1]} ${y}`;
+}

@@ -34,16 +34,19 @@ export const styles = StyleSheet.create({
     width: LOCK_BADGE, height: LOCK_BADGE, borderRadius: LOCK_BADGE / 2, backgroundColor: RING_LOCKED,
     borderWidth: 2, borderColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center',
   },
-  parts: { flexDirection: 'row', gap: 8, marginTop: 10 },
-  part: { flex: 1 },
-  legend: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  // the parts as a legend: a line each, the amounts and shares in columns
+  parts: { gap: 6, marginTop: 10 },
+  part: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  legendBox: { width: 16, flexDirection: 'row', alignItems: 'center' },
   legendDot: { width: 8, height: 8, borderRadius: 4 },
   legendPair: { flexDirection: 'row', alignItems: 'center' },
   // the second dot covers a third of the first, a ring of the card's colour between them
   legendOver: { width: 12, height: 12, borderRadius: 6, marginLeft: -5, borderWidth: 2, borderColor: colors.surface },
-  partLabel: { fontSize: 12, color: colors.muted, flexShrink: 1 },
-  partValue: { fontSize: 15, fontWeight: '600', color: colors.text, marginTop: 2, fontVariant: ['tabular-nums'] },
-  partNote: { fontSize: 12, color: colors.muted, fontVariant: ['tabular-nums'] },
+  partLabel: { flex: 1, fontSize: 14, color: colors.muted },
+  // the amounts right-aligned in a column, the shares before them in one too
+  partValue: { minWidth: 84, textAlign: 'right', fontSize: 14, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
+  // a share ("43%") or a word ("сэкономлено") left of the amount
+  partNote: { textAlign: 'right', fontSize: 13, color: colors.muted, fontVariant: ['tabular-nums'] },
   note: { fontSize: 12, color: colors.muted, marginTop: 8 },
   overText: { color: colors.warn },
   savingsValue: { color: RING_LOCKED },

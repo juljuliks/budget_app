@@ -31,14 +31,14 @@ describe('6.1 the month\'s budget', () => {
     expect(await month()).toMatchObject({ b: 300000, s: 1 });
     // its split: the plan, the rest to savings
     expect(await screen.findByText('3 000 ₾')).toBeTruthy();
-    expect(after('План', 2)).toEqual(['500 ₾', '17%']);
+    expect(after('План', 2)).toEqual(['17%', '500 ₾']);
   });
 
   test('the split: the plan, outside it, savings; the savings and the share as sections', async () => {
     await openPlan();
-    expect(after('План', 2)).toEqual(['2 160 ₾', '72%']);
-    expect(after('Вне плана', 2)).toEqual(['300 ₾', '10%']);
-    expect(after('Сбережения', 2)).toEqual(['540 ₾', '18%']);
+    expect(after('План', 2)).toEqual(['72%', '2 160 ₾']);
+    expect(after('Вне плана', 2)).toEqual(['10%', '300 ₾']);
+    expect(after('Сбережения', 2)).toEqual(['18%', '540 ₾']);
     expect(after('🔒 Сразу', 2)).toEqual(['заблокировано в начале месяца · 10% бюджета', '300 ₾']);
     expect(after('🌊 Что осталось', 2)).toEqual(['что не запланировано, плюс сэкономленное · 8% бюджета', '240 ₾']);
     expect(after('🎲 Траты вне плана', 2)).toEqual(['категории без плана и без категории · 10% бюджета', '300 ₾']);
@@ -112,8 +112,8 @@ describe('6.2 locked for savings, the share outside the plan, the leftover', () 
     await tap('Сохранить');
     expect(await screen.findByText('Бюджет месяца сохранён')).toBeTruthy();
     expect((await month())!.s).toBe(0);
-    expect(after('Свободно', 2)).toEqual(['240 ₾', '8%']);
-    expect(after('Отложено', 2)).toEqual(['300 ₾', '10%']);
+    expect(after('Свободно', 2)).toEqual(['8%', '240 ₾']);
+    expect(after('Отложено', 2)).toEqual(['10%', '300 ₾']);
   });
 });
 

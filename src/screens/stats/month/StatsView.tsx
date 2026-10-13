@@ -8,7 +8,7 @@ import { CategoryStat, currentYm, spentOf, StatGroup, ymOf } from '@/db/plans';
 import { PlanAmountModal, PlanAmountTarget, splitUnplanned } from '@/entities/plan';
 import { MonthReportRow } from '@/features/month-report';
 import { daysInMonth, monthDays } from '@/shared/lib/dateRange';
-import { formatMoneyWithCurrency } from '@/shared/lib/money';
+import { formatMoneyWithCurrency, formatWithCurrency } from '@/shared/lib/money';
 import { NO_RATE } from '@/shared/lib/strings';
 import { useOpenCategoryTransactions } from '@/shared/navigation/navigation';
 import Donut, { DonutSegment } from '@/shared/ui/Donut';
@@ -18,7 +18,8 @@ import RefundsRow from '../parts/RefundsRow';
 import { useMonthData } from './model/useMonthData';
 import CategoryRow from './parts/CategoryRow';
 import MonthTotal from './parts/MonthTotal';
-import { typeSections, unplannedSection } from './parts/sections';
+import FundStatRow from './parts/FundStatRow';
+import { fundsSection, typeSections, unplannedSection } from './parts/sections';
 import { styles } from './parts/styles';
 
 /**
@@ -51,6 +52,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
   // the current month: a tick on each flexible category's bar where an even pace would be today
   const ym = ymOf(year, month);
   const evenPace = ym === currentYm() ? new Date().getDate() / daysInMonth(ym) : undefined;
+  const fromFunds = stats.funds.reduce((a, f) => a + f.spent_minor, 0);
   const picked = selected === null ? undefined : stats.categories.find((c) => String(c.category_id) === selected);
   const rowOf = (c: CategoryStat, unplanned: boolean) => (
     <CategoryRow
@@ -84,7 +86,12 @@ export default function StatsView({ year, month, currency }: { year: number; mon
         <Text style={styles.hint}>Составьте план на месяц во вкладке «План», чтобы видеть, сколько осталось по категориям.</Text>
       )}
 
-      {stats.categories.length === 0 ? <Text style={styles.hint}>В этом месяце трат нет.</Text> : typeSections(stats, split.groups, rowOf)}
+      {/* the funds' spending is from what they saved: said under the month's total */}
+      {fromFunds > 0 && !hidden ? <Text style={styles.fundsLine}>{`Из копилок ${formatWithCurrency(fromFunds, stats.currency)} — не из бюджета месяца`}</Text> : null}
+      {fundsSection(stats, (f) => (
+        <FundStatRow key={f.category_id} f={f} ym={ym} currency={stats.currency} hidden={hidden} openTransactions={openTransactions} />
+      ))}
+      {stats.categories.length === 0 && !stats.funds.length ? <Text style={styles.hint}>В этом месяце трат нет.</Text> : typeSections(stats, split.groups, rowOf)}
       {unplannedSection(stats, split, share, rowOf, hidden)}
 
       <RefundsRow amount={stats.refunds_unassigned_minor} currency={stats.currency} onPress={() => openTransactions(null, monthDays(ym), ['refund'])} />

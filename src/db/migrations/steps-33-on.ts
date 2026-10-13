@@ -59,4 +59,35 @@ export const STEPS_33_ON: MigrationStep[][] = [
     'ALTER TABLE unparsed_messages ADD COLUMN kept_at INTEGER',
     'UPDATE unparsed_messages SET kept_at = received_at',
   ],
+  // 37: "Копилка": a category saved up for (a holiday, the insurance) — how much by when. Each month of a plan puts a
+  // contribution in it (its plan item, kind 'fund': what is left to save over the months left), its spending is taken
+  // from what is saved. Deleted: closed_ym, what was saved goes to that month's savings (released_minor). plan_items
+  // is rebuilt for the new kind (its CHECK)
+  [
+    `CREATE TABLE IF NOT EXISTS funds (
+      category_id INTEGER PRIMARY KEY,
+      target_minor INTEGER NOT NULL CHECK (target_minor > 0),
+      currency TEXT NOT NULL,
+      due TEXT NOT NULL,
+      start_minor INTEGER NOT NULL DEFAULT 0 CHECK (start_minor >= 0),
+      since_ym TEXT NOT NULL,
+      closed_ym TEXT,
+      released_minor INTEGER
+    )`,
+    `CREATE TABLE plan_items_new (
+      ym TEXT NOT NULL,
+      category_id INTEGER NOT NULL,
+      limit_minor INTEGER NOT NULL DEFAULT 0 CHECK (limit_minor >= 0),
+      pinned INTEGER NOT NULL DEFAULT 0,
+      kind TEXT NOT NULL DEFAULT 'limit' CHECK (kind IN ('limit', 'fixed', 'fund')),
+      currency TEXT NOT NULL DEFAULT 'GEL',
+      norm_period TEXT NOT NULL DEFAULT 'day' CHECK (norm_period IN ('day', 'week', '2weeks', 'month')),
+      PRIMARY KEY (ym, category_id),
+      FOREIGN KEY(category_id) REFERENCES categories(id) ON DELETE CASCADE
+    )`,
+    `INSERT INTO plan_items_new (ym, category_id, limit_minor, pinned, kind, currency, norm_period)
+      SELECT ym, category_id, limit_minor, pinned, kind, currency, norm_period FROM plan_items`,
+    'DROP TABLE plan_items',
+    'ALTER TABLE plan_items_new RENAME TO plan_items',
+  ],
 ];

@@ -17,13 +17,16 @@ export type MonthSavings = {
   rest: { label: 'Что осталось' | 'Сверх бюджета'; plan: number | null; value: number };
   /** the current month: the obligatory payments not paid yet, taken out of the leftover */
   unpaidFixed: number;
+  /** funds deleted this month: what they had saved, in the total ("из копилки «Отпуск»") */
+  released: HistoryMonth['released'];
 };
 
 /** null: no budget that month — nothing to save from. */
 export function monthSavings(m: HistoryMonth, current: boolean): MonthSavings | null {
   if (m.budget_minor === null) return null;
   const unpaidFixed = current ? m.unpaid_fixed_minor : 0;
-  const total = m.budget_minor - m.spent_minor - unpaidFixed;
+  const released = m.released.reduce((a, r) => a + r.minor, 0);
+  const total = m.budget_minor - m.spent_minor - unpaidFixed + released;
   const locked = m.locked_minor;
   const kept = Math.min(locked, Math.max(0, total));
   const planned = m.budget_minor - m.planned_minor - m.unplanned_minor - locked;
@@ -31,9 +34,10 @@ export function monthSavings(m: HistoryMonth, current: boolean): MonthSavings | 
     label: total < 0 ? 'Перерасход' : m.to_savings ? 'В сбережения' : 'Сэкономлено',
     total,
     pending: current,
-    section: locked > 0 || m.to_savings,
+    section: locked > 0 || m.to_savings || released > 0,
     locked: { plan: locked, kept },
-    rest: { label: total < 0 ? 'Сверх бюджета' : 'Что осталось', plan: planned > 0 ? planned : null, value: total - kept },
+    rest: { label: total < 0 ? 'Сверх бюджета' : 'Что осталось', plan: planned > 0 ? planned : null, value: total - kept - released },
     unpaidFixed,
+    released: m.released,
   };
 }

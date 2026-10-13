@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Controller, useWatch } from 'react-hook-form';
+import { Controller, UseFormReturn, useWatch } from 'react-hook-form';
 import { Currency } from '@/db/fx';
 import { categoryMonthlyAverage, getPlanBudget, lastPlanItem, NormPeriod, OverBudgetError, PlanKind, planConverter, plannedTotal } from '@/db/plans';
 import { StyleSheet, Text, View } from 'react-native';
@@ -14,12 +14,14 @@ import TextInputModal from '@/shared/ui/TextInputModal';
 import { useLoadedForm } from '@/shared/ui/form';
 import { plural } from '@/shared/lib/format';
 import { toast, toastFailure } from '@/shared/ui/toast';
-import { savePlanAmount } from '../model/commands';
+import { saveFund, savePlanAmount } from '../model/commands';
+import FundFields, { FundForm } from './FundFields';
 import { MONTHS_NOM, RHYTHM_DAYS } from '@/shared/lib/dates';
 
 const KINDS = [
   ['limit', 'Траты с лимитом', 'Еда, кафе, одежда — сумма меняется, следим, сколько осталось'],
   ['fixed', 'Обязательный платёж', 'Аренда, кредит, подписки — одна и та же сумма каждый месяц'],
+  ['fund', 'Копилка', 'Отпуск, страховка, техника — копить понемногу, потратить разом'],
 ] as const;
 
 // how the category is spent: its limit in day / week stats is counted per this period
@@ -47,6 +49,8 @@ export type PlanAmountTarget = {
   norm_period?: NormPeriod;
   /** not in the plan yet: the amount offered (what the category spent), in `currency`; over last month's plan */
   suggested_minor?: number;
+  /** a fund: its target (in `currency`, the sheet's amount), date and what was saved before */
+  fund?: { target_minor: number; due: string; start_minor: number };
 };
 
 type Props = {
@@ -71,10 +75,11 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
   // the most this category can get = amount to distribute − the other categories (null = no amount set), in the app's currency
   const [free, setFree] = useState<{ minor: number; currency: Currency } | null>(null);
   // the saved item; a category not in the plan yet starts as a day-to-day limit in the screen's currency
-  const form = useLoadedForm<{ value: string; currency: Currency; kind: PlanKind; norm: NormPeriod }>(target ? {
-    value: toInputValue(target.limit_minor), currency: target.currency, kind: target.kind ?? 'limit', norm: target.norm_period ?? 'day',
+  const form = useLoadedForm<FundForm & { kind: PlanKind; norm: NormPeriod }>(target ? {
+    value: toInputValue(target.fund ? target.fund.target_minor : target.limit_minor), currency: target.currency, kind: target.kind ?? 'limit',
+    norm: target.norm_period ?? 'day', due: target.fund?.due ?? null, start: target.fund?.start_minor ? toInputValue(target.fund.start_minor) : '',
   } : null, target !== null);
-  const kind = useWatch({ control: form.control, name: 'kind' });
+  const [kind, due] = useWatch({ control: form.control, name: ['kind', 'due'] });
   const [entered, enteredCurrency] = useWatch({ control: form.control, name: ['value', 'currency'] });
   const [previous, setPrevious] = useState<{ minor: number; currency: Currency; ym: string } | null>(null);
   // what the category usually takes a month (the latest full months), in the app's currency
@@ -98,6 +103,8 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
       // not in the plan yet: the amount it was opened with (what the category spent), else last month's item —
       // ready to save as is (so it counts as a change); the kind and pattern from last month either way
       const dirty = { shouldDirty: true };
+      // a fund's amount is its target, not a month's
+      if (target.fund) return;
       if (!target.limit_minor && target.suggested_minor) {
         form.setValue('value', toInputValue(target.suggested_minor), dirty);
         form.setValue('currency', target.currency, dirty);
@@ -116,15 +123,19 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
     if (!target) return null;
     const minor = parseAmountOrZero(text);
     if (minor === null) return AMOUNT_HINT;
+    const { kind: k, currency, norm, due: date, start } = form.getValues();
+    const startMinor = parseAmountOrZero(start ?? '');
+    if (k === 'fund' && (!minor || startMinor === null)) return minor ? AMOUNT_HINT : 'Введите, сколько накопить';
     try {
-      const { kind: k, currency, norm } = form.getValues();
-      await savePlanAmount(ym, target.category_id, minor, k, currency, norm);
+      if (k === 'fund' && date) await saveFund(ym, target.category_id, { target_minor: minor, currency, due: date, start_minor: startMinor ?? 0 });
+      else await savePlanAmount(ym, target.category_id, minor, k, currency, norm);
     } catch (e) {
       if (!(e instanceof OverBudgetError)) throw e;
-      return `Больше бюджета месяца: можно запланировать до ${free ? formatWithCurrency(free.minor, free.currency) : '0'}`;
+      const room = `можно запланировать до ${free ? formatWithCurrency(free.minor, free.currency) : '0'}`;
+      return k === 'fund' ? `Взнос больше бюджета месяца: ${room}. Выберите дату позже` : `Больше бюджета месяца: ${room}`;
     }
     // the stats and reports open under the dialog count the plan too (savePlanAmount tells them)
-    toast(`План «${target.label}» сохранён`);
+    toast(k === 'fund' ? `Копилка «${target.label}» сохранена` : `План «${target.label}» сохранён`);
     onSaved();
     return null;
   }
@@ -169,6 +180,8 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
       // an item in the plan: removing it is a button under "Сохранить", as on the other sheets
       remove={onDelete ? { title: 'Удалить из плана', onPress: () => { onClose(); onDelete(); } } : undefined}
       inputAccessory={<Controller control={form.control} name="currency" render={({ field }) => <CurrencyButton value={field.value} onChange={field.onChange} />} />}
+      label={kind === 'fund' ? 'Накопить' : undefined}
+      submitDisabled={kind === 'fund' && !due}
     >
       <Controller control={form.control} name="kind" render={({ field }) => <RadioGroup options={KINDS} value={field.value} onChange={field.onChange} />} />
       {kind === 'limit' ? (
@@ -178,6 +191,7 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
           <Text style={formStyles.hint}>По этому в статистике считается лимит на день или неделю.</Text>
         </>
       ) : null}
+      {kind === 'fund' && target ? <FundFields ym={ym} categoryId={target.category_id} form={form as unknown as UseFormReturn<FundForm>} /> : null}
     </TextInputModal>
   );
 }

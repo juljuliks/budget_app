@@ -9,6 +9,7 @@ import SectionHeading from '@/shared/ui/SectionHeading';
 import { PencilIcon, SplitIcon } from '@/shared/ui/icons';
 import { colors } from '@/shared/theme/theme';
 import type { Tx } from '../model/useTransaction';
+import FundNote from './FundNote';
 import SplitView from './SplitView';
 
 type Props = {
@@ -76,6 +77,7 @@ export default function TransactionCategory({ tx, mixedCats, saving, choose, onS
           <Text style={styles.changeText}>Сменить</Text>
         </TouchableOpacity>
       </View>
+      <FundNote txId={tx.id} categoryId={tx.category_id} occurredAt={tx.occurred_at} amount={tx.amount_minor} />
       {splitLink}
       <CategoryPickerModal
         visible={pickerOpen}

@@ -1,6 +1,7 @@
 import { ingestSms } from '../ingest/ingest';
 import { createNotificationChannel } from '../notifications/notifeeBootstrap';
-import { showDepositNotification, showLimitAlert, showUncategorizedTransactionNotification } from '../notifications/notifeeIntegration';
+import { CHANNEL_ID, showDepositNotification, showLimitAlert, showUncategorizedTransactionNotification } from '../notifications/notifeeIntegration';
+import { showFundSpent } from '../notifications/fundNotice';
 import { scheduleMonthReports } from '../notifications/monthReportNotice';
 
 export type SmsTaskData = {
@@ -26,9 +27,9 @@ export default async function SmsBackgroundTask(data: SmsTaskData): Promise<void
       await createNotificationChannel();
       await showUncategorizedTransactionNotification(result.txId);
     } else if (result.status === 'inserted') {
-      // the merchant's category: maybe it is near its limit now
+      // a fund's category: taken from the fund (said so); else the merchant's category may be near its limit now
       await createNotificationChannel();
-      await showLimitAlert(result.categoryId);
+      if (!(await showFundSpent(result.txId, CHANNEL_ID))) await showLimitAlert(result.categoryId);
     }
     // the month's report on the 1st, with what is put aside after this operation
     if (result.status === 'inserted') await scheduleMonthReports();

@@ -9,6 +9,7 @@ import { useLoadFailed } from '@/shared/lib/useLoadFailed';
 import { formatMoneyWithCurrency, formatWithCurrency } from '@/shared/lib/money';
 import { monthDays } from '@/shared/lib/dateRange';
 import { NO_RATE } from '@/shared/lib/strings';
+import FundRows from './FundRows';
 import SavingsSection from './SavingsSection';
 import { styles } from './styles';
 import type { MonthSavings } from '../model/savings';
@@ -30,7 +31,7 @@ export default function MonthDetails({ ym, currency, savings }: { ym: string; cu
 
   const money = (minor: number) => formatWithCurrency(minor, currency);
   if (!stats) return <Loading inline failed={failed} onRetry={load} />;
-  if (stats.categories.length === 0) return <Text style={styles.hint}>Нет трат и плана.</Text>;
+  if (stats.categories.length === 0 && stats.funds.length === 0) return <Text style={styles.hint}>Нет трат и плана.</Text>;
 
   return (
     <View style={styles.details}>
@@ -64,6 +65,7 @@ export default function MonthDetails({ ym, currency, savings }: { ym: string; cu
           })}
         </View>
       ))}
+      {stats.funds.length ? <FundRows funds={stats.funds} money={money} /> : null}
       {savings?.section ? <SavingsSection s={savings} money={money} /> : null}
       {stats.other_currencies.length > 0 ? (
         <Text style={styles.note}>

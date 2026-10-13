@@ -7,7 +7,8 @@ type Props = { s: MonthSavings; money: (minor: number) => string };
 
 /**
  * The opened month's "Сбережения", under its categories: 🔒 "Сразу" and 🌊 "Что осталось" against the plan, and what
- * they make. The current month: "Сейчас", the obligatory payments not paid yet already out of the leftover.
+ * they make; a fund deleted that month gives what it had saved. The current month: "Сейчас", the obligatory payments not
+ * paid yet already out of the leftover.
  */
 export default function SavingsSection({ s, money }: Props) {
   const over = s.total < 0;
@@ -40,6 +41,16 @@ export default function SavingsSection({ s, money }: Props) {
         <Text style={[styles.detailNum, styles.muted]}>{s.rest.plan !== null ? money(s.rest.plan) : '—'}</Text>
         <Text style={[styles.detailNum, over ? styles.danger : s.rest.value > 0 && styles.good]}>{money(s.rest.value)}</Text>
       </View>
+      {s.released.map((r) => (
+        <View key={r.name} style={styles.detailRow}>
+          <View style={styles.detailName}>
+            <Text style={styles.detailText}>{`Из копилки «${`${r.emoji ?? ''} ${r.name}`.trim()}»`}</Text>
+            <Text style={styles.detailHint}>копилка удалена</Text>
+          </View>
+          <Text style={[styles.detailNum, styles.muted]}>—</Text>
+          <Text style={[styles.detailNum, styles.good]}>{money(r.minor)}</Text>
+        </View>
+      ))}
       <View style={[styles.detailRow, styles.totalRow]}>
         <Text style={[styles.detailName, styles.strong]}>{s.pending ? `Пока ${s.label === 'В сбережения' ? 'в сбережения' : 'сэкономлено'}` : s.label === 'Перерасход' ? 'Перерасход бюджета' : s.label === 'В сбережения' ? 'Всего в сбережения' : 'Сэкономлено'}</Text>
         <Text style={styles.detailNum} />

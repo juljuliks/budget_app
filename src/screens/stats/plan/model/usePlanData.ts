@@ -30,7 +30,10 @@ export function usePlanData(ym: string, currency: Currency) {
     Promise.all([listPlan(ym, currency), getPlanBudget(ym), monthIncome(ym, currency), planConverter(ym), monthStats(year, month, currency)])
       .then(keep(([plan, b, inc, conv, stats]: [Awaited<ReturnType<typeof listPlan>>, Awaited<ReturnType<typeof getPlanBudget>>, number, Awaited<ReturnType<typeof planConverter>>, Awaited<ReturnType<typeof monthStats>>]) => {
         setItems(plan); setBudget(b); setIncome(inc); setUnplannedSpent(unplannedSpent(stats));
-        setSpentBy({ byCategory: new Map(stats.categories.filter((c) => c.category_id !== null).map((c) => [c.category_id!, c.spent_minor])), total: stats.spent_minor });
+        // a fund takes its contribution, and what was spent past what it saved
+        const funds = stats.funds.map((f): [number, number] => [f.category_id, f.contribution_minor + f.shortage_minor]);
+        setSpentBy({ byCategory: new Map([...stats.categories.filter((c) => c.category_id !== null).map((c): [number, number] => [c.category_id!, c.spent_minor]), ...funds]),
+          total: stats.spent_minor + stats.funds.reduce((a, f) => a + f.contribution_minor, 0) });
         setToShown(() => (minor: number, from: Currency) => conv(minor, from, currency));
       }))
       .catch(keep(fail));

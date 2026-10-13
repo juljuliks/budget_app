@@ -5,6 +5,7 @@ import { placeholders } from '../sql';
 import { Currency } from '../fx';
 import { asCurrency } from './months';
 import { NormPeriod, PlanItem, PlanKind, asNorm } from './types';
+import { activeFunds, fundLedger } from './funds';
 import { OverBudgetError, ensureMonthPlan, planConverter, planCurrency, plannedTotal, storedBudget } from './budget';
 
 /** The month's plan items; `converted_minor` in `to` (default: the amount to distribute's currency). */
@@ -23,6 +24,7 @@ export async function listPlan(ym: string, to?: Currency): Promise<PlanItem[]> {
     [prev?.ym ?? '', ym]);
   const target = to ?? (await planCurrency(ym));
   const conv = await planConverter(ym);
+  const funds = await fundsOf(ym, rows.filter((r) => r.kind === 'fund').map((r) => r.category_id));
   return rows.map((r) => ({
     ...r,
     currency: asCurrency(r.currency),
@@ -30,7 +32,19 @@ export async function listPlan(ym: string, to?: Currency): Promise<PlanItem[]> {
     converted_minor: conv(r.limit_minor, asCurrency(r.currency), target),
     pinned: r.pinned === 1,
     previous_minor: r.previous_minor || null,
+    ...(funds.has(r.category_id) ? { fund: funds.get(r.category_id) } : {}),
   }));
+}
+
+/** The funds among the month's items: how much by when, and what each has by the month's end. */
+async function fundsOf(ym: string, ids: number[]): Promise<Map<number, NonNullable<PlanItem['fund']>>> {
+  const out = new Map<number, NonNullable<PlanItem['fund']>>();
+  for (const fund of await activeFunds(ym)) {
+    if (!ids.includes(fund.category_id)) continue;
+    const m = (await fundLedger(fund, ym)).months.find((x) => x.ym === ym);
+    out.set(fund.category_id, { target_minor: fund.target_minor, due: fund.due, saved_minor: m?.end ?? fund.start_minor, start_minor: fund.start_minor });
+  }
+  return out;
 }
 
 async function markPlanned(ym: string, db: Db) {

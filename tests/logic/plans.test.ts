@@ -232,6 +232,7 @@ describe('planHistory', () => {
     ]);
     expect(h[0]).toEqual({
       ym: NOW, planned_minor: 800, spent_minor: 300, budget_minor: null, locked_minor: 0, unplanned_minor: 0, to_savings: false, unpaid_fixed_minor: 0,
+      funds_minor: 0, released: [],
     });
     expect(h[1]).toEqual(expect.objectContaining({ planned_minor: 0, spent_minor: 0 }));
     expect(h[2]).toEqual(expect.objectContaining({ planned_minor: 0, spent_minor: 1000 }));

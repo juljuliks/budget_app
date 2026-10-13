@@ -39,6 +39,10 @@ type Props<V extends TextFormValues & FieldValues> = {
   remove?: { title: string; onPress: () => void };
   /** a control right of the field (e.g. the amount's currency) */
   inputAccessory?: React.ReactNode;
+  /** a caption over the field ("Накопить") */
+  label?: string;
+  /** the submit button greyed even with changes: something it needs is not filled in yet */
+  submitDisabled?: boolean;
   /** returns an error message to show, or null when saved */
   onSubmit: (value: string) => Promise<string | null>;
   onClose: () => void;
@@ -50,7 +54,7 @@ type Props<V extends TextFormValues & FieldValues> = {
  */
 export default function TextInputModal<V extends TextFormValues & FieldValues = TextFormValues>({
   visible, title, initialValue = '', form: outer, placeholder, submitLabel = 'Сохранить', hint, keyboardType, maxLength = 30,
-  allowEmpty, multiline, onSubmit, onClose, children, inputAccessory, headerRight, remove,
+  allowEmpty, multiline, onSubmit, onClose, children, inputAccessory, headerRight, remove, label, submitDisabled,
 }: Props<V>) {
   // used only without a form of the caller's (a hook can't be skipped)
   const own = useLoadedForm<TextFormValues>(outer ? null : { value: initialValue }, visible);
@@ -71,6 +75,7 @@ export default function TextInputModal<V extends TextFormValues & FieldValues = 
     <BottomSheet visible={visible} onClose={onClose} title={title} headerRight={headerRight}>
         <View style={styles.dialog}>
           {typeof hint === 'string' ? <Text style={styles.hint}>{hint}</Text> : hint ?? null}
+          {label ? <Text style={[formStyles.label, styles.label]}>{label}</Text> : null}
           <View style={styles.inputRow}>
           <Controller
             control={form.control}
@@ -88,7 +93,7 @@ export default function TextInputModal<V extends TextFormValues & FieldValues = 
                 keyboardType={keyboardType}
                 maxLength={maxLength}
                 returnKeyType={multiline ? 'default' : 'done'}
-                onSubmitEditing={multiline || !isDirty ? undefined : submit}
+                onSubmitEditing={multiline || !isDirty || submitDisabled ? undefined : submit}
               />
             )}
           />
@@ -97,7 +102,7 @@ export default function TextInputModal<V extends TextFormValues & FieldValues = 
           {children ? <View style={styles.extra}>{children}</View> : null}
           {/* the submit button greyed until something changed: nothing to save otherwise */}
           <SheetActions
-            submit={{ title: submitLabel, onPress: submit, disabled: isSubmitting || !isDirty }}
+            submit={{ title: submitLabel, onPress: submit, disabled: isSubmitting || !isDirty || !!submitDisabled }}
             extra={remove ? [{ title: remove.title, danger: true, onPress: remove.onPress }] : undefined}
             onCancel={remove ? undefined : onClose}
           />
@@ -114,6 +119,7 @@ export function setField<V extends FieldValues, K extends Path<V>>(form: UseForm
 const styles = StyleSheet.create({
   dialog: { paddingHorizontal: 20 },
   hint: { fontSize: 14, color: colors.muted, marginBottom: 12 },
+  label: { marginTop: 0 },
   extra: { marginTop: 12 },
   // the field and its accessory (the currency) the same height
   inputRow: { flexDirection: 'row', alignItems: 'stretch', gap: 8 },

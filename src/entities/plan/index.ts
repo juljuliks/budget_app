@@ -3,3 +3,4 @@ export type { SummaryGroup, SummaryGroupKey, UnplannedMonth } from './model/summ
 export { splitUnplanned, unplannedMonth, unplannedShare } from './model/unplanned';
 export { default as PlanAmountModal } from './ui/PlanAmountModal';
 export type { PlanAmountTarget } from './ui/PlanAmountModal';
+export { contributionsLeft, fundProgress, isSaved, monthsTo } from './model/fundTexts';

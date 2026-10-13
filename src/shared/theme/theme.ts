@@ -13,6 +13,11 @@ export const colors = {
   danger: '#B91C1C',
   /** a band of savings ("Сбережения" in the History) */
   savingsBg: '#ECFDF5',
+  /** "Копилки": the funds' color, its light ground and the ring's track, its text */
+  fund: '#7c3aed',
+  fundBg: '#F5F3FF',
+  fundTrack: '#EDE9FE',
+  fundText: '#6D28D9',
 };
 
 // Chart colors. Category colors (palettes per type) live in src/domain/colors.ts.

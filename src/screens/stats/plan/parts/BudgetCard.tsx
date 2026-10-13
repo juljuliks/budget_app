@@ -14,8 +14,8 @@ import { styles, toneStyle } from './styles';
 type Props = { p: PlanView; budget: PlanBudget | null; currency: Currency; hidden: boolean; onEdit: () => void };
 
 /**
- * The budget in one line, then its split as one bar: planned / for spending outside the plan / savings (or not
- * distributed), each part's amount under it in its color.
+ * The budget in one line, then its split as one bar: planned / for spending outside the plan / the funds / savings (or
+ * not distributed); under it a line for each part, as a legend: its dot, name, share, amount.
  */
 export default function BudgetCard({ p, budget, currency, hidden, onEdit }: Props) {
   const { shownBudget, locked, free } = p;
@@ -42,18 +42,19 @@ export default function BudgetCard({ p, budget, currency, hidden, onEdit }: Prop
             {/* no share for spending outside the plan: no column for it */}
             {p.parts.filter((x) => x.key !== 'unplanned' || p.unplanned > 0).map((x) => (
               <View key={x.key} style={styles.part}>
-                <View style={styles.legend}>
                   {/* savings holding both the leftover and the locked part: two dots, the locked one over the other */}
+                  {/* the dots in a box of one width: the names start in one column */}
+                  <View style={styles.legendBox}>
                   {x.key === 'free' && locked > 0 && (free ?? 0) > 0 ? (
                     <View style={styles.legendPair}>
                       <View style={[styles.legendDot, { backgroundColor: x.color }]} />
                       <View style={[styles.legendDot, styles.legendOver, { backgroundColor: RING_LOCKED }]} />
                     </View>
                   ) : <View style={[styles.legendDot, { backgroundColor: x.key === 'free' && locked > 0 ? RING_LOCKED : x.color }]} />}
-                  <Text style={styles.partLabel} numberOfLines={1}>{x.label}</Text>
-                </View>
+                  </View>
+                <Text style={styles.partLabel} numberOfLines={1}>{x.label}</Text>
+                <Text style={[styles.partNote, toneStyle(x.noteTone)]} numberOfLines={1}>{x.note}</Text>
                 <Masked style={[styles.partValue, toneStyle(x.tone)]}>{p.money(x.value)}</Masked>
-                <Text style={[styles.partNote, toneStyle(x.noteTone)]} numberOfLines={2}>{x.note}</Text>
               </View>
             ))}
           </View>

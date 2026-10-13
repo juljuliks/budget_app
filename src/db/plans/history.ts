@@ -5,6 +5,7 @@ import { BUDGET_CURRENCY, currentYm, monthRange, parseYm, planRateDate, ymOf } f
 import { convertSpending, spendByDay, spendRows } from './spend';
 import { unplannedOf } from './budget';
 import { monthStats, spentOf } from './stats';
+import { allFunds, fundLedger } from './funds';
 
 /**
  * Average spending per month over the full months of [fromKey, toKey] ('YYYY-MM-DD') that have data: not the
@@ -84,6 +85,10 @@ export type HistoryMonth = {
   to_savings: boolean;
   /** the current month only: obligatory payments planned and not paid yet (not leftover, they're still to go) */
   unpaid_fixed_minor: number;
+  /** put in the funds this month (their contributions: in spent_minor, the funds' own spending is not) */
+  funds_minor: number;
+  /** funds deleted this month: what they had saved goes to its savings */
+  released: Array<{ name: string; emoji: string | null; minor: number }>;
 };
 
 /** Every month from the first transaction / plan up to the current month, newest first, in `currency`. */
@@ -120,12 +125,29 @@ export async function planHistory(nowYm = currentYm(), currency: Currency = BUDG
       .reduce((a, c) => a + Math.max(0, c.limit_minor! - spentOf(c)), 0);
   }
 
+  // the funds: a month spent their contribution and their shortage, not what they spent; deleted ones gave what they had
+  const fundsBy = new Map<string, number>();
+  const releasedBy = new Map<string, HistoryMonth['released']>();
+  for (const fund of await allFunds()) {
+    const toShown = (minor: number, ym: string) => conv(minor, fund.currency, currency, planRateDate(ym)) ?? 0;
+    for (const m of (await fundLedger(fund, nowYm, nowYm)).months) {
+      spentBy.set(m.ym, (spentBy.get(m.ym) ?? 0) + toShown(m.contribution + m.shortage - m.spent, m.ym));
+      fundsBy.set(m.ym, (fundsBy.get(m.ym) ?? 0) + toShown(m.contribution, m.ym));
+    }
+    if (fund.closed_ym && fund.released_minor) {
+      const c = await db.get<{ name: string; emoji: string | null }>('SELECT name, emoji FROM categories WHERE id = ?', [fund.category_id]);
+      releasedBy.set(fund.closed_ym, [...releasedBy.get(fund.closed_ym) ?? [],
+        { name: c?.name ?? '', emoji: c?.emoji ?? null, minor: toShown(fund.released_minor, fund.closed_ym) }]);
+    }
+  }
+
   const out: HistoryMonth[] = [];
   let { year, month } = parseYm(nowYm);
   for (let ym = nowYm; ym >= first.ym; ym = ymOf(year, --month)) {
     out.push({
       ym, planned_minor: plannedBy.get(ym) ?? 0, spent_minor: spentBy.get(ym) ?? 0, budget_minor: budgetBy.get(ym) ?? null,
       locked_minor: 0, unplanned_minor: 0, to_savings: false, ...savingsBy.get(ym), unpaid_fixed_minor: ym === nowYm ? unpaidFixed : 0,
+      funds_minor: fundsBy.get(ym) ?? 0, released: releasedBy.get(ym) ?? [],
     });
   }
   return out;

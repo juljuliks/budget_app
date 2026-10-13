@@ -4,7 +4,7 @@ import { monthSavings } from '../../src/screens/stats/history/model/savings';
 
 const month = (m: Partial<HistoryMonth>): HistoryMonth => ({
   ym: '2026-09', planned_minor: 460000, spent_minor: 730400, budget_minor: 1041000,
-  locked_minor: 100000, unplanned_minor: 0, to_savings: true, unpaid_fixed_minor: 0, ...m,
+  locked_minor: 100000, unplanned_minor: 0, to_savings: true, unpaid_fixed_minor: 0, funds_minor: 0, released: [], ...m,
 });
 
 test('🔒 and the leftover going to savings: "В сбережения" is both', () => {

@@ -1,6 +1,6 @@
 import { getDb } from './index';
 import { Category, findCategoryByName, isSystemCategory, listCategories } from './categories';
-import { currentYm, NormPeriod, planConverter, PlanKind } from './plans';
+import { currentYm, deleteFund, NormPeriod, planConverter, PlanKind } from './plans';
 import { placeholders } from './sql';
 import { moveParts } from './parts';
 
@@ -28,6 +28,8 @@ export async function mergeCategories(targetId: number, sourceIds: number[], nam
   const clash = await findCategoryByName(name, typeId, targetId);
   if (clash && !all.includes(clash.id)) throw new MergeNameTakenError(name.trim());
 
+  // the merged ones' funds close (what they saved goes to this month's savings); the target's stays
+  for (const s of sources) await deleteFund(s);
   const db = await getDb();
   const marks = placeholders(all.length);
   const items = await db.all<Item>(

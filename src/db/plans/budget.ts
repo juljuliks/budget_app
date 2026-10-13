@@ -4,6 +4,7 @@ import { Currency, dateKey, ensureRatesLater, makeConverter } from '../fx';
 import { BUDGET_CURRENCY, asCurrency, currentYm, monthRange, parseYm, planRateDate } from './months';
 import { convertSpending, spendRows, sumBy } from './spend';
 import { PlanBudget } from './types';
+import { refreshFundItems } from './funds';
 
 /** The unplanned share of a budget, in its currency. */
 export const unplannedOf = (b: Pick<PlanBudget, 'amount_minor' | 'unplanned_pct' | 'unplanned_minor'>) =>
@@ -16,6 +17,12 @@ export const unplannedOf = (b: Pick<PlanBudget, 'amount_minor' | 'unplanned_pct'
  */
 export async function ensureMonthPlan(ym: string, nowYm = currentYm()): Promise<void> {
   if (ym < nowYm) return;
+  await createMonthPlan(ym);
+  // the funds' contributions as what is saved now asks (the spending since changed it)
+  await refreshFundItems(ym, nowYm);
+}
+
+async function createMonthPlan(ym: string): Promise<void> {
   const db = await getDb();
   if (await db.get('SELECT 1 FROM plan_months WHERE ym = ?', [ym])) return;
   await db.transaction(async (tx) => {
@@ -25,7 +32,8 @@ export async function ensureMonthPlan(ym: string, nowYm = currentYm()): Promise<
         `INSERT OR IGNORE INTO plan_items (ym, category_id, limit_minor, pinned, kind, currency, norm_period)
           SELECT ?, p.category_id, CASE WHEN p.pinned = 1 THEN p.limit_minor ELSE 0 END, p.pinned, p.kind, p.currency, p.norm_period
           FROM plan_items p JOIN categories c ON c.id = p.category_id
-          WHERE p.ym = ? AND c.deleted_at IS NULL`,
+          WHERE p.ym = ? AND c.deleted_at IS NULL
+            AND (p.kind != 'fund' OR EXISTS (SELECT 1 FROM funds f WHERE f.category_id = p.category_id AND f.closed_ym IS NULL))`,
         [ym, source.ym]);
     }
     // the amount to distribute (usually the salary) carries over as well, with its currency, unplanned share, savings choice

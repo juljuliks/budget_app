@@ -12,7 +12,9 @@ import { usePlanData } from './model/usePlanData';
 import { planView } from './model/planView';
 import BudgetCard from './parts/BudgetCard';
 import BudgetSheet from './parts/BudgetSheet';
-import { itemSections, systemSections } from './parts/sections';
+import { fundSection, itemSections, systemSections } from './parts/sections';
+import { FundSheet } from '@/features/fund';
+import type { PlanItem } from '@/db/plans';
 import { styles } from './parts/styles';
 import PlanAddModal from './PlanAddModal';
 
@@ -23,6 +25,12 @@ import PlanAddModal from './PlanAddModal';
  * Every amount has the currency it was entered in; the screen shows them in `currency` (the switch on top of
  * the tab), with the original in brackets when it differs.
  */
+/** The plan sheet of an item: a fund with its target, date and what was saved before. */
+const editTarget = (item: PlanItem): PlanAmountTarget => ({
+  ...item, label: categoryLabel(item),
+  fund: item.fund && { target_minor: item.fund.target_minor, due: item.fund.due, start_minor: item.fund.start_minor },
+});
+
 export default function PlanView({ ym, currency }: { ym: string; currency: Currency }) {
   const hidden = useHideAmounts();
   const data = usePlanData(ym, currency);
@@ -31,6 +39,8 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
   const [budgetOpen, setBudgetOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<PlanAmountTarget | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  // the fund opened (its card): the category
+  const [fundOpen, setFundOpen] = useState<PlanItem | null>(null);
 
   if (!items) return <Loading failed={data.failed} onRetry={load} />;
   const p = planView({ ...data, items, ym, currency, hidden });
@@ -43,10 +53,11 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
       <Text style={styles.pinNote}>📌 — переходит в следующий месяц с той же суммой</Text>
 
       {items.length === 0 ? <Text style={styles.hint}>План пуст. Нажмите ＋, чтобы добавить категории и суммы.</Text> : null}
+      {fundSection(p, hidden, setFundOpen)}
       {systemSections(p, hidden, openBudget)}
       {itemSections(p, {
         ym, currency, hidden, toShown,
-        onOpen: (item) => setEditingItem({ ...item, label: categoryLabel(item) }),
+        onOpen: (item) => setEditingItem(editTarget(item)),
         onPin: actions.togglePin,
       })}
 
@@ -60,7 +71,14 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
         target={editingItem}
         onClose={() => setEditingItem(null)}
         onSaved={load}
-        onDelete={() => { const item = items.find((i) => i.category_id === editingItem?.category_id); if (item) actions.removeItem(item); }}
+        // a fund is deleted from its card
+        onDelete={editingItem?.kind === 'fund' ? undefined : () => { const item = items.find((i) => i.category_id === editingItem?.category_id); if (item) actions.removeItem(item); }}
+      />
+      <FundSheet
+        categoryId={fundOpen?.category_id ?? null}
+        label={fundOpen ? `${fundOpen.emoji || ''} ${fundOpen.name}`.trim() : ''}
+        onClose={() => setFundOpen(null)}
+        onEdit={() => { const f = fundOpen; setFundOpen(null); if (f) setEditingItem(editTarget(f)); }}
       />
     </StickyScrollView>
     {/* like the "+" on the transactions screen: several categories with amounts at once */}

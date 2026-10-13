@@ -8,7 +8,7 @@ import { formatPercent } from '@/shared/lib/format';
 import { formatWithCurrency } from '@/shared/lib/money';
 import { NO_SECTION, PER_PERIOD, SPENDING_PATTERN } from '@/shared/lib/strings';
 import { chart } from '@/shared/theme/theme';
-import { RING_FREE, RING_LOCKED, RING_SAVINGS, RING_UNPLANNED } from '../parts/palette';
+import { RING_FREE, RING_FUNDS, RING_LOCKED, RING_SAVINGS, RING_UNPLANNED } from '../parts/palette';
 import type { SpentBy } from './usePlanData';
 
 /** how a part's amount is colored: over the budget, savings, locked, free */
@@ -55,16 +55,20 @@ type Data = {
   hidden: boolean;
 };
 
-export function planView({ ym, currency, items, budget, toShown, income, unplannedSpentMinor, spentBy, hidden }: Data) {
+export function planView({ ym, currency, items: all, budget, toShown, income, unplannedSpentMinor, spentBy, hidden }: Data) {
   const money = (minor: number) => formatWithCurrency(minor, currency);
+  // the funds' contributions apart: their own section and column ("Копилки")
+  const funds = all.filter((i) => i.kind === 'fund');
+  const items = all.filter((i) => i.kind !== 'fund');
   const total = items.reduce((sum, i) => sum + (i.converted_minor ?? 0), 0);
+  const fundsTotal = funds.reduce((sum, i) => sum + (i.converted_minor ?? 0), 0);
   // the amount to distribute in the screen's currency (its own one if there's no rate)
   const shownBudget = budget === null ? null : toShown(budget.amount_minor, budget.currency) ?? budget.amount_minor;
   // the share set aside for spending outside the plan, then what nothing claims yet
   const unplanned = shownBudget === null || !budget ? 0 : toShown(unplannedOf(budget), budget.currency) ?? unplannedOf(budget);
   // locked for savings right away (🔒), in the screen's currency
   const locked = !budget || !budget.locked_minor ? 0 : toShown(budget.locked_minor, budget.currency) ?? budget.locked_minor;
-  const free = shownBudget === null ? null : shownBudget - total - unplanned - locked;
+  const free = shownBudget === null ? null : shownBudget - total - fundsTotal - unplanned - locked;
   // "Сбережения" instead of "Свободно": what the budget leaves goes there
   const toSavings = !!budget?.to_savings && shownBudget !== null;
   const timing = ym < currentYm() ? 'past' : ym === currentYm() ? 'current' : 'future';
@@ -72,7 +76,7 @@ export function planView({ ym, currency, items, budget, toShown, income, unplann
   // if more), spending outside the plan its share (or more); a past month: what was actually left
   const savingsEnd = shownBudget === null ? null : timing === 'past' ? shownBudget - spentBy.total
     : timing === 'current'
-      ? shownBudget - items.reduce((a, i) => a + Math.max(i.converted_minor ?? 0, spentBy.byCategory.get(i.category_id) ?? 0), 0)
+      ? shownBudget - all.reduce((a, i) => a + Math.max(i.converted_minor ?? 0, spentBy.byCategory.get(i.category_id) ?? 0), 0)
         - Math.max(unplanned, unplannedSpentMinor)
       : (free ?? 0) + locked;
   const pct = (v: number) => (shownBudget ? percentOf(v, shownBudget) || '0%' : '');
@@ -83,6 +87,7 @@ export function planView({ ym, currency, items, budget, toShown, income, unplann
     { key: 'planned', label: 'План', value: total, color: chart.meterFill, note: pct(total) },
     // the plan shows what is set aside, not what is left of it (that's the stats' job)
     { key: 'unplanned', label: 'Вне плана', value: unplanned, color: RING_UNPLANNED, note: pct(unplanned) },
+    ...(fundsTotal > 0 ? [{ key: 'funds', label: 'Копилки', value: fundsTotal, color: RING_FUNDS, note: pct(fundsTotal) }] : []),
     toSavings && timing === 'past'
       ? { key: 'free', label: 'Сбережения', value: Math.abs(saved), color: RING_SAVINGS, note: saved < 0 ? 'бюджет превышен' : 'сэкономлено', tone: saved < 0 ? 'over' : 'savings', noteTone: saved < 0 ? 'over' : undefined }
       : toSavings
@@ -117,12 +122,12 @@ export function planView({ ym, currency, items, budget, toShown, income, unplann
   }
 
   const budgetHint = [
-    total > 0 ? `Уже запланировано: ${money(total)}` : '',
+    total + fundsTotal > 0 ? `Уже запланировано: ${money(total + fundsTotal)}` : '',
     // "Пополнение счёта" and the transfers more came back for (src/db/plans.ts monthIncome)
     income > 0 ? `Пришло за месяц: ${money(income)}` : '',
   ].filter(Boolean).join('\n') || 'Сколько денег на месяц, например зарплата. План не сможет его превысить.';
 
-  return { money, total, shownBudget, unplanned, locked, free, toSavings, timing, parts, notes, systemGroups, budgetHint, groups: groupByType(items) };
+  return { money, total, fundsTotal, funds, shownBudget, unplanned, locked, free, toSavings, timing, parts, notes, systemGroups, budgetHint, groups: groupByType(items) };
 }
 
 export type PlanView = ReturnType<typeof planView>;

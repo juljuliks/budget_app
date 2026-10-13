@@ -1,5 +1,5 @@
 export { default as TransactionItem } from './ui/TransactionItem';
-export { merchantLabel } from './model/title';
+export { merchantLabel, rowTitle } from './model/title';
 export { confirmDeleteTransaction, confirmDeleteTransactions } from './model/confirmDelete';
 export { confirmUnsplit } from './model/confirmUnsplit';
 export {

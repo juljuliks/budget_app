@@ -20,12 +20,14 @@ type Props = {
   single?: boolean;
   /** days after it can't be picked (greyed), e.g. today for an operation's date */
   maxDay?: DayKey;
+  /** days before it can't be picked (greyed), e.g. next month for a fund's date; the calendar opens on it */
+  minDay?: DayKey;
 };
 
 /** Month grid (Monday first) for picking a day or a period. */
-export default function RangeCalendar({ value, onChange, single, maxDay }: Props) {
+export default function RangeCalendar({ value, onChange, single, maxDay, minDay }: Props) {
   const today = dayKeyOf(new Date());
-  const initial = value ? parseDayKey(value.to) : new Date();
+  const initial = value ? parseDayKey(value.to) : minDay ? parseDayKey(minDay) : new Date();
   const [month, setMonth] = useState({ y: initial.getFullYear(), m: initial.getMonth() });
   // waiting for the second tap of a range
   const [anchor, setAnchor] = useState<DayKey | null>(null);
@@ -74,7 +76,7 @@ export default function RangeCalendar({ value, onChange, single, maxDay }: Props
             if (!day) return <View key={i} style={styles.cell} />;
             const inRange = value !== null && day >= value.from && day <= value.to;
             const isEdge = value !== null && (day === value.from || day === value.to);
-            const off = maxDay !== undefined && day > maxDay;
+            const off = (maxDay !== undefined && day > maxDay) || (minDay !== undefined && day < minDay);
             return (
               <TouchableOpacity key={day} testID={`day-${day}`} style={[styles.cell, inRange && styles.inRange, isEdge && styles.edge]} onPress={() => tap(day)} disabled={off}>
                 <Text style={[styles.day, day === today && styles.today, isEdge && styles.edgeText, off && styles.off]}>{Number(day.slice(8))}</Text>

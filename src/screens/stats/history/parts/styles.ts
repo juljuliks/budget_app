@@ -34,6 +34,7 @@ export const styles = StyleSheet.create({
   savingsTitle: { fontSize: 12, fontWeight: '600', color: colors.income },
   detailText: { fontSize: 14, color: colors.text },
   detailHint: { fontSize: 12, color: colors.muted },
+  fundsLine: { fontSize: 13, color: colors.muted, marginTop: 6 },
   totalRow: { borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border, marginTop: 4, paddingTop: 6 },
   strong: { fontWeight: '600' },
   muted: { color: colors.muted },

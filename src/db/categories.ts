@@ -1,6 +1,6 @@
 import { getDb } from './index';
 import type { Db } from './types';
-import { currentYm, monthStart } from './plans';
+import { currentYm, deleteFund, monthStart } from './plans';
 import { categorySpendingSql, signedSpendSql } from './spending';
 import { moveParts } from './parts';
 import { placeholders } from './sql';
@@ -140,6 +140,8 @@ export async function deleteCategory(id: number, targetId: number | null, nowYm 
     throw new Error('a system category cannot be deleted');
   }
   const from = monthStart(nowYm);
+  // a fund: closed first, what it saved goes to this month's savings
+  await deleteFund(id, nowYm);
   await db.transaction(async (tx) => {
     // the past stays in it: its operations there that follow a merchant are fixed, so the merchant moving on
     // (below, or later) doesn't take them along

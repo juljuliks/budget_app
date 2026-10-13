@@ -8,6 +8,7 @@ import { REFUND_KEY, categoryKey, convertSpending, spendRows, sumBy } from './sp
 import { NormPeriod, PlanKind, asNorm } from './types';
 import { ensureMonthPlan } from './budget';
 import { placeholders } from '../sql';
+import { activeFunds, fundLedger } from './funds';
 
 export type CategoryStat = {
   category_id: number | null; // null = uncategorized
@@ -74,6 +75,29 @@ export type MonthStats = {
   refunds_unassigned_minor: number;
   /** spending that couldn't be converted yet (no rate known: offline), not in the totals */
   other_currencies: Array<{ currency: string; spent_minor: number }>;
+  /** the funds ("Копилки"): their spending is taken from what they saved, not in the totals but their shortage */
+  funds: FundStat[];
+};
+
+/** A fund in a month, in the stats' currency. */
+export type FundStat = {
+  category_id: number;
+  name: string;
+  emoji: string | null;
+  color: string;
+  /** spent from it this month */
+  spent_minor: number;
+  /** what it had for the month: saved at its start plus the month's contribution */
+  available_minor: number;
+  /** spent past what it had: the month's spending (over the plan) */
+  shortage_minor: number;
+  /** what is left in it (now, for the current month) */
+  left_minor: number;
+  /** the month's contribution */
+  contribution_minor: number;
+  target_minor: number;
+  /** by when, 'YYYY-MM-DD' */
+  due: string;
 };
 
 /** Spending outside the plan: categories without a plan amount, and spending without a category (transfers too). */
@@ -134,18 +158,39 @@ export async function monthStats(year: number, month: number, currency: Currency
   if (uncategorized !== 0) categories.push(uncategorizedStat(uncategorized));
   categories.sort((a, b) => b.spent_minor - a.spent_minor || (b.limit_minor ?? 0) - (a.limit_minor ?? 0));
 
+  // the funds apart: their spending is from what they saved, only a shortage is the month's
+  const funds = await monthFunds(ym, (minor, from) => conv(minor, from, currency, planDate) ?? 0, cats, colorOf);
+  const own = categories.filter((c) => !funds.some((f) => f.category_id === c.category_id));
   const types = await listTypes();
 
   return {
     ym,
     currency,
-    groups: groupByType(categories, types),
-    spent_minor: categories.reduce((sum, c) => sum + spentOf(c), 0) - refundsUnassigned,
+    funds,
+    groups: groupByType(own, types),
+    spent_minor: own.reduce((sum, c) => sum + spentOf(c), 0) + funds.reduce((a, f) => a + f.shortage_minor, 0) - refundsUnassigned,
     refunds_unassigned_minor: refundsUnassigned,
-    planned_minor: categories.reduce((sum, c) => sum + (c.limit_minor ?? 0), 0),
-    categories,
+    planned_minor: own.reduce((sum, c) => sum + (c.limit_minor ?? 0), 0),
+    categories: own,
     other_currencies: missing,
   };
+}
+
+/** The month's funds as stats: each one's month of its ledger, converted. */
+async function monthFunds(ym: string, toShown: (minor: number, from: string) => number, cats: CategoryRow[], colorOf: Map<number, string>): Promise<FundStat[]> {
+  const out: FundStat[] = [];
+  for (const fund of await activeFunds(ym)) {
+    const c = cats.find((r) => r.id === fund.category_id);
+    const m = (await fundLedger(fund, ym)).months.find((x) => x.ym === ym);
+    if (!c || !m) continue;
+    const v = (minor: number) => toShown(minor, fund.currency);
+    out.push({
+      category_id: c.id, name: c.name, emoji: c.emoji, color: colorOf.get(c.id) ?? NEUTRAL_COLOR, spent_minor: v(m.spent),
+      available_minor: v(m.start + m.contribution), shortage_minor: v(m.shortage), left_minor: v(m.end), contribution_minor: v(m.contribution),
+      target_minor: v(fund.target_minor), due: fund.due,
+    });
+  }
+  return out;
 }
 
 export type PeriodStats = {

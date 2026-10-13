@@ -2,7 +2,7 @@
 // SectionHeaders it finds among its children and opened fragments only.
 import React from 'react';
 import { Text, View } from 'react-native';
-import type { CategoryStat, MonthStats, StatGroup } from '@/db/plans';
+import type { CategoryStat, FundStat, MonthStats, StatGroup } from '@/db/plans';
 import { formatPercent } from '@/shared/lib/format';
 import { formatShort, formatWithCurrency } from '@/shared/lib/money';
 import { MaskedTotal } from '@/shared/ui/Masked';
@@ -75,6 +75,22 @@ export function unplannedSection(
         {split.unplanned.length === 0 ? <Text style={styles.hint}>Трат вне плана пока не было.</Text> : null}
         {split.unplanned.map((c) => rowOf(c, true))}
       </View>
+    </>
+  );
+}
+
+/** "Копилки": what was spent from each fund this month; not in the month's totals, but what it lacked. */
+export function fundsSection(stats: MonthStats, rowOf: (f: FundStat) => React.ReactElement) {
+  if (!stats.funds.length) return null;
+  const spent = stats.funds.reduce((a, f) => a + f.spent_minor, 0);
+  return (
+    <>
+      {header('Копилки', spent > 0 ? (
+        <MaskedTotal style={styles.groupTotal} hiddenText="">
+          {formatWithCurrency(spent, stats.currency)}<Text style={styles.rowLimit}> из копилок</Text>
+        </MaskedTotal>
+      ) : null)}
+      <View>{stats.funds.map(rowOf)}</View>
     </>
   );
 }
