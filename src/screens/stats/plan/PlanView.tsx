@@ -41,6 +41,8 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
   const [budgetOpen, setBudgetOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<PlanAmountTarget | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  // the item's sheet is step 2 of "Добавить в план" (the category picked in step 1)
+  const [adding, setAdding] = useState(false);
   // the fund opened (its card): the category
   const [fundOpen, setFundOpen] = useState<PlanItem | null>(null);
   // what the month before sent, opened: its overspend or its leftover
@@ -75,10 +77,11 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
         ym={ym}
         currency={currency}
         target={editingItem}
-        onClose={() => setEditingItem(null)}
+        onClose={() => { setEditingItem(null); setAdding(false); }}
         onSaved={load}
+        adding={adding ? { onBack: () => { setEditingItem(null); setAdding(false); setAddOpen(true); } } : undefined}
         // a fund is deleted from its card
-        onDelete={editingItem?.kind === 'fund' ? undefined : () => { const item = items.find((i) => i.category_id === editingItem?.category_id); if (item) actions.removeItem(item); }}
+        onDelete={adding || editingItem?.kind === 'fund' ? undefined : () => { const item = items.find((i) => i.category_id === editingItem?.category_id); if (item) actions.removeItem(item); }}
       />
       <FundSheet
         categoryId={fundOpen?.category_id ?? null}
@@ -92,9 +95,10 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
       />
       <CarrySheet fromYm={carryOpen ? budget?.carry?.from_ym ?? null : null} kind={carryOpen ?? 'debt'} onClose={() => setCarryOpen(null)} />
     </StickyScrollView>
-    {/* like the "+" on the transactions screen: several categories with amounts at once */}
-    <Fab onPress={() => setAddOpen(true)} accessibilityLabel="Добавить категории в план" />
-    <PlanAddModal ym={ym} currency={currency} visible={addOpen} plannedIds={items.map((i) => i.category_id)} onClose={() => setAddOpen(false)} onSaved={load} />
+    {/* "Добавить в план": step 1 the category, step 2 its amount (the item's sheet) */}
+    <Fab onPress={() => setAddOpen(true)} accessibilityLabel="Добавить в план" />
+    <PlanAddModal ym={ym} currency={currency} visible={addOpen} onClose={() => setAddOpen(false)}
+      onPick={(target) => { setAddOpen(false); setAdding(true); setEditingItem(target); }} />
     </View>
   );
 }

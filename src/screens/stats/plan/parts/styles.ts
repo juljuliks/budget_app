@@ -44,11 +44,11 @@ export const styles = StyleSheet.create({
   // the amounts right-aligned at the edge; the shares in a column right by the names
   partValues: { flex: 1, flexDirection: 'row', alignItems: 'baseline', justifyContent: 'flex-end', gap: 6 },
   partValue: { textAlign: 'right', fontSize: 14, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
-  // as planned, struck: the overspend took part of it
-  partWas: { fontSize: 12, color: colors.muted, textDecorationLine: 'line-through', fontVariant: ['tabular-nums'] },
+  // "(−15 ₾ ⓘ)" after savings the overspend took part of
+  less: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  lessText: { fontSize: 13, color: colors.muted, fontVariant: ['tabular-nums'] },
   // the legend's names laid out unseen: the widest sets the names' column
   measure: { position: 'absolute', opacity: 0, alignItems: 'flex-start' },
-  rowInfo: { paddingLeft: 8 },
   // a share ("43%") or a word ("сэкономлено") right by the name
   partNote: { minWidth: 34, textAlign: 'right', fontSize: 13, color: colors.muted, fontVariant: ['tabular-nums'] },
   note: { fontSize: 12, color: colors.muted, marginTop: 8 },

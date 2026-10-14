@@ -127,7 +127,7 @@ export function planView({ ym, currency, items: all, budget, toShown, income, un
     const savingsRows: SystemRow[] = [
       ...(locked > 0 ? [{
         key: 'locked', name: '🔒 Сразу', tone: 'locked' as const, value: less ? less.locked.now : locked,
-        ...(less && less.locked.now < locked ? { note: 'перерасход съел часть', was: locked } : { note: 'заблокировано в начале месяца' }),
+        ...(less && less.locked.now < locked ? { note: 'меньше из-за перерасхода', was: locked } : { note: 'заблокировано в начале месяца' }),
       }] : []),
       ...((free ?? 0) > 0 ? [{
         key: 'floating', name: '🌊 Что осталось', note: 'не запланировано — решите в итогах месяца', tone: 'savings' as const,

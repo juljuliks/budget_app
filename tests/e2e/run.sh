@@ -42,6 +42,8 @@ for flow in "${FLOWS[@]}"; do
   F="$OUT/$flow"; rm -rf "$F"; mkdir -p "$F"
   node dist-e2e/tests/e2e/seed.js "$flow" "$F/seed.db" >/dev/null
   adb shell am force-stop "$PKG"
+  # the lock off (its settings are apart from the database): a flow that needs it turns it on in its script
+  adb shell rm -f "/data/data/$PKG/shared_prefs/app_lock.xml"
   adb shell rm -f "$DIR/app.db" "$DIR/app.db-wal" "$DIR/app.db-shm" "$DIR/app.db-journal"
   adb push "$F/seed.db" "$DIR/app.db" >/dev/null
   adb shell chown "$OWNER" "$DIR/app.db"; adb shell chmod 660 "$DIR/app.db"; adb shell restorecon "$DIR/app.db" || true
@@ -58,6 +60,8 @@ for flow in "${FLOWS[@]}"; do
   if [ $ok = 1 ] && [ -f "$HOOK" ]; then ADB=adb DIR="$DIR" OUT="$F" bash "$HOOK" after || ok=0; fi
   adb logcat -d > "$F/logcat.txt" || true
   adb shell am force-stop "$PKG"
+  # turned on by the flow: off again, the emulator isn't left locked
+  adb shell rm -f "/data/data/$PKG/shared_prefs/app_lock.xml"
   # the database with its WAL: the last changes may still be there
   for x in app.db app.db-wal app.db-shm; do adb pull "$DIR/$x" "$F/$x" >/dev/null 2>&1 || true; done
   if [ $ok = 1 ]; then node dist-e2e/tests/e2e/verify.js "$flow" "$F/app.db" || ok=0; fi

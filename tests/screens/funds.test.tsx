@@ -44,6 +44,27 @@ describe('6.5 funds', () => {
     expect(screen.getByText('в месяц')).toBeTruthy();
   });
 
+  test('a contribution past what is free, 🔒 has it: "Вычесть из сбережений?" — what is short taken from it', async () => {
+    await openApp(planned);
+    await tap('Статистика');
+    await tap('План');
+    await tap('Изменить: 👕 Одежда');
+    await tap('Копилка');
+    // 2 700 over 4 months: 675 a month, 640 free
+    fireEvent.changeText(await screen.findByDisplayValue('400'), '2700');
+    await tap('Выбрать дату');
+    await tap('›');
+    await tap('›');
+    await tap('#day-2027-01-31');
+    await tap('Выбрать');
+    await tap('Сохранить');
+    expect(await screen.findByText(`Свободного не хватает 35${N}₾ — их можно взять из сбережений.`)).toBeTruthy();
+    await tap('Вычесть и сохранить');
+    expect(await screen.findByText(`Копилка «👕 Одежда» сохранена, из 🔒 вычтено 35${N}₾`)).toBeTruthy();
+    expect(await fund()).toMatchObject({ target_minor: 270000 });
+    expect(await (await getDb()).get("SELECT locked_minor AS l FROM plan_months WHERE ym = '2026-10'")).toEqual({ l: 26500 });
+  });
+
   test('its card: what it has, the contributions and the spending; deleted — asked, "Отменить" brings it back', async () => {
     await makeFund();
     await tap('Копилка: 👕 Одежда');

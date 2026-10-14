@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { LayoutChangeEvent, Text, TouchableOpacity, View } from 'react-native';
 import Masked from '@/shared/ui/Masked';
+import LessNote from './LessNote';
 import type { PlanView } from '../model/planView';
 import { RING_LOCKED } from './palette';
 import { styles, toneStyle } from './styles';
 
 /**
  * The bar's parts as a legend, a line each: its dot, name, share — the shares in a column right by the names (as wide as
- * the longest one) — and the amount at the right edge. Savings the overspend took part of: the planned amount struck,
+ * the longest one) — and the amount at the right edge. Savings the overspend took part of: "(−15 ₾ ⓘ)",
  * then what is left; a tap on the line — what took it.
  */
 export default function BudgetLegend({ p, onLess }: { p: PlanView; onLess: () => void }) {
@@ -40,7 +41,7 @@ export default function BudgetLegend({ p, onLess }: { p: PlanView; onLess: () =>
           </View>
           <Text style={[styles.partNote, toneStyle(x.noteTone)]} numberOfLines={1}>{x.note}</Text>
           <View style={styles.partValues}>
-            {x.was !== undefined ? <Masked style={styles.partWas}>{p.money(x.was)}</Masked> : null}
+            {x.was !== undefined ? <LessNote less={x.was - x.value} money={p.money} /> : null}
             <Masked style={[styles.partValue, toneStyle(x.tone)]}>{p.money(x.value)}</Masked>
           </View>
         </TouchableOpacity>

@@ -4,9 +4,10 @@ import { categoryLabel } from '@/db/categories';
 import type { Currency } from '@/db/fx';
 import type { PlanItem } from '@/db/plans';
 import { formatWithCurrency } from '@/shared/lib/money';
-import { InfoIcon, LockIcon, PinIcon } from '@/shared/ui/icons';
+import { LockIcon, PinIcon } from '@/shared/ui/icons';
 import { colors } from '@/shared/theme/theme';
 import { normText, percentOf, PlanView, SystemRow } from '../model/planView';
+import LessNote from './LessNote';
 import { styles, toneStyle } from './styles';
 
 type Props = {
@@ -78,16 +79,11 @@ export function SystemRowView({ p, r, hidden, onOpen, onLess }: { p: PlanView; r
       </View>
       {hidden ? null : (
         <View style={styles.amountBox}>
-          {/* the overspend took part of it: as planned, struck */}
-          {r.was !== undefined ? <Text style={styles.partWas}>{p.money(r.was)}</Text> : null}
           <Text style={[styles.amount, toneStyle(r.tone)]}>{`${r.carry === 'plus' ? '+' : ''}${p.money(r.value)}`}</Text>
+          {/* the overspend took part of it: by how much, ⓘ — what took it */}
+          {r.was !== undefined ? <LessNote less={r.was - r.value} money={p.money} onPress={onLess} /> : null}
         </View>
       )}
-      {r.was !== undefined ? (
-        <TouchableOpacity onPress={onLess} hitSlop={8} style={styles.rowInfo} accessibilityRole="button" accessibilityLabel="Почему сбережения меньше">
-          <InfoIcon color={colors.accent} size={18} />
-        </TouchableOpacity>
-      ) : null}
     </TouchableOpacity>
   );
 }

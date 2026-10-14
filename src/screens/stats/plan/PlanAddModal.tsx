@@ -1,193 +1,100 @@
 import React, { useEffect, useState } from 'react';
-import { useFormState, useWatch } from 'react-hook-form';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
-import { Category, categoryLabel, isSystemCategory, listCategories } from '@/db/categories';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { categoryLabel } from '@/db/categories';
+import { categoryColors } from '@/db/colors';
 import { Currency } from '@/db/fx';
-import { addPlanItem, getPlanBudget, lastPlanItem, PlanBudget, planConverter, PlanKind, plannedTotal, setPlanAmount } from '@/db/plans';
-import CurrencyButton from '@/shared/ui/CurrencyButton';
-import { SheetActions } from '@/shared/ui/Button';
-import Checkbox from '@/shared/ui/Checkbox';
-import { currencySymbol, formatShort, formatWithCurrency, parseAmountOrZero } from '@/shared/lib/money';
-import { AMOUNT_HINT, LOAD_FAILED } from '@/shared/lib/strings';
+import { AddableCategory, AddableGroup, addableCategories, getPlanBudget, parseYm, plannedTotal } from '@/db/plans';
+import type { PlanAmountTarget } from '@/entities/plan';
+import { MONTHS_GEN, MONTHS_NOM, MONTHS_PREP } from '@/shared/lib/dates';
+import { formatWithCurrency } from '@/shared/lib/money';
+import { LOAD_FAILED } from '@/shared/lib/strings';
+import { formStyles } from '@/shared/theme/formStyles';
 import { colors } from '@/shared/theme/theme';
-import { submitForm, useLoadedForm } from '@/shared/ui/form';
-import { plural } from '@/shared/lib/format';
-import { toast, toastError, toastFailure } from '@/shared/ui/toast';
+import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
+import { SheetActions } from '@/shared/ui/Button';
+import StepsNav from '@/shared/ui/StepsNav';
+import { toastFailure } from '@/shared/ui/toast';
 
 type Props = {
   ym: string;
-  /** the currency typed amounts start in (the screen's) */
+  /** the screen's currency: what is spent is shown in it, a new item starts in it */
   currency: Currency;
   visible: boolean;
-  /** categories already in the plan: not offered */
-  plannedIds: number[];
   onClose: () => void;
-  onSaved: () => void;
+  /** the category picked: step 2, its amount (PlanAmountModal) */
+  onPick: (target: PlanAmountTarget) => void;
 };
 
-/** one row of the form: ticked, its amount, its currency (last time's, else the screen's) */
-type Item = { checked: boolean; amount: string; currency: Currency };
-/** keyed 'c<category id>': a bare number would make the form treat the path as an array index */
-type Form = { items: Record<string, Item> };
-const keyOf = (id: number) => `c${id}`;
-
-type Row = Category & { last: { limit_minor: number; currency: Currency; kind: PlanKind } | null };
-
 /**
- * "＋" on the plan: every category not in the plan yet with an amount field; several are added at once.
- * Typing an amount ticks the row; a ticked row without an amount takes last time's amount (addPlanItem).
- * Each row has its own currency (last time's, else the screen's); the total (converted) can't go over what is still
- * free of the month's budget.
+ * "＋" on the plan, step 1 of "Добавить в план": the categories not in the plan — those of the month before's plan
+ * (its amount, what is spent in this one), then those spent in this month, then the rest. A tap goes to the amount.
  */
-export default function PlanAddModal({ ym, currency: screenCurrency, visible, plannedIds, onClose, onSaved }: Props) {
-  const [rows, setRows] = useState<Row[] | null>(null);
-  const form = useLoadedForm<Form>(visible && rows ? {
-    items: Object.fromEntries(rows.map((r) => [keyOf(r.id), { checked: false, amount: '', currency: r.last?.currency ?? screenCurrency }])),
-  } : null, visible);
-  const items = useWatch({ control: form.control, name: 'items' }) ?? {};
-  const item = (r: Row): Item => items[keyOf(r.id)] ?? { checked: false, amount: '', currency: r.last?.currency ?? screenCurrency };
-  const currencyOf = (r: Row): Currency => item(r).currency;
-  const setItem = (r: Row, patch: Partial<Item>) => {
-    form.setValue(`items.${keyOf(r.id)}`, { ...item(r), ...patch }, { shouldDirty: true });
-  };
-  const { isSubmitting: saving } = useFormState({ control: form.control });
-  // what is still free, in the amount to distribute's currency, and a converter to it
-  const [budget, setBudget] = useState<PlanBudget | null>(null);
-  const [free, setFree] = useState<number | null>(null);
-  const [conv, setConv] = useState<(minor: number, from: Currency, to: Currency) => number | null>(() => () => null);
+export default function PlanAddModal({ ym, currency, visible, onClose, onPick }: Props) {
+  const [rows, setRows] = useState<AddableCategory[] | null>(null);
+  const [colorOf, setColorOf] = useState<Map<number, string>>(new Map());
+  const [free, setFree] = useState<{ minor: number; currency: Currency } | null>(null);
 
   useEffect(() => {
-    if (!visible) { setRows(null); return; }
+    if (!visible) return;
     (async () => {
-      // "Сбережения" isn't planned: it gets what the budget leaves
-      const cats = (await listCategories()).filter((c) => !plannedIds.includes(c.id) && !isSystemCategory(c));
-      setRows(await Promise.all(cats.map(async (c) => ({ ...c, last: await lastPlanItem(ym, c.id) }))));
-      const b = await getPlanBudget(ym);
-      setBudget(b);
-      // the unplanned share is not for the plan
-      setFree(b === null ? null : Math.max(b.plannable_minor - (await plannedTotal(ym, undefined, b.currency)), 0));
-      const c = await planConverter(ym);
-      setConv(() => c);
+      const [list, colorMap, budget] = await Promise.all([addableCategories(ym, currency), categoryColors(), getPlanBudget(ym)]);
+      setRows(list);
+      setColorOf(colorMap);
+      setFree(budget && { minor: Math.max(budget.plannable_minor - (await plannedTotal(ym, undefined, budget.currency)), 0), currency: budget.currency });
     })().catch(toastFailure('load plan categories', LOAD_FAILED));
-    // plannedIds only matter when opened
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible, ym]);
+  }, [visible, ym, currency]);
 
-  function toggle(r: Row) {
-    setItem(r, { checked: !item(r).checked });
-  }
-
-  function setAmount(r: Row, text: string) {
-    // typing an amount ticks the row
-    setItem(r, text.trim() ? { amount: text, checked: true } : { amount: text });
-  }
-
-  /** What each ticked row adds: its own amount in the picked currency, or last time's (what addPlanItem takes) */
-  function plannedAmount(r: Row): { minor: number; currency: Currency } | null {
-    const text = item(r).amount.trim();
-    if (!text) return { minor: r.last?.limit_minor ?? 0, currency: r.last?.currency ?? currencyOf(r) };
-    const minor = parseAmountOrZero(text);
-    return minor === null ? null : { minor, currency: currencyOf(r) };
-  }
-
-  const picked = (rows ?? []).filter((r) => item(r).checked);
-  // the ticked rows' total in the budget's currency (or the screen's without it)
-  const sumCurrency = budget?.currency ?? screenCurrency;
-  const sum = picked.reduce((s, r) => {
-    const a = plannedAmount(r);
-    return s + (a ? conv(a.minor, a.currency, sumCurrency) ?? 0 : 0);
-  }, 0);
-
-  const add = submitForm(form, async () => {
-    if (picked.some((r) => plannedAmount(r) === null)) { toastError(AMOUNT_HINT); return; }
-    if (free !== null && sum > free) {
-      toastError(`Больше бюджета месяца: свободно ${formatWithCurrency(free, sumCurrency)}`);
-      return;
-    }
-    try {
-      for (const r of picked) {
-        const text = item(r).amount.trim();
-        if (text) await setPlanAmount(ym, r.id, parseAmountOrZero(text)!, r.last?.kind, currencyOf(r));
-        else await addPlanItem(ym, r.id);
-      }
-      toast(picked.length === 1 ? `«${categoryLabel(picked[0])}» добавлена в план` : `Добавлено в план: ${picked.length} ${plural(picked.length, ['категория', 'категории', 'категорий'])}`);
-      onSaved();
-      onClose();
-    } catch (e) {
-      console.error('add to plan failed', e);
-      toastError('Не удалось добавить');
-      onSaved(); // some may have been added
-    }
-  });
+  const { year, month } = parseYm(ym);
+  const titles: Record<AddableGroup, string> = {
+    last: `В плане ${MONTHS_GEN[(month + 11) % 12]}`, spent: `С тратами в ${MONTHS_PREP[month]}`, other: 'Остальные',
+  };
+  const money = (minor: number, c: Currency = currency) => formatWithCurrency(minor, c);
+  const note = (c: AddableCategory) => (c.last
+    ? `план ${money(c.last.limit_minor, c.last.currency)} · ${c.spent_minor > 0 ? `потрачено ${money(c.spent_minor)}` : 'трат нет'}`
+    : c.spent_minor > 0 ? `потрачено ${money(c.spent_minor)}` : null);
+  const pick = (c: AddableCategory) => onPick({ category_id: c.id, label: categoryLabel(c), limit_minor: 0, currency: c.last?.currency ?? currency });
 
   return (
     <BottomSheet visible={visible} onClose={onClose} title="Добавить в план" style={styles.sheet}>
-        <View style={styles.head}>
-          <Text style={styles.caption}>
-            {free !== null ? `Свободно: ${formatWithCurrency(free, sumCurrency)}` : 'Бюджет месяца не задан'}
-            {picked.length ? ` · выбрано на ${formatWithCurrency(sum, sumCurrency)}` : ''}
-          </Text>
-        </View>
-        <SheetScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.list}>
-          {(rows ?? []).map((r) => {
-            const on = item(r).checked;
-            return (
-              <View key={r.id} style={styles.row}>
-                <TouchableOpacity style={styles.rowMain} onPress={() => toggle(r)} accessibilityRole="checkbox" accessibilityState={{ checked: on }}>
-                  <Checkbox checked={on} size={20} />
-                  <Text style={styles.name} numberOfLines={1}>{categoryLabel(r)}</Text>
-                </TouchableOpacity>
-                {/* the amount and its currency, the same height */}
-                <View style={styles.amountRow}>
-                <TextInput
-                  style={styles.amount}
-                  value={item(r).amount}
-                  onChangeText={(t) => setAmount(r, t)}
-                  // last time's amount: taken when the row is ticked without one
-                  placeholder={r.last ? `${formatShort(r.last.limit_minor)}${r.last.currency !== currencyOf(r) ? ` ${currencySymbol(r.last.currency)}` : ''}` : '0'}
-                  placeholderTextColor={colors.muted}
-                  keyboardType="decimal-pad"
-                  maxLength={12}
-                  accessibilityLabel={`Сумма: ${categoryLabel(r)}`}
-                />
-                <CurrencyButton value={currencyOf(r)} onChange={(c) => setItem(r, { currency: c })} />
-                </View>
+      <StepsNav at={0} count={2} name="Категория" style={styles.inset} />
+      <Text style={styles.caption}>
+        {`${free ? `Свободно: ${money(free.minor, free.currency)}` : 'Бюджет месяца не задан'} · траты — за ${MONTHS_NOM[month]}${year !== new Date().getFullYear() ? ` ${year}` : ''}`}
+      </Text>
+      <SheetScrollView>
+        {(rows ?? []).map((c, i, all) => (
+          <View key={c.id}>
+            {i === 0 || all[i - 1].group !== c.group ? <Text style={formStyles.sectionHeader}>{titles[c.group]}</Text> : null}
+            <TouchableOpacity style={styles.row} onPress={() => pick(c)} accessibilityRole="button" accessibilityLabel={`Добавить в план: ${categoryLabel(c)}`}>
+              <View style={[styles.dot, { backgroundColor: colorOf.get(c.id) ?? colors.border }]} />
+              <View style={styles.text}>
+                <Text style={styles.name} numberOfLines={1}>{categoryLabel(c)}</Text>
+                {note(c) ? <Text style={styles.note}>{note(c)}</Text> : null}
               </View>
-            );
-          })}
-          {rows?.length === 0 ? <Text style={styles.empty}>Все категории уже в плане.</Text> : null}
-        </SheetScrollView>
-        <View style={styles.footer}>
-          <Text style={styles.hint}>Без суммы подставится сумма прошлого месяца (серым в поле).</Text>
-          <SheetActions
-            submit={{ title: picked.length ? `Добавить (${picked.length})` : 'Добавить', onPress: add, disabled: saving || picked.length === 0 }}
-            onCancel={onClose}
-            style={styles.actions}
-          />
-        </View>
+              <Text style={styles.chevron}>›</Text>
+            </TouchableOpacity>
+          </View>
+        ))}
+        {rows?.length === 0 ? <Text style={styles.empty}>Все категории уже в плане.</Text> : null}
+      </SheetScrollView>
+      <SheetActions submit={null} onCancel={onClose} style={styles.actions} />
     </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  sheet: { maxHeight: '88%', paddingBottom: 0 },
-  head: { paddingHorizontal: 16, paddingBottom: 8 },
-  caption: { fontSize: 13, color: colors.muted, marginTop: 4 },
-  list: { paddingHorizontal: 16, paddingBottom: 8 },
+  sheet: { maxHeight: '88%' },
+  inset: { paddingHorizontal: 20 },
+  caption: { fontSize: 13, color: colors.muted, paddingHorizontal: 20, paddingBottom: 8 },
+  // as in "Настройки → Категории"
   row: {
-    flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 6,
+    flexDirection: 'row', alignItems: 'center', paddingLeft: 16, paddingRight: 8, paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
   },
-  rowMain: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6 },
-  name: { flex: 1, fontSize: 15, color: colors.text },
-  amountRow: { flexDirection: 'row', alignItems: 'stretch', gap: 8 },
-  amount: {
-    width: 80, textAlign: 'right', fontSize: 16, color: colors.text, paddingVertical: 6, paddingHorizontal: 10,
-    borderWidth: 1, borderColor: colors.border, borderRadius: 8, fontVariant: ['tabular-nums'],
-  },
+  dot: { width: 10, height: 10, borderRadius: 5, marginRight: 10 },
+  text: { flex: 1, gap: 2 },
+  name: { fontSize: 16, color: colors.text },
+  note: { fontSize: 13, color: colors.muted },
+  chevron: { fontSize: 24, color: colors.muted, marginLeft: 8 },
   empty: { color: colors.muted, textAlign: 'center', paddingVertical: 16 },
-  footer: { padding: 16, paddingTop: 8, borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
-  hint: { fontSize: 12, color: colors.muted, marginBottom: 8 },
-  actions: { marginTop: 8 },
+  actions: { paddingHorizontal: 16, marginTop: 8 },
 });

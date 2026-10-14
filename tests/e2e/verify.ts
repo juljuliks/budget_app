@@ -46,6 +46,9 @@ switch (flow) {
     expect('the merchant got it', ruleOf('NEWSHOP'), want);
     break;
   }
+  case 'lock-start':
+    // the screens only: the database isn't touched
+    break;
   default:
     failures.push(`unknown flow ${flow}`);
 }

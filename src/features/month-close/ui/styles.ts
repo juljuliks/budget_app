@@ -3,12 +3,7 @@ import { colors } from '@/shared/theme/theme';
 
 export const styles = StyleSheet.create({
   content: { paddingHorizontal: 16, paddingBottom: 8, gap: 12 },
-  nav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, minHeight: 24 },
-  back: { fontSize: 15, color: colors.accent },
-  stepOf: { fontSize: 13, color: colors.muted },
-  progress: { flexDirection: 'row', gap: 6, paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 },
-  dash: { flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.border },
-  dashOn: { backgroundColor: colors.accent },
+  steps: { paddingHorizontal: 20 },
   block: { borderRadius: 14, padding: 14, gap: 8, backgroundColor: colors.surface },
   savings: { backgroundColor: colors.savingsBg },
   funds: { backgroundColor: colors.fundBg },

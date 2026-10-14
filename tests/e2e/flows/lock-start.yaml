@@ -1,0 +1,15 @@
+# 9.11.10: the lock on — the app opens on "Введите PIN-код", its content isn't shown before the PIN.
+appId: com.budgetapp
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Введите PIN-код"
+    timeout: 60000
+- assertNotVisible: "Настройки"
+- tapOn: "1"
+- tapOn: "2"
+- tapOn: "3"
+- tapOn: "4"
+- extendedWaitUntil:
+    visible: "Настройки"
+    timeout: 15000

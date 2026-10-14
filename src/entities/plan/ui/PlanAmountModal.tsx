@@ -4,19 +4,21 @@ import { Currency } from '@/db/fx';
 import { categoryMonthlyAverage, getPlanBudget, lastPlanItem, NormPeriod, OverBudgetError, PlanKind, planConverter, plannedTotal } from '@/db/plans';
 import { StyleSheet, Text, View } from 'react-native';
 import { colors } from '@/shared/theme/theme';
-import { AMOUNT_HINT, PER_PERIOD, SPENDING_PATTERN, LOAD_FAILED } from '@/shared/lib/strings';
+import { AMOUNT_HINT, PER_PERIOD, SPENDING_PATTERN, LOAD_FAILED, SAVE_FAILED } from '@/shared/lib/strings';
 import { daysInMonth } from '@/shared/lib/dateRange';
 import { formStyles } from '@/shared/theme/formStyles';
 import CurrencyButton from '@/shared/ui/CurrencyButton';
 import { formatWithCurrency, parseAmountOrZero, toInputValue } from '@/shared/lib/money';
 import RadioGroup from '@/shared/ui/RadioGroup';
+import StepsNav from '@/shared/ui/StepsNav';
 import TextInputModal from '@/shared/ui/TextInputModal';
 import { useLoadedForm } from '@/shared/ui/form';
-import { plural } from '@/shared/lib/format';
 import { toast, toastFailure } from '@/shared/ui/toast';
 import { saveFund, savePlanAmount } from '../model/commands';
 import FundFields, { FundForm } from './FundFields';
-import { MONTHS_NOM, RHYTHM_DAYS } from '@/shared/lib/dates';
+import { askTakeLocked } from './askTakeLocked';
+import PlanFacts from './PlanFacts';
+import { RHYTHM_DAYS } from '@/shared/lib/dates';
 
 const KINDS = [
   ['limit', 'Траты с лимитом', 'Еда, кафе, одежда — сумма меняется, следим, сколько осталось'],
@@ -64,6 +66,8 @@ type Props = {
   onSaved: () => void;
   /** an item in the plan: the trash right of the title removes it (the sheet closes first) */
   onDelete?: () => void;
+  /** step 2 of "Добавить в план" (the category picked in step 1): "‹ Назад" goes back to it */
+  adding?: { onBack: () => void };
 };
 
 /**
@@ -71,9 +75,11 @@ type Props = {
  * stats screen ("＋ В план"). The amount is entered in any currency (the one it was entered in comes back when
  * editing); what is still free is shown in the amount to distribute's currency, and going over it is refused.
  */
-export default function PlanAmountModal({ ym, currency: shown, target, onClose, onSaved, onDelete }: Props) {
+export default function PlanAmountModal({ ym, currency: shown, target, onClose, onSaved, onDelete, adding }: Props) {
   // the most this category can get = amount to distribute − the other categories (null = no amount set), in the app's currency
   const [free, setFree] = useState<{ minor: number; currency: Currency } | null>(null);
+  // "🔒 Отложить сразу", in the budget's currency: what is short of free can be taken from it
+  const [locked, setLocked] = useState(0);
   // the saved item; a category not in the plan yet starts as a day-to-day limit in the screen's currency
   const form = useLoadedForm<FundForm & { kind: PlanKind; norm: NormPeriod }>(target ? {
     value: toInputValue(target.fund ? target.fund.target_minor : target.limit_minor), currency: target.currency, kind: target.kind ?? 'limit',
@@ -98,6 +104,7 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
       };
       // the unplanned share is not for the plan
       setFree(budget ? inShown(Math.max(budget.plannable_minor - others, 0), budget.currency) : null);
+      setLocked(budget?.locked_minor ?? 0);
       setPrevious(last ? { ...inShown(last.limit_minor, last.currency), ym: last.ym } : null);
       setAverage(avg && avg.average_minor > 0 ? { minor: avg.average_minor, months: avg.months, from: avg.from, to: avg.to } : null);
       // not in the plan yet: the amount it was opened with (what the category spent), else last month's item —
@@ -119,56 +126,59 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
     })().catch(toastFailure('load plan budget', LOAD_FAILED));
   }, [ym, target, form, shown]);
 
-  async function save(text: string): Promise<string | null> {
+  async function save(text: string): Promise<string | null | false> {
     if (!target) return null;
     const minor = parseAmountOrZero(text);
     if (minor === null) return AMOUNT_HINT;
     const { kind: k, currency, norm, due: date, start } = form.getValues();
     const startMinor = parseAmountOrZero(start ?? '');
     if (k === 'fund' && (!minor || startMinor === null)) return minor ? AMOUNT_HINT : 'Введите, сколько накопить';
+    const label = target.label;
+    // the stats and reports open under the dialog count the plan too (savePlanAmount tells them)
+    const saved = (taken?: string) => {
+      const done = k === 'fund' ? `Копилка «${label}» сохранена` : adding ? `«${label}» ${taken ? 'в плане' : 'добавлена в план'}` : `План «${label}» сохранён`;
+      toast(taken ? `${done}, из 🔒 вычтено ${taken}` : done);
+      onSaved();
+    };
+    const write = (takeLocked: boolean) => (k === 'fund' && date
+      ? saveFund(ym, target.category_id, { target_minor: minor, currency, due: date, start_minor: startMinor ?? 0 }, undefined, takeLocked)
+      : savePlanAmount(ym, target.category_id, minor, k, currency, norm, takeLocked));
     try {
-      if (k === 'fund' && date) await saveFund(ym, target.category_id, { target_minor: minor, currency, due: date, start_minor: startMinor ?? 0 });
-      else await savePlanAmount(ym, target.category_id, minor, k, currency, norm);
+      await write(false);
     } catch (e) {
       if (!(e instanceof OverBudgetError)) throw e;
+      const short = e.planned_minor - e.budget_minor;
+      // what isn't free is in "🔒 Отложить сразу": asked over the sheet, which stays open
+      if (short <= locked) {
+        askTakeLocked({
+          short, locked, currency: e.currency, adding: !!adding,
+          onYes: () => write(true)
+            .then(() => { saved(formatWithCurrency(short, e.currency)); onClose(); })
+            .catch(toastFailure('save plan amount from savings', SAVE_FAILED)),
+        });
+        return false;
+      }
       const room = `можно запланировать до ${free ? formatWithCurrency(free.minor, free.currency) : '0'}`;
       return k === 'fund' ? `Взнос больше бюджета месяца: ${room}. Выберите дату позже` : `Больше бюджета месяца: ${room}`;
     }
-    // the stats and reports open under the dialog count the plan too (savePlanAmount tells them)
-    toast(k === 'fund' ? `Копилка «${target.label}» сохранена` : `План «${target.label}» сохранён`);
-    onSaved();
+    saved();
     return null;
   }
 
-  // what helps to pick the amount: the room in the budget, last month's plan, the usual spending
-  const facts: Array<{ label: string; value: string; note?: string }> = [];
-  // the month's budget minus the other categories' plans: not about what is spent
-  if (free) facts.push({ label: 'Можно запланировать', value: `до ${formatWithCurrency(free.minor, free.currency)}` });
-  if (previous) facts.push({ label: `В плане на ${monthName(previous.ym)}`, value: formatWithCurrency(previous.minor, previous.currency) });
-  if (average) {
-    facts.push({
-      label: `В среднем в месяц (${average.months} ${plural(average.months, ['полный месяц', 'полных месяца', 'полных месяцев'])})`,
-      value: `≈ ${formatWithCurrency(average.minor, shown)}`,
-    });
-  }
-  const hint = facts.length ? (
-    <View style={styles.facts}>
-      {facts.map((f) => (
-        <View key={f.label} style={styles.fact}>
-          <View style={styles.factLabel}>
-            <Text style={styles.label}>{f.label}</Text>
-            {f.note ? <Text style={styles.note}>{f.note}</Text> : null}
-          </View>
-          <Text style={styles.value}>{f.value}</Text>
-        </View>
-      ))}
+  // step 2 of "Добавить в план": the steps and the category over the facts
+  const hint = adding ? (
+    <View>
+      <StepsNav at={1} count={2} name="Сумма" onBack={adding.onBack} />
+      <Text style={styles.category}>{target?.label}</Text>
+      <PlanFacts free={free} previous={previous} average={average} shown={shown} />
     </View>
-  ) : null;
+  ) : <PlanFacts free={free} previous={previous} average={average} shown={shown} />;
 
   return (
     <TextInputModal
       visible={target !== null}
-      title={target?.label ?? ''}
+      title={adding ? 'Добавить в план' : target?.label ?? ''}
+      submitLabel={adding ? 'Добавить в план' : undefined}
       hint={hint}
       form={form}
       placeholder="0"
@@ -182,8 +192,9 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
       inputAccessory={<Controller control={form.control} name="currency" render={({ field }) => <CurrencyButton value={field.value} onChange={field.onChange} />} />}
       label={kind === 'fund' ? 'Накопить' : undefined}
       submitDisabled={kind === 'fund' && !due}
+      // the kind first: the field under it is a month's amount or a fund's target
+      above={<Controller control={form.control} name="kind" render={({ field }) => <RadioGroup options={KINDS} value={field.value} onChange={field.onChange} />} />}
     >
-      <Controller control={form.control} name="kind" render={({ field }) => <RadioGroup options={KINDS} value={field.value} onChange={field.onChange} />} />
       {kind === 'limit' ? (
         <>
           <Text style={formStyles.label}>Как тратите</Text>
@@ -197,17 +208,6 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
 }
 
 
-/** "сентябрь", "сентябрь 2025" ('YYYY-MM'): the year only when it isn't this one. */
-function monthName(ym: string): string {
-  const [y, m] = ym.split('-').map(Number);
-  return `${MONTHS_NOM[m - 1]}${y !== new Date().getFullYear() ? ` ${y}` : ''}`;
-}
-
 const styles = StyleSheet.create({
-  facts: { marginBottom: 12, gap: 6 },
-  fact: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  factLabel: { flex: 1 },
-  label: { fontSize: 14, color: colors.muted },
-  note: { fontSize: 12, color: colors.muted, marginTop: 1 },
-  value: { fontSize: 14, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
+  category: { fontSize: 18, fontWeight: '600', color: colors.text, marginBottom: 12 },
 });

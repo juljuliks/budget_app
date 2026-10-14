@@ -38,17 +38,17 @@ describe('6.1 the month\'s budget', () => {
     await openPlan();
     expect(after('План', 2)).toEqual(['72%', '2 160 ₾']);
     expect(after('Вне плана', 2)).toEqual(['10%', '300 ₾']);
-    // the overspend took 130 of them (see the next test): planned struck, what is left
-    expect(after('Сбережения', 3)).toEqual(['14%', '540 ₾', '410 ₾']);
+    // the overspend took 130 of them (see the next test): what is left, by how much
+    expect(after('Сбережения', 4)).toEqual(['14%', '(−130 ₾', ')', '410 ₾']);
     expect(after('🔒 Сразу', 2)).toEqual(['заблокировано в начале месяца · 10% бюджета', '300 ₾']);
-    expect(after('🌊 Что осталось', 3)).toEqual(['не запланировано — решите в итогах месяца · 4% бюджета', '240 ₾', '110 ₾']);
+    expect(after('🌊 Что осталось', 3)).toEqual(['не запланировано — решите в итогах месяца · 4% бюджета', '110 ₾', '(−130 ₾']);
     expect(after('🎲 Траты вне плана', 2)).toEqual(['категории без плана и без категории · 10% бюджета', '300 ₾']);
   });
 
   test('savings the overspend took part of: a tap on its line — by how much, what took it; a category\'s tap opens its plan', async () => {
     await openPlan();
     expect(screen.queryByText(/^Сбережения к концу месяца/)).toBeNull();
-    // the savings section's struck line: its ⓘ
+    // the savings section's line: ⓘ in its "(−130 ₾ ⓘ)"
     await tap('Почему сбережения меньше');
     expect(await screen.findByText('Сбережения меньше на 130 ₾')).toBeTruthy();
     await tap('Понятно');
@@ -56,7 +56,7 @@ describe('6.1 the month\'s budget', () => {
     await tap('Сбережения: почему меньше');
     // 3 000 − (620 + 310 + 800 + 450 + 30) − 380 outside the plan
     expect(await screen.findByText('Сбережения меньше на 130 ₾')).toBeTruthy();
-    expect(screen.getByText('Эти категории потратили больше плана. Если дальше тратить по плану, в сбережения пойдёт 410 ₾ вместо 540 ₾')).toBeTruthy();
+    expect(screen.getByText('Эти категории потратили больше плана. Если дальше тратить по плану, в сбережения пойдёт 410 ₾ (−130 ₾)')).toBeTruthy();
     expect(screen.getByText('доля 300 ₾ · потрачено 380 ₾')).toBeTruthy();
     expect(screen.getByText('план 400 ₾ · потрачено 450 ₾')).toBeTruthy();
     await tap('План: Одежда');
@@ -88,18 +88,27 @@ describe('6.2 locked for savings, the share outside the plan, the leftover', () 
     n.props.accessibilityRole === 'adjustable' && typeof n.props.onAccessibilityAction === 'function');
   const step = (i: number, actionName: 'increment' | 'decrement') => act(() => { fireEvent(sliders()[i], 'accessibilityAction', { nativeEvent: { actionName } }); });
 
-  test('"max": all that the plan and the other part leave, as an amount; typed by hand — an amount again', async () => {
+  test('"MAX": all that the plan and the other part leave, as an amount; typed by hand — an amount again', async () => {
     await tap('Изменить бюджет месяца');
     await screen.findByText('300 ₾ сразу в сбережения: план и траты вне плана их не займут.');
-    const [lockedMax] = screen.getAllByRole('tab', { name: 'max' });
+    const [lockedMax] = screen.getAllByRole('tab', { name: 'MAX' });
     await tap(lockedMax);
     // 3 000 − 2 160 planned − 300 the share outside the plan
     expect(await screen.findByDisplayValue('540')).toBeTruthy();
     // nothing left for the share outside the plan to grow into
-    expect(screen.getAllByRole('tab', { name: 'max' })[1].props.accessibilityState).toMatchObject({ disabled: true });
+    expect(screen.getAllByRole('tab', { name: 'MAX' })[1].props.accessibilityState).toMatchObject({ disabled: true });
     await tap('Сохранить');
     expect(await screen.findByText('Бюджет месяца сохранён')).toBeTruthy();
     expect(await month()).toMatchObject({ l: 54000 });
+  });
+
+  test('all that is free opens as "MAX"', async () => {
+    await (await getDb()).run("UPDATE plan_months SET locked_minor = 54000 WHERE ym = '2026-10'");
+    await tap('История');
+    await tap('План');
+    await tap('Изменить бюджет месяца');
+    await screen.findByDisplayValue('540');
+    await waitFor(() => expect(screen.getAllByRole('tab', { name: 'MAX' })[0].props.accessibilityState).toMatchObject({ selected: true }));
   });
 
   test('what doesn\'t fit can\'t be picked; less is', async () => {
@@ -156,10 +165,11 @@ describe('6.3 the categories in the plan', () => {
     expect(after('Можно запланировать', 1)).toEqual(['до 860 ₾']);
     expect(after('В плане на сентябрь', 1)).toEqual(['600 ₾']);
     expect(after('В среднем в месяц (1 полный месяц)', 1)).toEqual(['≈ 500 ₾']);
-    fireEvent.changeText(screen.getByDisplayValue('620'), '900');
+    // more than what is free and 🔒 together
+    fireEvent.changeText(screen.getByDisplayValue('620'), '1300');
     await tap('Сохранить');
     expect(await screen.findByText(/Больше бюджета месяца: можно запланировать до 860 ₾/)).toBeTruthy();
-    fireEvent.changeText(screen.getByDisplayValue('900'), '700');
+    fireEvent.changeText(screen.getByDisplayValue('1300'), '700');
     await tap('Раз в неделю · ≈ 158.06 ₾ в неделю');
     await tap('Сохранить');
     expect(await screen.findByText('План «🛒 Продукты» сохранён')).toBeTruthy();
@@ -191,19 +201,81 @@ describe('6.3 the categories in the plan', () => {
     expect(await screen.findByLabelText('Изменить: 👕 Одежда')).toBeTruthy();
   });
 
-  test('adding several: what is free, the amounts; more than is free refused', async () => {
-    await tap('Добавить категории в план');
-    expect(await screen.findByText('Свободно: 240 ₾')).toBeTruthy();
-    expect(screen.queryByLabelText('Сумма: 🏦 Сбережения')).toBeNull();
-    expect(screen.queryByLabelText('Сумма: 🛒 Продукты')).toBeNull();
-    fireEvent.changeText(screen.getByLabelText('Сумма: 🚕 Такси'), '300');
-    await tap('Добавить (1)');
-    expect(await screen.findByText(/Больше бюджета месяца: свободно 240 ₾/)).toBeTruthy();
-    fireEvent.changeText(screen.getByLabelText('Сумма: 🚕 Такси'), '100');
-    fireEvent.changeText(screen.getByLabelText('Сумма: 🎮 Развлечения'), '100');
-    await tap('Добавить (2)');
-    expect(await screen.findByText('Добавлено в план: 2 категории')).toBeTruthy();
+  test('more than is free, 🔒 has it: "Вычесть из сбережений?" — what is short taken from it', async () => {
+    await tap('Изменить: 👕 Одежда');
+    fireEvent.changeText(await screen.findByDisplayValue('400'), '700');
+    await tap('Сохранить');
+    expect(await screen.findByText('Вычесть из сбережений?')).toBeTruthy();
+    expect(screen.getByText('Свободного не хватает 60 ₾ — их можно взять из сбережений.')).toBeTruthy();
+    expect(texts()).toEqual(expect.arrayContaining(['🔒 Отложить сразу', '300 ₾', '240 ₾', '(−20%)']));
+    await tap('Вычесть и сохранить');
+    expect(await screen.findByText('План «👕 Одежда» сохранён, из 🔒 вычтено 60 ₾')).toBeTruthy();
+    expect(await item('Одежда')).toMatchObject({ a: 70000 });
+    expect(await month()).toMatchObject({ l: 24000 });
+  });
+
+  test('"Отмена" on the question: nothing saved, the amount still open', async () => {
+    await tap('Изменить: 👕 Одежда');
+    fireEvent.changeText(await screen.findByDisplayValue('400'), '700');
+    await tap('Сохранить');
+    await screen.findByText('Вычесть из сбережений?');
+    await tap('Отмена');
+    expect(await screen.findByDisplayValue('700')).toBeTruthy();
+    expect(await item('Одежда')).toMatchObject({ a: 40000 });
+    expect(await month()).toMatchObject({ l: 30000 });
+  });
+});
+
+describe('6.3.2 adding to the plan, step by step', () => {
+  beforeEach(() => openPlan());
+
+  test('step 1: the month before\'s plan, then spent in this month, then the rest; none in the plan or system', async () => {
+    // Кафе out of this month's plan: it was in September's
+    await (await getDb()).run("DELETE FROM plan_items WHERE ym = '2026-10' AND category_id = (SELECT id FROM categories WHERE name = 'Кафе и рестораны')");
+    await tap('История');
+    await tap('План');
+    await tap('Добавить в план');
+    expect(await screen.findByText('Шаг 1 из 2 · Категория')).toBeTruthy();
+    expect(screen.getByText('Свободно: 550 ₾ · траты — за октябрь')).toBeTruthy();
+    const t = texts();
+    const at = (s: string) => t.indexOf(s);
+    expect(at('В плане сентября')).toBeGreaterThan(-1);
+    expect(t[at('☕️ Кафе и рестораны') + 1]).toBe('план 300 ₾ · потрачено 90 ₾');
+    expect(at('С тратами в октябре')).toBeGreaterThan(at('☕️ Кафе и рестораны'));
+    expect(t[at('🎮 Развлечения') + 1]).toBe('потрачено 300 ₾');
+    expect(t[at('🚕 Такси') + 1]).toBe('потрачено 60 ₾');
+    expect(at('🎮 Развлечения')).toBeGreaterThan(at('С тратами в октябре'));
+    expect(screen.queryByLabelText('Добавить в план: 🛒 Продукты')).toBeNull();
+    expect(screen.queryByLabelText(/Добавить в план: .*Сбережения/)).toBeNull();
+  });
+
+  test('step 2: the amount sheet; "‹ Назад" to the categories; added', async () => {
+    await tap('Добавить в план');
+    await tap('Добавить в план: 🚕 Такси');
+    expect(await screen.findByText('Шаг 2 из 2 · Сумма')).toBeTruthy();
+    expect(screen.queryByText('Удалить из плана')).toBeNull();
+    await tap('‹ Назад');
+    expect(await screen.findByText('Шаг 1 из 2 · Категория')).toBeTruthy();
+    await tap('Добавить в план: 🚕 Такси');
+    fireEvent.changeText(await screen.findByPlaceholderText('0'), '100');
+    await tap('Добавить в план');
+    expect(await screen.findByText('«🚕 Такси» добавлена в план')).toBeTruthy();
     expect(await item('Такси')).toMatchObject({ a: 10000 });
+  });
+
+  test('more than is free: "Вычесть и добавить" takes it from 🔒; more than 🔒 too — refused', async () => {
+    await tap('Добавить в план');
+    await tap('Добавить в план: 🚕 Такси');
+    fireEvent.changeText(await screen.findByPlaceholderText('0'), '600');
+    await tap('Добавить в план');
+    expect(await screen.findByText(/Больше бюджета месяца: можно запланировать до 240 ₾/)).toBeTruthy();
+    fireEvent.changeText(screen.getByDisplayValue('600'), '300');
+    await tap('Добавить в план');
+    expect(await screen.findByText('Свободного не хватает 60 ₾ — их можно взять из сбережений.')).toBeTruthy();
+    await tap('Вычесть и добавить');
+    expect(await screen.findByText('«🚕 Такси» в плане, из 🔒 вычтено 60 ₾')).toBeTruthy();
+    expect(await item('Такси')).toMatchObject({ a: 30000 });
+    expect(await month()).toMatchObject({ l: 24000 });
   });
 });
 

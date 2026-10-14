@@ -41,7 +41,7 @@ export default function SavingsLessSheet({ less, visible, money, onClose, onOpen
       {less ? (
         <SheetScrollView contentContainerStyle={styles.content}>
           <Text style={styles.lead}>
-            {`Эти категории потратили больше плана. Если дальше тратить по плану, в сбережения пойдёт ${money(less.now)} вместо ${money(less.was)}`}
+            {`Эти категории потратили больше плана. Если дальше тратить по плану, в сбережения пойдёт ${money(less.now)} (−${money(less.less)})`}
           </Text>
           {less.overs.map((o) => (
             <Row key={o.key} o={o} money={money} onOpen={o.category_id === null ? undefined : () => { onClose(); onOpen(o.category_id!); }} />

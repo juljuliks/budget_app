@@ -45,7 +45,7 @@ appId: com.budgetapp
 - waitForAnimationToEnd
 - takeScreenshot: pl-04-budget
 - pressKey: back
-- tapOn: "Добавить категории в план"
+- tapOn: "Добавить в план"
 - waitForAnimationToEnd
 - takeScreenshot: pl-05-add
 - pressKey: back

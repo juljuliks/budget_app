@@ -45,3 +45,29 @@ not_notified() { ! grep -qE -- "$1" <<<"$(app_notifications)"; }
 # dd/mm/yyyy and hh:mm, minutes ago (default now)
 day() { date -v-"${1:-0}"M +%d/%m/%Y; }
 hm() { date -v-"${1:-0}"M +%H:%M; }
+
+# lock_on <pin>: "Блокировка" on with this PIN — the app's own settings file as LockStore writes it (PBKDF2, a new salt),
+# put in place while the app is stopped (the "before" step). run.sh takes it away before and after every flow: the lock
+# is off unless a flow's script turns it on.
+LOCK_PREFS="/data/data/$PKG/shared_prefs/app_lock.xml"
+lock_on() {
+  local xml owner
+  xml="$(mktemp)"
+  node -e '
+    const c = require("crypto"); const pin = process.argv[1]; const salt = c.randomBytes(16);
+    const hash = c.pbkdf2Sync(pin, salt, 100000, 32, "sha256");
+    console.log(`<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<map>
+    <string name="salt">${salt.toString("base64")}</string>
+    <int name="iterations" value="100000" />
+    <string name="hash">${hash.toString("base64")}</string>
+    <int name="length" value="${pin.length}" />
+</map>`);' "$1" > "$xml"
+  owner="$($ADB shell stat -c %u:%g "/data/data/$PKG" | tr -d '\r')"
+  $ADB shell mkdir -p "/data/data/$PKG/shared_prefs"
+  $ADB push "$xml" "$LOCK_PREFS" >/dev/null
+  $ADB shell chown "$owner" "/data/data/$PKG/shared_prefs" "$LOCK_PREFS"
+  $ADB shell chmod 660 "$LOCK_PREFS"
+  $ADB shell restorecon -R "/data/data/$PKG/shared_prefs" || true
+  rm -f "$xml"
+}

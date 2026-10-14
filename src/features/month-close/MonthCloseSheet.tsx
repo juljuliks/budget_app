@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Text, View } from 'react-native';
 import type { CloseStep } from '@/db/plans';
 import { openMonthReport } from '@/shared/navigation/sheets';
 import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
 import { SheetActions } from '@/shared/ui/Button';
 import Loading from '@/shared/ui/Loading';
+import StepsNav from '@/shared/ui/StepsNav';
 import { currentStep, monthWords, STEP_NAMES, stepAnswered } from './model/closeTexts';
 import { useMonthClose } from './model/useMonthClose';
 import StepFunds from './ui/StepFunds';
@@ -40,19 +41,8 @@ export default function MonthCloseSheet({ ym, onClose }: { ym: string | null; on
       {!c || !words ? <Loading inline failed={failed} onRetry={load} /> : (
         <>
           {step ? (
-            <>
-              <View style={styles.nav}>
-                {at > 0 ? (
-                  <TouchableOpacity onPress={() => setWanted(c.steps[at - 1])} hitSlop={8} accessibilityRole="button">
-                    <Text style={styles.back}>‹ Назад</Text>
-                  </TouchableOpacity>
-                ) : <View />}
-                <Text style={styles.stepOf}>{`Шаг ${at + 1} из ${c.steps.length} · ${STEP_NAMES[step]}`}</Text>
-              </View>
-              <View style={styles.progress}>
-                {c.steps.map((s, i) => <View key={s} style={[styles.dash, i <= at && styles.dashOn]} />)}
-              </View>
-            </>
+            <StepsNav at={at} count={c.steps.length} name={STEP_NAMES[step]} style={styles.steps}
+              onBack={at > 0 ? () => setWanted(c.steps[at - 1]) : undefined} />
           ) : null}
           <SheetScrollView contentContainerStyle={styles.content}>
             {step === 'funds' ? <StepFunds c={c} onAnswer={fund} /> : null}

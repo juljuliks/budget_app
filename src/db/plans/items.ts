@@ -102,9 +102,12 @@ export async function addPlanItem(ym: string, categoryId: number, limitMinor?: n
 
 /**
  * Sets (and adds, if missing) a plan item. `kind` is kept as is when omitted; `currency` too (a new item takes
- * the amount to distribute's). Refused (OverBudgetError) if the month's plan would exceed its amount to distribute.
+ * the amount to distribute's). Refused (OverBudgetError) if the month's plan would exceed its amount to distribute —
+ * unless `takeLocked`: then what is short is taken from "🔒 Отложить сразу", if it has that much.
  */
-export async function setPlanAmount(ym: string, categoryId: number, limitMinor: number, kind?: PlanKind, currency?: Currency, normPeriod?: NormPeriod) {
+export async function setPlanAmount(
+  ym: string, categoryId: number, limitMinor: number, kind?: PlanKind, currency?: Currency, normPeriod?: NormPeriod, takeLocked = false,
+) {
   // also adds the item (from the stats screen), so the month must exist with its carried-over items first
   await ensureMonthPlan(ym);
   limitMinor = Math.max(0, limitMinor);
@@ -112,9 +115,11 @@ export async function setPlanAmount(ym: string, categoryId: number, limitMinor: 
   const existing = await db.get<{ currency: string }>('SELECT currency FROM plan_items WHERE ym = ? AND category_id = ?', [ym, categoryId]);
   const cur = currency ?? (existing ? asCurrency(existing.currency) : await planCurrency(ym));
   const over = await fits(ym, categoryId, limitMinor, cur);
-  if (over) throw over;
+  const short = over ? over.planned_minor - over.budget_minor : 0;
+  if (over && (!takeLocked || short > ((await storedBudget(ym))?.locked_minor ?? 0))) throw over;
   // the checks above read the rates outside: the writes alone in the transaction
   await db.transaction(async (t) => {
+    if (short > 0) await t.run('UPDATE plan_months SET locked_minor = locked_minor - ? WHERE ym = ?', [short, ym]);
     await t.run(
       `INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency, norm_period) VALUES (?, ?, ?, coalesce(?, 'limit'), ?, coalesce(?, 'day'))
         ON CONFLICT(ym, category_id) DO UPDATE SET limit_minor = excluded.limit_minor, kind = coalesce(?, kind), currency = excluded.currency,

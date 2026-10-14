@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Text, TextInput, View } from 'react-native';
 import { Controller, useWatch } from 'react-hook-form';
 import type { Currency } from '@/db/fx';
@@ -44,6 +44,13 @@ export function ShareField({ form, name, other, planned, toShown, screen, title,
   const set = (minor: number) => form.setValue(name, minor ? toInputValue(minor) : '', { shouldDirty: true });
   // an amount between the stops opens as an amount
   const [mode, setMode] = useState<'pct' | 'amount' | 'max'>(stop === undefined ? 'amount' : 'pct');
+  // all that is free opens as "max" (once the form is loaded: the values come after the first render)
+  const opened = useRef(false);
+  useEffect(() => {
+    if (opened.current || !amount) return;
+    opened.current = true;
+    if (room > 0 && mine === room) setMode('max');
+  }, [amount, mine, room]);
   // "max": all that is free, following it (the budget or the other part changed); off with nothing free (or all of it in)
   useEffect(() => { if (mode === 'max' && mine !== room) set(room); }, [mode, mine, room]); // eslint-disable-line react-hooks/exhaustive-deps
   function switchMode(m: 'pct' | 'amount' | 'max') {
@@ -61,7 +68,7 @@ export function ShareField({ form, name, other, planned, toShown, screen, title,
         {icon ? <LockIcon color={color} size={14} /> : null}
         <Text style={[formStyles.label, styles.lockLabel]}>{title}</Text>
         <Segmented
-          options={[['pct', '%'], ['amount', cur], ['max', 'max']] as const} value={mode} onChange={switchMode} style={styles.lockMode}
+          options={[['pct', '%'], ['amount', cur], ['max', 'MAX']] as const} value={mode} onChange={switchMode} style={styles.lockMode}
           disabled={(room <= 0 || room === mine) && mode !== 'max' ? ['max'] : []}
         />
       </View>

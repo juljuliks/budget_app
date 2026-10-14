@@ -1,7 +1,7 @@
 import React from 'react';
 import { KeyboardTypeOptions, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Controller, FieldValues, Path, PathValue, useFormState, UseFormReturn } from 'react-hook-form';
-import BottomSheet from './BottomSheet';
+import BottomSheet, { SheetScrollView } from './BottomSheet';
 import { SheetActions } from './Button';
 import { submitForm, useLoadedForm } from './form';
 import { toastError } from './toast';
@@ -25,6 +25,8 @@ type Props<V extends TextFormValues & FieldValues> = {
   submitLabel?: string;
   /** muted lines under the title (e.g. "Свободно 1 600 ₾") */
   hint?: React.ReactNode;
+  /** between the hint and the field (the plan's kinds: what the amount is depends on them) */
+  above?: React.ReactNode;
   keyboardType?: KeyboardTypeOptions;
   maxLength?: number;
   /** empty input is submitted (as '') instead of "Введите название" */
@@ -43,8 +45,8 @@ type Props<V extends TextFormValues & FieldValues> = {
   label?: string;
   /** the submit button greyed even with changes: something it needs is not filled in yet */
   submitDisabled?: boolean;
-  /** returns an error message to show, or null when saved */
-  onSubmit: (value: string) => Promise<string | null>;
+  /** returns an error message to show, null when saved, false to stay open without one (a question asked over it) */
+  onSubmit: (value: string) => Promise<string | null | false>;
   onClose: () => void;
 };
 
@@ -54,7 +56,7 @@ type Props<V extends TextFormValues & FieldValues> = {
  */
 export default function TextInputModal<V extends TextFormValues & FieldValues = TextFormValues>({
   visible, title, initialValue = '', form: outer, placeholder, submitLabel = 'Сохранить', hint, keyboardType, maxLength = 30,
-  allowEmpty, multiline, onSubmit, onClose, children, inputAccessory, headerRight, remove, label, submitDisabled,
+  allowEmpty, multiline, onSubmit, onClose, children, inputAccessory, headerRight, remove, label, submitDisabled, above,
 }: Props<V>) {
   // used only without a form of the caller's (a hook can't be skipped)
   const own = useLoadedForm<TextFormValues>(outer ? null : { value: initialValue }, visible);
@@ -64,7 +66,7 @@ export default function TextInputModal<V extends TextFormValues & FieldValues = 
   const submit = submitForm(form, async ({ value }) => {
     try {
       const err = await onSubmit(value.trim());
-      if (err) toastError(err); else onClose();
+      if (err) toastError(err); else if (err === null) onClose();
     } catch (e) {
       console.error('save failed', e);
       toastError('Не удалось сохранить');
@@ -73,8 +75,10 @@ export default function TextInputModal<V extends TextFormValues & FieldValues = 
 
   return (
     <BottomSheet visible={visible} onClose={onClose} title={title} headerRight={headerRight}>
-        <View style={styles.dialog}>
+        {/* a tall form (the plan's amount) scrolls; its buttons stay under it */}
+        <SheetScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.dialog} style={styles.scroll}>
           {typeof hint === 'string' ? <Text style={styles.hint}>{hint}</Text> : hint ?? null}
+          {above ? <View style={styles.above}>{above}</View> : null}
           {label ? <Text style={[formStyles.label, styles.label]}>{label}</Text> : null}
           <View style={styles.inputRow}>
           <Controller
@@ -100,6 +104,8 @@ export default function TextInputModal<V extends TextFormValues & FieldValues = 
           {inputAccessory}
           </View>
           {children ? <View style={styles.extra}>{children}</View> : null}
+        </SheetScrollView>
+        <View style={styles.dialog}>
           {/* the submit button greyed until something changed: nothing to save otherwise */}
           <SheetActions
             submit={{ title: submitLabel, onPress: submit, disabled: isSubmitting || !isDirty || !!submitDisabled }}
@@ -118,9 +124,11 @@ export function setField<V extends FieldValues, K extends Path<V>>(form: UseForm
 
 const styles = StyleSheet.create({
   dialog: { paddingHorizontal: 20 },
+  scroll: { flexShrink: 1 },
   hint: { fontSize: 14, color: colors.muted, marginBottom: 12 },
   label: { marginTop: 0 },
   extra: { marginTop: 12 },
+  above: { marginBottom: 12 },
   // the field and its accessory (the currency) the same height
   inputRow: { flexDirection: 'row', alignItems: 'stretch', gap: 8 },
   input: { flex: 1 },

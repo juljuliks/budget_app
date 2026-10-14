@@ -23,17 +23,19 @@ export async function fundContribution(ym: string, categoryId: number, input: Fu
 
 /**
  * Makes the category a fund (or changes it) from `ym`: its plan item there becomes the fund's contribution. Made anew
- * after it was deleted: starts over from `ym`. Refused (OverBudgetError) if the contribution doesn't fit the budget.
- * Returns the contribution.
+ * after it was deleted: starts over from `ym`. Refused (OverBudgetError) if the contribution doesn't fit the budget —
+ * unless `takeLocked`: then what is short is taken from "🔒 Отложить сразу", if it has that much. Returns the contribution.
  */
-export async function setFund(ym: string, categoryId: number, input: FundInput, nowYm = currentYm()): Promise<number> {
+export async function setFund(ym: string, categoryId: number, input: FundInput, nowYm = currentYm(), takeLocked = false): Promise<number> {
   const fund = await draftFund(ym, categoryId, input);
   const contribution = await fundContribution(ym, categoryId, input, nowYm);
   const budget = await storedBudget(ym);
+  let short = 0;
   if (budget) {
     const own = (await planConverter(ym))(contribution, input.currency, budget.currency);
     const planned = (await plannedTotal(ym, categoryId, budget.currency)) + (own ?? 0);
-    if (planned > budget.plannable_minor) throw new OverBudgetError(budget.plannable_minor, planned, budget.currency);
+    short = Math.max(0, planned - budget.plannable_minor);
+    if (short > 0 && (!takeLocked || short > budget.locked_minor)) throw new OverBudgetError(budget.plannable_minor, planned, budget.currency);
   }
   const db = await getDb();
   await db.transaction(async (t) => {
@@ -43,6 +45,7 @@ export async function setFund(ym: string, categoryId: number, input: FundInput, 
           start_minor = excluded.start_minor, since_ym = excluded.since_ym, closed_ym = NULL, released_minor = NULL`,
       [categoryId, input.target_minor, input.currency, input.due, input.start_minor, fund.since_ym]);
     await t.run('INSERT OR IGNORE INTO plan_months (ym) VALUES (?)', [ym]);
+    if (short > 0) await t.run('UPDATE plan_months SET locked_minor = locked_minor - ? WHERE ym = ?', [short, ym]);
     await t.run(
       `INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency) VALUES (?, ?, ?, 'fund', ?)
         ON CONFLICT(ym, category_id) DO UPDATE SET limit_minor = excluded.limit_minor, kind = 'fund', currency = excluded.currency, pinned = 0`,

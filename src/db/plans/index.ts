@@ -13,3 +13,4 @@ export * from './fundEntries';
 export * from './fundWrites';
 export * from './close';
 export * from './closeWrites';
+export * from './addable';
