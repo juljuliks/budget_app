@@ -56,8 +56,6 @@ export default function MonthRow({ month, expanded, onToggle, currency }: Props)
           />
         </View>
         {planned ? <Meter ratio={spent / planned} /> : null}
-        {/* the funds' contributions are in the plan and the spending: what of it was put aside */}
-        {month.funds_minor > 0 ? <Text style={styles.fundsLine}>{`В копилки ${money(month.funds_minor)}`}</Text> : null}
         {budget !== null && savings ? (
           // the amount to distribute: what was left unplanned, and what went to savings (or was not spent)
           <View style={styles.totals}>

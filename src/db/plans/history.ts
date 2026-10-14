@@ -89,7 +89,7 @@ export type HistoryMonth = {
   close: { closed: boolean; rest_choice: RestChoice | null; saved_minor: number | null } | null;
   /** the current month only: obligatory payments planned and not paid yet (not leftover, they're still to go) */
   unpaid_fixed_minor: number;
-  /** put in the funds this month (their contributions: in spent_minor, the funds' own spending is not) */
+  /** put in the funds this month (their contributions: in spent_minor, the funds' own spending is not); the History's card doesn't show it, the opened month has each fund */
   funds_minor: number;
   /** funds deleted this month: what they had saved goes to its savings */
   released: Array<{ name: string; emoji: string | null; minor: number }>;
