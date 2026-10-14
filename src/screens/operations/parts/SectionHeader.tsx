@@ -53,7 +53,9 @@ export default function OperationsSectionHeader({ section, selecting, ids, selec
         </TouchableOpacity>
       ) : null}
       <Text style={styles.title}>{section.title}</Text>
-      {spent > 0 ? <Text style={styles.amount}>−{formatWithCurrency(spent, currency)}</Text> : null}
+      {/* more came back (refunds) than was spent: "+", green; a day of deposits only has no spending — nothing */}
+      {spent > 0 ? <Text style={styles.amount}>−{formatWithCurrency(spent, currency)}</Text>
+        : spent < 0 ? <Text style={[styles.amount, styles.cameBack]}>+{formatWithCurrency(-spent, currency)}</Text> : null}
       <TouchableOpacity onPress={onOpenDay} hitSlop={10} accessibilityLabel={`Траты за день: ${section.title}`}>
         <ChevronRightIcon color={colors.accent} />
       </TouchableOpacity>
@@ -65,4 +67,5 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   title: { flex: 1, fontSize: 13, fontWeight: '600', color: colors.muted },
   amount: { fontSize: 13, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
+  cameBack: { color: colors.income },
 });
