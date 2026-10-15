@@ -73,6 +73,16 @@ describe('outgoing transfers', () => {
     expect(await cardBalance()).toMatchObject({ minor: 9114 - 100, pending: 1 });
   });
 
+  test('a transfer in another currency (50 €) is subtracted at the day\'s rate', async () => {
+    const { getDb } = require('../../src/db');
+    const { setRatesFetcher } = require('../../src/fx/nbg');
+    setRatesFetcher(async () => []);
+    await (await getDb()).run("INSERT INTO fx_rates (date, currency, gel_per_unit) VALUES ('2026-10-03', 'EUR', 3.1)");
+    await sms(SPAR, '2026-10-03T15:19:00');
+    await sms('Money Transfer:\n50.00 EUR\nMC GOLD\n03/10/2026', '2026-10-03T16:00:00');
+    expect(await cardBalance()).toMatchObject({ minor: 9114 - 15500, currency: 'GEL', pending: 1 });
+  });
+
   test('a transfer the bank reported before the balance is already in it', async () => {
     await sms(TRANSFER, '2026-10-03T15:00:00');
     await sms(SPAR, '2026-10-03T15:19:00');

@@ -3,6 +3,7 @@ import type { Db } from './types';
 import { getSetting, setSetting } from './settings';
 import { parseTbc, parseTbcBalance } from '../parsers/tbc';
 import { placeholders } from './sql';
+import { dateKey, ensureRatesLater, makeConverter } from './fx';
 
 // The card balance, kept in sync with the bank: every SMS that reports "Balance: …" (purchases, balance-only SMS)
 // sets it exactly; operations after it (a deposit has no balance in its SMS) are added on top until the next one.
@@ -60,23 +61,29 @@ export async function recordBalance(anchor: BalanceAnchor, db?: Db, bank = 'tbc'
 
 /**
  * A bank's card balance now: the last reported one plus that bank's operations after it; null until a message
- * reports one.
+ * reports one. An operation in another currency (a transfer in €) is taken at that day's rate: the bank's own one
+ * differs a little, the next balance it reports sets it exactly.
  */
 export async function cardBalance(bank = 'tbc'): Promise<CardBalance | null> {
   const anchor = await readAnchor(bank);
   if (!anchor) return null;
   const db = await getDb();
-  const after = await db.all<{ kind: string; amount_minor: number }>(
-    `SELECT kind, amount_minor FROM transactions
-      WHERE bank = ? AND currency = ?
+  const after = await db.all<{ kind: string; amount_minor: number; currency: string; occurred_at: number }>(
+    `SELECT kind, amount_minor, currency, occurred_at FROM transactions
+      WHERE bank = ?
         AND (occurred_at > ? OR (occurred_at = ? AND ? IS NOT NULL AND id > ?))`,
-    [bank, anchor.currency, anchor.at, anchor.at, anchor.txId, anchor.txId ?? 0]);
+    [bank, anchor.at, anchor.at, anchor.txId, anchor.txId ?? 0]);
+  const foreign = after.filter((t) => t.currency !== anchor.currency && SIGN[t.kind]);
+  if (foreign.length) ensureRatesLater(foreign.map((t) => dateKey(t.occurred_at)));
+  const conv = await makeConverter();
   let minor = anchor.minor;
   let pending = 0;
   for (const t of after) {
     const sign = SIGN[t.kind];
     if (!sign) continue;
-    minor += sign * t.amount_minor;
+    const amount = conv(t.amount_minor, t.currency, anchor.currency, dateKey(t.occurred_at));
+    if (amount === null) continue;
+    minor += sign * amount;
     pending++;
   }
   return { minor, currency: anchor.currency, asOf: anchor.at, pending };
