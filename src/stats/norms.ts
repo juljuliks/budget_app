@@ -40,7 +40,10 @@ export type Norms = {
     monthLimit: number;
     /** spending in the period's part in that month (for the share of the month's plan) */
     spent: number;
-    /** the norm checked over the category's own rhythm window (see normWindow), across months if it spans two */
+    /**
+     * the norm checked over the category's own rhythm window (see normWindow), across months if it spans two; the
+     * window's spending is net: below 0 when more came back than was spent
+     */
     rhythm: NormPeriod; window: DayRange; windowParts: NormPart[]; windowNorm: number; windowSpent: number;
     /**
      * The limit for the viewed days themselves, as it was at their start (a share of the rhythm's limit when the period is
@@ -74,13 +77,18 @@ function monthsAround(range: DayRange): string[] {
   return out;
 }
 
-/** Spending by category over the days of `r`, as the period stats list it: a positive sum, or a transfer's negative one. */
-function spentIn(data: NormsData, r: DayRange): Map<number | null, number> {
+/** Each category's net sum over the days of `r`: negative when more came back (refunds) than was spent. */
+function netIn(data: NormsData, r: DayRange): Map<number | null, number> {
   const sums = new Map<number | null, number>();
   for (let d = parseDayKey(r.from); dayKeyOf(d) <= r.to; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1)) {
     for (const [k, v] of data.byDay.get(dayKeyOf(d)) ?? []) sums.set(k, (sums.get(k) ?? 0) + v);
   }
-  return new Map([...sums].filter(([k, v]) => v > 0 || (v < 0 && k !== null && data.transfer.has(k))));
+  return sums;
+}
+
+/** Spending by category over the days of `r`, as the period stats list it: a positive sum, or a transfer's negative one. */
+function spentIn(data: NormsData, r: DayRange): Map<number | null, number> {
+  return new Map([...netIn(data, r)].filter(([k, v]) => v > 0 || (v < 0 && k !== null && data.transfer.has(k))));
 }
 
 export async function loadNorms(range: DayRange, currency: Currency): Promise<Norms> {
@@ -151,7 +159,8 @@ export async function loadNorms(range: DayRange, currency: Currency): Promise<No
     norms.byCategory.set(id, {
       name, kind, monthLimit, spent: partSpent.get(id) ?? 0, rhythm, window: win, windowParts,
       windowNorm: rhythm === 'month' ? monthLimit : sum(windowParts),
-      windowSpent: (spentOver(win)).get(id) ?? 0,
+      // a refund in the window gives its money back to it: more came back than was spent — more left this week
+      windowSpent: rhythm === 'month' ? spentOver(win).get(id) ?? 0 : netIn(data, win).get(id) ?? 0,
       periodParts, periodNorm: sum(periodParts), periodSpent: periodSpent.get(id) ?? 0,
       effect,
     });

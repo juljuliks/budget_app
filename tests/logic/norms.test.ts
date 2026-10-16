@@ -34,6 +34,19 @@ test('a week across two months: each month\'s days by its own plan, spending ove
   expect(n.monthToDate.get(bars)).toBe(8000);
 });
 
+test('a refund in the week gives its money back to the week: "осталось" grows by it', async () => {
+  const bars = await createCategory('Бары');
+  await setPlanAmount('2025-10', bars, 60000, 'limit', 'GEL', 'week');
+  // Oct 1–12: 471.60 spent; Mon Oct 13 – Sun Oct 19: a refund of 107.01, nothing spent
+  await spend(47160, bars, '2025-10-05');
+  await addManualTransaction({ amount_minor: 10701, category_id: bars, occurred_at: Math.floor(new Date('2025-10-14T12:00:00').getTime() / 1000), kind: 'refund', currency: 'GEL' });
+  const b = (await loadNorms({ from: '2025-10-15', to: '2025-10-15' }, 'GEL')).byCategory.get(bars)!;
+  // (600 − 471.60) / 19 days left × 7
+  expect(b.windowNorm).toBeCloseTo((12840 / 19) * 7);
+  expect(b.windowSpent).toBe(-10701);
+  expect(Math.round(b.windowNorm) - b.windowSpent).toBe(Math.round((12840 / 19) * 7) + 10701);
+});
+
 test('a month without the category\'s plan counts as 0', async () => {
   const bars = await createCategory('Бары');
   await setPlanAmount('2025-10', bars, 31000, 'limit', 'GEL', 'week');
