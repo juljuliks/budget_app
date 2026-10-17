@@ -28,10 +28,10 @@ describe('8.1 a new operation', () => {
     await sms(`12.00GEL\n(*1234)\nNEWSHOP\n${today}`);
     expect(shown()).toEqual([['Покупка — 12.00 ₾', 'NEWSHOP', ['🛒 Продукты', '☕️ Кафе и рестораны', '➡️ К категориям']]]);
   });
-  test('a transfer: the transfer categories', async () => {
+  test('a transfer: the transfer categories, without their section', async () => {
     await sms('Money Transfer:\n15.00 GEL\nMC GOLD\n15/10/2026\nANA K');
     // no transfer categories of one's own yet (the seeded "Прочие" went): the system "Между своими картами" and the list
-    expect(shown()).toEqual([['Перевод — 15.00 ₾', 'ANA K', ['🔁 Переводы: Между своими картами', '➡️ К категориям']]]);
+    expect(shown()).toEqual([['Перевод — 15.00 ₾', 'ANA K', ['🔁 Между своими картами', '➡️ К категориям']]]);
   });
   test('a merchant of different categories: its own first', async () => {
     const db = await getDb();

@@ -15,7 +15,8 @@ type Item = { ym: string; category_id: number; limit_minor: number; currency: st
 
 /**
  * Merges `sourceIds` into `targetId`, history included: every month's operations and plan, the merchants' rules and
- * the usage move to the target, which takes `name` and `typeId`; the sources are removed. A month's plan amounts are
+ * the usage move to the target, which takes `name` and `typeId`; the sources are removed. A merchant of different
+ * categories left with just the target is of one category again. A month's plan amounts are
  * summed (in the target's currency there, else the first one's, at that month's plan rate); `rhythm` — how the merged
  * item is planned — applies to every merged month, else the target's (or the first source's) kind and pattern stay.
  */
@@ -56,6 +57,15 @@ export async function mergeCategories(targetId: number, sourceIds: number[], nam
     await tx.run(`UPDATE merchant_rules SET category_id = ? WHERE category_id IN (${sourceMarks})`, [targetId, ...sources]);
     await tx.run(`UPDATE OR IGNORE merchant_categories SET category_id = ? WHERE category_id IN (${sourceMarks})`, [targetId, ...sources]);
     await tx.run(`DELETE FROM merchant_categories WHERE category_id IN (${sourceMarks})`, sources);
+    // a merchant of different categories all merged into one: of that one category again — new operations go there
+    const single = await tx.all<{ k: string }>(
+      `SELECT m.merchant_key AS k FROM mixed_merchants m JOIN merchant_categories c ON c.merchant_key = m.merchant_key
+        GROUP BY m.merchant_key HAVING count(*) = 1 AND max(c.category_id) = ?`, [targetId]);
+    for (const { k } of single) {
+      await tx.run('DELETE FROM mixed_merchants WHERE merchant_key = ?', [k]);
+      await tx.run("INSERT OR REPLACE INTO merchant_rules (match_type, pattern, category_id, created_at) VALUES ('exact', ?, ?, ?)",
+        [k, targetId, Math.floor(Date.now() / 1000)]);
+    }
     await tx.run(`DELETE FROM plan_items WHERE category_id IN (${marks})`, all);
     for (const m of merged) {
       await tx.run(

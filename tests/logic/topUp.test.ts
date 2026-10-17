@@ -108,7 +108,7 @@ describe('"Пополнение счёта"', () => {
     expect(n.body).toBe('NAIRA ZHORDANIA');
     const titles = n.android.actions.map((a: any) => a.title);
     expect(titles).toHaveLength(3);
-    expect(titles.slice(0, 2).sort()).toEqual(['👩 Переводы: Маме', '🤝 Переводы: Долги']);
+    expect(titles.slice(0, 2).sort()).toEqual(['👩 Маме', '🤝 Долги']);
     expect(titles[2]).toBe('➡️ К категориям');
 
     // a button moves it there: a person paying back
@@ -120,7 +120,7 @@ describe('"Пополнение счёта"', () => {
     await (await getDb()).run('DELETE FROM categories WHERE id = ?', [mom]);
     await SmsBackgroundTask({ sender: 'TBC SMS', body: 'Deposit Money: 50.00 GEL\nMC GOLD\n03/10/2026', timestamp: 2 });
     expect(await (await getDb()).get("SELECT category_id FROM transactions WHERE kind = 'deposit'")).toEqual({ category_id: topUp });
-    expect(displayNotification.mock.calls[0][0].android.actions.map((a: any) => a.title)).toEqual(['🔁 Переводы: Между своими картами', '➡️ К категориям']);
+    expect(displayNotification.mock.calls[0][0].android.actions.map((a: any) => a.title)).toEqual(['🔁 Между своими картами', '➡️ К категориям']);
   });
 });
 

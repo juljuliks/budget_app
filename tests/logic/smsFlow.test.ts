@@ -163,7 +163,7 @@ test('money transfer offers only categories of the transfer type, plus "new cate
   const n = displayNotification.mock.calls[0][0];
   expect(n.title).toMatch(/^Перевод/);
   const titles = n.android.actions.map((a: any) => a.title);
-  expect(titles).toEqual(['👩 Переводы: Маме', '🔁 Переводы: Между своими картами', '➡️ К категориям']);
+  expect(titles).toEqual(['👩 Маме', '🔁 Между своими картами', '➡️ К категориям']);
   expect(n.android.actions[2].pressAction.id).toBe('all_categories');
 });
 

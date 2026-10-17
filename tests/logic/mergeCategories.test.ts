@@ -3,6 +3,7 @@ import { getDb } from '../../src/db';
 import { createRule } from '../../src/categorize/rules';
 import { createCategory, listCategories } from '../../src/db/categories';
 import { mergeCategories, MergeNameTakenError, mergedName } from '../../src/db/mergeCategories';
+import { findCategoryForMerchant, isMixedMerchant } from '../../src/categorize/rules';
 
 const at = (y: number, m: number, d: number) => Math.floor(new Date(y, m - 1, d, 12).getTime() / 1000);
 let seq = 0;
@@ -72,4 +73,23 @@ test('a name taken by another category of the section is refused', async () => {
 
 test('mergedName joins the names in the order picked', () => {
   expect(mergedName([{ name: 'Кафе ' }, { name: 'Рестораны' }])).toBe('Кафе & Рестораны');
+});
+
+test('a merchant of different categories: they merge in its list; all of them merged — of one category again', async () => {
+  const cafe = await createCategory('Кафе', '☕️');
+  const bars = await createCategory('Рестораны', '🍽');
+  const food = await createCategory('Продукты', '🛒');
+  const db = await getDb();
+  await db.run("INSERT INTO mixed_merchants (merchant_key, created_at) VALUES ('WOLT', 0), ('GLOVO', 0)");
+  await db.run('INSERT INTO merchant_categories (merchant_key, category_id) VALUES (?, ?), (?, ?), (?, ?), (?, ?)',
+    ['WOLT', cafe, 'WOLT', bars, 'GLOVO', bars, 'GLOVO', food]);
+
+  await mergeCategories(cafe, [bars], 'Кафе & Рестораны', null, null);
+
+  // GLOVO: still two to pick from
+  expect(await isMixedMerchant('GLOVO')).toBe(true);
+  expect(await db.all("SELECT category_id FROM merchant_categories WHERE merchant_key = 'GLOVO' ORDER BY category_id")).toEqual([{ category_id: cafe }, { category_id: food }]);
+  // WOLT: nothing to pick from — its new operations go to the merged one without asking
+  expect(await isMixedMerchant('WOLT')).toBe(false);
+  expect(await findCategoryForMerchant('WOLT')).toEqual({ category_id: cafe, source: 'rule' });
 });

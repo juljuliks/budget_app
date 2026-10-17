@@ -4,7 +4,7 @@ import { buildCategorySuggestions } from './notifyHelper';
 import { isMixedMerchant } from '../categorize/rules';
 import { merchantCategories } from '../db/merchants';
 import { isRememberable } from '../domain/types';
-import { categoryLabel, isTopUp, listCategories, topCategories } from '../db/categories';
+import { categoryShortLabel, isTopUp, listCategories, topCategories } from '../db/categories';
 import { getDb } from '../db';
 import { monthClose } from '../db/plans';
 import { assignCategory } from '../categorize/assign';
@@ -44,7 +44,7 @@ export async function showUncategorizedTransactionNotification(txId: number) {
   const suggestions = [...own, ...(await buildCategorySuggestions(tx.kind, MAX_ACTIONS - 1)).filter((s) => !own.some((o) => o.id === s.id))]
     .slice(0, MAX_ACTIONS - 1);
   const actions: Array<{ title: string; pressAction: { id: string; launchActivity?: string } }> = suggestions.map((s) => ({
-    title: categoryLabel(s),
+    title: categoryShortLabel(s),
     pressAction: { id: `suggest_${s.id}` },
   }));
   // "➡️ К категориям": the transaction with the full category list (a new category can be created there too)
@@ -82,14 +82,14 @@ export async function showDepositNotification(txId: number) {
   const category = (await listCategories()).find((c) => c.id === tx.category_id);
   const transfers = (await topCategories(10_000)).filter((c) => c.type_is_transfer === 1 && !isTopUp(c)).slice(0, MAX_ACTIONS - 1);
   const actions: Array<{ title: string; pressAction: { id: string; launchActivity?: string } }> = transfers.map((s) => ({
-    title: categoryLabel(s),
+    title: categoryShortLabel(s),
     pressAction: { id: `suggest_${s.id}` },
   }));
   actions.push({ title: '➡️ К категориям', pressAction: { id: ALL_CATEGORIES_ACTION, launchActivity: 'default' } });
   const hide = await hideNotificationAmounts();
   await notifee.displayNotification({
     id: `tx_${txId}`,
-    title: `Пополнение${amountPart(hide, tx.amount_minor, tx.currency)}${category ? ` → ${categoryLabel(category)}` : ''}`,
+    title: `Пополнение${amountPart(hide, tx.amount_minor, tx.currency)}${category ? ` → ${categoryShortLabel(category)}` : ''}`,
     body: tx.raw_merchant || ' ',
     android: {
       channelId: CHANNEL_ID,

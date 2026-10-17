@@ -2,7 +2,7 @@
 // "🏖 Отпуск · из копилки, осталось 0 ₾" — it is taken from what the fund saved, not from the month's budget.
 import notifee, { AndroidImportance } from '@notifee/react-native';
 import { getDb } from '../db';
-import { categoryLabel, listCategories } from '../db/categories';
+import { categoryShortLabel, listCategories } from '../db/categories';
 import { fundOfTransaction } from '../db/plans';
 import { formatMoneyWithCurrency } from '@/shared/lib/money';
 import { hideNotificationAmounts } from '../native/appLock';
@@ -19,7 +19,7 @@ export async function fundNoticeFor(txId: number, hide: boolean): Promise<{ titl
   const merchant = tx.raw_merchant || 'Операция';
   return {
     title: hide ? merchant : `−${formatMoneyWithCurrency(tx.amount_minor, tx.currency)} · ${merchant}`,
-    body: `${category ? categoryLabel(category) : ''} · из копилки${hide ? '' : `, осталось ${formatMoneyWithCurrency(at.after, at.currency)}`}`,
+    body: `${category ? categoryShortLabel(category) : ''} · из копилки${hide ? '' : `, осталось ${formatMoneyWithCurrency(at.after, at.currency)}`}`,
   };
 }
 

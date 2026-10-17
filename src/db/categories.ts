@@ -60,6 +60,11 @@ export function isTransferCategory(c: Pick<Category, 'type_is_transfer'>): boole
   return c.type_is_transfer === 1;
 }
 
+/** "💸 Маме": the category alone, without its section (the notifications' buttons are short) */
+export function categoryShortLabel(c: { emoji?: string | null; name: string }): string {
+  return `${c.emoji || ''} ${c.name}`.trim();
+}
+
 /** "💸 Переводы: Маме" */
 export function categoryLabel(c: { emoji?: string | null; name: string; type_name?: string | null }): string {
   return `${c.emoji || ''} ${c.type_name ? `${c.type_name}: ` : ''}${c.name}`.trim();
