@@ -43,7 +43,8 @@ export async function normsData(months: string[], currency: Currency, nowYm = cu
   }
 
   const planRows = read.length === 0 ? [] : await db.all<{ ym: string; category_id: number; name: string; emoji: string | null; limit_minor: number; currency: string; kind: PlanKind | null; norm_period: string | null }>(
-    `SELECT p.ym, p.category_id, c.name, c.emoji, p.limit_minor, p.currency, p.kind, p.norm_period
+    `SELECT p.ym, p.category_id, c.name, c.emoji, p.limit_minor, p.currency,
+      CASE WHEN p.kind = 'subs' THEN 'fixed' ELSE p.kind END AS kind, p.norm_period
       FROM plan_items p JOIN categories c ON c.id = p.category_id
       WHERE p.ym IN (${placeholders(read.length)}) ORDER BY c.id`, read);
   const plans: NormsData['plans'] = new Map(months.map((m) => [m, new Map()]));

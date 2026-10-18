@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { SearchIcon } from '@/shared/ui/icons';
-import { colors } from '@/shared/theme/theme';
+import { SearchIcon } from './icons';
+import { colors } from '../theme/theme';
 
 /** The text search: a field with ✕ to clear it. */
 export default function SearchBar({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {

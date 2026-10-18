@@ -87,3 +87,21 @@ export async function merchantsWithoutSubscription(categoryId: number): Promise<
       GROUP BY t.merchant_key ORDER BY t.occurred_at DESC`, [categoryId]);
   return rows.map((r) => ({ merchant_key: r.k, name: r.name ?? r.k, day: dayOfUnix(r.at), amount_minor: r.amount_minor, currency: asCurrency(r.currency) }));
 }
+
+/**
+ * Merchants with no subscription for step 1 of "Добавить подписку": those charged the same amount in two months or more
+ * first ("похожи на подписку"), then the others by their last charge; `query` — by name.
+ */
+export async function merchantsToSubscribe(query = '', limit = 40): Promise<Array<LastCharge & { likely: boolean }>> {
+  const like = `%${query.trim().toLowerCase()}%`;
+  const rows = await (await getDb()).all<{ k: string; name: string | null; at: number; amount_minor: number; currency: string; likely: number }>(
+    `SELECT t.merchant_key AS k, t.raw_merchant AS name, t.occurred_at AS at, t.amount_minor, t.currency,
+        (SELECT count(DISTINCT strftime('%Y-%m', x.occurred_at, 'unixepoch', 'localtime')) FROM transactions x
+          WHERE x.merchant_key = t.merchant_key AND x.amount_minor = t.amount_minor AND x.${CHARGE}) >= 2 AS likely
+      FROM transactions t
+      WHERE t.merchant_key IS NOT NULL AND t.${CHARGE} AND lower(t.merchant_key) LIKE ?
+        AND NOT EXISTS (SELECT 1 FROM subscriptions s WHERE s.merchant_key = t.merchant_key AND s.deleted_at IS NULL)
+        AND t.occurred_at = (SELECT max(y.occurred_at) FROM transactions y WHERE y.merchant_key = t.merchant_key AND y.${CHARGE})
+      GROUP BY t.merchant_key ORDER BY likely DESC, t.occurred_at DESC LIMIT ?`, [like, limit]);
+  return rows.map((r) => ({ merchant_key: r.k, name: r.name ?? r.k, day: dayOfUnix(r.at), amount_minor: r.amount_minor, currency: asCurrency(r.currency), likely: r.likely === 1 }));
+}

@@ -90,3 +90,30 @@ export async function refreshSubscriptionItems(nowYm = currentYm()): Promise<voi
     await refreshSubscriptionItem(ym, nowYm);
   }
 }
+
+export type SubscriptionDraft = { merchant_key: string | null; amount_minor: number; currency: Currency; period_months: number; due: string | null };
+
+/**
+ * What saving a subscription does to the plan: the first month from this one it is charged in ("В план октября +30 ₾"),
+ * and by how much that month's "Подписки" changes (the subscription `id` as it was taken off), in the month's plan
+ * currency. No day — null.
+ */
+export async function planEffect(draft: SubscriptionDraft, id?: number, now = new Date()): Promise<{ ym: string; delta_minor: number; currency: Currency } | null> {
+  if (!draft.due) return null;
+  const db = await getDb();
+  const nowYm = currentYm(now);
+  const old = id === undefined ? null : (await listSubscriptions(db)).find((s) => s.id === id) ?? null;
+  const keys = [draft.merchant_key, old?.merchant_key].filter((k): k is string => !!k);
+  const days = await chargeDays(keys, db);
+  const opsOf = (key: string | null) => (key ? days.get(key) ?? [] : []);
+  const since = `${old?.since_ym ?? nowYm}-01`;
+  const chargesIn = (ym: string) => monthCharges(draft.due!, draft.period_months, ym, opsOf(draft.merchant_key), since).length;
+  const next = nextCharge(draft.due, draft.period_months, opsOf(draft.merchant_key), todayKey(now));
+  const ym = chargesIn(nowYm) ? nowYm : next.slice(0, 7) < nowYm ? nowYm : next.slice(0, 7);
+  const currency = asCurrency((await db.get<{ c: string }>('SELECT budget_currency AS c FROM plan_months WHERE ym = ?', [ym]))?.c);
+  const conv = await makeConverter();
+  const rateDay = planRateDate(ym);
+  const was = old?.due ? monthCharges(old.due, old.period_months, ym, opsOf(old.merchant_key), `${old.since_ym}-01`).length * (conv(old.amount_minor, old.currency, currency, rateDay) ?? 0) : 0;
+  const after = chargesIn(ym) * (conv(draft.amount_minor, draft.currency, currency, rateDay) ?? 0);
+  return { ym, delta_minor: after - was, currency };
+}

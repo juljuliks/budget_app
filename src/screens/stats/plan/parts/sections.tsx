@@ -8,6 +8,7 @@ import { SectionHeader } from '@/shared/ui/StickyScrollView';
 import { formStyles } from '@/shared/theme/formStyles';
 import { percentOf, PlanView } from '../model/planView';
 import { FundItemRow } from './FundItemRow';
+import { SubsItemRow } from './SubsItemRow';
 import { PlanItemRow, SystemRowView } from './PlanItemRow';
 import { styles } from './styles';
 
@@ -87,6 +88,25 @@ export function fundSection(p: PlanView, hidden: boolean, onOpen: (item: PlanIte
       ))}
       <View>
         {p.funds.map((item) => <FundItemRow key={item.category_id} p={p} item={item} hidden={hidden} onOpen={() => onOpen(item)} />)}
+      </View>
+    </React.Fragment>
+  );
+}
+
+/** "Подписки": the month's charges, with their share of the budget; a tap opens the "Подписки" sheet. */
+export function subsSection(p: PlanView, hidden: boolean, onOpen: () => void) {
+  if (!p.subs) return null;
+  const sum = p.subs.converted_minor ?? 0;
+  return (
+    <React.Fragment key="subs">
+      {header('Подписки', (
+        <Text style={styles.groupTotal}>
+          {hidden && p.shownBudget ? null : p.money(sum)}
+          {p.shownBudget && sum ? <Text style={styles.groupShare}>{hidden ? '' : ' · '}{percentOf(sum, p.shownBudget)}</Text> : null}
+        </Text>
+      ))}
+      <View>
+        <SubsItemRow p={p} item={p.subs} hidden={hidden} onOpen={onOpen} />
       </View>
     </React.Fragment>
   );

@@ -67,8 +67,10 @@ export function planView({ ym, currency, items: all, budget, toShown, income, un
   const money = (minor: number) => formatWithCurrency(minor, currency);
   // the funds' contributions apart: their own section and column ("Копилки")
   const funds = all.filter((i) => i.kind === 'fund');
-  const items = all.filter((i) => i.kind !== 'fund');
-  const total = items.reduce((sum, i) => sum + (i.converted_minor ?? 0), 0);
+  // "Подписки" apart too: its own section, its amount part of the plan
+  const subs = all.find((i) => i.system === 'subs') ?? null;
+  const items = all.filter((i) => i.kind !== 'fund' && i !== subs);
+  const total = items.reduce((sum, i) => sum + (i.converted_minor ?? 0), 0) + (subs?.converted_minor ?? 0);
   const fundsTotal = funds.reduce((sum, i) => sum + (i.converted_minor ?? 0), 0);
   // the amount to distribute in the screen's currency (its own one if there's no rate), with the leftover the month before
   // moved in; what it owed is a part of it
@@ -152,7 +154,7 @@ export function planView({ ym, currency, items: all, budget, toShown, income, un
   // funds, what the month before owes, less the leftover it moved in (that one is room)
   const claimed = total + fundsTotal + debt - plus;
 
-  return { money, total, fundsTotal, funds, shownBudget, budgetSub, claimed, unplanned, locked, free, timing, parts, less, systemGroups, budgetHint, groups: groupByType(items) };
+  return { money, total, fundsTotal, funds, subs, shownBudget, budgetSub, claimed, unplanned, locked, free, timing, parts, less, systemGroups, budgetHint, groups: groupByType(items) };
 }
 
 export type PlanView = ReturnType<typeof planView>;

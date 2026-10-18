@@ -141,7 +141,9 @@ export async function monthStats(year: number, month: number, currency: Currency
   const colorOf = await categoryColors();
 
   const cats = await db.all<CategoryRow & { limit_minor: number | null; plan_currency: string | null; plan_kind: PlanKind | null; plan_norm: string | null }>(
-    `SELECT c.id, c.name, c.emoji, c.type_id, ct.name AS type_name, p.limit_minor, p.currency AS plan_currency, p.kind AS plan_kind,
+    `SELECT c.id, c.name, c.emoji, c.type_id, ct.name AS type_name, p.limit_minor, p.currency AS plan_currency,
+      -- "Подписки" counts as a fixed payment in the stats: paid or not, by the month
+      CASE WHEN p.kind = 'subs' THEN 'fixed' ELSE p.kind END AS plan_kind,
         p.norm_period AS plan_norm, c.deleted_at, ct.is_transfer
       FROM categories c
       LEFT JOIN category_types ct ON ct.id = c.type_id

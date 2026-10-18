@@ -13,8 +13,9 @@ import { planView } from './model/planView';
 import BudgetCard from './parts/BudgetCard';
 import BudgetSheet from './parts/BudgetSheet';
 import SavingsLessSheet from './parts/SavingsLessSheet';
-import { fundSection, itemSections, systemSections } from './parts/sections';
+import { fundSection, itemSections, subsSection, systemSections } from './parts/sections';
 import { FundSheet } from '@/features/fund';
+import { SubscriptionsSheet } from '@/features/subscriptions';
 import { CarrySheet } from '@/features/month-close';
 import type { PlanItem } from '@/db/plans';
 import { styles } from './parts/styles';
@@ -49,6 +50,8 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
   const [carryOpen, setCarryOpen] = useState<'debt' | 'plus' | null>(null);
   // ⓘ of the savings the overspend took part of
   const [lessOpen, setLessOpen] = useState(false);
+  // "Подписки" opened
+  const [subsOpen, setSubsOpen] = useState(false);
 
   if (!items) return <Loading failed={data.failed} onRetry={load} />;
   const p = planView({ ...data, items, ym, currency, hidden });
@@ -62,6 +65,7 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
 
       {items.length === 0 ? <Text style={styles.hint}>План пуст. Нажмите ＋, чтобы добавить категории и суммы.</Text> : null}
       {fundSection(p, hidden, setFundOpen)}
+      {subsSection(p, hidden, () => setSubsOpen(true))}
       {systemSections(p, hidden, openBudget, setCarryOpen, () => setLessOpen(true))}
       {itemSections(p, {
         ym, currency, hidden, toShown,
@@ -92,6 +96,10 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
       <SavingsLessSheet
         less={p.less} visible={lessOpen} money={p.money} onClose={() => setLessOpen(false)}
         onOpen={(id) => { const item = items.find((i) => i.category_id === id); if (item) setEditingItem(editTarget(item)); }}
+      />
+      <SubscriptionsSheet
+        ym={subsOpen ? ym : null} currency={currency} onClose={() => setSubsOpen(false)}
+        onEditAmount={() => { setSubsOpen(false); if (p.subs) setEditingItem(editTarget(p.subs)); }}
       />
       <CarrySheet fromYm={carryOpen ? budget?.carry?.from_ym ?? null : null} kind={carryOpen ?? 'debt'} onClose={() => setCarryOpen(null)} />
     </StickyScrollView>

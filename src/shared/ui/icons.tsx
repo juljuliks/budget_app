@@ -150,3 +150,10 @@ export const SplitIcon = ({ color, size = 16 }: P) => (
     <Path d="M12 22v-8.3a4 4 0 0 0-1.172-2.872L3 3M15 9l6-6" />
   </Svg>
 );
+
+/** Charged again and again: a subscription (after Lucide "repeat", ISC license). */
+export const RepeatIcon = ({ color, size = 20 }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="m17 2 4 4-4 4M3 11v-1a4 4 0 0 1 4-4h14M7 22l-4-4 4-4M21 13v1a4 4 0 0 1-4 4H3" />
+  </Svg>
+);

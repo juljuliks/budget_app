@@ -65,7 +65,9 @@ export function ToastHost({ inset = 0 }: { inset?: number }) {
     return () => {
       listeners.delete(l);
       hosts.splice(hosts.indexOf(id), 1);
-      emit(); // the host below takes over
+      // the host below takes over — after this commit: told during it (a sheet closing over another one), its render
+      // with the toast was dropped and it kept showing the toast before
+      setTimeout(emit, 0);
     };
   }, []);
 
