@@ -91,6 +91,20 @@ export async function paymentDays(payments: Array<Pick<RecurringPayment, 'mercha
   return (p) => (p.merchant_key ? byMerchant.get(p.merchant_key) ?? [] : p.category_id !== null ? byCategory.get(p.category_id) ?? [] : []);
 }
 
+/** The category's payment without a merchant (put in from the plan), or null. */
+export async function categoryPayment(categoryId: number, db?: Db): Promise<RecurringPayment | null> {
+  db ??= await getDb();
+  const r = await db.get<Row>(
+    `SELECT ${COLUMNS} FROM recurring_payments WHERE category_id = ? AND merchant_key IS NULL AND deleted_at IS NULL ORDER BY id LIMIT 1`, [categoryId]);
+  return r ? asSub(r) : null;
+}
+
+/** The day of the category's last spending ('YYYY-MM-DD'), or null: a payment put in from the plan is offered the next. */
+export async function lastCategoryDay(categoryId: number): Promise<string | null> {
+  const r = await (await getDb()).get<{ at: number | null }>(`SELECT max(occurred_at) AS at FROM spend_parts WHERE category_id = ? AND ${CHARGE}`, [categoryId]);
+  return r?.at ? dayOfUnix(r.at) : null;
+}
+
 /** A merchant's last charge: its day, amount and currency, and the merchant's name as the SMS spells it. */
 export type LastCharge = { merchant_key: string; name: string; day: string; amount_minor: number; currency: Currency };
 
@@ -137,8 +151,7 @@ export async function paymentCard(merchantKey: string | null, now = new Date(), 
   const db = await getDb();
   // its merchant's payment, else its category's one without a merchant
   const sub = (merchantKey ? await paymentOfMerchant(merchantKey) : null)
-    ?? (categoryId === null ? null : (await db.get<Row>(
-      `SELECT ${COLUMNS} FROM recurring_payments WHERE category_id = ? AND merchant_key IS NULL AND deleted_at IS NULL ORDER BY id LIMIT 1`, [categoryId]).then((r) => (r ? asSub(r) : null))));
+    ?? (categoryId === null ? null : await categoryPayment(categoryId, db));
   if (!sub) return null;
   const days = (await paymentDays([sub], db))(sub);
   const from = Math.floor(new Date(now.getFullYear(), 0, 1).getTime() / 1000);
