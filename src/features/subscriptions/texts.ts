@@ -23,6 +23,10 @@ export const inMonth = (ym: string) => `в ${MONTHS_PREP[Number(ym.slice(5)) - 1
 /** "октября" of 'YYYY-MM'. */
 export const monthGen = (ym: string) => MONTHS_GEN[Number(ym.slice(5)) - 1];
 
+/** "октября"; another year — "сентября 2027". */
+export const monthGenYear = (ym: string, now = new Date()) =>
+  `${monthGen(ym)}${Number(ym.slice(0, 4)) === now.getFullYear() ? '' : ` ${ym.slice(0, 4)}`}`;
+
 /** "сегодня", "завтра", "через 7 дней", "через месяц", "через 5 месяцев"; past — null. */
 export function inTime(day: string, today: string): string | null {
   const [y, m, d] = parts(day);

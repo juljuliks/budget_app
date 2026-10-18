@@ -16,7 +16,7 @@ import { colors } from '@/shared/theme/theme';
 import { todayKey } from '@/db/subscriptions';
 import { confirmDeleteSub, saveSub } from '../model/commands';
 import { SubscriptionTarget, useSubscriptionForm } from '../model/useSubscriptionForm';
-import { inTime, monthGen, periodText, PERIODS } from '../texts';
+import { inTime, monthGenYear, periodText, PERIODS } from '../texts';
 
 type Props = {
   /** null = closed */
@@ -77,7 +77,7 @@ export default function SubscriptionSheet({ target, onClose, adding }: Props) {
         {f.effect && f.effect.delta_minor !== 0 ? (
           <View style={styles.plate}>
             <Text style={styles.plateTitle}>
-              {`В план ${monthGen(f.effect.ym)} ${f.effect.delta_minor > 0 ? '+' : '−'}${formatWithCurrency(Math.abs(f.effect.delta_minor), f.effect.currency)}`}
+              {`В план ${monthGenYear(f.effect.ym)} ${f.effect.delta_minor > 0 ? '+' : '−'}${formatWithCurrency(Math.abs(f.effect.delta_minor), f.effect.currency)}`}
             </Text>
             <Text style={styles.plateText}>Каждое списание — в план своего месяца.</Text>
           </View>

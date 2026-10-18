@@ -1,6 +1,6 @@
 // The subscriptions' words (features/subscriptions/texts.ts, periodText in shared/lib/format.ts).
 import { periodText } from '../../src/shared/lib/format';
-import { inMonth, inTime, longDay, shortDay } from '../../src/features/subscriptions/texts';
+import { inMonth, inTime, longDay, monthGenYear, shortDay } from '../../src/features/subscriptions/texts';
 
 test('how often', () => {
   expect([1, 3, 6, 12, 24, 5, 2].map(periodText)).toEqual(
@@ -23,4 +23,6 @@ test('days and months', () => {
   expect(shortDay('2027-03-12', now)).toBe('12 мар 2027');
   expect(longDay('2026-11-18')).toBe('18 ноября');
   expect(inMonth('2027-06')).toBe('в июне');
+  expect(monthGenYear('2026-11', now)).toBe('ноября');
+  expect(monthGenYear('2027-09', now)).toBe('сентября 2027');
 });
