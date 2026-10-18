@@ -42,7 +42,7 @@ export default function CategoryRow({ stat, total, currency, evenPace, dim, ym, 
   const cameIn = stat.transfer && stat.spent_minor < 0 ? -stat.spent_minor : 0;
   const hidden = useHideAmounts();
   const ratio = limit ? spent / limit : 0;
-  // fixed payment (rent, subscription): paid once this month's spending covers its plan (the share is by the amount)
+  // fixed payment (rent, repeating payment): paid once this month's spending covers its plan (the share is by the amount)
   const fixed = stat.plan_kind === 'fixed';
   const paid = !!limit && spent >= limit;
   const rhythm = !fixed && stat.plan_norm && stat.plan_norm !== 'month' ? stat.plan_norm : null;

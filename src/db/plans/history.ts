@@ -6,7 +6,7 @@ import { convertSpending, spendByDay, spendRows } from './spend';
 import { unplannedOf } from './budget';
 import { monthStats, spentOf } from './stats';
 import { allFunds, fundLedger } from './funds';
-import { allSavings, savingLedger } from '../subscriptions/saving';
+import { allSavings, savingLedger } from '../recurring/saving';
 import type { RestChoice } from './close';
 
 /**
@@ -159,7 +159,7 @@ export async function planHistory(nowYm = currentYm(), currency: Currency = BUDG
     }
   }
 
-  // the subscriptions saved up for: "Подписки" spent the contributions, not what was paid from them (as monthStats)
+  // the repeating payments saved up for: "Подписки" spent the contributions, not what was paid from them (as monthStats)
   for (const v of await allSavings()) {
     const toShown = (minor: number, ym: string) => conv(minor, v.currency, currency, planRateDate(ym)) ?? 0;
     for (const m of (await savingLedger(v, nowYm, nowYm)).months) {

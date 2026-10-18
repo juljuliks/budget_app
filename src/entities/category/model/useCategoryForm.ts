@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Path, PathValue, useFormState, useWatch } from 'react-hook-form';
 import { categoryLabel, categorySummary, findCategoryByName, getCategory, isRecurring, isSystemCategory } from '@/db/categories';
-import { savedInCategory } from '@/db/subscriptions';
+import { savedInCategory } from '@/db/recurring';
 import { formatWithCurrency } from '@/shared/lib/money';
 import { UNDO } from '@/shared/lib/strings';
 import { sheetAlert } from '@/shared/ui/sheetAlert';

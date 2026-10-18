@@ -12,7 +12,7 @@ import { useTransaction } from './model/useTransaction';
 import AmountModal from './ui/AmountModal';
 import NoteSection from './ui/NoteSection';
 import SplitSheet from './ui/SplitSheet';
-import SubscriptionNote from './ui/SubscriptionNote';
+import PaymentNote from './ui/PaymentNote';
 import TransactionCategory from './ui/TransactionCategory';
 import TransactionHeader from './ui/TransactionHeader';
 
@@ -64,7 +64,7 @@ export default function TransactionSheet({ txId: openId, onClose }: Props) {
         </Text>
       ) : null}
 
-      <SubscriptionNote tx={tx} />
+      <PaymentNote tx={tx} />
 
       {tx.raw_sms ? (
         <>

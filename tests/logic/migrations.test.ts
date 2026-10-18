@@ -205,7 +205,7 @@ describe('migrations', () => {
     await db.run("INSERT INTO subscriptions (merchant_key, name, amount_minor, currency, since_ym, created_at) VALUES ('NETFLIX.COM', 'Netflix', 3000, 'GEL', '2026-10', 0)");
     await migrate(db);
     expect(await db.get('SELECT system, recurring FROM categories WHERE id = ?', [subs])).toEqual({ system: null, recurring: 1 });
-    expect(await db.get('SELECT category_id FROM subscriptions')).toEqual({ category_id: subs });
+    expect(await db.get('SELECT category_id FROM recurring_payments')).toEqual({ category_id: subs });
     expect(await db.get('SELECT count(*) AS n FROM categories WHERE recurring = 1')).toEqual({ n: 1 });
   });
 });

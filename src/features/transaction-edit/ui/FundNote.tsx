@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { fundOfTransaction } from '@/db/plans';
-import { savingOfTransaction } from '@/db/subscriptions';
+import { savingOfTransaction } from '@/db/recurring';
 import { formatWithCurrency } from '@/shared/lib/money';
 import ProgressRing from '@/shared/ui/ProgressRing';
 import { colors } from '@/shared/theme/theme';
@@ -12,7 +12,7 @@ type At = { before: number; after: number; currency: string; saving?: string };
 
 /**
  * An operation in a fund's category: "Из копилки — не из бюджета месяца", what the fund had before it and after; a
- * subscription's charge paid from what was saved for it: "Из отложенного — не из бюджета месяца".
+ * repeating payment's charge paid from what was saved for it: "Из отложенного — не из бюджета месяца".
  */
 export default function FundNote({ txId, categoryId, merchantKey, occurredAt, amount }: Props) {
   const [at, setAt] = useState<At | null>(null);

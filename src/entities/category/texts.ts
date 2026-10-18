@@ -12,7 +12,7 @@ export function systemCategoryHint(systemKind: string): string {
 export const QUICK_HINT = 'Цвет подберётся сам. Изменить категорию полностью можно в Настройки → Категории.';
 
 /**
- * The words of a category's repeating payments: "Подписки" calls them subscriptions ("Подписка «Netflix»", "＋ Добавить
+ * The words of a category's repeating payments: "Подписки" calls them repeating payments ("Подписка «Netflix»", "＋ Добавить
  * подписку"), any other — payments ("Платёж «…»", "＋ Добавить платёж").
  */
 export function paymentWords(categoryName: string) {

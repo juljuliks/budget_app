@@ -3,7 +3,7 @@ import type { Db } from './types';
 import { currentYm, deleteFund, monthStart } from './plans';
 import { categorySpendingSql, signedSpendSql } from './spending';
 import { moveParts } from './parts';
-import { deleteSubscription } from './subscriptions/writes';
+import { deletePayment } from './recurring/writes';
 import { placeholders } from './sql';
 
 export type Category = {
@@ -20,7 +20,7 @@ export type Category = {
   color: string | null;
   /** 'topup' for "Пополнение счёта", 'own' (system categories: can't be deleted or renamed), else null */
   system: string | null;
-  /** 1 — "Повторяющиеся платежи": its plan item counted from its payments (db/subscriptions) */
+  /** 1 — "Повторяющиеся платежи": its plan item counted from its payments (db/recurring) */
   recurring: number;
 };
 
@@ -34,7 +34,7 @@ export const isTopUp = (c: { system?: string | null }) => c.system === TOP_UP;
 /** "Между своими картами": money between one's own cards and accounts (other banks, a savings one) — not spending, not income. */
 export const OWN_TRANSFER = 'own';
 /**
- * "Повторяющиеся платежи" on: its merchants' payments are remembered (how often, the next one; db/subscriptions), its
+ * "Повторяющиеся платежи" on: its merchants' payments are remembered (how often, the next one; db/recurring), its
  * plan item counted from them ('subs'). "Подписки" is one ("подписка" its word), any can be.
  */
 export const isRecurring = (c: { recurring?: number | boolean | null }) => !!c.recurring;
@@ -47,7 +47,7 @@ export async function topUpCategoryId(db?: Db): Promise<number | null> {
   return (await db.get<{ id: number }>("SELECT id FROM categories WHERE system = 'topup'"))?.id ?? null;
 }
 
-/** The id of "Подписки" (the seeded one with repeating payments; the seeds and tests make subscriptions in it). */
+/** The id of "Подписки" (the seeded one with repeating payments; the seeds and tests make repeating payments in it). */
 export async function subscriptionsCategoryId(db?: Db): Promise<number | null> {
   db ??= await getDb();
   return (await db.get<{ id: number }>("SELECT id FROM categories WHERE recurring = 1 AND name = 'Подписки' AND deleted_at IS NULL"))?.id ?? null;
@@ -157,8 +157,8 @@ export async function deleteCategory(id: number, targetId: number | null, nowYm 
   const from = monthStart(nowYm);
   // a fund: closed first, what it saved goes to this month's savings; its repeating payments too
   await deleteFund(id, nowYm);
-  for (const p of await db.all<{ id: number }>('SELECT id FROM subscriptions WHERE category_id = ? AND deleted_at IS NULL', [id])) {
-    await deleteSubscription(p.id);
+  for (const p of await db.all<{ id: number }>('SELECT id FROM recurring_payments WHERE category_id = ? AND deleted_at IS NULL', [id])) {
+    await deletePayment(p.id);
   }
   await db.transaction(async (tx) => {
     // the past stays in it: its operations there that follow a merchant are fixed, so the merchant moving on

@@ -203,20 +203,20 @@ export const STEPS_33_ON: MigrationStep[][] = [
   ],
   // 41: saving up for a subscription ("Откладывать каждый месяц?"): a saving is like a fund of the subscription's —
   // from since_ym, "Уже отложено" (start_minor), closed (turned off, the subscription deleted) in closed_ym with what it
-  // had (released_minor: that month's savings); charges before it was made (created_at) aren't its. A past month's contribution is what its plan had (sub_contributions,
+  // had (released_minor: that month's savings); charges before it was made (created_at) aren't its. A past month's contribution is what its plan had (payment_contributions,
   // written while the month is the current or a coming one)
   [
-    `CREATE TABLE IF NOT EXISTS sub_savings (
+    `CREATE TABLE IF NOT EXISTS payment_savings (
       id INTEGER PRIMARY KEY,
-      sub_id INTEGER NOT NULL,
+      payment_id INTEGER NOT NULL,
       since_ym TEXT NOT NULL,
       start_minor INTEGER NOT NULL DEFAULT 0 CHECK (start_minor >= 0),
       closed_ym TEXT,
       released_minor INTEGER,
       created_at INTEGER NOT NULL DEFAULT 0
     )`,
-    'CREATE UNIQUE INDEX IF NOT EXISTS idx_sub_savings_open ON sub_savings(sub_id) WHERE closed_ym IS NULL',
-    `CREATE TABLE IF NOT EXISTS sub_contributions (
+    'CREATE UNIQUE INDEX IF NOT EXISTS idx_payment_savings_open ON payment_savings(payment_id) WHERE closed_ym IS NULL',
+    `CREATE TABLE IF NOT EXISTS payment_contributions (
       saving_id INTEGER NOT NULL,
       ym TEXT NOT NULL,
       minor INTEGER NOT NULL,
@@ -224,16 +224,18 @@ export const STEPS_33_ON: MigrationStep[][] = [
     )`,
   ],
   // 42: repeating payments in any category ("Повторяющиеся платежи", categories.recurring): its plan item counted from
-  // them (kind 'subs'), each subscription (a repeating payment) of its category (subscriptions.category_id). "Подписки"
+  // them (kind 'subs'), each subscription (a repeating payment) of its category (recurring_payments.category_id). "Подписки"
   // is no longer a system category: one with the switch on, its subscriptions its own
   [
     'ALTER TABLE categories ADD COLUMN recurring INTEGER NOT NULL DEFAULT 0',
     'ALTER TABLE subscriptions ADD COLUMN category_id INTEGER',
+    // the code's word for them: a repeating payment
+    'ALTER TABLE subscriptions RENAME TO recurring_payments',
     async (db) => {
       const subs = (await db.get<{ id: number }>("SELECT id FROM categories WHERE system = 'subs'"))?.id;
       if (subs === undefined) return;
       await db.run('UPDATE categories SET recurring = 1, system = NULL WHERE id = ?', [subs]);
-      await db.run('UPDATE subscriptions SET category_id = ?', [subs]);
+      await db.run('UPDATE recurring_payments SET category_id = ?', [subs]);
     },
   ],
 ];

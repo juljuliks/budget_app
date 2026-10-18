@@ -78,10 +78,10 @@ function TransactionItem({ tx, onPress, onLongPress, selectable, selected, onDel
           {formatAmount(split?.amount_minor ?? tx.amount_minor, tx.currency, tx.kind)}
         </Text>
         {split?.part ? <Text style={styles.whole}>из {formatMoneyWithCurrency(tx.amount_minor, tx.currency)}</Text> : null}
-        {tx.sub_period ? (
+        {tx.payment_period ? (
           <View style={styles.inline}>
             <RepeatIcon color={colors.muted} size={12} />
-            <Text style={styles.whole}> {periodText(tx.sub_period)}</Text>
+            <Text style={styles.whole}> {periodText(tx.payment_period)}</Text>
           </View>
         ) : null}
       </View>

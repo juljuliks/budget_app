@@ -1,4 +1,4 @@
-import { savedInCategory } from './subscriptions/recurring';
+import { savedInCategory } from './recurring/recurring';
 import { getDb } from './index';
 import type { Db } from './types';
 import { currentYm, monthStart } from './plans';
@@ -44,7 +44,7 @@ export async function categoryDeletePreview(id: number, nowYm = currentYm()): Pr
     past: await bucket('t.category_id = ? AND t.occurred_at < ?', [id, from]),
     merchants: merchants.map((m) => m.name),
     hasPlan: !!plan,
-    payments: (await db.get<{ n: number }>('SELECT count(*) AS n FROM subscriptions WHERE category_id = ? AND deleted_at IS NULL', [id]))?.n ?? 0,
+    payments: (await db.get<{ n: number }>('SELECT count(*) AS n FROM recurring_payments WHERE category_id = ? AND deleted_at IS NULL', [id]))?.n ?? 0,
     saved: await savedInCategory(id),
   };
 }

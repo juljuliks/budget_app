@@ -5,7 +5,7 @@ import { BUDGET_CURRENCY, asCurrency, currentYm, monthRange, parseYm, planRateDa
 import { convertSpending, spendRows, sumBy } from './spend';
 import { PlanBudget } from './types';
 import { refreshFundItems, ymBefore } from './funds';
-import { refreshSubscriptionItem } from './subscriptionItems';
+import { refreshRecurringItem } from './recurringItems';
 
 /** The unplanned share of a budget, in its currency. */
 export const unplannedOf = (b: Pick<PlanBudget, 'amount_minor' | 'unplanned_pct' | 'unplanned_minor'>) =>
@@ -21,8 +21,8 @@ export async function ensureMonthPlan(ym: string, nowYm = currentYm()): Promise<
   const created = await createMonthPlan(ym);
   // the funds' contributions as what is saved now asks (the spending since changed it)
   await refreshFundItems(ym, nowYm);
-  // "Подписки": a new month's charges (later — counted again by each change of a subscription)
-  if (created) await refreshSubscriptionItem(ym, nowYm);
+  // "Подписки": a new month's charges (later — counted again by each change of a repeating payment)
+  if (created) await refreshRecurringItem(ym, nowYm);
 }
 
 /** Made now: true; already there: false. */

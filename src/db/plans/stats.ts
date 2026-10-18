@@ -9,7 +9,7 @@ import { NormPeriod, PlanKind, asNorm } from './types';
 import { ensureMonthPlan } from './budget';
 import { placeholders } from '../sql';
 import { activeFunds, fundLedger } from './funds';
-import { savingSpend } from '../subscriptions/saving';
+import { savingSpend } from '../recurring/saving';
 
 export type CategoryStat = {
   category_id: number | null; // null = uncategorized

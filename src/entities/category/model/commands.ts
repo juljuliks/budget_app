@@ -1,5 +1,5 @@
 // The category's writes: each one tells the screens the data changed.
-import { RecurringUndo, turnRecurring, undoRecurring } from '@/db/subscriptions';
+import { RecurringUndo, turnRecurring, undoRecurring } from '@/db/recurring';
 import { createCategory, updateCategory } from '@/db/categories';
 import { createCategoryType, renameCategoryType, setCategoryTypePalette } from '@/db/categoryTypes';
 import { emitTransactionsChanged } from '@/domain/events';

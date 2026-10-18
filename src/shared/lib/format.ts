@@ -58,7 +58,7 @@ export function formatPercent(part: number, whole: number): string {
   return p === 0 && part > 0 ? '<1%' : `${p}%`;
 }
 
-/** How often a subscription is charged: "каждый месяц", "раз в 3 месяца", "раз в полгода", "раз в год", "раз в 2 года". */
+/** How often a repeating payment is charged: "каждый месяц", "раз в 3 месяца", "раз в полгода", "раз в год", "раз в 2 года". */
 export function periodText(months: number): string {
   if (months === 1) return 'каждый месяц';
   if (months === 6) return 'раз в полгода';

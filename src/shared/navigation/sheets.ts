@@ -24,11 +24,11 @@ export type SheetState = {
   backup: boolean;
   /** "Блокировка" (Настройки → "Настроить"): the fingerprint, when to ask, the notifications, a new PIN */
   lockOptions: boolean;
-  /** a subscription: one (`id`), or the one of an operation's merchant (`txId`: made from it if it has none) */
-  subscription: { id?: number; txId?: number } | null;
+  /** a repeating payment: one (`id`), or the one of an operation's merchant (`txId`: made from it if it has none) */
+  payment: { id?: number; txId?: number } | null;
 };
 
-export const CLOSED: SheetState = { transaction: null, addTransaction: false, categoryTypes: false, categoryDelete: null, monthReport: null, monthClose: null, merchant: null, settings: false, backup: false, lockOptions: false, subscription: null };
+export const CLOSED: SheetState = { transaction: null, addTransaction: false, categoryTypes: false, categoryDelete: null, monthReport: null, monthClose: null, merchant: null, settings: false, backup: false, lockOptions: false, payment: null };
 
 let handler: ((patch: Partial<SheetState>) => void) | null = null;
 let pending: Partial<SheetState> = {};
@@ -47,7 +47,7 @@ export const openMerchant = (merchantKey: string) => open({ merchant: merchantKe
 export const openSettings = () => open({ settings: true });
 export const openBackup = () => open({ backup: true });
 export const openLockOptions = () => open({ lockOptions: true });
-export const openSubscription = (which: { id?: number; txId?: number }) => open({ subscription: which });
+export const openPayment = (which: { id?: number; txId?: number }) => open({ payment: which });
 
 /** ModalHost registers itself; returns what was asked for before it was mounted. */
 export function attachSheetHost(h: (patch: Partial<SheetState>) => void): Partial<SheetState> {

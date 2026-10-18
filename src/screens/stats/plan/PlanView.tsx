@@ -15,7 +15,7 @@ import BudgetSheet from './parts/BudgetSheet';
 import SavingsLessSheet from './parts/SavingsLessSheet';
 import { itemSections, recurringSection, systemSections } from './parts/sections';
 import { FundSheet } from '@/features/fund';
-import { SubscriptionsSheet } from '@/features/subscriptions';
+import { RecurringPaymentsSheet } from '@/features/recurring-payments';
 import { CarrySheet } from '@/features/month-close';
 import type { PlanItem } from '@/db/plans';
 import { styles } from './parts/styles';
@@ -97,7 +97,7 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
         onOpen={(id) => { const item = items.find((i) => i.category_id === id); if (item) setEditingItem(editTarget(item)); }}
       />
       {subsOpen ? (
-        <SubscriptionsSheet
+        <RecurringPaymentsSheet
           ym={ym} category={{ id: subsOpen.category_id, name: subsOpen.name, emoji: subsOpen.emoji }} currency={currency}
           onClose={() => setSubsOpen(null)}
           onEditAmount={() => { const item = subsOpen; setSubsOpen(null); setEditingItem(editTarget(item)); }}

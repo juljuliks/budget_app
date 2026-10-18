@@ -27,8 +27,8 @@ export type TransactionRow = {
   category_type_name: string | null;
   /** a split operation's parts in other categories (PARTS_COLUMN; parseParts), null = not split */
   parts: string | null;
-  /** in "Подписки": how often its merchant's subscription is charged (months); null — none, or without a day */
-  sub_period?: number | null;
+  /** in "Подписки": how often its merchant's repeating payment is charged (months); null — none, or without a day */
+  payment_period?: number | null;
   /** the list filtered by categories: those (a split operation shows its parts in them) */
   focus?: number[];
 };

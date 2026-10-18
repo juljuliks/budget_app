@@ -8,7 +8,7 @@ import { SectionHeader } from '@/shared/ui/StickyScrollView';
 import { formStyles } from '@/shared/theme/formStyles';
 import { percentOf, PlanView } from '../model/planView';
 import { FundItemRow } from './FundItemRow';
-import { SubsItemRow } from './SubsItemRow';
+import { RecurringItemRow } from './RecurringItemRow';
 import { PlanItemRow, SystemRowView } from './PlanItemRow';
 import { styles } from './styles';
 
@@ -97,7 +97,7 @@ export function recurringSection(p: PlanView, hidden: boolean, onOpen: (item: Pl
         </Text>
       ))}
       <View>
-        {p.recurring.map((item) => <SubsItemRow key={item.category_id} p={p} item={item} hidden={hidden} onOpen={() => onOpen(item)} />)}
+        {p.recurring.map((item) => <RecurringItemRow key={item.category_id} p={p} item={item} hidden={hidden} onOpen={() => onOpen(item)} />)}
       </View>
     </React.Fragment>
   );

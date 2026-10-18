@@ -3,7 +3,7 @@ import { Currency } from '../fx';
 
 /**
  * 'limit' = spending cap (progress bar); 'fixed' = fixed payment like rent (paid / not paid); 'fund' = a fund's contribution
- * (funds.ts); 'subs' = a category with "Повторяющиеся платежи", the month's charges (subscriptionItems.ts).
+ * (funds.ts); 'subs' = a category with "Повторяющиеся платежи", the month's charges (recurringItems.ts).
  */
 export type PlanKind = 'limit' | 'fixed' | 'fund' | 'subs';
 

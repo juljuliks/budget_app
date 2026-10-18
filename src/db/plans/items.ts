@@ -6,7 +6,7 @@ import { Currency } from '../fx';
 import { asCurrency } from './months';
 import { NormPeriod, PlanItem, PlanKind, asNorm } from './types';
 import { activeFunds, fundLedger } from './funds';
-import { monthSubscriptions } from './subscriptionItems';
+import { monthPayments } from './recurringItems';
 import { OverBudgetError, ensureMonthPlan, planConverter, planCurrency, plannedTotal, storedBudget } from './budget';
 
 /** The month's plan items; `converted_minor` in `to` (default: the amount to distribute's currency). */
@@ -29,8 +29,8 @@ export async function listPlan(ym: string, to?: Currency): Promise<PlanItem[]> {
   // a category with repeating payments: their names, those saved up for, the contributions
   const subsInfo = new Map<number, NonNullable<PlanItem['subs']>>();
   for (const r of rows.filter((x) => x.recurring)) {
-    const subs = await monthSubscriptions(ym, target, undefined, r.category_id);
-    const savingIds = new Set(subs.saving.map((v) => v.sub_id));
+    const subs = await monthPayments(ym, target, undefined, r.category_id);
+    const savingIds = new Set(subs.saving.map((v) => v.payment_id));
     const subNames = (keep: (id: number) => boolean) => [...subs.charges.map((c) => c.sub), ...subs.later.map((l) => l.sub)]
       .filter((s) => keep(s.id)).map((s) => s.name).filter((n, i, all) => all.indexOf(n) === i);
     subsInfo.set(r.category_id, {

@@ -56,7 +56,7 @@ export async function mergeCategories(targetId: number, sourceIds: number[], nam
     await moveParts(tx, sources, targetId);
     await tx.run(`UPDATE merchant_rules SET category_id = ? WHERE category_id IN (${sourceMarks})`, [targetId, ...sources]);
     // repeating payments go along: the merged one has them if any had
-    await tx.run(`UPDATE subscriptions SET category_id = ? WHERE category_id IN (${sourceMarks})`, [targetId, ...sources]);
+    await tx.run(`UPDATE recurring_payments SET category_id = ? WHERE category_id IN (${sourceMarks})`, [targetId, ...sources]);
     await tx.run(`UPDATE categories SET recurring = 1 WHERE id = ? AND EXISTS (SELECT 1 FROM categories WHERE recurring = 1 AND id IN (${sourceMarks}))`, [targetId, ...sources]);
     await tx.run(`UPDATE OR IGNORE merchant_categories SET category_id = ? WHERE category_id IN (${sourceMarks})`, [targetId, ...sources]);
     await tx.run(`DELETE FROM merchant_categories WHERE category_id IN (${sourceMarks})`, sources);

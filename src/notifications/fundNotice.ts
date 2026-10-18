@@ -1,11 +1,11 @@
 // A purchase that came straight into a fund's category (its merchant's): "−1 200 ₾ · TURKISH AIRLINES",
 // "🏖 Отпуск · из копилки, осталось 0 ₾" — it is taken from what the fund saved, not from the month's budget; a
-// subscription's charge paid from what was saved for it: "📺 Подписки · iCloud+ из отложенного, осталось 0 ₾".
+// repeating payment's charge paid from what was saved for it: "📺 Подписки · iCloud+ из отложенного, осталось 0 ₾".
 import notifee, { AndroidImportance } from '@notifee/react-native';
 import { getDb } from '../db';
 import { categoryShortLabel, listCategories } from '../db/categories';
 import { fundOfTransaction } from '../db/plans';
-import { savingOfTransaction } from '../db/subscriptions';
+import { savingOfTransaction } from '../db/recurring';
 import { formatMoneyWithCurrency } from '@/shared/lib/money';
 import { hideNotificationAmounts } from '../native/appLock';
 
