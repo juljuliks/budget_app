@@ -9,6 +9,7 @@ import { NormPeriod, PlanKind, asNorm } from './types';
 import { ensureMonthPlan } from './budget';
 import { placeholders } from '../sql';
 import { activeFunds, fundLedger } from './funds';
+import { savingSpend } from '../subscriptions/saving';
 
 export type CategoryStat = {
   category_id: number | null; // null = uncategorized
@@ -137,6 +138,9 @@ export async function monthStats(year: number, month: number, currency: Currency
   const { items, missing, conv } = await convertSpending(await spendRows(from, to), currency, [planDate]);
   const spentBy = sumBy(items, categoryKey);
   const refundsUnassigned = refundsUnassignedOf(spentBy);
+  // the subscriptions saved up for: "Подписки" spent their contributions, not what was paid from them
+  const saving = await savingSpend(ym, (minor, from) => conv(minor, from, currency, planDate) ?? 0);
+  if (saving) spentBy.set(saving.category_id, (spentBy.get(saving.category_id) ?? 0) + saving.minor);
 
   const colorOf = await categoryColors();
 

@@ -6,6 +6,7 @@ import { convertSpending, spendByDay, spendRows } from './spend';
 import { unplannedOf } from './budget';
 import { monthStats, spentOf } from './stats';
 import { allFunds, fundLedger } from './funds';
+import { allSavings, savingLedger } from '../subscriptions/saving';
 import type { RestChoice } from './close';
 
 /**
@@ -156,6 +157,15 @@ export async function planHistory(nowYm = currentYm(), currency: Currency = BUDG
       releasedBy.set(fund.closed_ym, [...releasedBy.get(fund.closed_ym) ?? [],
         { name: c?.name ?? '', emoji: c?.emoji ?? null, minor: toShown(fund.released_minor, fund.closed_ym) }]);
     }
+  }
+
+  // the subscriptions saved up for: "Подписки" spent the contributions, not what was paid from them (as monthStats)
+  for (const v of await allSavings()) {
+    const toShown = (minor: number, ym: string) => conv(minor, v.currency, currency, planRateDate(ym)) ?? 0;
+    for (const m of (await savingLedger(v, nowYm, nowYm)).months) {
+      spentBy.set(m.ym, (spentBy.get(m.ym) ?? 0) + toShown(m.contribution - (m.spent - m.shortage), m.ym));
+    }
+    if (v.closed_ym && v.released_minor) spentBy.set(v.closed_ym, (spentBy.get(v.closed_ym) ?? 0) - toShown(v.released_minor, v.closed_ym));
   }
 
   const out: HistoryMonth[] = [];

@@ -53,5 +53,6 @@ test('a month of stats: the month and today\'s norms', async () => {
     await monthStats(2026, 9, 'GEL');
     await loadNorms({ from: '2026-10-15', to: '2026-10-15' }, 'GEL');
   });
-  expect(n).toBeLessThanOrEqual(18);
+  // 19: one look for the subscriptions saved up for (db/subscriptions/saving.ts)
+  expect(n).toBeLessThanOrEqual(19);
 });

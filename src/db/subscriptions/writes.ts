@@ -3,6 +3,7 @@ import { getDb } from '../index';
 import { Currency } from '../fx';
 import { currentYm } from '../plans/months';
 import { refreshSubscriptionItems } from '../plans/subscriptionItems';
+import { SavingUndo, stopSaving, undoSaving } from './savingWrites';
 
 export type SubscriptionInput = {
   merchant_key: string | null;
@@ -35,15 +36,21 @@ export async function saveSubscription(input: SubscriptionInput, id?: number): P
   return out;
 }
 
-/** Deletes a subscription: its charges leave the plans of this month on (past ones stay). */
-export async function deleteSubscription(id: number): Promise<void> {
+/**
+ * Deletes a subscription: its charges leave the plans of this month on (past ones stay); saved up for, what it had goes
+ * to this month's savings. What "Отменить" needs to put the saving back (null — wasn't saving).
+ */
+export async function deleteSubscription(id: number): Promise<{ released: number; undo: SavingUndo } | null> {
+  const stopped = await stopSaving(id);
   const db = await getDb();
   await db.run('UPDATE subscriptions SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL', [Math.floor(Date.now() / 1000), id]);
   await refreshSubscriptionItems();
+  return stopped;
 }
 
-/** Brings a deleted subscription back ("Отменить" in the toast). */
-export async function restoreSubscription(id: number): Promise<void> {
+/** Brings a deleted subscription back ("Отменить" in the toast), its saving too. */
+export async function restoreSubscription(id: number, saving?: SavingUndo | null): Promise<void> {
   await (await getDb()).run('UPDATE subscriptions SET deleted_at = NULL WHERE id = ?', [id]);
-  await refreshSubscriptionItems();
+  if (saving) await undoSaving(saving);
+  else await refreshSubscriptionItems();
 }

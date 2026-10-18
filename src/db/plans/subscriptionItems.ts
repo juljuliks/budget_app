@@ -1,13 +1,20 @@
 // "Подписки" in a month's plan: its item (kind 'subs') is the month's charges, counted from the subscriptions with a day
 // (db/subscriptions/schedule.ts). Until one has a day the item keeps the amount put in by hand (what it had before the
-// subscriptions). The current and the coming months are counted again on each look; past ones stay as they were.
+// subscriptions). The current and the coming months are counted again on each look; past ones stay as they were. A
+// subscription saved up for ("Откладывать каждый месяц?") puts its contribution in instead of its charge (paid from
+// what was saved).
 import { getDb } from '../index';
 import { Currency, makeConverter } from '../fx';
 import { chargeDays, listSubscriptions, Subscription, todayKey } from '../subscriptions/reads';
 import { addMonths, chargesBetween, monthCharges, monthDays, nextCharge } from '../subscriptions/schedule';
+import { savingEffects, storeContributions } from '../subscriptions/saving';
 import { asCurrency, currentYm, planRateDate } from './months';
 
-export type SubCharge = { sub: Subscription; day: string; done: boolean; converted_minor: number | null };
+/** `saved`: paid from what was saved for it (not in the month's sum) */
+export type SubCharge = { sub: Subscription; day: string; done: boolean; converted_minor: number | null; saved: boolean };
+
+/** A subscription saved up for in the month: what it has at the month's start, the contribution, in its currency. */
+export type SubSaving = { sub_id: number; start_minor: number; contribution_minor: number; end_minor: number; converted_minor: number | null };
 
 export type MonthSubscriptions = {
   /** the month's charges by day */
@@ -16,7 +23,9 @@ export type MonthSubscriptions = {
   later: Array<{ sub: Subscription; next: string }>;
   /** those without a day */
   undated: Subscription[];
-  /** the charges' sum in `currency` (those without a rate left out) */
+  /** the subscriptions saved up for */
+  saving: SubSaving[];
+  /** the charges' sum (but those paid from what was saved) and the contributions, in `currency` (those without a rate left out) */
   total_minor: number;
   currency: Currency;
 };
@@ -31,15 +40,22 @@ export async function monthSubscriptions(ym: string, to?: Currency, now = new Da
   const rateDay = planRateDate(ym);
   const today = todayKey(now);
   const [, last] = monthDays(ym);
-  const out: MonthSubscriptions = { charges: [], later: [], undated: [], total_minor: 0, currency };
+  const out: MonthSubscriptions = { charges: [], later: [], undated: [], saving: [], total_minor: 0, currency };
+  for (const e of await savingEffects(ym, currentYm(now), db)) {
+    if (!e.month) continue;
+    const converted = conv(e.month.contribution, e.currency, currency, rateDay);
+    out.saving.push({ sub_id: e.saving.sub_id, start_minor: e.month.start, contribution_minor: e.month.contribution, end_minor: e.month.end, converted_minor: converted });
+    out.total_minor += converted ?? 0;
+  }
+  const saved = new Set(out.saving.map((v) => v.sub_id));
   for (const sub of subs) {
     if (!sub.due) { out.undated.push(sub); continue; }
     const ops = sub.merchant_key ? days.get(sub.merchant_key) ?? [] : [];
     const charges = monthCharges(sub.due, sub.period_months, ym, ops, `${sub.since_ym}-01`);
     for (const c of charges) {
       const converted = conv(sub.amount_minor, sub.currency, currency, rateDay);
-      out.charges.push({ sub, ...c, converted_minor: converted });
-      out.total_minor += converted ?? 0;
+      out.charges.push({ sub, ...c, converted_minor: converted, saved: saved.has(sub.id) });
+      if (!saved.has(sub.id)) out.total_minor += converted ?? 0;
     }
     if (!charges.length) {
       // the current month: the next one waited for (a late one too); a coming month: the first after it
@@ -76,6 +92,7 @@ export async function refreshSubscriptionItem(ym: string, nowYm = currentYm()): 
   // an amount by hand stays until a subscription has a day (once counted, it's counted on — 0 with none left); no item and
   // no subscriptions — none made
   if (r.kind === null ? !r.any : r.kind !== 'subs' && !r.dated) return;
+  await storeContributions(ym, nowYm, db);
   const { total_minor, currency } = await monthSubscriptions(ym, asCurrency(r.c));
   await db.run(
     `INSERT INTO plan_items (ym, category_id, limit_minor, pinned, kind, currency) VALUES (?, ?, ?, 0, 'subs', ?)

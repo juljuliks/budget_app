@@ -201,4 +201,25 @@ export const STEPS_33_ON: MigrationStep[][] = [
       await db.run('DELETE FROM categories WHERE id = ?', [savings]);
     },
   ],
+  // 41: saving up for a subscription ("Откладывать каждый месяц?"): a saving is like a fund of the subscription's —
+  // from since_ym, "Уже отложено" (start_minor), closed (turned off, the subscription deleted) in closed_ym with what it
+  // had (released_minor: that month's savings). A past month's contribution is what its plan had (sub_contributions,
+  // written while the month is the current or a coming one)
+  [
+    `CREATE TABLE IF NOT EXISTS sub_savings (
+      id INTEGER PRIMARY KEY,
+      sub_id INTEGER NOT NULL,
+      since_ym TEXT NOT NULL,
+      start_minor INTEGER NOT NULL DEFAULT 0 CHECK (start_minor >= 0),
+      closed_ym TEXT,
+      released_minor INTEGER
+    )`,
+    'CREATE UNIQUE INDEX IF NOT EXISTS idx_sub_savings_open ON sub_savings(sub_id) WHERE closed_ym IS NULL',
+    `CREATE TABLE IF NOT EXISTS sub_contributions (
+      saving_id INTEGER NOT NULL,
+      ym TEXT NOT NULL,
+      minor INTEGER NOT NULL,
+      PRIMARY KEY (saving_id, ym)
+    )`,
+  ],
 ];

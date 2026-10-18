@@ -94,3 +94,16 @@ export function offeredDue(lastOpDay: string, periodMonths: number, today: strin
   while (chargeAt(lastOpDay, periodMonths, k) < today) k++;
   return chargeAt(lastOpDay, periodMonths, k);
 }
+
+/**
+ * The charge `ym`'s saving is for: the first on or after the month's 1st (from the set day on, or a done one), not
+ * paid before the month (a charge a few days early belongs to the month it was paid in).
+ */
+export function savingFor(due: string, periodMonths: number, ym: string, opDays: string[]): string {
+  const from = `${ym}-01`;
+  for (let to = addMonths(from, periodMonths); ; to = addMonths(to, periodMonths)) {
+    const day = chargesBetween(due, periodMonths, from, to).find((d) =>
+      (d >= due || isDone(d, opDays)) && !opDays.some((o) => o < from && Math.abs(daysBetween(d, o)) <= WINDOW_DAYS));
+    if (day) return day;
+  }
+}
