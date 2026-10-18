@@ -208,4 +208,22 @@ describe('migrations', () => {
     expect(await db.get('SELECT category_id FROM recurring_payments')).toEqual({ category_id: subs });
     expect(await db.get('SELECT count(*) AS n FROM categories WHERE recurring = 1')).toEqual({ n: 1 });
   });
+
+  test('migration 43: the tables renamed to repeating payments, a saving\'s sub_id → payment_id; one renamed before — left as it is', async () => {
+    const db = openDatabase(':memory:');
+    await migrate(db, MIGRATIONS.slice(0, 42));
+    await db.run("INSERT INTO subscriptions (merchant_key, name, amount_minor, currency, since_ym, created_at) VALUES ('ICLOUD', 'iCloud+', 10000, 'GEL', '2026-10', 0)");
+    await db.run("INSERT INTO sub_savings (id, sub_id, since_ym, start_minor) VALUES (3, 1, '2026-10', 500)");
+    await db.run("INSERT INTO sub_contributions (saving_id, ym, minor) VALUES (3, '2026-10', 900)");
+    await migrate(db);
+    expect(await db.get('SELECT name FROM recurring_payments')).toEqual({ name: 'iCloud+' });
+    expect(await db.get('SELECT id, payment_id, start_minor FROM payment_savings')).toEqual({ id: 3, payment_id: 1, start_minor: 500 });
+    expect(await db.get('SELECT minor FROM payment_contributions')).toEqual({ minor: 900 });
+
+    const early = openDatabase(':memory:');
+    await migrate(early, MIGRATIONS.slice(0, 42));
+    await early.run('ALTER TABLE subscriptions RENAME TO recurring_payments');
+    await migrate(early);
+    expect(await early.get("SELECT count(*) AS n FROM sqlite_master WHERE name IN ('recurring_payments', 'payment_savings', 'payment_contributions')")).toEqual({ n: 3 });
+  });
 });
