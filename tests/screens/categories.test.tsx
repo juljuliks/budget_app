@@ -3,7 +3,7 @@ import { act, fireEvent, waitFor } from '@testing-library/react-native';
 import notifee from '@notifee/react-native';
 import SmsBackgroundTask from '../../src/native/SmsBackgroundTask';
 import { navigationRef } from '../../src/shared/navigation/navigation';
-import { longPress, openApp, openSettings, screen, tap, texts, toggleSwitch, backToTabs } from './app';
+import { longPress, openApp, openSettings, screen, tap, texts, toggleSwitch, backToTabs, back } from './app';
 import { base, category, ops } from '../e2e/seeds';
 import { setPlanAmount } from '../../src/db/plans';
 import { getDb } from '../../src/db';
@@ -54,9 +54,9 @@ describe('4.1–4.2 the list; creating and changing a category', () => {
 
   test('changing one: its operations, then the new name everywhere', async () => {
     await tap('🛒 Продукты');
-    expect(await screen.findByText('Категория')).toBeTruthy();
-    expect(screen.getByText('61 операция · 384.00 ₾')).toBeTruthy();
-    expect(screen.getByText('Показать операции ›')).toBeTruthy();
+    expect(await screen.findByText('61 операция · 384.00 ₾ ›')).toBeTruthy();
+    expect(screen.getByText('Последние операции')).toBeTruthy();
+    expect(screen.getByText('Показать все ›')).toBeTruthy();
     fireEvent.changeText(screen.getByDisplayValue('Продукты'), 'Еда');
     await tap('Сохранить');
     expect(await screen.findByText('Категория «🛒 Еда» сохранена')).toBeTruthy();
@@ -75,14 +75,15 @@ describe('4.1–4.2 the list; creating and changing a category', () => {
 
   test('"Показать операции": the operations of it; back returns here', async () => {
     await tap('👕 Одежда');
-    await tap('Показать операции ›');
+    await tap(/^\d+ операци.* ›$/);
     expect(await screen.findByText('Категория · 1')).toBeTruthy();
     expect(screen.getByText('Возврат · ZARA')).toBeTruthy();
     expect(screen.queryByText('SPAR')).toBeNull();
     await tap('Назад');
-    expect(await screen.findByText('Разделы')).toBeTruthy();
-    // and its sheet again
+    // its page again, over the categories
     expect(await screen.findByDisplayValue('Одежда')).toBeTruthy();
+    back();
+    expect(await screen.findByText('Разделы')).toBeTruthy();
   });
 
   test('"Подписки": a category of its own — renamed, deleted as any; its repeating payments are not switched here (the plan does)', async () => {

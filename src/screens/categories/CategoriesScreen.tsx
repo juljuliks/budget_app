@@ -11,7 +11,8 @@ import { formStyles } from '@/shared/theme/formStyles';
 import { colors } from '@/shared/theme/theme';
 import { CreateButton } from '@/shared/ui/PlusButton';
 import { CategorySheet } from '@/entities/category';
-import { openCategory, openCategoryTypes } from '@/shared/navigation/sheets';
+import { openCategoryTypes } from '@/shared/navigation/sheets';
+import { openCategory } from '@/shared/navigation/navigation';
 import { onTransactionsChanged } from '@/domain/events';
 import Checkbox from '@/shared/ui/Checkbox';
 import { MergeCategoriesSheet } from '@/features/category-merge';
@@ -25,8 +26,7 @@ export default function CategoriesScreen({ navigation }: Props) {
   const [cats, setCats] = useState<Category[]>([]);
   const [colorOf, setColorOf] = useState<Map<number, string>>(new Map());
   const [types, setTypes] = useState<string[]>([]);
-  // "+": a new category's sheet; an existing one opens over the page through ModalHost (openCategory), so that back from
-  // its "Показать операции" shows it again
+  // "+": a new category's sheet; an existing one is a page over this one
   const [creating, setCreating] = useState(false);
   // picked to merge, in the order picked (the first is merged into); empty = not picking
   const [picked, setPicked] = useState<number[]>([]);

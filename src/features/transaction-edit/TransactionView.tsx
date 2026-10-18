@@ -2,10 +2,9 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { confirmDeleteTransaction, confirmUnsplit, splitParts } from '@/entities/transaction';
 import { isRememberable } from '@/domain/types';
-import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
 import { SheetActions } from '@/shared/ui/Button';
 import Loading from '@/shared/ui/Loading';
-import { useLast } from '@/shared/lib/useLast';
+import Page from '@/shared/ui/Page';
 import { colors } from '@/shared/theme/theme';
 import { useCategoryChoice } from './model/useCategoryChoice';
 import { useTransaction } from './model/useTransaction';
@@ -17,32 +16,26 @@ import TransactionCategory from './ui/TransactionCategory';
 import TransactionHeader from './ui/TransactionHeader';
 
 type Props = {
-  /** the operation to show; null = closed */
-  txId: number | null;
+  txId: number;
+  /** leaves the page: the operation deleted, a category picked */
   onClose: () => void;
 };
 
 /**
- * An operation in a sheet (from the list or a notification): the amount (tap to correct it), its category and the
- * merchant's (a refund is subtracted from its category), the SMS, a note; "Удалить операцию" at the bottom.
+ * An operation's page (from the list, a notification, a merchant's or a category's page): the amount (tap to correct
+ * it), the merchant and the category (links to their pages), the merchant's category (a refund is subtracted from its
+ * category), the SMS, a note; "Удалить операцию" pinned at the bottom. The forms over it are sheets.
  */
-export default function TransactionSheet({ txId: openId, onClose }: Props) {
-  // kept while the sheet slides away
-  const txId = useLast(openId) ?? -1;
-  const visible = openId !== null;
-  const { tx, merchantCategory, mixedCats, reload, failed } = useTransaction(txId, visible);
-  const { saving, choose } = useCategoryChoice(txId, tx ?? null, visible, onClose);
+export default function TransactionView({ txId, onClose }: Props) {
+  const { tx, merchantCategory, mixedCats, reload, failed } = useTransaction(txId, true);
+  const { saving, choose } = useCategoryChoice(txId, tx ?? null, true, onClose);
   const [amountOpen, setAmountOpen] = useState(false);
   const [splitOpen, setSplitOpen] = useState(false);
 
   if (!tx) {
-    return (
-      <BottomSheet visible={visible} onClose={onClose} title="Операция">
-        {tx === null
-          ? <Text style={styles.gone}>Операция не найдена: возможно, её удалили.</Text>
-          : <Loading inline style={styles.center} failed={failed} onRetry={reload} />}
-      </BottomSheet>
-    );
+    return tx === null
+      ? <Text style={styles.gone}>Операция не найдена: возможно, её удалили.</Text>
+      : <Loading failed={failed} onRetry={reload} />;
   }
   const merchantName = tx.raw_merchant || tx.merchant_key;
   // only purchases / payments are remembered for their merchant (see assignCategory)
@@ -50,8 +43,12 @@ export default function TransactionSheet({ txId: openId, onClose }: Props) {
   const split = splitParts(tx) !== null;
 
   return (
-    <BottomSheet visible={visible} onClose={onClose} style={styles.sheet}>
-    <SheetScrollView contentContainerStyle={styles.content}>
+    <Page contentStyle={styles.content} footer={(
+      <SheetActions submit={null} style={styles.actions} extra={[
+        ...(split ? [{ title: 'Убрать разделение', onPress: () => confirmUnsplit(tx) }] : []),
+        { title: 'Удалить операцию', danger: true, onPress: () => confirmDeleteTransaction(tx, onClose) },
+      ]} />
+    )}>
       <TransactionHeader tx={tx} onEditAmount={() => setAmountOpen(true)} merchantLinked={rememberable} />
       <TransactionCategory tx={tx} mixedCats={mixedCats} saving={saving} choose={choose} onSplit={() => setSplitOpen(true)} />
 
@@ -76,20 +73,13 @@ export default function TransactionSheet({ txId: openId, onClose }: Props) {
       <NoteSection txId={tx.id} note={tx.note} onSaved={reload} />
       <AmountModal visible={amountOpen} tx={tx} onClose={() => setAmountOpen(false)} onSaved={reload} />
       <SplitSheet visible={splitOpen} tx={tx} onClose={() => setSplitOpen(false)} />
-
-      <SheetActions submit={null} extra={[
-        ...(split ? [{ title: 'Убрать разделение', onPress: () => confirmUnsplit(tx) }] : []),
-        { title: 'Удалить операцию', danger: true, onPress: () => confirmDeleteTransaction(tx, onClose) },
-      ]} />
-    </SheetScrollView>
-    </BottomSheet>
+    </Page>
   );
 }
 
 const styles = StyleSheet.create({
-  sheet: { maxHeight: '92%' },
-  content: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 8 },
-  center: { height: 160, justifyContent: 'center', paddingHorizontal: 20 },
+  content: { paddingHorizontal: 20, paddingTop: 16 },
+  actions: { marginTop: 0 },
   gone: { fontSize: 15, color: colors.muted, textAlign: 'center', paddingHorizontal: 20, paddingVertical: 48 },
   heading: { fontSize: 13, fontWeight: '600', color: colors.muted, marginTop: 24, marginBottom: 8, textTransform: 'uppercase' },
   merchantInfo: { fontSize: 13, color: colors.muted, marginTop: 10 },

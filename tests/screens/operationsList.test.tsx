@@ -1,6 +1,6 @@
 // 2.1: the operations by day.
 import { waitFor, within } from '@testing-library/react-native';
-import { openApp, rowOf, screen, tap } from './app';
+import { backToTabs, openApp, rowOf, screen, tap } from './app';
 import { buy, daysAgo, ops } from '../e2e/seeds';
 import { getDb } from '../../src/db';
 import { splitTransaction } from '../../src/db/parts';
@@ -51,6 +51,8 @@ test('2.1.6: unread ones in the badge; opening one marks it read', async () => {
     const r = await (await getDb()).get<{ seen: number }>("SELECT seen_at IS NOT NULL AS seen FROM transactions WHERE raw_merchant = 'GLOVO'");
     expect(r?.seen).toBe(1);
   });
+  // back from its page to the list
+  backToTabs();
   await waitFor(() => expect(screen.getByText('1')).toBeTruthy());
 });
 

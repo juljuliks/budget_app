@@ -8,7 +8,7 @@ import { categoryShortLabel, isTopUp, listCategories, topCategories } from '../d
 import { getDb } from '../db';
 import { monthClose } from '../db/plans';
 import { assignCategory } from '../categorize/assign';
-import { openTransaction } from '@/shared/navigation/sheets';
+import { openTransaction } from '@/shared/navigation/navigation';
 import { KIND_LABELS } from '@/shared/lib/format';
 import { formatMoneyWithCurrency } from '@/shared/lib/money';
 import { limitAlertFor } from './limitAlerts';

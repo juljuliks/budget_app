@@ -1,6 +1,6 @@
 import React from 'react';
 import type { StyleProp, TextStyle, ViewStyle } from 'react-native';
-import { openCategory } from '@/shared/navigation/sheets';
+import { openCategory } from '@/shared/navigation/navigation';
 import TextLink from '@/shared/ui/TextLink';
 
 type Props = {
@@ -12,7 +12,7 @@ type Props = {
   containerStyle?: StyleProp<ViewStyle>;
 };
 
-/** A category's name as a link, as a merchant's (MerchantLink): "🛒 Продукты ›" opens its sheet over whatever is open. */
+/** A category's name as a link, as a merchant's (MerchantLink): "🛒 Продукты ›" opens its page over the current one. */
 export default function CategoryLink({ categoryId, label, style, containerStyle }: Props) {
   return <TextLink label={label} onPress={() => openCategory(categoryId)} style={style} containerStyle={containerStyle} hint="Открыть категорию" />;
 }

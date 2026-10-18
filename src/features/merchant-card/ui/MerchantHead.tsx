@@ -1,28 +1,23 @@
 import React from 'react';
-import { StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Switch, Text, View } from 'react-native';
 import type { MerchantDetails } from '@/db/merchants';
 import { plural } from '@/shared/lib/format';
+import TextLink from '@/shared/ui/TextLink';
 import { colors } from '@/shared/theme/theme';
 import { money } from '../texts';
 
 type Props = { m: MerchantDetails; mixed: boolean; saving: boolean; onShowTransactions: () => void; onSwitchMixed: (on: boolean) => void };
 
-/** The name; like a category's sheet: how many operations and how much, a link to them; the "Разные категории" switch. */
+/** Like a category's page: how many operations and how much — a link to them (the name is the page's title); the "Разные категории" switch. */
 export default function MerchantHead({ m, mixed, saving, onShowTransactions, onSwitchMixed }: Props) {
   return (
     <>
-      <Text style={styles.title}>{m.name}</Text>
-      <View style={styles.summaryRow}>
-        <Text style={styles.meta} numberOfLines={1}>
-          {m.count} {plural(m.count, ['операция', 'операции', 'операций'])}
-          {m.totals.length ? ` · ${money(m.totals)}` : ''}
-        </Text>
-        {m.count > 0 ? (
-          <TouchableOpacity onPress={onShowTransactions} hitSlop={8} accessibilityRole="link">
-            <Text style={styles.link}>Показать операции ›</Text>
-          </TouchableOpacity>
-        ) : null}
-      </View>
+      {m.count > 0 ? (
+        <TextLink
+          label={`${m.count} ${plural(m.count, ['операция', 'операции', 'операций'])}${m.totals.length ? ` · ${money(m.totals)}` : ''}`}
+          onPress={onShowTransactions} style={styles.summary} containerStyle={styles.summaryBox}
+        />
+      ) : <Text style={styles.meta}>Операций нет</Text>}
 
       {/* a delivery of groceries or meals: no category of its own, each new operation asks */}
       <View style={styles.switchRow}>
@@ -37,10 +32,9 @@ export default function MerchantHead({ m, mixed, saving, onShowTransactions, onS
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: 20, fontWeight: '600', color: colors.text, flexShrink: 1 },
-  summaryRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 4 },
-  meta: { fontSize: 14, color: colors.muted, flexShrink: 1 },
-  link: { fontSize: 14, color: colors.accent },
+  summaryBox: { alignSelf: 'flex-start' },
+  summary: { fontSize: 15 },
+  meta: { fontSize: 15, color: colors.muted },
   switchRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 16 },
   switchText: { flex: 1 },
   switchTitle: { fontSize: 16, color: colors.text },

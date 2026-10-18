@@ -3,8 +3,7 @@ import React, { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import { BackHandler } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { HeaderBackButton } from '@react-navigation/elements';
-import { navigationRef } from '@/shared/navigation/navigation';
-import { forgetSheets } from '@/shared/navigation/sheets';
+import { forgetPages, navigationRef } from '@/shared/navigation/navigation';
 import HeaderActions from '../parts/HeaderActions';
 import type { TabNavigation } from './useOperationsRoute';
 
@@ -36,7 +35,7 @@ export function useTabLifecycle({ tabNavigation, from, sortingOut, askLeave, edi
 
   // opening the tab from the tab bar is a normal visit: no back button, no sheets to come back to
   useEffect(() => tabNavigation.addListener('tabPress', () => {
-    if (from) { tabNavigation.setParams({ from: undefined }); forgetSheets(); }
+    if (from) { tabNavigation.setParams({ from: undefined }); forgetPages(); }
   }), [tabNavigation, from]);
 
   // Leaving for another tab starts the next visit clean. A screen pushed over the tabs (merchants, categories) keeps the

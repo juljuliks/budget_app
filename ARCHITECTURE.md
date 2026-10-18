@@ -17,7 +17,8 @@ src/
   features/   сценарии пользователя: действие в несколько шагов, с вопросами и последствиями
   entities/   transaction/, category/, merchant/, plan/ — показать, выбрать, просто изменить одну вещь
   shared/     ui/ (кит без знания о бюджете), lib/ (format, money, dates, хуки), theme/,
-              navigation/ (navigationRef, хуки переходов, sheets.ts — открыть шит откуда угодно, leaveGuard)
+              navigation/ (navigationRef, страницы: openTransaction / openMerchant / openCategory, хуки переходов,
+                           sheets.ts — открыть шит откуда угодно, leaveGuard)
               settings/ (хуки над настройками: валюта показа, «скрыть суммы»)
   ядро, без React, по доменам:
   db/          база: миграции и запросы (plans/, transactions/, spending.ts — что считается тратой)
@@ -38,8 +39,8 @@ src/
 |---|---|---|
 | Кнопка, шит, чип, календарь — не знает про операции и категории | `shared/ui` | `Button`, `BottomSheet`, `RangeCalendar` |
 | Чистая функция или хук без бизнес-смысла | `shared/lib` | `format`, `money`, `dates`, `useLatestRequest`, `useStableCallback` |
-| Показать, выбрать или просто изменить одну сущность, без сценария | `entities/<сущность>` | `TransactionItem`, `CategoryPicker`, `CategorySheet` |
-| Действие пользователя в несколько шагов | `features/<действие>` | удалить категорию с разбором, карточка мерчанта (правило), объединить, импорт SMS |
+| Показать, выбрать или просто изменить одну сущность, без сценария | `entities/<сущность>` | `TransactionItem`, `CategoryPicker`, `CategoryView`, `RecentOperations` |
+| Действие пользователя в несколько шагов | `features/<действие>` | удалить категорию с разбором, мерчант (правило: `MerchantView`), объединить, импорт SMS |
 | Вкладка и её части, которые нигде больше не нужны | `screens/<вкладка>/parts` | заголовок раздела операций, строка категории статистики |
 | Корень приложения: стек, вкладки, хосты, старт | `app` | `App.tsx`, `MainTabs`, `ModalHost`, `useAppStartup` |
 | Переходы и открытие шитов — нужны всем слоям, без UI | `shared/navigation` | `navigation.ts`, `sheets.ts`, `leaveGuard.ts` |
@@ -53,11 +54,16 @@ src/
 
 Когда нижнему слою нужно то, что выше, — не импорт, а:
 - проп-колбэк: `CategorySheet` (entity) получает `onDelete`, удаление с разбором (feature) передаёт экран;
-- шит через `sheets.ts`: `TransactionSheet` открывает карточку мерчанта `openMerchant(…)`, её рисует `ModalHost`.
-  Имя мерчанта или категории в шите — `MerchantLink` / `CategoryLink` (обе на `shared/ui/TextLink`: синий текст со
-  стрелкой), шит в заголовке — `BottomSheet` `onTitlePress`. Ссылка из шита на страницу — `showOperationsFromSheet`
-  (`shared/navigation`): шиты `ModalHost` прячутся (`leaveSheets`), «Назад» со страницы показывает их снова
-  (`backToSheets`). Поэтому карточки мерчанта и категории открываются только через `sheets.ts`, не своим состоянием.
+- страница или шит через `shared/navigation`: `TransactionView` открывает страницу мерчанта `openMerchant(…)`, её
+  собирает `screens/merchant`; формы — шиты через `sheets.ts`, их рисует `ModalHost`.
+
+**Страницы и шиты.** Продуктовые сущности — страницы стека (`screens/operation`, `merchant`, `category`): открываются
+`openTransaction` / `openMerchant` / `openCategory` поверх текущей (`push`), «назад» идёт по цепочке. Тело страницы —
+`View` слайса (`TransactionView`, `MerchantView`, `CategoryView`) в `shared/ui/Page`: содержимое прокручивается, кнопки
+прижаты книзу. Формы и выборы (сумма, «Сменить категорию», разделение, описание, новая категория, подтверждения) —
+шиты. Имя мерчанта или категории — `MerchantLink` / `CategoryLink` (обе на `shared/ui/TextLink`: синий текст со
+стрелкой), в заголовке шита — `BottomSheet` `onTitlePress` (шит закрывается: страница уходит под шиты). «Показать все ›»
+со страницы — `showOperationsFrom`: «назад» из «Операций» восстанавливает страницы как были (`backToPages`).
 
 Записи в базу — командами слайса (`model/commands.ts`): запись + `emitTransactionsChanged`. Компоненты не зовут
 `emitTransactionsChanged` сами.

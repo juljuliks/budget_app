@@ -4,7 +4,7 @@ import type { Currency } from '@/db/fx';
 import { RecurringPayment, todayKey } from '@/db/recurring';
 import { formatWithCurrency } from '@/shared/lib/money';
 import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
-import { openCategory } from '@/shared/navigation/sheets';
+import { openCategory } from '@/shared/navigation/navigation';
 import Button from '@/shared/ui/Button';
 import Loading from '@/shared/ui/Loading';
 import { toastFailure } from '@/shared/ui/toast';
@@ -53,7 +53,7 @@ export default function RecurringPaymentsSheet({ ym, category, currency, onClose
   const shareOf = (minor: number) => (data?.budget_minor && minor > 0 ? formatPercent(minor, data.budget_minor) : null);
   return (
     <>
-    <BottomSheet visible={ym !== null} onClose={onClose} title={`${category.emoji ?? '🔁'} ${category.name}`} onTitlePress={() => openCategory(category.id)} style={styles.root}>
+    <BottomSheet visible={ym !== null} onClose={onClose} title={`${category.emoji ?? '🔁'} ${category.name}`} onTitlePress={() => { onClose(); openCategory(category.id); }} style={styles.root}>
       {!data || !ym ? <Loading inline failed={failed} onRetry={load} /> : (
         <SheetScrollView contentContainerStyle={styles.body}>
           <View style={styles.fact}>

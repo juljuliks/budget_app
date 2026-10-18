@@ -100,6 +100,11 @@ export async function openSettings(row: 'Мерчанты' | 'Категории
   await tap(row);
 }
 
+/** Back one page (the stack's header is native, not drawn here). */
+export function back() {
+  act(() => navigationRef.goBack());
+}
+
 /** Back from the pages over the tabs (the stack's header is native, not drawn here): to the tabs. */
 export function backToTabs() {
   act(() => { while (navigationRef.canGoBack() && navigationRef.getRootState().routes.length > 1) navigationRef.goBack(); });

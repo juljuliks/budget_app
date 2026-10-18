@@ -16,12 +16,11 @@ jest.mock('@notifee/react-native', () => ({
   AndroidImportance: { HIGH: 4 },
   EventType: { ACTION_PRESS: 2 },
 }), { virtual: true });
-jest.mock('../../src/shared/navigation/navigation', () => ({ navigateWhenReady: jest.fn() }));
+// notification actions open pages (an operation)
+const openTransaction = jest.fn();
+jest.mock('../../src/shared/navigation/navigation', () => ({ navigateWhenReady: jest.fn(), openTransaction: (id: number) => openTransaction(id) }));
 // "Скрывать суммы в уведомлениях" is native (react-native isn't loaded here): off
 jest.mock('../../src/native/appLock', () => ({ hideNotificationAmounts: async () => false }));
-// notification actions open sheets (an operation, a refund)
-const openTransaction = jest.fn();
-jest.mock('../../src/shared/navigation/sheets', () => ({ openTransaction: (id: number) => openTransaction(id) }));
 
 import SmsBackgroundTask from '../../src/native/SmsBackgroundTask';
 import { handleNotificationAction } from '../../src/notifications/notifeeIntegration';

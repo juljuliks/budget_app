@@ -1,6 +1,6 @@
 // 2.7: an operation's card — what it shows, its category (this one or the merchant's), the amount, the note, deleting.
 import { fireEvent, waitFor } from '@testing-library/react-native';
-import { openApp, screen, tap, texts } from './app';
+import { openApp, screen, tap, texts, back } from './app';
 import { ops } from '../e2e/seeds';
 import { getDb } from '../../src/db';
 import { createCategory } from '../../src/db/categories';
@@ -17,7 +17,8 @@ beforeEach(() => openApp(ops));
 test('2.7.1: the card — the amount, the merchant as a link, the date, the category, the SMS, the note', async () => {
   await tap('SPAR');
   expect(await screen.findByLabelText('Изменить сумму')).toBeTruthy();
-  expect(screen.getAllByText('−30.00 ₾').length).toBeGreaterThan(1);
+  // a page over the list: the list's rows are under it
+  expect(screen.getByText('−30.00 ₾')).toBeTruthy();
   expect(screen.getByText('SPAR ›')).toBeTruthy();
   expect(screen.getByText(/^Сегодня, \d\d:\d\d$/)).toBeTruthy();
   expect(screen.getByText('Сменить')).toBeTruthy();
@@ -148,18 +149,19 @@ test('2.7.10: a note — added, shown, found, removed', async () => {
   expect((await opsOf('SPAR'))[0].note).toBeNull();
 });
 
-test('2.7.11: the merchant\'s name opens its card; "Показать операции" hides both for the list, "Назад" shows them again', async () => {
+test('2.7.11: the merchant\'s name opens its page over the operation\'s; its operations, "Назад" — the pages again', async () => {
   await tap('SPAR');
   await tap('SPAR ›');
   expect(await screen.findByText('Разные категории')).toBeTruthy();
-  await tap('Показать операции ›');
-  await waitFor(() => expect(screen.queryByText('Удалить операцию')).toBeNull());
+  await tap(/^\d+ операци.* ›$/);
+  expect(await screen.findByDisplayValue('SPAR')).toBeTruthy();
   expect(screen.queryByText('Разные категории')).toBeNull();
-  expect(screen.getByDisplayValue('SPAR')).toBeTruthy();
   await tap('Назад');
   expect(await screen.findByText('Разные категории')).toBeTruthy();
-  expect(screen.getByText('Удалить операцию')).toBeTruthy();
   expect(screen.queryByDisplayValue('SPAR')).toBeNull();
+  // under the merchant's page — the operation's
+  back();
+  expect(await screen.findByText('Удалить операцию')).toBeTruthy();
 });
 
 test('2.7.12: deleting the operation; "Отменить" brings it back as it was', async () => {

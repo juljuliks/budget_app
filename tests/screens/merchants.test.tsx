@@ -1,6 +1,6 @@
 // 3: the merchants — the list by category, a merchant's card (its category, "Разные категории", deleting), several at once.
 import { fireEvent, waitFor, within } from '@testing-library/react-native';
-import { longPress, openApp, openSettings, rowOf, screen, tap, toggleSwitch } from './app';
+import { longPress, openApp, openSettings, rowOf, screen, tap, toggleSwitch, back } from './app';
 import { ops } from '../e2e/seeds';
 import { getDb } from '../../src/db';
 
@@ -59,8 +59,10 @@ describe('3.2 a merchant\'s card', () => {
   test('what it shows', async () => {
     await tap('ZARA');
     // its purchases; spent there: minus the refund
-    expect(await screen.findByText('2 операции · 195.00 ₾')).toBeTruthy();
-    expect(screen.getByText('Показать операции ›')).toBeTruthy();
+    expect(await screen.findByText('2 операции · 195.00 ₾ ›')).toBeTruthy();
+    // its latest operations; not more than 5 — no "Показать все"
+    expect(screen.getByText('Последние операции')).toBeTruthy();
+    expect(screen.queryByText('Показать все ›')).toBeNull();
     expect(screen.getByText('Разные категории')).toBeTruthy();
     expect(screen.getByText('Каждая новая операция спрашивает категорию')).toBeTruthy();
     expect(screen.getByText('👕 Одежда')).toBeTruthy();
@@ -140,11 +142,22 @@ describe('3.2 a merchant\'s card', () => {
 
   test('"Показать операции": the operations searched by its name; back returns here', async () => {
     await tap('SPAR');
-    await tap('Показать операции ›');
+    await tap(/^\d+ операци.* ›$/);
     expect(await screen.findByDisplayValue('SPAR')).toBeTruthy();
     await tap('Назад');
+    // its page again, over the merchants
+    expect(await screen.findByText('Разные категории')).toBeTruthy();
+    back();
     expect(await screen.findByPlaceholderText('Найти мерчанта')).toBeTruthy();
-    // and its card again
+  });
+
+  test('its latest operations: a tap opens the operation\'s page over it, back returns', async () => {
+    await tap('ZARA');
+    expect(await screen.findByText('Последние операции')).toBeTruthy();
+    await tap(screen.getAllByText(/^👕 Одежда · \d\d:\d\d$/)[0]);
+    expect(await screen.findByText('Удалить операцию')).toBeTruthy();
+    expect(screen.getByText('Возврат · ZARA')).toBeTruthy();
+    back();
     expect(await screen.findByText('Разные категории')).toBeTruthy();
   });
 

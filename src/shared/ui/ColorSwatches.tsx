@@ -68,14 +68,15 @@ export function PaletteStrip({ shades, size = 14 }: { shades: string[]; size?: n
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' },
+  // "Авто", 6 colors and "+" in one line on a phone
+  row: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, alignItems: 'center' },
   ring: { padding: 3, borderRadius: 20, borderWidth: 2, borderColor: 'transparent' },
   selected: { borderColor: colors.accent },
-  swatch: { width: 28, height: 28, borderRadius: 14 },
+  swatch: { width: 26, height: 26, borderRadius: 13 },
   // the size of a swatch with its ring
   plus: { margin: 2 },
   auto: {
-    alignItems: 'center', justifyContent: 'center', paddingHorizontal: 14, height: 38,
+    alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10, height: 38,
     borderRadius: 10, borderWidth: 2, borderColor: colors.border, borderStyle: 'dashed',
   },
   autoSelected: { borderColor: colors.accent, borderStyle: 'solid' },

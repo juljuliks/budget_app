@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { SectionList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { CategoryPickerModal } from '@/entities/category';
-import { openMerchant } from '@/shared/navigation/sheets';
+import { openMerchant } from '@/shared/navigation/navigation';
 import { FilterButton, OptionsSheet } from '@/features/operations-filters';
 import SearchBar from '@/shared/ui/SearchBar';
 import { NO_CATEGORY } from '@/shared/lib/strings';

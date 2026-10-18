@@ -6,6 +6,9 @@ import { MerchantsScreen } from '@/screens/merchants';
 import { MessageTemplatesScreen, UnparsedMessageScreen, UnparsedScreen } from '@/screens/messages';
 import { BanksScreen } from '@/screens/banks';
 import { SettingsScreen } from '@/screens/settings';
+import { OperationScreen } from '@/screens/operation';
+import { MerchantScreen } from '@/screens/merchant';
+import { CategoryScreen } from '@/screens/category';
 import MainTabs from './MainTabs';
 import { ModalHost } from './ModalHost';
 import { useAppStartup } from './useAppStartup';
@@ -30,8 +33,12 @@ export default function App() {
         <Stack.Screen name="UnparsedMessage" component={UnparsedMessageScreen} options={{ title: '' }} />
         <Stack.Screen name="MessageTemplates" component={MessageTemplatesScreen} options={{ title: 'Шаблоны сообщений' }} />
         <Stack.Screen name="Banks" component={BanksScreen} options={{ title: 'Банки' }} />
+        {/* the budget's things: pages over each other, back walks the chain */}
+        <Stack.Screen name="Operation" component={OperationScreen} options={{ title: 'Операция' }} />
+        <Stack.Screen name="Merchant" component={MerchantScreen} options={{ title: '' }} />
+        <Stack.Screen name="Category" component={CategoryScreen} options={{ title: '' }} />
       </Stack.Navigator>
-      {/* the sheets over the pages (an operation, a new one, a refund, sections, deleting a category) */}
+      {/* the sheets over the pages (a new operation, sections, deleting a category, a repeating payment, …) */}
       <ModalHost />
       {/* confirmations and messages (sheetAlert), over everything */}
       <SheetAlertHost />

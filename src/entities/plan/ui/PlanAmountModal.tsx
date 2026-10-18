@@ -14,7 +14,7 @@ import StepsNav from '@/shared/ui/StepsNav';
 import TextInputModal from '@/shared/ui/TextInputModal';
 import { useLoadedForm } from '@/shared/ui/form';
 import { toast, toastFailure } from '@/shared/ui/toast';
-import { openCategory } from '@/shared/navigation/sheets';
+import { openCategory } from '@/shared/navigation/navigation';
 import { saveFund, savePlanAmount, saveRecurring } from '../model/commands';
 import RecurringFields, { RecurringForm } from './RecurringFields';
 import { turnOffRecurring } from './turnOffRecurring';
@@ -206,8 +206,8 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
     <TextInputModal
       visible={target !== null}
       title={adding ? 'Добавить в план' : target?.label ?? ''}
-      // the category's name a link to its own sheet, as on the operation's card
-      onTitlePress={!adding && target ? () => openCategory(target.category_id) : undefined}
+      // the category's name a link to its page (the sheet closes: a page goes under the sheets)
+      onTitlePress={!adding && target ? () => { onClose(); openCategory(target.category_id); } : undefined}
       submitLabel={adding ? 'Добавить в план' : undefined}
       hint={hint}
       form={form}

@@ -1,1 +1,1 @@
-export { default as MerchantCard } from './MerchantCard';
+export { default as MerchantView } from './MerchantView';

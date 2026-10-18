@@ -1,1 +1,1 @@
-export { default as TransactionSheet } from './TransactionSheet';
+export { default as TransactionView } from './TransactionView';

@@ -4,7 +4,7 @@ import { act, fireEvent } from '@testing-library/react-native';
 import { openApp, screen, tap } from './app';
 import { ops, planned } from '../e2e/seeds';
 import { getDb } from '../../src/db';
-import { openTransaction } from '../../src/shared/navigation/sheets';
+import { openTransaction } from '../../src/shared/navigation/navigation';
 
 /**
  * The operations unreadable until `fix` (the database "fails"); what the app logs meanwhile is expected. Legacy

@@ -1,8 +1,7 @@
-import { createNavigationContainerRef, useNavigation } from '@react-navigation/native';
+import { createNavigationContainerRef, NavigationState, StackActions, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { DayRange } from '../lib/dateRange';
-import { leaveSheets } from './sheets';
 
 export type TabParamList = {
   /** day: open the stats of that day (a day header in the transactions list), its local midnight in unix seconds */
@@ -23,8 +22,8 @@ export type TabParamList = {
   } | undefined;
 };
 
-/** Where the operations opened from somewhere else return: a tab or a page over them. */
-export type BackTarget = keyof TabParamList | Exclude<keyof RootStackParamList, 'Main' | 'UnparsedMessage'>;
+/** Where the operations opened from somewhere else return: a tab, a page over them, or `'pages'` — the pages a link left (showOperationsFrom). */
+export type BackTarget = keyof TabParamList | 'Merchants' | 'Categories' | 'Settings' | 'Banks' | 'Unparsed' | 'MessageTemplates' | 'pages';
 
 /** Screens pushed over the tab bar. */
 export type RootStackParamList = {
@@ -42,6 +41,12 @@ export type RootStackParamList = {
   MessageTemplates: undefined;
   /** whose SMS and pushes are read ("Банки", from the settings) */
   Banks: undefined;
+  /** an operation: its amount, category, SMS, note (a list's row, a notification, the merchant's and category's pages) */
+  Operation: { id: number };
+  /** a merchant: its operations, category, "Разные категории" (its key) */
+  Merchant: { key: string };
+  /** a category: its operations, section, name, color */
+  Category: { id: number };
 };
 
 export const navigationRef = createNavigationContainerRef<RootStackParamList>();
@@ -64,33 +69,51 @@ type Route = { [K in keyof RootStackParamList]: { name: K; params: RootStackPara
 
 // A notification action may ask to open a screen before the navigator is mounted
 // (cold start, or the press was delivered to the background handler). Keep it until it can run.
-let pending: Route | null = null;
+let pending: { route: Route; push: boolean } | null = null;
 
-export function navigateWhenReady(route: Route) {
-  if (navigationRef.isReady()) {
-    // `as never`: TS can't narrow the name/params union against navigate's overloads
-    navigationRef.navigate(route as never);
-  } else {
-    pending = route;
-  }
+/** `push`: a page over the current one even if one like it is open (an operation from a merchant from an operation). */
+export function navigateWhenReady(route: Route, push = false) {
+  if (!navigationRef.isReady()) { pending = { route, push }; return; }
+  if (push) navigationRef.dispatch(StackActions.push(route.name, route.params));
+  // `as never`: TS can't narrow the name/params union against navigate's overloads
+  else navigationRef.navigate(route as never);
 }
 
 /** Called from NavigationContainer.onReady and when the app returns to the foreground. */
 export function flushPendingNavigation() {
   if (!pending || !navigationRef.isReady()) return;
-  const route = pending;
+  const { route, push } = pending;
   pending = null;
-  navigateWhenReady(route);
+  navigateWhenReady(route, push);
 }
 
+// The budget's things are pages over the tabs, each over the one it was opened from; back walks the chain.
+export const openTransaction = (id: number) => navigateWhenReady({ name: 'Operation', params: { id } }, true);
+export const openMerchant = (key: string) => navigateWhenReady({ name: 'Merchant', params: { key } }, true);
+export const openCategory = (id: number) => navigateWhenReady({ name: 'Category', params: { id } }, true);
+
+// the pages "Показать все ›" took the user away from, the latest last: back from the operations restores them
+const left: NavigationState[] = [];
+
 /**
- * "Показать операции ›" of a sheet (a merchant's card, a category's): the operations with its filter; the sheets hide,
- * back returns to the page they were over and shows them again (sheets.ts).
+ * "Показать все ›" / "N операций ›" of a merchant's or a category's page: the operations tab with its filter; back
+ * from there (backToPages) puts the pages back as they were (the operation it was opened from under it too).
  */
-export function showOperationsFromSheet(filter: { category?: number; query?: string }) {
-  const here = navigationRef.getCurrentRoute()?.name as BackTarget | 'Main' | 'UnparsedMessage' | undefined;
-  leaveSheets();
-  const from = here === 'Main' || here === 'UnparsedMessage' ? undefined : here;
+export function showOperationsFrom(filter: { category?: number; query?: string }) {
+  left.push(navigationRef.getRootState());
   // `as never`: a nested navigate the root types don't describe
-  navigationRef.navigate('Main', { screen: 'Transactions', params: { ...filter, nonce: Date.now(), from } } as never);
+  navigationRef.navigate('Main', { screen: 'Transactions', params: { ...filter, nonce: Date.now(), from: 'pages' } } as never);
+}
+
+/** Back from the operations a page's link opened: those pages again; false — there were none. */
+export function backToPages(): boolean {
+  const s = left.pop();
+  if (!s) return false;
+  navigationRef.reset(s);
+  return true;
+}
+
+/** The operations left another way (their tab pressed): the pages are not coming back. */
+export function forgetPages() {
+  left.length = 0;
 }

@@ -5,7 +5,7 @@ import { contributionsLeft, isSaved } from '@/entities/plan';
 import { formatWithCurrency } from '@/shared/lib/money';
 import { dayTitle, MONTHS } from '@/shared/lib/dates';
 import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
-import { openCategory } from '@/shared/navigation/sheets';
+import { openCategory } from '@/shared/navigation/navigation';
 import Button from '@/shared/ui/Button';
 import Loading from '@/shared/ui/Loading';
 import { formStyles } from '@/shared/theme/formStyles';
@@ -42,7 +42,7 @@ export default function FundSheet({ categoryId, label, onClose, onEdit }: Props)
   const money = (minor: number) => formatWithCurrency(minor, card?.fund.currency);
   const saved = card ? isSaved(card.saved, card.fund.target_minor) : false;
   return (
-    <BottomSheet visible={categoryId !== null} onClose={onClose} title={label} onTitlePress={categoryId !== null ? () => openCategory(categoryId) : undefined}>
+    <BottomSheet visible={categoryId !== null} onClose={onClose} title={label} onTitlePress={categoryId !== null ? () => { onClose(); openCategory(categoryId); } : undefined}>
       {!card ? <Loading inline failed={failed} onRetry={load} /> : (
         <SheetScrollView contentContainerStyle={styles.body}>
           <View style={styles.amounts}>

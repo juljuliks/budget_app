@@ -1,6 +1,6 @@
 import React from 'react';
 import type { StyleProp, TextStyle, ViewStyle } from 'react-native';
-import { openMerchant } from '@/shared/navigation/sheets';
+import { openMerchant } from '@/shared/navigation/navigation';
 import TextLink from '@/shared/ui/TextLink';
 
 type Props = {
@@ -12,7 +12,7 @@ type Props = {
   containerStyle?: StyleProp<ViewStyle>;
 };
 
-/** A merchant's name as a link: "SPAR ›" opens its card (its category, its operations) over whatever is open. */
+/** A merchant's name as a link: "SPAR ›" opens its page (its category, its operations) over the current one. */
 export default function MerchantLink({ merchantKey, label, style, containerStyle }: Props) {
   return <TextLink label={label} onPress={() => openMerchant(merchantKey)} style={style} containerStyle={containerStyle} hint="Открыть мерчанта" />;
 }

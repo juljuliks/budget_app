@@ -3,8 +3,7 @@ import { useEffect } from 'react';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { Filter } from '@/features/operations-filters';
-import { TabParamList, useRootNavigation } from '@/shared/navigation/navigation';
-import { backToSheets } from '@/shared/navigation/sheets';
+import { backToPages, TabParamList, useRootNavigation } from '@/shared/navigation/navigation';
 
 export type TabNavigation = BottomTabNavigationProp<TabParamList, 'Transactions'>;
 
@@ -20,14 +19,14 @@ export function useOperationsRoute(resetFilters: () => void) {
     resetFilters();
   }
 
-  // came here from another screen (not the tab bar): back returns there with the filter cleared, and to the sheets
-  // a link of which opened this (a merchant's card over an operation)
+  // came here from another screen (not the tab bar): back returns there with the filter cleared — to the pages a link
+  // of which opened this (a merchant's page over an operation's) as they were
   function goBack() {
     const target = from;
     clearParams();
-    if (target === 'Stats' || target === 'Transactions') tabNavigation.navigate(target);
+    if (target === 'pages') backToPages();
+    else if (target === 'Stats' || target === 'Transactions') tabNavigation.navigate(target);
     else if (target) navigation.navigate(target);
-    backToSheets();
   }
 
   return { params, from, tabNavigation, clearParams, goBack };

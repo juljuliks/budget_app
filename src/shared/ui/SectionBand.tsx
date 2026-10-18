@@ -11,10 +11,12 @@ type Props = {
   share?: string | null;
   /** the sheet's side padding: the band goes edge to edge */
   inset?: number;
+  /** an action at its right edge ("Показать все ›") */
+  right?: React.ReactNode;
 };
 
-/** A section's grey band, as the plan's: its title, its total and share of the budget ("41.55 ₾ · 1%"). */
-export default function SectionBand({ title, total, share, inset = 20 }: Props) {
+/** A section's grey band, as the plan's: its title, its total and share of the budget ("41.55 ₾ · 1%") or an action. */
+export default function SectionBand({ title, total, share, inset = 20, right }: Props) {
   return (
     <View style={[formStyles.sectionHeader, styles.band, { marginHorizontal: -inset, paddingHorizontal: inset }]}>
       <Text style={styles.title}>{title}</Text>
@@ -24,6 +26,7 @@ export default function SectionBand({ title, total, share, inset = 20 }: Props) 
           {share ? <Text style={styles.share}>{` · ${share}`}</Text> : null}
         </Text>
       ) : null}
+      {right}
     </View>
   );
 }
