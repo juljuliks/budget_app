@@ -138,9 +138,8 @@ export async function monthStats(year: number, month: number, currency: Currency
   const { items, missing, conv } = await convertSpending(await spendRows(from, to), currency, [planDate]);
   const spentBy = sumBy(items, categoryKey);
   const refundsUnassigned = refundsUnassignedOf(spentBy);
-  // the subscriptions saved up for: "Подписки" spent their contributions, not what was paid from them
-  const saving = await savingSpend(ym, (minor, from) => conv(minor, from, currency, planDate) ?? 0);
-  if (saving) spentBy.set(saving.category_id, (spentBy.get(saving.category_id) ?? 0) + saving.minor);
+  // the payments saved up for: their categories spent the contributions, not what was paid from them
+  for (const [id, minor] of await savingSpend(ym, (m, from) => conv(m, from, currency, planDate) ?? 0)) spentBy.set(id, (spentBy.get(id) ?? 0) + minor);
 
   const colorOf = await categoryColors();
 

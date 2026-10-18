@@ -8,8 +8,11 @@ import { asCurrency } from '../plans/months';
 import { REMEMBERABLE_KINDS } from '../../domain/types';
 import { nextCharge } from './schedule';
 
+/** A repeating payment ("подписка" in "Подписки"): a merchant's charge every N months, of a category with "Повторяющиеся платежи". */
 export type Subscription = {
   id: number;
+  /** its category (one with "Повторяющиеся платежи") */
+  category_id: number | null;
   /** its merchant; null — one without (put in by name) */
   merchant_key: string | null;
   name: string;
@@ -25,7 +28,7 @@ export type Subscription = {
 };
 
 type Row = Omit<Subscription, 'currency'> & { currency: string };
-const COLUMNS = 'id, merchant_key, name, amount_minor, currency, period_months, due, since_ym';
+const COLUMNS = 'id, category_id, merchant_key, name, amount_minor, currency, period_months, due, since_ym';
 const asSub = (r: Row): Subscription => ({ ...r, currency: asCurrency(r.currency) });
 
 /** The day of a moment ('YYYY-MM-DD', local). */
@@ -37,10 +40,13 @@ export function dayOfUnix(unix: number): string {
 /** Today ('YYYY-MM-DD', local). */
 export const todayKey = (now = new Date()) => dayOfUnix(Math.floor(now.getTime() / 1000));
 
-/** The subscriptions not deleted, by name. */
-export async function listSubscriptions(db?: Db): Promise<Subscription[]> {
+/** The payments not deleted (of `categoryId`, or of every category with the switch on), by name. */
+export async function listSubscriptions(db?: Db, categoryId?: number): Promise<Subscription[]> {
   db ??= await getDb();
-  return (await db.all<Row>(`SELECT ${COLUMNS} FROM subscriptions WHERE deleted_at IS NULL ORDER BY name COLLATE NOCASE`)).map(asSub);
+  return (await db.all<Row>(
+    `SELECT ${COLUMNS} FROM subscriptions WHERE deleted_at IS NULL
+      AND category_id IN (SELECT id FROM categories WHERE recurring = 1 AND deleted_at IS NULL ${categoryId === undefined ? '' : 'AND id = ?'})
+      ORDER BY name COLLATE NOCASE`, categoryId === undefined ? [] : [categoryId])).map(asSub);
 }
 
 export async function getSubscription(id: number): Promise<Subscription | null> {

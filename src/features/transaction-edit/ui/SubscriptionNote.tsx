@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { subscriptionsCategoryId } from '@/db/categories';
+import { getCategory, isRecurring } from '@/db/categories';
+import { paymentWords, PaymentWords } from '@/entities/category';
 import { saveSubscription, subscriptionCard, SubscriptionCard } from '@/db/subscriptions';
 import { emitTransactionsChanged, onTransactionsChanged } from '@/domain/events';
 import { dayTitle } from '@/shared/lib/dates';
@@ -19,11 +20,13 @@ import type { Tx } from '../model/useTransaction';
  */
 export default function SubscriptionNote({ tx }: { tx: Tx }) {
   const [card, setCard] = useState<SubscriptionCard | null | 'none'>(null);
+  const [w, setW] = useState<PaymentWords | null>(null);
   useEffect(() => {
     let live = true;
     const load = async () => {
-      const subs = await subscriptionsCategoryId();
-      if (!tx.merchant_key || tx.category_id !== subs) return null;
+      const c = tx.category_id === null ? undefined : await getCategory(tx.category_id);
+      if (!tx.merchant_key || !c || !isRecurring(c)) return null;
+      if (live) setW(paymentWords(c.name));
       return (await subscriptionCard(tx.merchant_key)) ?? 'none';
     };
     const run = () => load().then((c) => { if (live) setCard(c); }).catch((e) => console.error('subscription card failed', e));
@@ -31,11 +34,11 @@ export default function SubscriptionNote({ tx }: { tx: Tx }) {
     const off = onTransactionsChanged(run);
     return () => { live = false; off(); };
   }, [tx.id, tx.merchant_key, tx.category_id, tx.amount_minor]);
-  if (!card) return null;
+  if (!card || !w) return null;
   if (card === 'none' || !card.sub.due) {
     return (
       <TouchableOpacity style={styles.box} onPress={() => openSubscription({ txId: tx.id })} accessibilityRole="button">
-        <Text style={styles.title}>Подписка без даты списания</Text>
+        <Text style={styles.title}>{`${w.One} без даты списания`}</Text>
         <Text style={styles.link}>Задать дату ›</Text>
       </TouchableOpacity>
     );
@@ -61,14 +64,14 @@ export default function SubscriptionNote({ tx }: { tx: Tx }) {
           <Text style={styles.factValue}>{`${card.year_count} ${plural(card.year_count, ['раз', 'раза', 'раз'])} · ${money(card.year_minor)}`}</Text>
         </View>
         <TouchableOpacity onPress={() => openSubscription({ id: sub.id })} hitSlop={8} accessibilityRole="button">
-          <Text style={styles.link}>Изменить подписку ›</Text>
+          <Text style={styles.link}>{`Изменить ${w.acc} ›`}</Text>
         </TouchableOpacity>
       </View>
       {changed ? (
         <TouchableOpacity style={styles.warn} onPress={update} accessibilityRole="button">
           <Text style={styles.warnText}>
             {`Сумма ${tx.amount_minor > sub.amount_minor ? 'выросла' : 'уменьшилась'}: было ${money(sub.amount_minor)}. `}
-            <Text style={styles.warnBold}>{`Обновить подписку на ${money(tx.amount_minor)}?`}</Text>
+            <Text style={styles.warnBold}>{`Обновить ${w.acc} на ${money(tx.amount_minor)}?`}</Text>
           </Text>
         </TouchableOpacity>
       ) : null}

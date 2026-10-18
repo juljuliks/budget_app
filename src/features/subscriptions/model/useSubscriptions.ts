@@ -1,7 +1,6 @@
-// The "Подписки" sheet of a month: its charges, the others, those without a day (and the merchants of "Подписки" with
-// no subscription), what the plan has for it — loaded when opened, again on each change.
+// A category's repeating payments in a month (its sheet): the charges, the others, those without a day (and its merchants
+// with no payment), what the plan has for it — loaded when opened, again on each change.
 import { useCallback, useEffect, useState } from 'react';
-import { subscriptionsCategoryId } from '@/db/categories';
 import type { Currency } from '@/db/fx';
 import { listPlan, monthSubscriptions, MonthSubscriptions, planConverter, storedBudget } from '@/db/plans';
 import { LastCharge, merchantsWithoutSubscription } from '@/db/subscriptions';
@@ -20,7 +19,7 @@ export type SubscriptionsData = MonthSubscriptions & {
   budget_minor: number | null;
 };
 
-export function useSubscriptions(ym: string | null, currency: Currency) {
+export function useSubscriptions(ym: string | null, currency: Currency, categoryId: number) {
   const [data, setData] = useState<SubscriptionsData | null>(null);
   const latest = useLatestRequest();
   const { failed, started, fail } = useLoadFailed('load subscriptions');
@@ -29,17 +28,16 @@ export function useSubscriptions(ym: string | null, currency: Currency) {
     const keep = latest();
     started();
     (async (): Promise<SubscriptionsData> => {
-      const categoryId = await subscriptionsCategoryId();
       const [month, merchants, plan, budget, conv] = await Promise.all([
-        monthSubscriptions(ym, currency), categoryId === null ? [] : merchantsWithoutSubscription(categoryId), listPlan(ym, currency),
+        monthSubscriptions(ym, currency, undefined, categoryId), merchantsWithoutSubscription(categoryId), listPlan(ym, currency),
         storedBudget(ym), planConverter(ym)]);
-      const item = plan.find((i) => i.system === 'subs');
+      const item = plan.find((i) => i.category_id === categoryId);
       return {
         ...month, merchants, planned_minor: item ? item.converted_minor : null, by_hand: !!item && item.kind !== 'subs',
         budget_minor: budget ? conv(budget.amount_minor, budget.currency, currency) : null,
       };
     })().then(keep(setData)).catch(keep(fail));
-  }, [ym, currency, latest, started, fail]);
+  }, [ym, currency, categoryId, latest, started, fail]);
   useEffect(() => { setData(null); load(); }, [load]);
   useEffect(() => onTransactionsChanged(load), [load]);
   return { data, failed, load };

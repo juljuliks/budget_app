@@ -13,7 +13,7 @@ import {
   AUTO, BACKUP, BACKUP_INFO, CHANGE_FOLDER, CHANGE_PASSWORD, EXPORT_CSV, PASSWORD, PASSWORD_OFF_HINT, PASSWORD_ON_HINT,
   RESTORE_BACKUP, SAVE_BACKUP,
 } from '../texts';
-import SwitchRow from './SwitchRow';
+import SwitchRow from '@/shared/ui/SwitchRow';
 import { toastFailure } from '@/shared/ui/toast';
 import { LOAD_FAILED } from '@/shared/lib/strings';
 

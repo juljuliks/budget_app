@@ -4,8 +4,11 @@ import { Currency } from '../fx';
 import { currentYm } from '../plans/months';
 import { refreshSubscriptionItems } from '../plans/subscriptionItems';
 import { SavingUndo, stopSaving, undoSaving } from './savingWrites';
+import { subscriptionsCategoryId } from '../categories';
 
 export type SubscriptionInput = {
+  /** the category it is a payment of; none — the one it had (a new one: "Подписки") */
+  category_id?: number | null;
   merchant_key: string | null;
   name: string;
   amount_minor: number;
@@ -21,14 +24,17 @@ export async function saveSubscription(input: SubscriptionInput, id?: number): P
   const own = id ?? (input.merchant_key
     ? (await db.get<{ id: number }>('SELECT id FROM subscriptions WHERE merchant_key = ? AND deleted_at IS NULL', [input.merchant_key]))?.id
     : undefined);
-  const values = [input.merchant_key, input.name.trim(), input.amount_minor, input.currency, input.period_months, input.due];
+  const category = input.category_id
+    ?? (own !== undefined ? (await db.get<{ c: number | null }>('SELECT category_id AS c FROM subscriptions WHERE id = ?', [own]))?.c : null)
+    ?? await subscriptionsCategoryId(db);
+  const values = [category, input.merchant_key, input.name.trim(), input.amount_minor, input.currency, input.period_months, input.due];
   let out: number;
   if (own !== undefined) {
-    await db.run('UPDATE subscriptions SET merchant_key = ?, name = ?, amount_minor = ?, currency = ?, period_months = ?, due = ? WHERE id = ?', [...values, own]);
+    await db.run('UPDATE subscriptions SET category_id = ?, merchant_key = ?, name = ?, amount_minor = ?, currency = ?, period_months = ?, due = ? WHERE id = ?', [...values, own]);
     out = own;
   } else {
     const r = await db.run(
-      'INSERT INTO subscriptions (merchant_key, name, amount_minor, currency, period_months, due, since_ym, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO subscriptions (category_id, merchant_key, name, amount_minor, currency, period_months, due, since_ym, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [...values, currentYm(), Math.floor(Date.now() / 1000)]);
     out = r.lastInsertRowid;
   }

@@ -18,7 +18,7 @@ async function charge(merchant: string, amount: number, when: string) {
     [amount, merchant, merchant, await subscriptionsCategoryId(), at(when), `sms ${n}`, `h${n}`]);
 }
 const YANDEX = { merchant_key: 'YANDEX', name: 'Яндекс Плюс', amount_minor: 4500, currency: 'GEL' as const, period_months: 3 };
-const subsItem = async (ym: string) => (await listPlan(ym)).find((i) => i.system === 'subs')?.limit_minor;
+const subsItem = async (ym: string) => (await listPlan(ym)).find((i) => i.recurring)?.limit_minor;
 const subsSpent = async (year: number, month: number) => (await monthStats(year, month, 'GEL')).categories.find((c) => c.name === 'Подписки')?.spent_minor ?? 0;
 
 beforeEach(async () => {

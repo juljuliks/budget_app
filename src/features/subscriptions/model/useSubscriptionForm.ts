@@ -5,9 +5,13 @@ import { planEffect } from '@/db/plans';
 import { offeredDue, todayKey } from '@/db/subscriptions';
 import { parseAmountInput, toInputValue } from '@/shared/lib/money';
 
-/** What the sheet opens with: a subscription (`id`), or a new one — of a merchant, from its last charge. */
+/** The category a payment is of (its name gives the words: "Подписка" in "Подписки", else "Платёж"). */
+export type PaymentCategory = { id: number; name: string; emoji: string | null };
+
+/** What the sheet opens with: a payment (`id`), or a new one — of a merchant, from its last charge. */
 export type SubscriptionTarget = {
   id?: number;
+  category: PaymentCategory;
   merchant_key: string | null;
   name: string;
   amount_minor: number;
@@ -49,7 +53,7 @@ export function useSubscriptionForm(target: SubscriptionTarget | null) {
 
   const minor = parseAmountInput(amount);
   const input = target && minor !== null && name.trim()
-    ? { merchant_key: target.merchant_key, name: name.trim(), amount_minor: minor, currency, period_months: period, due }
+    ? { category_id: target.category.id, merchant_key: target.merchant_key, name: name.trim(), amount_minor: minor, currency, period_months: period, due }
     : null;
 
   // "В план октября +30 ₾": counted again as the form changes

@@ -22,7 +22,8 @@ export type Saving = {
   closed_ym: string | null;
   /** what it had then: that month's savings */
   released_minor: number | null;
-  /** its subscription (deleted ones too) */
+  /** its subscription (deleted ones too) and the subscription's category */
+  category_id: number | null;
   merchant_key: string | null;
   name: string;
   amount_minor: number;
@@ -35,7 +36,7 @@ export type SavingLedger = { saving: Saving; months: SavingMonth[]; balance: num
 
 type Row = Omit<Saving, 'currency'> & { currency: string };
 const COLUMNS = `v.id, v.sub_id, v.since_ym, v.start_minor, v.closed_ym, v.released_minor, v.created_at,
-  s.merchant_key, s.name, s.amount_minor, s.currency, s.period_months, s.due`;
+  s.category_id, s.merchant_key, s.name, s.amount_minor, s.currency, s.period_months, s.due`;
 const asSaving = (r: Row): Saving => ({ ...r, currency: asCurrency(r.currency) });
 
 /** The savings that count in `ym`: started by then, not closed before it (one closed in it gives back what it had). */
@@ -70,8 +71,8 @@ export async function savingLedger(v: Saving, until = currentYm(), nowYm = curre
   const { year, month } = parseYm(last);
   const rows = !v.merchant_key ? [] : await db.all<{ id: number; category_id: number | null; kind: string; amount_minor: number; currency: string; occurred_at: number; refund_settled_at: number | null }>(
     `SELECT id, category_id, kind, amount_minor, currency, occurred_at, refund_settled_at FROM spend_parts
-      WHERE merchant_key = ? AND category_id = (SELECT id FROM categories WHERE system = 'subs') AND occurred_at >= ? AND occurred_at < ?
-      ORDER BY occurred_at, id`, [v.merchant_key, Math.max(monthStart(v.since_ym), v.created_at), monthRange(year, month)[1]]);
+      WHERE merchant_key = ? AND category_id = ? AND occurred_at >= ? AND occurred_at < ?
+      ORDER BY occurred_at, id`, [v.merchant_key, v.category_id, Math.max(monthStart(v.since_ym), v.created_at), monthRange(year, month)[1]]);
   const { items } = await convertSpending(rows, v.currency);
   const ops = v.merchant_key ? (await chargeDays([v.merchant_key], db)).get(v.merchant_key) ?? [] : [];
   const r = savingMonths({
@@ -98,16 +99,14 @@ export async function savingEffects(ym: string, nowYm = currentYm(), db?: Db): P
   return out;
 }
 
-/**
- * What the month's savings change "Подписки"'s spending by, converted by `toShown`: its category and the sum; null —
- * nothing (no saving: one look).
- */
-export async function savingSpend(ym: string, toShown: (minor: number, from: Currency) => number): Promise<{ category_id: number; minor: number } | null> {
-  const db = await getDb();
-  const effects = (await savingEffects(ym, currentYm(), db)).filter((e) => e.minor !== 0);
-  if (!effects.length) return null;
-  const id = (await db.get<{ id: number }>("SELECT id FROM categories WHERE system = 'subs'"))?.id;
-  return id === undefined ? null : { category_id: id, minor: effects.reduce((a, e) => a + toShown(e.minor, e.currency), 0) };
+/** What the month's savings change their categories' spending by, converted by `toShown` (no saving: one look). */
+export async function savingSpend(ym: string, toShown: (minor: number, from: Currency) => number): Promise<Map<number, number>> {
+  const out = new Map<number, number>();
+  for (const e of await savingEffects(ym, currentYm())) {
+    if (e.minor === 0 || e.saving.category_id === null) continue;
+    out.set(e.saving.category_id, (out.get(e.saving.category_id) ?? 0) + toShown(e.minor, e.currency));
+  }
+  return out;
 }
 
 /**

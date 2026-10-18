@@ -12,6 +12,8 @@ import { toast, toastError, toastFailure } from '@/shared/ui/toast';
 import { formatWithCurrency } from '@/shared/lib/money';
 import { longDay, monthGen } from '../texts';
 import type { SavingChoice } from './useSubscriptionSaving';
+import type { PaymentCategory } from './useSubscriptionForm';
+import { paymentWords } from '@/entities/category';
 
 /** "Отменить" of a saving turned off: it back, with what it had. */
 const undoAction = (undo: SavingUndo, name: string) => ({
@@ -52,7 +54,7 @@ export function saveSub(input: SubscriptionInput, id: number | undefined, onDone
     const due = input.due ? ` Списание ${longDay(input.due)} (${formatWithCurrency(input.amount_minor, input.currency)}) встанет в план ${monthGen(input.due.slice(0, 7))} целиком.` : '';
     sheetAlert(
       `Не откладывать на ${input.name}?`,
-      `На подписку уже отложено ${formatWithCurrency(saving.balance, input.currency)}. Они уйдут в сбережения ${monthGen(currentYm())} — как при удалении копилки.${due}`,
+      `На «${input.name}» уже отложено ${formatWithCurrency(saving.balance, input.currency)}. Они уйдут в сбережения ${monthGen(currentYm())} — как при удалении копилки.${due}`,
       [{ text: 'Отмена', style: 'cancel' }, { text: 'Не откладывать', style: 'destructive', onPress: () => { check(input, id, onDone, saving); } }]);
     return;
   }
@@ -75,15 +77,16 @@ async function check(input: SubscriptionInput, id: number | undefined, onDone: (
   await write(input, id, onDone, saving);
 }
 
-async function remove(id: number, name: string, onDone: () => void) {
+async function remove(id: number, name: string, category: PaymentCategory, onDone: () => void) {
+  const w = paymentWords(category.name);
   try {
     const stopped = await deleteSubscription(id);
     emitTransactionsChanged();
     onDone();
-    toast(`Подписка «${name}» удалена`, {
+    toast(`${w.One} «${name}» ${w.deleted}`, {
       label: UNDO,
       onPress: () => {
-        restoreSubscription(id, stopped?.undo).then(() => { emitTransactionsChanged(); toast(`Подписка «${name}» снова в плане`); })
+        restoreSubscription(id, stopped?.undo).then(() => { emitTransactionsChanged(); toast(`${w.One} «${name}» снова в плане`); })
           .catch(toastFailure('restore subscription', 'Не удалось восстановить'));
       },
     });
@@ -97,11 +100,12 @@ async function remove(id: number, name: string, onDone: () => void) {
  * "Удалить подписку «Netflix»?": its charges leave the plan from this month, the operations stay; something saved up for
  * it goes to this month's savings.
  */
-export async function confirmDeleteSub(id: number, name: string, currency: string, onDone: () => void) {
+export async function confirmDeleteSub(id: number, name: string, currency: string, category: PaymentCategory, onDone: () => void) {
+  const w = paymentWords(category.name);
   const saved = await savedNow(id).catch(() => 0);
-  const kept = saved > 0 ? ` На подписку уже отложено ${formatWithCurrency(saved, currency)} — они уйдут в сбережения ${monthGen(currentYm())}.` : '';
+  const kept = saved > 0 ? ` На ${w.acc} уже отложено ${formatWithCurrency(saved, currency)} — они уйдут в сбережения ${monthGen(currentYm())}.` : '';
   sheetAlert(
-    `Удалить подписку «${name}»?`,
-    `Её списания уйдут из плана с этого месяца. Операции останутся в «Подписках».${kept}`,
-    [{ text: 'Отмена', style: 'cancel' }, { text: 'Удалить', style: 'destructive', onPress: () => { remove(id, name, onDone); } }]);
+    `Удалить ${w.acc} «${name}»?`,
+    `Списания уйдут из плана с этого месяца. Операции останутся в категории «${category.name}».${kept}`,
+    [{ text: 'Отмена', style: 'cancel' }, { text: 'Удалить', style: 'destructive', onPress: () => { remove(id, name, category, onDone); } }]);
 }

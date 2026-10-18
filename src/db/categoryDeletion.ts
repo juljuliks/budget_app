@@ -1,3 +1,4 @@
+import { savedInCategory } from './subscriptions/recurring';
 import { getDb } from './index';
 import type { Db } from './types';
 import { currentYm, monthStart } from './plans';
@@ -25,6 +26,9 @@ export type DeletePreview = {
   merchants: string[];
   /** a plan item this month (or later): it goes with the category */
   hasPlan: boolean;
+  /** its repeating payments (they go with it), and what they saved (it goes to this month's savings) */
+  payments?: number;
+  saved?: Array<{ name: string; minor: number; currency: string }>;
 };
 
 export async function categoryDeletePreview(id: number, nowYm = currentYm()): Promise<DeletePreview> {
@@ -40,6 +44,8 @@ export async function categoryDeletePreview(id: number, nowYm = currentYm()): Pr
     past: await bucket('t.category_id = ? AND t.occurred_at < ?', [id, from]),
     merchants: merchants.map((m) => m.name),
     hasPlan: !!plan,
+    payments: (await db.get<{ n: number }>('SELECT count(*) AS n FROM subscriptions WHERE category_id = ? AND deleted_at IS NULL', [id]))?.n ?? 0,
+    saved: await savedInCategory(id),
   };
 }
 

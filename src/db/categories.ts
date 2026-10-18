@@ -3,6 +3,7 @@ import type { Db } from './types';
 import { currentYm, deleteFund, monthStart } from './plans';
 import { categorySpendingSql, signedSpendSql } from './spending';
 import { moveParts } from './parts';
+import { deleteSubscription } from './subscriptions/writes';
 import { placeholders } from './sql';
 
 export type Category = {
@@ -17,8 +18,10 @@ export type Category = {
   deleted_at: number | null;
   /** own color; null = from the type's palette (see src/domain/colors.ts) */
   color: string | null;
-  /** 'topup' for "Пополнение счёта", 'own', 'subs'… (system categories: can't be deleted or renamed), else null */
+  /** 'topup' for "Пополнение счёта", 'own' (system categories: can't be deleted or renamed), else null */
   system: string | null;
+  /** 1 — "Повторяющиеся платежи": its plan item counted from its payments (db/subscriptions) */
+  recurring: number;
 };
 
 /**
@@ -31,12 +34,11 @@ export const isTopUp = (c: { system?: string | null }) => c.system === TOP_UP;
 /** "Между своими картами": money between one's own cards and accounts (other banks, a savings one) — not spending, not income. */
 export const OWN_TRANSFER = 'own';
 /**
- * "Подписки": its spending is the subscriptions' charges (db/subscriptions), its plan item counted from them ('subs').
- * A purchase category, offered as any other; not deleted, merged or renamed.
+ * "Повторяющиеся платежи" on: its merchants' payments are remembered (how often, the next one; db/subscriptions), its
+ * plan item counted from them ('subs'). "Подписки" is one ("подписка" its word), any can be.
  */
-export const SUBSCRIPTIONS = 'subs';
-export const isSubscriptions = (c: { system?: string | null }) => c.system === SUBSCRIPTIONS;
-/** A category of the system: "Пополнение счёта", "Между своими картами", "Подписки"… (not deleted, merged, added to the plan by hand). */
+export const isRecurring = (c: { recurring?: number | boolean | null }) => !!c.recurring;
+/** A category of the system: "Пополнение счёта", "Между своими картами" (not deleted, merged, added to the plan by hand). */
 export const isSystemCategory = (c: { system?: string | null }) => !!c.system;
 
 /** The id of "Пополнение счёта". */
@@ -45,13 +47,19 @@ export async function topUpCategoryId(db?: Db): Promise<number | null> {
   return (await db.get<{ id: number }>("SELECT id FROM categories WHERE system = 'topup'"))?.id ?? null;
 }
 
-/** The id of "Подписки". */
+/** The id of "Подписки" (the seeded one with repeating payments; the seeds and tests make subscriptions in it). */
 export async function subscriptionsCategoryId(db?: Db): Promise<number | null> {
   db ??= await getDb();
-  return (await db.get<{ id: number }>("SELECT id FROM categories WHERE system = 'subs'"))?.id ?? null;
+  return (await db.get<{ id: number }>("SELECT id FROM categories WHERE recurring = 1 AND name = 'Подписки' AND deleted_at IS NULL"))?.id ?? null;
 }
 
-const COLUMNS = `c.id, c.name, c.emoji, c.sort_order, c.type_id, c.deleted_at, c.color, c.system,
+/** "Повторяющиеся платежи" on or off. */
+export async function setRecurring(id: number, on: boolean, db?: Db): Promise<void> {
+  db ??= await getDb();
+  await db.run('UPDATE categories SET recurring = ? WHERE id = ?', [on ? 1 : 0, id]);
+}
+
+const COLUMNS = `c.id, c.name, c.emoji, c.sort_order, c.type_id, c.deleted_at, c.color, c.system, c.recurring,
     t.name AS type_name, coalesce(t.is_transfer, 0) AS type_is_transfer`;
 const FROM = 'FROM categories c LEFT JOIN category_types t ON t.id = c.type_id';
 const SELECT = `SELECT ${COLUMNS} ${FROM}`;
@@ -147,8 +155,11 @@ export async function deleteCategory(id: number, targetId: number | null, nowYm 
     throw new Error('a system category cannot be deleted');
   }
   const from = monthStart(nowYm);
-  // a fund: closed first, what it saved goes to this month's savings
+  // a fund: closed first, what it saved goes to this month's savings; its repeating payments too
   await deleteFund(id, nowYm);
+  for (const p of await db.all<{ id: number }>('SELECT id FROM subscriptions WHERE category_id = ? AND deleted_at IS NULL', [id])) {
+    await deleteSubscription(p.id);
+  }
   await db.transaction(async (tx) => {
     // the past stays in it: its operations there that follow a merchant are fixed, so the merchant moving on
     // (below, or later) doesn't take them along

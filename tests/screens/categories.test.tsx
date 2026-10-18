@@ -3,7 +3,7 @@ import { act, fireEvent, waitFor } from '@testing-library/react-native';
 import notifee from '@notifee/react-native';
 import SmsBackgroundTask from '../../src/native/SmsBackgroundTask';
 import { navigationRef } from '../../src/shared/navigation/navigation';
-import { longPress, openApp, openSettings, screen, tap, texts } from './app';
+import { longPress, openApp, openSettings, screen, tap, texts, toggleSwitch } from './app';
 import { base, category, ops } from '../e2e/seeds';
 import { setPlanAmount } from '../../src/db/plans';
 import { getDb } from '../../src/db';
@@ -84,11 +84,20 @@ describe('4.1–4.2 the list; creating and changing a category', () => {
     expect(await screen.findByText('Разделы')).toBeTruthy();
   });
 
-  test('"Подписки": a system one — its name stays, it can\'t be deleted, the hint says where its plan comes from', async () => {
+  test('"Подписки": a category of its own with "Повторяющиеся платежи" on — renamed, deleted as any; turned off with something saved — asked, "Отменить"', async () => {
     await tap('📺 Подписки');
-    expect(await screen.findByText(/^Системная категория: списания подписок/)).toBeTruthy();
-    expect(screen.getByDisplayValue('Подписки').props.editable).toBe(false);
-    expect(screen.queryByText('Удалить категорию')).toBeNull();
+    expect(await screen.findByLabelText('Повторяющиеся платежи')).toBeTruthy();
+    expect(screen.getByLabelText('Повторяющиеся платежи').props.value).toBe(true);
+    expect(screen.getByText(/^У мерчанта в категории — платёж/)).toBeTruthy();
+    expect(screen.getByDisplayValue('Подписки').props.editable).not.toBe(false);
+    expect(screen.getByText('Удалить категорию')).toBeTruthy();
+    act(() => toggleSwitch(false));
+    await tap('Сохранить');
+    expect(await screen.findByText('Категория «📺 Подписки» сохранена')).toBeTruthy();
+    expect(await (await getDb()).get("SELECT recurring FROM categories WHERE name = 'Подписки'")).toEqual({ recurring: 0 });
+    await tap('Отменить');
+    expect(await screen.findByText('Повторяющиеся платежи снова включены')).toBeTruthy();
+    expect(await (await getDb()).get("SELECT recurring FROM categories WHERE name = 'Подписки'")).toEqual({ recurring: 1 });
   });
 
   test('"Пополнение счёта": a system one too — what it is for, can\'t be deleted', async () => {
@@ -146,11 +155,11 @@ describe('4.3 the sections', () => {
 describe('4.4 merging', () => {
   beforeEach(() => openCategories(base));
 
-  test('picking: a long press, "Подписки" not, "Объединить" from two', async () => {
+  test('picking: a long press, a system one not, "Объединить" from two', async () => {
     await longPress('👕 Одежда');
     expect(await screen.findByText('Выбрано: 1')).toBeTruthy();
     expect(screen.queryByText('Объединить (1)')).toBeNull();
-    await tap('📺 Подписки');
+    await tap('💳 Пополнение счёта');
     expect(screen.getByText('Выбрано: 1')).toBeTruthy();
     await tap('💻 Техника');
     expect(await screen.findByText('Объединить (2)')).toBeTruthy();

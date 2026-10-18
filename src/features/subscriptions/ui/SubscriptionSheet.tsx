@@ -16,6 +16,7 @@ import { colors } from '@/shared/theme/theme';
 import { todayKey } from '@/db/subscriptions';
 import { currentYm } from '@/db/plans';
 import { confirmDeleteSub, saveSub } from '../model/commands';
+import { paymentWords } from '@/entities/category';
 import { SubscriptionTarget, useSubscriptionForm } from '../model/useSubscriptionForm';
 import { useSubscriptionSaving } from '../model/useSubscriptionSaving';
 import SavingFields from './SavingFields';
@@ -42,18 +43,20 @@ export default function SubscriptionSheet({ target, onClose, adding }: Props) {
   const amountBad = f.amount.trim() !== '' && f.input === null && !!f.name.trim();
   const save = () => { if (f.input) saveSub(f.input, target?.id, onClose, saving.choice); };
   const skip = () => { if (f.input) saveSub({ ...f.input, due: null }, target?.id, onClose); else onClose(); };
-  const title = target?.id !== undefined ? `📺 ${target.name}` : target?.merchant_key ? `📺 Подписка «${target.merchant_key}»` : '📺 Новая подписка';
+  const w = paymentWords(target?.category.name ?? '');
+  const icon = target?.category.emoji ?? '🔁';
+  const title = target?.id !== undefined ? `${icon} ${target.name}` : target?.merchant_key ? `${icon} ${w.One} «${target.merchant_key}»` : `${icon} ${w.New}`;
   return (
     <BottomSheet
       visible={target !== null} onClose={onClose} title={title} style={styles.root}
       headerRight={target?.id !== undefined ? (
-        <TouchableOpacity onPress={() => { confirmDeleteSub(target.id!, target.name, target.currency, onClose); }} hitSlop={8} accessibilityRole="button" accessibilityLabel="Удалить подписку">
+        <TouchableOpacity onPress={() => { confirmDeleteSub(target.id!, target.name, target.currency, target.category, onClose); }} hitSlop={8} accessibilityRole="button" accessibilityLabel={`Удалить ${w.acc}`}>
           <TrashIcon color={colors.danger} size={22} />
         </TouchableOpacity>
       ) : null}
     >
       <SheetScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        {adding ? <StepsNav at={1} count={2} name="Подписка" onBack={adding.onBack} /> : null}
+        {adding ? <StepsNav at={1} count={2} name={w.One} onBack={adding.onBack} /> : null}
         {target?.from_operation ? (
           <Text style={[formStyles.hint, styles.lead]}>Запомним, когда спишется следующая, — она встанет в план своего месяца.</Text>
         ) : null}

@@ -1,7 +1,7 @@
 // Picking the operation's category: for this operation only, or for its merchant too (asked when that changes others).
 import { useEffect, useState } from 'react';
 import { assignCategory, MerchantChoice, merchantChangePreview } from '@/categorize/assign';
-import { categoryLabel, getCategory, isSubscriptions } from '@/db/categories';
+import { categoryLabel, getCategory, isRecurring } from '@/db/categories';
 import { subscriptionOfMerchant } from '@/db/subscriptions';
 import { openSubscription } from '@/shared/navigation/sheets';
 import { showLimitAlert } from '@/notifications/notifeeIntegration';
@@ -25,8 +25,8 @@ export function useCategoryChoice(txId: number, tx: Tx | null, visible: boolean,
       else if (choice === 'merchant' && tx) toast(`Категория «${categoryLabel(c)}» назначена мерчанту «${merchantLabel(tx)}»`);
       else toast(`Категория «${categoryLabel(c)}» назначена`);
       onClose();
-      // "Подписки" for a merchant with no subscription: how often, when next (over the sheet that just closed)
-      if (c && isSubscriptions(c) && tx?.merchant_key && !(await subscriptionOfMerchant(tx.merchant_key))) setTimeout(() => openSubscription({ txId }), 250);
+      // a category with repeating payments for a merchant with none: how often, when next (over the sheet that just closed)
+      if (c && isRecurring(c) && tx?.merchant_key && !(await subscriptionOfMerchant(tx.merchant_key))) setTimeout(() => openSubscription({ txId }), 250);
     } catch (e) {
       console.error('assign category failed', e);
       toastError('Не удалось сохранить');

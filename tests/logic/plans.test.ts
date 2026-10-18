@@ -304,7 +304,7 @@ describe('the unplanned share of the budget', () => {
 
 describe('savings', () => {
   const { monthStats, getPlanBudget, setPlanBudget, ensureMonthPlan } = require('../../src/db/plans');
-  const { subscriptionsCategoryId, deleteCategory, updateCategory, getCategory } = require('../../src/db/categories');
+  const { topUpCategoryId, deleteCategory, updateCategory, getCategory } = require('../../src/db/categories');
   const { addManualTransaction } = require('../../src/db/transactions');
   const { getDb } = require('../../src/db');
 
@@ -318,10 +318,10 @@ describe('savings', () => {
   });
 
   test('a system category keeps its name and cannot be deleted', async () => {
-    const subs = await subscriptionsCategoryId();
-    await updateCategory(subs, { name: 'Другое имя', emoji: '💰', typeId: null });
-    expect(await getCategory(subs)).toMatchObject({ name: 'Подписки', emoji: '💰' });
-    await expect(deleteCategory(subs, null)).rejects.toThrow();
+    const topUp = await topUpCategoryId();
+    await updateCategory(topUp, { name: 'Другое имя', emoji: '💰', typeId: null });
+    expect(await getCategory(topUp)).toMatchObject({ name: 'Пополнение счёта', emoji: '💰' });
+    await expect(deleteCategory(topUp, null)).rejects.toThrow();
   });
 
   test('the leftover goes to savings by default; the choice carries over', async () => {

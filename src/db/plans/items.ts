@@ -15,7 +15,7 @@ export async function listPlan(ym: string, to?: Currency): Promise<PlanItem[]> {
   const db = await getDb();
   const prev = await db.get<{ ym: string }>('SELECT ym FROM plan_months WHERE ym < ? ORDER BY ym DESC LIMIT 1', [ym]);
   const rows = await db.all<Omit<PlanItem, 'pinned' | 'converted_minor' | 'currency'> & { pinned: number; currency: string }>(
-    `SELECT p.category_id, c.name, c.emoji, c.system, c.type_id, ct.name AS type_name, p.limit_minor, p.currency, p.kind, p.norm_period, p.pinned,
+    `SELECT p.category_id, c.name, c.emoji, c.system, c.recurring = 1 AS recurring, c.type_id, ct.name AS type_name, p.limit_minor, p.currency, p.kind, p.norm_period, p.pinned,
         (SELECT q.limit_minor FROM plan_items q WHERE q.ym = ? AND q.category_id = p.category_id) AS previous_minor
       FROM plan_items p
       JOIN categories c ON c.id = p.category_id
@@ -26,14 +26,18 @@ export async function listPlan(ym: string, to?: Currency): Promise<PlanItem[]> {
   const target = to ?? (await planCurrency(ym));
   const conv = await planConverter(ym);
   const funds = await fundsOf(ym, rows.filter((r) => r.kind === 'fund').map((r) => r.category_id));
-  const subs = rows.some((r) => r.system === 'subs') ? await monthSubscriptions(ym, target) : null;
-  const savingIds = new Set(subs?.saving.map((v) => v.sub_id) ?? []);
-  const subNames = (keep: (id: number) => boolean) => (subs ? [...subs.charges.map((c) => c.sub), ...subs.later.map((l) => l.sub)] : [])
-    .filter((s) => keep(s.id)).map((s) => s.name).filter((n, i, all) => all.indexOf(n) === i);
-  const subsInfo = subs && {
-    names: subNames((id) => !savingIds.has(id)), saving_names: subNames((id) => savingIds.has(id)),
-    saving_minor: subs.saving.reduce((a, v) => a + (v.converted_minor ?? 0), 0),
-  };
+  // a category with repeating payments: their names, those saved up for, the contributions
+  const subsInfo = new Map<number, NonNullable<PlanItem['subs']>>();
+  for (const r of rows.filter((x) => x.recurring)) {
+    const subs = await monthSubscriptions(ym, target, undefined, r.category_id);
+    const savingIds = new Set(subs.saving.map((v) => v.sub_id));
+    const subNames = (keep: (id: number) => boolean) => [...subs.charges.map((c) => c.sub), ...subs.later.map((l) => l.sub)]
+      .filter((s) => keep(s.id)).map((s) => s.name).filter((n, i, all) => all.indexOf(n) === i);
+    subsInfo.set(r.category_id, {
+      names: subNames((id) => !savingIds.has(id)), saving_names: subNames((id) => savingIds.has(id)),
+      saving_minor: subs.saving.reduce((a, v) => a + (v.converted_minor ?? 0), 0),
+    });
+  }
   return rows.map((r) => ({
     ...r,
     currency: asCurrency(r.currency),
@@ -42,7 +46,8 @@ export async function listPlan(ym: string, to?: Currency): Promise<PlanItem[]> {
     pinned: r.pinned === 1,
     previous_minor: r.previous_minor || null,
     ...(funds.has(r.category_id) ? { fund: funds.get(r.category_id) } : {}),
-    ...(r.system === 'subs' && subsInfo ? { subs: subsInfo } : {}),
+    recurring: !!r.recurring,
+    ...(subsInfo.has(r.category_id) ? { subs: subsInfo.get(r.category_id) } : {}),
   }));
 }
 

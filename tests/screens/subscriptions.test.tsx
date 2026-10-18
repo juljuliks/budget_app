@@ -122,7 +122,7 @@ describe('6.7.8 saving up for a subscription', () => {
     await tap('Нет, весь платёж в октябре');
     await tap('Сохранить');
     expect(await screen.findByText('Не откладывать на Netflix?')).toBeTruthy();
-    expect(screen.getByText(/^На подписку уже отложено 10/)).toBeTruthy();
+    expect(screen.getByText(/^На «Netflix» уже отложено 10/)).toBeTruthy();
     await tap('Не откладывать');
     expect(await screen.findByText(`Netflix — без откладывания, 10${N}₾ в сбережениях октября`)).toBeTruthy();
     expect(await (await getDb()).get('SELECT closed_ym, released_minor FROM sub_savings')).toEqual({ closed_ym: '2026-10', released_minor: 1000 });

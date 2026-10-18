@@ -3,7 +3,7 @@ import { Currency } from '../fx';
 
 /**
  * 'limit' = spending cap (progress bar); 'fixed' = fixed payment like rent (paid / not paid); 'fund' = a fund's contribution
- * (funds.ts); 'subs' = "Подписки", the month's charges (subscriptionItems.ts).
+ * (funds.ts); 'subs' = a category with "Повторяющиеся платежи", the month's charges (subscriptionItems.ts).
  */
 export type PlanKind = 'limit' | 'fixed' | 'fund' | 'subs';
 
@@ -33,10 +33,11 @@ export type PlanItem = {
   pinned: boolean;
   /** amount of the same item in the month this plan was carried over from (placeholder hint) */
   previous_minor: number | null;
-  /** the category's system kind ('subs' — "Подписки"), null / absent for the user's own */
+  /** the category's system kind, null / absent for the user's own */
   system?: string | null;
-  /** "Подписки": its subscriptions with a day, those charged this month first, then by their next charge */
-  /** "Подписки": the subscriptions charged by name, those saved up for, their contributions in the plan's currency */
+  /** "Повторяющиеся платежи" on: its item counted from its payments */
+  recurring?: boolean;
+  /** with repeating payments: those charged by name, those saved up for, their contributions in the plan's currency */
   subs?: { names: string[]; saving_names: string[]; saving_minor: number };
   /** a fund's item (kind 'fund'): how much by when, what it has by the month's end (now, for the current one); in `currency` */
   fund?: { target_minor: number; due: string; saved_minor: number; start_minor: number };

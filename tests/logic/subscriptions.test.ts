@@ -25,10 +25,27 @@ beforeEach(async () => {
 });
 afterEach(() => jest.useRealTimers());
 
-test('"Подписки" is a system category', async () => {
+test('"Подписки" is a category of its own with repeating payments on (not a system one)', async () => {
   const id = await subscriptionsCategoryId();
-  const row = await (await getDb()).get<{ name: string; system: string }>('SELECT name, system FROM categories WHERE id = ?', [id]);
-  expect(row).toEqual({ name: 'Подписки', system: 'subs' });
+  const row = await (await getDb()).get<{ name: string; system: string | null; recurring: number }>('SELECT name, system, recurring FROM categories WHERE id = ?', [id]);
+  expect(row).toEqual({ name: 'Подписки', system: null, recurring: 1 });
+});
+
+test('any category can have repeating payments: its plan counted from them; off — the amount stays, by hand; "Отменить"', async () => {
+  const { createCategory } = require('../../src/db/categories');
+  const { turnRecurring, undoRecurring } = require('../../src/db/subscriptions');
+  const insurance = await createCategory('Страховка', '🛡');
+  await turnRecurring(insurance, true);
+  await charge('GPI', 12000, '2026-10-05T10:00:00', insurance);
+  await saveSubscription({ category_id: insurance, merchant_key: 'GPI', name: 'GPI', amount_minor: 12000, currency: 'GEL', period_months: 12, due: '2027-10-05' });
+  const item = async () => (await listPlan('2026-10')).find((i) => i.category_id === insurance);
+  expect(await item()).toMatchObject({ kind: 'subs', limit_minor: 12000, recurring: true });
+  // "Подписки" keeps its own
+  expect((await listPlan('2026-10')).find((i) => i.name === 'Подписки')).toBeUndefined();
+  const undo = await turnRecurring(insurance, false);
+  expect(await item()).toMatchObject({ kind: 'fixed', limit_minor: 12000, recurring: false });
+  await undoRecurring(undo);
+  expect(await item()).toMatchObject({ kind: 'subs', recurring: true });
 });
 
 test('until a subscription has a day the amount put in by hand stays; then it is the charges', async () => {

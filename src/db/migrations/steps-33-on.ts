@@ -223,4 +223,17 @@ export const STEPS_33_ON: MigrationStep[][] = [
       PRIMARY KEY (saving_id, ym)
     )`,
   ],
+  // 42: repeating payments in any category ("Повторяющиеся платежи", categories.recurring): its plan item counted from
+  // them (kind 'subs'), each subscription (a repeating payment) of its category (subscriptions.category_id). "Подписки"
+  // is no longer a system category: one with the switch on, its subscriptions its own
+  [
+    'ALTER TABLE categories ADD COLUMN recurring INTEGER NOT NULL DEFAULT 0',
+    'ALTER TABLE subscriptions ADD COLUMN category_id INTEGER',
+    async (db) => {
+      const subs = (await db.get<{ id: number }>("SELECT id FROM categories WHERE system = 'subs'"))?.id;
+      if (subs === undefined) return;
+      await db.run('UPDATE categories SET recurring = 1, system = NULL WHERE id = ?', [subs]);
+      await db.run('UPDATE subscriptions SET category_id = ?', [subs]);
+    },
+  ],
 ];

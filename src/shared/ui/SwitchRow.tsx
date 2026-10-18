@@ -1,6 +1,6 @@
 import React from 'react';
-import { StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
-import { colors } from '@/shared/theme/theme';
+import { StyleProp, StyleSheet, Switch, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
+import { colors } from '../theme/theme';
 
 type Props = {
   label: string;
@@ -10,12 +10,13 @@ type Props = {
   onChange: (on: boolean) => void;
   /** when on: a link under the hint ("Сменить папку") */
   change?: { title: string; onPress: () => void };
+  style?: StyleProp<ViewStyle>;
 };
 
-/** A setting of the backup sheet: its switch, its state in a line, a link to change it while on. */
-export default function SwitchRow({ label, hint, on, onChange, change }: Props) {
+/** A setting with its switch ("Автокопия", "Повторяющиеся платежи"): its state in a line, a link to change it while on. */
+export default function SwitchRow({ label, hint, on, onChange, change, style }: Props) {
   return (
-    <View style={styles.row}>
+    <View style={[styles.row, style]}>
       <View style={styles.text}>
         <Text style={styles.label}>{label}</Text>
         <Text style={styles.hint}>{hint}</Text>

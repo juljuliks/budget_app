@@ -2,6 +2,7 @@ import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { categoryLabel } from '@/db/categories';
 import type { PlanItem } from '@/db/plans';
+import { paymentWords } from '@/entities/category';
 import { RepeatIcon } from '@/shared/ui/icons';
 import { formatWithCurrency } from '@/shared/lib/money';
 import { colors } from '@/shared/theme/theme';
@@ -11,7 +12,7 @@ import { styles } from './styles';
 type Props = { p: PlanView; item: PlanItem; hidden: boolean; onOpen: () => void };
 
 /**
- * "Подписки" in the plan: the repeat sign in the pin's place, the subscriptions with a day by name ("копим: …" — those
+ * A category with repeating payments in the plan: the repeat sign in the pin's place, its payments with a day by name ("копим: …" — those
  * saved up for), the month's amount (counted from them; by hand until one has a day), "копим 26.67 ₾" — the
  * contributions in it. A tap opens the "Подписки" sheet.
  */
@@ -19,7 +20,8 @@ export function SubsItemRow({ p, item, hidden, onOpen }: Props) {
   const names = item.subs?.names ?? [];
   const saving = item.subs?.saving_names ?? [];
   const listed = [names.join(', '), saving.length ? `копим: ${saving.join(', ')}` : ''].filter(Boolean).join(' · ');
-  const note = item.kind !== 'subs' ? 'вручную · задайте даты подпискам' : listed || 'нет подписок с датой';
+  const w = paymentWords(item.name);
+  const note = item.kind !== 'subs' ? `вручную · задайте даты ${w.toAll}` : listed || w.noDated;
   return (
     <TouchableOpacity style={styles.row} onPress={onOpen} accessibilityLabel={categoryLabel(item)}>
       <View style={styles.pin}><RepeatIcon color={colors.accent} size={20} /></View>

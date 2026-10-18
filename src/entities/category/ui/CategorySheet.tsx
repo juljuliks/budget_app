@@ -14,7 +14,8 @@ import { formStyles } from '@/shared/theme/formStyles';
 import { colors } from '@/shared/theme/theme';
 import { NO_SECTION } from '@/shared/lib/strings';
 import { useCategoryForm } from '../model/useCategoryForm';
-import { QUICK_HINT, systemCategoryHint } from '../texts';
+import { QUICK_HINT, RECURRING_HINT, systemCategoryHint } from '../texts';
+import SwitchRow from '@/shared/ui/SwitchRow';
 import CategoryNameField from './CategoryNameField';
 import CategorySummaryRow from './CategorySummaryRow';
 import TypeEditModal from './TypeEditModal';
@@ -45,7 +46,7 @@ type Props = {
 export default function CategorySheet({ visible, categoryId, typeId: initialTypeId, quick, onClose, onSaved, onDelete }: Props) {
   const navigation = useRootNavigation();
   const {
-    form, isNew, isDirty, isSubmitting, name, emoji, typeId, color, set, types, loadTypes, taken, systemKind, summary, save,
+    form, isNew, isDirty, isSubmitting, name, emoji, typeId, color, recurring, set, types, loadTypes, taken, systemKind, summary, save,
   } = useCategoryForm({ visible, categoryId, initialTypeId, onClose, onSaved });
   const system = systemKind !== null;
   const [typeOpen, setTypeOpen] = useState(false);
@@ -90,6 +91,10 @@ export default function CategorySheet({ visible, categoryId, typeId: initialType
           </Text>
         ) : null}
 
+        {quick || system ? null : (
+          <SwitchRow label="Повторяющиеся платежи" hint={RECURRING_HINT} on={recurring} onChange={(v) => set('recurring', v)} style={styles.switchRow} />
+        )}
+
         {quick ? (
           <Text style={styles.quickHint}>{QUICK_HINT}</Text>
         ) : (
@@ -130,6 +135,7 @@ export default function CategorySheet({ visible, categoryId, typeId: initialType
 }
 
 const styles = StyleSheet.create({
+  switchRow: { paddingHorizontal: 0, marginTop: 16 },
   sheet: { maxHeight: '92%' },
   content: { paddingHorizontal: 20, paddingBottom: 8 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' },

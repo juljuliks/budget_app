@@ -197,4 +197,15 @@ describe('migrations', () => {
     expect(await db.all('SELECT pattern, category_id FROM merchant_rules')).toEqual([{ pattern: 'DEPOSIT', category_id: own }]);
     expect(await db.get('SELECT usage_count FROM category_usage WHERE category_id = ?', [own])).toEqual({ usage_count: 3 });
   });
+
+  test('migration 42: "Подписки" is no longer a system category — repeating payments on, its subscriptions its own', async () => {
+    const db = openDatabase(':memory:');
+    await migrate(db, MIGRATIONS.slice(0, 41));
+    const subs = (await db.get<{ id: number }>("SELECT id FROM categories WHERE system = 'subs'"))!.id;
+    await db.run("INSERT INTO subscriptions (merchant_key, name, amount_minor, currency, since_ym, created_at) VALUES ('NETFLIX.COM', 'Netflix', 3000, 'GEL', '2026-10', 0)");
+    await migrate(db);
+    expect(await db.get('SELECT system, recurring FROM categories WHERE id = ?', [subs])).toEqual({ system: null, recurring: 1 });
+    expect(await db.get('SELECT category_id FROM subscriptions')).toEqual({ category_id: subs });
+    expect(await db.get('SELECT count(*) AS n FROM categories WHERE recurring = 1')).toEqual({ n: 1 });
+  });
 });

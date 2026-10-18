@@ -84,20 +84,20 @@ export function itemSections(p: PlanView, { ym, currency, hidden, toShown, onOpe
   ));
 }
 
-/** "Подписки": the month's charges, with their share of the budget; a tap opens the "Подписки" sheet. */
-export function subsSection(p: PlanView, hidden: boolean, onOpen: () => void) {
-  if (!p.subs) return null;
-  const sum = p.subs.converted_minor ?? 0;
+/** "Повторяющиеся платежи": a row for each category with them, with their share of the budget; a tap opens its payments. */
+export function recurringSection(p: PlanView, hidden: boolean, onOpen: (item: PlanItem) => void) {
+  if (!p.recurring.length) return null;
+  const sum = p.recurringTotal;
   return (
-    <React.Fragment key="subs">
-      {header('Подписки', (
+    <React.Fragment key="recurring">
+      {header('Повторяющиеся платежи', (
         <Text style={styles.groupTotal}>
           {hidden && p.shownBudget ? null : p.money(sum)}
           {p.shownBudget && sum ? <Text style={styles.groupShare}>{hidden ? '' : ' · '}{percentOf(sum, p.shownBudget)}</Text> : null}
         </Text>
       ))}
       <View>
-        <SubsItemRow p={p} item={p.subs} hidden={hidden} onOpen={onOpen} />
+        {p.recurring.map((item) => <SubsItemRow key={item.category_id} p={p} item={item} hidden={hidden} onOpen={() => onOpen(item)} />)}
       </View>
     </React.Fragment>
   );

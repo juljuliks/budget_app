@@ -5,6 +5,8 @@ import { colors } from '@/shared/theme/theme';
 
 type Props = {
   name: string;
+  /** what it is, for a screen reader ("Подписка: Netflix") */
+  label: string;
   /** under the name, its parts joined with " · "; `warn` / `ok` color the last one */
   note: string[];
   tone?: 'ok' | 'warn';
@@ -19,11 +21,11 @@ type Props = {
 };
 
 /** A subscription in the "Подписки" sheet: name and what it is, the amount; a tap opens it. */
-export default function SubscriptionRow({ name, note, tone, amount, amountNote, muted, ring, onPress }: Props) {
+export default function SubscriptionRow({ name, label, note, tone, amount, amountNote, muted, ring, onPress }: Props) {
   const last = note[note.length - 1];
   const head = note.slice(0, -1);
   return (
-    <TouchableOpacity style={styles.row} onPress={onPress} accessibilityRole="button" accessibilityLabel={`Подписка: ${name}`}>
+    <TouchableOpacity style={styles.row} onPress={onPress} accessibilityRole="button" accessibilityLabel={`${label}: ${name}`}>
       {ring !== undefined ? <ProgressRing ratio={ring} color={ring >= 1 ? colors.income : colors.fund} track={colors.fundTrack} size={22} /> : null}
       <View style={styles.body}>
         <Text style={styles.name} numberOfLines={1}>{name}</Text>

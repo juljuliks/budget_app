@@ -22,6 +22,11 @@ const merchantsN = (n: number) => `${n} ${plural(n, ['мерчант', 'мерч
 const past = (label: string, p: DeletePreview) =>
   `${opsOn(p.past)} прошлых месяцев ${p.past.n === 1 ? 'останется' : 'останутся'} в «${label}» — история и отчёты не изменятся.`;
 const plan = (label: string) => `План «${label}» на этот месяц удалится.`;
+// its repeating payments go with it; what they saved — to this month's savings
+const payments = (p: DeletePreview) => [
+  p.payments ? `${p.payments === 1 ? 'Её повторяющийся платёж удалится' : 'Её повторяющиеся платежи удалятся'}.` : '',
+  p.saved?.length ? `Отложенное на них (${p.saved.map((x) => `${x.name} — ${formatMoneyWithCurrency(x.minor, x.currency)}`).join(', ')}) уйдёт в сбережения месяца.` : '',
+].filter(Boolean).join(' ');
 
 /** No operations this month: a plain confirmation. */
 export function deleteEmptyText(label: string, p: DeletePreview): SheetText {
@@ -31,6 +36,7 @@ export function deleteEmptyText(label: string, p: DeletePreview): SheetText {
     lines.push(`${p.merchants.length === 1 ? `Мерчант ${names(p.merchants)} останется` : `${merchantsN(p.merchants.length)} (${names(p.merchants)}) останутся`} без категории.`);
   }
   if (p.hasPlan) lines.push(plan(label));
+  if (p.payments) lines.push(payments(p));
   return { title: `Удалить категорию «${label}»?`, message: lines.join(' ') };
 }
 
@@ -55,6 +61,7 @@ export function moveAllText(label: string, target: string | null, p: DeletePrevi
       : `• ${who} ${one ? 'останется' : 'останутся'} без категории — ${one ? 'его' : 'их'} новые операции придётся размечать вручную.`);
   }
   if (p.hasPlan) lines.push(`• ${plan(label)}`);
+  if (p.payments) lines.push(`• ${payments(p)}`);
   return { title: target ? `Перенести в «${target}» и удалить «${label}»?` : `Удалить «${label}»?`, message: lines.join('\n') };
 }
 
@@ -101,6 +108,7 @@ export function sortOutDoneText(label: string, s: SortOutSummary, p: DeletePrevi
     after.push(`${one ? `Мерчант ${names(p.merchants)} всё ещё` : `${merchantsN(p.merchants.length)} (${names(p.merchants)}) всё ещё`} с категорией «${label}» — после удаления ${one ? 'останется' : 'останутся'} без категории.`);
   }
   if (p.hasPlan) after.push(plan(label));
+  if (p.payments) after.push(payments(p));
   return { title: 'Все операции перенесены', message: [lines.join('\n'), after.join(' ')].filter(Boolean).join('\n\n') };
 }
 

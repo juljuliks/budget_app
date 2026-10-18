@@ -1,0 +1,56 @@
+// "Повторяющиеся платежи" of a category turned on and off. Off: what its payments saved goes to this month's savings,
+// its plan items from this month on keep their amount as an obligatory payment (by hand from now on), the payments stay
+// (on again — they count again). "Отменить" puts it back as it was.
+import { getDb } from '../index';
+import { setRecurring } from '../categories';
+import { currentYm } from '../plans/months';
+import { refreshSubscriptionItems } from '../plans/subscriptionItems';
+import { savedNow, SavingUndo, stopSaving, undoSaving } from './savingWrites';
+
+export type RecurringUndo = { category_id: number; items: string[]; savings: SavingUndo[] };
+
+/** Its payments' ids (not deleted). */
+async function paymentsOf(categoryId: number): Promise<number[]> {
+  const db = await getDb();
+  return (await db.all<{ id: number }>('SELECT id FROM subscriptions WHERE category_id = ? AND deleted_at IS NULL', [categoryId])).map((r) => r.id);
+}
+
+/** What turning it off gives back to this month's savings: each payment saved up for, with what it has. */
+export async function savedInCategory(categoryId: number): Promise<Array<{ name: string; minor: number; currency: string }>> {
+  const db = await getDb();
+  const out: Array<{ name: string; minor: number; currency: string }> = [];
+  for (const id of await paymentsOf(categoryId)) {
+    const minor = await savedNow(id);
+    const s = await db.get<{ name: string; currency: string }>('SELECT name, currency FROM subscriptions WHERE id = ?', [id]);
+    if (minor > 0 && s) out.push({ name: s.name, minor, currency: s.currency });
+  }
+  return out;
+}
+
+/** Turns it on (its plan counted from the payments again) or off; off — how to put it back. */
+export async function turnRecurring(categoryId: number, on: boolean, nowYm = currentYm()): Promise<RecurringUndo | null> {
+  const db = await getDb();
+  if (on) {
+    await setRecurring(categoryId, true, db);
+    await refreshSubscriptionItems(nowYm);
+    return null;
+  }
+  const savings: SavingUndo[] = [];
+  for (const id of await paymentsOf(categoryId)) {
+    const stopped = await stopSaving(id, nowYm);
+    if (stopped) savings.push(stopped.undo);
+  }
+  const items = (await db.all<{ ym: string }>("SELECT ym FROM plan_items WHERE category_id = ? AND ym >= ? AND kind = 'subs'", [categoryId, nowYm])).map((r) => r.ym);
+  await db.run("UPDATE plan_items SET kind = 'fixed' WHERE category_id = ? AND ym >= ? AND kind = 'subs'", [categoryId, nowYm]);
+  await setRecurring(categoryId, false, db);
+  return { category_id: categoryId, items, savings };
+}
+
+/** "Отменить" after turning it off. */
+export async function undoRecurring(u: RecurringUndo, nowYm = currentYm()): Promise<void> {
+  const db = await getDb();
+  await setRecurring(u.category_id, true, db);
+  for (const ym of u.items) await db.run("UPDATE plan_items SET kind = 'subs' WHERE category_id = ? AND ym = ?", [u.category_id, ym]);
+  for (const s of u.savings) await undoSaving(s, nowYm);
+  await refreshSubscriptionItems(nowYm);
+}

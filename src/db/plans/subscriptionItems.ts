@@ -1,4 +1,5 @@
-// "Подписки" in a month's plan: its item (kind 'subs') is the month's charges, counted from the subscriptions with a day
+// A category with "Повторяющиеся платежи" ("Подписки" one) in a month's plan: its item (kind 'subs') is the month's
+// charges, counted from its payments (subscriptions) with a day
 // (db/subscriptions/schedule.ts). Until one has a day the item keeps the amount put in by hand (what it had before the
 // subscriptions). The current and the coming months are counted again on each look; past ones stay as they were. A
 // subscription saved up for ("Откладывать каждый месяц?") puts its contribution in instead of its charge (paid from
@@ -30,11 +31,11 @@ export type MonthSubscriptions = {
   currency: Currency;
 };
 
-/** The month's subscriptions as the plan counts them; amounts in `to` (the plan's currency by default). */
-export async function monthSubscriptions(ym: string, to?: Currency, now = new Date()): Promise<MonthSubscriptions> {
+/** The month's payments of `categoryId` (all — every such category's) as the plan counts them; amounts in `to` (the plan's currency by default). */
+export async function monthSubscriptions(ym: string, to?: Currency, now = new Date(), categoryId?: number): Promise<MonthSubscriptions> {
   const db = await getDb();
   const currency = to ?? asCurrency((await db.get<{ c: string }>('SELECT budget_currency AS c FROM plan_months WHERE ym = ?', [ym]))?.c);
-  const subs = await listSubscriptions(db);
+  const subs = await listSubscriptions(db, categoryId);
   const days = await chargeDays(subs.flatMap((s) => (s.merchant_key ? [s.merchant_key] : [])), db);
   const conv = await makeConverter();
   const rateDay = planRateDate(ym);
@@ -42,7 +43,7 @@ export async function monthSubscriptions(ym: string, to?: Currency, now = new Da
   const [, last] = monthDays(ym);
   const out: MonthSubscriptions = { charges: [], later: [], undated: [], saving: [], total_minor: 0, currency };
   for (const e of await savingEffects(ym, currentYm(now), db)) {
-    if (!e.month) continue;
+    if (!e.month || (categoryId !== undefined && e.saving.category_id !== categoryId)) continue;
     const converted = conv(e.month.contribution, e.currency, currency, rateDay);
     out.saving.push({
       sub_id: e.saving.sub_id, start_minor: e.month.start, contribution_minor: e.month.contribution, end_minor: e.month.end, converted_minor: converted,
@@ -80,29 +81,32 @@ function firstAfter(due: string, periodMonths: number, day: string): string {
 }
 
 /**
- * The item of "Подписки" in `ym` (the current or a coming month with a plan) set to its charges, in the plan's currency;
- * made if the month has none and there are subscriptions. An amount by hand stays until one has a day.
+ * The items of the categories with "Повторяющиеся платежи" in `ym` (the current or a coming month with a plan) set to
+ * their charges, in the plan's currency; made if the month has none and the category has payments. An amount by hand
+ * stays until one of them has a day.
  */
 export async function refreshSubscriptionItem(ym: string, nowYm = currentYm()): Promise<void> {
   if (ym < nowYm) return;
   const db = await getDb();
-  // one look when there's nothing to count (the stats open months often)
-  const r = await db.get<{ c: string | null; category: number | null; kind: string | null; any: number; dated: number }>(
-    `SELECT (SELECT budget_currency FROM plan_months WHERE ym = ?) AS c, (SELECT id FROM categories WHERE system = 'subs') AS category,
-        (SELECT p.kind FROM plan_items p JOIN categories c ON c.id = p.category_id WHERE p.ym = ? AND c.system = 'subs') AS kind,
-        EXISTS (SELECT 1 FROM subscriptions WHERE deleted_at IS NULL) AS any,
-        EXISTS (SELECT 1 FROM subscriptions WHERE deleted_at IS NULL AND due IS NOT NULL) AS dated`, [ym, ym]);
-  if (!r || r.c === null || r.category === null) return;
-  const categoryId = r.category;
-  // an amount by hand stays until a subscription has a day (once counted, it's counted on — 0 with none left); no item and
-  // no subscriptions — none made
-  if (r.kind === null ? !r.any : r.kind !== 'subs' && !r.dated) return;
+  const c = (await db.get<{ c: string | null }>('SELECT budget_currency AS c FROM plan_months WHERE ym = ?', [ym]))?.c;
+  if (!c) return;
   await storeContributions(ym, nowYm, db);
-  const { total_minor, currency } = await monthSubscriptions(ym, asCurrency(r.c));
-  await db.run(
-    `INSERT INTO plan_items (ym, category_id, limit_minor, pinned, kind, currency) VALUES (?, ?, ?, 0, 'subs', ?)
-      ON CONFLICT (ym, category_id) DO UPDATE SET limit_minor = excluded.limit_minor, kind = 'subs', currency = excluded.currency`,
-    [ym, categoryId, total_minor, currency]);
+  // one look for every such category: its item, has it payments, has one a day
+  const cats = await db.all<{ id: number; kind: string | null; any: number; dated: number }>(
+    `SELECT c.id, (SELECT p.kind FROM plan_items p WHERE p.ym = ? AND p.category_id = c.id) AS kind,
+        EXISTS (SELECT 1 FROM subscriptions s WHERE s.category_id = c.id AND s.deleted_at IS NULL) AS any,
+        EXISTS (SELECT 1 FROM subscriptions s WHERE s.category_id = c.id AND s.deleted_at IS NULL AND s.due IS NOT NULL) AS dated
+      FROM categories c WHERE c.recurring = 1 AND c.deleted_at IS NULL`, [ym]);
+  for (const r of cats) {
+    // an amount by hand stays until a payment has a day (once counted, it's counted on — 0 with none left); no item and
+    // no payments — none made
+    if (r.kind === null ? !r.any : r.kind !== 'subs' && !r.dated) continue;
+    const { total_minor, currency } = await monthSubscriptions(ym, asCurrency(c), undefined, r.id);
+    await db.run(
+      `INSERT INTO plan_items (ym, category_id, limit_minor, pinned, kind, currency) VALUES (?, ?, ?, 0, 'subs', ?)
+        ON CONFLICT (ym, category_id) DO UPDATE SET limit_minor = excluded.limit_minor, kind = 'subs', currency = excluded.currency`,
+      [ym, r.id, total_minor, currency]);
+  }
 }
 
 /** Every month with a plan from the current one on, counted again (a subscription was changed). */
