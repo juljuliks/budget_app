@@ -1,8 +1,11 @@
 // The plan's types: an item, the month's budget, the kinds and the spending rhythms.
 import { Currency } from '../fx';
 
-/** 'limit' = spending cap (progress bar); 'fixed' = fixed payment like rent (paid / not paid); 'fund' = a fund's contribution (funds.ts). */
-export type PlanKind = 'limit' | 'fixed' | 'fund';
+/**
+ * 'limit' = spending cap (progress bar); 'fixed' = fixed payment like rent (paid / not paid); 'fund' = a fund's contribution
+ * (funds.ts); 'subs' = "Подписки", the month's charges (subscriptionItems.ts).
+ */
+export type PlanKind = 'limit' | 'fixed' | 'fund' | 'subs';
 
 /**
  * The rhythm a flexible item's norm is counted in for period stats: food every day, bars per week, clothes per
@@ -30,6 +33,10 @@ export type PlanItem = {
   pinned: boolean;
   /** amount of the same item in the month this plan was carried over from (placeholder hint) */
   previous_minor: number | null;
+  /** the category's system kind ('subs' — "Подписки"), null / absent for the user's own */
+  system?: string | null;
+  /** "Подписки": its subscriptions with a day, those charged this month first, then by their next charge */
+  subs?: { names: string[] };
   /** a fund's item (kind 'fund'): how much by when, what it has by the month's end (now, for the current one); in `currency` */
   fund?: { target_minor: number; due: string; saved_minor: number; start_minor: number };
 };

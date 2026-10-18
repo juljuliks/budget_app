@@ -126,4 +126,47 @@ export const STEPS_33_ON: MigrationStep[][] = [
         [ym]);
     },
   ],
+  // 39: "Подписки": a system category (system = 'subs'; the one so named, or a new one) and its subscriptions — a merchant
+  // (or a name without one) charged every period_months from the day set (due; null — "Без даты списания"). Its plan
+  // item is of a kind of its own ('subs'): the month's charges, counted (plan_items rebuilt for it). save / start_minor —
+  // saving up for one charged less often than monthly (not used yet). A deleted one keeps its row (deleted_at)
+  [
+    `CREATE TABLE IF NOT EXISTS subscriptions (
+      id INTEGER PRIMARY KEY,
+      merchant_key TEXT,
+      name TEXT NOT NULL,
+      amount_minor INTEGER NOT NULL CHECK (amount_minor >= 0),
+      currency TEXT NOT NULL,
+      period_months INTEGER NOT NULL DEFAULT 1 CHECK (period_months BETWEEN 1 AND 36),
+      due TEXT,
+      since_ym TEXT NOT NULL,
+      save INTEGER NOT NULL DEFAULT 0,
+      start_minor INTEGER NOT NULL DEFAULT 0 CHECK (start_minor >= 0),
+      created_at INTEGER NOT NULL,
+      deleted_at INTEGER
+    )`,
+    'CREATE UNIQUE INDEX IF NOT EXISTS idx_subscriptions_merchant ON subscriptions(merchant_key) WHERE merchant_key IS NOT NULL AND deleted_at IS NULL',
+    `CREATE TABLE plan_items_new (
+      ym TEXT NOT NULL,
+      category_id INTEGER NOT NULL,
+      limit_minor INTEGER NOT NULL DEFAULT 0 CHECK (limit_minor >= 0),
+      pinned INTEGER NOT NULL DEFAULT 0,
+      kind TEXT NOT NULL DEFAULT 'limit' CHECK (kind IN ('limit', 'fixed', 'fund', 'subs')),
+      currency TEXT NOT NULL DEFAULT 'GEL',
+      norm_period TEXT NOT NULL DEFAULT 'day' CHECK (norm_period IN ('day', 'week', '2weeks', 'month')),
+      PRIMARY KEY (ym, category_id),
+      FOREIGN KEY(category_id) REFERENCES categories(id) ON DELETE CASCADE
+    )`,
+    `INSERT INTO plan_items_new (ym, category_id, limit_minor, pinned, kind, currency, norm_period)
+      SELECT ym, category_id, limit_minor, pinned, kind, currency, norm_period FROM plan_items`,
+    'DROP TABLE plan_items',
+    'ALTER TABLE plan_items_new RENAME TO plan_items',
+    async (db) => {
+      // by name in JS: SQLite's lower() leaves Cyrillic as it is
+      const subs = (await db.all<{ id: number; name: string }>('SELECT id, name FROM categories WHERE deleted_at IS NULL AND system IS NULL ORDER BY id'))
+        .find((c) => c.name.trim().toLowerCase() === 'подписки');
+      if (subs) await db.run("UPDATE categories SET system = 'subs' WHERE id = ?", [subs.id]);
+      else await db.run("INSERT INTO categories (name, emoji, system, sort_order) VALUES ('Подписки', '📺', 'subs', 7)");
+    },
+  ],
 ];

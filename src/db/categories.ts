@@ -34,13 +34,25 @@ export const isTopUp = (c: { system?: string | null }) => c.system === TOP_UP;
 
 /** "Между своими картами": money between one's own cards (other banks) — not spending, not income. */
 export const OWN_TRANSFER = 'own';
-/** A category of the system: "Сбережения", "Пополнение счёта" (not deleted, merged, planned, offered for purchases). */
+/**
+ * "Подписки": its spending is the subscriptions' charges (db/subscriptions), its plan item counted from them ('subs').
+ * A purchase category, offered as any other; not deleted, merged or renamed.
+ */
+export const SUBSCRIPTIONS = 'subs';
+export const isSubscriptions = (c: { system?: string | null }) => c.system === SUBSCRIPTIONS;
+/** A category of the system: "Сбережения", "Пополнение счёта", "Подписки"… (not deleted, merged, added to the plan by hand). */
 export const isSystemCategory = (c: { system?: string | null }) => !!c.system;
 
 /** The id of "Пополнение счёта". */
 export async function topUpCategoryId(db?: Db): Promise<number | null> {
   db ??= await getDb();
   return (await db.get<{ id: number }>("SELECT id FROM categories WHERE system = 'topup'"))?.id ?? null;
+}
+
+/** The id of "Подписки". */
+export async function subscriptionsCategoryId(db?: Db): Promise<number | null> {
+  db ??= await getDb();
+  return (await db.get<{ id: number }>("SELECT id FROM categories WHERE system = 'subs'"))?.id ?? null;
 }
 
 /** The id of "Сбережения". */

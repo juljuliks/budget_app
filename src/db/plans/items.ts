@@ -6,6 +6,7 @@ import { Currency } from '../fx';
 import { asCurrency } from './months';
 import { NormPeriod, PlanItem, PlanKind, asNorm } from './types';
 import { activeFunds, fundLedger } from './funds';
+import { monthSubscriptions } from './subscriptionItems';
 import { OverBudgetError, ensureMonthPlan, planConverter, planCurrency, plannedTotal, storedBudget } from './budget';
 
 /** The month's plan items; `converted_minor` in `to` (default: the amount to distribute's currency). */
@@ -14,7 +15,7 @@ export async function listPlan(ym: string, to?: Currency): Promise<PlanItem[]> {
   const db = await getDb();
   const prev = await db.get<{ ym: string }>('SELECT ym FROM plan_months WHERE ym < ? ORDER BY ym DESC LIMIT 1', [ym]);
   const rows = await db.all<Omit<PlanItem, 'pinned' | 'converted_minor' | 'currency'> & { pinned: number; currency: string }>(
-    `SELECT p.category_id, c.name, c.emoji, c.type_id, ct.name AS type_name, p.limit_minor, p.currency, p.kind, p.norm_period, p.pinned,
+    `SELECT p.category_id, c.name, c.emoji, c.system, c.type_id, ct.name AS type_name, p.limit_minor, p.currency, p.kind, p.norm_period, p.pinned,
         (SELECT q.limit_minor FROM plan_items q WHERE q.ym = ? AND q.category_id = p.category_id) AS previous_minor
       FROM plan_items p
       JOIN categories c ON c.id = p.category_id
@@ -25,6 +26,8 @@ export async function listPlan(ym: string, to?: Currency): Promise<PlanItem[]> {
   const target = to ?? (await planCurrency(ym));
   const conv = await planConverter(ym);
   const funds = await fundsOf(ym, rows.filter((r) => r.kind === 'fund').map((r) => r.category_id));
+  const subs = rows.some((r) => r.system === 'subs') ? await monthSubscriptions(ym, target) : null;
+  const subNames = subs ? [...subs.charges.map((c) => c.sub.name), ...subs.later.map((l) => l.sub.name)].filter((n, i, all) => all.indexOf(n) === i) : [];
   return rows.map((r) => ({
     ...r,
     currency: asCurrency(r.currency),
@@ -33,6 +36,7 @@ export async function listPlan(ym: string, to?: Currency): Promise<PlanItem[]> {
     pinned: r.pinned === 1,
     previous_minor: r.previous_minor || null,
     ...(funds.has(r.category_id) ? { fund: funds.get(r.category_id) } : {}),
+    ...(r.system === 'subs' ? { subs: { names: subNames } } : {}),
   }));
 }
 

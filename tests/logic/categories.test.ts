@@ -34,7 +34,7 @@ describe('types', () => {
     expect(await listCategoryTypes()).toEqual([{ id: transfer, name: 'Переводы', is_transfer: 1, sort_order: 100, palette: null }]);
     expect((await listCategories()).filter(isTransferCategory).map((c) => c.system)).toEqual(['own']);
     expect((await listCategories()).filter((c) => c.system).map((c) => [categoryLabel(c), c.system]).sort()).toEqual([
-      ['🏦 Сбережения', 'savings'], ['💳 Пополнение счёта', 'topup'], ['🔁 Переводы: Между своими картами', 'own'],
+      ['🏦 Сбережения', 'savings'], ['💳 Пополнение счёта', 'topup'], ['🔁 Переводы: Между своими картами', 'own'], ['📺 Подписки', 'subs'],
     ].sort());
   });
 

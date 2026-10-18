@@ -5,6 +5,7 @@ import { BUDGET_CURRENCY, asCurrency, currentYm, monthRange, parseYm, planRateDa
 import { convertSpending, spendRows, sumBy } from './spend';
 import { PlanBudget } from './types';
 import { refreshFundItems, ymBefore } from './funds';
+import { refreshSubscriptionItem } from './subscriptionItems';
 
 /** The unplanned share of a budget, in its currency. */
 export const unplannedOf = (b: Pick<PlanBudget, 'amount_minor' | 'unplanned_pct' | 'unplanned_minor'>) =>
@@ -17,14 +18,17 @@ export const unplannedOf = (b: Pick<PlanBudget, 'amount_minor' | 'unplanned_pct'
  */
 export async function ensureMonthPlan(ym: string, nowYm = currentYm()): Promise<void> {
   if (ym < nowYm) return;
-  await createMonthPlan(ym);
+  const created = await createMonthPlan(ym);
   // the funds' contributions as what is saved now asks (the spending since changed it)
   await refreshFundItems(ym, nowYm);
+  // "Подписки": a new month's charges (later — counted again by each change of a subscription)
+  if (created) await refreshSubscriptionItem(ym, nowYm);
 }
 
-async function createMonthPlan(ym: string): Promise<void> {
+/** Made now: true; already there: false. */
+async function createMonthPlan(ym: string): Promise<boolean> {
   const db = await getDb();
-  if (await db.get('SELECT 1 FROM plan_months WHERE ym = ?', [ym])) return;
+  if (await db.get('SELECT 1 FROM plan_months WHERE ym = ?', [ym])) return false;
   await db.transaction(async (tx) => {
     const source = await tx.get<{ ym: string }>('SELECT ym FROM plan_months WHERE ym < ? ORDER BY ym DESC LIMIT 1', [ym]);
     if (source) {
@@ -48,6 +52,7 @@ async function createMonthPlan(ym: string): Promise<void> {
         (SELECT unplanned_minor FROM plan_months WHERE ym = ?))`,
       [ym, source?.ym ?? '', source?.ym ?? '', BUDGET_CURRENCY, source?.ym ?? '', source?.ym ?? '', source?.ym ?? '', source?.ym ?? '']);
   });
+  return true;
 }
 
 /**

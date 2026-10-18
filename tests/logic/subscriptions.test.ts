@@ -1,0 +1,80 @@
+// "Подписки" (db/subscriptions, db/plans/subscriptionItems.ts): the system category, the plan's item counted from the
+// charges, the amount by hand until one has a day, the month's sections, the merchants without a subscription.
+import { freshDb } from '../helpers';
+import { getDb } from '../../src/db';
+import { subscriptionsCategoryId } from '../../src/db/categories';
+import { listPlan, monthSubscriptions, setPlanAmount, setPlanBudget } from '../../src/db/plans';
+import { deleteSubscription, merchantsWithoutSubscription, saveSubscription, subscriptionOfMerchant } from '../../src/db/subscriptions';
+
+let n = 0;
+const at = (s: string) => Math.floor(new Date(s).getTime() / 1000);
+/** A bank operation of `merchant` (its key the same) in `categoryId`. */
+async function charge(merchant: string, amount: number, when: string, categoryId: number | null) {
+  n++;
+  await (await getDb()).run(
+    `INSERT INTO transactions (bank, kind, amount_minor, currency, raw_merchant, merchant_key, category_id, category_source, occurred_at, raw_sms, sms_hash)
+      VALUES ('tbc', 'purchase', ?, 'GEL', ?, ?, ?, 'user', ?, ?, ?)`,
+    [amount, merchant, merchant, categoryId, at(when), `sms ${n}`, `h${n}`]);
+}
+const NETFLIX = { merchant_key: 'NETFLIX.COM', name: 'Netflix', amount_minor: 3000, currency: 'GEL' as const, period_months: 1 };
+
+beforeEach(async () => {
+  jest.useFakeTimers({ now: new Date('2026-10-18T12:00:00'), advanceTimers: true });
+  await freshDb();
+  await setPlanBudget('2026-10', 500000, 'GEL');
+});
+afterEach(() => jest.useRealTimers());
+
+test('"Подписки" is a system category', async () => {
+  const id = await subscriptionsCategoryId();
+  const row = await (await getDb()).get<{ name: string; system: string }>('SELECT name, system FROM categories WHERE id = ?', [id]);
+  expect(row).toEqual({ name: 'Подписки', system: 'subs' });
+});
+
+test('until a subscription has a day the amount put in by hand stays; then it is the charges', async () => {
+  const subs = (await subscriptionsCategoryId())!;
+  await setPlanAmount('2026-10', subs, 25000, 'fixed', 'GEL');
+  await charge('NETFLIX.COM', 3000, '2026-10-18T10:00:00', subs);
+  // "Пропустить": no day — still by hand
+  await saveSubscription({ ...NETFLIX, due: null });
+  expect((await listPlan('2026-10')).find((i) => i.category_id === subs)).toMatchObject({ kind: 'fixed', limit_minor: 25000 });
+  // a day: October's charge (done, the operation of the 18th) is the plan
+  await saveSubscription({ ...NETFLIX, due: '2026-11-18' });
+  expect((await listPlan('2026-10')).find((i) => i.category_id === subs)).toMatchObject({ kind: 'subs', limit_minor: 3000 });
+  // a year one charged in March isn't October's
+  await saveSubscription({ merchant_key: 'APPLE', name: 'iCloud+', amount_minor: 10000, currency: 'GEL', period_months: 12, due: '2027-03-12' });
+  expect((await listPlan('2026-10')).find((i) => i.category_id === subs)!.limit_minor).toBe(3000);
+  expect((await listPlan('2027-03')).find((i) => i.category_id === subs)!.limit_minor).toBe(13000);
+  // deleted: counted on, 0 with none charged
+  await deleteSubscription((await subscriptionOfMerchant('NETFLIX.COM'))!.id);
+  expect((await listPlan('2026-10')).find((i) => i.category_id === subs)!.limit_minor).toBe(0);
+});
+
+test("the month's sections: charged in it by day, the others by their next charge, those without a day", async () => {
+  const subs = (await subscriptionsCategoryId())!;
+  await charge('NETFLIX.COM', 3000, '2026-10-18T10:00:00', subs);
+  await saveSubscription({ ...NETFLIX, due: '2026-11-18' });
+  await saveSubscription({ merchant_key: 'SPOTIFY', name: 'Spotify', amount_minor: 1840, currency: 'GEL', period_months: 1, due: '2026-10-25' });
+  await saveSubscription({ merchant_key: 'ADOBE', name: 'Adobe', amount_minor: 8900, currency: 'USD', period_months: 12, due: '2027-06-03' });
+  await saveSubscription({ merchant_key: 'YOUTUBE', name: 'YouTube', amount_minor: 1599, currency: 'GEL', period_months: 1, due: null });
+  const m = await monthSubscriptions('2026-10', 'GEL');
+  expect(m.charges.map((c) => [c.sub.name, c.day, c.done])).toEqual([['Netflix', '2026-10-18', true], ['Spotify', '2026-10-25', false]]);
+  expect(m.total_minor).toBe(4840);
+  expect(m.later.map((l) => [l.sub.name, l.next])).toEqual([['Adobe', '2027-06-03']]);
+  expect(m.undated.map((s) => s.name)).toEqual(['YouTube']);
+  // November: Netflix and Spotify again, Adobe next in June
+  const nov = await monthSubscriptions('2026-11', 'GEL');
+  expect(nov.charges.map((c) => c.day)).toEqual(['2026-11-18', '2026-11-25']);
+});
+
+test('the merchants charged in "Подписки" with no subscription: their last charge', async () => {
+  const subs = (await subscriptionsCategoryId())!;
+  await charge('YOUTUBE', 1599, '2026-09-02T09:00:00', subs);
+  await charge('YOUTUBE', 1599, '2026-10-02T09:00:00', subs);
+  await charge('NETFLIX.COM', 3000, '2026-10-18T10:00:00', subs);
+  await charge('SPAR', 500, '2026-10-10T10:00:00', null);
+  await saveSubscription({ ...NETFLIX, due: '2026-11-18' });
+  expect(await merchantsWithoutSubscription(subs)).toEqual([
+    { merchant_key: 'YOUTUBE', name: 'YOUTUBE', day: '2026-10-02', amount_minor: 1599, currency: 'GEL' },
+  ]);
+});
