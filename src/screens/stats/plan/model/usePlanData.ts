@@ -15,6 +15,8 @@ export function usePlanData(ym: string, currency: Currency) {
   const [budget, setBudget] = useState<PlanBudget | null>(null);
   // converts an amount to the screen's currency on the plan's rate date (null: no rate known)
   const [toShown, setToShown] = useState<(minor: number, from: Currency) => number | null>(() => () => null);
+  // and back: an amount in the screen's currency in another one (the savings in the budget's currency)
+  const [fromShown, setFromShown] = useState<(minor: number, to: Currency) => number | null>(() => () => null);
   const [income, setIncome] = useState(0);
   // spent outside the plan this month, in the screen's currency
   const [unplannedSpentMinor, setUnplannedSpent] = useState(0);
@@ -36,6 +38,7 @@ export function usePlanData(ym: string, currency: Currency) {
         setSpentBy({ byCategory: new Map([...stats.categories.filter((c) => c.category_id !== null).map((c): [number, number] => [c.category_id!, c.spent_minor]), ...funds]),
           total: stats.spent_minor + stats.funds.reduce((a, f) => a + f.contribution_minor, 0) });
         setToShown(() => (minor: number, from: Currency) => conv(minor, from, currency));
+        setFromShown(() => (minor: number, to: Currency) => conv(minor, currency, to));
       }))
       .catch(keep(fail));
   }, [ym, currency, latest, started, fail]);
@@ -45,5 +48,5 @@ export function usePlanData(ym: string, currency: Currency) {
   // a sheet over it changed the month (the month before's "Итоги": what it sends here)
   useEffect(() => onTransactionsChanged(load), [load]);
 
-  return { items, budget, toShown, income, unplannedSpentMinor, spentBy, load, failed };
+  return { items, budget, toShown, fromShown, income, unplannedSpentMinor, spentBy, load, failed };
 }

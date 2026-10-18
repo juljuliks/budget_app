@@ -45,6 +45,17 @@ describe('6.1 the month\'s budget', () => {
     expect(after('🎲 Траты вне плана', 2)).toEqual(['категории без плана и без категории · 10% бюджета', '300 ₾']);
   });
 
+  test('another currency: the savings in it, "(N ₾)" under them in the budget\'s one', async () => {
+    await openPlan();
+    const db = await getDb();
+    for (let d = 1; d <= 15; d++) await db.run("INSERT OR REPLACE INTO fx_rates (date, currency, gel_per_unit) VALUES (?, 'USD', 2.5)", [`2026-10-${String(d).padStart(2, '0')}`]);
+    await tap('Настройки');
+    await tap('$ USD');
+    expect(await screen.findByText('(300 ₾)')).toBeTruthy();
+    expect(after('🔒 Сразу', 3)).toEqual(['заблокировано в начале месяца · 10% бюджета', '120 $', '(300 ₾)']);
+    expect(after('🌊 Что осталось', 3)).toEqual(['не запланировано — решите в итогах месяца · 4% бюджета', '44 $', '(110 ₾)']);
+  });
+
   test('savings the overspend took part of: a tap on its line — by how much, what took it; a category\'s tap opens its plan', async () => {
     await openPlan();
     expect(screen.queryByText(/^Сбережения к концу месяца/)).toBeNull();

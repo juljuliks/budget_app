@@ -80,6 +80,7 @@ export function SystemRowView({ p, r, hidden, onOpen, onLess }: { p: PlanView; r
       {hidden ? null : (
         <View style={styles.amountBox}>
           <Text style={[styles.amount, toneStyle(r.tone)]}>{`${r.carry === 'plus' ? '+' : ''}${p.money(r.value)}`}</Text>
+          {r.original ? <Text style={styles.amountOriginal}>{r.original}</Text> : null}
           {/* the overspend took part of it: by how much, ⓘ — what took it */}
           {r.was !== undefined ? <LessNote less={r.was - r.value} money={p.money} onPress={onLess} /> : null}
         </View>

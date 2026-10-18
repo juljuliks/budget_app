@@ -18,9 +18,10 @@ export type Tone = 'over' | 'savings' | 'locked' | 'free';
 export type BudgetPart = { key: string; label: string; value: number; color: string; note: string; tone?: Tone; noteTone?: Tone; was?: number };
 /**
  * `carry`: what the month before sent (a tap: "Покрыть иначе?" / "Куда остаток?"); a moved leftover with its "+", no share.
- * `was`: as planned, struck (the overspend took part of it).
+ * `was`: as planned, struck (the overspend took part of it). `original`: "(300 ₾)" under it, in the budget's currency
+ * (the one 🔒 is typed in) when the screen shows another.
  */
-export type SystemRow = { key: string; name: string; note: string; value: number; tone?: Tone; carry?: 'debt' | 'plus'; was?: number };
+export type SystemRow = { key: string; name: string; note: string; value: number; tone?: Tone; carry?: 'debt' | 'plus'; was?: number; original?: string };
 /** "сентября" of a month key */
 const genOf = (ym: string) => MONTHS_GEN[Number(ym.slice(5)) - 1];
 
@@ -57,13 +58,14 @@ type Data = {
   items: PlanItem[];
   budget: PlanBudget | null;
   toShown: (minor: number, from: Currency) => number | null;
+  fromShown: (minor: number, to: Currency) => number | null;
   income: number;
   unplannedSpentMinor: number;
   spentBy: SpentBy;
   hidden: boolean;
 };
 
-export function planView({ ym, currency, items: all, budget, toShown, income, unplannedSpentMinor, spentBy }: Data) {
+export function planView({ ym, currency, items: all, budget, toShown, fromShown, income, unplannedSpentMinor, spentBy }: Data) {
   const money = (minor: number) => formatWithCurrency(minor, currency);
   // the funds' contributions apart: their own section and column ("Копилки")
   const funds = all.filter((i) => i.kind === 'fund');
@@ -126,14 +128,22 @@ export function planView({ ym, currency, items: all, budget, toShown, income, un
     ] });
   }
   if (shownBudget) {
+    // a savings amount in the budget's currency, if the screen shows another: "(300 ₾)" (none without a rate)
+    const inBudget = (shown: number, own?: number) => {
+      if (!budget || budget.currency === currency) return {};
+      const minor = own ?? fromShown(shown, budget.currency);
+      return minor === null ? {} : { original: `(${formatWithCurrency(minor, budget.currency)})` };
+    };
     const savingsRows: SystemRow[] = [
       ...(locked > 0 ? [{
         key: 'locked', name: '🔒 Сразу', tone: 'locked' as const, value: less ? less.locked.now : locked,
+        // as typed while the overspend took none of it
+        ...inBudget(less ? less.locked.now : locked, less && less.locked.now < locked ? undefined : budget!.locked_minor),
         ...(less && less.locked.now < locked ? { note: 'меньше из-за перерасхода', was: locked } : { note: 'заблокировано в начале месяца' }),
       }] : []),
       ...((free ?? 0) > 0 ? [{
         key: 'floating', name: '🌊 Что осталось', note: 'не запланировано — решите в итогах месяца', tone: 'savings' as const,
-        value: less ? less.free.now : free!, ...(less && less.free.now < free! ? { was: free! } : {}),
+        value: less ? less.free.now : free!, ...(less && less.free.now < free! ? { was: free! } : {}), ...inBudget(less ? less.free.now : free!),
       }] : []),
     ];
     if (savingsRows.length) systemGroups.push({ title: 'Сбережения', rows: savingsRows });

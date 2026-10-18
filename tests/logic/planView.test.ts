@@ -11,7 +11,7 @@ const budget = (p: Partial<PlanBudget>): PlanBudget => ({
   amount_minor: 100000, currency: 'GEL', unplanned_pct: 0, to_savings: false, locked_minor: 0, unplanned_minor: null, carry: null, ...p,
 } as PlanBudget);
 const view = (items: PlanItem[], b: PlanBudget | null, ym = '2030-01') => planView({
-  ym, currency: 'GEL', items, budget: b, toShown: (m) => m, income: 0, unplannedSpentMinor: 0,
+  ym, currency: 'GEL', items, budget: b, toShown: (m) => m, fromShown: (m) => m, income: 0, unplannedSpentMinor: 0,
   spentBy: { byCategory: new Map(), total: 0 }, hidden: false,
 });
 
@@ -76,4 +76,19 @@ test('what the budget sheet\'s parts can\'t take: the plan, the funds, what the 
   expect(view([item({}), fund], budget({})).claimed).toBe(36000);
   expect(view([item({})], budget({ carry: { from_ym: '2029-12', debt_minor: 4000, plus_minor: 0 } })).claimed).toBe(35000);
   expect(view([item({})], budget({ carry: { from_ym: '2029-12', debt_minor: 0, plus_minor: 10000 } })).claimed).toBe(21000);
+});
+
+test('the savings in the screen\'s currency, "(N ₾)" under them in the budget\'s one (🔒 as typed)', () => {
+  // 1 $ = 2.5 ₾: the budget 1 000 ₾ = 400 $, 🔒 250 ₾ = 100 $, the plan 500 ₾ = 200 $, what is left 100 $ = 250 ₾
+  const p = planView({
+    ym: '2030-01', currency: 'USD', items: [item({ converted_minor: 20000 })], budget: budget({ locked_minor: 25000 }),
+    toShown: (m) => Math.round(m / 2.5), fromShown: (m) => Math.round(m * 2.5), income: 0, unplannedSpentMinor: 0,
+    spentBy: { byCategory: new Map(), total: 0 }, hidden: false,
+  });
+  const rows = p.systemGroups.find((g) => g.title === 'Сбережения')!.rows;
+  expect(rows.map((r) => [r.key, r.value, r.original])).toEqual([
+    ['locked', 10000, '(250\u00a0₾)'], ['floating', 10000, '(250\u00a0₾)'],
+  ]);
+  // the screen in the budget's currency: nothing in brackets
+  expect(view([item({})], budget({ locked_minor: 25000 })).systemGroups[0].rows.every((r) => r.original === undefined)).toBe(true);
 });
