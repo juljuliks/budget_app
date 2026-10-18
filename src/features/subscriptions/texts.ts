@@ -1,18 +1,10 @@
 // The subscriptions' words: the periods, "через 7 дней", the days.
 import { MONTHS_GEN, MONTHS_PREP, SHORT_MONTHS } from '@/shared/lib/dates';
+export { periodText } from '@/shared/lib/format';
 import { plural } from '@/shared/lib/format';
 
 /** The period chips: months and their names; another — "Другое…". */
 export const PERIODS: ReadonlyArray<readonly [number, string]> = [[1, 'Каждый месяц'], [3, 'Раз в 3 месяца'], [6, 'Раз в полгода'], [12, 'Раз в год']];
-
-/** "каждый месяц", "раз в 3 месяца", "раз в полгода", "раз в год", "раз в 2 года", "раз в 5 месяцев". */
-export function periodText(months: number): string {
-  if (months === 1) return 'каждый месяц';
-  if (months === 6) return 'раз в полгода';
-  if (months === 12) return 'раз в год';
-  if (months % 12 === 0) return `раз в ${months / 12} ${plural(months / 12, ['год', 'года', 'лет'])}`;
-  return `раз в ${months} ${plural(months, ['месяц', 'месяца', 'месяцев'])}`;
-}
 
 const parts = (day: string) => day.split('-').map(Number);
 

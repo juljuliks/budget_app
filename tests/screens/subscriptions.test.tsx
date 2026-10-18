@@ -6,6 +6,7 @@ import { openApp, screen, tap } from './app';
 import { buy, on, planned } from '../e2e/seeds';
 import { getDb } from '../../src/db';
 import { subscriptionsCategoryId } from '../../src/db/categories';
+import { saveSubscription } from '../../src/db/subscriptions';
 
 const N = ' ';
 const subs = async () => (await getDb()).all<{ name: string; merchant_key: string | null; amount_minor: number; period_months: number; due: string | null }>(
@@ -83,5 +84,59 @@ describe('6.6 subscriptions', () => {
     await tap('Отменить');
     expect(await screen.findByText('Подписка «NETFLIX.COM» снова в плане')).toBeTruthy();
     expect(await subs()).toHaveLength(1);
+  });
+});
+
+describe('6.6 subscriptions on the operations', () => {
+  async function seedOps() {
+    await buy('NETFLIX.COM', 30, on(10, 10), await subscriptionsCategoryId());
+    await buy('SPOTIFY', 18.4, on(12, 10));
+  }
+
+  test('"Подписки" set on an operation of a merchant with none: how often, the next charge — from it', async () => {
+    await openApp(seedOps);
+    await tap('SPOTIFY');
+    expect(await screen.findByText('Выберите категорию')).toBeTruthy();
+    await tap('📺 Подписки');
+    expect(await screen.findByText('📺 Подписка «SPOTIFY»')).toBeTruthy();
+    expect(screen.getByText(/^12 ноября 2026/)).toBeTruthy();
+    await tap('Сохранить');
+    expect(await screen.findByText('SPOTIFY — следующее списание 12 ноября')).toBeTruthy();
+    expect((await subs())[0]).toMatchObject({ merchant_key: 'SPOTIFY', amount_minor: 1840, due: '2026-11-12' });
+    // the list: how often under its amount
+    expect(await screen.findByText(' каждый месяц')).toBeTruthy();
+  });
+
+  test('"Пропустить": kept without a day, not asked again', async () => {
+    await openApp(seedOps);
+    await tap('SPOTIFY');
+    await tap('📺 Подписки');
+    await tap('Пропустить');
+    expect(await screen.findByText('SPOTIFY — без даты списания')).toBeTruthy();
+    expect((await subs())[0]).toMatchObject({ merchant_key: 'SPOTIFY', due: null });
+  });
+
+  test("the operation's card: the subscription without a day — \"Задать дату\"; then the next charge and this year's", async () => {
+    await openApp(seedOps);
+    await tap('NETFLIX.COM');
+    await tap('Задать дату ›');
+    expect(await screen.findByText(/^10 ноября 2026/)).toBeTruthy();
+    await tap('Сохранить');
+    expect(await screen.findByText('Следующее списание')).toBeTruthy();
+    expect(screen.getByText('10 ноября 2026')).toBeTruthy();
+    expect(screen.getByText(`1 раз · 30${N}₾`)).toBeTruthy();
+    expect(screen.getByText('Изменить подписку ›')).toBeTruthy();
+  });
+
+  test('charged another amount than the subscription\'s: "Обновить подписку?"', async () => {
+    await openApp(async () => {
+      await seedOps();
+      await saveSubscription({ merchant_key: 'NETFLIX.COM', name: 'Netflix', amount_minor: 2700, currency: 'GEL', period_months: 1, due: '2026-11-10' });
+    });
+    await tap('NETFLIX.COM');
+    expect(await screen.findByText(/^Сумма выросла: было 27/)).toBeTruthy();
+    await tap(`Обновить подписку на 30${N}₾?`);
+    expect(await screen.findByText(`Netflix — 30${N}₾`)).toBeTruthy();
+    expect((await subs())[0].amount_minor).toBe(3000);
   });
 });

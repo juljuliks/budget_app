@@ -6,6 +6,7 @@ import { CategoryTypesSheet } from '@/features/category-types';
 import { TransactionSheet } from '@/features/transaction-edit';
 import { MonthReportSheet } from '@/features/month-report';
 import { MonthCloseSheet } from '@/features/month-close';
+import { SubscriptionHost } from '@/features/subscriptions';
 import { MerchantCard } from '@/features/merchant-card';
 import { SettingsSheet } from '@/features/settings';
 import { BackupSheet, PasswordHost } from '@/features/backup';
@@ -36,6 +37,8 @@ export function ModalHost() {
       />
       <BackupSheet visible={state.backup} onClose={() => close({ backup: false })} />
       <LockOptionsSheet visible={state.lockOptions} onClose={() => close({ lockOptions: false })} />
+      {/* over the operation or the plan it was opened from */}
+      <SubscriptionHost which={state.subscription} onClose={() => close({ subscription: null })} />
       {/* the backups' password, asked by the backup's flows */}
       <PasswordHost />
       {/* over the operation it was opened from; "Показать операции" closes that one too */}

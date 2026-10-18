@@ -12,6 +12,7 @@ import { useTransaction } from './model/useTransaction';
 import AmountModal from './ui/AmountModal';
 import NoteSection from './ui/NoteSection';
 import SplitSheet from './ui/SplitSheet';
+import SubscriptionNote from './ui/SubscriptionNote';
 import TransactionCategory from './ui/TransactionCategory';
 import TransactionHeader from './ui/TransactionHeader';
 
@@ -62,6 +63,8 @@ export default function TransactionSheet({ txId: openId, onClose }: Props) {
           Категория мерчанта «{merchantName}»: {merchantCategory}. Новые операции мерчанта получают её автоматически.
         </Text>
       ) : null}
+
+      <SubscriptionNote tx={tx} />
 
       {tx.raw_sms ? (
         <>

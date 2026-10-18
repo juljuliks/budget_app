@@ -3,11 +3,11 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { txCategoryLabel } from '@/db/categories';
 import { isUnread, TransactionRow } from '@/db/transactions';
 import Checkbox from '@/shared/ui/Checkbox';
-import { formatAmount, formatTime, isIncome } from '@/shared/lib/format';
+import { formatAmount, formatTime, isIncome, periodText } from '@/shared/lib/format';
 import { formatMoneyWithCurrency } from '@/shared/lib/money';
 import { rowTitle } from '../model/title';
 import { splitRow } from '../model/parts';
-import { SplitIcon } from '@/shared/ui/icons';
+import { RepeatIcon, SplitIcon } from '@/shared/ui/icons';
 import RowActions from '@/shared/ui/RowActions';
 import { colors } from '@/shared/theme/theme';
 import { NO_CATEGORY } from '@/shared/lib/strings';
@@ -78,6 +78,12 @@ function TransactionItem({ tx, onPress, onLongPress, selectable, selected, onDel
           {formatAmount(split?.amount_minor ?? tx.amount_minor, tx.currency, tx.kind)}
         </Text>
         {split?.part ? <Text style={styles.whole}>из {formatMoneyWithCurrency(tx.amount_minor, tx.currency)}</Text> : null}
+        {tx.sub_period ? (
+          <View style={styles.inline}>
+            <RepeatIcon color={colors.muted} size={12} />
+            <Text style={styles.whole}> {periodText(tx.sub_period)}</Text>
+          </View>
+        ) : null}
       </View>
       {onDelete ? <RowActions onDelete={() => onDelete(tx)} /> : null}
     </TouchableOpacity>

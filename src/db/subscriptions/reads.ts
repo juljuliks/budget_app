@@ -6,6 +6,7 @@ import { Currency } from '../fx';
 import { placeholders, sqlList } from '../sql';
 import { asCurrency } from '../plans/months';
 import { REMEMBERABLE_KINDS } from '../../domain/types';
+import { nextCharge } from './schedule';
 
 export type Subscription = {
   id: number;
@@ -104,4 +105,24 @@ export async function merchantsToSubscribe(query = '', limit = 40): Promise<Arra
         AND t.occurred_at = (SELECT max(y.occurred_at) FROM transactions y WHERE y.merchant_key = t.merchant_key AND y.${CHARGE})
       GROUP BY t.merchant_key ORDER BY likely DESC, t.occurred_at DESC LIMIT ?`, [like, limit]);
   return rows.map((r) => ({ merchant_key: r.k, name: r.name ?? r.k, day: dayOfUnix(r.at), amount_minor: r.amount_minor, currency: asCurrency(r.currency), likely: r.likely === 1 }));
+}
+
+/** An operation's merchant's subscription for its card: the next charge (with a day), this year's charges in its currency. */
+export type SubscriptionCard = { sub: Subscription; next: string | null; year_count: number; year_minor: number; last: { id: number; amount_minor: number; currency: Currency } | null };
+
+export async function subscriptionCard(merchantKey: string, now = new Date()): Promise<SubscriptionCard | null> {
+  const sub = await subscriptionOfMerchant(merchantKey);
+  if (!sub) return null;
+  const db = await getDb();
+  const days = (await chargeDays([merchantKey], db)).get(merchantKey) ?? [];
+  const from = Math.floor(new Date(now.getFullYear(), 0, 1).getTime() / 1000);
+  const year = await db.get<{ n: number; sum: number | null }>(
+    `SELECT count(*) AS n, sum(CASE WHEN currency = ? THEN amount_minor END) AS sum FROM transactions
+      WHERE merchant_key = ? AND ${CHARGE} AND occurred_at >= ?`, [sub.currency, merchantKey, from]);
+  const last = await db.get<{ id: number; amount_minor: number; currency: string }>(
+    `SELECT id, amount_minor, currency FROM transactions WHERE merchant_key = ? AND ${CHARGE} ORDER BY occurred_at DESC, id DESC LIMIT 1`, [merchantKey]);
+  return {
+    sub, next: sub.due ? nextCharge(sub.due, sub.period_months, days, todayKey(now)) : null,
+    year_count: year?.n ?? 0, year_minor: year?.sum ?? 0, last: last ? { ...last, currency: asCurrency(last.currency) } : null,
+  };
 }

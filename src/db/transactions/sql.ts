@@ -13,8 +13,12 @@ export const PARTS_COLUMN = `(SELECT group_concat(x, char(30)) FROM (
     FROM transaction_parts p JOIN categories pc ON pc.id = p.category_id LEFT JOIN category_types pct ON pct.id = pc.type_id
     WHERE p.tx_id = t.id ORDER BY p.amount_minor DESC, p.category_id)) AS parts`;
 
+/** In "Подписки": its merchant's subscription's period (months), if it has a day; else null. */
+export const SUB_PERIOD_COLUMN = `CASE WHEN c.system = 'subs' THEN (SELECT s.period_months FROM subscriptions s
+    WHERE s.merchant_key = t.merchant_key AND s.deleted_at IS NULL AND s.due IS NOT NULL) END AS sub_period`;
+
 export const TX_COLUMNS = `t.id, t.bank, t.kind, t.amount_minor, t.currency, t.raw_merchant, t.merchant_key, t.note, t.category_id,
-    t.category_source, t.occurred_at, t.seen_at, t.refund_settled_at, ${CATEGORY_COLUMNS}, ${PARTS_COLUMN}`;
+    t.category_source, t.occurred_at, t.seen_at, t.refund_settled_at, ${CATEGORY_COLUMNS}, ${PARTS_COLUMN}, ${SUB_PERIOD_COLUMN}`;
 
 export const FROM_TX = `FROM transactions t
     LEFT JOIN categories c ON c.id = t.category_id

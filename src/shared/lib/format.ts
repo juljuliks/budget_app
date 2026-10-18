@@ -57,3 +57,12 @@ export function formatPercent(part: number, whole: number): string {
   const p = whole > 0 ? Math.round((part / whole) * 100) : 0;
   return p === 0 && part > 0 ? '<1%' : `${p}%`;
 }
+
+/** How often a subscription is charged: "каждый месяц", "раз в 3 месяца", "раз в полгода", "раз в год", "раз в 2 года". */
+export function periodText(months: number): string {
+  if (months === 1) return 'каждый месяц';
+  if (months === 6) return 'раз в полгода';
+  if (months === 12) return 'раз в год';
+  if (months % 12 === 0) return `раз в ${months / 12} ${plural(months / 12, ['год', 'года', 'лет'])}`;
+  return `раз в ${months} ${plural(months, ['месяц', 'месяца', 'месяцев'])}`;
+}
