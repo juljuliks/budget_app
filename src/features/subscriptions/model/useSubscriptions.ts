@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { subscriptionsCategoryId } from '@/db/categories';
 import type { Currency } from '@/db/fx';
-import { listPlan, monthSubscriptions, MonthSubscriptions } from '@/db/plans';
+import { listPlan, monthSubscriptions, MonthSubscriptions, planConverter, storedBudget } from '@/db/plans';
 import { LastCharge, merchantsWithoutSubscription } from '@/db/subscriptions';
 import { onTransactionsChanged } from '@/domain/events';
 import { useLatestRequest } from '@/shared/lib/useLatestRequest';
@@ -16,6 +16,8 @@ export type SubscriptionsData = MonthSubscriptions & {
   planned_minor: number | null;
   /** an amount put in by hand (no subscription has a day yet) */
   by_hand: boolean;
+  /** the month's budget in the screen's currency (the sections' share of it); null — none */
+  budget_minor: number | null;
 };
 
 export function useSubscriptions(ym: string | null, currency: Currency) {
@@ -28,10 +30,14 @@ export function useSubscriptions(ym: string | null, currency: Currency) {
     started();
     (async (): Promise<SubscriptionsData> => {
       const categoryId = await subscriptionsCategoryId();
-      const [month, merchants, plan] = await Promise.all([
-        monthSubscriptions(ym, currency), categoryId === null ? [] : merchantsWithoutSubscription(categoryId), listPlan(ym, currency)]);
+      const [month, merchants, plan, budget, conv] = await Promise.all([
+        monthSubscriptions(ym, currency), categoryId === null ? [] : merchantsWithoutSubscription(categoryId), listPlan(ym, currency),
+        storedBudget(ym), planConverter(ym)]);
       const item = plan.find((i) => i.system === 'subs');
-      return { ...month, merchants, planned_minor: item ? item.converted_minor : null, by_hand: !!item && item.kind !== 'subs' };
+      return {
+        ...month, merchants, planned_minor: item ? item.converted_minor : null, by_hand: !!item && item.kind !== 'subs',
+        budget_minor: budget ? conv(budget.amount_minor, budget.currency, currency) : null,
+      };
     })().then(keep(setData)).catch(keep(fail));
   }, [ym, currency, latest, started, fail]);
   useEffect(() => { setData(null); load(); }, [load]);

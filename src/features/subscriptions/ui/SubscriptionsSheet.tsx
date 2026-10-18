@@ -6,6 +6,8 @@ import { formatWithCurrency } from '@/shared/lib/money';
 import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
 import Button from '@/shared/ui/Button';
 import Loading from '@/shared/ui/Loading';
+import SectionBand from '@/shared/ui/SectionBand';
+import { formatPercent } from '@/shared/lib/format';
 import { formStyles } from '@/shared/theme/formStyles';
 import { colors } from '@/shared/theme/theme';
 import { SubscriptionTarget } from '../model/useSubscriptionForm';
@@ -38,6 +40,8 @@ export default function SubscriptionsSheet({ ym, currency, onClose, onEditAmount
   const today = todayKey();
   const money = (minor: number, cur: string = currency) => formatWithCurrency(minor, cur);
   const month = ym ? monthGen(ym) : '';
+  // a section's share of the month's budget, as in the plan
+  const shareOf = (minor: number) => (data?.budget_minor && minor > 0 ? formatPercent(minor, data.budget_minor) : null);
   return (
     <>
     <BottomSheet visible={ym !== null} onClose={onClose} title="📺 Подписки" style={styles.root}>
@@ -56,10 +60,7 @@ export default function SubscriptionsSheet({ ym, currency, onClose, onEditAmount
             </TouchableOpacity>
           ) : null}
 
-          <View style={styles.label}>
-            <Text style={formStyles.label}>{`Списания ${inMonth(ym)}`}</Text>
-            <Text style={[formStyles.label, styles.labelSum]}>{money(data.total_minor - savingSum(data))}</Text>
-          </View>
+          <SectionBand title={`Списания ${inMonth(ym)}`} total={money(data.total_minor - savingSum(data))} share={shareOf(data.total_minor - savingSum(data))} />
           {data.charges.length ? data.charges.map((c) => (
             <SubscriptionRow
               key={`${c.sub.id}-${c.day}`} name={c.sub.name} onPress={() => setOpen(targetOf(c.sub))}
@@ -68,7 +69,8 @@ export default function SubscriptionsSheet({ ym, currency, onClose, onEditAmount
             />
           )) : <Text style={formStyles.hint}>{`Нет списаний ${inMonth(ym)}`}</Text>}
 
-          {data.later.length ? <Text style={formStyles.label}>Другие списания</Text> : null}
+          {/* the later ones in the plan: only what is saved up for them this month */}
+          {data.later.length ? <SectionBand title="Другие списания" total={savingSum(data) ? `копим ${money(savingSum(data))}` : null} share={shareOf(savingSum(data))} /> : null}
           {data.later.map(({ sub, next }) => {
             const v = data.saving.find((x) => x.sub_id === sub.id);
             return v ? (
@@ -86,7 +88,7 @@ export default function SubscriptionsSheet({ ym, currency, onClose, onEditAmount
             );
           })}
 
-          {data.undated.length || data.merchants.length ? <Text style={formStyles.label}>Без даты списания</Text> : null}
+          {data.undated.length || data.merchants.length ? <SectionBand title="Без даты списания" /> : null}
           {data.undated.map((sub) => (
             <SubscriptionRow
               key={sub.id} name={sub.name} onPress={() => setOpen(targetOf(sub))}
@@ -122,7 +124,5 @@ const styles = StyleSheet.create({
   factLabel: { fontSize: 15, color: colors.muted },
   factValue: { fontSize: 15, fontWeight: '700', color: colors.text, fontVariant: ['tabular-nums'] },
   link: { color: colors.accent },
-  label: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
-  labelSum: { color: colors.text, textTransform: 'none' },
   add: { marginTop: 16 },
 });

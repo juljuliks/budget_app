@@ -44,6 +44,9 @@ describe('6.6 subscriptions', () => {
     // October's charge done, counted by the plan now
     expect(await screen.findByText('✓ списано 10 окт')).toBeTruthy();
     expect(screen.queryByText(/Сумма введена вручную/)).toBeNull();
+    // the sections as the plan's: the sum and its share of the budget (3 000 ₾)
+    expect(screen.getByText('Списания в октябре')).toBeTruthy();
+    expect(screen.getAllByText(' · 1%').length).toBeGreaterThanOrEqual(2);
   });
 
   test('a year one: the day follows the period until picked by hand; this month\'s charge is the year\'s', async () => {
