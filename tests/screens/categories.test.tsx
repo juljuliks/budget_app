@@ -1,5 +1,7 @@
 // 4: the categories — the list, creating and changing one, the sections, merging, deleting.
 import { act, fireEvent, waitFor } from '@testing-library/react-native';
+import notifee from '@notifee/react-native';
+import SmsBackgroundTask from '../../src/native/SmsBackgroundTask';
 import { navigationRef } from '../../src/shared/navigation/navigation';
 import { longPress, openApp, openSettings, screen, tap, texts } from './app';
 import { base, category, ops } from '../e2e/seeds';
@@ -269,4 +271,39 @@ test('4.4.2: merging categories planned differently: how to plan the merged one'
   expect(await screen.findByText('Категории объединены в «Покупки & Одежда»')).toBeTruthy();
   expect(await q("SELECT p.limit_minor AS a, p.kind FROM plan_items p JOIN categories c ON c.id = p.category_id WHERE c.name = 'Покупки & Одежда' AND p.ym = '2026-10'"))
     .toEqual([{ a: 70000, kind: 'fixed' }]);
+});
+
+test('4.4.3: merchants of different categories — merged in their lists; all of a merchant\'s merged: it asks no more', async () => {
+  await openCategories(async () => {
+    await base();
+    const db = await getDb();
+    const id = async (name: string) => (await db.get<{ id: number }>('SELECT id FROM categories WHERE name = ?', [name]))!.id;
+    // DELIVERY: "Покупки" or "Одежда"; MARKETX: "Одежда" or "Техника"
+    await db.run("INSERT INTO mixed_merchants (merchant_key, created_at) VALUES ('DELIVERY', 0), ('MARKETX', 0)");
+    for (const [k, c] of [['DELIVERY', 'Покупки'], ['DELIVERY', 'Одежда'], ['MARKETX', 'Одежда'], ['MARKETX', 'Техника']]) {
+      await db.run('INSERT INTO merchant_categories (merchant_key, category_id) VALUES (?, ?)', [k, await id(c)]);
+    }
+  });
+  await longPress('🛍️ Покупки');
+  await tap('👕 Одежда');
+  await tap('Объединить (2)');
+  await tap('Объединить');
+  expect(await screen.findByText('Категории объединены в «Покупки & Одежда»')).toBeTruthy();
+  const merged = (await cat('Покупки & Одежда')).id;
+  const display = notifee.displayNotification as jest.Mock;
+  display.mockClear();
+  const sms = (merchant: string) => act(() => SmsBackgroundTask({ sender: 'TBC', body: `12.00GEL\n(*1234)\n${merchant}\n15/10/2026 11:30`, timestamp: Date.now() }));
+
+  // DELIVERY: nothing to pick from — straight into the merged one, no question
+  await sms('DELIVERY');
+  expect((await q<{ c: number }>("SELECT category_id AS c FROM transactions WHERE merchant_key = 'DELIVERY'"))[0].c).toBe(merged);
+  // no "Покупка — 12.00 ₾" with the categories to pick (its limit's warning may come)
+  const asks = () => display.mock.calls.filter(([x]) => String(x.id).startsWith('tx_')).map(([x]) => x);
+  expect(asks()).toEqual([]);
+  // MARKETX: still two — it asks, both on the buttons
+  await sms('MARKETX');
+  expect((await q<{ c: number | null }>("SELECT category_id AS c FROM transactions WHERE merchant_key = 'MARKETX'"))[0].c).toBeNull();
+  await waitFor(() => expect(asks()).toHaveLength(1));
+  const [n] = asks();
+  expect(n.android.actions.map((a: { title: string }) => a.title).slice(0, 2).sort()).toEqual(['💻 Техника', '🛍️ Покупки & Одежда'].sort());
 });
