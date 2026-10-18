@@ -1,10 +1,13 @@
 // The category sheet's longer texts.
-import { OWN_TRANSFER, TOP_UP } from '@/db/categories';
+import { OWN_TRANSFER, SUBSCRIPTIONS, TOP_UP } from '@/db/categories';
 
 /** Under the name of a system category: what goes there, why it can't be renamed or deleted. */
 export function systemCategoryHint(systemKind: string): string {
   if (systemKind === OWN_TRANSFER) {
     return 'Системная категория: переводы со своей карты на свою карту в другом банке. Поставьте её и на перевод, и на пополнение: это не траты и не доход, в статистику и план они не попадают. Название не меняется, удалить её нельзя.';
+  }
+  if (systemKind === SUBSCRIPTIONS) {
+    return 'Системная категория: списания подписок. У мерчанта в ней — подписка: как часто и когда следующее списание; в плане сумма считается из списаний месяца (Статистика → План → «Подписки»). Название не меняется, удалить её нельзя.';
   }
   return systemKind === TOP_UP
     ? 'Системная категория: сюда попадают все пополнения карты — деньги, которые пришли за месяц и которые вы распределяете. Это не траты. Если пополнение — возврат долга от человека, перенесите его в категорию переводов. Название не меняется, удалить её нельзя.'

@@ -57,6 +57,7 @@
 | 5 статистика | `stats.test.tsx`; строки без сумм при закрытом глазе — `logic/hiddenText.test.ts` |
 | 6 план | `plan.test.tsx` |
 | 6.5 копилки: сделать, карточка, удалить, статистика | `funds.test.tsx`; взнос, месяцы, нехватка, история — `logic/funds.test.ts` |
+| 6.7 подписки: раздел в плане, шит «Подписки», добавить, удалить, вопрос из операции, карточка | `subscriptions.test.tsx`; даты списаний — `logic/subscriptionSchedule.test.ts`, сумма в плане, «Без даты списания» — `logic/subscriptions.test.ts`, тексты — `logic/subscriptionTexts.test.ts`; подсказка категории (4.2.10) — `categories.test.tsx` |
 | 6.6 итоги месяца: окно по шагам, перенос в октябрь, «История», отчёт после итогов, баннер | `monthClose.test.tsx`; шаги, суммы, перенос, план и факт — `logic/monthClose.test.ts`; уменьшенные сбережения — `logic/planView.test.ts` |
 | 7 отчёт и история | `report.test.tsx`; сбережения месяца — `logic/historySavings.test.ts` |
 | 8 уведомления: что в них, кнопки, лимиты, отчёт 1-го | `notifications.test.tsx` |

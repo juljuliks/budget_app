@@ -84,6 +84,13 @@ describe('4.1–4.2 the list; creating and changing a category', () => {
     expect(await screen.findByText('Разделы')).toBeTruthy();
   });
 
+  test('"Подписки": a system one — its name stays, it can\'t be deleted, the hint says where its plan comes from', async () => {
+    await tap('📺 Подписки');
+    expect(await screen.findByText(/^Системная категория: списания подписок/)).toBeTruthy();
+    expect(screen.getByDisplayValue('Подписки').props.editable).toBe(false);
+    expect(screen.queryByText('Удалить категорию')).toBeNull();
+  });
+
   test('"Сбережения": its name stays, it can\'t be deleted', async () => {
     await tap('🏦 Сбережения');
     expect(await screen.findByText(/^Системная категория: сюда уходит то, что бюджет месяца оставил/)).toBeTruthy();
