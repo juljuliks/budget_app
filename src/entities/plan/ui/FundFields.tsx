@@ -1,16 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { Controller, UseFormReturn, useWatch } from 'react-hook-form';
 import type { Currency } from '@/db/fx';
 import { fundContribution, monthsBetween, parseYm } from '@/db/plans';
 import { monthsTo } from '../model/fundTexts';
-import { DayKey, dayKeyOf } from '@/shared/lib/dateRange';
+import { dayKeyOf } from '@/shared/lib/dateRange';
 import { dayTitle } from '@/shared/lib/dates';
 import { plural } from '@/shared/lib/format';
 import { currencySymbol, formatWithCurrency, parseAmountOrZero } from '@/shared/lib/money';
-import BottomSheet from '@/shared/ui/BottomSheet';
-import { SheetActions } from '@/shared/ui/Button';
-import RangeCalendar from '@/shared/ui/RangeCalendar';
+import DateField from '@/shared/ui/DateField';
 import { formStyles } from '@/shared/theme/formStyles';
 import { colors } from '@/shared/theme/theme';
 
@@ -25,8 +23,6 @@ type Props = { ym: string; categoryId: number; form: UseFormReturn<FundForm> };
  */
 export default function FundFields({ ym, categoryId, form }: Props) {
   const [value, currency, due, start] = useWatch({ control: form.control, name: ['value', 'currency', 'due', 'start'] });
-  const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState<DayKey | null>(null);
   const [contribution, setContribution] = useState<number | null>(null);
   const target = parseAmountOrZero(value ?? '') ?? 0;
   const saved = parseAmountOrZero(start ?? '') ?? 0;
@@ -46,16 +42,10 @@ export default function FundFields({ ym, categoryId, form }: Props) {
 
   return (
     <>
-      <Text style={formStyles.label}>К какой дате</Text>
-      <View style={styles.row}>
-        <Text style={[styles.date, !due && styles.muted]}>
-          {due ? dayTitle(due) : 'Не выбрана'}
-          {due && months ? <Text style={styles.muted}>{` · ${monthsTo(months)}`}</Text> : null}
-        </Text>
-        <TouchableOpacity onPress={() => { setDraft(due); setOpen(true); }} hitSlop={8} accessibilityRole="button" accessibilityLabel={due ? 'Изменить дату' : 'Выбрать дату'}>
-          <Text style={styles.change}>{due ? 'Изменить' : 'Выбрать'}</Text>
-        </TouchableOpacity>
-      </View>
+      <DateField
+        label="К какой дате" value={due} format={dayTitle} suffix={due && months ? ` · ${monthsTo(months)}` : null}
+        sheetTitle="К какой дате накопить" minDay={minDay} onChange={(d) => form.setValue('due', d, { shouldDirty: true })}
+      />
 
       <Text style={formStyles.label}>Уже отложено (необязательно)</Text>
       <View style={[formStyles.input, styles.amountRow]}>
@@ -76,30 +66,16 @@ export default function FundFields({ ym, categoryId, form }: Props) {
           </>
         ) : <Text style={[styles.plateTitle, styles.muted]}>{due ? 'Введите, сколько накопить' : 'Выберите дату — посчитаем взнос в месяц'}</Text>}
       </View>
-
-      <BottomSheet visible={open} onClose={() => setOpen(false)} title="К какой дате накопить">
-        <View style={styles.sheet}>
-          <RangeCalendar value={draft ? { from: draft, to: draft } : null} onChange={(r) => setDraft(r.from)} single minDay={minDay} />
-          <SheetActions
-            submit={{ title: 'Выбрать', disabled: !draft, onPress: () => { if (draft) form.setValue('due', draft, { shouldDirty: true }); setOpen(false); } }}
-            onCancel={() => setOpen(false)}
-          />
-        </View>
-      </BottomSheet>
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  date: { flex: 1, fontSize: 16, color: colors.text },
   muted: { color: colors.muted, fontSize: 14 },
-  change: { fontSize: 15, color: colors.accent },
   amountRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 0 },
   amountInput: { flex: 1, fontSize: 16, color: colors.text, paddingVertical: 10 },
   plate: { marginTop: 14, borderRadius: 10, padding: 12, backgroundColor: colors.surface, gap: 4 },
   plateOn: { backgroundColor: colors.fundBg },
   plateTitle: { fontSize: 16, fontWeight: '600', color: colors.fundText },
   plateText: { fontSize: 13, color: colors.muted },
-  sheet: { paddingHorizontal: 16 },
 });

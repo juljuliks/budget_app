@@ -3,15 +3,17 @@ import { Controller } from 'react-hook-form';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { CategoryPicker } from '@/entities/category';
 import { parseAmountInput } from '@/shared/lib/money';
+import { dayKeyOf } from '@/shared/lib/dateRange';
 import { AMOUNT_HINT } from '@/shared/lib/strings';
 import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
 import { SheetActions } from '@/shared/ui/Button';
 import CurrencyButton from '@/shared/ui/CurrencyButton';
+import DateField from '@/shared/ui/DateField';
 import Segmented from '@/shared/ui/Segmented';
 import { formStyles } from '@/shared/theme/formStyles';
 import { colors } from '@/shared/theme/theme';
+import { dayLabel } from './model/dayLabel';
 import { KINDS, useAddForm } from './model/useAddForm';
-import DateField from './ui/DateField';
 
 /** Manual entry in a sheet (the "+" on the operations): cash, or anything the bank didn't send an SMS for. */
 export default function AddTransactionSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
@@ -59,7 +61,10 @@ export default function AddTransactionSheet({ visible, onClose }: { visible: boo
         )}
       />
 
-      <DateField value={date} onChange={(d) => form.setValue('date', d, { shouldDirty: true })} />
+      <DateField
+        label="Дата" value={date} format={dayLabel} sheetTitle="Дата операции" maxDay={dayKeyOf(new Date())}
+        onChange={(d) => form.setValue('date', d, { shouldDirty: true })}
+      />
 
       <Controller
         control={form.control}
