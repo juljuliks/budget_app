@@ -74,6 +74,23 @@ export async function chargeDays(keys: string[], db?: Db): Promise<Map<string, s
   return out;
 }
 
+/**
+ * The days each payment was charged on: its merchant's charges; one without a merchant (put in from the plan) — any
+ * spending of its category (a category with repeating payments has no limit to mix them up with).
+ */
+export async function paymentDays(payments: Array<Pick<RecurringPayment, 'merchant_key' | 'category_id'>>, db?: Db): Promise<(p: Pick<RecurringPayment, 'merchant_key' | 'category_id'>) => string[]> {
+  db ??= await getDb();
+  const byMerchant = await chargeDays([...new Set(payments.flatMap((p) => (p.merchant_key ? [p.merchant_key] : [])))], db);
+  const cats = [...new Set(payments.flatMap((p) => (!p.merchant_key && p.category_id !== null ? [p.category_id] : [])))];
+  const byCategory = new Map<number, string[]>(cats.map((c) => [c, []]));
+  if (cats.length) {
+    const rows = await db.all<{ c: number; at: number }>(
+      `SELECT category_id AS c, occurred_at AS at FROM spend_parts WHERE category_id IN (${placeholders(cats.length)}) AND ${CHARGE} ORDER BY occurred_at`, cats);
+    for (const r of rows) byCategory.get(r.c)?.push(dayOfUnix(r.at));
+  }
+  return (p) => (p.merchant_key ? byMerchant.get(p.merchant_key) ?? [] : p.category_id !== null ? byCategory.get(p.category_id) ?? [] : []);
+}
+
 /** A merchant's last charge: its day, amount and currency, and the merchant's name as the SMS spells it. */
 export type LastCharge = { merchant_key: string; name: string; day: string; amount_minor: number; currency: Currency };
 
@@ -116,17 +133,22 @@ export async function merchantsForPayment(query = '', limit = 40): Promise<Array
 /** An operation's merchant's repeating payment for its card: the next charge (with a day), this year's charges in its currency. */
 export type PaymentCard = { sub: RecurringPayment; next: string | null; year_count: number; year_minor: number; last: { id: number; amount_minor: number; currency: Currency } | null };
 
-export async function paymentCard(merchantKey: string, now = new Date()): Promise<PaymentCard | null> {
-  const sub = await paymentOfMerchant(merchantKey);
-  if (!sub) return null;
+export async function paymentCard(merchantKey: string | null, now = new Date(), categoryId: number | null = null): Promise<PaymentCard | null> {
   const db = await getDb();
-  const days = (await chargeDays([merchantKey], db)).get(merchantKey) ?? [];
+  // its merchant's payment, else its category's one without a merchant
+  const sub = (merchantKey ? await paymentOfMerchant(merchantKey) : null)
+    ?? (categoryId === null ? null : (await db.get<Row>(
+      `SELECT ${COLUMNS} FROM recurring_payments WHERE category_id = ? AND merchant_key IS NULL AND deleted_at IS NULL ORDER BY id LIMIT 1`, [categoryId]).then((r) => (r ? asSub(r) : null))));
+  if (!sub) return null;
+  const days = (await paymentDays([sub], db))(sub);
   const from = Math.floor(new Date(now.getFullYear(), 0, 1).getTime() / 1000);
+  const whose = sub.merchant_key ? 'merchant_key = ?' : 'category_id = ?';
+  const key = sub.merchant_key ?? sub.category_id;
   const year = await db.get<{ n: number; sum: number | null }>(
-    `SELECT count(*) AS n, sum(CASE WHEN currency = ? THEN amount_minor END) AS sum FROM transactions
-      WHERE merchant_key = ? AND ${CHARGE} AND occurred_at >= ?`, [sub.currency, merchantKey, from]);
+    `SELECT count(*) AS n, sum(CASE WHEN currency = ? THEN amount_minor END) AS sum FROM spend_parts
+      WHERE ${whose} AND ${CHARGE} AND occurred_at >= ?`, [sub.currency, key, from]);
   const last = await db.get<{ id: number; amount_minor: number; currency: string }>(
-    `SELECT id, amount_minor, currency FROM transactions WHERE merchant_key = ? AND ${CHARGE} ORDER BY occurred_at DESC, id DESC LIMIT 1`, [merchantKey]);
+    `SELECT id, amount_minor, currency FROM spend_parts WHERE ${whose} AND ${CHARGE} ORDER BY occurred_at DESC, id DESC LIMIT 1`, [key]);
   return {
     sub, next: sub.due ? nextCharge(sub.due, sub.period_months, days, todayKey(now)) : null,
     year_count: year?.n ?? 0, year_minor: year?.sum ?? 0, last: last ? { ...last, currency: asCurrency(last.currency) } : null,
