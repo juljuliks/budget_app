@@ -226,4 +226,28 @@ describe('migrations', () => {
     await migrate(early);
     expect(await early.get("SELECT count(*) AS n FROM sqlite_master WHERE name IN ('recurring_payments', 'payment_savings', 'payment_contributions')")).toEqual({ n: 3 });
   });
+
+  test('migration 44: an obligatory payment of this month on is a repeating one — the day after its last spending, counted from it', async () => {
+    jest.useFakeTimers({ now: new Date('2026-10-15T12:00:00'), advanceTimers: true });
+    const db = openDatabase(':memory:');
+    await migrate(db, MIGRATIONS.slice(0, 43));
+    await db.run("INSERT INTO categories (id, name, emoji) VALUES (90, 'Квартира', '🏠'), (91, 'Спорт', '🏋️')");
+    await db.run("INSERT INTO plan_months (ym) VALUES ('2026-09'), ('2026-10')");
+    await db.run(`INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency) VALUES
+      ('2026-09', 90, 60000, 'fixed', 'USD'), ('2026-10', 90, 60000, 'fixed', 'USD'), ('2026-10', 91, 30000, 'fixed', 'GEL')`);
+    // rent paid by a transfer on 1 October; no spending in "Спорт"
+    await db.run(`INSERT INTO transactions (bank, kind, amount_minor, currency, merchant_key, category_id, category_source, occurred_at, raw_sms, sms_hash)
+      VALUES ('tbc', 'transfer', 60000, 'USD', 'LANDLORD', 90, 'user', ?, '', 'r1')`, [Math.floor(new Date('2026-10-01T10:00:00').getTime() / 1000)]);
+    await migrate(db);
+    jest.useRealTimers();
+    expect(await db.all('SELECT category_id, merchant_key, amount_minor, currency, period_months, due FROM recurring_payments ORDER BY category_id')).toEqual([
+      { category_id: 90, merchant_key: null, amount_minor: 60000, currency: 'USD', period_months: 1, due: '2026-11-01' },
+      { category_id: 91, merchant_key: null, amount_minor: 30000, currency: 'GEL', period_months: 1, due: null },
+    ]);
+    expect(await db.all('SELECT id, recurring FROM categories WHERE id IN (90, 91)')).toEqual([{ id: 90, recurring: 1 }, { id: 91, recurring: 1 }]);
+    // with a day — counted ('subs'); without — by hand; September stays as it was
+    expect(await db.all('SELECT ym, category_id, kind FROM plan_items ORDER BY ym, category_id')).toEqual([
+      { ym: '2026-09', category_id: 90, kind: 'fixed' }, { ym: '2026-10', category_id: 90, kind: 'subs' }, { ym: '2026-10', category_id: 91, kind: 'fixed' },
+    ]);
+  });
 });

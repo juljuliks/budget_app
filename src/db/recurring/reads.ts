@@ -6,6 +6,7 @@ import { Currency } from '../fx';
 import { placeholders, sqlList } from '../sql';
 import { asCurrency } from '../plans/months';
 import { REMEMBERABLE_KINDS } from '../../domain/types';
+import { EXPENSE_KINDS } from '../spending';
 import { nextCharge } from './schedule';
 
 /** A repeating payment ("подписка" in "Подписки"): a merchant's charge every N months, of a category with "Повторяющиеся платежи". */
@@ -61,6 +62,8 @@ export async function paymentOfMerchant(merchantKey: string): Promise<RecurringP
 }
 
 const CHARGE = `kind IN (${sqlList(REMEMBERABLE_KINDS)})`;
+/** A category's spending (a payment without a merchant: rent is often a transfer) */
+const SPENT = `kind IN (${sqlList(EXPENSE_KINDS)})`;
 
 /** The days the merchants were charged on (their purchases and payments), each merchant's in order. */
 export async function chargeDays(keys: string[], db?: Db): Promise<Map<string, string[]>> {
@@ -85,7 +88,7 @@ export async function paymentDays(payments: Array<Pick<RecurringPayment, 'mercha
   const byCategory = new Map<number, string[]>(cats.map((c) => [c, []]));
   if (cats.length) {
     const rows = await db.all<{ c: number; at: number }>(
-      `SELECT category_id AS c, occurred_at AS at FROM spend_parts WHERE category_id IN (${placeholders(cats.length)}) AND ${CHARGE} ORDER BY occurred_at`, cats);
+      `SELECT category_id AS c, occurred_at AS at FROM spend_parts WHERE category_id IN (${placeholders(cats.length)}) AND ${SPENT} ORDER BY occurred_at`, cats);
     for (const r of rows) byCategory.get(r.c)?.push(dayOfUnix(r.at));
   }
   return (p) => (p.merchant_key ? byMerchant.get(p.merchant_key) ?? [] : p.category_id !== null ? byCategory.get(p.category_id) ?? [] : []);
@@ -101,7 +104,7 @@ export async function categoryPayment(categoryId: number, db?: Db): Promise<Recu
 
 /** The day of the category's last spending ('YYYY-MM-DD'), or null: a payment put in from the plan is offered the next. */
 export async function lastCategoryDay(categoryId: number): Promise<string | null> {
-  const r = await (await getDb()).get<{ at: number | null }>(`SELECT max(occurred_at) AS at FROM spend_parts WHERE category_id = ? AND ${CHARGE}`, [categoryId]);
+  const r = await (await getDb()).get<{ at: number | null }>(`SELECT max(occurred_at) AS at FROM spend_parts WHERE category_id = ? AND ${SPENT}`, [categoryId]);
   return r?.at ? dayOfUnix(r.at) : null;
 }
 
@@ -155,13 +158,13 @@ export async function paymentCard(merchantKey: string | null, now = new Date(), 
   if (!sub) return null;
   const days = (await paymentDays([sub], db))(sub);
   const from = Math.floor(new Date(now.getFullYear(), 0, 1).getTime() / 1000);
-  const whose = sub.merchant_key ? 'merchant_key = ?' : 'category_id = ?';
+  const whose = sub.merchant_key ? `merchant_key = ? AND ${CHARGE}` : `category_id = ? AND ${SPENT}`;
   const key = sub.merchant_key ?? sub.category_id;
   const year = await db.get<{ n: number; sum: number | null }>(
     `SELECT count(*) AS n, sum(CASE WHEN currency = ? THEN amount_minor END) AS sum FROM spend_parts
-      WHERE ${whose} AND ${CHARGE} AND occurred_at >= ?`, [sub.currency, key, from]);
+      WHERE ${whose} AND occurred_at >= ?`, [sub.currency, key, from]);
   const last = await db.get<{ id: number; amount_minor: number; currency: string }>(
-    `SELECT id, amount_minor, currency FROM spend_parts WHERE ${whose} AND ${CHARGE} ORDER BY occurred_at DESC, id DESC LIMIT 1`, [key]);
+    `SELECT id, amount_minor, currency FROM spend_parts WHERE ${whose} ORDER BY occurred_at DESC, id DESC LIMIT 1`, [key]);
   return {
     sub, next: sub.due ? nextCharge(sub.due, sub.period_months, days, todayKey(now)) : null,
     year_count: year?.n ?? 0, year_minor: year?.sum ?? 0, last: last ? { ...last, currency: asCurrency(last.currency) } : null,
