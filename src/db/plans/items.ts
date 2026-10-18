@@ -27,7 +27,13 @@ export async function listPlan(ym: string, to?: Currency): Promise<PlanItem[]> {
   const conv = await planConverter(ym);
   const funds = await fundsOf(ym, rows.filter((r) => r.kind === 'fund').map((r) => r.category_id));
   const subs = rows.some((r) => r.system === 'subs') ? await monthSubscriptions(ym, target) : null;
-  const subNames = subs ? [...subs.charges.map((c) => c.sub.name), ...subs.later.map((l) => l.sub.name)].filter((n, i, all) => all.indexOf(n) === i) : [];
+  const savingIds = new Set(subs?.saving.map((v) => v.sub_id) ?? []);
+  const subNames = (keep: (id: number) => boolean) => (subs ? [...subs.charges.map((c) => c.sub), ...subs.later.map((l) => l.sub)] : [])
+    .filter((s) => keep(s.id)).map((s) => s.name).filter((n, i, all) => all.indexOf(n) === i);
+  const subsInfo = subs && {
+    names: subNames((id) => !savingIds.has(id)), saving_names: subNames((id) => savingIds.has(id)),
+    saving_minor: subs.saving.reduce((a, v) => a + (v.converted_minor ?? 0), 0),
+  };
   return rows.map((r) => ({
     ...r,
     currency: asCurrency(r.currency),
@@ -36,7 +42,7 @@ export async function listPlan(ym: string, to?: Currency): Promise<PlanItem[]> {
     pinned: r.pinned === 1,
     previous_minor: r.previous_minor || null,
     ...(funds.has(r.category_id) ? { fund: funds.get(r.category_id) } : {}),
-    ...(r.system === 'subs' ? { subs: { names: subNames } } : {}),
+    ...(r.system === 'subs' && subsInfo ? { subs: subsInfo } : {}),
   }));
 }
 

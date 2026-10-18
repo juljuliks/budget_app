@@ -14,8 +14,11 @@ import TextInputModal from '@/shared/ui/TextInputModal';
 import { formStyles } from '@/shared/theme/formStyles';
 import { colors } from '@/shared/theme/theme';
 import { todayKey } from '@/db/subscriptions';
+import { currentYm } from '@/db/plans';
 import { confirmDeleteSub, saveSub } from '../model/commands';
 import { SubscriptionTarget, useSubscriptionForm } from '../model/useSubscriptionForm';
+import { useSubscriptionSaving } from '../model/useSubscriptionSaving';
+import SavingFields from './SavingFields';
 import { inTime, monthGenYear, periodText, PERIODS } from '../texts';
 
 type Props = {
@@ -33,17 +36,18 @@ type Props = {
  */
 export default function SubscriptionSheet({ target, onClose, adding }: Props) {
   const f = useSubscriptionForm(target);
+  const saving = useSubscriptionSaving(target, f.period, f.input?.amount_minor ?? null, f.due);
   const [otherOpen, setOtherOpen] = useState(false);
   const custom = !PERIODS.some(([m]) => m === f.period);
   const amountBad = f.amount.trim() !== '' && f.input === null && !!f.name.trim();
-  const save = () => { if (f.input) saveSub(f.input, target?.id, onClose); };
+  const save = () => { if (f.input) saveSub(f.input, target?.id, onClose, saving.choice); };
   const skip = () => { if (f.input) saveSub({ ...f.input, due: null }, target?.id, onClose); else onClose(); };
   const title = target?.id !== undefined ? `📺 ${target.name}` : target?.merchant_key ? `📺 Подписка «${target.merchant_key}»` : '📺 Новая подписка';
   return (
     <BottomSheet
       visible={target !== null} onClose={onClose} title={title} style={styles.root}
       headerRight={target?.id !== undefined ? (
-        <TouchableOpacity onPress={() => confirmDeleteSub(target.id!, target.name, onClose)} hitSlop={8} accessibilityRole="button" accessibilityLabel="Удалить подписку">
+        <TouchableOpacity onPress={() => { confirmDeleteSub(target.id!, target.name, target.currency, onClose); }} hitSlop={8} accessibilityRole="button" accessibilityLabel="Удалить подписку">
           <TrashIcon color={colors.danger} size={22} />
         </TouchableOpacity>
       ) : null}
@@ -74,7 +78,13 @@ export default function SubscriptionSheet({ target, onClose, adding }: Props) {
           suffix={f.due ? (inTime(f.due, todayKey()) ? ` · ${inTime(f.due, todayKey())}` : null) : null} onChange={f.setDue}
         />
         <Text style={formStyles.hint}>После списания дата сдвинется сама: пришла операция мерчанта — следующая через период.</Text>
-        {f.effect && f.effect.delta_minor !== 0 ? (
+        <SavingFields s={saving} amount={f.input?.amount_minor ?? null} currency={f.currency} due={f.due} />
+        {saving.contribution !== null ? (
+          <View style={styles.plate}>
+            <Text style={styles.plateTitle}>{`В план ${monthGenYear(currentYm())} +${formatWithCurrency(saving.contribution, f.currency)}`}</Text>
+            <Text style={styles.plateText}>{`Взнос каждый месяц до ${monthGenYear(f.due!.slice(0, 7))}; списание — из отложенного.`}</Text>
+          </View>
+        ) : f.effect && f.effect.delta_minor !== 0 ? (
           <View style={styles.plate}>
             <Text style={styles.plateTitle}>
               {`В план ${monthGenYear(f.effect.ym)} ${f.effect.delta_minor > 0 ? '+' : '−'}${formatWithCurrency(Math.abs(f.effect.delta_minor), f.effect.currency)}`}
@@ -83,7 +93,7 @@ export default function SubscriptionSheet({ target, onClose, adding }: Props) {
           </View>
         ) : null}
         <SheetActions
-          submit={{ title: 'Сохранить', onPress: save, disabled: !f.input || !f.due }}
+          submit={{ title: 'Сохранить', onPress: save, disabled: !f.input || !f.due || saving.startBad || !saving.choice }}
           onCancel={target?.from_operation ? skip : onClose} cancelTitle={target?.from_operation ? 'Пропустить' : 'Отмена'}
         />
       </SheetScrollView>

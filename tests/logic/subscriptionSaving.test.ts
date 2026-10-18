@@ -68,6 +68,15 @@ describe('saving up for a subscription', () => {
     expect(await subsSpent(2026, 9)).toBe(0);
   });
 
+  test('a charge paid before the saving was turned on is the month\'s, not the saving\'s', async () => {
+    await charge('YANDEX', 4500, '2026-10-05T10:00:00');
+    const id = await saveSubscription({ ...YANDEX, due: '2027-01-05' });
+    await startSaving(id, 0);
+    // October: its charge and the contribution for January's
+    expect(await subsItem('2026-10')).toBe(4500 + 1200);
+    expect(await subsSpent(2026, 9)).toBe(4500 + 1200);
+  });
+
   test('turned off: what it had goes to the month (its "Подписки" spend that much less); "Отменить" puts it back', async () => {
     await setPlanBudget('2026-09', 500000, 'GEL');
     const id = await saveSubscription({ ...YANDEX, due: '2027-01-29' });

@@ -36,7 +36,8 @@ export type PlanItem = {
   /** the category's system kind ('subs' — "Подписки"), null / absent for the user's own */
   system?: string | null;
   /** "Подписки": its subscriptions with a day, those charged this month first, then by their next charge */
-  subs?: { names: string[] };
+  /** "Подписки": the subscriptions charged by name, those saved up for, their contributions in the plan's currency */
+  subs?: { names: string[]; saving_names: string[]; saving_minor: number };
   /** a fund's item (kind 'fund'): how much by when, what it has by the month's end (now, for the current one); in `currency` */
   fund?: { target_minor: number; due: string; saved_minor: number; start_minor: number };
 };

@@ -6,7 +6,7 @@ import type { Db } from '../types';
 import { Currency } from '../fx';
 import { asCurrency, currentYm, monthRange, monthStart, parseYm } from '../plans/months';
 import { convertSpending } from '../plans/spend';
-import { chargeDays } from './reads';
+import { chargeDays, dayOfUnix } from './reads';
 import { savingFor } from './schedule';
 import { SavingMonth, savingMonths, ymBefore } from './savingLedger';
 
@@ -16,6 +16,8 @@ export type Saving = {
   since_ym: string;
   /** "Уже отложено" */
   start_minor: number;
+  /** when it was made (unix): the charges before aren't its */
+  created_at: number;
   /** turned off (or the subscription deleted) in this month: counts up to the month before */
   closed_ym: string | null;
   /** what it had then: that month's savings */
@@ -32,7 +34,7 @@ export type Saving = {
 export type SavingLedger = { saving: Saving; months: SavingMonth[]; balance: number; byTx: Map<number, { before: number; after: number }> };
 
 type Row = Omit<Saving, 'currency'> & { currency: string };
-const COLUMNS = `v.id, v.sub_id, v.since_ym, v.start_minor, v.closed_ym, v.released_minor,
+const COLUMNS = `v.id, v.sub_id, v.since_ym, v.start_minor, v.closed_ym, v.released_minor, v.created_at,
   s.merchant_key, s.name, s.amount_minor, s.currency, s.period_months, s.due`;
 const asSaving = (r: Row): Saving => ({ ...r, currency: asCurrency(r.currency) });
 
@@ -69,12 +71,12 @@ export async function savingLedger(v: Saving, until = currentYm(), nowYm = curre
   const rows = !v.merchant_key ? [] : await db.all<{ id: number; category_id: number | null; kind: string; amount_minor: number; currency: string; occurred_at: number; refund_settled_at: number | null }>(
     `SELECT id, category_id, kind, amount_minor, currency, occurred_at, refund_settled_at FROM spend_parts
       WHERE merchant_key = ? AND category_id = (SELECT id FROM categories WHERE system = 'subs') AND occurred_at >= ? AND occurred_at < ?
-      ORDER BY occurred_at, id`, [v.merchant_key, monthStart(v.since_ym), monthRange(year, month)[1]]);
+      ORDER BY occurred_at, id`, [v.merchant_key, Math.max(monthStart(v.since_ym), v.created_at), monthRange(year, month)[1]]);
   const { items } = await convertSpending(rows, v.currency);
   const ops = v.merchant_key ? (await chargeDays([v.merchant_key], db)).get(v.merchant_key) ?? [] : [];
   const r = savingMonths({
     since: v.since_ym, last, nowYm, start: v.start_minor, amount: v.amount_minor, planned: (ym) => planned.has(ym), stored,
-    dueOf: (ym) => (v.due ? savingFor(v.due, v.period_months, ym, ops) : null),
+    dueOf: (ym) => (v.due ? savingFor(v.due, v.period_months, ym, ops, v.created_at ? dayOfUnix(v.created_at) : '') : null),
     spends: items.map(({ row, value }) => ({ id: row.id, at: row.occurred_at, value })),
   });
   return { saving: v, ...r };

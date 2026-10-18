@@ -25,6 +25,7 @@ type Props = {
 };
 
 const targetOf = (s: Subscription): SubscriptionTarget => ({ ...s });
+const savingSum = (m: { saving: Array<{ converted_minor: number | null }> }) => m.saving.reduce((a, v) => a + (v.converted_minor ?? 0), 0);
 
 /**
  * "Подписки" of the plan's month: "Списания в <месяце>" (done ✓ or the day), "Другие списания" (by the next charge),
@@ -46,6 +47,9 @@ export default function SubscriptionsSheet({ ym, currency, onClose, onEditAmount
             <Text style={styles.factLabel}>{`В плане ${month}`}</Text>
             <Text style={styles.factValue}>{data.planned_minor === null ? '—' : money(data.planned_minor)}</Text>
           </View>
+          {data.saving.length ? (
+            <Text style={formStyles.hint}>{`списания ${money(data.total_minor - savingSum(data))} + копим ${money(savingSum(data))}`}</Text>
+          ) : null}
           {data.by_hand ? (
             <TouchableOpacity onPress={onEditAmount} accessibilityRole="button">
               <Text style={formStyles.hint}>Сумма введена вручную — пока ни у одной подписки нет даты. <Text style={styles.link}>Изменить сумму</Text></Text>
@@ -54,24 +58,33 @@ export default function SubscriptionsSheet({ ym, currency, onClose, onEditAmount
 
           <View style={styles.label}>
             <Text style={formStyles.label}>{`Списания ${inMonth(ym)}`}</Text>
-            <Text style={[formStyles.label, styles.labelSum]}>{money(data.total_minor)}</Text>
+            <Text style={[formStyles.label, styles.labelSum]}>{money(data.total_minor - savingSum(data))}</Text>
           </View>
           {data.charges.length ? data.charges.map((c) => (
             <SubscriptionRow
               key={`${c.sub.id}-${c.day}`} name={c.sub.name} onPress={() => setOpen(targetOf(c.sub))}
-              note={[periodText(c.sub.period_months), c.done ? `✓ списано ${shortDay(c.day)}` : [shortDay(c.day), inTime(c.day, today)].filter(Boolean).join(', ')]}
-              tone={c.done ? 'ok' : undefined} amount={money(c.sub.amount_minor, c.sub.currency)}
+              note={[periodText(c.sub.period_months), ...(c.saved ? ['из отложенного'] : []), c.done ? `✓ списано ${shortDay(c.day)}` : [shortDay(c.day), inTime(c.day, today)].filter(Boolean).join(', ')]}
+              tone={c.done ? 'ok' : undefined} amount={money(c.sub.amount_minor, c.sub.currency)} muted={c.saved}
             />
           )) : <Text style={formStyles.hint}>{`Нет списаний ${inMonth(ym)}`}</Text>}
 
           {data.later.length ? <Text style={formStyles.label}>Другие списания</Text> : null}
-          {data.later.map(({ sub, next }) => (
-            <SubscriptionRow
-              key={sub.id} name={sub.name} onPress={() => setOpen(targetOf(sub))}
-              note={[periodText(sub.period_months), shortDay(next)]}
-              amount={money(sub.amount_minor, sub.currency)} amountNote={inMonth(next.slice(0, 7))} muted
-            />
-          ))}
+          {data.later.map(({ sub, next }) => {
+            const v = data.saving.find((x) => x.sub_id === sub.id);
+            return v ? (
+              <SubscriptionRow
+                key={sub.id} name={sub.name} onPress={() => setOpen(targetOf(sub))} ring={sub.amount_minor ? v.end_minor / sub.amount_minor : 0}
+                note={[periodText(sub.period_months), shortDay(next), `${money(v.end_minor, sub.currency)} из ${money(sub.amount_minor, sub.currency)}`]}
+                amount={money(v.contribution_minor, sub.currency)} amountNote="в месяц"
+              />
+            ) : (
+              <SubscriptionRow
+                key={sub.id} name={sub.name} onPress={() => setOpen(targetOf(sub))}
+                note={[periodText(sub.period_months), shortDay(next)]}
+                amount={money(sub.amount_minor, sub.currency)} amountNote={inMonth(next.slice(0, 7))} muted
+              />
+            );
+          })}
 
           {data.undated.length || data.merchants.length ? <Text style={formStyles.label}>Без даты списания</Text> : null}
           {data.undated.map((sub) => (

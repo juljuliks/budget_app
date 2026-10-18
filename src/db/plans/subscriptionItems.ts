@@ -5,7 +5,7 @@
 // what was saved).
 import { getDb } from '../index';
 import { Currency, makeConverter } from '../fx';
-import { chargeDays, listSubscriptions, Subscription, todayKey } from '../subscriptions/reads';
+import { chargeDays, dayOfUnix, listSubscriptions, Subscription, todayKey } from '../subscriptions/reads';
 import { addMonths, chargesBetween, monthCharges, monthDays, nextCharge } from '../subscriptions/schedule';
 import { savingEffects, storeContributions } from '../subscriptions/saving';
 import { asCurrency, currentYm, planRateDate } from './months';
@@ -14,7 +14,7 @@ import { asCurrency, currentYm, planRateDate } from './months';
 export type SubCharge = { sub: Subscription; day: string; done: boolean; converted_minor: number | null; saved: boolean };
 
 /** A subscription saved up for in the month: what it has at the month's start, the contribution, in its currency. */
-export type SubSaving = { sub_id: number; start_minor: number; contribution_minor: number; end_minor: number; converted_minor: number | null };
+export type SubSaving = { sub_id: number; start_minor: number; contribution_minor: number; end_minor: number; converted_minor: number | null; from_day: string };
 
 export type MonthSubscriptions = {
   /** the month's charges by day */
@@ -44,18 +44,23 @@ export async function monthSubscriptions(ym: string, to?: Currency, now = new Da
   for (const e of await savingEffects(ym, currentYm(now), db)) {
     if (!e.month) continue;
     const converted = conv(e.month.contribution, e.currency, currency, rateDay);
-    out.saving.push({ sub_id: e.saving.sub_id, start_minor: e.month.start, contribution_minor: e.month.contribution, end_minor: e.month.end, converted_minor: converted });
+    out.saving.push({
+      sub_id: e.saving.sub_id, start_minor: e.month.start, contribution_minor: e.month.contribution, end_minor: e.month.end, converted_minor: converted,
+      from_day: e.saving.created_at ? dayOfUnix(e.saving.created_at) : '',
+    });
     out.total_minor += converted ?? 0;
   }
-  const saved = new Set(out.saving.map((v) => v.sub_id));
+  // a charge before the saving was made isn't paid from it
+  const savedFrom = new Map(out.saving.map((v) => [v.sub_id, v.from_day]));
   for (const sub of subs) {
     if (!sub.due) { out.undated.push(sub); continue; }
     const ops = sub.merchant_key ? days.get(sub.merchant_key) ?? [] : [];
     const charges = monthCharges(sub.due, sub.period_months, ym, ops, `${sub.since_ym}-01`);
     for (const c of charges) {
       const converted = conv(sub.amount_minor, sub.currency, currency, rateDay);
-      out.charges.push({ sub, ...c, converted_minor: converted, saved: saved.has(sub.id) });
-      if (!saved.has(sub.id)) out.total_minor += converted ?? 0;
+      const saved = savedFrom.has(sub.id) && c.day >= savedFrom.get(sub.id)!;
+      out.charges.push({ sub, ...c, converted_minor: converted, saved });
+      if (!saved) out.total_minor += converted ?? 0;
     }
     if (!charges.length) {
       // the current month: the next one waited for (a late one too); a coming month: the first after it

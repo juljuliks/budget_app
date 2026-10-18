@@ -8,7 +8,7 @@ import { openSaving, savingLedger } from './saving';
 export type SavingUndo =
   | { kind: 'opened'; id: number }
   | { kind: 'closed'; id: number }
-  | { kind: 'removed'; row: { id: number; sub_id: number; since_ym: string; start_minor: number }; contributions: Array<{ ym: string; minor: number }> };
+  | { kind: 'removed'; row: { id: number; sub_id: number; since_ym: string; start_minor: number; created_at: number }; contributions: Array<{ ym: string; minor: number }> };
 
 /**
  * Saves up for the subscription from this month, "Уже отложено" `start`; already saving — `start` changes (what it
@@ -21,7 +21,7 @@ export async function startSaving(subId: number, start: number, nowYm = currentY
     if (open.start_minor === start) return null;
     await db.run('UPDATE sub_savings SET start_minor = ? WHERE id = ?', [start, open.id]);
   } else {
-    const r = await db.run('INSERT INTO sub_savings (sub_id, since_ym, start_minor) VALUES (?, ?, ?)', [subId, nowYm, start]);
+    const r = await db.run('INSERT INTO sub_savings (sub_id, since_ym, start_minor, created_at) VALUES (?, ?, ?, ?)', [subId, nowYm, start, Math.floor(Date.now() / 1000)]);
     await refreshSubscriptionItems(nowYm);
     return { kind: 'opened', id: r.lastInsertRowid };
   }
@@ -49,7 +49,7 @@ export async function stopSaving(subId: number, nowYm = currentYm()): Promise<{ 
     const contributions = await db.all<{ ym: string; minor: number }>('SELECT ym, minor FROM sub_contributions WHERE saving_id = ?', [open.id]);
     await db.run('DELETE FROM sub_contributions WHERE saving_id = ?', [open.id]);
     await db.run('DELETE FROM sub_savings WHERE id = ?', [open.id]);
-    out = { released: 0, undo: { kind: 'removed', row: { id: open.id, sub_id: open.sub_id, since_ym: open.since_ym, start_minor: open.start_minor }, contributions } };
+    out = { released: 0, undo: { kind: 'removed', row: { id: open.id, sub_id: open.sub_id, since_ym: open.since_ym, start_minor: open.start_minor, created_at: open.created_at }, contributions } };
   } else {
     const { balance } = await savingLedger({ ...open, closed_ym: nowYm }, nowYm, nowYm, db);
     await db.run('UPDATE sub_savings SET closed_ym = ?, released_minor = ? WHERE id = ?', [nowYm, balance, open.id]);
@@ -68,7 +68,7 @@ export async function undoSaving(u: SavingUndo, nowYm = currentYm()): Promise<vo
   } else if (u.kind === 'closed') {
     await db.run('UPDATE sub_savings SET closed_ym = NULL, released_minor = NULL WHERE id = ?', [u.id]);
   } else {
-    await db.run('INSERT INTO sub_savings (id, sub_id, since_ym, start_minor) VALUES (?, ?, ?, ?)', [u.row.id, u.row.sub_id, u.row.since_ym, u.row.start_minor]);
+    await db.run('INSERT INTO sub_savings (id, sub_id, since_ym, start_minor, created_at) VALUES (?, ?, ?, ?, ?)', [u.row.id, u.row.sub_id, u.row.since_ym, u.row.start_minor, u.row.created_at]);
     for (const c of u.contributions) await db.run('INSERT INTO sub_contributions (saving_id, ym, minor) VALUES (?, ?, ?)', [u.row.id, c.ym, c.minor]);
   }
   await refreshSubscriptionItems(nowYm);

@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import ProgressRing from '@/shared/ui/ProgressRing';
 import { colors } from '@/shared/theme/theme';
 
 type Props = {
@@ -12,15 +13,18 @@ type Props = {
   amountNote?: string;
   /** the amount muted (not the plan's this month) */
   muted?: boolean;
+  /** saved up for: how far along (0–1), a ring before the name */
+  ring?: number;
   onPress: () => void;
 };
 
 /** A subscription in the "Подписки" sheet: name and what it is, the amount; a tap opens it. */
-export default function SubscriptionRow({ name, note, tone, amount, amountNote, muted, onPress }: Props) {
+export default function SubscriptionRow({ name, note, tone, amount, amountNote, muted, ring, onPress }: Props) {
   const last = note[note.length - 1];
   const head = note.slice(0, -1);
   return (
     <TouchableOpacity style={styles.row} onPress={onPress} accessibilityRole="button" accessibilityLabel={`Подписка: ${name}`}>
+      {ring !== undefined ? <ProgressRing ratio={ring} color={ring >= 1 ? colors.income : colors.fund} track={colors.fundTrack} size={22} /> : null}
       <View style={styles.body}>
         <Text style={styles.name} numberOfLines={1}>{name}</Text>
         <Text style={styles.note} numberOfLines={2}>

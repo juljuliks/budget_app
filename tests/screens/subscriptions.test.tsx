@@ -7,6 +7,7 @@ import { buy, on, planned } from '../e2e/seeds';
 import { getDb } from '../../src/db';
 import { subscriptionsCategoryId } from '../../src/db/categories';
 import { saveSubscription } from '../../src/db/subscriptions';
+import { setPlanBudget } from '../../src/db/plans';
 
 const N = ' ';
 const subs = async () => (await getDb()).all<{ name: string; merchant_key: string | null; amount_minor: number; period_months: number; due: string | null }>(
@@ -84,6 +85,46 @@ describe('6.6 subscriptions', () => {
     await tap('Отменить');
     expect(await screen.findByText('Подписка «NETFLIX.COM» снова в плане')).toBeTruthy();
     expect(await subs()).toHaveLength(1);
+  });
+});
+
+describe('6.7.8 saving up for a subscription', () => {
+  test('a year one: "Откладывать каждый месяц?" — "Да" by default; the plan has the contribution ("копим")', async () => {
+    await openSubscriptions();
+    await tap('Подписка: NETFLIX.COM');
+    await tap('Раз в год');
+    expect(await screen.findByText('Откладывать каждый месяц?')).toBeTruthy();
+    expect(screen.getByText(/^Да, по 3/)).toBeTruthy();
+    expect(screen.getByText(/^В план октября \+3/)).toBeTruthy();
+    await tap('Сохранить');
+    // October's charge was before the saving: the month's; the contribution on top
+    expect(await screen.findByText(/^списания 30.*копим 3/)).toBeTruthy();
+    expect((await (await getDb()).all('SELECT since_ym FROM sub_savings'))).toEqual([{ since_ym: '2026-10' }]);
+  });
+
+  test('turned off with something saved: asked first, what it had goes to the month\'s savings; "Отменить" puts it back', async () => {
+    await openApp(async () => {
+      await seed();
+      await setPlanBudget('2026-09', 500000, 'GEL');
+      const id = await saveSubscription({ merchant_key: 'NETFLIX.COM', name: 'Netflix', amount_minor: 3000, currency: 'GEL', period_months: 12, due: '2027-10-10' });
+      const db = await getDb();
+      await db.run("INSERT INTO sub_savings (id, sub_id, since_ym, start_minor) VALUES (5, ?, '2026-09', 0)", [id]);
+      await db.run("INSERT INTO sub_contributions (saving_id, ym, minor) VALUES (5, '2026-09', 1000)");
+    });
+    await tap('Статистика');
+    await tap('План');
+    await tap('📺 Подписки');
+    await tap('Подписка: Netflix');
+    expect(await screen.findByText(`Отложено 10${N}₾ из 30${N}₾.`)).toBeTruthy();
+    await tap('Нет, весь платёж в октябре');
+    await tap('Сохранить');
+    expect(await screen.findByText('Не откладывать на Netflix?')).toBeTruthy();
+    expect(screen.getByText(/^На подписку уже отложено 10/)).toBeTruthy();
+    await tap('Не откладывать');
+    expect(await screen.findByText(`Netflix — без откладывания, 10${N}₾ в сбережениях октября`)).toBeTruthy();
+    expect(await (await getDb()).get('SELECT closed_ym, released_minor FROM sub_savings')).toEqual({ closed_ym: '2026-10', released_minor: 1000 });
+    await tap('Отменить');
+    expect(await screen.findByText('Netflix — снова откладываем')).toBeTruthy();
   });
 });
 

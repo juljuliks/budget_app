@@ -11,12 +11,15 @@ import { styles } from './styles';
 type Props = { p: PlanView; item: PlanItem; hidden: boolean; onOpen: () => void };
 
 /**
- * "Подписки" in the plan: the repeat sign in the pin's place, the subscriptions with a day by name, the month's amount
- * (counted from them; by hand until one has a day). A tap opens the "Подписки" sheet.
+ * "Подписки" in the plan: the repeat sign in the pin's place, the subscriptions with a day by name ("копим: …" — those
+ * saved up for), the month's amount (counted from them; by hand until one has a day), "копим 26.67 ₾" — the
+ * contributions in it. A tap opens the "Подписки" sheet.
  */
 export function SubsItemRow({ p, item, hidden, onOpen }: Props) {
   const names = item.subs?.names ?? [];
-  const note = item.kind !== 'subs' ? 'вручную · задайте даты подпискам' : names.length ? names.join(', ') : 'нет подписок с датой';
+  const saving = item.subs?.saving_names ?? [];
+  const listed = [names.join(', '), saving.length ? `копим: ${saving.join(', ')}` : ''].filter(Boolean).join(' · ');
+  const note = item.kind !== 'subs' ? 'вручную · задайте даты подпискам' : listed || 'нет подписок с датой';
   return (
     <TouchableOpacity style={styles.row} onPress={onOpen} accessibilityLabel={categoryLabel(item)}>
       <View style={styles.pin}><RepeatIcon color={colors.accent} size={20} /></View>
@@ -27,6 +30,7 @@ export function SubsItemRow({ p, item, hidden, onOpen }: Props) {
       {hidden ? null : (
         <View style={styles.amountBox}>
           <Text style={styles.amount}>{item.converted_minor !== null ? p.money(item.converted_minor) : formatWithCurrency(item.limit_minor, item.currency)}</Text>
+          {item.subs?.saving_minor ? <Text style={styles.amountOriginal}>{`копим ${p.money(item.subs.saving_minor)}`}</Text> : null}
         </View>
       )}
     </TouchableOpacity>
