@@ -42,6 +42,18 @@ test('the budget\'s split: planned, outside the plan, savings (🔒 and what the
   expect(s.systemGroups[0].rows[1].note).toBe('не запланировано — решите в итогах месяца');
 });
 
+test('the funds in "Сбережения": their contributions in its column and section, between 🔒 and 🌊; 🌊 none left — no row', () => {
+  const fund = item({ category_id: 9, name: 'Отпуск', kind: 'fund', converted_minor: 20000, limit_minor: 20000 });
+  const v = view([item({}), fund], budget({ locked_minor: 10000 }));
+  expect(v.parts.map((p) => [p.label, p.value])).toEqual([['План', 31000], ['Вне плана', 0], ['Сбережения', 69000]]);
+  expect(v.systemGroups[0]).toMatchObject({ title: 'Сбережения', funds: [expect.objectContaining({ name: 'Отпуск' })] });
+  // the plan takes the rest: no 🌊
+  const full = view([item({ converted_minor: 70000 }), fund], budget({ locked_minor: 10000 }));
+  expect(full.systemGroups[0].rows.map((r) => r.key)).toEqual(['locked']);
+  // no budget: the funds still there
+  expect(view([fund], null).systemGroups).toEqual([expect.objectContaining({ title: 'Сбережения', rows: [], funds: [fund] })]);
+});
+
 test('what the month before sent: owed — red first, out of what is left; moved in — on top of the budget, a line under it', () => {
   const debt = view([item({})], budget({ carry: { from_ym: '2029-12', debt_minor: 5000, plus_minor: 0 } }));
   expect(debt.parts.map((p) => [p.label, p.value])).toEqual([['Перерасход декабря', 5000], ['План', 31000], ['Вне плана', 0], ['Сбережения', 64000]]);

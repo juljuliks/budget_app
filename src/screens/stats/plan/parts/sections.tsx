@@ -19,27 +19,36 @@ const header = (title: string, total: React.ReactNode) => (
   </SectionHeader>
 );
 
+type SystemOpen = { budget: () => void; carry: (kind: 'debt' | 'plus') => void; less: () => void; fund: (item: PlanItem) => void };
+
 /**
- * System "categories" first: what the budget sets apart before the plan — savings (locked and floating) and the share
- * outside the plan; like the plan's sections, with their share of the budget; a tap opens the budget.
+ * System "categories" first: what the budget sets apart before the plan — savings (locked, the funds' contributions,
+ * floating) and the share outside the plan; like the plan's sections, with their share of the budget; a tap opens the
+ * budget (a fund: the fund).
  */
-export function systemSections(p: PlanView, hidden: boolean, onOpenBudget: () => void, onOpenCarry: (kind: 'debt' | 'plus') => void, onLess: () => void) {
-  if (!p.shownBudget) return null;
+export function systemSections(p: PlanView, hidden: boolean, open: SystemOpen) {
   return p.systemGroups.map((g) => {
-    const sum = g.rows.reduce((a, r) => a + r.value, 0);
+    const funds = g.funds ?? [];
+    const sum = g.rows.reduce((a, r) => a + r.value, 0) + funds.reduce((a, i) => a + (i.converted_minor ?? 0), 0);
     // the leftover moved in: on top of the budget, "+", no share
-    const plus = g.rows.every((r) => r.carry === 'plus');
+    const plus = g.rows.length > 0 && g.rows.every((r) => r.carry === 'plus');
+    const row = (r: PlanView['systemGroups'][number]['rows'][number]) => (
+      <SystemRowView key={r.key} p={p} r={r} hidden={hidden} onOpen={r.carry ? () => open.carry(r.carry!) : open.budget} onLess={open.less} />
+    );
     return (
       <React.Fragment key={g.title}>
         {/* "Скрыть суммы": the share only */}
         {header(g.title, (
           <Text style={[styles.groupTotal, plus && styles.freeValue]}>
-            {hidden ? null : `${plus ? '+' : ''}${p.money(sum)}`}
-            {plus ? null : <Text style={styles.groupShare}>{hidden ? '' : ' · '}{percentOf(sum, p.shownBudget!) || '0%'}</Text>}
+            {hidden && p.shownBudget ? null : `${plus ? '+' : ''}${p.money(sum)}`}
+            {plus || !p.shownBudget ? null : <Text style={styles.groupShare}>{hidden ? '' : ' · '}{percentOf(sum, p.shownBudget) || '0%'}</Text>}
           </Text>
         ))}
         <View>
-          {g.rows.map((r) => <SystemRowView key={r.key} p={p} r={r} hidden={hidden} onOpen={r.carry ? () => onOpenCarry(r.carry!) : onOpenBudget} onLess={onLess} />)}
+          {/* 🔒 first, then the funds, then 🌊 */}
+          {g.rows.filter((r) => r.key === 'locked').map(row)}
+          {funds.map((item) => <FundItemRow key={item.category_id} p={p} item={item} hidden={hidden} onOpen={() => open.fund(item)} />)}
+          {g.rows.filter((r) => r.key !== 'locked').map(row)}
         </View>
       </React.Fragment>
     );
@@ -73,24 +82,6 @@ export function itemSections(p: PlanView, { ym, currency, hidden, toShown, onOpe
       </View>
     </React.Fragment>
   ));
-}
-
-/** "Копилки": the funds' contributions this month, with their share of the budget; a tap opens the fund. */
-export function fundSection(p: PlanView, hidden: boolean, onOpen: (item: PlanItem) => void) {
-  if (!p.funds.length) return null;
-  return (
-    <React.Fragment key="funds">
-      {header('Копилки', (
-        <Text style={styles.groupTotal}>
-          {hidden && p.shownBudget ? null : p.money(p.fundsTotal)}
-          {p.shownBudget && p.fundsTotal ? <Text style={styles.groupShare}>{hidden ? '' : ' · '}{percentOf(p.fundsTotal, p.shownBudget)}</Text> : null}
-        </Text>
-      ))}
-      <View>
-        {p.funds.map((item) => <FundItemRow key={item.category_id} p={p} item={item} hidden={hidden} onOpen={() => onOpen(item)} />)}
-      </View>
-    </React.Fragment>
-  );
 }
 
 /** "Подписки": the month's charges, with their share of the budget; a tap opens the "Подписки" sheet. */

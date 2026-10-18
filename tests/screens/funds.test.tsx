@@ -34,13 +34,14 @@ async function makeFund() {
 }
 
 describe('6.5 funds', () => {
-  test('made from the plan\'s sheet: its contribution in "Копилки", what it has of the target', async () => {
+  test('made from the plan\'s sheet: its contribution in "Сбережения", what it has of the target', async () => {
     await makeFund();
     expect(await fund()).toEqual({ target_minor: 150000, due: '2027-01-31', start_minor: 30000, closed_ym: null });
     // saved 300 + October's 300 − ZARA 450
     expect(await screen.findByText(`150 из 1 500${N}₾ · к 31 января 2027`)).toBeTruthy();
-    // the budget's column and the section
-    expect(screen.getAllByText('Копилки')).toHaveLength(2);
+    // no column or section of its own: in "Сбережения"
+    expect(screen.queryByText('Копилки')).toBeNull();
+    expect(screen.getAllByText('Сбережения').length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText('в месяц')).toBeTruthy();
   });
 

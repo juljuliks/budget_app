@@ -8,7 +8,7 @@ import { formatPercent } from '@/shared/lib/format';
 import { formatWithCurrency } from '@/shared/lib/money';
 import { NO_SECTION, PER_PERIOD, SPENDING_PATTERN } from '@/shared/lib/strings';
 import { chart } from '@/shared/theme/theme';
-import { RING_DEBT, RING_FUNDS, RING_SAVINGS, RING_UNPLANNED } from '../parts/palette';
+import { RING_DEBT, RING_SAVINGS, RING_UNPLANNED } from '../parts/palette';
 import type { SpentBy } from './usePlanData';
 import { savingsLess } from './savingsLess';
 
@@ -67,7 +67,7 @@ type Data = {
 
 export function planView({ ym, currency, items: all, budget, toShown, fromShown, income, unplannedSpentMinor, spentBy }: Data) {
   const money = (minor: number) => formatWithCurrency(minor, currency);
-  // the funds' contributions apart: their own section and column ("Копилки")
+  // the funds' contributions apart: in "Сбережения" (its section and its column)
   const funds = all.filter((i) => i.kind === 'fund');
   // "Подписки" apart too: its own section, its amount part of the plan
   const subs = all.find((i) => i.system === 'subs') ?? null;
@@ -101,25 +101,25 @@ export function planView({ ym, currency, items: all, budget, toShown, fromShown,
   const less = timing === 'current' && shownBudget !== null
     ? savingsLess({ items: all, spentBy, unplanned, unplannedSpent: unplannedSpentMinor, free: free ?? 0, locked }) : null;
 
-  // the bar's parts, left to right; what the budget leaves is shown in "Сбережения" (where it goes: "Итоги месяца")
-  const saved = savingsEnd ?? 0;
+  // the bar's parts, left to right; what the budget leaves is shown in "Сбережения" (where it goes: "Итоги месяца") with
+  // the funds' contributions
+  const saved = (savingsEnd ?? 0) + fundsTotal;
   const parts: BudgetPart[] = shownBudget ? [
     // owed by the month before: first, red
     ...(carry && debt > 0 ? [{ key: 'debt', label: `Перерасход ${genOf(carry.from_ym)}`, value: debt, color: RING_DEBT, note: pct(debt), tone: 'over' as const }] : []),
     { key: 'planned', label: 'План', value: total, color: chart.meterFill, note: pct(total) },
     // the plan shows what is set aside, not what is left of it (that's the stats' job)
     { key: 'unplanned', label: 'Вне плана', value: unplanned, color: RING_UNPLANNED, note: pct(unplanned) },
-    ...(fundsTotal > 0 ? [{ key: 'funds', label: 'Копилки', value: fundsTotal, color: RING_FUNDS, note: pct(fundsTotal) }] : []),
     timing === 'past'
       ? { key: 'free', label: 'Сбережения', value: Math.abs(saved), color: RING_SAVINGS, note: saved < 0 ? 'бюджет превышен' : 'сэкономлено', tone: saved < 0 ? 'over' : 'savings', noteTone: saved < 0 ? 'over' : undefined }
       // the locked part and the leftover together: one savings column; what it's made of (🔒 + 🌊) is in the section below
       : less
-        ? { key: 'free', label: 'Сбережения', value: less.now, was: less.was, color: RING_SAVINGS, note: pct(less.now), tone: 'savings' }
-        : { key: 'free', label: 'Сбережения', value: Math.max(0, free ?? 0) + locked, color: RING_SAVINGS, note: pct(Math.max(0, free ?? 0) + locked), tone: 'savings' },
+        ? { key: 'free', label: 'Сбережения', value: less.now + fundsTotal, was: less.was + fundsTotal, color: RING_SAVINGS, note: pct(less.now + fundsTotal), tone: 'savings' }
+        : { key: 'free', label: 'Сбережения', value: Math.max(0, free ?? 0) + locked + fundsTotal, color: RING_SAVINGS, note: pct(Math.max(0, free ?? 0) + locked + fundsTotal), tone: 'savings' },
   ] : [];
 
-  // the plan's system sections: savings (🔒 locked + 🌊 floating: what the plan leaves) and the share outside it
-  const systemGroups: Array<{ title: string; rows: SystemRow[] }> = [];
+  // the plan's system sections: savings (🔒 locked, the funds, 🌊 floating: what the plan leaves) and the share outside it
+  const systemGroups: Array<{ title: string; rows: SystemRow[]; funds?: PlanItem[] }> = [];
   if (shownBudget && carry) {
     const from = genOf(carry.from_ym);
     systemGroups.push({ title: `Перенос из ${from}`, rows: [
@@ -134,6 +134,7 @@ export function planView({ ym, currency, items: all, budget, toShown, fromShown,
       const minor = own ?? fromShown(shown, budget.currency);
       return minor === null ? {} : { original: `(${formatWithCurrency(minor, budget.currency)})` };
     };
+    const floating = less ? less.free.now : free ?? 0;
     const savingsRows: SystemRow[] = [
       ...(locked > 0 ? [{
         key: 'locked', name: '🔒 Сразу', tone: 'locked' as const, value: less ? less.locked.now : locked,
@@ -141,15 +142,16 @@ export function planView({ ym, currency, items: all, budget, toShown, fromShown,
         ...inBudget(less ? less.locked.now : locked, less && less.locked.now < locked ? undefined : budget!.locked_minor),
         ...(less && less.locked.now < locked ? { note: 'меньше из-за перерасхода', was: locked } : { note: 'заблокировано в начале месяца' }),
       }] : []),
-      ...((free ?? 0) > 0 ? [{
+      // none left — not shown
+      ...(floating > 0 ? [{
         key: 'floating', name: '🌊 Что осталось', note: 'не запланировано — решите в итогах месяца', tone: 'savings' as const,
         value: less ? less.free.now : free!, ...(less && less.free.now < free! ? { was: free! } : {}), ...inBudget(less ? less.free.now : free!),
       }] : []),
     ];
-    if (savingsRows.length) systemGroups.push({ title: 'Сбережения', rows: savingsRows });
+    if (savingsRows.length || funds.length) systemGroups.push({ title: 'Сбережения', rows: savingsRows, funds });
     // the share set aside only: the spending against it is in the stats
     if (unplanned > 0) systemGroups.push({ title: 'Вне плана', rows: [{ key: 'unplanned', name: '🎲 Траты вне плана', value: unplanned, note: 'категории без плана и без категории' }] });
-  }
+  } else if (funds.length) systemGroups.push({ title: 'Сбережения', rows: [], funds });
 
   const budgetHint = [
     total + fundsTotal > 0 ? `Уже запланировано: ${money(total + fundsTotal)}` : '',

@@ -13,7 +13,7 @@ import { planView } from './model/planView';
 import BudgetCard from './parts/BudgetCard';
 import BudgetSheet from './parts/BudgetSheet';
 import SavingsLessSheet from './parts/SavingsLessSheet';
-import { fundSection, itemSections, subsSection, systemSections } from './parts/sections';
+import { itemSections, subsSection, systemSections } from './parts/sections';
 import { FundSheet } from '@/features/fund';
 import { SubscriptionsSheet } from '@/features/subscriptions';
 import { CarrySheet } from '@/features/month-close';
@@ -64,9 +64,8 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
       <Text style={styles.pinNote}>📌 — переходит в следующий месяц с той же суммой</Text>
 
       {items.length === 0 ? <Text style={styles.hint}>План пуст. Нажмите ＋, чтобы добавить категории и суммы.</Text> : null}
-      {fundSection(p, hidden, setFundOpen)}
       {subsSection(p, hidden, () => setSubsOpen(true))}
-      {systemSections(p, hidden, openBudget, setCarryOpen, () => setLessOpen(true))}
+      {systemSections(p, hidden, { budget: openBudget, carry: setCarryOpen, less: () => setLessOpen(true), fund: setFundOpen })}
       {itemSections(p, {
         ym, currency, hidden, toShown,
         onOpen: (item) => setEditingItem(editTarget(item)),
