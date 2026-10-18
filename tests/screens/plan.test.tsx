@@ -187,6 +187,13 @@ describe('6.3 the categories in the plan', () => {
     expect(await item('Продукты')).toMatchObject({ a: 70000, kind: 'limit', norm: 'week' });
   });
 
+  test('the category\'s name in the title opens its sheet over the amount, as on the operation\'s card', async () => {
+    await tap('Изменить: 🛒 Продукты');
+    await tap('Открыть: 🛒 Продукты');
+    expect(await screen.findByDisplayValue('Продукты')).toBeTruthy();
+    expect(screen.getByText('Повторяющиеся платежи')).toBeTruthy();
+  });
+
   test('📌: repeated every month; removing such a one asks', async () => {
     await tap(screen.getAllByLabelText('Повторять каждый месяц')[0]);
     expect(await screen.findByText(/«.*» будет повторяться каждый месяц/)).toBeTruthy();

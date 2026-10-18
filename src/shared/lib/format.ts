@@ -66,6 +66,3 @@ export function periodText(months: number): string {
   if (months % 12 === 0) return `раз в ${months / 12} ${plural(months / 12, ['год', 'года', 'лет'])}`;
   return `раз в ${months} ${plural(months, ['месяц', 'месяца', 'месяцев'])}`;
 }
-
-/** A repeating payment's period chips: months and their names (another — "Другое…"). */
-export const PAYMENT_PERIODS: ReadonlyArray<readonly [number, string]> = [[1, 'Каждый месяц'], [3, 'Раз в 3 месяца'], [6, 'Раз в полгода'], [12, 'Раз в год']];

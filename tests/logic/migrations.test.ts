@@ -238,7 +238,7 @@ describe('migrations', () => {
     // rent paid by a transfer on 1 October; no spending in "Спорт"
     await db.run(`INSERT INTO transactions (bank, kind, amount_minor, currency, merchant_key, category_id, category_source, occurred_at, raw_sms, sms_hash)
       VALUES ('tbc', 'transfer', 60000, 'USD', 'LANDLORD', 90, 'user', ?, '', 'r1')`, [Math.floor(new Date('2026-10-01T10:00:00').getTime() / 1000)]);
-    await migrate(db);
+    await migrate(db, MIGRATIONS.slice(0, 44));
     jest.useRealTimers();
     expect(await db.all('SELECT category_id, merchant_key, amount_minor, currency, period_months, due FROM recurring_payments ORDER BY category_id')).toEqual([
       { category_id: 90, merchant_key: null, amount_minor: 60000, currency: 'USD', period_months: 1, due: '2026-11-01' },
@@ -248,6 +248,33 @@ describe('migrations', () => {
     // with a day — counted ('subs'); without — by hand; September stays as it was
     expect(await db.all('SELECT ym, category_id, kind FROM plan_items ORDER BY ym, category_id')).toEqual([
       { ym: '2026-09', category_id: 90, kind: 'fixed' }, { ym: '2026-10', category_id: 90, kind: 'subs' }, { ym: '2026-10', category_id: 91, kind: 'fixed' },
+    ]);
+  });
+
+  test('migration 45: 44 undone — the payments without a merchant go, their categories obligatory again; a merchant\'s payment stays', async () => {
+    jest.useFakeTimers({ now: new Date('2026-10-15T12:00:00'), advanceTimers: true });
+    const db = openDatabase(':memory:');
+    await migrate(db, MIGRATIONS.slice(0, 44));
+    // as 44 left them: "Квартира" with a payment without a merchant (counted, saving), "Подписки" with Netflix's and one by hand
+    await db.run("INSERT INTO categories (id, name, emoji, recurring) VALUES (90, 'Квартира', '🏠', 1), (92, 'Подписки', '📺', 1)");
+    await db.run("INSERT INTO plan_months (ym) VALUES ('2026-09'), ('2026-10'), ('2026-11')");
+    await db.run(`INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency) VALUES
+      ('2026-09', 90, 60000, 'subs', 'USD'), ('2026-10', 90, 60000, 'subs', 'USD'), ('2026-11', 90, 60000, 'subs', 'USD'), ('2026-10', 92, 4000, 'subs', 'GEL')`);
+    await db.run(`INSERT INTO recurring_payments (id, category_id, merchant_key, name, amount_minor, currency, period_months, due, since_ym, created_at) VALUES
+      (1, 90, NULL, 'Квартира', 60000, 'USD', 1, '2026-11-01', '2026-10', 0), (2, 92, 'NETFLIX', 'Netflix', 3000, 'GEL', 1, '2026-10-20', '2026-10', 0),
+      (3, 92, NULL, 'Подписки', 1000, 'GEL', 1, NULL, '2026-10', 0)`);
+    await db.run("INSERT INTO payment_savings (id, payment_id, since_ym) VALUES (7, 1, '2026-10')");
+    await db.run("INSERT INTO payment_contributions (saving_id, ym, minor) VALUES (7, '2026-10', 100)");
+    await migrate(db);
+    jest.useRealTimers();
+    expect(await db.all('SELECT id FROM recurring_payments')).toEqual([{ id: 2 }]);
+    expect(await db.get('SELECT count(*) AS n FROM payment_savings')).toEqual({ n: 0 });
+    expect(await db.get('SELECT count(*) AS n FROM payment_contributions')).toEqual({ n: 0 });
+    expect(await db.all('SELECT id, recurring FROM categories WHERE id IN (90, 92) ORDER BY id')).toEqual([{ id: 90, recurring: 0 }, { id: 92, recurring: 1 }]);
+    // this month on obligatory again, the amount as it was; September stays; "Подписки" still counted from Netflix
+    expect(await db.all('SELECT ym, category_id, kind, limit_minor FROM plan_items ORDER BY ym, category_id')).toEqual([
+      { ym: '2026-09', category_id: 90, kind: 'subs', limit_minor: 60000 }, { ym: '2026-10', category_id: 90, kind: 'fixed', limit_minor: 60000 },
+      { ym: '2026-10', category_id: 92, kind: 'subs', limit_minor: 4000 }, { ym: '2026-11', category_id: 90, kind: 'fixed', limit_minor: 60000 },
     ]);
   });
 });

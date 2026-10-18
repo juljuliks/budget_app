@@ -26,9 +26,11 @@ export type SheetState = {
   lockOptions: boolean;
   /** a repeating payment: one (`id`), or the one of an operation's merchant (`txId`: made from it if it has none) */
   payment: { id?: number; txId?: number } | null;
+  /** a category's own sheet (its name, section, color, repeating payments): from the plan's sheet, over it */
+  category: number | null;
 };
 
-export const CLOSED: SheetState = { transaction: null, addTransaction: false, categoryTypes: false, categoryDelete: null, monthReport: null, monthClose: null, merchant: null, settings: false, backup: false, lockOptions: false, payment: null };
+export const CLOSED: SheetState = { transaction: null, addTransaction: false, categoryTypes: false, categoryDelete: null, monthReport: null, monthClose: null, merchant: null, settings: false, backup: false, lockOptions: false, payment: null, category: null };
 
 let handler: ((patch: Partial<SheetState>) => void) | null = null;
 let pending: Partial<SheetState> = {};
@@ -48,6 +50,7 @@ export const openSettings = () => open({ settings: true });
 export const openBackup = () => open({ backup: true });
 export const openLockOptions = () => open({ lockOptions: true });
 export const openPayment = (which: { id?: number; txId?: number }) => open({ payment: which });
+export const openCategory = (categoryId: number) => open({ category: categoryId });
 
 /** ModalHost registers itself; returns what was asked for before it was mounted. */
 export function attachSheetHost(h: (patch: Partial<SheetState>) => void): Partial<SheetState> {

@@ -6,7 +6,7 @@
 // what was saved).
 import { getDb } from '../index';
 import { Currency, makeConverter } from '../fx';
-import { dayOfUnix, listPayments, paymentDays, RecurringPayment, todayKey } from '../recurring/reads';
+import { chargeDays, dayOfUnix, listPayments, RecurringPayment, todayKey } from '../recurring/reads';
 import { addMonths, chargesBetween, monthCharges, monthDays, nextCharge } from '../recurring/schedule';
 import { savingEffects, storeContributions } from '../recurring/saving';
 import { asCurrency, currentYm, planRateDate } from './months';
@@ -36,7 +36,7 @@ export async function monthPayments(ym: string, to?: Currency, now = new Date(),
   const db = await getDb();
   const currency = to ?? asCurrency((await db.get<{ c: string }>('SELECT budget_currency AS c FROM plan_months WHERE ym = ?', [ym]))?.c);
   const subs = await listPayments(db, categoryId);
-  const daysOf = await paymentDays(subs, db);
+  const days = await chargeDays(subs.flatMap((s) => (s.merchant_key ? [s.merchant_key] : [])), db);
   const conv = await makeConverter();
   const rateDay = planRateDate(ym);
   const today = todayKey(now);
@@ -55,7 +55,7 @@ export async function monthPayments(ym: string, to?: Currency, now = new Date(),
   const savedFrom = new Map(out.saving.map((v) => [v.payment_id, v.from_day]));
   for (const sub of subs) {
     if (!sub.due) { out.undated.push(sub); continue; }
-    const ops = daysOf(sub);
+    const ops = sub.merchant_key ? days.get(sub.merchant_key) ?? [] : [];
     const charges = monthCharges(sub.due, sub.period_months, ym, ops, `${sub.since_ym}-01`);
     for (const c of charges) {
       const converted = conv(sub.amount_minor, sub.currency, currency, rateDay);
@@ -117,7 +117,7 @@ export async function refreshRecurringItems(nowYm = currentYm()): Promise<void> 
   }
 }
 
-export type PaymentDraft = { merchant_key: string | null; category_id?: number | null; amount_minor: number; currency: Currency; period_months: number; due: string | null };
+export type PaymentDraft = { merchant_key: string | null; amount_minor: number; currency: Currency; period_months: number; due: string | null };
 
 /**
  * What saving a repeating payment does to the plan: the first month from this one it is charged in ("В план октября +30 ₾"),
@@ -129,16 +129,17 @@ export async function planEffect(draft: PaymentDraft, id?: number, now = new Dat
   const db = await getDb();
   const nowYm = currentYm(now);
   const old = id === undefined ? null : (await listPayments(db)).find((s) => s.id === id) ?? null;
-  const own = { merchant_key: draft.merchant_key, category_id: draft.category_id ?? old?.category_id ?? null };
-  const daysOf = await paymentDays(old ? [own, old] : [own], db);
+  const keys = [draft.merchant_key, old?.merchant_key].filter((k): k is string => !!k);
+  const days = await chargeDays(keys, db);
+  const opsOf = (key: string | null) => (key ? days.get(key) ?? [] : []);
   const since = `${old?.since_ym ?? nowYm}-01`;
-  const chargesIn = (ym: string) => monthCharges(draft.due!, draft.period_months, ym, daysOf(own), since).length;
-  const next = nextCharge(draft.due, draft.period_months, daysOf(own), todayKey(now));
+  const chargesIn = (ym: string) => monthCharges(draft.due!, draft.period_months, ym, opsOf(draft.merchant_key), since).length;
+  const next = nextCharge(draft.due, draft.period_months, opsOf(draft.merchant_key), todayKey(now));
   const ym = chargesIn(nowYm) ? nowYm : next.slice(0, 7) < nowYm ? nowYm : next.slice(0, 7);
   const currency = asCurrency((await db.get<{ c: string }>('SELECT budget_currency AS c FROM plan_months WHERE ym = ?', [ym]))?.c);
   const conv = await makeConverter();
   const rateDay = planRateDate(ym);
-  const was = old?.due ? monthCharges(old.due, old.period_months, ym, daysOf(old), `${old.since_ym}-01`).length * (conv(old.amount_minor, old.currency, currency, rateDay) ?? 0) : 0;
+  const was = old?.due ? monthCharges(old.due, old.period_months, ym, opsOf(old.merchant_key), `${old.since_ym}-01`).length * (conv(old.amount_minor, old.currency, currency, rateDay) ?? 0) : 0;
   const after = chargesIn(ym) * (conv(draft.amount_minor, draft.currency, currency, rateDay) ?? 0);
   return { ym, delta_minor: after - was, currency };
 }

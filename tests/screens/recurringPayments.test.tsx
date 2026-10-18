@@ -93,23 +93,6 @@ describe('6.6 subscriptions', () => {
   });
 });
 
-describe('6.7.9 "Повторяющийся платёж" from the plan', () => {
-  test('an obligatory one is a repeating payment now: the day offered from the last operation, then it is counted; no day — by hand', async () => {
-    await openApp(seed);
-    await tap('Статистика');
-    await tap('План');
-    await tap('Изменить: 🏠 Дом и коммуналка');
-    expect(await screen.findByRole('radio', { name: /Повторяющийся платёж/ })).toBeTruthy();
-    expect(screen.queryByText('Обязательный платёж')).toBeNull();
-    // RENT on the 3rd plus a month
-    expect(await screen.findByText(/^3 ноября 2026/)).toBeTruthy();
-    await tap('Сохранить');
-    expect(await screen.findByText('каждый месяц · ✓ оплачено 3 окт')).toBeTruthy();
-    expect(await (await getDb()).get("SELECT merchant_key, amount_minor, period_months, due FROM recurring_payments WHERE name = 'Дом и коммуналка'"))
-      .toEqual({ merchant_key: null, amount_minor: 80000, period_months: 1, due: '2026-11-03' });
-  });
-});
-
 describe('6.7.8 saving up for a subscription', () => {
   test('a year one: "Откладывать каждый месяц?" — "Да" by default; the plan has the contribution ("копим")', async () => {
     await openSubscriptions();

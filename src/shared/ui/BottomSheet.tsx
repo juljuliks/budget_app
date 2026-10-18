@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import {
   Animated, Easing, FlatList, FlatListProps, Keyboard, LayoutChangeEvent, Modal, NativeScrollEvent, NativeSyntheticEvent, PanResponder,
-  Pressable, ScrollView, ScrollViewProps, StyleProp, StyleSheet, Text, View, ViewStyle,
+  Pressable, ScrollView, ScrollViewProps, StyleProp, StyleSheet, Text, TouchableOpacity, View, ViewStyle,
 } from 'react-native';
 import { colors } from '../theme/theme';
 import { SHEET_INSET, ToastHost } from './toast';
@@ -10,6 +10,8 @@ type Props = {
   visible: boolean;
   onClose: () => void;
   title?: string;
+  /** the title a link with an arrow ("📺 Подписки ›"): e.g. the category's own sheet */
+  onTitlePress?: () => void;
   /** a control right of the title (e.g. delete) */
   headerRight?: React.ReactNode;
   children: React.ReactNode;
@@ -62,7 +64,7 @@ const FLICK_VY = 0.8;
  * Modal itself isn't animated: with animationType="slide" the backdrop would slide up with the sheet). Closed by
  * tapping the backdrop, the back button or swiping the sheet down; it stays mounted until the closing animation ends.
  */
-export default function BottomSheet({ visible, onClose, title, headerRight, children, style }: Props) {
+export default function BottomSheet({ visible, onClose, title, onTitlePress, headerRight, children, style }: Props) {
   const [mounted, setMounted] = useState(visible);
   const progress = useRef(new Animated.Value(0)).current;
   const [height, setHeight] = useState(800);
@@ -134,7 +136,12 @@ export default function BottomSheet({ visible, onClose, title, headerRight, chil
             <View style={styles.handleZone}><View style={styles.handle} /></View>
             {title || headerRight ? (
               <View style={styles.titleRow}>
-                <Text style={styles.title}>{title}</Text>
+                {onTitlePress ? (
+                  <TouchableOpacity style={styles.titleLink} onPress={onTitlePress} accessibilityRole="button" accessibilityLabel={`Открыть: ${title}`}>
+                    <Text style={styles.titleText} numberOfLines={1}>{title}</Text>
+                    <Text style={styles.chevron}>›</Text>
+                  </TouchableOpacity>
+                ) : <Text style={styles.title}>{title}</Text>}
                 {headerRight}
               </View>
             ) : null}
@@ -160,4 +167,7 @@ const styles = StyleSheet.create({
   handle: { alignSelf: 'center', width: 36, height: 4, borderRadius: 2, backgroundColor: colors.border },
   titleRow: { flexDirection: 'row', alignItems: 'center', paddingRight: 12 },
   title: { flex: 1, fontSize: 18, fontWeight: '600', color: colors.text, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8 },
+  titleLink: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8 },
+  titleText: { flexShrink: 1, fontSize: 18, fontWeight: '600', color: colors.text },
+  chevron: { fontSize: 22, color: colors.accent },
 });

@@ -64,4 +64,23 @@ export const STEPS_43_ON: MigrationStep[][] = [
       }
     },
   ],
+  // 45: 44 undone — "Обязательный платёж" is back: the payments without a merchant (made by 44 or from the plan's sheet)
+  // go with their savings; a category left without payments has its repeating payments off, its items of this month on
+  // obligatory again ('fixed', the amount as it is). The past months stay as they were
+  [
+    async (db) => {
+      const now = new Date();
+      const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const cats = (await db.all<{ c: number }>('SELECT DISTINCT category_id AS c FROM recurring_payments WHERE merchant_key IS NULL AND category_id IS NOT NULL')).map((r) => r.c);
+      const savings = 'SELECT id FROM payment_savings WHERE payment_id IN (SELECT id FROM recurring_payments WHERE merchant_key IS NULL)';
+      await db.run(`DELETE FROM payment_contributions WHERE saving_id IN (${savings})`);
+      await db.run(`DELETE FROM payment_savings WHERE id IN (${savings})`);
+      await db.run('DELETE FROM recurring_payments WHERE merchant_key IS NULL');
+      for (const c of cats) {
+        if (await db.get('SELECT 1 FROM recurring_payments WHERE category_id = ?', [c])) continue;
+        await db.run('UPDATE categories SET recurring = 0 WHERE id = ?', [c]);
+        await db.run("UPDATE plan_items SET kind = 'fixed' WHERE category_id = ? AND ym >= ? AND kind = 'subs'", [c, ym]);
+      }
+    },
+  ],
 ];

@@ -34,8 +34,7 @@ async function createMonthPlan(ym: string): Promise<boolean> {
     if (source) {
       await tx.run(
         `INSERT OR IGNORE INTO plan_items (ym, category_id, limit_minor, pinned, kind, currency, norm_period)
-          -- a category with repeating payments always goes on with its amount (a dated one is counted again right after)
-          SELECT ?, p.category_id, CASE WHEN p.pinned = 1 OR c.recurring = 1 THEN p.limit_minor ELSE 0 END, p.pinned, p.kind, p.currency, p.norm_period
+          SELECT ?, p.category_id, CASE WHEN p.pinned = 1 THEN p.limit_minor ELSE 0 END, p.pinned, p.kind, p.currency, p.norm_period
           FROM plan_items p JOIN categories c ON c.id = p.category_id
           WHERE p.ym = ? AND c.deleted_at IS NULL
             AND (p.kind != 'fund' OR EXISTS (SELECT 1 FROM funds f WHERE f.category_id = p.category_id AND f.closed_ym IS NULL))`,

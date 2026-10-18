@@ -95,17 +95,3 @@ test('the merchants charged in "Подписки" with no subscription: their la
     { merchant_key: 'YOUTUBE', name: 'YOUTUBE', day: '2026-10-02', amount_minor: 1599, currency: 'GEL' },
   ]);
 });
-
-test('a payment without a merchant (put in from the plan) is charged by any spending of its category', async () => {
-  const { createCategory } = require('../../src/db/categories');
-  const { turnRecurring, paymentCard } = require('../../src/db/recurring');
-  const sport = await createCategory('Спорт', '🏋️');
-  await turnRecurring(sport, true);
-  await savePayment({ category_id: sport, merchant_key: null, name: 'Спорт', amount_minor: 30000, currency: 'GEL', period_months: 1, due: '2026-10-05' });
-  // no operation yet: expected on the 5th
-  expect((await monthPayments('2026-10', 'GEL')).charges).toEqual([expect.objectContaining({ day: '2026-10-05', done: false })]);
-  await charge('FITPASS', 30000, '2026-10-06T10:00:00', sport);
-  expect((await monthPayments('2026-10', 'GEL')).charges).toEqual([expect.objectContaining({ day: '2026-10-05', done: true })]);
-  // its card for an operation of any merchant of the category
-  expect((await paymentCard('FITPASS', new Date('2026-10-18T12:00:00'), sport))?.next).toBe('2026-11-05');
-});

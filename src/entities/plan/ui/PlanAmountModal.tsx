@@ -14,8 +14,8 @@ import StepsNav from '@/shared/ui/StepsNav';
 import TextInputModal from '@/shared/ui/TextInputModal';
 import { useLoadedForm } from '@/shared/ui/form';
 import { toast, toastFailure } from '@/shared/ui/toast';
-import { saveFund, savePlanAmount, saveRecurring } from '../model/commands';
-import RecurringFields, { RecurringForm } from './RecurringFields';
+import { openCategory } from '@/shared/navigation/sheets';
+import { saveFund, savePlanAmount } from '../model/commands';
 import FundFields, { FundForm } from './FundFields';
 import { askTakeLocked } from './askTakeLocked';
 import PlanFacts from './PlanFacts';
@@ -23,7 +23,7 @@ import { RHYTHM_DAYS } from '@/shared/lib/dates';
 
 const KINDS = [
   ['limit', 'Траты с лимитом', 'Еда, кафе, одежда — сумма меняется, следим, сколько осталось'],
-  ['subs', 'Повторяющийся платёж', 'Аренда, спорт, страховка — каждый месяц или реже; с датой план знает, оплачено ли'],
+  ['fixed', 'Обязательный платёж', 'Аренда, кредит, подписки — одна и та же сумма каждый месяц'],
   ['fund', 'Копилка', 'Отпуск, страховка, техника — копить понемногу, потратить разом'],
 ] as const;
 
@@ -37,15 +37,6 @@ function patterns(minor: number | null, currency: Currency, ym: string) {
     const title = per === null ? SPENDING_PATTERN[p].title : `${SPENDING_PATTERN[p].title} · ${p === 'month' ? '' : '≈ '}${formatWithCurrency(per, currency)} ${PER_PERIOD[p]}`;
     return [p, title, SPENDING_PATTERN[p].hint] as const;
   });
-}
-
-/** "Повторяющийся платёж" saved from the sheet; an error to show, or null. */
-async function submitRecurring(ym: string, categoryId: number, minor: number, currency: Currency, v: RecurringForm, saved: () => void): Promise<string | null> {
-  if (!minor) return 'Введите сумму платежа';
-  if (v.period !== 1 && !v.next) return 'Для платежа реже раза в месяц нужна дата';
-  await saveRecurring(ym, categoryId, { amount_minor: minor, currency, period_months: v.period, due: v.next });
-  saved();
-  return null;
 }
 
 export type PlanAmountTarget = {
@@ -91,13 +82,11 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
   // "🔒 Отложить сразу", in the budget's currency: what is short of free can be taken from it
   const [locked, setLocked] = useState(0);
   // the saved item; a category not in the plan yet starts as a day-to-day limit in the screen's currency
-  // "Обязательный платёж" is a repeating payment now
-  const form = useLoadedForm<FundForm & RecurringForm & { kind: PlanKind; norm: NormPeriod }>(target ? {
-    value: toInputValue(target.fund ? target.fund.target_minor : target.limit_minor), currency: target.currency,
-    kind: target.kind === 'fixed' ? 'subs' : target.kind ?? 'limit', period: 1, next: null,
+  const form = useLoadedForm<FundForm & { kind: PlanKind; norm: NormPeriod }>(target ? {
+    value: toInputValue(target.fund ? target.fund.target_minor : target.limit_minor), currency: target.currency, kind: target.kind ?? 'limit',
     norm: target.norm_period ?? 'day', due: target.fund?.due ?? null, start: target.fund?.start_minor ? toInputValue(target.fund.start_minor) : '',
   } : null, target !== null);
-  const [kind, due, period, next] = useWatch({ control: form.control, name: ['kind', 'due', 'period', 'next'] });
+  const [kind, due] = useWatch({ control: form.control, name: ['kind', 'due'] });
   const [entered, enteredCurrency] = useWatch({ control: form.control, name: ['value', 'currency'] });
   const [previous, setPrevious] = useState<{ minor: number; currency: Currency; ym: string } | null>(null);
   // what the category usually takes a month (the latest full months), in the app's currency
@@ -132,7 +121,7 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
         form.setValue('currency', last.currency, dirty);
       }
       if (!target.limit_minor && last) {
-        if (!target.kind) form.setValue('kind', last.kind === 'fixed' ? 'subs' : last.kind, dirty);
+        if (!target.kind) form.setValue('kind', last.kind, dirty);
         if (!target.norm_period) form.setValue('norm', last.norm_period, dirty);
       }
     })().catch(toastFailure('load plan budget', LOAD_FAILED));
@@ -152,7 +141,6 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
       toast(taken ? `${done}, из 🔒 вычтено ${taken}` : done);
       onSaved();
     };
-    if (k === 'subs') return submitRecurring(ym, target.category_id, minor, currency, form.getValues(), saved);
     const write = (takeLocked: boolean) => (k === 'fund' && date
       ? saveFund(ym, target.category_id, { target_minor: minor, currency, due: date, start_minor: startMinor ?? 0 }, undefined, takeLocked)
       : savePlanAmount(ym, target.category_id, minor, k, currency, norm, takeLocked));
@@ -191,6 +179,8 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
     <TextInputModal
       visible={target !== null}
       title={adding ? 'Добавить в план' : target?.label ?? ''}
+      // the category's name a link to its own sheet, as on the operation's card
+      onTitlePress={!adding && target ? () => openCategory(target.category_id) : undefined}
       submitLabel={adding ? 'Добавить в план' : undefined}
       hint={hint}
       form={form}
@@ -204,7 +194,7 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
       remove={onDelete ? { title: 'Удалить из плана', onPress: () => { onClose(); onDelete(); } } : undefined}
       inputAccessory={<Controller control={form.control} name="currency" render={({ field }) => <CurrencyButton value={field.value} onChange={field.onChange} />} />}
       label={kind === 'fund' ? 'Накопить' : undefined}
-      submitDisabled={(kind === 'fund' && !due) || (kind === 'subs' && period !== 1 && !next)}
+      submitDisabled={kind === 'fund' && !due}
       // the kind first: the field under it is a month's amount or a fund's target
       above={<Controller control={form.control} name="kind" render={({ field }) => <RadioGroup options={KINDS} value={field.value} onChange={field.onChange} />} />}
     >
@@ -215,7 +205,6 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
           <Text style={formStyles.hint}>По этому в статистике считается лимит на день или неделю.</Text>
         </>
       ) : null}
-      {kind === 'subs' && target ? <RecurringFields categoryId={target.category_id} form={form as unknown as UseFormReturn<RecurringForm>} /> : null}
       {kind === 'fund' && target ? <FundFields ym={ym} categoryId={target.category_id} form={form as unknown as UseFormReturn<FundForm>} /> : null}
     </TextInputModal>
   );

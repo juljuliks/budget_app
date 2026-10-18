@@ -14,6 +14,8 @@ export type TextFormValues = { value: string };
 type Props<V extends TextFormValues & FieldValues> = {
   visible: boolean;
   title: string;
+  /** the title a link with an arrow (see BottomSheet) */
+  onTitlePress?: () => void;
   /** the saved value (ignored with `form`: its defaults hold it) */
   initialValue?: string;
   /**
@@ -55,7 +57,7 @@ type Props<V extends TextFormValues & FieldValues> = {
  * something in the form changed.
  */
 export default function TextInputModal<V extends TextFormValues & FieldValues = TextFormValues>({
-  visible, title, initialValue = '', form: outer, placeholder, submitLabel = 'Сохранить', hint, keyboardType, maxLength = 30,
+  visible, title, onTitlePress, initialValue = '', form: outer, placeholder, submitLabel = 'Сохранить', hint, keyboardType, maxLength = 30,
   allowEmpty, multiline, onSubmit, onClose, children, inputAccessory, headerRight, remove, label, submitDisabled, above,
 }: Props<V>) {
   // used only without a form of the caller's (a hook can't be skipped)
@@ -74,7 +76,7 @@ export default function TextInputModal<V extends TextFormValues & FieldValues = 
   });
 
   return (
-    <BottomSheet visible={visible} onClose={onClose} title={title} headerRight={headerRight}>
+    <BottomSheet visible={visible} onClose={onClose} title={title} onTitlePress={onTitlePress} headerRight={headerRight}>
         {/* a tall form (the plan's amount) scrolls; its buttons stay under it */}
         <SheetScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.dialog} style={styles.scroll}>
           {typeof hint === 'string' ? <Text style={styles.hint}>{hint}</Text> : hint ?? null}

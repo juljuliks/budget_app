@@ -3,7 +3,8 @@ import { MONTHS_GEN, MONTHS_PREP, SHORT_MONTHS } from '@/shared/lib/dates';
 export { periodText } from '@/shared/lib/format';
 import { plural } from '@/shared/lib/format';
 
-export { PAYMENT_PERIODS as PERIODS } from '@/shared/lib/format';
+/** The period chips: months and their names; another — "Другое…". */
+export const PERIODS: ReadonlyArray<readonly [number, string]> = [[1, 'Каждый месяц'], [3, 'Раз в 3 месяца'], [6, 'Раз в полгода'], [12, 'Раз в год']];
 
 const parts = (day: string) => day.split('-').map(Number);
 
