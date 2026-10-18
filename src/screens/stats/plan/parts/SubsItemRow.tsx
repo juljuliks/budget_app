@@ -16,7 +16,7 @@ type Props = { p: PlanView; item: PlanItem; hidden: boolean; onOpen: () => void 
  */
 export function SubsItemRow({ p, item, hidden, onOpen }: Props) {
   const names = item.subs?.names ?? [];
-  const note = item.kind !== 'subs' ? 'обязательный платёж · задайте даты подпискам' : names.length ? names.join(', ') : 'нет подписок с датой';
+  const note = item.kind !== 'subs' ? 'вручную · задайте даты подпискам' : names.length ? names.join(', ') : 'нет подписок с датой';
   return (
     <TouchableOpacity style={styles.row} onPress={onOpen} accessibilityLabel={categoryLabel(item)}>
       <View style={styles.pin}><RepeatIcon color={colors.accent} size={20} /></View>
