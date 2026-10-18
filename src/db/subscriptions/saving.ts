@@ -110,6 +110,26 @@ export async function savingSpend(ym: string, toShown: (minor: number, from: Cur
   return id === undefined ? null : { category_id: id, minor: effects.reduce((a, e) => a + toShown(e.minor, e.currency), 0) };
 }
 
+/**
+ * An operation of a subscription saved up for, paid from what was saved: what the saving had before it and after, and
+ * the subscription's name; null — not paid from a saving.
+ */
+export async function savingOfTransaction(txId: number, merchantKey: string | null, occurredAt: number):
+  Promise<{ before: number; after: number; currency: Currency; name: string } | null> {
+  if (!merchantKey) return null;
+  const db = await getDb();
+  const d = new Date(occurredAt * 1000);
+  const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  const rows = (await db.all<Row>(
+    `SELECT ${COLUMNS} FROM sub_savings v JOIN subscriptions s ON s.id = v.sub_id
+      WHERE s.merchant_key = ? AND v.since_ym <= ? AND (v.closed_ym IS NULL OR v.closed_ym > ?)`, [merchantKey, ym, ym])).map(asSaving);
+  for (const v of rows) {
+    const at = (await savingLedger(v, ym, currentYm(), db)).byTx.get(txId);
+    if (at) return { ...at, currency: v.currency, name: v.name };
+  }
+  return null;
+}
+
 /** The current and coming months' contributions kept as their plans have them (read once the month is past). */
 export async function storeContributions(ym: string, nowYm = currentYm(), db?: Db): Promise<void> {
   if (ym < nowYm) return;

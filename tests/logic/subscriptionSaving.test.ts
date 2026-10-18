@@ -5,7 +5,7 @@ import { getDb } from '../../src/db';
 import { subscriptionsCategoryId } from '../../src/db/categories';
 import { listPlan, monthStats, setPlanBudget } from '../../src/db/plans';
 import {
-  deleteSubscription, restoreSubscription, saveSubscription, savedNow, savingFor, savingMonths, startSaving, stopSaving, undoSaving,
+  deleteSubscription, restoreSubscription, saveSubscription, savedNow, savingFor, savingMonths, savingOfTransaction, startSaving, stopSaving, undoSaving,
 } from '../../src/db/subscriptions';
 
 let n = 0;
@@ -66,6 +66,9 @@ describe('saving up for a subscription', () => {
     await charge('YANDEX', 4500, '2026-10-29T10:00:00');
     expect(await subsItem('2026-10')).toBe(0);
     expect(await subsSpent(2026, 9)).toBe(0);
+    // its card: from what was saved
+    const tx = (await (await getDb()).get<{ id: number; occurred_at: number }>('SELECT id, occurred_at FROM transactions'))!;
+    expect(await savingOfTransaction(tx.id, 'YANDEX', tx.occurred_at)).toEqual({ before: 4500, after: 0, currency: 'GEL', name: 'Яндекс Плюс' });
   });
 
   test('a charge paid before the saving was turned on is the month\'s, not the saving\'s', async () => {

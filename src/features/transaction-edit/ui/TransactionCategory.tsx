@@ -77,7 +77,7 @@ export default function TransactionCategory({ tx, mixedCats, saving, choose, onS
           <Text style={styles.changeText}>Сменить</Text>
         </TouchableOpacity>
       </View>
-      <FundNote txId={tx.id} categoryId={tx.category_id} occurredAt={tx.occurred_at} amount={tx.amount_minor} />
+      <FundNote txId={tx.id} categoryId={tx.category_id} merchantKey={tx.merchant_key} occurredAt={tx.occurred_at} amount={tx.amount_minor} />
       {splitLink}
       <CategoryPickerModal
         visible={pickerOpen}

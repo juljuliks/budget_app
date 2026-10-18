@@ -1,25 +1,29 @@
 // A purchase that came straight into a fund's category (its merchant's): "−1 200 ₾ · TURKISH AIRLINES",
-// "🏖 Отпуск · из копилки, осталось 0 ₾" — it is taken from what the fund saved, not from the month's budget.
+// "🏖 Отпуск · из копилки, осталось 0 ₾" — it is taken from what the fund saved, not from the month's budget; a
+// subscription's charge paid from what was saved for it: "📺 Подписки · iCloud+ из отложенного, осталось 0 ₾".
 import notifee, { AndroidImportance } from '@notifee/react-native';
 import { getDb } from '../db';
 import { categoryShortLabel, listCategories } from '../db/categories';
 import { fundOfTransaction } from '../db/plans';
+import { savingOfTransaction } from '../db/subscriptions';
 import { formatMoneyWithCurrency } from '@/shared/lib/money';
 import { hideNotificationAmounts } from '../native/appLock';
 
 /** The notice's lines; null — not a fund's operation. */
 export async function fundNoticeFor(txId: number, hide: boolean): Promise<{ title: string; body: string } | null> {
   const db = await getDb();
-  const tx = await db.get<{ amount_minor: number; currency: string; raw_merchant: string | null; category_id: number | null; occurred_at: number }>(
-    'SELECT amount_minor, currency, raw_merchant, category_id, occurred_at FROM transactions WHERE id = ?', [txId]);
+  const tx = await db.get<{ amount_minor: number; currency: string; raw_merchant: string | null; merchant_key: string | null; category_id: number | null; occurred_at: number }>(
+    'SELECT amount_minor, currency, raw_merchant, merchant_key, category_id, occurred_at FROM transactions WHERE id = ?', [txId]);
   if (!tx) return null;
-  const at = await fundOfTransaction(txId, tx.category_id, tx.occurred_at);
+  const fund = await fundOfTransaction(txId, tx.category_id, tx.occurred_at);
+  const saving = fund ? null : await savingOfTransaction(txId, tx.merchant_key, tx.occurred_at);
+  const at = fund ?? saving;
   if (!at) return null;
   const category = (await listCategories()).find((c) => c.id === tx.category_id);
   const merchant = tx.raw_merchant || 'Операция';
   return {
     title: hide ? merchant : `−${formatMoneyWithCurrency(tx.amount_minor, tx.currency)} · ${merchant}`,
-    body: `${category ? categoryShortLabel(category) : ''} · из копилки${hide ? '' : `, осталось ${formatMoneyWithCurrency(at.after, at.currency)}`}`,
+    body: `${category ? categoryShortLabel(category) : ''} · ${saving ? `${saving.name} из отложенного` : 'из копилки'}${hide ? '' : `, осталось ${formatMoneyWithCurrency(at.after, at.currency)}`}`,
   };
 }
 
