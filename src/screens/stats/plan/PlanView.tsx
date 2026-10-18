@@ -13,7 +13,7 @@ import { planView } from './model/planView';
 import BudgetCard from './parts/BudgetCard';
 import BudgetSheet from './parts/BudgetSheet';
 import SavingsLessSheet from './parts/SavingsLessSheet';
-import { itemSections, recurringSection, systemSections } from './parts/sections';
+import { itemSections, systemSections } from './parts/sections';
 import { FundSheet } from '@/features/fund';
 import { RecurringPaymentsSheet } from '@/features/recurring-payments';
 import { CarrySheet } from '@/features/month-close';
@@ -61,15 +61,15 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
     <View style={styles.screen}>
     <StickyScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <BudgetCard p={p} budget={budget} currency={currency} hidden={hidden} onEdit={openBudget} onLess={() => setLessOpen(true)} />
-      <Text style={styles.pinNote}>📌 — переходит в следующий месяц с той же суммой</Text>
+      <Text style={styles.pinNote}>{`📌 — переходит в следующий месяц с той же суммой${p.recurring.length ? '\n🔁 — повторяющийся платёж: переходит всегда, сумма — по датам списаний' : ''}`}</Text>
 
       {items.length === 0 ? <Text style={styles.hint}>План пуст. Нажмите ＋, чтобы добавить категории и суммы.</Text> : null}
-      {recurringSection(p, hidden, setSubsOpen)}
       {systemSections(p, hidden, { budget: openBudget, carry: setCarryOpen, less: () => setLessOpen(true), fund: setFundOpen })}
       {itemSections(p, {
         ym, currency, hidden, toShown,
         onOpen: (item) => setEditingItem(editTarget(item)),
         onPin: actions.togglePin,
+        onOpenRecurring: setSubsOpen,
       })}
 
       <BudgetSheet

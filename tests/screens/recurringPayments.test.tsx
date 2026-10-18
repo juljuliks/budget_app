@@ -46,7 +46,7 @@ describe('6.6 subscriptions', () => {
     expect(screen.queryByText(/Сумма введена вручную/)).toBeNull();
     // the sections as the plan's: the sum and its share of the budget (3 000 ₾)
     expect(screen.getByText('Списания в октябре')).toBeTruthy();
-    expect(screen.getAllByText(' · 1%').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText(' · 1%').length).toBeGreaterThanOrEqual(1);
   });
 
   test('a year one: the day follows the period until picked by hand; this month\'s charge is the year\'s', async () => {
@@ -71,7 +71,9 @@ describe('6.6 subscriptions', () => {
     expect(screen.getByText(/^25 октября 2026/)).toBeTruthy();
     await tap('Сохранить');
     expect(await screen.findByText('SPOTIFY — следующее списание 25 октября')).toBeTruthy();
-    expect(await screen.findByText(/25 окт, через 10 дней/)).toBeTruthy();
+    // in the sheet and in the plan's row (its only payment: how often and when)
+    expect((await screen.findAllByText(/25 окт, через 10 дней/)).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('каждый месяц · 25 окт, через 10 дней').length).toBe(2);
   });
 
   test('deleted from its sheet, asked; "Отменить" in the toast brings it back', async () => {

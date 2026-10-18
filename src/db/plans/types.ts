@@ -38,7 +38,11 @@ export type PlanItem = {
   /** "Повторяющиеся платежи" on: its item counted from its payments */
   recurring?: boolean;
   /** with repeating payments: those charged by name, those saved up for, their contributions in the plan's currency */
-  subs?: { names: string[]; saving_names: string[]; saving_minor: number };
+  subs?: {
+    names: string[]; saving_names: string[]; saving_minor: number;
+    /** the category's only payment: how often, its charge this month (done) or the next one; day null — none set */
+    single?: { period_months: number; day: string | null; done: boolean };
+  };
   /** a fund's item (kind 'fund'): how much by when, what it has by the month's end (now, for the current one); in `currency` */
   fund?: { target_minor: number; due: string; saved_minor: number; start_minor: number };
 };

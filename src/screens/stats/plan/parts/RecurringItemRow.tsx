@@ -3,6 +3,8 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import { categoryLabel } from '@/db/categories';
 import type { PlanItem } from '@/db/plans';
 import { paymentWords } from '@/entities/category';
+import { inTime, periodText, shortDay } from '@/features/recurring-payments';
+import { todayKey } from '@/db/recurring';
 import { RepeatIcon } from '@/shared/ui/icons';
 import { formatWithCurrency } from '@/shared/lib/money';
 import { colors } from '@/shared/theme/theme';
@@ -21,7 +23,12 @@ export function RecurringItemRow({ p, item, hidden, onOpen }: Props) {
   const saving = item.subs?.saving_names ?? [];
   const listed = [names.join(', '), saving.length ? `копим: ${saving.join(', ')}` : ''].filter(Boolean).join(' · ');
   const w = paymentWords(item.name);
-  const note = item.kind !== 'subs' ? `вручную · задайте даты ${w.toAll}` : listed || w.noDated;
+  const one = item.subs?.single;
+  // its only payment: how often, paid or when next ("без даты" — the amount stands each month)
+  const single = one ? [periodText(one.period_months),
+    one.done && one.day ? `✓ оплачено ${shortDay(one.day)}` : one.day ? [shortDay(one.day), inTime(one.day, todayKey())].filter(Boolean).join(', ') : 'без даты',
+  ].join(' · ') : null;
+  const note = single ?? (item.kind !== 'subs' ? `вручную · задайте даты ${w.toAll}` : listed || w.noDated);
   return (
     <TouchableOpacity style={styles.row} onPress={onOpen} accessibilityLabel={categoryLabel(item)}>
       <View style={styles.pin}><RepeatIcon color={colors.accent} size={20} /></View>
