@@ -21,7 +21,7 @@ test('2.1.2–2.1.5: days, their spending, the rows of each kind', async () => {
   expect(row('Возврат · ZARA').getByText(/^👕 Одежда · /)).toBeTruthy();
   expect(row('Возврат · ZARA').getByText('+5.00 ₾')).toBeTruthy();
   expect(row('Пополнение · SALARY').getByText('+100.00 ₾')).toBeTruthy();
-  expect(row('Перевод · Сбережения').getByText(/^🏦 Сбережения · /)).toBeTruthy();
+  expect(row('Перевод · Накопительный').getByText(/^🔁 Переводы: Между своими картами · /)).toBeTruthy();
   // in its own currency
   expect(row('NETFLIX.COM').getByText('−10.00 $')).toBeTruthy();
 });

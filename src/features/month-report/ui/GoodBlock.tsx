@@ -30,7 +30,6 @@ export default function GoodBlock({ v }: { v: ReportView }) {
           ))}
         </>
       ) : null}
-      {r.movedToSavings > 0 ? <Line label="Переведено в «Сбережения» вручную" value={plus(r.movedToSavings)} strong valueStyle={styles.good} /> : null}
       {v.better > 0 ? <Line label="Отложено больше, чем месяцем раньше" value={plus(v.better)} strong valueStyle={styles.good} /> : null}
     </View>
   );

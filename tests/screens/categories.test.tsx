@@ -91,13 +91,6 @@ describe('4.1–4.2 the list; creating and changing a category', () => {
     expect(screen.queryByText('Удалить категорию')).toBeNull();
   });
 
-  test('"Сбережения": its name stays, it can\'t be deleted', async () => {
-    await tap('🏦 Сбережения');
-    expect(await screen.findByText(/^Системная категория: сюда уходит то, что бюджет месяца оставил/)).toBeTruthy();
-    expect(screen.getByDisplayValue('Сбережения').props.editable).toBe(false);
-    expect(screen.queryByText('Удалить категорию')).toBeNull();
-  });
-
   test('"Пополнение счёта": a system one too — what it is for, can\'t be deleted', async () => {
     await tap('💳 Пополнение счёта');
     expect(await screen.findByText(/^Системная категория: сюда попадают все пополнения карты/)).toBeTruthy();
@@ -153,11 +146,11 @@ describe('4.3 the sections', () => {
 describe('4.4 merging', () => {
   beforeEach(() => openCategories(base));
 
-  test('picking: a long press, "Сбережения" not, "Объединить" from two', async () => {
+  test('picking: a long press, "Подписки" not, "Объединить" from two', async () => {
     await longPress('👕 Одежда');
     expect(await screen.findByText('Выбрано: 1')).toBeTruthy();
     expect(screen.queryByText('Объединить (1)')).toBeNull();
-    await tap('🏦 Сбережения');
+    await tap('📺 Подписки');
     expect(screen.getByText('Выбрано: 1')).toBeTruthy();
     await tap('💻 Техника');
     expect(await screen.findByText('Объединить (2)')).toBeTruthy();

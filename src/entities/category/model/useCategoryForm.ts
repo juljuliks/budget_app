@@ -34,7 +34,7 @@ export function useCategoryForm({ visible, categoryId, initialTypeId, onClose, o
   const [types, setTypes] = useState<CategoryType[]>([]);
   // colors other categories already have: not offered
   const [taken, setTaken] = useState<Set<string>>(new Set());
-  // "Сбережения", "Пополнение счёта": system categories, the name stays and they can't be deleted
+  // "Пополнение счёта", "Подписки"…: system categories, the name stays and they can't be deleted
   const [systemKind, setSystemKind] = useState<string | null>(null);
 
   const loadTypes = useCallback(() => {

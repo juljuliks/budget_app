@@ -1,6 +1,6 @@
 import { getDb } from './index';
 import { Currency } from './fx';
-import { getPlanBudget, monthRange, movedToSavings, monthStats, parseYm, planConverter, unplannedOf, unplannedSpent, ymOf } from './plans';
+import { getPlanBudget, monthRange, monthStats, parseYm, planConverter, unplannedOf, unplannedSpent, ymOf } from './plans';
 import { EXPENSE_KINDS } from './spending';
 import { SavingsPlanFact, savingsPlanFact } from './reportSavings';
 import { sqlList } from './sql';
@@ -63,8 +63,6 @@ export type MonthReport = {
   underPlan: ReportCategory[];
   /** obligatory payments with nothing paid this month */
   unpaid: ReportCategory[];
-  /** operations in "Сбережения" this month: money moved to savings by hand (part of `saved`, not on top of it) */
-  movedToSavings: number;
   /** the leftover goes to "Сбережения" (its "Итоги месяца" didn't keep it as is) */
   toSavings: boolean;
   /**
@@ -158,7 +156,6 @@ export async function monthReport(ym: string, currency: Currency): Promise<Month
   const underPlan = stats.categories.filter((c) => c.plan_kind === 'limit' && c.limit_minor !== null && c.spent_minor < c.limit_minor)
     .map(cat).sort((a, b) => (b.limit - b.spent) - (a.limit - a.spent));
 
-  const moved = await movedToSavings(ym, currency);
   const planFact = await savingsPlanFact(ym, currency);
   // the funds' contributions: part of what is put aside, not of what the plan left
   const funds = planFact ? planFact.fundsPlanned : stats.funds.reduce((a, f) => a + f.contribution_minor, 0);
@@ -180,7 +177,6 @@ export async function monthReport(ym: string, currency: Currency): Promise<Month
     underPlan,
     // without data for the month a payment may just not be in the app yet
     unpaid: hasData ? stats.categories.filter((c) => c.plan_kind === 'fixed' && c.spent_minor <= 0).map(cat) : [],
-    movedToSavings: moved,
     // as its "Итоги месяца" said (not closed yet: as going there)
     toSavings: (await db.get<{ r: string | null }>('SELECT rest_choice AS r FROM month_closes WHERE ym = ? AND closed_at IS NOT NULL', [ym]))?.r !== 'keep',
     locked,

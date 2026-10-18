@@ -1,6 +1,7 @@
 // The schema's history, migrations 33 and on (shipped ones are never edited).
 import type { MigrationStep } from './step';
 import { placeNextDayDated } from '../balance';
+import { moveParts } from '../parts';
 
 /** Migrations 33 and on: a new one is appended here (when this file nears 250 lines, the next file starts). */
 export const STEPS_33_ON: MigrationStep[][] = [
@@ -167,6 +168,37 @@ export const STEPS_33_ON: MigrationStep[][] = [
         .find((c) => c.name.trim().toLowerCase() === 'подписки');
       if (subs) await db.run("UPDATE categories SET system = 'subs' WHERE id = ?", [subs.id]);
       else await db.run("INSERT INTO categories (name, emoji, system, sort_order) VALUES ('Подписки', '📺', 'subs', 7)");
+    },
+  ],
+  // 40: no "Сбережения" category (system = 'savings'): money moved to one's own savings account is a transfer between
+  // one's own accounts. Its operations (and their parts), rules and merchants go to "Между своими картами" (not spending
+  // either), the category itself is gone; with no such category it becomes it
+  [
+    async (db) => {
+      const savings = (await db.get<{ id: number }>("SELECT id FROM categories WHERE system = 'savings'"))?.id;
+      if (savings === undefined) return;
+      const own = (await db.get<{ id: number }>("SELECT id FROM categories WHERE system = 'own'"))?.id;
+      if (own === undefined) {
+        await db.run(
+          `UPDATE categories SET system = 'own', name = 'Между своими картами', emoji = '🔁', deleted_at = NULL,
+            type_id = (SELECT id FROM category_types WHERE is_transfer = 1 ORDER BY id LIMIT 1) WHERE id = ?`, [savings]);
+        return;
+      }
+      await moveParts(db, [savings], own);
+      await db.run('UPDATE transactions SET category_id = ? WHERE category_id = ?', [own, savings]);
+      await db.run('UPDATE OR IGNORE merchant_rules SET category_id = ? WHERE category_id = ?', [own, savings]);
+      await db.run('DELETE FROM merchant_rules WHERE category_id = ?', [savings]);
+      await db.run('UPDATE OR IGNORE merchant_categories SET category_id = ? WHERE category_id = ?', [own, savings]);
+      await db.run('DELETE FROM merchant_categories WHERE category_id = ?', [savings]);
+      const used = (await db.get<{ n: number }>('SELECT coalesce(sum(usage_count), 0) AS n FROM category_usage WHERE category_id = ?', [savings]))?.n ?? 0;
+      await db.run('DELETE FROM category_usage WHERE category_id = ?', [savings]);
+      if (used) {
+        await db.run(
+          `INSERT INTO category_usage (category_id, usage_count) VALUES (?, ?)
+            ON CONFLICT (category_id) DO UPDATE SET usage_count = usage_count + excluded.usage_count`, [own, used]);
+      }
+      await db.run('DELETE FROM plan_items WHERE category_id = ?', [savings]);
+      await db.run('DELETE FROM categories WHERE id = ?', [savings]);
     },
   ],
 ];

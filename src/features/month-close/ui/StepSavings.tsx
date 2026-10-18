@@ -64,7 +64,6 @@ export default function StepSavings({ c, onAnswer }: Props) {
             </>
           ) : null}
           {restToSavings ? <Line label="🌊 Что осталось" value={money(b.rest_minor)} /> : null}
-          {b.moved_minor > 0 ? <Line label="Уже переведено в «🏦 Сбережения»" value={money(b.moved_minor)} /> : null}
           <Text style={styles.question}>Удалось отложить?</Text>
           <AmountAnswer asked={b.ask_minor} currency={b.currency} answered={c.saved_minor} label="Отложено в сбережения"
             onAnswer={(minor, kind) => onAnswer({ saved: kind, saved_minor: kind === 'other' ? minor : null })}

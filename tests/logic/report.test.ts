@@ -48,12 +48,12 @@ test('an overspend under 5% of the plan is not in the report', async () => {
   expect(r.couldSaveMore).toBe(0);
 });
 
-test('money moved to "Сбережения" is shown, and is not spending', async () => {
-  const { savingsCategoryId } = require('../../src/db/categories');
+test('money moved to one\'s own savings account ("Между своими картами") is not spending', async () => {
+  const { getDb } = require('../../src/db');
+  const own = (await (await getDb()).get("SELECT id FROM categories WHERE system = 'own'")).id;
   await setPlanBudget('2026-09', 100000, 'GEL');
-  await addManualTransaction({ amount_minor: 20000, category_id: await savingsCategoryId(), occurred_at: at('2026-09-10') });
+  await addManualTransaction({ amount_minor: 20000, category_id: own, occurred_at: at('2026-09-10') });
   const r = await monthReport('2026-09', 'GEL');
-  expect(r.movedToSavings).toBe(20000);
   expect(r.spent).toBe(0);
   expect(r.saved).toBe(100000);
 });

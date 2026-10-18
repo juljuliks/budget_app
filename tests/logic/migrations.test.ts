@@ -7,7 +7,7 @@ describe('migrations', () => {
     await migrate(db);
     expect(await getSchemaVersion(db)).toBe(MIGRATIONS.length);
     const { n } = (await db.get<{ n: number }>('SELECT count(*) AS n FROM categories'))!;
-    expect(n).toBe(14); // with the system ones: "Сбережения", "Между своими картами", "Подписки" (seeded, made system)
+    expect(n).toBe(13); // with the system ones: "Между своими картами", "Подписки" (seeded, made system)
     const tables = (await db.all<{ name: string }>("SELECT name FROM sqlite_master WHERE type = 'table'")).map((r) => r.name);
     expect(tables).toEqual(expect.arrayContaining(['categories', 'merchant_rules', 'transactions', 'category_usage']));
   });
@@ -29,7 +29,7 @@ describe('migrations', () => {
     await migrate(db);
     await migrate(db);
     const { n } = (await db.get<{ n: number }>('SELECT count(*) AS n FROM categories'))!;
-    expect(n).toBe(14); // with the system ones: "Сбережения", "Между своими картами", "Подписки" (seeded, made system)
+    expect(n).toBe(13); // with the system ones: "Между своими картами", "Подписки" (seeded, made system)
   });
 
   test('upgrades a legacy DB created from the old schema.sql (user_version 0, no category_usage)', async () => {
@@ -38,7 +38,7 @@ describe('migrations', () => {
     await db.run("INSERT INTO categories (name, emoji, sort_order) VALUES ('Продукты', '🛒', 1)");
     await migrate(db);
     const { n } = (await db.get<{ n: number }>('SELECT count(*) AS n FROM categories'))!;
-    expect(n).toBe(14); // with the system ones: "Сбережения", "Между своими картами", "Подписки" (seeded, made system)
+    expect(n).toBe(13); // with the system ones: "Между своими картами", "Подписки" (seeded, made system)
     expect(await db.get("SELECT name FROM sqlite_master WHERE name = 'category_usage'")).toBeDefined();
   });
 
@@ -172,5 +172,29 @@ describe('migrations', () => {
       { ym: '2026-09', rest_choice: 'savings', closed: 1 },
     ]);
     expect(await db.all('SELECT ym, saved_minor FROM fund_confirms')).toEqual([{ ym: '2026-09', saved_minor: 5000 }]);
+  });
+
+  test('migration 40: "Сбережения" is gone — its operations, a split\'s part, rules and merchants in "Между своими картами"', async () => {
+    const db = openDatabase(':memory:');
+    await migrate(db, MIGRATIONS.slice(0, 39));
+    const id = async (system: string) => (await db.get<{ id: number }>('SELECT id FROM categories WHERE system = ?', [system]))!.id;
+    const savings = await id('savings');
+    const own = await id('own');
+    const tx = (key: string, category: number) => db.run(
+      `INSERT INTO transactions (bank, kind, amount_minor, currency, merchant_key, category_id, category_source, occurred_at, raw_sms, sms_hash)
+        VALUES ('tbc', 'transfer', 10000, 'GEL', ?, ?, 'user', 0, '', ?)`, [key, category, key]);
+    await tx('DEPOSIT', savings);
+    await tx('SPLIT', 1);
+    await db.run('INSERT INTO transaction_parts (tx_id, category_id, amount_minor) VALUES (2, ?, 4000)', [savings]);
+    await db.run("INSERT INTO merchant_rules (match_type, pattern, category_id, created_at) VALUES ('exact', 'DEPOSIT', ?, 0)", [savings]);
+    await db.run('INSERT INTO category_usage (category_id, usage_count) VALUES (?, 3)', [savings]);
+    await migrate(db);
+    expect(await db.get("SELECT 1 FROM categories WHERE system = 'savings'")).toBeUndefined();
+    expect(await db.all('SELECT merchant_key, category_id FROM transactions ORDER BY id')).toEqual([
+      { merchant_key: 'DEPOSIT', category_id: own }, { merchant_key: 'SPLIT', category_id: 1 },
+    ]);
+    expect(await db.all('SELECT tx_id, category_id, amount_minor FROM transaction_parts')).toEqual([{ tx_id: 2, category_id: own, amount_minor: 4000 }]);
+    expect(await db.all('SELECT pattern, category_id FROM merchant_rules')).toEqual([{ pattern: 'DEPOSIT', category_id: own }]);
+    expect(await db.get('SELECT usage_count FROM category_usage WHERE category_id = ?', [own])).toEqual({ usage_count: 3 });
   });
 });

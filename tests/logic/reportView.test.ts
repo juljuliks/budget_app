@@ -5,7 +5,7 @@ import type { MonthReport } from '../../src/db/report';
 const report = (p: Partial<MonthReport>): MonthReport => ({
   currency: 'GEL', hasPlan: true, saved: 50000, previousSaved: null, spent: 150000, budget: 200000, toSavings: true,
   overLimitsTotal: 0, overLimits: [], unplannedOver: 0, unplannedSpent: 0, unplannedShare: 0, unplannedOfSpending: 0, review: false,
-  uncategorizedCount: 0, unpaid: [], locked: 0, lockedTouched: 0, savedInPlan: 0, underPlan: [], movedToSavings: 0, couldSaveMore: 0,
+  uncategorizedCount: 0, unpaid: [], locked: 0, lockedTouched: 0, savedInPlan: 0, underPlan: [], couldSaveMore: 0,
   topUnplanned: [], average: null, savedFrom: null,
   ...p,
 } as unknown as MonthReport);

@@ -6,7 +6,7 @@ export * from './budget';
 export * from './items';
 export * from './stats';
 export * from './history';
-export { movedToSavings, spendingEntries } from './spend';
+export { spendingEntries } from './spend';
 export * from './normsData';
 export * from './funds';
 export * from './fundEntries';

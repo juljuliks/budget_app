@@ -304,24 +304,24 @@ describe('the unplanned share of the budget', () => {
 
 describe('savings', () => {
   const { monthStats, getPlanBudget, setPlanBudget, ensureMonthPlan } = require('../../src/db/plans');
-  const { savingsCategoryId, deleteCategory, updateCategory, getCategory } = require('../../src/db/categories');
+  const { subscriptionsCategoryId, deleteCategory, updateCategory, getCategory } = require('../../src/db/categories');
   const { addManualTransaction } = require('../../src/db/transactions');
+  const { getDb } = require('../../src/db');
 
-  test('an operation in "Сбережения" is money put aside, not spending', async () => {
-    const savings = await savingsCategoryId();
-    expect(savings).not.toBeNull();
+  test('money moved to one\'s own account ("Между своими картами") is not spending', async () => {
+    const own = (await (await getDb()).get("SELECT id FROM categories WHERE system = 'own'")).id;
     const at = Math.floor(new Date('2026-10-03T12:00:00').getTime() / 1000);
-    await addManualTransaction({ amount_minor: 5000, category_id: savings, occurred_at: at });
+    await addManualTransaction({ amount_minor: 5000, category_id: own, occurred_at: at });
     await addManualTransaction({ amount_minor: 1000, category_id: null, occurred_at: at });
     const stats = await monthStats(2026, 9, 'GEL');
     expect(stats.spent_minor).toBe(1000);
   });
 
-  test('the system category keeps its name and cannot be deleted', async () => {
-    const savings = await savingsCategoryId();
-    await updateCategory(savings, { name: 'Другое имя', emoji: '💰', typeId: null });
-    expect(await getCategory(savings)).toMatchObject({ name: 'Сбережения', emoji: '💰' });
-    await expect(deleteCategory(savings, null)).rejects.toThrow();
+  test('a system category keeps its name and cannot be deleted', async () => {
+    const subs = await subscriptionsCategoryId();
+    await updateCategory(subs, { name: 'Другое имя', emoji: '💰', typeId: null });
+    expect(await getCategory(subs)).toMatchObject({ name: 'Подписки', emoji: '💰' });
+    await expect(deleteCategory(subs, null)).rejects.toThrow();
   });
 
   test('the leftover goes to savings by default; the choice carries over', async () => {

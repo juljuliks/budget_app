@@ -102,8 +102,8 @@ export const at = (days: number, hour: number) => Math.floor(new Date(now.getFul
 
 /**
  * Section 2 (the operations): today (a purchase of a merchant's category, an unread transfer, a refund, a deposit, money
- * moved to savings), yesterday (a hand-picked one with a note, an unread one with a note), 3 days ago (two of ZARA,
- * one in dollars), 60 older ones of MARKET (paging), one last year.
+ * moved to one's savings account — "Между своими картами"), yesterday (a hand-picked one with a note, an unread one
+ * with a note), 3 days ago (two of ZARA, one in dollars), 60 older ones of MARKET (paging), one last year.
  */
 export async function ops() {
   const db = await getDb();
@@ -111,14 +111,14 @@ export async function ops() {
   const cafe = await category('Кафе и рестораны', '☕️');
   const clothes = await category('Одежда', '👕');
   const subs = await category('Подписки', '📺');
-  const savings = (await db.get<{ id: number }>("SELECT id FROM categories WHERE system = 'savings'"))!.id;
+  const own = (await db.get<{ id: number }>("SELECT id FROM categories WHERE system = 'own'"))!.id;
   // a time of today that has passed even early in the morning
   const t = (h: number) => Math.min(at(0, h), Math.floor(Date.now() / 1000) - 60 * (12 - h));
   await buy('SPAR', 30, t(9), food);
   await buy('NINO B', 10, t(8), null, { kind: 'transfer', unread: true });
   await buy('ZARA', 5, t(7), clothes, { kind: 'refund' });
   await buy('SALARY', 100, t(6), null, { kind: 'deposit' });
-  await buy('Сбережения', 50, t(5), savings, { kind: 'transfer' });
+  await buy('Накопительный', 50, t(5), own, { kind: 'transfer' });
   await buy('WOLT', 45, at(1, 13), cafe, { note: 'обед ещё раз' });
   await buy('GLOVO', 20, at(1, 12), null, { unread: true, note: 'подарок маме' });
   await buy('ZARA', 120, at(3, 18), clothes);

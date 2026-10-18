@@ -8,7 +8,6 @@ import { currentYm, parseYm, ymOf } from './months';
 import { planConverter, storedBudget } from './budget';
 import { monthStats } from './stats';
 import { activeFunds, fundLedger } from './funds';
-import { movedToSavings } from './spend';
 
 export type OverCover = 'savings' | 'next' | 'covered';
 export type OverRestCover = 'next' | 'covered';
@@ -60,8 +59,6 @@ export type CloseBudget = {
   rest_minor: number;
   /** "Удалось отложить?": 🔒 kept and the leftover going to savings; 0 — not asked */
   ask_minor: number;
-  /** operations in "🏦 Сбережения" that month */
-  moved_minor: number;
 };
 
 export type MonthClose = {
@@ -150,7 +147,6 @@ export async function monthClose(ym: string, nowYm = currentYm()): Promise<Month
     budget = {
       currency: cur, amount_minor: amount, locked_minor: locked, spent_minor: spent, over_minor: over,
       from_savings_minor: fromSavings, over_rest_minor: overRest, kept_locked_minor: kept, rest_minor: rest, ask_minor: ask,
-      moved_minor: await movedToSavings(ym, cur),
     };
     if (over > 0) {
       carry.debt_minor = answers.over_cover === 'next' ? over : answers.over_rest_cover === 'next' ? overRest : 0;

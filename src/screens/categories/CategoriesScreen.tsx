@@ -37,7 +37,7 @@ export default function CategoriesScreen({ navigation }: Props) {
   const picking = picked.length > 0;
   // the "Разделы" row's height: the picking toolbar in its place takes the same
   const [headerHeight, setHeaderHeight] = useState(0);
-  // "Сбережения" can't be merged
+  // a system category ("Подписки") can't be merged
   const pick = (c: Category) => {
     if (isSystemCategory(c)) return;
     setPicked((p) => (p.includes(c.id) ? p.filter((id) => id !== c.id) : [...p, c.id]));

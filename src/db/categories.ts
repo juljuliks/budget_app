@@ -17,13 +17,9 @@ export type Category = {
   deleted_at: number | null;
   /** own color; null = from the type's palette (see src/domain/colors.ts) */
   color: string | null;
-  /** 'savings' for "Сбережения", 'topup' for "Пополнение счёта" (system categories: can't be deleted or renamed), else null */
+  /** 'topup' for "Пополнение счёта", 'own', 'subs'… (system categories: can't be deleted or renamed), else null */
   system: string | null;
 };
-
-/** The system category money put aside goes to: its operations aren't spending. */
-export const SAVINGS = 'savings';
-export const isSavings = (c: { system?: string | null }) => c.system === SAVINGS;
 
 /**
  * The system category every deposit goes to by default: money that came to the card (P2P from crypto, a salary) —
@@ -32,7 +28,7 @@ export const isSavings = (c: { system?: string | null }) => c.system === SAVINGS
 export const TOP_UP = 'topup';
 export const isTopUp = (c: { system?: string | null }) => c.system === TOP_UP;
 
-/** "Между своими картами": money between one's own cards (other banks) — not spending, not income. */
+/** "Между своими картами": money between one's own cards and accounts (other banks, a savings one) — not spending, not income. */
 export const OWN_TRANSFER = 'own';
 /**
  * "Подписки": its spending is the subscriptions' charges (db/subscriptions), its plan item counted from them ('subs').
@@ -40,7 +36,7 @@ export const OWN_TRANSFER = 'own';
  */
 export const SUBSCRIPTIONS = 'subs';
 export const isSubscriptions = (c: { system?: string | null }) => c.system === SUBSCRIPTIONS;
-/** A category of the system: "Сбережения", "Пополнение счёта", "Подписки"… (not deleted, merged, added to the plan by hand). */
+/** A category of the system: "Пополнение счёта", "Между своими картами", "Подписки"… (not deleted, merged, added to the plan by hand). */
 export const isSystemCategory = (c: { system?: string | null }) => !!c.system;
 
 /** The id of "Пополнение счёта". */
@@ -53,12 +49,6 @@ export async function topUpCategoryId(db?: Db): Promise<number | null> {
 export async function subscriptionsCategoryId(db?: Db): Promise<number | null> {
   db ??= await getDb();
   return (await db.get<{ id: number }>("SELECT id FROM categories WHERE system = 'subs'"))?.id ?? null;
-}
-
-/** The id of "Сбережения". */
-export async function savingsCategoryId(): Promise<number | null> {
-  const db = await getDb();
-  return (await db.get<{ id: number }>("SELECT id FROM categories WHERE system = 'savings'"))?.id ?? null;
 }
 
 const COLUMNS = `c.id, c.name, c.emoji, c.sort_order, c.type_id, c.deleted_at, c.color, c.system,
@@ -125,7 +115,7 @@ export async function createCategory(name: string, emoji?: string | null, typeId
 
 export async function updateCategory(id: number, fields: { name: string; emoji?: string | null; typeId: number | null; color?: string | null }) {
   const db = await getDb();
-  // a system category ("Сбережения") keeps its name
+  // a system category ("Подписки") keeps its name
   await db.run('UPDATE categories SET name = CASE WHEN system IS NULL THEN ? ELSE name END, emoji = ?, type_id = ?, color = ? WHERE id = ?',
     [fields.name.trim(), fields.emoji?.trim() || null, fields.typeId, fields.color ?? null, id]);
 }

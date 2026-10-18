@@ -46,9 +46,6 @@ export default function ReportHero({ v, onCloseMonth }: { v: ReportView; onClose
         </Text>
       ) : null}
       {pf ? <PlanFact v={v} pf={pf} onCloseMonth={onCloseMonth} /> : null}
-      {pf && r.movedToSavings > 0 ? (
-        <View style={styles.from}><FromLine label="Из них переведено в «Сбережения» вручную" v={r.movedToSavings} money={money} /></View>
-      ) : null}
       {/* where it comes from: the parts add up to it */}
       {r.savedFrom && !pf ? (
         <View style={styles.from}>
@@ -60,7 +57,6 @@ export default function ReportHero({ v, onCloseMonth }: { v: ReportView; onClose
             <FromLine label={r.savedFrom.unplanned >= 0 ? 'Не потрачено из доли вне плана' : 'Вне плана сверх доли'} v={r.savedFrom.unplanned} money={money} info={v.unplannedInfo} />
           ) : null}
           {r.savedFrom.funds > 0 ? <FromLine label="Взносы в копилки" v={r.savedFrom.funds} money={money} /> : null}
-          {r.movedToSavings > 0 ? <FromLine label="Из них переведено в «Сбережения» вручную" v={r.movedToSavings} money={money} /> : null}
         </View>
       ) : null}
     </View>

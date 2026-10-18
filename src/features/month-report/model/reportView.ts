@@ -22,7 +22,7 @@ export function reportView(r: MonthReport, currency: Currency) {
     ['перерасход лимитов', r.overLimitsTotal], ['вне плана сверх доли', r.unplannedOver], ['меньше, чем месяцем раньше', worse],
   ] as Part[]).filter(([, v]) => v > 0);
   const goodParts = ([
-    ['сэкономлено в плане', r.savedInPlan], ['переведено в «Сбережения» вручную', r.movedToSavings], ['больше, чем месяцем раньше', better],
+    ['сэкономлено в плане', r.savedInPlan], ['больше, чем месяцем раньше', better],
   ] as Part[]).filter(([, v]) => v > 0);
   const badMonth = badParts.reduce((a, [, v]) => a + v, 0);
   const goodMonth = goodParts.reduce((a, [, v]) => a + v, 0);
