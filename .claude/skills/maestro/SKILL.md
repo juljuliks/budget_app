@@ -1,6 +1,7 @@
 ---
 name: maestro
 description: Writing, running or debugging the Maestro e2e flows of this app on the Android emulator (tests/e2e/flows, run.sh, hooks, verify.ts). Use before touching anything under tests/e2e/flows or when a Maestro run fails.
+model: sonnet
 ---
 
 # Maestro в этом проекте

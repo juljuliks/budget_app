@@ -1,6 +1,7 @@
 ---
 name: finish
 description: Definition of done for this app — run after any new feature, fix or change of behavior or texts, before saying it's done. Brings the glossary, IMPROVEMENTS.md, README, the test plan and tests, the architecture rules and the public documentation in line with the change.
+model: sonnet
 ---
 
 # Готово ли изменение

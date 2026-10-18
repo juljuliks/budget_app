@@ -1,6 +1,7 @@
 ---
 name: architecture
 description: Where code goes in this app and how big it may get (FSD-lite layers, import direction, file-size limits, commands for writes) and how to split a long file. Use before creating, moving or splitting a file under src/, before adding a component, hook, screen or a write to the database, and when a lint error about layers or sizes comes up.
+model: haiku
 ---
 
 # Архитектура: куда класть и как не разрастаться
