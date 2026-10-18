@@ -37,7 +37,7 @@ const plainTotal = (v: PeriodView, spent: number, several: boolean) => (several 
 export function limitSections(v: PeriodView, h: Handlers) {
   const limits = v.limitSections.map(({ key, cats }) => {
     const g = v.groups.find((x) => x.key === key);
-    const title = GROUP_TITLES[key] === GROUP_TITLES.fixed ? 'Обязательные платежи' : `${GROUP_TITLES[key]} лимиты`;
+    const title = GROUP_TITLES[key] === GROUP_TITLES.fixed ? GROUP_TITLES.fixed : `${GROUP_TITLES[key]} лимиты`;
     const vsLimit = !!g && g.limit > 0;
     const total = g ? g.spent : v.sumSpent(cats);
     return (

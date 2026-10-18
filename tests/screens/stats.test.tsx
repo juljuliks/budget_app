@@ -1,7 +1,7 @@
 // 5: the stats — a month against its plan, a day / week against the limits, a long period, hidden amounts, the
 // currency, the warning over them. Today: Thursday 15 October 2026 (setup.ts).
 import { act, waitFor, within } from '@testing-library/react-native';
-import { openApp, rowOf, screen, tap, texts } from './app';
+import { openApp, rowOf, screen, tap, texts, backToTabs } from './app';
 import { buy, ops, planned, on } from '../e2e/seeds';
 import { emitTransactionsChanged } from '../../src/domain/events';
 import { getDb } from '../../src/db';
@@ -224,6 +224,7 @@ describe('5.4–5.6 hidden amounts, the currency, the warning', () => {
     for (let d = 1; d <= 15; d++) await db.run("INSERT OR REPLACE INTO fx_rates (date, currency, gel_per_unit) VALUES (?, 'USD', 2.5)", [`2026-10-${String(d).padStart(2, '0')}`]);
     await tap('Настройки');
     await tap('$ USD');
+    backToTabs();
     await act(() => new Promise((r) => setTimeout(r, 100)));
     expect(await screen.findByText('Потрачено 804 / 984 $ (82%)')).toBeTruthy();
     expect(await getSetting('display_currency')).toBe('USD');

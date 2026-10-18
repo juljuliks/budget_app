@@ -13,7 +13,7 @@ Feature-Sliced Design (FSD-lite): без слоёв processes и widgets — д�
 ```
 src/
   app/        App, вкладки, стартовые эффекты, хосты (ModalHost), кнопка настроек
-  screens/    вкладки: operations/, stats/, merchants/, categories/ — только сборка из частей
+  screens/    вкладки и страницы: operations/, stats/, merchants/, categories/, settings/, … — только сборка из частей
   features/   сценарии пользователя: действие в несколько шагов, с вопросами и последствиями
   entities/   transaction/, category/, merchant/, plan/ — показать, выбрать, просто изменить одну вещь
   shared/     ui/ (кит без знания о бюджете), lib/ (format, money, dates, хуки), theme/,
@@ -54,6 +54,10 @@ src/
 Когда нижнему слою нужно то, что выше, — не импорт, а:
 - проп-колбэк: `CategorySheet` (entity) получает `onDelete`, удаление с разбором (feature) передаёт экран;
 - шит через `sheets.ts`: `TransactionSheet` открывает карточку мерчанта `openMerchant(…)`, её рисует `ModalHost`.
+  Имя мерчанта или категории в шите — `MerchantLink` / `CategoryLink` (обе на `shared/ui/TextLink`: синий текст со
+  стрелкой), шит в заголовке — `BottomSheet` `onTitlePress`. Ссылка из шита на страницу — `showOperationsFromSheet`
+  (`shared/navigation`): шиты `ModalHost` прячутся (`leaveSheets`), «Назад» со страницы показывает их снова
+  (`backToSheets`). Поэтому карточки мерчанта и категории открываются только через `sheets.ts`, не своим состоянием.
 
 Записи в базу — командами слайса (`model/commands.ts`): запись + `emitTransactionsChanged`. Компоненты не зовут
 `emitTransactionsChanged` сами.

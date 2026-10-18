@@ -5,6 +5,7 @@ import { CategoriesScreen } from '@/screens/categories';
 import { MerchantsScreen } from '@/screens/merchants';
 import { MessageTemplatesScreen, UnparsedMessageScreen, UnparsedScreen } from '@/screens/messages';
 import { BanksScreen } from '@/screens/banks';
+import { SettingsScreen } from '@/screens/settings';
 import MainTabs from './MainTabs';
 import { ModalHost } from './ModalHost';
 import { useAppStartup } from './useAppStartup';
@@ -22,6 +23,7 @@ export default function App() {
     <NavigationContainer ref={navigationRef} onReady={flushPendingNavigation}>
       <Stack.Navigator>
         <Stack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
+        <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Настройки' }} />
         <Stack.Screen name="Categories" component={CategoriesScreen} options={{ title: 'Категории' }} />
         <Stack.Screen name="Merchants" component={MerchantsScreen} options={{ title: 'Мерчанты' }} />
         <Stack.Screen name="Unparsed" component={UnparsedScreen} options={{ title: 'Не распознано' }} />

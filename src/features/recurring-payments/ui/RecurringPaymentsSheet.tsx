@@ -4,13 +4,17 @@ import type { Currency } from '@/db/fx';
 import { RecurringPayment, todayKey } from '@/db/recurring';
 import { formatWithCurrency } from '@/shared/lib/money';
 import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
+import { openCategory } from '@/shared/navigation/sheets';
 import Button from '@/shared/ui/Button';
 import Loading from '@/shared/ui/Loading';
+import { toastFailure } from '@/shared/ui/toast';
+import { SAVE_FAILED } from '@/shared/lib/strings';
 import SectionBand from '@/shared/ui/SectionBand';
 import { formatPercent } from '@/shared/lib/format';
 import { formStyles } from '@/shared/theme/formStyles';
 import { colors } from '@/shared/theme/theme';
 import { paymentWords } from '@/entities/category';
+import { turnOffRecurring } from '@/entities/plan';
 import { PaymentCategory, PaymentTarget } from '../model/usePaymentForm';
 import { useRecurringPayments } from '../model/useRecurringPayments';
 import { inMonth, inTime, monthGen, periodText, shortDay } from '../texts';
@@ -49,7 +53,7 @@ export default function RecurringPaymentsSheet({ ym, category, currency, onClose
   const shareOf = (minor: number) => (data?.budget_minor && minor > 0 ? formatPercent(minor, data.budget_minor) : null);
   return (
     <>
-    <BottomSheet visible={ym !== null} onClose={onClose} title={`${category.emoji ?? '🔁'} ${category.name}`} style={styles.root}>
+    <BottomSheet visible={ym !== null} onClose={onClose} title={`${category.emoji ?? '🔁'} ${category.name}`} onTitlePress={() => openCategory(category.id)} style={styles.root}>
       {!data || !ym ? <Loading inline failed={failed} onRetry={load} /> : (
         <SheetScrollView contentContainerStyle={styles.body}>
           <View style={styles.fact}>
@@ -109,6 +113,11 @@ export default function RecurringPaymentsSheet({ ym, category, currency, onClose
           ))}
 
           <Button title={`＋ ${w.add}`} outline onPress={() => setAdding('merchant')} style={styles.add} />
+          {/* the plan turns them on ("Повторяющийся платёж") and off; the amount stays, by hand from now on */}
+          <Button
+            title="Выключить повторяющиеся платежи" danger outline style={styles.off}
+            onPress={() => { turnOffRecurring(category.id).then((off) => { if (off) onClose(); }).catch(toastFailure('turn off recurring', SAVE_FAILED)); }}
+          />
         </SheetScrollView>
       )}
     </BottomSheet>
@@ -130,4 +139,5 @@ const styles = StyleSheet.create({
   factValue: { fontSize: 15, fontWeight: '700', color: colors.text, fontVariant: ['tabular-nums'] },
   link: { color: colors.accent },
   add: { marginTop: 16 },
+  off: { marginTop: 8 },
 });

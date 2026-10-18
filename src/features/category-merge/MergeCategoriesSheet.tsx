@@ -15,7 +15,7 @@ import { colors } from '@/shared/theme/theme';
 import { toast, toastError, toastFailure } from '@/shared/ui/toast';
 
 const rhythmKey = (r: MergeRhythm) => `${r.kind}:${r.norm}`;
-const rhythmTitle = (r: MergeRhythm) => (r.kind === 'fixed' ? 'Обязательный платёж' : `Лимит · ${SPENDING_PATTERN[r.norm].title.toLowerCase()}`);
+const rhythmTitle = (r: MergeRhythm) => (r.kind === 'fixed' ? 'Разовый платёж' : `Лимит · ${SPENDING_PATTERN[r.norm].title.toLowerCase()}`);
 
 /**
  * Merging the categories picked (in the order picked) into the first: its name ("Кафе & Рестораны"), section and

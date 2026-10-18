@@ -39,6 +39,7 @@ export async function listPlan(ym: string, to?: Currency): Promise<PlanItem[]> {
     subsInfo.set(r.category_id, {
       names: subNames((id) => !savingIds.has(id)), saving_names: subNames((id) => savingIds.has(id)),
       saving_minor: subs.saving.reduce((a, v) => a + (v.converted_minor ?? 0), 0),
+      own: all.some((s) => !s.merchant_key),
       ...(only ? { single: {
         period_months: only.period_months, done: !!charge?.done,
         day: charge?.day ?? subs.later.find((l) => l.sub.id === only.id)?.next ?? null,

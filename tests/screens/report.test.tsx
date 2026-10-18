@@ -39,7 +39,7 @@ describe('7.2 the history', () => {
     const oct = texts().slice(texts().indexOf('Сбережения'));
     expect(oct.slice(0, 8)).toEqual(['Сбережения', 'План', 'Сейчас', '🔒 Отложено сразу', 'в начале месяца', '300 ₾', '300 ₾', '💰 Сэкономлено']);
     expect(oct).toContain('Пока в сбережения');
-    expect(oct.some((t) => /^Месяц идёт: из «Сэкономлено» вычтены обязательные платежи, которые ещё не оплачены \(30 ₾\)/.test(t))).toBe(true);
+    expect(oct.some((t) => /^Месяц идёт: из «Сэкономлено» вычтены платежи, которые ещё не оплачены \(30 ₾\)/.test(t))).toBe(true);
   });
 
   test('the report only for a month that is over and had a plan', async () => {

@@ -1,16 +1,17 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import {
   Animated, Easing, FlatList, FlatListProps, Keyboard, LayoutChangeEvent, Modal, NativeScrollEvent, NativeSyntheticEvent, PanResponder,
-  Pressable, ScrollView, ScrollViewProps, StyleProp, StyleSheet, Text, TouchableOpacity, View, ViewStyle,
+  Pressable, ScrollView, ScrollViewProps, StyleProp, StyleSheet, Text, View, ViewStyle,
 } from 'react-native';
 import { colors } from '../theme/theme';
 import { SHEET_INSET, ToastHost } from './toast';
+import TextLink from './TextLink';
 
 type Props = {
   visible: boolean;
   onClose: () => void;
   title?: string;
-  /** the title a link with an arrow ("📺 Подписки ›"): e.g. the category's own sheet */
+  /** the title a link (TextLink, "📺 Подписки ›"): e.g. the category's own sheet */
   onTitlePress?: () => void;
   /** a control right of the title (e.g. delete) */
   headerRight?: React.ReactNode;
@@ -136,11 +137,8 @@ export default function BottomSheet({ visible, onClose, title, onTitlePress, hea
             <View style={styles.handleZone}><View style={styles.handle} /></View>
             {title || headerRight ? (
               <View style={styles.titleRow}>
-                {onTitlePress ? (
-                  <TouchableOpacity style={styles.titleLink} onPress={onTitlePress} accessibilityRole="button" accessibilityLabel={`Открыть: ${title}`}>
-                    <Text style={styles.titleText} numberOfLines={1}>{title}</Text>
-                    <Text style={styles.chevron}>›</Text>
-                  </TouchableOpacity>
+                {onTitlePress && title ? (
+                  <TextLink label={title} onPress={onTitlePress} style={styles.titleText} containerStyle={styles.titleLink} accessibilityLabel={`Открыть: ${title}`} oneLine />
                 ) : <Text style={styles.title}>{title}</Text>}
                 {headerRight}
               </View>
@@ -167,7 +165,6 @@ const styles = StyleSheet.create({
   handle: { alignSelf: 'center', width: 36, height: 4, borderRadius: 2, backgroundColor: colors.border },
   titleRow: { flexDirection: 'row', alignItems: 'center', paddingRight: 12 },
   title: { flex: 1, fontSize: 18, fontWeight: '600', color: colors.text, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8 },
-  titleLink: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8 },
-  titleText: { flexShrink: 1, fontSize: 18, fontWeight: '600', color: colors.text },
-  chevron: { fontSize: 22, color: colors.accent },
+  titleLink: { flex: 1, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8 },
+  titleText: { fontSize: 18, fontWeight: '600' },
 });

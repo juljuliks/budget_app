@@ -6,6 +6,7 @@ import { freshDb } from '../helpers';
 import { done } from '../e2e/seeds';
 import { setHideAmounts } from '../../src/shared/settings/hideAmounts';
 import { setDisplayCurrency } from '../../src/shared/settings/displayCurrency';
+import { navigationRef } from '../../src/shared/navigation/navigation';
 
 /** The app on a fresh database filled by `seed`, the operations shown. */
 export async function openApp(seed?: () => Promise<void>) {
@@ -97,6 +98,11 @@ export function texts(): string[] {
 export async function openSettings(row: 'Мерчанты' | 'Категории' | 'Банки') {
   await tap('Настройки');
   await tap(row);
+}
+
+/** Back from the pages over the tabs (the stack's header is native, not drawn here): to the tabs. */
+export function backToTabs() {
+  act(() => { while (navigationRef.canGoBack() && navigationRef.getRootState().routes.length > 1) navigationRef.goBack(); });
 }
 
 /** The switch on the screen (the last one: a sheet's), toggled. */

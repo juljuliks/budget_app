@@ -37,6 +37,8 @@ appId: com.budgetapp
     timeout: 20000
 - assertVisible: "(?s)Прочитано SMS банка: 5\\..*Не операции \\(баланс, коды, отклонённые\\): 2\\."
 - tapOn: "Понятно"
+# the settings are a page: back to the operations
+- back
 # past operations: no "new" marks, no badge; the merchant's category applied
 - assertVisible: "CARREFOUR"
 - assertVisible: ".*Продукты · .*"

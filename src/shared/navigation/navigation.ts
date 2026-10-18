@@ -2,6 +2,7 @@ import { createNavigationContainerRef, useNavigation } from '@react-navigation/n
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { DayRange } from '../lib/dateRange';
+import { leaveSheets } from './sheets';
 
 export type TabParamList = {
   /** day: open the stats of that day (a day header in the transactions list), its local midnight in unix seconds */
@@ -17,14 +18,19 @@ export type TabParamList = {
     nonce?: number;
     /** a category being deleted: its operations of this month to sort out to other categories, then it goes */
     sortOut?: number;
-    /** where back returns: a tab, or the merchants / categories screen */
-    from?: keyof TabParamList | 'Merchants' | 'Categories';
+    /** where back returns: a tab, or a page over them (the merchants, the categories) */
+    from?: BackTarget;
   } | undefined;
 };
+
+/** Where the operations opened from somewhere else return: a tab or a page over them. */
+export type BackTarget = keyof TabParamList | Exclude<keyof RootStackParamList, 'Main' | 'UnparsedMessage'>;
 
 /** Screens pushed over the tab bar. */
 export type RootStackParamList = {
   Main: undefined;
+  /** the settings (the gear in the tab headers) */
+  Settings: undefined;
   Categories: undefined;
   /** Merchants with their categories; merging into groups */
   Merchants: undefined;
@@ -75,4 +81,16 @@ export function flushPendingNavigation() {
   const route = pending;
   pending = null;
   navigateWhenReady(route);
+}
+
+/**
+ * "Показать операции ›" of a sheet (a merchant's card, a category's): the operations with its filter; the sheets hide,
+ * back returns to the page they were over and shows them again (sheets.ts).
+ */
+export function showOperationsFromSheet(filter: { category?: number; query?: string }) {
+  const here = navigationRef.getCurrentRoute()?.name as BackTarget | 'Main' | 'UnparsedMessage' | undefined;
+  leaveSheets();
+  const from = here === 'Main' || here === 'UnparsedMessage' ? undefined : here;
+  // `as never`: a nested navigate the root types don't describe
+  navigationRef.navigate('Main', { screen: 'Transactions', params: { ...filter, nonce: Date.now(), from } } as never);
 }

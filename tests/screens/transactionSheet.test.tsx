@@ -38,12 +38,16 @@ test('2.7.2–2.7.3: without a category: the categories right away; the merchant
   expect(await ruleOf('GLOVO')).toBe('Кафе и рестораны');
 });
 
-test('2.7.3a: the category\'s name with an arrow opens its sheet (to edit it), "Сменить" on the right picks another', async () => {
+test('2.7.3a: the category\'s name a link (as the merchant\'s) opens its sheet over the card, "Сменить" on the right picks another', async () => {
   await openApp(ops);
   await tap('SPAR');
-  await tap('Категория: 🛒 Продукты');
+  // "Разделить по категориям" right of the "Категория" title
+  await screen.findByText('Разделить по категориям');
+  const all = texts();
+  expect(all.slice(all.lastIndexOf('Категория'), all.lastIndexOf('Категория') + 2)).toEqual(['Категория', 'Разделить по категориям']);
+  await tap('🛒 Продукты ›');
   expect(await screen.findByDisplayValue('Продукты')).toBeTruthy();
-  expect(screen.getByText('Повторяющиеся платежи')).toBeTruthy();
+  expect(screen.queryByText('Повторяющиеся платежи')).toBeNull();
 });
 
 describe('2.7.4: the merchant has another category', () => {
@@ -94,7 +98,7 @@ test('2.7.8: a transfer: the transfer categories first, no merchant category', a
   const all = texts();
   // "Без категории" first (what it has now), then the transfer ones
   const i = all.indexOf('Выберите категорию');
-  expect(all.slice(i + 1, i + 3)).toEqual(['⚪️ Без категории', '👩 Переводы: Маме']);
+  expect(all.slice(i + 1, i + 4)).toEqual(['Разделить по категориям', '⚪️ Без категории', '👩 Переводы: Маме']);
   // "Пополнение счёта" is for deposits only
   expect(all).not.toContain('💳 Пополнение счёта');
   // the person isn't a merchant: no link
@@ -105,7 +109,7 @@ test('2.7.8: a deposit: in "Пополнение счёта", first; then the tr
   await createCategory('Маме', '👩', await getTransferTypeId());
   await tap('Пополнение · SALARY');
   expect(await screen.findByText('Сменить')).toBeTruthy();
-  expect(screen.getByText('💳 Пополнение счёта')).toBeTruthy();
+  expect(screen.getByText('💳 Пополнение счёта ›')).toBeTruthy();
   await tap('Сменить');
   expect(await screen.findByText('👩 Переводы: Маме')).toBeTruthy();
   const all = texts();
@@ -144,7 +148,7 @@ test('2.7.10: a note — added, shown, found, removed', async () => {
   expect((await opsOf('SPAR'))[0].note).toBeNull();
 });
 
-test('2.7.11: the merchant\'s name opens its card; "Показать операции" closes both for the list', async () => {
+test('2.7.11: the merchant\'s name opens its card; "Показать операции" hides both for the list, "Назад" shows them again', async () => {
   await tap('SPAR');
   await tap('SPAR ›');
   expect(await screen.findByText('Разные категории')).toBeTruthy();
@@ -152,6 +156,10 @@ test('2.7.11: the merchant\'s name opens its card; "Показать опера�
   await waitFor(() => expect(screen.queryByText('Удалить операцию')).toBeNull());
   expect(screen.queryByText('Разные категории')).toBeNull();
   expect(screen.getByDisplayValue('SPAR')).toBeTruthy();
+  await tap('Назад');
+  expect(await screen.findByText('Разные категории')).toBeTruthy();
+  expect(screen.getByText('Удалить операцию')).toBeTruthy();
+  expect(screen.queryByDisplayValue('SPAR')).toBeNull();
 });
 
 test('2.7.12: deleting the operation; "Отменить" brings it back as it was', async () => {

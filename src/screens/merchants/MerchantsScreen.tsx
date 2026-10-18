@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { SectionList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { CategoryPickerModal } from '@/entities/category';
-import { MerchantCard } from '@/features/merchant-card';
+import { openMerchant } from '@/shared/navigation/sheets';
 import { FilterButton, OptionsSheet } from '@/features/operations-filters';
 import SearchBar from '@/shared/ui/SearchBar';
 import { NO_CATEGORY } from '@/shared/lib/strings';
@@ -23,7 +23,6 @@ export default function MerchantsScreen() {
   const bulk = useMerchantBulk(list.merchants, categories);
   const { selectMode, selected } = bulk;
   const [catSheetOpen, setCatSheetOpen] = useState(false);
-  const [cardId, setCardId] = useState<string | null>(null);
 
   return (
     <View style={styles.screen}>
@@ -66,7 +65,7 @@ export default function MerchantsScreen() {
             // a long press starts selecting (with this one); while selecting a tap toggles, otherwise opens the card
             onPress={() => {
               if (bulk.longPressed.current) { bulk.longPressed.current = false; return; }
-              if (selectMode) bulk.toggle(item.id); else setCardId(item.id);
+              if (selectMode) bulk.toggle(item.id); else openMerchant(item.id);
             }}
             onLongPress={selectMode ? undefined : () => bulk.start(item.id)}
             onPressIn={() => { bulk.longPressed.current = false; }}
@@ -93,7 +92,6 @@ export default function MerchantsScreen() {
         onPick={bulk.pickCategory}
         onClose={() => bulk.setPickOpen(false)}
       />
-      <MerchantCard merchantId={cardId} categories={categories} onClose={() => setCardId(null)} />
     </View>
   );
 }

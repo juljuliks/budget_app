@@ -6,7 +6,7 @@ import type { Db } from '../types';
 import { Currency } from '../fx';
 import { asCurrency, currentYm, monthRange, monthStart, parseYm } from '../plans/months';
 import { convertSpending } from '../plans/spend';
-import { chargeDays, dayOfUnix } from './reads';
+import { dayOfUnix, paymentDays } from './reads';
 import { savingFor } from './schedule';
 import { SavingMonth, savingMonths, ymBefore } from './savingLedger';
 
@@ -69,12 +69,13 @@ export async function savingLedger(v: Saving, until = currentYm(), nowYm = curre
   const planned = new Set((await db.all<{ ym: string }>(
     'SELECT ym FROM plan_months WHERE ym >= ? AND ym <= ?', [v.since_ym, last])).map((r) => r.ym));
   const { year, month } = parseYm(last);
-  const rows = !v.merchant_key ? [] : await db.all<{ id: number; category_id: number | null; kind: string; amount_minor: number; currency: string; occurred_at: number; refund_settled_at: number | null }>(
+  // a payment without a merchant: any spending of its category
+  const rows = v.category_id === null && !v.merchant_key ? [] : await db.all<{ id: number; category_id: number | null; kind: string; amount_minor: number; currency: string; occurred_at: number; refund_settled_at: number | null }>(
     `SELECT id, category_id, kind, amount_minor, currency, occurred_at, refund_settled_at FROM spend_parts
-      WHERE merchant_key = ? AND category_id = ? AND occurred_at >= ? AND occurred_at < ?
-      ORDER BY occurred_at, id`, [v.merchant_key, v.category_id, Math.max(monthStart(v.since_ym), v.created_at), monthRange(year, month)[1]]);
+      WHERE (merchant_key = ? OR ? IS NULL) AND category_id = ? AND occurred_at >= ? AND occurred_at < ?
+      ORDER BY occurred_at, id`, [v.merchant_key, v.merchant_key, v.category_id, Math.max(monthStart(v.since_ym), v.created_at), monthRange(year, month)[1]]);
   const { items } = await convertSpending(rows, v.currency);
-  const ops = v.merchant_key ? (await chargeDays([v.merchant_key], db)).get(v.merchant_key) ?? [] : [];
+  const ops = (await paymentDays([v], db))(v);
   const r = savingMonths({
     since: v.since_ym, last, nowYm, start: v.start_minor, amount: v.amount_minor, planned: (ym) => planned.has(ym), stored,
     dueOf: (ym) => (v.due ? savingFor(v.due, v.period_months, ym, ops, v.created_at ? dayOfUnix(v.created_at) : '') : null),

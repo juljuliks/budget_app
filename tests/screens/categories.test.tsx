@@ -3,7 +3,7 @@ import { act, fireEvent, waitFor } from '@testing-library/react-native';
 import notifee from '@notifee/react-native';
 import SmsBackgroundTask from '../../src/native/SmsBackgroundTask';
 import { navigationRef } from '../../src/shared/navigation/navigation';
-import { longPress, openApp, openSettings, screen, tap, texts, toggleSwitch } from './app';
+import { longPress, openApp, openSettings, screen, tap, texts, toggleSwitch, backToTabs } from './app';
 import { base, category, ops } from '../e2e/seeds';
 import { setPlanAmount } from '../../src/db/plans';
 import { getDb } from '../../src/db';
@@ -61,8 +61,7 @@ describe('4.1–4.2 the list; creating and changing a category', () => {
     await tap('Сохранить');
     expect(await screen.findByText('Категория «🛒 Еда» сохранена')).toBeTruthy();
     expect(await screen.findByText('🛒 Еда')).toBeTruthy();
-    // the stack's header is native (not drawn here): back by the navigation
-    act(() => navigationRef.goBack());
+    backToTabs();
     expect((await screen.findAllByText(/^🛒 Еда · /)).length).toBeGreaterThan(0);
   });
 
@@ -82,22 +81,16 @@ describe('4.1–4.2 the list; creating and changing a category', () => {
     expect(screen.queryByText('SPAR')).toBeNull();
     await tap('Назад');
     expect(await screen.findByText('Разделы')).toBeTruthy();
+    // and its sheet again
+    expect(await screen.findByDisplayValue('Одежда')).toBeTruthy();
   });
 
-  test('"Подписки": a category of its own with "Повторяющиеся платежи" on — renamed, deleted as any; turned off with something saved — asked, "Отменить"', async () => {
+  test('"Подписки": a category of its own — renamed, deleted as any; its repeating payments are not switched here (the plan does)', async () => {
     await tap('📺 Подписки');
-    expect(await screen.findByLabelText('Повторяющиеся платежи')).toBeTruthy();
-    expect(screen.getByLabelText('Повторяющиеся платежи').props.value).toBe(true);
-    expect(screen.getByText(/^У мерчанта в категории — платёж/)).toBeTruthy();
+    expect(await screen.findByDisplayValue('Подписки')).toBeTruthy();
     expect(screen.getByDisplayValue('Подписки').props.editable).not.toBe(false);
     expect(screen.getByText('Удалить категорию')).toBeTruthy();
-    act(() => toggleSwitch(false));
-    await tap('Сохранить');
-    expect(await screen.findByText('Категория «📺 Подписки» сохранена')).toBeTruthy();
-    expect(await (await getDb()).get("SELECT recurring FROM categories WHERE name = 'Подписки'")).toEqual({ recurring: 0 });
-    await tap('Отменить');
-    expect(await screen.findByText('Повторяющиеся платежи снова включены')).toBeTruthy();
-    expect(await (await getDb()).get("SELECT recurring FROM categories WHERE name = 'Подписки'")).toEqual({ recurring: 1 });
+    expect(screen.queryByLabelText('Повторяющиеся платежи')).toBeNull();
   });
 
   test('"Пополнение счёта": a system one too — what it is for, can\'t be deleted', async () => {
@@ -275,7 +268,7 @@ test('4.4.2: merging categories planned differently: how to plan the merged one'
   expect(screen.getByText('Лимит · каждый день')).toBeTruthy();
   expect(screen.getByText('как «Покупки»')).toBeTruthy();
   expect(screen.getByText('как «Одежда»')).toBeTruthy();
-  await tap('Обязательный платёж');
+  await tap('Разовый платёж');
   await tap('Объединить');
   expect(await screen.findByText('Категории объединены в «Покупки & Одежда»')).toBeTruthy();
   expect(await q("SELECT p.limit_minor AS a, p.kind FROM plan_items p JOIN categories c ON c.id = p.category_id WHERE c.name = 'Покупки & Одежда' AND p.ym = '2026-10'"))

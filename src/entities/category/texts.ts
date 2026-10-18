@@ -27,6 +27,3 @@ export function paymentWords(categoryName: string) {
     };
 }
 export type PaymentWords = ReturnType<typeof paymentWords>;
-
-/** Under the switch "Повторяющиеся платежи". */
-export const RECURRING_HINT = 'У мерчанта в категории — платёж: как часто и когда следующее списание. Сумма в плане считается из списаний месяца, редкие можно откладывать каждый месяц.';

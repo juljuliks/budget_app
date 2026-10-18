@@ -11,8 +11,7 @@ import { formStyles } from '@/shared/theme/formStyles';
 import { colors } from '@/shared/theme/theme';
 import { CreateButton } from '@/shared/ui/PlusButton';
 import { CategorySheet } from '@/entities/category';
-import { startCategoryDelete } from '@/features/category-delete';
-import { openCategoryTypes } from '@/shared/navigation/sheets';
+import { openCategory, openCategoryTypes } from '@/shared/navigation/sheets';
 import { onTransactionsChanged } from '@/domain/events';
 import Checkbox from '@/shared/ui/Checkbox';
 import { MergeCategoriesSheet } from '@/features/category-merge';
@@ -26,11 +25,9 @@ export default function CategoriesScreen({ navigation }: Props) {
   const [cats, setCats] = useState<Category[]>([]);
   const [colorOf, setColorOf] = useState<Map<number, string>>(new Map());
   const [types, setTypes] = useState<string[]>([]);
-  // the category sheet: an existing one by id, 'new' for "+", null = closed
-  const [open, setOpenState] = useState<number | 'new' | null>(null);
-  // what the sheet shows: kept while it slides away (it would turn into "Новая категория" mid-animation)
-  const [shown, setShown] = useState<number | 'new'>('new');
-  const setOpen = (v: number | 'new' | null) => { setOpenState(v); if (v !== null) setShown(v); };
+  // "+": a new category's sheet; an existing one opens over the page through ModalHost (openCategory), so that back from
+  // its "Показать операции" shows it again
+  const [creating, setCreating] = useState(false);
   // picked to merge, in the order picked (the first is merged into); empty = not picking
   const [picked, setPicked] = useState<number[]>([]);
   const [merging, setMerging] = useState<number[]>([]);
@@ -46,7 +43,7 @@ export default function CategoriesScreen({ navigation }: Props) {
   useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <CreateButton onPress={() => setOpen('new')} accessibilityLabel="Новая категория" />
+        <CreateButton onPress={() => setCreating(true)} accessibilityLabel="Новая категория" />
       ),
     });
   }, [navigation]);
@@ -82,7 +79,7 @@ export default function CategoriesScreen({ navigation }: Props) {
         // picking: a tap picks / unpicks
         <TouchableOpacity
           style={styles.row}
-          onPress={() => (picking ? pick(item) : setOpen(item.id))}
+          onPress={() => (picking ? pick(item) : openCategory(item.id))}
           onLongPress={() => pick(item)}
           accessibilityRole="button"
           accessibilityState={picking ? { selected: picked.includes(item.id), disabled: isSystemCategory(item) } : undefined}
@@ -115,13 +112,7 @@ export default function CategoriesScreen({ navigation }: Props) {
       )}
       ListEmptyComponent={<Text style={styles.empty}>Категорий нет. Нажмите «Создать».</Text>}
     />
-    <CategorySheet
-      visible={open !== null}
-      categoryId={typeof shown === 'number' ? shown : undefined}
-      onClose={() => setOpen(null)}
-      onSaved={load}
-      onDelete={typeof shown === 'number' ? () => startCategoryDelete(shown, { close: () => setOpen(null), onDeleted: load }) : undefined}
-    />
+    <CategorySheet visible={creating} onClose={() => setCreating(false)} onSaved={load} />
     {picked.length > 1 ? (
       <View style={styles.bottomBar}>
         <Button title={`Объединить (${picked.length})`} onPress={() => setMerging(picked)} />

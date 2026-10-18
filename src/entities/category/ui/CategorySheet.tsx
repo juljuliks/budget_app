@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { categoryLabel } from '@/db/categories';
 import { colorFromHue, distinctHue, freeCategoryColors } from '@/domain/colors';
-import { useRootNavigation } from '@/shared/navigation/navigation';
+import { showOperationsFromSheet } from '@/shared/navigation/navigation';
 import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
 import { SheetActions } from '@/shared/ui/Button';
 import Chip from '@/shared/ui/Chip';
@@ -14,8 +14,7 @@ import { formStyles } from '@/shared/theme/formStyles';
 import { colors } from '@/shared/theme/theme';
 import { NO_SECTION } from '@/shared/lib/strings';
 import { useCategoryForm } from '../model/useCategoryForm';
-import { QUICK_HINT, RECURRING_HINT, systemCategoryHint } from '../texts';
-import SwitchRow from '@/shared/ui/SwitchRow';
+import { QUICK_HINT, systemCategoryHint } from '../texts';
 import CategoryNameField from './CategoryNameField';
 import CategorySummaryRow from './CategorySummaryRow';
 import TypeEditModal from './TypeEditModal';
@@ -44,19 +43,17 @@ type Props = {
  * category's id (assigns it, selects it, moves operations into it) exactly as when an existing one is picked.
  */
 export default function CategorySheet({ visible, categoryId, typeId: initialTypeId, quick, onClose, onSaved, onDelete }: Props) {
-  const navigation = useRootNavigation();
   const {
-    form, isNew, isDirty, isSubmitting, name, emoji, typeId, color, recurring, set, types, loadTypes, taken, systemKind, summary, save,
+    form, isNew, isDirty, isSubmitting, name, emoji, typeId, color, set, types, loadTypes, taken, systemKind, summary, save,
   } = useCategoryForm({ visible, categoryId, initialTypeId, onClose, onSaved });
   const system = systemKind !== null;
   const [typeOpen, setTypeOpen] = useState(false);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
 
+  // the Operations tab filtered by this category; back returns here (and to what the sheet was over)
   function showOperations() {
-    onClose();
-    // the Operations tab filtered by this category, back returns to the categories
-    navigation.navigate({ name: 'Main', params: { screen: 'Transactions', params: { category: categoryId, nonce: Date.now(), from: 'Categories' } } } as never);
+    if (categoryId !== undefined) showOperationsFromSheet({ category: categoryId });
   }
 
   // the type's shades first: a type reads as one color family on the charts
@@ -90,10 +87,6 @@ export default function CategorySheet({ visible, categoryId, typeId: initialType
             Будет выглядеть так: {categoryLabel({ emoji, name: name.trim(), type_name: types.find((t) => t.id === typeId)?.name })}
           </Text>
         ) : null}
-
-        {quick || system ? null : (
-          <SwitchRow label="Повторяющиеся платежи" hint={RECURRING_HINT} on={recurring} onChange={(v) => set('recurring', v)} style={styles.switchRow} />
-        )}
 
         {quick ? (
           <Text style={styles.quickHint}>{QUICK_HINT}</Text>
@@ -135,7 +128,6 @@ export default function CategorySheet({ visible, categoryId, typeId: initialType
 }
 
 const styles = StyleSheet.create({
-  switchRow: { paddingHorizontal: 0, marginTop: 16 },
   sheet: { maxHeight: '92%' },
   content: { paddingHorizontal: 20, paddingBottom: 8 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' },

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { txCategoryLabel } from '@/db/categories';
 import { EXPENSE_KINDS } from '@/db/spending';
-import { CategoryPicker, CategoryPickerModal, CategorySheet } from '@/entities/category';
+import { CategoryLink, CategoryPicker, CategoryPickerModal } from '@/entities/category';
 import { splitParts } from '@/entities/transaction';
 import Chip from '@/shared/ui/Chip';
 import SectionHeading from '@/shared/ui/SectionHeading';
@@ -24,17 +24,15 @@ type Props = {
 
 /**
  * The operation's category: a settled refund says so; a merchant of different categories offers its ones; a categorized
- * one shows its name (a tap — its sheet, to edit it) with "Сменить"; none yet — the categories right away. Spending can be split between categories
- * ("Разделить по категориям"); a split one shows its parts.
+ * one shows its name (a link to its sheet) with "Сменить"; none yet — the categories right away. Spending can be split
+ * between categories ("Разделить по категориям", right of the "Категория" title); a split one shows its parts.
  */
 export default function TransactionCategory({ tx, mixedCats, saving, choose, onSplit }: Props) {
   const [pickerOpen, setPickerOpen] = useState(false);
-  // the category's own sheet (its name, section, color, repeating payments)
-  const [editOpen, setEditOpen] = useState(false);
   const category = txCategoryLabel(tx);
   const parts = splitParts(tx);
   const splitLink = (EXPENSE_KINDS as ReadonlyArray<string>).includes(tx.kind) ? (
-    <TouchableOpacity style={styles.splitLink} onPress={onSplit} disabled={saving}>
+    <TouchableOpacity style={styles.splitLink} onPress={onSplit} disabled={saving} hitSlop={8} accessibilityRole="button">
       <SplitIcon color={colors.accent} size={16} />
       <Text style={styles.changeText}>Разделить по категориям</Text>
     </TouchableOpacity>
@@ -55,15 +53,15 @@ export default function TransactionCategory({ tx, mixedCats, saving, choose, onS
         transferFirst={tx.kind === 'transfer'}
         deposit={tx.kind === 'deposit'}
         disabled={saving}
+        headingRight={splitLink}
       />
-      {splitLink}
       </>
     );
   }
   return (
     <>
       {/* no gear here: category management is in the "Сменить категорию" sheet */}
-      <SectionHeading title="Категория" />
+      <SectionHeading title="Категория" right={splitLink} />
       <View style={styles.currentRow}>
         {mixedCats?.length ? (
           <>
@@ -74,10 +72,7 @@ export default function TransactionCategory({ tx, mixedCats, saving, choose, onS
             {category && !mixedCats.some((c) => c.id === tx.category_id) ? <Chip label={category} selected /> : null}
           </>
         ) : (
-          <TouchableOpacity style={styles.catLink} onPress={() => setEditOpen(true)} accessibilityRole="button" accessibilityLabel={`Категория: ${category}`}>
-            <Text style={styles.catName} numberOfLines={1}>{category}</Text>
-            <Text style={styles.chevron}>›</Text>
-          </TouchableOpacity>
+          tx.category_id !== null && category ? <CategoryLink categoryId={tx.category_id} label={category} style={styles.catName} containerStyle={styles.catLink} /> : null
         )}
         <TouchableOpacity style={styles.changeButton} disabled={saving} onPress={() => setPickerOpen(true)} accessibilityLabel="Сменить категорию">
           <PencilIcon color={colors.accent} size={16} />
@@ -85,7 +80,6 @@ export default function TransactionCategory({ tx, mixedCats, saving, choose, onS
         </TouchableOpacity>
       </View>
       <FundNote txId={tx.id} categoryId={tx.category_id} merchantKey={tx.merchant_key} occurredAt={tx.occurred_at} amount={tx.amount_minor} />
-      {splitLink}
       <CategoryPickerModal
         visible={pickerOpen}
         title="Сменить категорию"
@@ -96,22 +90,20 @@ export default function TransactionCategory({ tx, mixedCats, saving, choose, onS
         onPick={(id) => { setPickerOpen(false); choose(id); }}
         onClose={() => setPickerOpen(false)}
       />
-      {tx.category_id !== null ? <CategorySheet visible={editOpen} categoryId={tx.category_id} onClose={() => setEditOpen(false)} /> : null}
     </>
   );
 }
 
 const styles = StyleSheet.create({
   currentRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
-  catLink: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8 },
-  catName: { flexShrink: 1, fontSize: 18, color: colors.text },
-  chevron: { fontSize: 22, color: colors.accent },
+  catLink: { flex: 1, minWidth: 0, paddingVertical: 8 },
+  catName: { fontSize: 18 },
   changeButton: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16,
     borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed',
   },
   changeText: { fontSize: 15, color: colors.accent },
-  splitLink: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: 12, paddingVertical: 4 },
+  splitLink: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   refundDone: { fontSize: 15, color: colors.income, fontWeight: '600' },
 });

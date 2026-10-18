@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
 import type { CategoryInfo } from '@/entities/category';
+import { showOperationsFromSheet } from '@/shared/navigation/navigation';
 import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
 import { SheetActions } from '@/shared/ui/Button';
 import { useMerchantActions } from './model/useMerchantActions';
@@ -15,8 +15,6 @@ type Props = {
   /** the categories' labels (the merchants screen has them); without, the card loads them */
   categories?: Map<number, CategoryInfo>;
   onClose: () => void;
-  /** "Показать операции" leaves for the operations tab: whatever the card was opened over closes too */
-  onLeave?: () => void;
 };
 
 /**
@@ -24,18 +22,14 @@ type Props = {
  * one or "Без категории", or, of different categories, several (offered for its operations); "Сохранить" says what a
  * change means first (no question for a merchant getting its first category or none).
  */
-export default function MerchantCard({ merchantId, categories: given, onClose, onLeave }: Props) {
-  const navigation = useNavigation();
+export default function MerchantCard({ merchantId, categories: given, onClose }: Props) {
   const card = useMerchantCard(merchantId, given, onClose);
   const { m, mixed, dirty } = card;
   const { saving, save, remove } = useMerchantActions(merchantId, card, onClose);
 
+  // the Transactions tab searching this merchant's name; back returns here (and to what the card was over)
   function showTransactions() {
-    if (!m) return;
-    onClose();
-    onLeave?.();
-    // the Transactions tab searching this merchant's name, back returns to the merchants (`as never`: a nested navigate the root types don't describe)
-    navigation.navigate({ name: 'Main', params: { screen: 'Transactions', params: { query: m.name, nonce: Date.now(), from: 'Merchants' } } } as never);
+    if (m) showOperationsFromSheet({ query: m.name });
   }
 
   return (

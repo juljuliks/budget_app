@@ -1,7 +1,7 @@
 // 6: the plan — the month's budget (what's locked, the share outside the plan, the leftover to savings), the
 // categories in it, adding them, the next month. Today: 15 October 2026.
 import { act, fireEvent, waitFor } from '@testing-library/react-native';
-import { openApp, screen, tap, texts } from './app';
+import { openApp, screen, tap, texts, backToTabs } from './app';
 import { base, planned } from '../e2e/seeds';
 import { getDb } from '../../src/db';
 
@@ -51,6 +51,7 @@ describe('6.1 the month\'s budget', () => {
     for (let d = 1; d <= 15; d++) await db.run("INSERT OR REPLACE INTO fx_rates (date, currency, gel_per_unit) VALUES (?, 'USD', 2.5)", [`2026-10-${String(d).padStart(2, '0')}`]);
     await tap('Настройки');
     await tap('$ USD');
+    backToTabs();
     expect(await screen.findByText('(300 ₾)')).toBeTruthy();
     expect(after('🔒 Отложено сразу', 3)).toEqual(['заблокировано в начале месяца · 10% бюджета', '120 $', '(300 ₾)']);
     expect(after('💰 Сэкономлено', 3)).toEqual(['не запланировано — решите в итогах месяца · 4% бюджета', '44 $', '(110 ₾)']);
@@ -166,7 +167,7 @@ describe('6.3 the categories in the plan', () => {
   test('a row: its limit per rhythm, its share of the budget; the obligatory ones', async () => {
     expect(after('🛒 Продукты', 2)).toEqual(['лимит ≈ 20 ₾ в день · 21% бюджета', '620 ₾']);
     expect(after('☕️ Кафе и рестораны', 2)).toEqual(['лимит ≈ 70 ₾ в неделю · 10% бюджета', '310 ₾']);
-    expect(after('🏠 Дом и коммуналка', 2)).toEqual(['обязательный платёж · 27% бюджета', '800 ₾']);
+    expect(after('🏠 Дом и коммуналка', 2)).toEqual(['разовый платёж · 27% бюджета', '800 ₾']);
     expect(after('👕 Одежда', 2)).toEqual(['крупно, раз в месяц · 13% бюджета', '400 ₾']);
   });
 
@@ -191,7 +192,8 @@ describe('6.3 the categories in the plan', () => {
     await tap('Изменить: 🛒 Продукты');
     await tap('Открыть: 🛒 Продукты');
     expect(await screen.findByDisplayValue('Продукты')).toBeTruthy();
-    expect(screen.getByText('Повторяющиеся платежи')).toBeTruthy();
+    // the repeating payments are turned on and off in the plan only
+    expect(screen.queryByText('Повторяющиеся платежи')).toBeNull();
   });
 
   test('📌: repeated every month; removing such a one asks', async () => {

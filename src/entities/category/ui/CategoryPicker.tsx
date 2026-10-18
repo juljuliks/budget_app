@@ -32,6 +32,8 @@ type Props = {
   showAll?: boolean;
   /** the selected ones first (several picked in a sheet) */
   selectedFirst?: boolean;
+  /** an action right of the title ("Разделить по категориям") */
+  headingRight?: React.ReactNode;
 };
 
 /** categories shown before "Показать ещё" when the picker sits right in a form */
@@ -44,7 +46,7 @@ const COLLAPSED = 8;
  */
 export default function CategoryPicker({
   selectedId, selectedIds, onSelect, allowNone = false, title = 'Категория', transferFirst = false, deposit = false, excludeIds, disabled, showAll = false,
-  selectedFirst = false,
+  selectedFirst = false, headingRight,
 }: Props) {
   // "+": a new category in a sheet, picked right after it is created (as if tapped in the list)
   const [creating, setCreating] = useState(false);
@@ -92,7 +94,7 @@ export default function CategoryPicker({
   return (
     <View>
       {/* no gear: categories are managed only from Настройки (the gear in the tab headers) */}
-      <SectionHeading title={title} />
+      <SectionHeading title={title} right={headingRight} />
       <View style={styles.chips}>
         {noneFirst ? noneChip : null}
         {shown.map((c) => (

@@ -144,6 +144,8 @@ describe('3.2 a merchant\'s card', () => {
     expect(await screen.findByDisplayValue('SPAR')).toBeTruthy();
     await tap('Назад');
     expect(await screen.findByPlaceholderText('Найти мерчанта')).toBeTruthy();
+    // and its card again
+    expect(await screen.findByText('Разные категории')).toBeTruthy();
   });
 
   test('deleting it: its operations stay, without the merchant', async () => {

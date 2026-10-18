@@ -1,10 +1,13 @@
-import React, { ReactNode, useEffect, useState } from 'react';
-import { StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { useIsFocused } from '@react-navigation/native';
 import { appVersion } from '@/native/appInfo';
 import { limitAlertsEnabled, setLimitAlertsEnabled } from '@/notifications/limitAlerts';
-import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
 import { setDisplayCurrency, useDisplayCurrency } from '@/shared/settings/displayCurrency';
 import { useRootNavigation } from '@/shared/navigation/navigation';
+import { openBackup, openLockOptions } from '@/shared/navigation/sheets';
+import { LockSettings } from '@/features/app-lock';
+import { startSmsImport } from '@/features/sms-import';
 import CurrencyPicker from '@/shared/ui/CurrencyPicker';
 import { colors } from '@/shared/theme/theme';
 import { toastFailure } from '@/shared/ui/toast';
@@ -19,26 +22,16 @@ function Row({ label, onPress }: { label: string; onPress: () => void }) {
   );
 }
 
-type Props = {
-  open: boolean;
-  onClose: () => void;
-  /** «Импорт SMS из телефона» (the app passes the import's flow) */
-  onImportSms: () => void;
-  /** «Резервная копия»: save, restore, CSV (the app passes the backup's flow) */
-  onBackup: () => void;
-  /** «Блокировка» (the app passes the lock's section) */
-  lock: ReactNode;
-};
-
 /**
- * Настройки (the gear in the tab headers): a sheet with Валюта — the currency the app converts amounts to, switched right
+ * Настройки (the gear in the tab headers): a page (back — the arrow in its header) with Валюта — the currency the app converts amounts to, switched right
  * here — the limit notifications switch, «Блокировка», then Банки, Мерчанты, Категории, Шаблоны сообщений, Импорт SMS (past bank SMS from the phone) and
- * Резервная копия; the installed version at the bottom.
+ * Резервная копия; the installed version at the bottom. The pages open over it, the sheets (import, backup, the lock) — on it.
  */
-export default function SettingsSheet({ open, onClose, onImportSms, onBackup, lock }: Props) {
+export default function SettingsScreen() {
   const navigation = useRootNavigation();
+  const open = useIsFocused();
   const currency = useDisplayCurrency();
-  const go = (route: 'Merchants' | 'Categories' | 'MessageTemplates' | 'Banks') => { onClose(); navigation.navigate(route); };
+  const go = (route: 'Merchants' | 'Categories' | 'MessageTemplates' | 'Banks') => navigation.navigate(route);
   const [alerts, setAlerts] = useState(true);
   useEffect(() => {
     if (open) limitAlertsEnabled().then(setAlerts).catch(toastFailure('load limit alerts setting', LOAD_FAILED));
@@ -50,9 +43,7 @@ export default function SettingsSheet({ open, onClose, onImportSms, onBackup, lo
   };
 
   return (
-    <BottomSheet visible={open} title="Настройки" onClose={onClose}>
-      {/* with the lock's settings open it is taller than the screen */}
-      <SheetScrollView>
+    <ScrollView style={styles.page}>
         <View style={styles.currency}>
           <Text style={styles.label}>Валюта</Text>
           <Text style={styles.hint}>
@@ -76,22 +67,21 @@ export default function SettingsSheet({ open, onClose, onImportSms, onBackup, lo
             accessibilityLabel="Уведомлять о лимитах"
           />
         </View>
-        {lock}
+        <LockSettings open={open} onOptions={openLockOptions} />
         <Row label="Банки" onPress={() => go('Banks')} />
         <Row label="Мерчанты" onPress={() => go('Merchants')} />
         <Row label="Категории" onPress={() => go('Categories')} />
         <Row label="Шаблоны сообщений" onPress={() => go('MessageTemplates')} />
-        {/* after this sheet has closed: one sheet at a time */}
-        <Row label="Импорт SMS из телефона" onPress={() => { onClose(); setTimeout(onImportSms, 250); }} />
-        <Row label="Резервная копия" onPress={() => { onClose(); setTimeout(onBackup, 250); }} />
+        <Row label="Импорт SMS из телефона" onPress={startSmsImport} />
+        <Row label="Резервная копия" onPress={openBackup} />
         {/* which build is installed: the phone's and the emulator's can differ */}
         <Text style={styles.version}>Версия {appVersion()}</Text>
-      </SheetScrollView>
-    </BottomSheet>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
+  page: { flex: 1, backgroundColor: colors.bg },
   hint: { fontSize: 13, color: colors.muted, marginTop: 2, marginBottom: 10 },
   currency: { paddingHorizontal: 20, paddingVertical: 14, borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
   row: {

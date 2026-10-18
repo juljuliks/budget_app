@@ -44,11 +44,10 @@ async function lockOn(opts: { bio?: boolean } = {}) {
   await toggle('Блокировка', true);
 }
 
-/** Настройки → "Настроить" (the lock on): the settings close, the lock's sheet opens */
+/** Настройки → "Настроить" (the lock on): the lock's sheet opens over the settings page */
 async function openOptions() {
   await tap('Настроить');
   await screen.findByText('Спрашивать после сворачивания');
-  hidden('Уведомлять о лимитах');
 }
 
 /** The app with the lock on already (PIN 1234), the settings open */

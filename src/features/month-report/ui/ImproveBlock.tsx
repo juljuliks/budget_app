@@ -64,7 +64,7 @@ export default function ImproveBlock({ v, currency, onPlan, onSortOut }: Props) 
       ) : null}
       {r.unpaid.length ? (
         <>
-          <Line label="Обязательные не оплачены" strong />
+          <Line label="Платежи не оплачены" strong />
           {r.unpaid.map((c) => <CategoryLine key={String(c.id)} c={c} note="нет операции за месяц" value={minus(c.limit)} valueStyle={styles.bad} />)}
         </>
       ) : null}

@@ -4,9 +4,9 @@ import { isPartOfWindow, NormPart, Norms } from '@/stats/norms';
 
 export type SummaryGroupKey = NormPeriod | 'fixed' | 'outside';
 
-/** The limits' section titles by rhythm (and the obligatory payments, the spending outside the plan). */
+/** The limits' section titles by rhythm (and the payments — one-off and repeating, the spending outside the plan). */
 export const GROUP_TITLES: Record<SummaryGroupKey, string> = {
-  day: 'Дневные', week: 'Недельные', '2weeks': 'Двухнедельные', month: 'Месячные', fixed: 'Обязательные', outside: 'Вне плана',
+  day: 'Дневные', week: 'Недельные', '2weeks': 'Двухнедельные', month: 'Месячные', fixed: 'Платежи', outside: 'Вне плана',
 };
 
 /** One tile under the donut: the categories of one rhythm together (or the spending outside any limit). */

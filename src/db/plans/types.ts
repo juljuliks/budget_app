@@ -2,7 +2,7 @@
 import { Currency } from '../fx';
 
 /**
- * 'limit' = spending cap (progress bar); 'fixed' = fixed payment like rent (paid / not paid); 'fund' = a fund's contribution
+ * 'limit' = spending cap (progress bar); 'fixed' = a one-off payment, a known amount ("Разовый платёж": a gift; paid / not paid); 'fund' = a fund's contribution
  * (funds.ts); 'subs' = a category with "Повторяющиеся платежи", the month's charges (recurringItems.ts).
  */
 export type PlanKind = 'limit' | 'fixed' | 'fund' | 'subs';
@@ -40,6 +40,8 @@ export type PlanItem = {
   /** with repeating payments: those charged by name, those saved up for, their contributions in the plan's currency */
   subs?: {
     names: string[]; saving_names: string[]; saving_minor: number;
+    /** it has its own payment without a merchant (put in from the plan's sheet): the row opens that sheet */
+    own: boolean;
     /** the category's only payment: how often, its charge this month (done) or the next one; day null — none set */
     single?: { period_months: number; day: string | null; done: boolean };
   };

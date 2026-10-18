@@ -1,6 +1,6 @@
 // 9.12: "Банки" — whose SMS and pushes are read; several banks: the balances apart, the "Банк" filter, a label on rows.
 import { act, fireEvent } from '@testing-library/react-native';
-import { openApp, openSettings, screen, tap, texts } from './app';
+import { openApp, openSettings, screen, tap, texts, backToTabs } from './app';
 import { ops } from '../e2e/seeds';
 import { getDb } from '../../src/db';
 import { navigationRef } from '../../src/shared/navigation/navigation';
@@ -29,7 +29,7 @@ test('9.12.1: TBC read, Bank of Georgia off; turned on — "Балансы ка�
   expect(await screen.findByText('Хотя бы один банк должен читаться')).toBeTruthy();
   await toggle('Читать TBC', true);
 
-  act(() => navigationRef.goBack());
+  backToTabs();
   expect(await screen.findByText('Балансы карт')).toBeTruthy();
   expect(await screen.findByText('Банк')).toBeTruthy();
   expect(screen.getByLabelText('Банк: BoG')).toBeTruthy();

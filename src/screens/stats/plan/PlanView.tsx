@@ -32,6 +32,7 @@ import PlanAddModal from './PlanAddModal';
 const editTarget = (item: PlanItem): PlanAmountTarget => ({
   ...item, label: categoryLabel(item),
   fund: item.fund && { target_minor: item.fund.target_minor, due: item.fund.due, start_minor: item.fund.start_minor },
+  merchants: !!item.recurring && !item.subs?.own,
 });
 
 export default function PlanView({ ym, currency }: { ym: string; currency: Currency }) {
@@ -69,7 +70,8 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
         ym, currency, hidden, toShown,
         onOpen: (item) => setEditingItem(editTarget(item)),
         onPin: actions.togglePin,
-        onOpenRecurring: setSubsOpen,
+        // its own payment (from this sheet) — the plan's sheet; the merchants' ones — their list
+        onOpenRecurring: (item) => (item.subs?.own ? setEditingItem(editTarget(item)) : setSubsOpen(item)),
       })}
 
       <BudgetSheet

@@ -36,7 +36,7 @@ export function PlanItemRow({ p, item, ym, currency, hidden, toShown, onOpen, on
         {item.kind === 'fixed' || item.limit_minor || (shownBudget && item.converted_minor) ? (
           <Text style={styles.percent}>
             {[
-              item.kind === 'fixed' ? 'обязательный платёж' : '',
+              item.kind === 'fixed' ? 'разовый платёж' : '',
               // a flexible item's amount per its norm rhythm, e.g. "≈ 46 ₾ в неделю"
               item.kind === 'limit' && !hidden ? normText(item, ym, currency) : '',
               shownBudget && item.converted_minor ? `${percentOf(item.converted_minor, shownBudget)} бюджета` : '',

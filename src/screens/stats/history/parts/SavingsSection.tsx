@@ -45,7 +45,7 @@ export default function SavingsSection({ s, money }: Props) {
         <View style={styles.detailName}>
           <Text style={styles.detailText}>{over ? s.rest.label : `💰 ${s.rest.label}`}</Text>
           <Text style={styles.detailHint}>
-            {over ? 'потрачено больше бюджета' : s.pending ? 'без неоплаченных обязательных' : 'не потрачено к концу месяца'}
+            {over ? 'потрачено больше бюджета' : s.pending ? 'без неоплаченных платежей' : 'не потрачено к концу месяца'}
           </Text>
         </View>
         <Text style={[styles.detailNum, styles.muted]}>{s.rest.plan !== null ? money(s.rest.plan) : '—'}</Text>
@@ -74,7 +74,7 @@ export default function SavingsSection({ s, money }: Props) {
       {s.saved !== null && s.saved !== s.total ? <Extra name="Удалось отложить" value={money(s.saved)} /> : null}
       {s.pending && s.unpaidFixed > 0 ? (
         <Text style={styles.note}>
-          Месяц идёт: из «Сэкономлено» вычтены обязательные платежи, которые ещё не оплачены ({money(s.unpaidFixed)}). Итог — в конце месяца.
+          Месяц идёт: из «Сэкономлено» вычтены платежи, которые ещё не оплачены ({money(s.unpaidFixed)}). Итог — в конце месяца.
         </Text>
       ) : null}
     </View>

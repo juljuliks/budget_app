@@ -93,6 +93,42 @@ describe('6.6 subscriptions', () => {
   });
 });
 
+describe('6.7.9 "Повторяющийся платёж" from the plan', () => {
+  test('a one-off one made a repeating payment: the day offered from the last operation, then it is counted', async () => {
+    await openApp(seed);
+    await tap('Статистика');
+    await tap('План');
+    await tap('Изменить: 🏠 Дом и коммуналка');
+    expect(await screen.findByRole('radio', { name: /Разовый платёж/, checked: true })).toBeTruthy();
+    await tap(screen.getByRole('radio', { name: /Повторяющийся платёж/ }));
+    // RENT on the 3rd plus a month
+    expect(await screen.findByText(/^3 ноября 2026/)).toBeTruthy();
+    await tap('Сохранить');
+    expect(await screen.findByText('каждый месяц · ✓ оплачено 3 окт')).toBeTruthy();
+    expect(await (await getDb()).get("SELECT merchant_key, amount_minor, period_months, due FROM recurring_payments WHERE name = 'Дом и коммуналка'"))
+      .toEqual({ merchant_key: null, amount_minor: 80000, period_months: 1, due: '2026-11-03' });
+    expect(await (await getDb()).get("SELECT recurring FROM categories WHERE name = 'Дом и коммуналка'")).toEqual({ recurring: 1 });
+    // its row opens the plan's sheet again, the payment in it; another kind turns the repeating payments off
+    await tap('🏠 Дом и коммуналка');
+    expect(await screen.findByRole('radio', { name: /Повторяющийся платёж/, checked: true })).toBeTruthy();
+    expect(await screen.findByText(/^3 ноября 2026/)).toBeTruthy();
+    await tap(screen.getByRole('radio', { name: /Разовый платёж/ }));
+    await tap('Сохранить');
+    expect(await screen.findByText('План «🏠 Дом и коммуналка» сохранён, повторяющиеся платежи выключены')).toBeTruthy();
+    expect(await (await getDb()).get("SELECT recurring FROM categories WHERE name = 'Дом и коммуналка'")).toEqual({ recurring: 0 });
+  });
+
+  test('"Подписки": "Выключить повторяющиеся платежи" in its sheet; "Отменить" turns them back on', async () => {
+    await openSubscriptions();
+    await tap('Выключить повторяющиеся платежи');
+    expect(await screen.findByText('Повторяющиеся платежи выключены')).toBeTruthy();
+    expect(await (await getDb()).get("SELECT recurring FROM categories WHERE name = 'Подписки'")).toEqual({ recurring: 0 });
+    await tap('Отменить');
+    expect(await screen.findByText('Повторяющиеся платежи снова включены')).toBeTruthy();
+    expect(await (await getDb()).get("SELECT recurring FROM categories WHERE name = 'Подписки'")).toEqual({ recurring: 1 });
+  });
+});
+
 describe('6.7.8 saving up for a subscription', () => {
   test('a year one: "Откладывать каждый месяц?" — "Да" by default; the plan has the contribution ("копим")', async () => {
     await openSubscriptions();
@@ -130,6 +166,25 @@ describe('6.7.8 saving up for a subscription', () => {
     expect(await (await getDb()).get('SELECT closed_ym, released_minor FROM payment_savings')).toEqual({ closed_ym: '2026-10', released_minor: 1000 });
     await tap('Отменить');
     expect(await screen.findByText('Netflix — снова откладываем')).toBeTruthy();
+  });
+
+  test('the repeating payments turned off with something saved: asked first', async () => {
+    await openApp(async () => {
+      await seed();
+      await setPlanBudget('2026-09', 500000, 'GEL');
+      const id = await savePayment({ merchant_key: 'NETFLIX.COM', name: 'Netflix', amount_minor: 3000, currency: 'GEL', period_months: 12, due: '2027-10-10' });
+      const db = await getDb();
+      await db.run("INSERT INTO payment_savings (id, payment_id, since_ym, start_minor) VALUES (5, ?, '2026-09', 0)", [id]);
+      await db.run("INSERT INTO payment_contributions (saving_id, ym, minor) VALUES (5, '2026-09', 1000)");
+    });
+    await tap('Статистика');
+    await tap('План');
+    await tap('📺 Подписки');
+    await tap('Выключить повторяющиеся платежи');
+    expect(await screen.findByText('Выключить повторяющиеся платежи?')).toBeTruthy();
+    expect(screen.getByText(/^На платежи уже отложено: Netflix — 10/)).toBeTruthy();
+    await tap('Выключить');
+    expect(await screen.findByText('Повторяющиеся платежи выключены')).toBeTruthy();
   });
 });
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { PartView, SPLIT_COLORS } from '@/entities/transaction';
+import { CategoryLink } from '@/entities/category';
 import { plural } from '@/shared/lib/format';
 import { formatMoneyWithCurrency } from '@/shared/lib/money';
 import { PencilIcon } from '@/shared/ui/icons';
@@ -15,7 +16,7 @@ type Props = {
   onEdit: () => void;
 };
 
-/** A split operation's categories in its card: the bar, each part's share and amount; "Изменить" opens the split. */
+/** A split operation's categories in its card: the bar, each part (a link to its category), its share and amount; "Изменить" opens the split. */
 export default function SplitView({ parts, total, currency, onEdit }: Props) {
   return (
     <>
@@ -30,7 +31,7 @@ export default function SplitView({ parts, total, currency, onEdit }: Props) {
       {parts.map((p, i) => (
         <View key={p.category_id} style={[styles.row, i < parts.length - 1 && styles.divider]}>
           <View style={[styles.dot, { backgroundColor: SPLIT_COLORS[i % SPLIT_COLORS.length] }]} />
-          <Text style={styles.name} numberOfLines={1}>{p.label}</Text>
+          <CategoryLink categoryId={p.category_id} label={p.label} containerStyle={styles.name} />
           <Text style={styles.share}>{Math.round((p.amount_minor / total) * 100)}%</Text>
           <Text style={styles.amount}>{formatMoneyWithCurrency(p.amount_minor, currency)}</Text>
         </View>
@@ -47,7 +48,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 11 },
   divider: { borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
   dot: { width: 10, height: 10, borderRadius: 5 },
-  name: { flex: 1, fontSize: 16, color: colors.text },
+  name: { flex: 1 },
   share: { fontSize: 14, color: colors.muted, fontVariant: ['tabular-nums'] },
   amount: { minWidth: 84, textAlign: 'right', fontSize: 16, color: colors.text, fontVariant: ['tabular-nums'] },
 });

@@ -43,10 +43,10 @@ export function periodView({ stats, norms, month, average, range, normLabel, day
   // under the donut: the limits by rhythm, or the average per month for a long period
   const groups = pace && norms ? summaryGroups(norms, range, stats.spent_minor, today, month ?? undefined) : [];
   const limited = groups.filter((g) => g.key !== 'outside');
-  /** "Недельные лимиты · 28 сен – 4 окт", "Обязательные платежи · октябрь" */
+  /** "Недельные лимиты · 28 сен – 4 окт", "Платежи · октябрь" */
   const groupTitle = (key: SummaryGroupKey) => {
     const g = groups.find((x) => x.key === key);
-    const name = key === 'outside' ? GROUP_TITLES.outside : key === 'fixed' ? 'Обязательные платежи' : `${GROUP_TITLES[key]} лимиты`;
+    const name = key === 'outside' ? GROUP_TITLES.outside : key === 'fixed' ? GROUP_TITLES.fixed : `${GROUP_TITLES[key]} лимиты`;
     const byMonth = key === 'month' || key === 'fixed' || (key === 'outside' && !!g?.limit);
     return byMonth ? `${name} · ${monthIn}` : g?.window ? `${name} · ${shortRange(g.window)}` : name;
   };
