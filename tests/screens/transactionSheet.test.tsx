@@ -38,6 +38,14 @@ test('2.7.2–2.7.3: without a category: the categories right away; the merchant
   expect(await ruleOf('GLOVO')).toBe('Кафе и рестораны');
 });
 
+test('2.7.3a: the category\'s name with an arrow opens its sheet (to edit it), "Сменить" on the right picks another', async () => {
+  await openApp(ops);
+  await tap('SPAR');
+  await tap('Категория: 🛒 Продукты');
+  expect(await screen.findByDisplayValue('Продукты')).toBeTruthy();
+  expect(screen.getByText('Повторяющиеся платежи')).toBeTruthy();
+});
+
 describe('2.7.4: the merchant has another category', () => {
   async function pick() {
     // a purchase (a refund just takes its merchant's category): the older one of ZARA

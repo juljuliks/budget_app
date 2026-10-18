@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { txCategoryLabel } from '@/db/categories';
 import { EXPENSE_KINDS } from '@/db/spending';
-import { CategoryPicker, CategoryPickerModal } from '@/entities/category';
+import { CategoryPicker, CategoryPickerModal, CategorySheet } from '@/entities/category';
 import { splitParts } from '@/entities/transaction';
 import Chip from '@/shared/ui/Chip';
 import SectionHeading from '@/shared/ui/SectionHeading';
@@ -24,11 +24,13 @@ type Props = {
 
 /**
  * The operation's category: a settled refund says so; a merchant of different categories offers its ones; a categorized
- * one shows it with "Сменить"; none yet — the categories right away. Spending can be split between categories
+ * one shows its name (a tap — its sheet, to edit it) with "Сменить"; none yet — the categories right away. Spending can be split between categories
  * ("Разделить по категориям"); a split one shows its parts.
  */
 export default function TransactionCategory({ tx, mixedCats, saving, choose, onSplit }: Props) {
   const [pickerOpen, setPickerOpen] = useState(false);
+  // the category's own sheet (its name, section, color, repeating payments)
+  const [editOpen, setEditOpen] = useState(false);
   const category = txCategoryLabel(tx);
   const parts = splitParts(tx);
   const splitLink = (EXPENSE_KINDS as ReadonlyArray<string>).includes(tx.kind) ? (
@@ -71,7 +73,12 @@ export default function TransactionCategory({ tx, mixedCats, saving, choose, onS
             {/* picked elsewhere, not among the merchant's yet (e.g. just now from "Сменить") */}
             {category && !mixedCats.some((c) => c.id === tx.category_id) ? <Chip label={category} selected /> : null}
           </>
-        ) : <Chip label={category!} selected />}
+        ) : (
+          <TouchableOpacity style={styles.catLink} onPress={() => setEditOpen(true)} accessibilityRole="button" accessibilityLabel={`Категория: ${category}`}>
+            <Text style={styles.catName} numberOfLines={1}>{category}</Text>
+            <Text style={styles.chevron}>›</Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity style={styles.changeButton} disabled={saving} onPress={() => setPickerOpen(true)} accessibilityLabel="Сменить категорию">
           <PencilIcon color={colors.accent} size={16} />
           <Text style={styles.changeText}>Сменить</Text>
@@ -89,12 +96,16 @@ export default function TransactionCategory({ tx, mixedCats, saving, choose, onS
         onPick={(id) => { setPickerOpen(false); choose(id); }}
         onClose={() => setPickerOpen(false)}
       />
+      {tx.category_id !== null ? <CategorySheet visible={editOpen} categoryId={tx.category_id} onClose={() => setEditOpen(false)} /> : null}
     </>
   );
 }
 
 const styles = StyleSheet.create({
   currentRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
+  catLink: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8 },
+  catName: { flexShrink: 1, fontSize: 18, color: colors.text },
+  chevron: { fontSize: 22, color: colors.accent },
   changeButton: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16,
