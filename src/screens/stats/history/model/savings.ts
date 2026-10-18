@@ -1,4 +1,4 @@
-// A month's savings in "История": what went there (🔒 "Сразу" + 🌊 "Что осталось"), as the plan names them, and where
+// A month's savings in "История": what went there (🔒 "Отложено сразу" + 💰 "Сэкономлено"), as the plan names them, and where
 // its "Итоги месяца" sent the leftover. While the month is on, the obligatory payments not paid yet aren't leftover: they
 // still have to go.
 import type { HistoryMonth } from '@/db/plans';
@@ -26,8 +26,8 @@ export type MonthSavings = {
   section: boolean;
   /** 🔒 locked at the start, and what's left of it (spending past the rest of the budget takes it) */
   locked: { plan: number; kept: number };
-  /** 🌊 what the plan left (null: nothing), and what is left; over the budget — "Сверх бюджета", below 0 */
-  rest: { label: 'Что осталось' | 'Сверх бюджета'; plan: number | null; value: number };
+  /** 💰 what the plan left (null: nothing), and what is left; over the budget — "Сверх бюджета", below 0 */
+  rest: { label: 'Сэкономлено' | 'Сверх бюджета'; plan: number | null; value: number };
   /** the current month: the obligatory payments not paid yet, taken out of the leftover */
   unpaidFixed: number;
   /** funds deleted this month: what they had saved, in the total ("из копилки «Отпуск»") */
@@ -54,7 +54,7 @@ export function monthSavings(m: HistoryMonth, current: boolean): MonthSavings | 
     pending: current,
     section: locked > 0 || rest === 'savings' || rest === null || released > 0,
     locked: { plan: locked, kept },
-    rest: { label: total < 0 ? 'Сверх бюджета' : 'Что осталось', plan: planned > 0 ? planned : null, value: total - kept - released },
+    rest: { label: total < 0 ? 'Сверх бюджета' : 'Сэкономлено', plan: planned > 0 ? planned : null, value: total - kept - released },
     unpaidFixed,
     released: m.released,
   };

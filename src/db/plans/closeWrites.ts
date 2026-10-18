@@ -17,17 +17,31 @@ async function keepCarry(ym: string, nowYm: string): Promise<void> {
     [c.saved_minor, c.carry.debt_minor, c.carry.plus_minor, c.budget?.currency ?? null, ym]);
 }
 
-/** A fund's contribution of `ym`: what went in (0 — "Нет"), null — unanswered again. */
+/** The funds' parts of `ym` (each fund's in its currency); null — unanswered again. */
+async function writeFunds(ym: string, parts: Array<{ category_id: number; minor: number }> | null, nowYm: string): Promise<void> {
+  const db = await getDb();
+  if (parts === null) await db.run('DELETE FROM fund_confirms WHERE ym = ?', [ym]);
+  for (const p of parts ?? []) {
+    await db.run(
+      'INSERT INTO fund_confirms (category_id, ym, saved_minor) VALUES (?, ?, ?) ON CONFLICT(category_id, ym) DO UPDATE SET saved_minor = excluded.saved_minor',
+      [p.category_id, ym, Math.max(0, p.minor)]);
+  }
+  // what they have changed: the current month's contributions count it
+  await refreshFundItems(nowYm, nowYm);
+}
+
+/** A fund's contribution of `ym` by itself (what went in, 0 — none); null — unanswered again. */
 export async function answerFund(ym: string, categoryId: number, minor: number | null, nowYm = currentYm()): Promise<void> {
   const db = await getDb();
   if (minor === null) await db.run('DELETE FROM fund_confirms WHERE ym = ? AND category_id = ?', [ym, categoryId]);
-  else {
-    await db.run(
-      'INSERT INTO fund_confirms (category_id, ym, saved_minor) VALUES (?, ?, ?) ON CONFLICT(category_id, ym) DO UPDATE SET saved_minor = excluded.saved_minor',
-      [categoryId, ym, Math.max(0, minor)]);
-  }
-  // what it has changed: the current month's contribution counts it
-  await refreshFundItems(nowYm, nowYm);
+  else await writeFunds(ym, [{ category_id: categoryId, minor }], nowYm);
+  if (minor === null) await refreshFundItems(nowYm, nowYm);
+  await keepCarry(ym, nowYm);
+}
+
+/** "Изменить распределение": the funds' parts of what was put aside by hand (the rest is the savings'). */
+export async function setSplit(ym: string, parts: Array<{ category_id: number; minor: number }>, nowYm = currentYm()): Promise<void> {
+  await writeFunds(ym, parts, nowYm);
   await keepCarry(ym, nowYm);
 }
 
@@ -40,6 +54,9 @@ export async function answerClose(ym: string, patch: Partial<CloseAnswers>, nowY
   const db = await getDb();
   await db.run('INSERT OR IGNORE INTO month_closes (ym) VALUES (?)', [ym]);
   await db.run(`UPDATE month_closes SET ${keys.map((k) => `${k} = ?`).join(', ')} WHERE ym = ?`, [...keys.map((k) => patch[k] ?? null), ym]);
+  // what was put aside laid out again by itself (a split by hand is gone with a new answer)
+  const c = await monthClose(ym, nowYm);
+  await writeFunds(ym, c.auto ? c.auto.funds : null, nowYm);
   await keepCarry(ym, nowYm);
 }
 

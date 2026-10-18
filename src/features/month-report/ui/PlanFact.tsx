@@ -29,7 +29,7 @@ function Row({ name, plan, fact, money, sub, strong }: {
 }
 
 /**
- * The month's savings and funds, planned and put aside, as its "Итоги месяца" said: 🔒 "Сразу", 🌊 "Что осталось" (with
+ * The month's savings and funds, planned and put aside, as its "Итоги месяца" said: 🔒 "Отложено сразу", 💰 "Сэкономлено" (with
  * what it was made of), each fund's contribution, the total. The leftover moved or kept as is: a line apart. Not closed:
  * the plan, "Итоги не подведены" and "Подвести итоги ›".
  */
@@ -45,10 +45,10 @@ export default function PlanFact({ v, pf, onCloseMonth }: Props) {
         <Text style={[styles.num, styles.head]}>План</Text>
         <Text style={[styles.num, styles.head]}>Факт</Text>
       </View>
-      {pf.locked ? <Row name="🔒 Сразу" plan={pf.locked.plan} fact={pf.locked.fact} money={money} /> : null}
+      {pf.locked ? <Row name="🔒 Отложено сразу" plan={pf.locked.plan} fact={pf.locked.fact} money={money} /> : null}
       {restIn ? (
         <>
-          <Row name="🌊 Что осталось" plan={pf.rest!.plan} fact={pf.rest!.fact} money={money} />
+          <Row name="💰 Сэкономлено" plan={pf.rest!.plan} fact={pf.rest!.fact} money={money} />
           {f ? (
             <>
               <Row sub name="Свободно в плане" plan={f.undistributed} money={money} />
@@ -65,7 +65,7 @@ export default function PlanFact({ v, pf, onCloseMonth }: Props) {
       <Row strong name="Всего" plan={pf.plan} fact={pf.fact} money={money} />
       {pf.rest && !restIn ? (
         <View style={styles.apart}>
-          <Text style={styles.name}>{pf.rest.choice === 'next' ? `🌊 Что осталось — перенесено на ${next}` : '🌊 Что осталось — сэкономлено, не отложено'}</Text>
+          <Text style={styles.name}>{pf.rest.choice === 'next' ? `💰 Сэкономлено — перенесено на ${next}` : '💰 Сэкономлено — оставлено как есть, не отложено'}</Text>
           <Masked style={styles.num}>{money(pf.rest.plan)}</Masked>
         </View>
       ) : null}

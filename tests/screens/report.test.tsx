@@ -32,14 +32,14 @@ describe('7.2 the history', () => {
     await tap('Сентябрь 2026');
     await screen.findByText('Всего в сбережения');
     const sep = () => { const t = texts(); const i = t.indexOf('Сбережения'); return t.slice(i, i + 10); };
-    expect(sep()).toEqual(['Сбережения', 'План', 'Отложено', '🌊 Что осталось', 'не потрачено к концу месяца', '1 300 ₾', '1 150 ₾', 'Всего в сбережения', '', '1 150 ₾']);
+    expect(sep()).toEqual(['Сбережения', 'План', 'Отложено', '💰 Сэкономлено', 'не потрачено к концу месяца', '1 300 ₾', '1 150 ₾', 'Всего в сбережения', '', '1 150 ₾']);
     await tap('Сентябрь 2026');
     await tap('Октябрь 2026');
     await screen.findByText('Пока в сбережения');
     const oct = texts().slice(texts().indexOf('Сбережения'));
-    expect(oct.slice(0, 8)).toEqual(['Сбережения', 'План', 'Сейчас', '🔒 Сразу', 'в начале месяца', '300 ₾', '300 ₾', '🌊 Что осталось']);
+    expect(oct.slice(0, 8)).toEqual(['Сбережения', 'План', 'Сейчас', '🔒 Отложено сразу', 'в начале месяца', '300 ₾', '300 ₾', '💰 Сэкономлено']);
     expect(oct).toContain('Пока в сбережения');
-    expect(oct.some((t) => /^Месяц идёт: из «Что осталось» вычтены обязательные платежи, которые ещё не оплачены \(30 ₾\)/.test(t))).toBe(true);
+    expect(oct.some((t) => /^Месяц идёт: из «Сэкономлено» вычтены обязательные платежи, которые ещё не оплачены \(30 ₾\)/.test(t))).toBe(true);
   });
 
   test('the report only for a month that is over and had a plan', async () => {
@@ -65,7 +65,7 @@ describe('7.1 the report', () => {
 
   test('what was put aside, a year of it, and where it came from (adding up to it): the plan, no fact until its "Итоги"', async () => {
     expect(inReport('В сбережения', 2)).toEqual(['1 150 ₾', '≈ 13 800 ₾ за год в таком темпе']);
-    expect(after('🌊 Что осталось', 2)).toEqual(['1 150 ₾', '—']);
+    expect(after('💰 Сэкономлено', 2)).toEqual(['1 150 ₾', '—']);
     expect(after('Свободно в плане', 1)).toEqual(['1 300 ₾']);
     expect(after('Категории плана потратили меньше', 1)).toEqual(['50 ₾']);
     expect(after('Вне плана сверх доли', 1)).toEqual(['−200 ₾']);

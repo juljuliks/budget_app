@@ -38,7 +38,7 @@ test('the budget\'s split: planned, outside the plan, savings (🔒 and what the
   expect(v.parts.map((p) => [p.label, p.value, p.note])).toEqual([['План', 31000, '31%'], ['Вне плана', 20000, '20%'], ['Сбережения', 49000, '49%']]);
   const s = view([item({})], budget({ locked_minor: 10000 }));
   expect(s.parts.find((p) => p.key === 'free')).toMatchObject({ label: 'Сбережения', value: 69000, note: '69%' });
-  expect(s.systemGroups.map((g) => [g.title, g.rows.map((r) => r.name)])).toEqual([['Сбережения', ['🔒 Сразу', '🌊 Что осталось']]]);
+  expect(s.systemGroups.map((g) => [g.title, g.rows.map((r) => r.name)])).toEqual([['Сбережения', ['🔒 Отложено сразу', '💰 Сэкономлено']]]);
   expect(s.systemGroups[0].rows[1].note).toBe('не запланировано — решите в итогах месяца');
 });
 

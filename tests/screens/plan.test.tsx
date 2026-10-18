@@ -40,8 +40,8 @@ describe('6.1 the month\'s budget', () => {
     expect(after('Вне плана', 2)).toEqual(['10%', '300 ₾']);
     // the overspend took 130 of them (see the next test): what is left, by how much
     expect(after('Сбережения', 4)).toEqual(['14%', '(−130 ₾', ')', '410 ₾']);
-    expect(after('🔒 Сразу', 2)).toEqual(['заблокировано в начале месяца · 10% бюджета', '300 ₾']);
-    expect(after('🌊 Что осталось', 3)).toEqual(['не запланировано — решите в итогах месяца · 4% бюджета', '110 ₾', '(−130 ₾']);
+    expect(after('🔒 Отложено сразу', 2)).toEqual(['заблокировано в начале месяца · 10% бюджета', '300 ₾']);
+    expect(after('💰 Сэкономлено', 3)).toEqual(['не запланировано — решите в итогах месяца · 4% бюджета', '110 ₾', '(−130 ₾']);
     expect(after('🎲 Траты вне плана', 2)).toEqual(['категории без плана и без категории · 10% бюджета', '300 ₾']);
   });
 
@@ -52,8 +52,8 @@ describe('6.1 the month\'s budget', () => {
     await tap('Настройки');
     await tap('$ USD');
     expect(await screen.findByText('(300 ₾)')).toBeTruthy();
-    expect(after('🔒 Сразу', 3)).toEqual(['заблокировано в начале месяца · 10% бюджета', '120 $', '(300 ₾)']);
-    expect(after('🌊 Что осталось', 3)).toEqual(['не запланировано — решите в итогах месяца · 4% бюджета', '44 $', '(110 ₾)']);
+    expect(after('🔒 Отложено сразу', 3)).toEqual(['заблокировано в начале месяца · 10% бюджета', '120 $', '(300 ₾)']);
+    expect(after('💰 Сэкономлено', 3)).toEqual(['не запланировано — решите в итогах месяца · 4% бюджета', '44 $', '(110 ₾)']);
   });
 
   test('savings the overspend took part of: a tap on its line — by how much, what took it; a category\'s tap opens its plan', async () => {
@@ -133,7 +133,7 @@ describe('6.2 locked for savings, the share outside the plan, the leftover', () 
     await tap('Сохранить');
     expect(await screen.findByText('Бюджет месяца сохранён')).toBeTruthy();
     expect((await month())!.l).toBe(0);
-    await waitFor(() => expect(screen.queryByText('🔒 Сразу')).toBeNull());
+    await waitFor(() => expect(screen.queryByText('🔒 Отложено сразу')).toBeNull());
   });
 
   test('an amount of one\'s own instead of the %', async () => {

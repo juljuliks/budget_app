@@ -16,3 +16,4 @@ export * from './closeWrites';
 export * from './addable';
 export * from './subscriptionItems';
 export * from './subscriptionBudget';
+export * from './closeSplit';

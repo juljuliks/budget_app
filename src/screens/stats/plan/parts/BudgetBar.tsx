@@ -15,7 +15,7 @@ export default function BudgetBar({ p }: { p: PlanView }) {
   // where the locked part sits in the bar: its 🔒 is drawn over it, taller than the bar
   const [lockBox, setLockBox] = useState<{ x: number; width: number } | null>(null);
   const { locked, free, timing, less } = p;
-  // what the overspend took of the savings: red between 🌊 and 🔒, out of both
+  // what the overspend took of the savings: red between 💰 and 🔒, out of both
   const freeNow = less ? less.free.now : free ?? 0;
   const lockedNow = less ? less.locked.now : locked;
   const eaten = less ? less.was - less.now : 0;

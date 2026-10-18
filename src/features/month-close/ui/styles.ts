@@ -20,6 +20,16 @@ export const styles = StyleSheet.create({
   fund: { gap: 6 },
   fundRule: { borderBottomWidth: 1, borderBottomColor: colors.fundTrack, paddingBottom: 10 },
   hint: { fontSize: 13, color: colors.muted, textAlign: 'center', marginTop: 12 },
+  link: { fontSize: 14, color: colors.accent },
+  // "Разложим так": a numbered row of the split
+  splitRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 7, borderTopWidth: 1, borderTopColor: colors.savingsRule },
+  splitNum: { width: 16, fontSize: 12, color: colors.muted, textAlign: 'center' },
+  splitBody: { flex: 1, minWidth: 0 },
+  splitName: { fontSize: 15, color: colors.text },
+  splitNote: { fontSize: 12.5, color: colors.muted, marginTop: 1 },
+  splitValueBox: { alignItems: 'flex-end' },
+  splitValue: { fontSize: 15, fontWeight: '500', color: colors.text, fontVariant: ['tabular-nums'] },
+  splitOf: { fontSize: 12, color: colors.muted },
   actions: { paddingHorizontal: 16 },
   empty: { fontSize: 15, color: colors.muted, paddingHorizontal: 20, paddingVertical: 12 },
 });

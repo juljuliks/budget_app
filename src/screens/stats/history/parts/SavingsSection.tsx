@@ -16,7 +16,7 @@ function Extra({ name, value }: { name: string; value: string }) {
 }
 
 /**
- * The opened month's "Сбережения", under its categories: 🔒 "Сразу" and 🌊 "Что осталось" against the plan, and what
+ * The opened month's "Сбережения", under its categories: 🔒 "Отложено сразу" and 💰 "Сэкономлено" against the plan, and what
  * they make; a fund deleted that month gives what it had saved. The current month: "Сейчас", the obligatory payments not
  * paid yet already out of the leftover.
  */
@@ -32,7 +32,7 @@ export default function SavingsSection({ s, money }: Props) {
       {s.locked.plan > 0 ? (
         <View style={styles.detailRow}>
           <View style={styles.detailName}>
-            <Text style={styles.detailText}>🔒 Сразу</Text>
+            <Text style={styles.detailText}>🔒 Отложено сразу</Text>
             <Text style={styles.detailHint}>
               {s.locked.kept < s.locked.plan ? `${money(s.locked.plan - s.locked.kept)} ушло на траты` : 'в начале месяца'}
             </Text>
@@ -43,7 +43,7 @@ export default function SavingsSection({ s, money }: Props) {
       ) : null}
       <View style={styles.detailRow}>
         <View style={styles.detailName}>
-          <Text style={styles.detailText}>{over ? s.rest.label : `🌊 ${s.rest.label}`}</Text>
+          <Text style={styles.detailText}>{over ? s.rest.label : `💰 ${s.rest.label}`}</Text>
           <Text style={styles.detailHint}>
             {over ? 'потрачено больше бюджета' : s.pending ? 'без неоплаченных обязательных' : 'не потрачено к концу месяца'}
           </Text>
@@ -74,7 +74,7 @@ export default function SavingsSection({ s, money }: Props) {
       {s.saved !== null && s.saved !== s.total ? <Extra name="Удалось отложить" value={money(s.saved)} /> : null}
       {s.pending && s.unpaidFixed > 0 ? (
         <Text style={styles.note}>
-          Месяц идёт: из «Что осталось» вычтены обязательные платежи, которые ещё не оплачены ({money(s.unpaidFixed)}). Итог — в конце месяца.
+          Месяц идёт: из «Сэкономлено» вычтены обязательные платежи, которые ещё не оплачены ({money(s.unpaidFixed)}). Итог — в конце месяца.
         </Text>
       ) : null}
     </View>

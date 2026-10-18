@@ -10,7 +10,7 @@ const month = (m: Partial<HistoryMonth>): HistoryMonth => ({
 test('🔒 and the leftover going to savings: "В сбережения" is both', () => {
   expect(monthSavings(month({}), false)).toMatchObject({
     label: 'В сбережения', total: 310600, pending: false, section: true,
-    locked: { plan: 100000, kept: 100000 }, rest: { label: 'Что осталось', plan: 481000, value: 210600 },
+    locked: { plan: 100000, kept: 100000 }, rest: { label: 'Сэкономлено', plan: 481000, value: 210600 },
   });
 });
 
@@ -33,7 +33,7 @@ test('a month over not closed: "Итоги не подведены", the leftove
 
 test('the spending took part of 🔒, then went past the budget', () => {
   expect(monthSavings(month({ spent_minor: 981000 }), false)).toMatchObject({
-    total: 60000, locked: { plan: 100000, kept: 60000 }, rest: { label: 'Что осталось', value: 0 },
+    total: 60000, locked: { plan: 100000, kept: 60000 }, rest: { label: 'Сэкономлено', value: 0 },
   });
   expect(monthSavings(month({ spent_minor: 1073000 }), false)).toMatchObject({
     label: 'Перерасход', total: -32000, locked: { kept: 0 }, rest: { label: 'Сверх бюджета', value: -32000 },

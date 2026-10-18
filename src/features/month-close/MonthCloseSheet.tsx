@@ -8,8 +8,8 @@ import Loading from '@/shared/ui/Loading';
 import StepsNav from '@/shared/ui/StepsNav';
 import { currentStep, monthWords, STEP_NAMES, stepAnswered } from './model/closeTexts';
 import { useMonthClose } from './model/useMonthClose';
-import StepFunds from './ui/StepFunds';
 import StepOver from './ui/StepOver';
+import SplitSheet from './ui/SplitSheet';
 import StepSavings from './ui/StepSavings';
 import { styles } from './ui/styles';
 
@@ -17,14 +17,15 @@ import { styles } from './ui/styles';
 const NEXT_SHEET_MS = 250;
 
 /**
- * "Итоги месяца" (sheets.ts → openMonthClose): a month over, step by step — Копилки → Перерасход → Сбережения, each one
- * only if it has a question. "Далее" once the step is answered, "‹ Назад", "Подвести позже" (the answers are kept). The
+ * "Итоги месяца" (sheets.ts → openMonthClose): a month over, step by step — Перерасход → Сбережения ("Сколько удалось
+ * отложить?" and how it is laid out over the funds and the savings), each one only if it has a question. "Далее" once the step is answered, "‹ Назад", "Подвести позже" (the answers are kept). The
  * last step: "Отчёт за сентябрь" once everything is answered — the month is closed and its report opens.
  */
 export default function MonthCloseSheet({ ym, onClose }: { ym: string | null; onClose: () => void }) {
-  const { close: c, failed, load, fund, answer, finish } = useMonthClose(ym);
+  const { close: c, failed, load, split, answer, finish } = useMonthClose(ym);
   const [wanted, setWanted] = useState<CloseStep | null>(null);
-  useEffect(() => setWanted(null), [ym]);
+  const [splitOpen, setSplitOpen] = useState(false);
+  useEffect(() => { setWanted(null); setSplitOpen(false); }, [ym]);
   const words = ym ? monthWords(ym) : null;
   const step = c ? currentStep(c.steps, wanted) : null;
   const at = c && step ? c.steps.indexOf(step) : -1;
@@ -37,6 +38,7 @@ export default function MonthCloseSheet({ ym, onClose }: { ym: string | null; on
   }
 
   return (
+    <>
     <BottomSheet visible={ym !== null} onClose={onClose} title={words ? `Итоги · ${words.title}` : ''}>
       {!c || !words ? <Loading inline failed={failed} onRetry={load} /> : (
         <>
@@ -45,9 +47,8 @@ export default function MonthCloseSheet({ ym, onClose }: { ym: string | null; on
               onBack={at > 0 ? () => setWanted(c.steps[at - 1]) : undefined} />
           ) : null}
           <SheetScrollView contentContainerStyle={styles.content}>
-            {step === 'funds' ? <StepFunds c={c} onAnswer={fund} /> : null}
             {step === 'over' ? <StepOver c={c} onAnswer={answer} /> : null}
-            {step === 'savings' ? <StepSavings c={c} onAnswer={answer} /> : null}
+            {step === 'savings' ? <StepSavings c={c} onAnswer={answer} onSplit={() => setSplitOpen(true)} /> : null}
             {!step ? <Text style={styles.empty}>{`Вопросов о ${words.prep} нет`}</Text> : null}
           </SheetScrollView>
           <View style={styles.actions}>
@@ -67,5 +68,9 @@ export default function MonthCloseSheet({ ym, onClose }: { ym: string | null; on
         </>
       )}
     </BottomSheet>
+    {/* over it: a sibling (each sheet its own window) */}
+    <SplitSheet c={c} visible={ym !== null && splitOpen} onClose={() => setSplitOpen(false)}
+      onSave={(parts) => { split(parts).then(() => setSplitOpen(false)); }} />
+    </>
   );
 }

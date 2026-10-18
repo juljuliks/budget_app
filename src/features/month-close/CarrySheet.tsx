@@ -42,8 +42,7 @@ export default function CarrySheet({ fromYm, kind, onClose }: Props) {
   const field: keyof CloseAnswers = kind === 'plus' ? 'rest_choice' : c?.answers.over_cover === 'savings' ? 'over_rest_cover' : 'over_cover';
   const options: Option[] = !c || !b || !m || !next ? [] : kind === 'plus' ? [
     { value: 'next', title: `Перенести на ${next.nom}`, note: `как сейчас: бюджет ${next.gen} + ${money(b.rest_minor)}` },
-    { value: 'savings', title: 'В сбережения', note: `в сбережения ${m.gen} — спросим, удалось ли отложить` },
-    { value: 'keep', title: 'Оставить как есть', note: 'в «Истории» — сэкономлено, никуда не относим' },
+    { value: 'savings', title: 'В сбережения', note: `💰 «Сэкономлено» ${m.gen} — спросим, удалось ли отложить` },
   ] : [
     { value: 'next', title: `Из бюджета ${next.gen}`, note: `как сейчас: вычтен из бюджета ${next.gen}` },
     ...(field === 'over_cover' && b.locked_minor > 0 ? [{

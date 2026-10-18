@@ -49,7 +49,7 @@ export default function ReportHero({ v, onCloseMonth }: { v: ReportView; onClose
       {/* where it comes from: the parts add up to it */}
       {r.savedFrom && !pf ? (
         <View style={styles.from}>
-          {r.savedFrom.locked > 0 ? <FromLine label="🔒 Сразу" v={r.savedFrom.locked} money={money} /> : null}
+          {r.savedFrom.locked > 0 ? <FromLine label="🔒 Отложено сразу" v={r.savedFrom.locked} money={money} /> : null}
           {/* not distributed is money the plan left without a purpose: worth planning, so red */}
           <FromLine label="Свободно в плане" v={r.savedFrom.undistributed} money={money} bad />
           <FromLine label={r.savedFrom.plan >= 0 ? 'Категории плана потратили меньше' : 'Категории плана потратили больше'} v={r.savedFrom.plan} money={money} />

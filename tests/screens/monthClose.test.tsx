@@ -1,4 +1,5 @@
-// 6.6 "Итоги месяца": the sheet step by step — Копилки → Перерасход → Сбережения, "Далее" once answered, "‹ Назад",
+// 6.6 "Итоги месяца": the sheet step by step — Перерасход → Сбережения ("Сколько удалось отложить?" laid out over the
+// funds, 🔒 and 💰), "Далее" once answered, "‹ Назад",
 // "Подвести позже" (the answers kept), "Отчёт за сентябрь" closes the month. Today: 15 October 2026; the seed's September:
 // a budget of 3 000 ₾, 1 850 ₾ spent.
 import { act, waitFor } from '@testing-library/react-native';
@@ -6,7 +7,7 @@ import { getSetting } from '../../src/db/settings';
 import { openApp, screen, tap, texts } from './app';
 import { buy, category, on, planned } from '../e2e/seeds';
 import { getDb } from '../../src/db';
-import { answerClose, answerFund, finishClose, setFund, setPlanBudget } from '../../src/db/plans';
+import { answerClose, finishClose, setFund, setPlanBudget, setSplit } from '../../src/db/plans';
 import { openMonthClose } from '../../src/shared/navigation/sheets';
 
 const m = (s: string) => s.replace(/ /g, ' ');
@@ -19,25 +20,28 @@ async function open() {
 }
 
 describe('6.6 month close', () => {
-  test('no overspend: where the leftover goes, "Удалось отложить?", then "Отчёт за сентябрь" closes it and opens the report', async () => {
+  test('no overspend: what the budget left, "Сколько удалось отложить?", how it is laid out; "Отчёт за сентябрь" closes it', async () => {
     await openApp(planned);
     await open();
     expect(screen.getByText('Шаг 1 из 1 · Сбережения')).toBeTruthy();
-    expect(screen.getAllByText('🌊 Что осталось')).toHaveLength(2);
-    expect(screen.getByRole('radio', { name: 'В сбережения' }).props.accessibilityState).toMatchObject({ checked: true });
-    expect(screen.getByText('Перенести на октябрь')).toBeTruthy();
+    expect(screen.getByText('Осталось от бюджета')).toBeTruthy();
+    expect(screen.getByText('Сколько удалось отложить?')).toBeTruthy();
+    expect(screen.getByText('Разложим так')).toBeTruthy();
+    expect(screen.getByText('💰 Сэкономлено')).toBeTruthy();
+    expect(screen.getByText(/Перенести на октябрь$/)).toBeTruthy();
     expect(screen.getByText('Отчёт откроется, когда ответите на вопросы выше')).toBeTruthy();
     expect(disabled('Отчёт за сентябрь')).toBe(true);
 
     await tap(m('Да, 1 150 ₾'));
     expect(await screen.findByText(m('✓ Отложено 1 150 ₾'))).toBeTruthy();
+    expect(screen.getByText('Разложили')).toBeTruthy();
     expect(disabled('Отчёт за сентябрь')).toBe(false);
     await tap('Отчёт за сентябрь');
     expect(await screen.findByText('Отчёт · Сентябрь 2026')).toBeTruthy();
     expect(await closedAt()).not.toBeNull();
   });
 
-  test('a fund, an overspend bigger than 🔒, the savings: "Нет" lowers the overspend, "Назад", "Подвести позже" keeps the answers', async () => {
+  test('a fund, an overspend bigger than 🔒: the overspend, then one sum laid out — the fund first; by hand; "Назад", "Подвести позже" keeps the answers', async () => {
     await openApp(async () => {
       await planned();
       const holiday = await category('Отпуск', '🏖');
@@ -47,37 +51,35 @@ describe('6.6 month close', () => {
       await buy('BOLT', 1500, on(20, 12, 1), taxi);
     });
     await open();
-    // 🔒 goes to the overspend by default: nothing left for savings — two steps
-    expect(screen.getByText('Шаг 1 из 2 · Копилки')).toBeTruthy();
-    expect(screen.getByText('🏖 Отпуск · взнос')).toBeTruthy();
-    expect(disabled('Далее')).toBe(true);
-    await tap('Нет');
-    expect(await screen.findByText('✕ Не отложено')).toBeTruthy();
-    expect(screen.getByText(m('300 ₾ не потрачены — пойдут в остаток сентября. Следующие взносы станут больше'))).toBeTruthy();
+    // 3 350 spent and the fund's 300, 2 500 for spending: 1 150 over, 🔒 500 covers part of it
+    expect(screen.getByText('Шаг 1 из 2 · Перерасход')).toBeTruthy();
+    expect(screen.getByText(m('Из сбережений сентября — 500 ₾ из 1 150 ₾'))).toBeTruthy();
+    expect(screen.getByText(m('Остальные 650 ₾?'))).toBeTruthy();
+    await tap(m('Из бюджета октября — все 1 150 ₾'));
     await tap('Далее');
 
-    // 3 350 spent, 2 500 for spending: 850 over, 🔒 500 covers part of it
-    expect(await screen.findByText('Шаг 2 из 2 · Перерасход')).toBeTruthy();
-    expect(screen.getByText(m('850 ₾'))).toBeTruthy();
-    expect(screen.getByText(m('Из сбережений сентября — 500 ₾ из 850 ₾'))).toBeTruthy();
-    expect(screen.getByText(m('Остальные 350 ₾?'))).toBeTruthy();
-    await tap(m('Из бюджета октября — все 850 ₾'));
-    // 🔒 kept whole: the savings step comes
-    expect(await screen.findByText('Шаг 2 из 3 · Перерасход')).toBeTruthy();
-    await tap('Далее');
-
-    expect(await screen.findByText('Шаг 3 из 3 · Сбережения')).toBeTruthy();
+    // 🔒 kept whole: the fund's 300 and 🔒 500 asked
+    expect(await screen.findByText('Шаг 2 из 2 · Сбережения')).toBeTruthy();
+    expect(screen.getByText(m('Да, 800 ₾'))).toBeTruthy();
     await tap('Другая сумма');
-    act(() => { screen.getByLabelText('Отложено в сбережения').props.onChangeText('400'); });
+    act(() => { screen.getByLabelText('Отложено').props.onChangeText('400'); });
     await tap('Готово');
     expect(await screen.findByText(m('✓ Отложено 400 ₾'))).toBeTruthy();
+    // the fund first, 🔒 the rest
+    expect(screen.getByText(m('300 ₾ ✓'))).toBeTruthy();
+    expect(screen.getByText(m('из 500 ₾'))).toBeTruthy();
+
+    await tap('Изменить распределение ›');
+    expect(await screen.findByText('Распределение · сентябрь')).toBeTruthy();
+    act(() => { screen.getByLabelText('Отложено в «🏖 Отпуск»').props.onChangeText('100'); });
+    await tap('Сохранить');
+    await waitFor(async () => expect(await (await getDb()).get("SELECT saved_minor FROM fund_confirms WHERE ym = '2026-09'")).toEqual({ saved_minor: 10000 }));
+    expect(await screen.findByText(/^не хватило 200/)).toBeTruthy();
 
     await tap('‹ Назад');
-    expect(await screen.findByText('Шаг 2 из 3 · Перерасход')).toBeTruthy();
+    expect(await screen.findByText('Шаг 1 из 2 · Перерасход')).toBeTruthy();
     await tap('Подвести позже');
     expect(await closedAt()).toBeNull();
-    await open();
-    expect(screen.getByText('✕ Не отложено')).toBeTruthy();
     expect(await (await getDb()).get("SELECT over_cover, saved, saved_minor FROM month_closes WHERE ym = '2026-09'"))
       .toEqual({ over_cover: 'next', saved: 'other', saved_minor: 40000 });
   });
@@ -96,8 +98,11 @@ describe('6.6 month close', () => {
     await tap('Изменить: ➕ Остаток сентября');
     expect(await screen.findByText('Куда остаток?')).toBeTruthy();
     expect(screen.getByRole('radio', { name: 'Перенести на октябрь' }).props.accessibilityState).toMatchObject({ checked: true });
-    await tap('Оставить как есть');
+    await tap('В сбережения');
     await tap('Сохранить');
+    // to savings: what was put aside is asked — September's "Итоги" open
+    expect(await screen.findByText('Итоги · Сентябрь 2026')).toBeTruthy();
+    await tap('Подвести позже');
     expect(await screen.findByText(m('3 000 ₾'))).toBeTruthy();
     expect(screen.queryByText('Перенос из сентября')).toBeNull();
   });
@@ -131,7 +136,7 @@ describe('6.6 month close', () => {
     expect(screen.getByText(m('1 150 ₾ ?'))).toBeTruthy();
     await tap('Подвести итоги ›');
     expect(await screen.findByText('Итоги · Сентябрь 2026')).toBeTruthy();
-    await tap('Перенести на октябрь');
+    await tap(/Перенести на октябрь$/);
     await tap('Отчёт за сентябрь');
     expect(await screen.findByText('Отчёт · Сентябрь 2026')).toBeTruthy();
     expect(await closedAt()).not.toBeNull();
@@ -145,22 +150,23 @@ describe('6.6 month close', () => {
       await planned();
       const holiday = await category('Отпуск', '🏖');
       await setFund('2026-09', holiday, { target_minor: 150000, currency: 'GEL', due: '2027-01-31', start_minor: 0 }, '2026-09');
-      await answerFund('2026-09', holiday, 20000);
       await answerClose('2026-09', { rest_choice: 'savings', saved: 'other', saved_minor: 50000 });
+      // by hand: the fund 200, the rest to savings
+      await setSplit('2026-09', [{ category_id: holiday, minor: 20000 }]);
       await finishClose('2026-09');
     });
     await tap('Статистика');
     await tap('История');
     await tap('Отчёт за месяц ›');
     expect(await screen.findByText('Отчёт · Сентябрь 2026')).toBeTruthy();
-    // 3 000 − 1 850 spent: 1 150 — 850 left and the fund's 300, as planned
+    // 3 000 − 1 850 spent: 1 150 — 850 left and the fund's 300, as planned; 500 put aside: the fund 200, 💰 300
     // the amounts here are shown masked-ready: compared with plain spaces
     const t = texts().map((x) => x.replace(/\s/g, ' '));
     const after = (label: string, n: number) => t.slice(t.indexOf(label) + 1, t.indexOf(label) + 1 + n);
-    expect(after('Отложено', 1)).toEqual(['700 ₾']);
-    expect(after('🌊 Что осталось', 2)).toEqual(['850 ₾', '500 ₾']);
+    expect(after('Отложено', 1)).toEqual(['500 ₾']);
+    expect(after('💰 Сэкономлено', 2)).toEqual(['850 ₾', '300 ₾']);
     expect(after('🏖 Отпуск · взнос', 2)).toEqual(['300 ₾', '200 ₾']);
-    expect(after('Всего', 2)).toEqual(['1 150 ₾', '700 ₾']);
+    expect(after('Всего', 2)).toEqual(['1 150 ₾', '500 ₾']);
     expect(screen.queryByText('Итоги не подведены: факт появится, когда ответите, что удалось отложить')).toBeNull();
   });
   describe('the banner, the 1st to the 3rd', () => {

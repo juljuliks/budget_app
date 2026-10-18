@@ -45,7 +45,7 @@ export function systemSections(p: PlanView, hidden: boolean, open: SystemOpen) {
           </Text>
         ))}
         <View>
-          {/* 🔒 first, then the funds, then 🌊 */}
+          {/* 🔒 first, then the funds, then 💰 */}
           {g.rows.filter((r) => r.key === 'locked').map(row)}
           {funds.map((item) => <FundItemRow key={item.category_id} p={p} item={item} hidden={hidden} onOpen={() => open.fund(item)} />)}
           {g.rows.filter((r) => r.key !== 'locked').map(row)}

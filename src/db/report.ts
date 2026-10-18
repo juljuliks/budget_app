@@ -68,7 +68,7 @@ export type MonthReport = {
   /**
    * Where `saved` comes from, exactly (they add up to it): 🔒, what the plan left undistributed, what the planned categories
    * didn't spend (minus their overspend), what is left of the share outside the plan (minus spending past it), and the
-   * funds' contributions as planned. All but 🔒 and the funds: "Что осталось".
+   * funds' contributions as planned. All but 🔒 and the funds: "Сэкономлено".
    * null without a budget.
    */
   savedFrom: { locked: number; undistributed: number; plan: number; unplanned: number; funds: number } | null;

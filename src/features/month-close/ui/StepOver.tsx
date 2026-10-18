@@ -43,7 +43,7 @@ export default function StepOver({ c, onAnswer }: Props) {
         <Text style={[styles.headText, styles.headOver]}>{money(b.over_minor)}</Text>
       </View>
       <Text style={styles.muted}>
-        {b.locked_minor > 0 ? `Потрачено ${money(b.spent_minor)}, а на траты было ${money(spentFor)} — бюджет без 🔒 «Сразу»`
+        {b.locked_minor > 0 ? `Потрачено ${money(b.spent_minor)}, а на траты было ${money(spentFor)} — бюджет без «🔒 Отложено сразу»`
           : `Потрачено ${money(b.spent_minor)} при бюджете ${money(b.amount_minor)}`}
       </Text>
       <Text style={styles.question}>Чем покрыть?</Text>

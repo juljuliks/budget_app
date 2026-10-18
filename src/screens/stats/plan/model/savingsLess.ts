@@ -1,5 +1,5 @@
 // The current month's savings, less what the overspend already took: every category past its plan, and spending outside
-// the plan past its share, comes out of what the plan leaves (🌊 "Что осталось"), then out of 🔒 "Сразу". No React.
+// the plan past its share, comes out of what the plan leaves (💰 "Сэкономлено"), then out of 🔒 "Отложено сразу". No React.
 import type { PlanItem } from '@/db/plans';
 import type { SpentBy } from './usePlanData';
 
@@ -11,7 +11,7 @@ export type SavingsLess = {
   was: number;
   now: number;
   less: number;
-  /** 🌊 and 🔒, as planned and now */
+  /** 💰 and 🔒, as planned and now */
   free: { was: number; now: number };
   locked: { was: number; now: number };
   /** the biggest first */

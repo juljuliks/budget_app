@@ -97,7 +97,7 @@ export function planView({ ym, currency, items: all, budget, toShown, fromShown,
       : (free ?? 0) + locked;
   const pct = (v: number) => (shownBudget ? percentOf(v, shownBudget) || '0%' : '');
 
-  // this month: what the overspend already took of the savings (🌊 first, then 🔒)
+  // this month: what the overspend already took of the savings (💰 first, then 🔒)
   const less = timing === 'current' && shownBudget !== null
     ? savingsLess({ items: all, spentBy, unplanned, unplannedSpent: unplannedSpentMinor, free: free ?? 0, locked }) : null;
 
@@ -112,13 +112,13 @@ export function planView({ ym, currency, items: all, budget, toShown, fromShown,
     { key: 'unplanned', label: 'Вне плана', value: unplanned, color: RING_UNPLANNED, note: pct(unplanned) },
     timing === 'past'
       ? { key: 'free', label: 'Сбережения', value: Math.abs(saved), color: RING_SAVINGS, note: saved < 0 ? 'бюджет превышен' : 'сэкономлено', tone: saved < 0 ? 'over' : 'savings', noteTone: saved < 0 ? 'over' : undefined }
-      // the locked part and the leftover together: one savings column; what it's made of (🔒 + 🌊) is in the section below
+      // the locked part and the leftover together: one savings column; what it's made of (🔒 + 💰) is in the section below
       : less
         ? { key: 'free', label: 'Сбережения', value: less.now + fundsTotal, was: less.was + fundsTotal, color: RING_SAVINGS, note: pct(less.now + fundsTotal), tone: 'savings' }
         : { key: 'free', label: 'Сбережения', value: Math.max(0, free ?? 0) + locked + fundsTotal, color: RING_SAVINGS, note: pct(Math.max(0, free ?? 0) + locked + fundsTotal), tone: 'savings' },
   ] : [];
 
-  // the plan's system sections: savings (🔒 locked, the funds, 🌊 floating: what the plan leaves) and the share outside it
+  // the plan's system sections: savings (🔒 locked, the funds, 💰 floating: what the plan leaves) and the share outside it
   const systemGroups: Array<{ title: string; rows: SystemRow[]; funds?: PlanItem[] }> = [];
   if (shownBudget && carry) {
     const from = genOf(carry.from_ym);
@@ -137,14 +137,14 @@ export function planView({ ym, currency, items: all, budget, toShown, fromShown,
     const floating = less ? less.free.now : free ?? 0;
     const savingsRows: SystemRow[] = [
       ...(locked > 0 ? [{
-        key: 'locked', name: '🔒 Сразу', tone: 'locked' as const, value: less ? less.locked.now : locked,
+        key: 'locked', name: '🔒 Отложено сразу', tone: 'locked' as const, value: less ? less.locked.now : locked,
         // as typed while the overspend took none of it
         ...inBudget(less ? less.locked.now : locked, less && less.locked.now < locked ? undefined : budget!.locked_minor),
         ...(less && less.locked.now < locked ? { note: 'меньше из-за перерасхода', was: locked } : { note: 'заблокировано в начале месяца' }),
       }] : []),
       // none left — not shown
       ...(floating > 0 ? [{
-        key: 'floating', name: '🌊 Что осталось', note: 'не запланировано — решите в итогах месяца', tone: 'savings' as const,
+        key: 'floating', name: '💰 Сэкономлено', note: 'не запланировано — решите в итогах месяца', tone: 'savings' as const,
         value: less ? less.free.now : free!, ...(less && less.free.now < free! ? { was: free! } : {}), ...inBudget(less ? less.free.now : free!),
       }] : []),
     ];
