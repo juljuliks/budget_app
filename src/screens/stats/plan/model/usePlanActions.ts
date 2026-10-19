@@ -2,6 +2,9 @@
 import type { UseFormReturn } from 'react-hook-form';
 import { categoryLabel } from '@/db/categories';
 import { OverBudgetError, PlanItem, removePlanItem, restorePlanItem, setPlanBudget } from '@/db/plans';
+import { removeRecurringFrom, restoreRecurring, savedInCategory } from '@/db/recurring';
+import { emitTransactionsChanged } from '@/domain/events';
+import { MONTHS_GEN } from '@/shared/lib/dates';
 import { formatWithCurrency, parseAmountOrZero } from '@/shared/lib/money';
 import { AMOUNT_HINT, SAVE_FAILED, UNDO } from '@/shared/lib/strings';
 import { sheetAlert } from '@/shared/ui/sheetAlert';
@@ -62,8 +65,41 @@ export function usePlanActions(ym: string, load: () => void) {
     load();
   }
 
-  // a category repeated every month is asked about: removing it also stops it carrying over
-  function removeItem(item: PlanItem) {
+  /** A category with repeating payments: out of this month's plan and the next ones', its payments off. */
+  async function removeRecurring(item: PlanItem) {
+    const label = categoryLabel(item);
+    try {
+      const removed = await removeRecurringFrom(ym, item.category_id);
+      emitTransactionsChanged();
+      toast(`«${label}» убрана из плана, повторяющиеся платежи выключены`, {
+        label: UNDO,
+        onPress: () => {
+          restoreRecurring(removed).then(() => { emitTransactionsChanged(); toast(`«${label}» снова в плане`); })
+            .catch(toastFailure('restore recurring item', 'Не удалось восстановить'));
+        },
+      });
+    } catch (e) {
+      console.error('remove recurring item failed', e);
+      toastError(SAVE_FAILED);
+    }
+    load();
+  }
+
+  // a category repeated every month is asked about: removing it also stops it carrying over; one with repeating
+  // payments — they'd count it again next month: they are turned off, it is gone from the next months too
+  async function removeItem(item: PlanItem) {
+    if (item.recurring) {
+      const saved = await savedInCategory(item.category_id).catch(() => []);
+      const kept = saved.length ? ` На платежи уже отложено: ${saved.map((x) => `${x.name} — ${formatWithCurrency(x.minor, x.currency)}`).join(', ')} — это уйдёт в сбережения месяца.` : '';
+      sheetAlert(
+        `Убрать «${categoryLabel(item)}» из плана?`,
+        `У категории повторяющиеся платежи — они выключатся, а категория пропадёт из плана с ${MONTHS_GEN[Number(ym.slice(5)) - 1]}. Операции не изменятся.${kept}`,
+        [
+          { text: 'Отмена', style: 'cancel' },
+          { text: 'Убрать из плана', style: 'destructive', onPress: () => { removeRecurring(item); } },
+        ]);
+      return;
+    }
     if (!item.pinned) { remove(item); return; }
     sheetAlert(
       `Убрать «${categoryLabel(item)}» из плана?`,

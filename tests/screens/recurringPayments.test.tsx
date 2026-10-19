@@ -267,6 +267,35 @@ describe('6.7.9 "Повторяющийся платёж" from the plan', () => 
       .toEqual({ limit_minor: 0 });
   });
 
+  test('"Удалить из плана": asked; gone from this month and the next ones, its payments off; "Отменить" — all back', async () => {
+    await openApp(seed);
+    await tap('Статистика');
+    await tap('План');
+    await tap('Изменить: 🏠 Дом и коммуналка');
+    await tap(await screen.findByRole('radio', { name: /Повторяющийся платёж/ }));
+    expect(await screen.findByText(/^3 ноября 2026/)).toBeTruthy();
+    await tap('Сохранить');
+    expect(await screen.findByText('каждый месяц · следующее 3 ноя')).toBeTruthy();
+    // November's plan made: the payment counted there too
+    await tap('Следующий месяц');
+    expect(await screen.findByText('каждый месяц · 3 ноя')).toBeTruthy();
+    await tap('Предыдущий месяц');
+    await tap(await screen.findByText('🏠 Дом и коммуналка'));
+    await tap('Удалить из плана');
+    expect(await screen.findByText('Убрать «🏠 Дом и коммуналка» из плана?')).toBeTruthy();
+    expect(screen.getByText('У категории повторяющиеся платежи — они выключатся, а категория пропадёт из плана с октября. Операции не изменятся.')).toBeTruthy();
+    await tap('Убрать из плана');
+    expect(await screen.findByText('«🏠 Дом и коммуналка» убрана из плана, повторяющиеся платежи выключены')).toBeTruthy();
+    const db = await getDb();
+    const items = () => db.all("SELECT ym FROM plan_items WHERE category_id = (SELECT id FROM categories WHERE name = 'Дом и коммуналка') ORDER BY ym");
+    await waitFor(async () => expect(await items()).toEqual([{ ym: '2026-09' }]));
+    expect(await db.get("SELECT recurring FROM categories WHERE name = 'Дом и коммуналка'")).toEqual({ recurring: 0 });
+    await tap('Отменить');
+    expect(await screen.findByText('«🏠 Дом и коммуналка» снова в плане')).toBeTruthy();
+    await waitFor(async () => expect(await items()).toEqual([{ ym: '2026-09' }, { ym: '2026-10' }, { ym: '2026-11' }]));
+    expect(await db.get("SELECT recurring FROM categories WHERE name = 'Дом и коммуналка'")).toEqual({ recurring: 1 });
+  });
+
   // the seed's budget: 2 400 ₾ to plan (3 000 less 10% outside and 🔒 300), 2 160 planned — 240 free
   test('this month\'s charge past what is free: "Вычесть из сбережений?", what is short taken from 🔒', async () => {
     await openApp(seed);

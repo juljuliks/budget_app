@@ -2,6 +2,7 @@
 // its plan items from this month on keep their amount as an obligatory payment (by hand from now on), the payments stay
 // (on again — they count again). "Отменить" puts it back as it was.
 import { getDb } from '../index';
+import type { SqlParam } from '../types';
 import { setRecurring } from '../categories';
 import { currentYm } from '../plans/months';
 import { refreshRecurringItems } from '../plans/recurringItems';
@@ -53,4 +54,29 @@ export async function undoRecurring(u: RecurringUndo, nowYm = currentYm()): Prom
   for (const ym of u.items) await db.run("UPDATE plan_items SET kind = 'subs' WHERE category_id = ? AND ym = ?", [u.category_id, ym]);
   for (const s of u.savings) await undoSaving(s, nowYm);
   await refreshRecurringItems(nowYm);
+}
+
+/** A category with repeating payments taken out of the plan from `ym` on: its items there as they were, and it turned off. */
+export type RemovedRecurring = { rows: Array<Record<string, SqlParam>>; off: RecurringUndo | null };
+
+/**
+ * "Убрать из плана" of a category with repeating payments: they are off (as turnRecurring — what they saved goes to this
+ * month's savings), and its items from `ym` on are gone (not only `ym`'s: on, they'd count it again next month).
+ */
+export async function removeRecurringFrom(ym: string, categoryId: number, nowYm = currentYm()): Promise<RemovedRecurring> {
+  const db = await getDb();
+  const rows = await db.all<Record<string, SqlParam>>('SELECT * FROM plan_items WHERE category_id = ? AND ym >= ?', [categoryId, ym]);
+  const off = await turnRecurring(categoryId, false, nowYm);
+  await db.run('DELETE FROM plan_items WHERE category_id = ? AND ym >= ?', [categoryId, ym]);
+  return { rows, off };
+}
+
+/** "Отменить" after removeRecurringFrom: its items back as they were, its repeating payments on. */
+export async function restoreRecurring(r: RemovedRecurring, nowYm = currentYm()): Promise<void> {
+  const db = await getDb();
+  for (const row of r.rows) {
+    const cols = Object.keys(row);
+    await db.run(`INSERT OR IGNORE INTO plan_items (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`, cols.map((c) => row[c]));
+  }
+  if (r.off) await undoRecurring(r.off, nowYm);
 }

@@ -45,13 +45,15 @@ function useSheetScroll(p: Pick<ScrollViewProps, 'onScroll' | 'onLayout' | 'onCo
   };
 }
 
+// a tap with the keyboard open does what it taps at once (by default the first one only hides the keyboard): a nested
+// list, as the categories in "Новая операция", needs it of its own too
 export function SheetScrollView(props: ScrollViewProps) {
-  return <ScrollView {...props} {...useSheetScroll(props)} />;
+  return <ScrollView keyboardShouldPersistTaps="handled" {...props} {...useSheetScroll(props)} />;
 }
 
 /** A FlatList inside a sheet, see SheetScrollView. */
 export const SheetFlatList = React.forwardRef(function SheetFlatList<T>(props: FlatListProps<T>, ref: React.ForwardedRef<FlatList<T>>) {
-  return <FlatList ref={ref} {...props} {...useSheetScroll({ ...props, onScroll: props.onScroll ?? undefined })} />;
+  return <FlatList ref={ref} keyboardShouldPersistTaps="handled" {...props} {...useSheetScroll({ ...props, onScroll: props.onScroll ?? undefined })} />;
 }) as <T>(props: FlatListProps<T> & { ref?: React.Ref<FlatList<T>> }) => React.ReactElement;
 
 const OPEN_MS = 240;
