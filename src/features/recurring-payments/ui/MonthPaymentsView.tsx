@@ -34,13 +34,15 @@ type Props = {
  */
 export default function MonthPaymentsView({ ym, data, w, money, shareOf, chargesMinor, upcoming, open, merchantTarget, targetOf, onUpcoming, onAdd }: Props) {
   const today = todayKey();
+  // "через N дней" — from today: in the current month only (a coming month's sheet says the day)
+  const soon = (day: string) => (ym === today.slice(0, 7) ? inTime(day, today) : null);
   return (
     <>
       <SectionBand title={`Списания ${inMonth(ym)}`} total={money(chargesMinor)} share={shareOf(chargesMinor)} />
       {data.charges.length ? data.charges.map((c) => (
         <PaymentRow label={w.One}
           key={`${c.sub.id}-${c.day}`} name={c.sub.name} onPress={() => open(targetOf(c.sub))}
-          note={[periodText(c.sub.period), ...(c.saved ? ['из отложенного'] : []), c.done ? `✓ списано ${shortDay(c.day)}` : [shortDay(c.day), inTime(c.day, today)].filter(Boolean).join(', ')]}
+          note={[periodText(c.sub.period), ...(c.saved ? ['из отложенного'] : []), c.done ? `✓ списано ${shortDay(c.day)}` : [shortDay(c.day), soon(c.day)].filter(Boolean).join(', ')]}
           tone={c.done ? 'ok' : undefined} amount={money(c.sub.amount_minor, c.sub.currency)} muted={c.saved}
         />
       )) : <Text style={formStyles.hint}>{`Нет списаний ${inMonth(ym)}`}</Text>}

@@ -158,10 +158,11 @@ export const RepeatIcon = ({ color, size = 20 }: P) => (
   </Svg>
 );
 
-/** A plan item with a limit: bars under a ceiling line. */
+/** A plan item with a limit: bars under a thin ceiling line. */
 export const LimitIcon = ({ color, size = 22 }: P) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M3 5h18M6 20v-6M10 20v-9M14 20v-4M18 20v-7" />
+    <Path d="M3 5h18" strokeWidth={1.25} />
+    <Path d="M6 20v-6M10 20v-9M14 20v-4M18 20v-7" />
   </Svg>
 );
 

@@ -42,7 +42,11 @@ describe('6.5 funds', () => {
     // no column or section of its own: in "Сбережения"
     expect(screen.queryByText('Копилки')).toBeNull();
     expect(screen.getAllByText('Сбережения').length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText('в месяц · 10%')).toBeTruthy();
+    // the share alone: the plan is the month's anyway
+    const t = texts();
+    const i = t.indexOf('👕 Одежда');
+    expect(t[i + 2]).toMatch(/^300\s₾$/);
+    expect(t[i + 3]).toBe('10%');
   });
 
   test('the screen in another currency: the contribution in the fund\'s own one before it, "(300 ₾)"', async () => {
@@ -55,7 +59,7 @@ describe('6.5 funds', () => {
     await screen.findAllByText('120 $');
     const t = texts();
     const i = t.indexOf('👕 Одежда');
-    expect(t.slice(i + 1, i + 5)).toEqual(['150 из 1 500 ₾ · к 31 января 2027', '(300 ₾)', '120 $', 'в месяц · 10%']);
+    expect(t.slice(i + 1, i + 5)).toEqual(['150 из 1 500 ₾ · к 31 января 2027', '(300 ₾)', '120 $', '10%']);
   });
 
   test('a contribution past what is free, 🔒 has it: "Вычесть из сбережений?" — what is short taken from it', async () => {

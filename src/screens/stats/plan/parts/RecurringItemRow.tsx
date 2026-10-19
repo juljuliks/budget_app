@@ -3,7 +3,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import { categoryLabel } from '@/db/categories';
 import type { PlanItem } from '@/db/plans';
 import { paymentWords } from '@/entities/category';
-import { inTime, periodText, shortDay } from '@/features/recurring-payments';
+import { inMonthYear, inTime, periodText, shortDay } from '@/features/recurring-payments';
 import { chargeAt, ONCE, todayKey } from '@/db/recurring';
 import { RepeatIcon } from '@/shared/ui/icons';
 import { formatWithCurrency } from '@/shared/lib/money';
@@ -31,14 +31,18 @@ export function RecurringItemRow({ p, item, hidden, onOpen }: Props) {
   const next = one?.day && one.done ? (one.period === ONCE ? null : chargeAt(one.day, one.period, 1)) : null;
   const single = one ? [periodText(one.period),
     next ? `следующее ${shortDay(next)}` : one.day && one.done ? shortDay(one.day)
-      : one.day ? [shortDay(one.day), inTime(one.day, todayKey())].filter(Boolean).join(', ') : 'без даты',
+      // "через N дней" — from today: in the current month's plan only (in November's "через месяц" read as December)
+      : one.day ? [shortDay(one.day), p.timing === 'current' ? inTime(one.day, todayKey()) : null].filter(Boolean).join(', ') : 'без даты',
   ].join(' · ') : null;
   // "(6 $)": all its payments in one currency, not the screen's
   const own = item.kind === 'subs' ? item.subs?.in_currency : undefined;
   const foreign = own && own.currency !== p.currency && own.charges_minor > 0 ? formatWithCurrency(own.charges_minor, own.currency) : null;
-  const note = single ?? (item.kind !== 'subs' ? `вручную · задайте даты ${w.toAll}` : listed || w.noDated);
+  // none charged this month (0 at the right, the row faded and last in its section): when and how much next — "30 ₾ в ноябре"
+  const up = item.subs?.upcoming;
+  const upcoming = up ? `${formatWithCurrency(up.amount_minor, up.currency)} ${inMonthYear(up.ym)}` : null;
+  const note = upcoming ?? single ?? (item.kind !== 'subs' ? `вручную · задайте даты ${w.toAll}` : listed || w.noDated);
   return (
-    <TouchableOpacity style={styles.row} onPress={onOpen} accessibilityLabel={categoryLabel(item)}>
+    <TouchableOpacity style={[styles.row, up && styles.later]} onPress={onOpen} accessibilityLabel={categoryLabel(item)}>
       <View style={styles.pin}><RepeatIcon color={colors.accent} size={20} /></View>
       <View style={styles.nameBox}>
         <Text style={styles.name} numberOfLines={1}>{`${item.emoji || ''} ${item.name}`.trim()}</Text>

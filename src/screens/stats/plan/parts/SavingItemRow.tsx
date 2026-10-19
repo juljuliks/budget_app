@@ -35,11 +35,11 @@ export function SavingItemRow({ p, item, hidden, onOpen }: Props) {
       <View style={styles.amountBox}>
         {hidden ? null : (
           <View style={styles.amountLine}>
-            {own ? <Text style={[styles.amount, styles.savingForeign]}>{`(${own})`}</Text> : null}
+            {own ? <Text style={[styles.amount, styles.amountForeign]}>{`(${own})`}</Text> : null}
             <Text style={styles.amount}>{p.money(s.saving_minor)}</Text>
           </View>
         )}
-        <Share p={p} value={s.saving_minor} before="в месяц" />
+        <Share p={p} value={s.saving_minor} />
       </View>
     </TouchableOpacity>
   );

@@ -34,6 +34,12 @@ test('the items by type, in their order; totals of the converted amounts', () =>
   expect(g.map((x) => [x.title, x.planned, x.items.length])).toEqual([['Жизнь', 36000, 2], ['Без раздела', 0, 1]]);
 });
 
+test('in a section, those charged in a later month only go last, the rest in their order', () => {
+  const later = { names: [], saving_names: [], upcoming: { amount_minor: 3000, currency: 'GEL' as const, ym: '2026-11' } } as unknown as PlanItem['subs'];
+  const g = groupByType([item({}), item({ category_id: 2, recurring: true, subs: later }), item({ category_id: 3 })]);
+  expect(g[0].items.map((x) => x.category_id)).toEqual([1, 3, 2]);
+});
+
 test('the budget\'s split: planned, outside the plan, savings (🔒 and what the plan leaves — "Итоги месяца" decide)', () => {
   const v = view([item({})], budget({ unplanned_pct: 20 } as Partial<PlanBudget>));
   expect(v.parts.map((p) => [p.label, p.value, p.note])).toEqual([['План', 31000, '31%'], ['Вне плана', 20000, '20%'], ['Сбережения', 49000, '49%']]);

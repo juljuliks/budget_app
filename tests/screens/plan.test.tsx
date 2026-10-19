@@ -31,17 +31,17 @@ describe('6.1 the month\'s budget', () => {
     expect(await month()).toMatchObject({ b: 300000, s: 1 });
     // its split: the plan, the rest to savings
     expect(await screen.findByText('3 000 ₾')).toBeTruthy();
-    expect(after('План', 2)).toEqual(['500 ₾', '17%']);
+    expect(after('План', 2)).toEqual(['17%', '500 ₾']);
   });
 
   test('the split: the plan, outside it, savings; the savings and the share as sections', async () => {
     await openPlan();
-    expect(after('План', 2)).toEqual(['2 160 ₾', '72%']);
-    expect(after('Вне плана', 2)).toEqual(['300 ₾', '10%']);
+    expect(after('План', 2)).toEqual(['72%', '2 160 ₾']);
+    expect(after('Вне плана', 2)).toEqual(['10%', '300 ₾']);
     // the overspend took 130 of them (see the next test): what is left, by how much
-    expect(after('Сбережения', 4)).toEqual(['перерасход: ', '−130 ₾', '410 ₾', '14%']);
+    expect(after('Сбережения', 4)).toEqual(['14%', '(−130 ₾', ')', '410 ₾']);
     expect(after('🔒 Отложено сразу', 3)).toEqual(['заблокировано в начале месяца', '300 ₾', '10%']);
-    expect(after('💰 Сэкономлено', 4)).toEqual(['меньше из-за перерасхода: ', '−130 ₾', '110 ₾', '4%']);
+    expect(after('💰 Сэкономлено', 4)).toEqual(['перерасход: ', '−130 ₾', '110 ₾', '4%']);
     expect(after('🎲 Траты вне плана', 3)).toEqual(['категории без плана и без категории', '300 ₾', '10%']);
   });
 
@@ -54,7 +54,7 @@ describe('6.1 the month\'s budget', () => {
     backToTabs();
     expect(await screen.findByText('(300 ₾)')).toBeTruthy();
     expect(after('🔒 Отложено сразу', 4)).toEqual(['заблокировано в начале месяца', '(300 ₾)', '120 $', '10%']);
-    expect(after('💰 Сэкономлено', 5)).toEqual(['меньше из-за перерасхода: ', '−52 $', '(110 ₾)', '44 $', '4%']);
+    expect(after('💰 Сэкономлено', 5)).toEqual(['перерасход: ', '−52 $', '(110 ₾)', '44 $', '4%']);
     // the section's header: its total in the budget's currency first
     expect(screen.getByText('(410 ₾) ')).toBeTruthy();
   });
@@ -62,7 +62,7 @@ describe('6.1 the month\'s budget', () => {
   test('savings the overspend took part of: a tap on its line — by how much, what took it; a category\'s tap opens its plan', async () => {
     await openPlan();
     expect(screen.queryByText(/^Сбережения к концу месяца/)).toBeNull();
-    // the savings section's line: ⓘ in its "меньше из-за перерасхода: −130 ₾ ⓘ"
+    // the savings section's line: ⓘ in its "перерасход: −130 ₾ ⓘ"
     await tap('Почему сбережения меньше');
     expect(await screen.findByText('Сбережения меньше на 130 ₾')).toBeTruthy();
     await tap('Понятно');

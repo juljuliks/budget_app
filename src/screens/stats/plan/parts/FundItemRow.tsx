@@ -37,13 +37,13 @@ export function FundItemRow({ p, item, hidden, onOpen }: Props) {
       <View style={styles.amountBox}>
         {hidden ? null : (
           <View style={styles.amountLine}>
-            {own && item.converted_minor !== null ? <Text style={[styles.amount, styles.savingForeign]}>{`(${own})`}</Text> : null}
+            {own && item.converted_minor !== null ? <Text style={[styles.amount, styles.amountForeign]}>{`(${own})`}</Text> : null}
             <Text style={styles.amount}>
               {item.converted_minor !== null ? p.money(item.converted_minor) : formatWithCurrency(item.limit_minor, item.currency)}
             </Text>
           </View>
         )}
-        <Share p={p} value={item.converted_minor} before={saved && !item.limit_minor ? 'можно тратить' : 'в месяц'} />
+        <Share p={p} value={item.converted_minor} before={saved && !item.limit_minor ? 'можно тратить' : undefined} />
       </View>
     </TouchableOpacity>
   );

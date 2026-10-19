@@ -51,6 +51,10 @@ export async function listPlan(ym: string, to?: Currency): Promise<PlanItem[]> {
         charges_minor: subs.charges.filter((c) => !c.saved).reduce((a, c) => a + c.sub.amount_minor, 0),
         saving_minor: subs.saving.reduce((a, v) => a + v.contribution_minor, 0),
       } } : {}),
+      // none charged this month: the next charge, in a coming month ("30 ₾ в ноябре")
+      ...(!subs.charges.length && subs.later[0] && subs.later[0].next.slice(0, 7) > ym ? { upcoming: {
+        amount_minor: subs.later[0].sub.amount_minor, currency: subs.later[0].sub.currency, ym: subs.later[0].next.slice(0, 7),
+      } } : {}),
       ...(only ? { single: {
         period: only.period, done: !!charge?.done,
         day: charge?.day ?? subs.later.find((l) => l.sub.id === only.id)?.next ?? null,

@@ -34,24 +34,27 @@ export const styles = StyleSheet.create({
   },
   // the parts as a legend: a line each, the amounts and shares in columns
   parts: { gap: 6, marginTop: 10 },
-  part: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
-  // the dot in line with the name
-  legendBox: { width: 16, height: 20, flexDirection: 'row', alignItems: 'center' },
-  partName: { flex: 1 },
+  part: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  legendBox: { width: 16, flexDirection: 'row', alignItems: 'center' },
   legendDot: { width: 8, height: 8, borderRadius: 4 },
   legendPair: { flexDirection: 'row', alignItems: 'center' },
   // the second dot covers a third of the first, a ring of the card's colour between them
   legendOver: { width: 12, height: 12, borderRadius: 6, marginLeft: -5, borderWidth: 2, borderColor: colors.surface },
-  partLabel: { fontSize: 14, lineHeight: 20, color: colors.muted },
-  // the amount at the right edge, its share under it
-  partValues: { alignItems: 'flex-end' },
-  partValue: { textAlign: 'right', fontSize: 14, lineHeight: 20, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
-  // "перерасход: −15 ₾ ⓘ" under savings the overspend took part of
-  less: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 3, marginTop: 2 },
+  partLabel: { fontSize: 14, color: colors.muted },
+  // the amounts right-aligned at the edge; the shares in a column right by the names
+  partValues: { flex: 1, flexDirection: 'row', alignItems: 'baseline', justifyContent: 'flex-end', gap: 6 },
+  partValue: { textAlign: 'right', fontSize: 14, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
+  // "перерасход: −15 ₾ ⓘ" under savings the overspend took part of (a plan's row)
+  less: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 2 },
   lessText: { fontSize: 12, color: colors.muted, fontVariant: ['tabular-nums'] },
   lessMinus: { color: colors.danger },
-  // a share ("43%") or a word ("сэкономлено") under the amount
-  partNote: { textAlign: 'right', fontSize: 12, color: colors.muted, fontVariant: ['tabular-nums'] },
+  // "(−15 ₾ ⓘ)" after them in the legend
+  lessParen: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  lessParenText: { fontSize: 13, color: colors.muted, fontVariant: ['tabular-nums'] },
+  // the legend's names laid out unseen: the widest sets the names' column
+  measure: { position: 'absolute', opacity: 0, alignItems: 'flex-start' },
+  // a share ("43%") or a word ("сэкономлено") right by the name
+  partNote: { minWidth: 34, textAlign: 'right', fontSize: 13, color: colors.muted, fontVariant: ['tabular-nums'] },
   note: { fontSize: 12, color: colors.muted, marginTop: 8 },
   overText: { color: colors.warn },
   savingsValue: { color: RING_LOCKED },
@@ -71,6 +74,8 @@ export const styles = StyleSheet.create({
   // the total in the budget's currency before it: lighter and thin
   groupForeign: { color: colors.faint, fontWeight: '400' },
   groupTotal: { fontSize: 13, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
+  // a row charged in a later month only: faded
+  later: { opacity: 0.5 },
   row: {
     flexDirection: 'row', alignItems: 'center', paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
@@ -90,9 +95,8 @@ export const styles = StyleSheet.create({
   amountOriginal: { fontSize: 12, color: colors.muted, fontVariant: ['tabular-nums'] },
   // another currency's amount before the one shown, as large, muted
   amountLine: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
-  amountForeign: { color: colors.muted },
-  // in "Сбережения": the budget's currency smaller and lighter than the amount
-  savingForeign: { fontSize: 13, color: colors.faint },
+  // the amount in another currency ("(300 $)") before the screen's one: smaller and lighter, in every row of the plan
+  amountForeign: { fontSize: 13, color: colors.faint },
   amountEmpty: { color: colors.muted, fontSize: 14 },
 });
 

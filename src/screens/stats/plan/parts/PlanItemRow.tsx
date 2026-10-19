@@ -17,7 +17,7 @@ type Props = {
   onOpen: () => void;
 };
 
-/** Under a row's amount: its share of the budget, "10%" (after `before`, e.g. "в месяц · 10%"); "Скрыть суммы" — it alone. */
+/** Under a row's amount: its share of the budget, "10%" (after `before`, e.g. "можно тратить · 10%"); "Скрыть суммы" — it alone. */
 export function Share({ p, value, before }: { p: PlanView; value: number | null; before?: string }) {
   const share = p.shownBudget && value ? percentOf(value, p.shownBudget) || '0%' : '';
   const text = [before, share].filter(Boolean).join(' · ');
@@ -88,7 +88,7 @@ export function SystemRowView({ p, r, hidden, onOpen, onLess }: { p: PlanView; r
       <View style={styles.amountBox}>
         {hidden ? null : (
           <View style={styles.amountLine}>
-            {r.inBudget !== undefined && p.budgetMoney ? <Text style={[styles.amount, styles.savingForeign]}>{p.budgetMoney(r.inBudget)}</Text> : null}
+            {r.inBudget !== undefined && p.budgetMoney ? <Text style={[styles.amount, styles.amountForeign]}>{p.budgetMoney(r.inBudget)}</Text> : null}
             <Text style={[styles.amount, toneStyle(r.tone)]}>{`${r.carry === 'plus' ? '+' : ''}${p.money(r.value)}`}</Text>
           </View>
         )}

@@ -197,6 +197,37 @@ describe('6.7.9 "Повторяющийся платёж" from the plan', () => 
     expect(await (await getDb()).get("SELECT recurring FROM categories WHERE name = 'Дом и коммуналка'")).toEqual({ recurring: 0 });
   });
 
+  test('a coming month\'s plan says the day, not "через …" (counted from today, it read as the month after)', async () => {
+    await openApp(seed);
+    await tap('Статистика');
+    await tap('План');
+    await tap('Изменить: 🏠 Дом и коммуналка');
+    await tap(await screen.findByRole('radio', { name: /Повторяющийся платёж/ }));
+    expect(await screen.findByText(/^3 ноября 2026/)).toBeTruthy();
+    await tap('Сохранить');
+    expect(await screen.findByText('каждый месяц · следующее 3 ноя')).toBeTruthy();
+    await tap('Следующий месяц');
+    expect(await screen.findByText('Ноябрь 2026')).toBeTruthy();
+    expect(await screen.findByText('каждый месяц · 3 ноя')).toBeTruthy();
+    expect(screen.queryByText(/через/)).toBeNull();
+  });
+
+  test('not charged this month: 0 at the right, "30 ₾ в ноябре" under its name', async () => {
+    await openApp(async () => {
+      await seed();
+      const { createCategory } = require('../../src/db/categories');
+      const { turnRecurring } = require('../../src/db/recurring');
+      const sport = await createCategory('Спорт', '🏋️');
+      await savePayment({ category_id: sport, merchant_key: null, name: 'Спорт', amount_minor: 3000, currency: 'GEL', period: 1, due: '2026-11-20' });
+      await turnRecurring(sport, true);
+    });
+    await tap('Статистика');
+    await tap('План');
+    expect(await screen.findByText(`30${N}₾ в ноябре`)).toBeTruthy();
+    expect(await (await getDb()).get("SELECT limit_minor FROM plan_items WHERE ym = '2026-10' AND category_id = (SELECT id FROM categories WHERE name = 'Спорт')"))
+      .toEqual({ limit_minor: 0 });
+  });
+
   test('every week from the plan: the day a week after the last spending, ± 3 days; each week\'s charge in the month', async () => {
     await openApp(seed);
     await tap('Статистика');

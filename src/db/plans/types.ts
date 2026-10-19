@@ -47,6 +47,8 @@ export type PlanItem = {
     own: boolean;
     /** all its payments in one currency: the month's charges and contributions in it */
     in_currency?: { currency: Currency; charges_minor: number; saving_minor: number };
+    /** none charged this month: its next charge, in a coming month — its amount in its currency and the month */
+    upcoming?: { amount_minor: number; currency: Currency; ym: string };
     /** the category's only payment: how often, its charge this month (done) or the next one; day null — none set */
     single?: { period: Period; day: string | null; done: boolean };
   };

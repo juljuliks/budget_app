@@ -1,5 +1,5 @@
-import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import React, { useState } from 'react';
+import { LayoutChangeEvent, Text, TouchableOpacity, View } from 'react-native';
 import Masked from '@/shared/ui/Masked';
 import LessNote from './LessNote';
 import type { PlanView } from '../model/planView';
@@ -7,10 +7,14 @@ import { RING_LOCKED } from './palette';
 import { styles, toneStyle } from './styles';
 
 /**
- * The bar's parts as a legend, a line each: its dot and name, the amount at the right edge and its share under it.
- * Savings the overspend took part of: "перерасход: −15 ₾ ⓘ" under the name; a tap on the line — what took it.
+ * The bar's parts as a legend, a line each: its dot, name, share — the shares in a column right by the names (as wide as
+ * the longest one) — and the amount at the right edge. Savings the overspend took part of: "(−15 ₾ ⓘ)",
+ * then what is left; a tap on the line — what took it.
  */
 export default function BudgetLegend({ p, onLess }: { p: PlanView; onLess: () => void }) {
+  // the names' column: as wide as the widest name (measured in an invisible column of them all)
+  const [nameWidth, setNameWidth] = useState(0);
+  const measure = (e: LayoutChangeEvent) => setNameWidth(Math.ceil(e.nativeEvent.layout.width));
   const { locked, free } = p;
   const shown = p.parts.filter((x) => x.key !== 'unplanned' || p.unplanned > 0);
   return (
@@ -32,16 +36,19 @@ export default function BudgetLegend({ p, onLess }: { p: PlanView; onLess: () =>
               </View>
             ) : <View style={[styles.legendDot, { backgroundColor: x.key === 'free' && locked > 0 ? RING_LOCKED : x.color }]} />}
           </View>
-          <View style={styles.partName}>
+          <View style={nameWidth ? { width: nameWidth } : undefined}>
             <Text style={styles.partLabel} numberOfLines={1}>{x.label}</Text>
-            {x.was !== undefined ? <LessNote label="перерасход" less={x.was - x.value} money={p.money} /> : null}
           </View>
+          <Text style={[styles.partNote, toneStyle(x.noteTone)]} numberOfLines={1}>{x.note}</Text>
           <View style={styles.partValues}>
+            {x.was !== undefined ? <LessNote less={x.was - x.value} money={p.money} /> : null}
             <Masked style={[styles.partValue, toneStyle(x.tone)]}>{p.money(x.value)}</Masked>
-            <Text style={[styles.partNote, toneStyle(x.noteTone)]} numberOfLines={1}>{x.note}</Text>
           </View>
         </TouchableOpacity>
       ))}
+      <View style={styles.measure} onLayout={measure} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+        {shown.map((x) => <Text key={x.key} style={styles.partLabel}>{x.label}</Text>)}
+      </View>
     </View>
   );
 }

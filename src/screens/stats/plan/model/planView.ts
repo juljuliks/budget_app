@@ -39,7 +39,10 @@ export function percentOf(part: number, whole: number): string {
   return part > 0 && whole > 0 ? formatPercent(part, whole) : '';
 }
 
-/** Plan items in sections by category type (listPlan returns them in type order); untyped last. Totals converted. */
+/**
+ * Plan items in sections by category type (listPlan returns them in type order); untyped last. Totals converted. In a
+ * section, those charged in a later month only (0 this month, "30 ₾ в ноябре") go last.
+ */
 export function groupByType(items: PlanItem[]): Array<{ title: string; planned: number; items: PlanItem[] }> {
   const groups: Array<{ title: string; planned: number; items: PlanItem[] }> = [];
   for (const item of items) {
@@ -49,6 +52,7 @@ export function groupByType(items: PlanItem[]): Array<{ title: string; planned: 
     g.items.push(item);
     g.planned += item.converted_minor ?? 0;
   }
+  for (const g of groups) g.items = [...g.items.filter((i) => !i.subs?.upcoming), ...g.items.filter((i) => i.subs?.upcoming)];
   return groups;
 }
 
@@ -162,13 +166,13 @@ export function planView({ ym, currency, items: all, budget, toShown, fromShown,
         key: 'locked', name: '🔒 Отложено сразу', tone: 'locked' as const, value: less ? less.locked.now : locked,
         // as typed while the overspend took none of it
         ...inBudget(less ? less.locked.now : locked, less && less.locked.now < locked ? undefined : budget!.locked_minor),
-        ...(less && less.locked.now < locked ? { note: 'меньше из-за перерасхода', was: locked } : { note: 'заблокировано в начале месяца' }),
+        ...(less && less.locked.now < locked ? { note: 'перерасход', was: locked } : { note: 'заблокировано в начале месяца' }),
       }] : []),
       // none left — not shown
       ...(floating > 0 ? [{
         key: 'floating', name: '💰 Сэкономлено', tone: 'savings' as const,
         value: less ? less.free.now : free!, ...inBudget(less ? less.free.now : free!),
-        ...(less && less.free.now < free! ? { note: 'меньше из-за перерасхода', was: free! } : { note: 'не запланировано — решите в итогах месяца' }),
+        ...(less && less.free.now < free! ? { note: 'перерасход', was: free! } : { note: 'не запланировано — решите в итогах месяца' }),
       }] : []),
     ];
     if (savingsRows.length || funds.length || saving.length) {
