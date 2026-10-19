@@ -32,7 +32,7 @@ export default function MerchantCategories({ name, savedCategoryId, categories, 
     return (
       <View style={styles.pickerTop}>
         <SectionHeading title="Категория" />
-        <View style={styles.currentRow}>
+        <View style={[styles.currentRow, styles.singleRow]}>
           <Chip label={single === null ? NO_CATEGORY : categories.get(single)?.label ?? '…'} selected />
           <TouchableOpacity style={styles.changeButton} disabled={saving} onPress={() => setChanging(true)} accessibilityLabel="Сменить категорию">
             <PencilIcon color={colors.accent} size={16} />
@@ -86,6 +86,7 @@ const styles = StyleSheet.create({
   pickerTop: { marginTop: 8 },
   listHint: { fontSize: 14, color: colors.muted, marginBottom: 10 },
   currentRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
+  singleRow: { justifyContent: 'space-between' },
   changeButton: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16,
