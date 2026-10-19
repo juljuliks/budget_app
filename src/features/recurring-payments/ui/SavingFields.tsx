@@ -6,7 +6,7 @@ import RadioGroup from '@/shared/ui/RadioGroup';
 import { formStyles } from '@/shared/theme/formStyles';
 import { colors } from '@/shared/theme/theme';
 import { usePaymentSaving } from '../model/usePaymentSaving';
-import { inMonth, longDay, monthGen, monthGenYear } from '../texts';
+import { inMonthYear, longDayYear, monthGenYear } from '../texts';
 
 type Props = { s: ReturnType<typeof usePaymentSaving>; amount: number | null; currency: Currency; due: string | null };
 
@@ -20,8 +20,8 @@ export default function SavingFields({ s, amount, currency, due }: Props) {
   const ym = due?.slice(0, 7);
   const options = [
     ['yes', s.contribution !== null ? `Да, по ${money(s.contribution)} в месяц` : 'Да, каждый месяц',
-      due && amount !== null ? `Как копилка: к ${longDay(due)} будет ${money(amount)}, списание не ударит по бюджету ${monthGen(ym!)}.` : undefined],
-    ['no', ym ? `Нет, весь платёж ${inMonth(ym)}` : 'Нет, весь платёж в месяц списания',
+      due && amount !== null ? `Как копилка: к ${longDayYear(due)} будет ${money(amount)}, списание не ударит по бюджету ${monthGenYear(ym!)}.` : undefined],
+    ['no', ym ? `Нет, весь платёж ${inMonthYear(ym)}` : 'Нет, весь платёж в месяц списания',
       ym && amount !== null ? `${money(amount)} встанут в план ${monthGenYear(ym)}.` : undefined],
   ] as const;
   return (

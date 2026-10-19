@@ -92,7 +92,9 @@ export default function RecurringPaymentsSheet({ ym, category, currency, view: i
       )}
     </BottomSheet>
     {/* over it: siblings, not inside (each sheet its own window; the topmost draws the toast) */}
-    <PaymentSheet target={open} onClose={() => { setOpen(null); setAdding(null); }} adding={adding === 'form' ? { onBack: () => { setOpen(null); setAdding('merchant'); } } : undefined} />
+    <PaymentSheet
+      target={open} onClose={() => { setOpen(null); setAdding(null); }} onLeave={() => { setOpen(null); setAdding(null); onClose(); }}
+      adding={adding === 'form' ? { onBack: () => { setOpen(null); setAdding('merchant'); } } : undefined} />
       <AddPaymentSheet
         visible={adding === 'merchant'} category={category} onClose={() => setAdding(null)}
         onPick={(target) => { setAdding('form'); setOpen(target); }}

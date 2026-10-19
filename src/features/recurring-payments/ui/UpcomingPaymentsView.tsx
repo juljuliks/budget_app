@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text } from 'react-native';
-import type { RecurringPayment } from '@/db/recurring';
+import { chargeAt, ONCE, RecurringPayment } from '@/db/recurring';
 import SectionBand from '@/shared/ui/SectionBand';
 import { formStyles } from '@/shared/theme/formStyles';
 import type { PaymentWords } from '@/entities/category';
@@ -22,13 +22,20 @@ type Props = {
   onMonth: () => void;
 };
 
-/** The payments saved up for, with the charge they save for (this month's one too); the payments not saved up for, by their next charge. */
+/**
+ * The payments saved up for, with the charge they save for: a later one, this month's not paid yet, or — this month's paid
+ * from what was saved — the one after it; the payments not saved up for, by their next charge.
+ */
 export function upcomingOf(data: RecurringPaymentsData) {
   const saving = data.saving.flatMap((v) => {
     const later = data.later.find((l) => l.sub.id === v.payment_id);
-    const charge = data.charges.find((c) => c.sub.id === v.payment_id);
-    const sub = later?.sub ?? charge?.sub;
-    return sub ? [{ v, sub, day: later?.next ?? charge!.day }] : [];
+    const charges = data.charges.filter((c) => c.sub.id === v.payment_id);
+    const sub = later?.sub ?? charges[0]?.sub;
+    if (!sub) return [];
+    const unpaid = charges.find((c) => !c.done);
+    const last = charges[charges.length - 1];
+    const day = later?.next ?? unpaid?.day ?? (sub.period === ONCE ? last.day : chargeAt(last.day, sub.period, 1));
+    return [{ v, sub, day }];
   });
   const plain = data.later.filter((l) => !data.saving.some((v) => v.payment_id === l.sub.id));
   return { saving, plain };

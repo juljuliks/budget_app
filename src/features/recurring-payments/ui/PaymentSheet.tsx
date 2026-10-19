@@ -16,8 +16,10 @@ import { colors } from '@/shared/theme/theme';
 import { ONCE, todayKey } from '@/db/recurring';
 import { currentYm } from '@/db/plans';
 import { confirmDeletePayment, submitPayment } from '../model/commands';
-import { paymentWords } from '@/entities/category';
+import { CategorySummaryRow, paymentWords } from '@/entities/category';
+import { showOperationsFrom } from '@/shared/navigation/navigation';
 import { PaymentTarget, usePaymentForm } from '../model/usePaymentForm';
+import { usePaymentOperations } from '../model/usePaymentOperations';
 import { usePaymentSaving } from '../model/usePaymentSaving';
 import SavingFields from './SavingFields';
 import { inTime, monthGenYear, periodText, PERIODS } from '../texts';
@@ -28,6 +30,8 @@ type Props = {
   onClose: () => void;
   /** step 2 of "Добавить подписку": "‹ Назад" to the merchants */
   adding?: { onBack: () => void };
+  /** before going to its operations: closes this sheet and the ones under it (by default — this one) */
+  onLeave?: () => void;
 };
 
 /**
@@ -35,8 +39,9 @@ type Props = {
  * period until picked by hand) and what it does to the plan ("В план октября +30 ₾"). Opened from an operation just
  * put in "Подписки": "Пропустить" keeps it without a day ("Без даты списания"), not asked again.
  */
-export default function PaymentSheet({ target, onClose, adding }: Props) {
+export default function PaymentSheet({ target, onClose, adding, onLeave }: Props) {
   const f = usePaymentForm(target);
+  const ops = usePaymentOperations(target);
   const saving = usePaymentSaving(target, f.period, f.input?.amount_minor ?? null, f.due);
   const [otherOpen, setOtherOpen] = useState(false);
   const custom = !PERIODS.some(([m]) => m === f.period);
@@ -58,6 +63,8 @@ export default function PaymentSheet({ target, onClose, adding }: Props) {
     >
       <SheetScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {adding ? <StepsNav at={1} count={2} name={w.One} onBack={adding.onBack} /> : null}
+        {/* like a merchant's and a category's page: how many operations and how much — a link to them */}
+        {ops ? <CategorySummaryRow summary={ops.summary} onShow={() => { (onLeave ?? onClose)(); showOperationsFrom(ops.filter); }} /> : null}
         {target?.from_operation ? (
           <Text style={[formStyles.hint, styles.lead]}>Запомним, когда спишется следующая, — она встанет в план своего месяца.</Text>
         ) : null}

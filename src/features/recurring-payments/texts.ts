@@ -18,6 +18,9 @@ export function shortDay(day: string, now = new Date()): string {
 /** "18 октября". */
 export const longDay = (day: string) => { const [, m, d] = parts(day); return `${d} ${MONTHS_GEN[m - 1]}`; };
 
+/** "18 октября"; another year — "18 октября 2027". */
+export const longDayYear = (day: string, now = new Date()) => `${longDay(day)}${parts(day)[0] === now.getFullYear() ? '' : ` ${parts(day)[0]}`}`;
+
 /** "в октябре" of 'YYYY-MM'. */
 export const inMonth = (ym: string) => `в ${MONTHS_PREP[Number(ym.slice(5)) - 1]}`;
 

@@ -90,6 +90,15 @@ describe('6.6 subscriptions', () => {
     expect(await screen.findByText(/^10 октября 2027/)).toBeTruthy();
   });
 
+  test('its operations: "N операций · сумма ›" (its merchant\'s), a tap — the operations searched by it, the sheets closed', async () => {
+    await openSubscriptions();
+    await tap('Подписка: NETFLIX.COM');
+    expect(await screen.findByText(`1 операция · 30.00${N}₾ ›`)).toBeTruthy();
+    await tap(`1 операция · 30.00${N}₾ ›`);
+    expect(await screen.findByDisplayValue('NETFLIX.COM')).toBeTruthy();
+    expect(screen.queryByText('Списания в октябре')).toBeNull();
+  });
+
   test('every week: not a subscription\'s period (the plan\'s repeating payment has it)', async () => {
     await openSubscriptions();
     await tap('Подписка: NETFLIX.COM');
@@ -251,6 +260,19 @@ describe('6.7.8 saving up for a subscription', () => {
     expect(screen.queryByText('Списания в октябре')).toBeNull();
   });
 
+  test('"Предстоящие подписки": one paid this month from what was saved — the charge it saves for now (next year)', async () => {
+    await openApp(async () => {
+      await seed();
+      // a year one charged on the 10th (NETFLIX.COM in the seed), saved up for since September
+      const id = await savePayment({ merchant_key: 'NETFLIX.COM', name: 'Netflix', amount_minor: 3000, currency: 'GEL', period: 12, due: '2026-10-10' });
+      await (await getDb()).run("INSERT INTO payment_savings (id, payment_id, since_ym, start_minor) VALUES (5, ?, '2026-09', 1000)", [id]);
+    });
+    await tap('Статистика');
+    await tap('План');
+    await tap('📺 Предстоящие подписки');
+    expect(await screen.findByText(/^раз в год · 10 окт 2027/)).toBeTruthy();
+  });
+
   test('turned off with something saved: asked first, what it had goes to the month\'s savings; "Отменить" puts it back', async () => {
     await openApp(async () => {
       await seed();
@@ -265,7 +287,7 @@ describe('6.7.8 saving up for a subscription', () => {
     await tap('📺 Подписки');
     await tap('Подписка: Netflix');
     expect(await screen.findByText(`Отложено 10${N}₾ из 30${N}₾.`)).toBeTruthy();
-    await tap('Нет, весь платёж в октябре');
+    await tap('Нет, весь платёж в октябре 2027');
     await tap('Сохранить');
     expect(await screen.findByText('Не откладывать на Netflix?')).toBeTruthy();
     expect(screen.getByText(/^На «Netflix» уже отложено 10/)).toBeTruthy();
