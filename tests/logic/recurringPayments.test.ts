@@ -109,3 +109,28 @@ test('a payment without a merchant (put in from the plan) is charged by any spen
   // its card for an operation of any merchant of the category
   expect((await paymentCard('FITPASS', new Date('2026-10-18T12:00:00'), sport))?.next).toBe('2026-11-05');
 });
+
+test('a category\'s last payment deleted: its repeating payments go off, the item a one-off one; "Отменить" puts both back', async () => {
+  const { createCategory } = require('../../src/db/categories');
+  const { turnRecurring, restorePayment } = require('../../src/db/recurring');
+  const rent = await createCategory('Аренда', '🏠');
+  await turnRecurring(rent, true);
+  await charge('LANDLORD', 130000, '2026-10-13T10:00:00', rent);
+  const id = await savePayment({ category_id: rent, merchant_key: null, name: 'Аренда', amount_minor: 130000, currency: 'GEL', period: 1, due: '2026-11-13' });
+  const recurring = async () => (await (await getDb()).get<{ r: number }>('SELECT recurring AS r FROM categories WHERE id = ?', [rent]))!.r;
+  expect((await listPlan('2026-10')).find((i) => i.category_id === rent)).toMatchObject({ kind: 'subs', limit_minor: 130000 });
+  const deleted = await deletePayment(id);
+  expect(deleted.off).not.toBeNull();
+  expect(await recurring()).toBe(0);
+  expect((await listPlan('2026-10')).find((i) => i.category_id === rent)).toMatchObject({ kind: 'fixed', limit_minor: 130000 });
+  await restorePayment(id, deleted);
+  expect(await recurring()).toBe(1);
+  expect((await listPlan('2026-10')).find((i) => i.category_id === rent)).toMatchObject({ kind: 'subs', limit_minor: 130000 });
+});
+
+test('"Подписки" without subscriptions keeps its repeating payments on', async () => {
+  const subs = (await subscriptionsCategoryId())!;
+  const id = await savePayment({ ...NETFLIX, due: '2026-11-18' });
+  expect((await deletePayment(id)).off).toBeNull();
+  expect(await (await getDb()).get('SELECT recurring FROM categories WHERE id = ?', [subs])).toEqual({ recurring: 1 });
+});

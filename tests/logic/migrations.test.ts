@@ -290,4 +290,21 @@ describe('migrations', () => {
     await db.run("UPDATE recurring_payments SET period_unit = 'once'");
     await expect(db.run("UPDATE recurring_payments SET period_unit = 'day'")).rejects.toHaveProperty('message', expect.stringContaining('CHECK constraint failed'));
   });
+
+  test('migration 47: repeating payments on with none left — off, this month on a one-off payment; "Подписки" stays on', async () => {
+    jest.useFakeTimers({ now: new Date('2026-10-18T12:00:00'), advanceTimers: true });
+    const db = openDatabase(':memory:');
+    await migrate(db, MIGRATIONS.slice(0, 46));
+    await db.run("INSERT INTO categories (id, name, recurring) VALUES (90, 'Аренда', 1), (91, 'Спорт', 1), (92, 'Подписки', 1)");
+    // Аренда: only a deleted one; Спорт: a live one
+    await db.run(`INSERT INTO recurring_payments (id, category_id, merchant_key, name, amount_minor, currency, period_months, due, since_ym, created_at, deleted_at)
+      VALUES (1, 90, NULL, 'Аренда', 130000, 'GEL', 1, '2026-10-13', '2026-10', 0, 5), (2, 91, NULL, 'Спорт', 9000, 'GEL', 1, '2026-10-20', '2026-10', 0, NULL)`);
+    await db.run("INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency) VALUES ('2026-09', 90, 130000, 'subs', 'GEL'), ('2026-10', 90, 130000, 'subs', 'GEL')");
+    await migrate(db);
+    jest.useRealTimers();
+    expect(await db.all('SELECT id, recurring FROM categories WHERE id IN (90, 91, 92) ORDER BY id')).toEqual([
+      { id: 90, recurring: 0 }, { id: 91, recurring: 1 }, { id: 92, recurring: 1 }]);
+    expect(await db.all('SELECT ym, kind, limit_minor FROM plan_items WHERE category_id = 90 ORDER BY ym')).toEqual([
+      { ym: '2026-09', kind: 'subs', limit_minor: 130000 }, { ym: '2026-10', kind: 'fixed', limit_minor: 130000 }]);
+  });
 });

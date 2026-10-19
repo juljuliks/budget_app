@@ -203,7 +203,7 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
       ) : null}
       {(kind === 'limit' || kind === 'fixed') && target ? <RepeatField ym={ym} form={form as unknown as UseFormReturn<RepeatForm>} entered={entered ?? ''} currency={enteredCurrency} /> : null}
       {kind !== 'subs' || !target ? null : target.recurring && target.merchants ? <Text style={formStyles.hint}>{BY_HAND_HINT}</Text>
-        : <RecurringFields categoryId={target.category_id} form={form as unknown as Parameters<typeof RecurringFields>[0]['form']} />}
+        : <RecurringFields categoryId={target.category_id} on={!!target.recurring} form={form as unknown as Parameters<typeof RecurringFields>[0]['form']} />}
       {kind === 'fund' && target ? <FundFields ym={ym} categoryId={target.category_id} form={form as unknown as UseFormReturn<FundForm>} /> : null}
     </TextInputModal>
   );

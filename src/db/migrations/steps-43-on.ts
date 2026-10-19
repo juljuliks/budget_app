@@ -88,4 +88,19 @@ export const STEPS_43_ON: MigrationStep[][] = [
   [
     "ALTER TABLE recurring_payments ADD COLUMN period_unit TEXT NOT NULL DEFAULT 'month' CHECK (period_unit IN ('month', 'week', 'once'))",
   ],
+  // 47: a category with its repeating payments on but none left (deleted, or taken by 45) — off, as deleting the last one
+  // does now: its items of this month on a one-off payment again ('fixed', the amount as it is); "Подписки" stays on
+  [
+    async (db) => {
+      const now = new Date();
+      const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const cats = await db.all<{ id: number }>(
+        `SELECT id FROM categories c WHERE recurring = 1 AND name <> 'Подписки'
+          AND NOT EXISTS (SELECT 1 FROM recurring_payments p WHERE p.category_id = c.id AND p.deleted_at IS NULL)`);
+      for (const { id } of cats) {
+        await db.run('UPDATE categories SET recurring = 0 WHERE id = ?', [id]);
+        await db.run("UPDATE plan_items SET kind = 'fixed' WHERE category_id = ? AND ym >= ? AND kind = 'subs'", [id, ym]);
+      }
+    },
+  ],
 ];

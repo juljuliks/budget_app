@@ -331,6 +331,49 @@ describe('6.7.9 "Повторяющийся платёж" from the plan', () => 
     expect(await (await getDb()).get("SELECT locked_minor FROM plan_months WHERE ym = '2026-10'")).toEqual({ locked_minor: 0 });
   });
 
+  test('turned off with its payment left: "Повторяющийся платёж" again — its payment back in the sheet, "Сохранить" on', async () => {
+    await openApp(async () => {
+      await seed();
+      const home = (await (await getDb()).get<{ id: number }>("SELECT id FROM categories WHERE name = 'Дом и коммуналка'"))!.id;
+      await savePayment({ category_id: home, merchant_key: null, name: 'Дом и коммуналка', amount_minor: 80000, currency: 'GEL', period: 1, due: '2026-11-03' });
+    });
+    await tap('Статистика');
+    await tap('План');
+    await tap('Изменить: 🏠 Дом и коммуналка');
+    await tap(screen.getByRole('radio', { name: /Повторяющийся платёж/ }));
+    expect(await screen.findByText(/^3 ноября 2026/)).toBeTruthy();
+    await tap('Сохранить');
+    expect(await screen.findByText('каждый месяц · следующее 3 ноя')).toBeTruthy();
+    expect(await (await getDb()).get("SELECT recurring FROM categories WHERE name = 'Дом и коммуналка'")).toEqual({ recurring: 1 });
+  });
+
+  test('a category\'s last payment deleted: its repeating payments off, the row a one-off payment; "Отменить" — back', async () => {
+    await openApp(async () => {
+      await seed();
+      const home = (await (await getDb()).get<{ id: number }>("SELECT id FROM categories WHERE name = 'Дом и коммуналка'"))!.id;
+      await (await getDb()).run('UPDATE categories SET recurring = 1 WHERE id = ?', [home]);
+      await savePayment({ category_id: home, merchant_key: 'RENT', name: 'RENT', amount_minor: 80000, currency: 'GEL', period: 1, due: '2026-11-03' });
+    });
+    await tap('Статистика');
+    await tap('План');
+    await tap('🏠 Дом и коммуналка');
+    await tap('Платёж: RENT');
+    await tap('Удалить платёж');
+    await tap('Удалить');
+    expect(await screen.findByText('Платёж «RENT» удалён, повторяющиеся платежи выключены')).toBeTruthy();
+    expect(await (await getDb()).get("SELECT recurring FROM categories WHERE name = 'Дом и коммуналка'")).toEqual({ recurring: 0 });
+    await tap('Отменить');
+    expect(await screen.findByText('Платёж «RENT» снова в плане')).toBeTruthy();
+    expect(await (await getDb()).get("SELECT recurring FROM categories WHERE name = 'Дом и коммуналка'")).toEqual({ recurring: 1 });
+  });
+
+  test('"Подписки" without subscriptions: "нет подписок" in its row', async () => {
+    await openApp(seed);
+    await tap('Статистика');
+    await tap('План');
+    expect(await screen.findByText('нет подписок')).toBeTruthy();
+  });
+
   test('every week from the plan: the day a week after the last spending, ± 3 days; each week\'s charge in the month', async () => {
     await openApp(seed);
     await tap('Статистика');

@@ -106,7 +106,7 @@ describe('saving up for a subscription', () => {
     expect(await subsItem('2026-10')).toBe(1200);
     const deleted = await deletePayment(id);
     expect(await subsItem('2026-10')).toBe(0);
-    await restorePayment(id, deleted?.undo);
+    await restorePayment(id, deleted);
     expect(await subsItem('2026-10')).toBe(1200);
   });
 });

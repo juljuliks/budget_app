@@ -19,13 +19,14 @@ export const dateNeeded = (period: number) => (period < 0 ? 'Для еженед
 /** The plan sheet's repeating payment: how often and the next charge (none — the amount stands each month). */
 export type RecurringForm = { period: number; next: string | null };
 
-type Props = { categoryId: number; form: UseFormReturn<RecurringForm & { value: string; currency: Currency }> };
+/** `on`: the category's repeating payments are on — its payment is what the sheet opened with (else picked here just now) */
+type Props = { categoryId: number; on: boolean; form: UseFormReturn<RecurringForm & { value: string; currency: Currency }> };
 
 /**
  * "Повторяющийся платёж" in the plan's sheet: "Как часто" and "Следующее списание" — offered from the category's last
  * spending plus the period; for a monthly one it may stay empty ("необязательно"), a rarer one needs it.
  */
-export default function RecurringFields({ categoryId, form }: Props) {
+export default function RecurringFields({ categoryId, on, form }: Props) {
   const [period, next] = useWatch({ control: form.control, name: ['period', 'next'] });
   // the charge another period is counted from (its payment's last one, or the category's last spending); the day picked
   // by hand in this sheet stays
@@ -37,7 +38,10 @@ export default function RecurringFields({ categoryId, form }: Props) {
     (async () => {
       const own = await paymentCard(null, undefined, categoryId);
       if (own && !own.sub.merchant_key) {
-        form.reset({ ...form.getValues(), value: toInputValue(own.sub.amount_minor), currency: own.sub.currency, period: own.sub.period, next: own.next });
+        const saved = { value: toInputValue(own.sub.amount_minor), currency: own.sub.currency, period: own.sub.period, next: own.next };
+        // turned off, left from before: brought back is a change to save (the kind picked here stays one)
+        if (on) form.reset({ ...form.getValues(), ...saved });
+        else (Object.keys(saved) as Array<keyof typeof saved>).forEach((k) => form.setValue(k, saved[k], { shouldDirty: true }));
         if (own.next) setAnchor(chargeBefore(own.next, own.sub.period));
         return;
       }

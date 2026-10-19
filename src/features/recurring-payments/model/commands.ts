@@ -85,13 +85,14 @@ async function check(input: PaymentInput, id: number | undefined, onDone: () => 
 async function remove(id: number, name: string, category: PaymentCategory, onDone: () => void) {
   const w = paymentWords(category.name);
   try {
-    const stopped = await deletePayment(id);
+    const deleted = await deletePayment(id);
     emitTransactionsChanged();
     onDone();
-    toast(`${w.One} «${name}» ${w.deleted}`, {
+    // the category's last one: its repeating payments went off
+    toast(`${w.One} «${name}» ${w.deleted}${deleted.off ? ', повторяющиеся платежи выключены' : ''}`, {
       label: UNDO,
       onPress: () => {
-        restorePayment(id, stopped?.undo).then(() => { emitTransactionsChanged(); toast(`${w.One} «${name}» снова в плане`); })
+        restorePayment(id, deleted).then(() => { emitTransactionsChanged(); toast(`${w.One} «${name}» снова в плане`); })
           .catch(toastFailure('restore payment', 'Не удалось восстановить'));
       },
     });

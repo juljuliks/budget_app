@@ -40,7 +40,8 @@ export function RecurringItemRow({ p, item, hidden, onOpen }: Props) {
   // none charged this month (0 at the right, the row faded and last in its section): when and how much next — "30 ₾ в ноябре"
   const up = item.subs?.upcoming;
   const upcoming = up ? `${formatWithCurrency(up.amount_minor, up.currency)} ${inMonthYear(up.ym)}` : null;
-  const note = upcoming ?? single ?? (item.kind !== 'subs' ? `вручную · задайте даты ${w.toAll}` : listed || w.noDated);
+  // none at all: nothing to set a day to
+  const note = upcoming ?? single ?? (item.subs?.empty ? w.none : item.kind !== 'subs' ? `вручную · задайте даты ${w.toAll}` : listed || w.noDated);
   return (
     <TouchableOpacity style={[styles.row, up && styles.later]} onPress={onOpen} accessibilityLabel={categoryLabel(item)}>
       <View style={styles.pin}><RepeatIcon color={colors.accent} size={20} /></View>
