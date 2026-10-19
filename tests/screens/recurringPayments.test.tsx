@@ -183,7 +183,7 @@ describe('6.7.9 "Повторяющийся платёж" from the plan', () => 
     // RENT on the 3rd plus a month
     expect(await screen.findByText(/^3 ноября 2026/)).toBeTruthy();
     await tap('Сохранить');
-    expect(await screen.findByText('каждый месяц · ✓ оплачено 3 окт')).toBeTruthy();
+    expect(await screen.findByText('каждый месяц · следующее 3 ноя')).toBeTruthy();
     expect(await (await getDb()).get("SELECT merchant_key, amount_minor, period_months, due FROM recurring_payments WHERE name = 'Дом и коммуналка'"))
       .toEqual({ merchant_key: null, amount_minor: 80000, period_months: 1, due: '2026-11-03' });
     expect(await (await getDb()).get("SELECT recurring FROM categories WHERE name = 'Дом и коммуналка'")).toEqual({ recurring: 1 });
@@ -244,6 +244,21 @@ describe('6.7.8 saving up for a subscription', () => {
     // in the plan the contribution is in "Сбережения" (like a fund's), not under "Подписки"
     expect(screen.getByLabelText('📺 Предстоящие подписки')).toBeTruthy();
     expect(screen.queryByText(/^копим 3/)).toBeNull();
+  });
+
+  test('all its payments in dollars: "(12 $)" before the month\'s charges in the plan, "(1 $)" before the contribution', async () => {
+    await openApp(async () => {
+      await seed();
+      const db = await getDb();
+      for (let d = 1; d <= 15; d++) await db.run("INSERT OR REPLACE INTO fx_rates (date, currency, gel_per_unit) VALUES (?, 'USD', 2.5)", [`2026-10-${String(d).padStart(2, '0')}`]);
+      await savePayment({ merchant_key: 'NETFLIX.COM', name: 'Netflix', amount_minor: 1200, currency: 'USD', period: 1, due: '2026-10-10' });
+      const id = await savePayment({ merchant_key: 'SPOTIFY', name: 'Spotify', amount_minor: 1200, currency: 'USD', period: 12, due: '2027-10-25' });
+      await db.run("INSERT INTO payment_savings (id, payment_id, since_ym, start_minor) VALUES (5, ?, '2026-10', 0)", [id]);
+    });
+    await tap('Статистика');
+    await tap('План');
+    expect(await screen.findByText('(12 $)')).toBeTruthy();
+    expect(screen.getByText('(1 $)')).toBeTruthy();
   });
 
   test('"Предстоящие подписки" in the plan\'s "Сбережения" opens the coming ones; "Подписки" in its section — the month\'s', async () => {

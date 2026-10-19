@@ -166,8 +166,9 @@ export function planView({ ym, currency, items: all, budget, toShown, fromShown,
       }] : []),
       // none left — not shown
       ...(floating > 0 ? [{
-        key: 'floating', name: '💰 Сэкономлено', note: 'не запланировано — решите в итогах месяца', tone: 'savings' as const,
-        value: less ? less.free.now : free!, ...(less && less.free.now < free! ? { was: free! } : {}), ...inBudget(less ? less.free.now : free!),
+        key: 'floating', name: '💰 Сэкономлено', tone: 'savings' as const,
+        value: less ? less.free.now : free!, ...inBudget(less ? less.free.now : free!),
+        ...(less && less.free.now < free! ? { note: 'меньше из-за перерасхода', was: free! } : { note: 'не запланировано — решите в итогах месяца' }),
       }] : []),
     ];
     if (savingsRows.length || funds.length || saving.length) {
@@ -193,7 +194,7 @@ export function planView({ ym, currency, items: all, budget, toShown, fromShown,
   // funds, what the month before owes, less the leftover it moved in (that one is room)
   const claimed = total + fundsTotal + debt - plus;
 
-  return { money, budgetMoney, fundInBudget, savingInBudget, total, fundsTotal, funds, recurring, shownBudget, budgetSub, claimed, unplanned, locked, free, timing, parts, less, systemGroups, budgetHint, groups: groupByType(items) };
+  return { currency, money, budgetMoney, fundInBudget, savingInBudget, total, fundsTotal, funds, recurring, shownBudget, budgetSub, claimed, unplanned, locked, free, timing, parts, less, systemGroups, budgetHint, groups: groupByType(items) };
 }
 
 export type PlanView = ReturnType<typeof planView>;

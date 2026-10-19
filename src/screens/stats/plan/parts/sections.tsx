@@ -68,13 +68,13 @@ export function systemSections(p: PlanView, hidden: boolean, open: SystemOpen) {
 type Items = {
   ym: string; currency: Currency; hidden: boolean;
   toShown: (minor: number, from: Currency) => number | null;
-  onOpen: (item: PlanItem) => void; onPin: (item: PlanItem) => void;
+  onOpen: (item: PlanItem) => void;
   /** a category with repeating payments: its payments */
   onOpenRecurring: (item: PlanItem) => void;
 };
 
-/** The plan's items by their category's type, each section with its total and its share of the budget; one with repeating payments — 🔁 in the pin's place. */
-export function itemSections(p: PlanView, { ym, currency, hidden, toShown, onOpen, onPin, onOpenRecurring }: Items) {
+/** The plan's items by their category's type, each section with its total and its share of the budget; one with repeating payments — 🔁 for its icon. */
+export function itemSections(p: PlanView, { ym, currency, hidden, toShown, onOpen, onOpenRecurring }: Items) {
   return p.groups.map((g) => (
     <React.Fragment key={g.title}>
       {/* the type's share of the amount to distribute; "Скрыть суммы": the share only */}
@@ -90,7 +90,7 @@ export function itemSections(p: PlanView, { ym, currency, hidden, toShown, onOpe
         ) : (
           <PlanItemRow
             key={item.category_id} p={p} item={item} ym={ym} currency={currency} hidden={hidden} toShown={toShown}
-            onOpen={() => onOpen(item)} onPin={() => onPin(item)}
+            onOpen={() => onOpen(item)}
           />
         )))}
       </View>

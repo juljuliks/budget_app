@@ -39,11 +39,18 @@ export async function listPlan(ym: string, to?: Currency): Promise<PlanItem[]> {
     // its charge this month: the first not paid yet (a weekly one has several), else the last paid
     const own = only ? subs.charges.filter((c) => c.sub.id === only.id) : [];
     const charge = own.find((c) => !c.done) ?? own[own.length - 1];
+    // all its payments in one currency: the month's charges (but those paid from what was saved) and contributions in it
+    const one = all.length && all.every((s) => s.currency === all[0].currency) ? all[0].currency : null;
     subsInfo.set(r.category_id, {
       names: subNames((id) => !savingIds.has(id)), saving_names: subNames((id) => savingIds.has(id)),
       saving_minor: subs.saving.reduce((a, v) => a + (v.converted_minor ?? 0), 0),
       ...savingProgress(subs.saving, all, (minor, from) => conv(minor, from, target) ?? 0),
       own: all.some((s) => !s.merchant_key),
+      ...(one ? { in_currency: {
+        currency: one,
+        charges_minor: subs.charges.filter((c) => !c.saved).reduce((a, c) => a + c.sub.amount_minor, 0),
+        saving_minor: subs.saving.reduce((a, v) => a + v.contribution_minor, 0),
+      } } : {}),
       ...(only ? { single: {
         period: only.period, done: !!charge?.done,
         day: charge?.day ?? subs.later.find((l) => l.sub.id === only.id)?.next ?? null,

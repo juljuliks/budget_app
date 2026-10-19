@@ -45,6 +45,8 @@ export type PlanItem = {
     saving_minor: number; saving_end_minor: number; saving_amount_minor: number;
     /** it has its own payment without a merchant (put in from the plan's sheet): the row opens that sheet */
     own: boolean;
+    /** all its payments in one currency: the month's charges and contributions in it */
+    in_currency?: { currency: Currency; charges_minor: number; saving_minor: number };
     /** the category's only payment: how often, its charge this month (done) or the next one; day null — none set */
     single?: { period: Period; day: string | null; done: boolean };
   };

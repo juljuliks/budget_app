@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Text, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 import Loading from '@/shared/ui/Loading';
 import { categoryLabel } from '@/db/categories';
 import type { Currency } from '@/db/fx';
@@ -12,7 +12,10 @@ import { usePlanData } from './model/usePlanData';
 import { planView } from './model/planView';
 import BudgetCard from './parts/BudgetCard';
 import BudgetSheet from './parts/BudgetSheet';
+import PlanIconsSheet from './parts/PlanIconsSheet';
 import SavingsLessSheet from './parts/SavingsLessSheet';
+import { InfoIcon } from '@/shared/ui/icons';
+import { colors } from '@/shared/theme/theme';
 import { itemSections, systemSections } from './parts/sections';
 import { FundSheet } from '@/features/fund';
 import { PaymentsView, RecurringPaymentsSheet } from '@/features/recurring-payments';
@@ -53,6 +56,8 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
   const [lessOpen, setLessOpen] = useState(false);
   // "Подписки" opened: the month's payments, or the coming ones ("Предстоящие подписки" in "Сбережения")
   const [subsOpen, setSubsOpen] = useState<{ item: PlanItem; view: PaymentsView } | null>(null);
+  // "Что значат значки"
+  const [iconsOpen, setIconsOpen] = useState(false);
 
   if (!items) return <Loading failed={data.failed} onRetry={load} />;
   const p = planView({ ...data, items, ym, currency, hidden });
@@ -64,14 +69,16 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
     <View style={styles.screen}>
     <StickyScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <BudgetCard p={p} budget={budget} currency={currency} hidden={hidden} onEdit={openBudget} onLess={() => setLessOpen(true)} />
-      <Text style={styles.pinNote}>{`📌 — переходит в следующий месяц с той же суммой${p.recurring.length ? '\n🔁 — повторяющийся платёж: переходит всегда, сумма — по датам списаний' : ''}`}</Text>
+      <TouchableOpacity style={styles.iconsLink} onPress={() => setIconsOpen(true)} hitSlop={8} accessibilityRole="button">
+        <InfoIcon color={colors.accent} size={16} />
+        <Text style={styles.iconsLinkText}>Что значат значки</Text>
+      </TouchableOpacity>
 
       {items.length === 0 ? <Text style={styles.hint}>План пуст. Нажмите ＋, чтобы добавить категории и суммы.</Text> : null}
       {systemSections(p, hidden, { budget: openBudget, carry: setCarryOpen, less: () => setLessOpen(true), fund: setFundOpen, saving: (item) => openRecurring(item, 'upcoming') })}
       {itemSections(p, {
         ym, currency, hidden, toShown,
         onOpen: (item) => setEditingItem(editTarget(item)),
-        onPin: actions.togglePin,
         onOpenRecurring: (item) => openRecurring(item),
       })}
 
@@ -106,6 +113,7 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
           onEditAmount={() => { const { item } = subsOpen; setSubsOpen(null); setEditingItem(editTarget(item)); }}
         />
       ) : null}
+      <PlanIconsSheet visible={iconsOpen} onClose={() => setIconsOpen(false)} />
       <CarrySheet fromYm={carryOpen ? budget?.carry?.from_ym ?? null : null} kind={carryOpen ?? 'debt'} onClose={() => setCarryOpen(null)} />
     </StickyScrollView>
     {/* "Добавить в план": step 1 the category, step 2 its amount (the item's sheet) */}

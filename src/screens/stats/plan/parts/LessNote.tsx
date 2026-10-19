@@ -5,16 +5,18 @@ import { InfoIcon } from '@/shared/ui/icons';
 import Masked from '@/shared/ui/Masked';
 import { styles } from './styles';
 
+type Props = { label: string; less: number; money: (minor: number) => string; onPress?: () => void };
+
 /**
- * After savings the overspend took part of: "(−15 ₾ ⓘ)" — by how much; a tap — what took it (without `onPress` the line
- * it is in takes the tap, the legend's).
+ * Under savings the overspend took part of: "перерасход: −15 ₾ ⓘ" — by how much; a tap — what took it (without
+ * `onPress` the line it is in takes the tap, the legend's).
  */
-export default function LessNote({ less, money, onPress }: { less: number; money: (minor: number) => string; onPress?: () => void }) {
+export default function LessNote({ label, less, money, onPress }: Props) {
   const body = (
     <>
-      <Masked style={styles.lessText}>{`(−${money(less)}`}</Masked>
-      <InfoIcon color={colors.accent} size={14} />
-      <Text style={styles.lessText}>)</Text>
+      <Text style={styles.lessText}>{`${label}: `}</Text>
+      <Masked style={[styles.lessText, styles.lessMinus]}>{`−${money(less)}`}</Masked>
+      <InfoIcon color={colors.accent} size={13} />
     </>
   );
   return onPress ? (

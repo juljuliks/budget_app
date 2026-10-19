@@ -2,20 +2,23 @@ import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { paymentWords } from '@/entities/category';
 import type { PlanItem } from '@/db/plans';
+import { formatWithCurrency } from '@/shared/lib/money';
 import ProgressRing from '@/shared/ui/ProgressRing';
 import { colors } from '@/shared/theme/theme';
 import type { PlanView } from '../model/planView';
+import { Share } from './PlanItemRow';
 import { styles } from './styles';
 
 type Props = { p: PlanView; item: PlanItem; hidden: boolean; onOpen: () => void };
 
 /**
  * What a category saves up for its repeating payments this month, in "Сбережения" like a fund: "Предстоящие подписки"
- * ("… платежи"), a ring of what is saved of their amounts, "копим: Netflix", the month's contribution. A tap opens its payments.
+ * ("… платежи"), a ring of what is saved of their amounts, "копим: Netflix", the month's contribution and its share (all
+ * its payments in another currency — "(6 $)" before it). A tap opens its payments.
  */
 export function SavingItemRow({ p, item, hidden, onOpen }: Props) {
   const s = item.subs!;
-  const inBudget = p.savingInBudget(item);
+  const own = s.in_currency && s.in_currency.currency !== p.currency && s.in_currency.saving_minor > 0 ? formatWithCurrency(s.in_currency.saving_minor, s.in_currency.currency) : null;
   const w = paymentWords(item.name);
   // "Подписки" — just "Предстоящие подписки"; another category — its name in the line under (its emoji is in the title)
   const of = w.subscriptions ? '' : `${item.name} · `;
@@ -29,15 +32,15 @@ export function SavingItemRow({ p, item, hidden, onOpen }: Props) {
         <Text style={styles.name} numberOfLines={1}>{name}</Text>
         <Text style={styles.percent} numberOfLines={1}>{`${of}копим: ${s.saving_names.join(', ')}`}</Text>
       </View>
-      {hidden ? null : (
-        <View style={styles.amountBox}>
+      <View style={styles.amountBox}>
+        {hidden ? null : (
           <View style={styles.amountLine}>
-            {inBudget !== null && p.budgetMoney ? <Text style={[styles.amount, styles.savingForeign]}>{p.budgetMoney(inBudget)}</Text> : null}
+            {own ? <Text style={[styles.amount, styles.savingForeign]}>{`(${own})`}</Text> : null}
             <Text style={styles.amount}>{p.money(s.saving_minor)}</Text>
           </View>
-          <Text style={styles.amountOriginal}>в месяц</Text>
-        </View>
-      )}
+        )}
+        <Share p={p} value={s.saving_minor} before="в месяц" />
+      </View>
     </TouchableOpacity>
   );
 }

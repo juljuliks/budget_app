@@ -1,7 +1,7 @@
 // The plan's changes from its screen: the month's budget, an item removed, an item pinned.
 import type { UseFormReturn } from 'react-hook-form';
 import { categoryLabel } from '@/db/categories';
-import { OverBudgetError, PlanItem, removePlanItem, restorePlanItem, setPlanBudget, setPlanPinned } from '@/db/plans';
+import { OverBudgetError, PlanItem, removePlanItem, restorePlanItem, setPlanBudget } from '@/db/plans';
 import { formatWithCurrency, parseAmountOrZero } from '@/shared/lib/money';
 import { AMOUNT_HINT, SAVE_FAILED, UNDO } from '@/shared/lib/strings';
 import { sheetAlert } from '@/shared/ui/sheetAlert';
@@ -62,22 +62,17 @@ export function usePlanActions(ym: string, load: () => void) {
     load();
   }
 
-  // a category repeated every month (📌) is asked about: removing it also stops it carrying over
+  // a category repeated every month is asked about: removing it also stops it carrying over
   function removeItem(item: PlanItem) {
     if (!item.pinned) { remove(item); return; }
     sheetAlert(
       `Убрать «${categoryLabel(item)}» из плана?`,
-      'Эта категория повторяется каждый месяц (📌). Она пропадёт из плана этого месяца и не перейдёт в следующие. Операции не изменятся.',
+      'Эта категория повторяется каждый месяц. Она пропадёт из плана этого месяца и не перейдёт в следующие. Операции не изменятся.',
       [
         { text: 'Отмена', style: 'cancel' },
         { text: 'Убрать из плана', style: 'destructive', onPress: () => { remove(item); } },
       ]);
   }
 
-  function togglePin(item: PlanItem) {
-    run(setPlanPinned(ym, item.category_id, !item.pinned),
-      item.pinned ? `«${categoryLabel(item)}» больше не повторяется` : `«${categoryLabel(item)}» будет повторяться каждый месяц`);
-  }
-
-  return { saveBudget, removeItem, togglePin };
+  return { saveBudget, removeItem };
 }

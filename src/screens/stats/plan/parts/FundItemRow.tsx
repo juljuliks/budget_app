@@ -7,18 +7,20 @@ import { formatWithCurrency } from '@/shared/lib/money';
 import ProgressRing from '@/shared/ui/ProgressRing';
 import { colors } from '@/shared/theme/theme';
 import type { PlanView } from '../model/planView';
+import { Share } from './PlanItemRow';
 import { styles } from './styles';
 
 type Props = { p: PlanView; item: PlanItem; hidden: boolean; onOpen: () => void };
 
 /**
- * A fund in the plan: a ring of how far along it is in the pin's place, "1 200 из 3 000 ₾ · к 31 июля 2027", the month's
- * contribution; saved up — "можно тратить". A tap opens the fund.
+ * A fund in the plan: a ring of how far along it is for its icon, "1 200 из 3 000 ₾ · к 31 июля 2027", the month's
+ * contribution ("(385 $)" before it: in the target's currency, when the screen shows another) and its share; saved up —
+ * "можно тратить". A tap opens the fund.
  */
 export function FundItemRow({ p, item, hidden, onOpen }: Props) {
   const f = item.fund;
   const saved = f ? isSaved(f.saved_minor, f.target_minor) : false;
-  const inBudget = p.fundInBudget(item);
+  const own = item.currency !== p.currency && item.limit_minor ? formatWithCurrency(item.limit_minor, item.currency) : null;
   return (
     <TouchableOpacity style={styles.row} onPress={onOpen} accessibilityLabel={`Копилка: ${categoryLabel(item)}`}>
       <View style={styles.pin}>
@@ -32,18 +34,17 @@ export function FundItemRow({ p, item, hidden, onOpen }: Props) {
           </Text>
         ) : null}
       </View>
-      {hidden ? null : (
-        <View style={styles.amountBox}>
-          {/* "(385 $)" before it: in the budget's currency, when the screen shows another */}
+      <View style={styles.amountBox}>
+        {hidden ? null : (
           <View style={styles.amountLine}>
-            {inBudget !== null && p.budgetMoney ? <Text style={[styles.amount, styles.savingForeign]}>{p.budgetMoney(inBudget)}</Text> : null}
+            {own && item.converted_minor !== null ? <Text style={[styles.amount, styles.savingForeign]}>{`(${own})`}</Text> : null}
             <Text style={styles.amount}>
               {item.converted_minor !== null ? p.money(item.converted_minor) : formatWithCurrency(item.limit_minor, item.currency)}
             </Text>
           </View>
-          <Text style={styles.amountOriginal}>{saved && !item.limit_minor ? 'можно тратить' : 'в месяц'}</Text>
-        </View>
-      )}
+        )}
+        <Share p={p} value={item.converted_minor} before={saved && !item.limit_minor ? 'можно тратить' : 'в месяц'} />
+      </View>
     </TouchableOpacity>
   );
 }

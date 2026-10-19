@@ -34,30 +34,33 @@ export const styles = StyleSheet.create({
   },
   // the parts as a legend: a line each, the amounts and shares in columns
   parts: { gap: 6, marginTop: 10 },
-  part: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  legendBox: { width: 16, flexDirection: 'row', alignItems: 'center' },
+  part: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  // the dot in line with the name
+  legendBox: { width: 16, height: 20, flexDirection: 'row', alignItems: 'center' },
+  partName: { flex: 1 },
   legendDot: { width: 8, height: 8, borderRadius: 4 },
   legendPair: { flexDirection: 'row', alignItems: 'center' },
   // the second dot covers a third of the first, a ring of the card's colour between them
   legendOver: { width: 12, height: 12, borderRadius: 6, marginLeft: -5, borderWidth: 2, borderColor: colors.surface },
-  partLabel: { fontSize: 14, color: colors.muted },
-  // the amounts right-aligned at the edge; the shares in a column right by the names
-  partValues: { flex: 1, flexDirection: 'row', alignItems: 'baseline', justifyContent: 'flex-end', gap: 6 },
-  partValue: { textAlign: 'right', fontSize: 14, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
-  // "(−15 ₾ ⓘ)" after savings the overspend took part of
-  less: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  lessText: { fontSize: 13, color: colors.muted, fontVariant: ['tabular-nums'] },
-  // the legend's names laid out unseen: the widest sets the names' column
-  measure: { position: 'absolute', opacity: 0, alignItems: 'flex-start' },
-  // a share ("43%") or a word ("сэкономлено") right by the name
-  partNote: { minWidth: 34, textAlign: 'right', fontSize: 13, color: colors.muted, fontVariant: ['tabular-nums'] },
+  partLabel: { fontSize: 14, lineHeight: 20, color: colors.muted },
+  // the amount at the right edge, its share under it
+  partValues: { alignItems: 'flex-end' },
+  partValue: { textAlign: 'right', fontSize: 14, lineHeight: 20, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
+  // "перерасход: −15 ₾ ⓘ" under savings the overspend took part of
+  less: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 3, marginTop: 2 },
+  lessText: { fontSize: 12, color: colors.muted, fontVariant: ['tabular-nums'] },
+  lessMinus: { color: colors.danger },
+  // a share ("43%") or a word ("сэкономлено") under the amount
+  partNote: { textAlign: 'right', fontSize: 12, color: colors.muted, fontVariant: ['tabular-nums'] },
   note: { fontSize: 12, color: colors.muted, marginTop: 8 },
   overText: { color: colors.warn },
   savingsValue: { color: RING_LOCKED },
   lockedValue: { color: RING_LOCKED },
   lockedPart: { backgroundColor: RING_LOCKED, alignItems: 'center', justifyContent: 'center' },
   freeValue: { color: colors.income },
-  pinNote: { fontSize: 12, color: colors.muted, marginBottom: 4 },
+  // "Что значат значки" under the budget
+  iconsLink: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingVertical: 4, marginBottom: 4 },
+  iconsLinkText: { fontSize: 14, color: colors.accent },
   caption: { fontSize: 13, color: colors.muted, textAlign: 'center' },
   hint: { color: colors.muted, fontSize: 14, textAlign: 'center', marginVertical: 12 },
   group: { marginTop: 12 },
@@ -72,7 +75,13 @@ export const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
   },
-  pin: { paddingRight: 8 },
+  // a row's icon in a column of one width
+  pin: { width: 28, alignItems: 'center', marginRight: 10 },
+  pinBadge: {
+    width: 18, height: 18, borderRadius: 9, backgroundColor: colors.accent, borderWidth: 2, borderColor: colors.bg,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  pinBadgeCorner: { position: 'absolute', right: -8, bottom: -7 },
   nameBox: { flex: 1, marginRight: 8 },
   name: { fontSize: 15, color: colors.text },
   percent: { fontSize: 12, color: colors.muted, marginTop: 2, fontVariant: ['tabular-nums'] },

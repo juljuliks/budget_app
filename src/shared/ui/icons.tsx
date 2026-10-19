@@ -1,5 +1,5 @@
 import React from 'react';
-import Svg, { Circle, Path } from 'react-native-svg';
+import Svg, { Circle, G, Path } from 'react-native-svg';
 
 type P = { color: string; size?: number };
 
@@ -155,5 +155,30 @@ export const SplitIcon = ({ color, size = 16 }: P) => (
 export const RepeatIcon = ({ color, size = 20 }: P) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
     <Path d="m17 2 4 4-4 4M3 11v-1a4 4 0 0 1 4-4h14M7 22l-4-4 4-4M21 13v1a4 4 0 0 1-4 4H3" />
+  </Svg>
+);
+
+/** A plan item with a limit: bars under a ceiling line. */
+export const LimitIcon = ({ color, size = 22 }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M3 5h18M6 20v-6M10 20v-9M14 20v-4M18 20v-7" />
+  </Svg>
+);
+
+/** A one-off payment in the plan: a price tag (after Lucide "tag", ISC license). */
+export const OneOffIcon = ({ color, size = 22 }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M3 12V4h8l10 10-8 8z" />
+    <Circle cx={7.5} cy={8} r={1.3} />
+  </Svg>
+);
+
+/** "Повторять каждый месяц": a filled pin tilted 45° (in PlanBadge's circle, on a plan icon's corner). */
+export const TiltedPinIcon = ({ color, size = 11 }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24">
+    <G rotation={45} origin="12, 12" fill={color} stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M12 17v5M8 3h8" />
+      <Path d="M9 10.76V6h6v4.76l2 3.24H7z" />
+    </G>
   </Svg>
 );

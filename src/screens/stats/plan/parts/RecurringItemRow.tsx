@@ -4,19 +4,21 @@ import { categoryLabel } from '@/db/categories';
 import type { PlanItem } from '@/db/plans';
 import { paymentWords } from '@/entities/category';
 import { inTime, periodText, shortDay } from '@/features/recurring-payments';
-import { todayKey } from '@/db/recurring';
+import { chargeAt, ONCE, todayKey } from '@/db/recurring';
 import { RepeatIcon } from '@/shared/ui/icons';
 import { formatWithCurrency } from '@/shared/lib/money';
 import { colors } from '@/shared/theme/theme';
 import type { PlanView } from '../model/planView';
+import { Share } from './PlanItemRow';
 import { styles } from './styles';
 
 type Props = { p: PlanView; item: PlanItem; hidden: boolean; onOpen: () => void };
 
 /**
- * A category with repeating payments in the plan: the repeat sign in the pin's place, its payments with a day by name ("копим: …" — those
+ * A category with repeating payments in the plan: the repeat sign for its icon, its payments with a day by name ("копим: …" — those
  * saved up for), the month's charges (counted from them; by hand until one has a day; the contributions — in
- * "Сбережения", SavingItemRow). A tap opens the "Подписки" sheet.
+ * "Сбережения", SavingItemRow) and their share. All its payments in another currency — "(6 $)" before. A tap opens the
+ * "Подписки" sheet.
  */
 export function RecurringItemRow({ p, item, hidden, onOpen }: Props) {
   const names = item.subs?.names ?? [];
@@ -24,10 +26,16 @@ export function RecurringItemRow({ p, item, hidden, onOpen }: Props) {
   const listed = [names.join(', '), saving.length ? `копим: ${saving.join(', ')}` : ''].filter(Boolean).join(' · ');
   const w = paymentWords(item.name);
   const one = item.subs?.single;
-  // its only payment: how often, paid or when next ("без даты" — the amount stands each month)
+  // its only payment: how often and when (the plan, not what was paid: a charge done — the next one; "без даты" — the
+  // amount stands each month)
+  const next = one?.day && one.done ? (one.period === ONCE ? null : chargeAt(one.day, one.period, 1)) : null;
   const single = one ? [periodText(one.period),
-    one.done && one.day ? `✓ оплачено ${shortDay(one.day)}` : one.day ? [shortDay(one.day), inTime(one.day, todayKey())].filter(Boolean).join(', ') : 'без даты',
+    next ? `следующее ${shortDay(next)}` : one.day && one.done ? shortDay(one.day)
+      : one.day ? [shortDay(one.day), inTime(one.day, todayKey())].filter(Boolean).join(', ') : 'без даты',
   ].join(' · ') : null;
+  // "(6 $)": all its payments in one currency, not the screen's
+  const own = item.kind === 'subs' ? item.subs?.in_currency : undefined;
+  const foreign = own && own.currency !== p.currency && own.charges_minor > 0 ? formatWithCurrency(own.charges_minor, own.currency) : null;
   const note = single ?? (item.kind !== 'subs' ? `вручную · задайте даты ${w.toAll}` : listed || w.noDated);
   return (
     <TouchableOpacity style={styles.row} onPress={onOpen} accessibilityLabel={categoryLabel(item)}>
@@ -36,11 +44,15 @@ export function RecurringItemRow({ p, item, hidden, onOpen }: Props) {
         <Text style={styles.name} numberOfLines={1}>{`${item.emoji || ''} ${item.name}`.trim()}</Text>
         <Text style={styles.percent} numberOfLines={1}>{note}</Text>
       </View>
-      {hidden ? null : (
-        <View style={styles.amountBox}>
-          <Text style={styles.amount}>{item.converted_minor !== null ? p.money(item.converted_minor) : formatWithCurrency(item.limit_minor, item.currency)}</Text>
-        </View>
-      )}
+      <View style={styles.amountBox}>
+        {hidden ? null : (
+          <View style={styles.amountLine}>
+            {foreign ? <Text style={[styles.amount, styles.amountForeign]}>{`(${foreign})`}</Text> : null}
+            <Text style={styles.amount}>{item.converted_minor !== null ? p.money(item.converted_minor) : formatWithCurrency(item.limit_minor, item.currency)}</Text>
+          </View>
+        )}
+        <Share p={p} value={item.converted_minor} />
+      </View>
     </TouchableOpacity>
   );
 }
