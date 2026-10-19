@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import type { Currency } from '@/db/fx';
 import { planEffect } from '@/db/plans';
-import { offeredDue, todayKey } from '@/db/recurring';
+import { addMonths, offeredDue, todayKey } from '@/db/recurring';
 import { parseAmountInput, toInputValue } from '@/shared/lib/money';
 
 /** The category a payment is of (its name gives the words: "Подписка" in "Подписки", else "Платёж"). */
@@ -31,7 +31,7 @@ export function usePaymentForm(target: PaymentTarget | null) {
   const [currency, setCurrency] = useState<Currency>('GEL');
   const [period, setPeriodState] = useState(1);
   const [due, setDueState] = useState<string | null>(null);
-  // the day picked by hand stays when the period changes
+  // the day picked by hand in this sheet stays when the period changes
   const [dueByHand, setDueByHand] = useState(false);
   const [effect, setEffect] = useState<Awaited<ReturnType<typeof planEffect>>>(null);
 
@@ -42,12 +42,14 @@ export function usePaymentForm(target: PaymentTarget | null) {
     setCurrency(target.currency);
     setPeriodState(target.period_months);
     setDueState(target.due ?? (target.last_day ? offeredDue(target.last_day, target.period_months, todayKey()) : null));
-    setDueByHand(!!target.due && target.id !== undefined);
+    setDueByHand(false);
   }, [target]);
 
+  // the charge before the next one: the merchant's last, or a saved payment's next one less its period
+  const lastCharge = target?.last_day ?? (target?.due ? addMonths(target.due, -target.period_months) : null);
   const setPeriod = (months: number) => {
     setPeriodState(months);
-    if (!dueByHand && target?.last_day) setDueState(offeredDue(target.last_day, months, todayKey()));
+    if (!dueByHand && lastCharge) setDueState(offeredDue(lastCharge, months, todayKey()));
   };
   const setDue = (day: string) => { setDueState(day); setDueByHand(true); };
 

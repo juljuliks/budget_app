@@ -60,6 +60,21 @@ describe('6.6 subscriptions', () => {
     expect((await subs())[0]).toMatchObject({ period_months: 12, due: '2027-10-10' });
   });
 
+  test('a saved one: another period moves its next charge from the last one; back to its own — the day it had', async () => {
+    await openSubscriptions();
+    await tap('Подписка: NETFLIX.COM');
+    await tap('Сохранить');
+    await screen.findByText('✓ списано 10 окт');
+    await tap('Подписка: NETFLIX.COM');
+    expect(await screen.findByText(/^10 ноября 2026/)).toBeTruthy();
+    await tap('Раз в год');
+    expect(await screen.findByText(/^10 октября 2027/)).toBeTruthy();
+    await tap('Раз в 3 месяца');
+    expect(await screen.findByText(/^10 января 2027/)).toBeTruthy();
+    await tap('Каждый месяц');
+    expect(await screen.findByText(/^10 ноября 2026/)).toBeTruthy();
+  });
+
   test('"＋ Добавить подписку": step 1 the merchant (charged the same in two months — "Похожи на подписку"), step 2 the subscription', async () => {
     await openSubscriptions();
     await tap('＋ Добавить подписку');
