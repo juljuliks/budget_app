@@ -225,7 +225,7 @@ describe('2.7.16 split between categories', () => {
     expect(await screen.findByText('18.00\u00a0₾')).toBeTruthy();
     await tap('Сохранить');
     expect(await screen.findByText('Разделена · 2 категории')).toBeTruthy();
-    expect(texts().slice(texts().indexOf('Разделена · 2 категории'))).toEqual(expect.arrayContaining(['🛒 Продукты', '60%', '18.00 ₾', '👕 Одежда', '40%', '12.00 ₾']));
+    expect(texts().slice(texts().indexOf('Разделена · 2 категории'))).toEqual(expect.arrayContaining(['🛒 Продукты ›', '60%', '18.00 ₾', '👕 Одежда ›', '40%', '12.00 ₾']));
     const parts = () => (getDb()).then((db) => db.all('SELECT amount_minor FROM transaction_parts'));
     expect(await parts()).toEqual([{ amount_minor: 1200 }]);
     await tap('Убрать разделение');
