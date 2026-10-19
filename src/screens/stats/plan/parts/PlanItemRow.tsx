@@ -82,7 +82,7 @@ export function SystemRowView({ p, r, hidden, onOpen, onLess }: { p: PlanView; r
       {hidden ? null : (
         <View style={styles.amountBox}>
           <View style={styles.amountLine}>
-            {r.inBudget !== undefined && p.budgetMoney ? <Text style={[styles.amount, styles.amountForeign]}>{p.budgetMoney(r.inBudget)}</Text> : null}
+            {r.inBudget !== undefined && p.budgetMoney ? <Text style={[styles.amount, styles.savingForeign]}>{p.budgetMoney(r.inBudget)}</Text> : null}
             <Text style={[styles.amount, toneStyle(r.tone)]}>{`${r.carry === 'plus' ? '+' : ''}${p.money(r.value)}`}</Text>
           </View>
           {/* the overspend took part of it: by how much, ⓘ — what took it */}

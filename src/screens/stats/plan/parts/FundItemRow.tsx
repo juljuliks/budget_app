@@ -36,7 +36,7 @@ export function FundItemRow({ p, item, hidden, onOpen }: Props) {
         <View style={styles.amountBox}>
           {/* "(385 $)" before it: in the budget's currency, when the screen shows another */}
           <View style={styles.amountLine}>
-            {inBudget !== null && p.budgetMoney ? <Text style={[styles.amount, styles.amountForeign]}>{p.budgetMoney(inBudget)}</Text> : null}
+            {inBudget !== null && p.budgetMoney ? <Text style={[styles.amount, styles.savingForeign]}>{p.budgetMoney(inBudget)}</Text> : null}
             <Text style={styles.amount}>
               {item.converted_minor !== null ? p.money(item.converted_minor) : formatWithCurrency(item.limit_minor, item.currency)}
             </Text>

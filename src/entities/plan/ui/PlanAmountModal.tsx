@@ -16,7 +16,7 @@ import { useLoadedForm } from '@/shared/ui/form';
 import { toast, toastFailure } from '@/shared/ui/toast';
 import { openCategory } from '@/shared/navigation/navigation';
 import { saveFund, savePlanAmount, saveRecurring } from '../model/commands';
-import RecurringFields, { RecurringForm } from './RecurringFields';
+import RecurringFields, { dateNeeded, RecurringForm } from './RecurringFields';
 import { turnOffRecurring } from './turnOffRecurring';
 import FundFields, { FundForm } from './FundFields';
 import { askTakeLocked } from './askTakeLocked';
@@ -47,7 +47,7 @@ function patterns(minor: number | null, currency: Currency, ym: string) {
 /** "Повторяющийся платёж" saved from the sheet; an error to show, or null. */
 async function submitRecurring(ym: string, categoryId: number, minor: number, currency: Currency, v: RecurringForm, saved: () => void): Promise<string | null> {
   if (!minor) return 'Введите сумму платежа';
-  if (v.period !== 1 && !v.next) return 'Для платежа реже раза в месяц нужна дата';
+  if (v.period !== 1 && !v.next) return dateNeeded(v.period).slice(0, -1);
   await saveRecurring(ym, categoryId, { amount_minor: minor, currency, period: v.period, due: v.next });
   saved();
   return null;

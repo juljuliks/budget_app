@@ -58,6 +58,8 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
   const p = planView({ ...data, items, ym, currency, hidden });
   const openBudget = () => setBudgetOpen(true);
 
+  // a category with repeating payments: its own payment (from the plan's sheet) — that sheet; the merchants' ones — their list
+  const openRecurring = (item: PlanItem) => (item.subs?.own ? setEditingItem(editTarget(item)) : setSubsOpen(item));
   return (
     <View style={styles.screen}>
     <StickyScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
@@ -65,13 +67,12 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
       <Text style={styles.pinNote}>{`📌 — переходит в следующий месяц с той же суммой${p.recurring.length ? '\n🔁 — повторяющийся платёж: переходит всегда, сумма — по датам списаний' : ''}`}</Text>
 
       {items.length === 0 ? <Text style={styles.hint}>План пуст. Нажмите ＋, чтобы добавить категории и суммы.</Text> : null}
-      {systemSections(p, hidden, { budget: openBudget, carry: setCarryOpen, less: () => setLessOpen(true), fund: setFundOpen })}
+      {systemSections(p, hidden, { budget: openBudget, carry: setCarryOpen, less: () => setLessOpen(true), fund: setFundOpen, saving: openRecurring })}
       {itemSections(p, {
         ym, currency, hidden, toShown,
         onOpen: (item) => setEditingItem(editTarget(item)),
         onPin: actions.togglePin,
-        // its own payment (from this sheet) — the plan's sheet; the merchants' ones — their list
-        onOpenRecurring: (item) => (item.subs?.own ? setEditingItem(editTarget(item)) : setSubsOpen(item)),
+        onOpenRecurring: openRecurring,
       })}
 
       <BudgetSheet

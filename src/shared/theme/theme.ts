@@ -3,6 +3,8 @@ export const colors = {
   surface: '#F4F5F7',
   text: '#16181D',
   muted: '#6B7280',
+  /** lighter than muted: a secondary amount next to the main one */
+  faint: '#9CA3AF',
   border: '#E5E7EB',
   accent: '#2563EB',
   /** text and icons on the accent color */

@@ -109,3 +109,19 @@ test('the savings in the screen\'s currency, "(N ₾)" before them in the budget
   expect(same.budgetMoney).toBeNull();
   expect(same.systemGroups[0].rows.every((r) => r.inBudget === undefined) && same.systemGroups[0].inBudget === undefined).toBe(true);
 });
+
+test('what "Подписки" saves up for: in "Сбережения" (as a fund\'s contribution), its row in its section — the charges only', () => {
+  const subs = item({
+    category_id: 7, name: 'Подписки', emoji: '📺', type_name: null, kind: 'subs', recurring: true, limit_minor: 4000, converted_minor: 4000,
+    subs: { names: ['Netflix'], saving_names: ['Bitwarden'], saving_minor: 1000, saving_end_minor: 3000, saving_amount_minor: 4500, own: false },
+  });
+  const v = view([item({}), subs], budget({}));
+  // 310 + 30 ₾ planned; 10 ₾ saved up — in the savings with what the plan leaves (1 000 − 340 − 10 = 650)
+  expect(v.parts.map((p) => [p.key, p.value])).toEqual([['planned', 34000], ['unplanned', 0], ['free', 66000]]);
+  expect(v.groups.find((g) => g.title === 'Без раздела')!.items[0].converted_minor).toBe(3000);
+  const savings = v.systemGroups.find((g) => g.title === 'Сбережения')!;
+  expect(savings.saving!.map((i) => i.category_id)).toEqual([7]);
+  expect(savings.rows.find((r) => r.key === 'floating')!.value).toBe(65000);
+  // the budget sheet can't take the contributions either
+  expect(v.claimed).toBe(35000);
+});

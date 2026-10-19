@@ -20,10 +20,12 @@ export function paymentWords(categoryName: string) {
     ? {
       One: 'Подписка', one: 'подписка', acc: 'подписку', New: 'Новая подписка', deleted: 'удалена', noneHas: 'ни у одной подписки',
       toAll: 'подпискам', noDated: 'нет подписок с датой', like: 'Похожи на подписку', add: 'Добавить подписку',
+      upcoming: 'Предстоящие подписки',
     }
     : {
       One: 'Платёж', one: 'платёж', acc: 'платёж', New: 'Новый платёж', deleted: 'удалён', noneHas: 'ни у одного платежа',
       toAll: 'платежам', noDated: 'нет платежей с датой', like: 'Похожи на повторяющиеся', add: 'Добавить платёж',
+      upcoming: 'Предстоящие платежи',
     };
 }
 export type PaymentWords = ReturnType<typeof paymentWords>;

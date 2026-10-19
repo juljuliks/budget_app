@@ -7,6 +7,7 @@ import { asCurrency } from './months';
 import { NormPeriod, PlanItem, PlanKind, asNorm } from './types';
 import { activeFunds, fundLedger } from './funds';
 import { monthPayments } from './recurringItems';
+import type { RecurringPayment } from '../recurring/reads';
 import { OverBudgetError, ensureMonthPlan, planConverter, planCurrency, plannedTotal, storedBudget } from './budget';
 
 /** The month's plan items; `converted_minor` in `to` (default: the amount to distribute's currency). */
@@ -39,6 +40,7 @@ export async function listPlan(ym: string, to?: Currency): Promise<PlanItem[]> {
     subsInfo.set(r.category_id, {
       names: subNames((id) => !savingIds.has(id)), saving_names: subNames((id) => savingIds.has(id)),
       saving_minor: subs.saving.reduce((a, v) => a + (v.converted_minor ?? 0), 0),
+      ...savingProgress(subs.saving, all, (minor, from) => conv(minor, from, target) ?? 0),
       own: all.some((s) => !s.merchant_key),
       ...(only ? { single: {
         period: only.period, done: !!charge?.done,
@@ -57,6 +59,19 @@ export async function listPlan(ym: string, to?: Currency): Promise<PlanItem[]> {
     recurring: !!r.recurring,
     ...(subsInfo.has(r.category_id) ? { subs: subsInfo.get(r.category_id) } : {}),
   }));
+}
+
+/** The payments saved up for: what they have by the month's end and their amounts, together in the plan's currency. */
+function savingProgress(saving: Array<{ payment_id: number; end_minor: number }>, subs: RecurringPayment[], toTarget: (minor: number, from: Currency) => number) {
+  let end = 0;
+  let amount = 0;
+  for (const v of saving) {
+    const sub = subs.find((s) => s.id === v.payment_id);
+    if (!sub) continue;
+    end += toTarget(v.end_minor, sub.currency);
+    amount += toTarget(sub.amount_minor, sub.currency);
+  }
+  return { saving_end_minor: end, saving_amount_minor: amount };
 }
 
 /** The funds among the month's items: how much by when, and what each has by the month's end. */

@@ -1,9 +1,11 @@
 // The repeating payments' words: the periods, "через 7 дней", the days.
 import { MONTHS_GEN, MONTHS_PREP, SHORT_MONTHS } from '@/shared/lib/dates';
 export { periodText } from '@/shared/lib/format';
-import { plural } from '@/shared/lib/format';
+import { PAYMENT_PERIODS, plural } from '@/shared/lib/format';
 
-export { PAYMENT_PERIODS as PERIODS } from '@/shared/lib/format';
+/** A subscription's period chips: every month or rarer, or once (every week is the plan's repeating payments'). */
+export const PERIODS = PAYMENT_PERIODS.filter(([p]) => p >= 0);
+
 
 const parts = (day: string) => day.split('-').map(Number);
 

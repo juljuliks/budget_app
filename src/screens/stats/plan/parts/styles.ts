@@ -65,8 +65,8 @@ export const styles = StyleSheet.create({
   groupHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: -16 },
   groupTitle: { fontSize: 13, fontWeight: '600', color: colors.muted },
   groupShare: { color: colors.muted, fontWeight: '400' },
-  // the total in the budget's currency before it: the same font, muted
-  groupForeign: { color: colors.muted },
+  // the total in the budget's currency before it: lighter and thin
+  groupForeign: { color: colors.faint, fontWeight: '400' },
   groupTotal: { fontSize: 13, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
   row: {
     flexDirection: 'row', alignItems: 'center', paddingVertical: 10,
@@ -82,6 +82,8 @@ export const styles = StyleSheet.create({
   // another currency's amount before the one shown, as large, muted
   amountLine: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
   amountForeign: { color: colors.muted },
+  // in "Сбережения": the budget's currency smaller and lighter than the amount
+  savingForeign: { fontSize: 13, color: colors.faint },
   amountEmpty: { color: colors.muted, fontSize: 14 },
 });
 

@@ -1,7 +1,7 @@
 // 6.6 "Подписки": its section in the plan, the sheet of the month's subscriptions, a day set for a merchant of "Подписки",
 // a subscription added step by step. Today: 15 October 2026; the seed `planned` (Подписки 30 ₾ by hand) and NETFLIX.COM
 // charged 30 ₾ on the 10th in "Подписки".
-import { fireEvent } from '@testing-library/react-native';
+import { fireEvent, waitFor } from '@testing-library/react-native';
 import { openApp, screen, tap } from './app';
 import { buy, on, planned } from '../e2e/seeds';
 import { getDb } from '../../src/db';
@@ -75,19 +75,11 @@ describe('6.6 subscriptions', () => {
     expect(await screen.findByText(/^10 ноября 2026/)).toBeTruthy();
   });
 
-  test('every week: the day a week after the last charge, no saving up; each week\'s charge in the month', async () => {
+  test('every week: not a subscription\'s period (the plan\'s repeating payment has it)', async () => {
     await openSubscriptions();
     await tap('Подписка: NETFLIX.COM');
-    await tap('Каждую неделю');
-    // charged on the 10th: the 17th
-    expect(await screen.findByText(/^17 октября 2026/)).toBeTruthy();
-    expect(screen.queryByText('Откладывать каждый месяц?')).toBeNull();
-    await tap('Сохранить');
-    expect(await screen.findByText('каждую неделю · ✓ списано 10 окт')).toBeTruthy();
-    expect(screen.getByText('каждую неделю · 17 окт, через 2 дня')).toBeTruthy();
-    expect(screen.getByText('каждую неделю · 24 окт, через 9 дней')).toBeTruthy();
-    expect(screen.getByText('каждую неделю · 31 окт, через 16 дней')).toBeTruthy();
-    expect(await (await getDb()).get('SELECT period_months, period_unit, due FROM recurring_payments')).toEqual({ period_months: 1, period_unit: 'week', due: '2026-10-17' });
+    expect(await screen.findByText('Раз в год')).toBeTruthy();
+    expect(screen.queryByText('Каждую неделю')).toBeNull();
   });
 
   test('"Один раз": the charge it was made from; done — in its month only, nothing after', async () => {
@@ -174,6 +166,24 @@ describe('6.7.9 "Повторяющийся платёж" from the plan', () => 
     expect(await (await getDb()).get("SELECT recurring FROM categories WHERE name = 'Дом и коммуналка'")).toEqual({ recurring: 0 });
   });
 
+  test('every week from the plan: the day a week after the last spending, ± 3 days; each week\'s charge in the month', async () => {
+    await openApp(seed);
+    await tap('Статистика');
+    await tap('План');
+    await tap('Изменить: 🏠 Дом и коммуналка');
+    await tap(await screen.findByRole('radio', { name: /Повторяющийся платёж/ }));
+    await tap('Каждую неделю');
+    // RENT on the 3rd: the 10th is past — the 17th
+    expect(await screen.findByText(/^17 октября 2026/)).toBeTruthy();
+    expect(screen.getByText('Списание засчитывается тратой категории за 3 дня до или после даты — дата сдвинется сама.')).toBeTruthy();
+    await tap('Сохранить');
+    await waitFor(async () => expect(await (await getDb()).get("SELECT period_months, period_unit, due FROM recurring_payments WHERE name = 'Дом и коммуналка'"))
+      .toEqual({ period_months: 1, period_unit: 'week', due: '2026-10-17' }));
+    // October: the 3rd (paid), the 17th, 24th, 31st — 4 × 800 ₾
+    expect(await (await getDb()).get("SELECT limit_minor FROM plan_items WHERE ym = '2026-10' AND category_id = (SELECT id FROM categories WHERE name = 'Дом и коммуналка')"))
+      .toEqual({ limit_minor: 320000 });
+  });
+
   test('"Подписки": no "Выключить повторяющиеся платежи" in its sheet — the plan turns them off, a subscription is deleted', async () => {
     await openSubscriptions();
     expect(await screen.findByText('＋ Добавить подписку')).toBeTruthy();
@@ -193,6 +203,9 @@ describe('6.7.8 saving up for a subscription', () => {
     // October's charge was before the saving: the month's; the contribution on top
     expect(await screen.findByText(/^списания 30.*копим 3/)).toBeTruthy();
     expect((await (await getDb()).all('SELECT since_ym FROM payment_savings'))).toEqual([{ since_ym: '2026-10' }]);
+    // in the plan the contribution is in "Сбережения" (like a fund's), not under "Подписки"
+    expect(screen.getByLabelText('📺 Предстоящие подписки')).toBeTruthy();
+    expect(screen.queryByText(/^копим 3/)).toBeNull();
   });
 
   test('turned off with something saved: asked first, what it had goes to the month\'s savings; "Отменить" puts it back', async () => {

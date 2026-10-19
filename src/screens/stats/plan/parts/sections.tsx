@@ -9,6 +9,7 @@ import { formStyles } from '@/shared/theme/formStyles';
 import { percentOf, PlanView } from '../model/planView';
 import { FundItemRow } from './FundItemRow';
 import { RecurringItemRow } from './RecurringItemRow';
+import { SavingItemRow } from './SavingItemRow';
 import { PlanItemRow, SystemRowView } from './PlanItemRow';
 import { styles } from './styles';
 
@@ -19,17 +20,23 @@ const header = (title: string, total: React.ReactNode) => (
   </SectionHeader>
 );
 
-type SystemOpen = { budget: () => void; carry: (kind: 'debt' | 'plus') => void; less: () => void; fund: (item: PlanItem) => void };
+type SystemOpen = {
+  budget: () => void; carry: (kind: 'debt' | 'plus') => void; less: () => void; fund: (item: PlanItem) => void;
+  /** a category's contributions to its repeating payments: its payments */
+  saving: (item: PlanItem) => void;
+};
 
 /**
- * System "categories" first: what the budget sets apart before the plan — savings (locked, the funds' contributions,
- * floating) and the share outside the plan; like the plan's sections, with their share of the budget; a tap opens the
+ * System "categories" first: what the budget sets apart before the plan — savings (locked, the funds' and the repeating
+ * payments' contributions, floating) and the share outside the plan; like the plan's sections, with their share of the budget; a tap opens the
  * budget (a fund: the fund).
  */
 export function systemSections(p: PlanView, hidden: boolean, open: SystemOpen) {
   return p.systemGroups.map((g) => {
     const funds = g.funds ?? [];
-    const sum = g.rows.reduce((a, r) => a + r.value, 0) + funds.reduce((a, i) => a + (i.converted_minor ?? 0), 0);
+    const saving = g.saving ?? [];
+    const sum = g.rows.reduce((a, r) => a + r.value, 0) + funds.reduce((a, i) => a + (i.converted_minor ?? 0), 0)
+      + saving.reduce((a, i) => a + (i.subs?.saving_minor ?? 0), 0);
     // the leftover moved in: on top of the budget, "+", no share
     const plus = g.rows.length > 0 && g.rows.every((r) => r.carry === 'plus');
     const row = (r: PlanView['systemGroups'][number]['rows'][number]) => (
@@ -47,9 +54,10 @@ export function systemSections(p: PlanView, hidden: boolean, open: SystemOpen) {
           </Text>
         ))}
         <View>
-          {/* 🔒 first, then the funds, then 💰 */}
+          {/* 🔒 first, then the funds and what is saved up for the repeating payments, then 💰 */}
           {g.rows.filter((r) => r.key === 'locked').map(row)}
           {funds.map((item) => <FundItemRow key={item.category_id} p={p} item={item} hidden={hidden} onOpen={() => open.fund(item)} />)}
+          {saving.map((item) => <SavingItemRow key={item.category_id} p={p} item={item} hidden={hidden} onOpen={() => open.saving(item)} />)}
           {g.rows.filter((r) => r.key !== 'locked').map(row)}
         </View>
       </React.Fragment>

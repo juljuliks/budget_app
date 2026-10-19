@@ -15,8 +15,8 @@ type Props = { p: PlanView; item: PlanItem; hidden: boolean; onOpen: () => void 
 
 /**
  * A category with repeating payments in the plan: the repeat sign in the pin's place, its payments with a day by name ("копим: …" — those
- * saved up for), the month's amount (counted from them; by hand until one has a day), "копим 26.67 ₾" — the
- * contributions in it. A tap opens the "Подписки" sheet.
+ * saved up for), the month's charges (counted from them; by hand until one has a day; the contributions — in
+ * "Сбережения", SavingItemRow). A tap opens the "Подписки" sheet.
  */
 export function RecurringItemRow({ p, item, hidden, onOpen }: Props) {
   const names = item.subs?.names ?? [];
@@ -39,7 +39,6 @@ export function RecurringItemRow({ p, item, hidden, onOpen }: Props) {
       {hidden ? null : (
         <View style={styles.amountBox}>
           <Text style={styles.amount}>{item.converted_minor !== null ? p.money(item.converted_minor) : formatWithCurrency(item.limit_minor, item.currency)}</Text>
-          {item.subs?.saving_minor ? <Text style={styles.amountOriginal}>{`копим ${p.money(item.subs.saving_minor)}`}</Text> : null}
         </View>
       )}
     </TouchableOpacity>
