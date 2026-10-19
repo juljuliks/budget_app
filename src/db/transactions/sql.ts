@@ -1,4 +1,5 @@
 // The SQL every operations query starts from: the columns, the join with the category, the newest first.
+import { periodSql } from '../recurring/period';
 
 
 export const CATEGORY_COLUMNS = 'c.name AS category_name, c.emoji AS category_emoji, ct.name AS category_type_name';
@@ -13,8 +14,8 @@ export const PARTS_COLUMN = `(SELECT group_concat(x, char(30)) FROM (
     FROM transaction_parts p JOIN categories pc ON pc.id = p.category_id LEFT JOIN category_types pct ON pct.id = pc.type_id
     WHERE p.tx_id = t.id ORDER BY p.amount_minor DESC, p.category_id)) AS parts`;
 
-/** In a category with "Повторяющиеся платежи": its merchant's payment's period (months), if it has a day; else null. */
-export const PAYMENT_PERIOD_COLUMN = `CASE WHEN c.recurring = 1 THEN (SELECT s.period_months FROM recurring_payments s
+/** In a category with "Повторяющиеся платежи": its merchant's payment's period (schedule.ts Period), if it has a day; else null. */
+export const PAYMENT_PERIOD_COLUMN = `CASE WHEN c.recurring = 1 THEN (SELECT ${periodSql('s.')} FROM recurring_payments s
     WHERE (s.merchant_key = t.merchant_key OR s.merchant_key IS NULL) AND s.category_id = c.id AND s.deleted_at IS NULL AND s.due IS NOT NULL
     ORDER BY s.merchant_key IS NULL LIMIT 1) END AS payment_period`;
 

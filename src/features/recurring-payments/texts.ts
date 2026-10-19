@@ -19,6 +19,10 @@ export const longDay = (day: string) => { const [, m, d] = parts(day); return `$
 /** "в октябре" of 'YYYY-MM'. */
 export const inMonth = (ym: string) => `в ${MONTHS_PREP[Number(ym.slice(5)) - 1]}`;
 
+/** "в октябре"; another year — "в сентябре 2027". */
+export const inMonthYear = (ym: string, now = new Date()) =>
+  `${inMonth(ym)}${Number(ym.slice(0, 4)) === now.getFullYear() ? '' : ` ${ym.slice(0, 4)}`}`;
+
 /** "октября" of 'YYYY-MM'. */
 export const monthGen = (ym: string) => MONTHS_GEN[Number(ym.slice(5)) - 1];
 

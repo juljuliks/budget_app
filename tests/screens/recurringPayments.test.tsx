@@ -75,6 +75,47 @@ describe('6.6 subscriptions', () => {
     expect(await screen.findByText(/^10 ноября 2026/)).toBeTruthy();
   });
 
+  test('every week: the day a week after the last charge, no saving up; each week\'s charge in the month', async () => {
+    await openSubscriptions();
+    await tap('Подписка: NETFLIX.COM');
+    await tap('Каждую неделю');
+    // charged on the 10th: the 17th
+    expect(await screen.findByText(/^17 октября 2026/)).toBeTruthy();
+    expect(screen.queryByText('Откладывать каждый месяц?')).toBeNull();
+    await tap('Сохранить');
+    expect(await screen.findByText('каждую неделю · ✓ списано 10 окт')).toBeTruthy();
+    expect(screen.getByText('каждую неделю · 17 окт, через 2 дня')).toBeTruthy();
+    expect(screen.getByText('каждую неделю · 24 окт, через 9 дней')).toBeTruthy();
+    expect(screen.getByText('каждую неделю · 31 окт, через 16 дней')).toBeTruthy();
+    expect(await (await getDb()).get('SELECT period_months, period_unit, due FROM recurring_payments')).toEqual({ period_months: 1, period_unit: 'week', due: '2026-10-17' });
+  });
+
+  test('"Один раз": the charge it was made from; done — in its month only, nothing after', async () => {
+    await openSubscriptions();
+    await tap('Подписка: NETFLIX.COM');
+    await tap('Один раз');
+    expect(await screen.findByText('Дата списания')).toBeTruthy();
+    expect(screen.getByText(/^10 октября 2026/)).toBeTruthy();
+    expect(screen.getByText('Списание одно: после него в план больше не встанет.')).toBeTruthy();
+    await tap('Сохранить');
+    expect(await screen.findByText('NETFLIX.COM — списание 10 октября')).toBeTruthy();
+    expect(await screen.findByText('один раз · ✓ списано 10 окт')).toBeTruthy();
+    expect(screen.queryByText('Другие списания')).toBeNull();
+    expect(await (await getDb()).get('SELECT period_unit, due FROM recurring_payments')).toEqual({ period_unit: 'once', due: '2026-10-10' });
+  });
+
+  test('"Другие списания": a month of another year — with the year', async () => {
+    await openApp(async () => {
+      await seed();
+      await savePayment({ merchant_key: 'SPOTIFY', name: 'Spotify', amount_minor: 1840, currency: 'GEL', period: 12, due: '2027-08-25' });
+    });
+    await tap('Статистика');
+    await tap('План');
+    await tap('📺 Подписки');
+    expect(await screen.findByText('Другие списания')).toBeTruthy();
+    expect(screen.getByText('в августе 2027')).toBeTruthy();
+  });
+
   test('"＋ Добавить подписку": step 1 the merchant (charged the same in two months — "Похожи на подписку"), step 2 the subscription', async () => {
     await openSubscriptions();
     await tap('＋ Добавить подписку');
@@ -133,14 +174,10 @@ describe('6.7.9 "Повторяющийся платёж" from the plan', () => 
     expect(await (await getDb()).get("SELECT recurring FROM categories WHERE name = 'Дом и коммуналка'")).toEqual({ recurring: 0 });
   });
 
-  test('"Подписки": "Выключить повторяющиеся платежи" in its sheet; "Отменить" turns them back on', async () => {
+  test('"Подписки": no "Выключить повторяющиеся платежи" in its sheet — the plan turns them off, a subscription is deleted', async () => {
     await openSubscriptions();
-    await tap('Выключить повторяющиеся платежи');
-    expect(await screen.findByText('Повторяющиеся платежи выключены')).toBeTruthy();
-    expect(await (await getDb()).get("SELECT recurring FROM categories WHERE name = 'Подписки'")).toEqual({ recurring: 0 });
-    await tap('Отменить');
-    expect(await screen.findByText('Повторяющиеся платежи снова включены')).toBeTruthy();
-    expect(await (await getDb()).get("SELECT recurring FROM categories WHERE name = 'Подписки'")).toEqual({ recurring: 1 });
+    expect(await screen.findByText('＋ Добавить подписку')).toBeTruthy();
+    expect(screen.queryByText('Выключить повторяющиеся платежи')).toBeNull();
   });
 });
 
@@ -162,7 +199,7 @@ describe('6.7.8 saving up for a subscription', () => {
     await openApp(async () => {
       await seed();
       await setPlanBudget('2026-09', 500000, 'GEL');
-      const id = await savePayment({ merchant_key: 'NETFLIX.COM', name: 'Netflix', amount_minor: 3000, currency: 'GEL', period_months: 12, due: '2027-10-10' });
+      const id = await savePayment({ merchant_key: 'NETFLIX.COM', name: 'Netflix', amount_minor: 3000, currency: 'GEL', period: 12, due: '2027-10-10' });
       const db = await getDb();
       await db.run("INSERT INTO payment_savings (id, payment_id, since_ym, start_minor) VALUES (5, ?, '2026-09', 0)", [id]);
       await db.run("INSERT INTO payment_contributions (saving_id, ym, minor) VALUES (5, '2026-09', 1000)");
@@ -183,23 +220,26 @@ describe('6.7.8 saving up for a subscription', () => {
     expect(await screen.findByText('Netflix — снова откладываем')).toBeTruthy();
   });
 
-  test('the repeating payments turned off with something saved: asked first', async () => {
+  test('the repeating payments turned off in the plan with something saved: asked first', async () => {
     await openApp(async () => {
       await seed();
-      await setPlanBudget('2026-09', 500000, 'GEL');
-      const id = await savePayment({ merchant_key: 'NETFLIX.COM', name: 'Netflix', amount_minor: 3000, currency: 'GEL', period_months: 12, due: '2027-10-10' });
       const db = await getDb();
-      await db.run("INSERT INTO payment_savings (id, payment_id, since_ym, start_minor) VALUES (5, ?, '2026-09', 0)", [id]);
-      await db.run("INSERT INTO payment_contributions (saving_id, ym, minor) VALUES (5, '2026-09', 1000)");
+      const home = (await db.get<{ id: number }>("SELECT id FROM categories WHERE name = 'Дом и коммуналка'"))!.id;
+      await db.run('UPDATE categories SET recurring = 1 WHERE id = ?', [home]);
+      const id = await savePayment({ category_id: home, merchant_key: null, name: 'Страховка', amount_minor: 3000, currency: 'GEL', period: 12, due: '2027-10-10' });
+      // "Уже отложено" 10 ₾ (its category's spending before — RENT — isn't paid from it)
+      await db.run("INSERT INTO payment_savings (id, payment_id, since_ym, start_minor) VALUES (5, ?, '2026-10', 1000)", [id]);
     });
     await tap('Статистика');
     await tap('План');
-    await tap('📺 Подписки');
-    await tap('Выключить повторяющиеся платежи');
+    await tap('🏠 Дом и коммуналка');
+    await tap(await screen.findByRole('radio', { name: /Разовый платёж/ }));
+    await tap('Сохранить');
     expect(await screen.findByText('Выключить повторяющиеся платежи?')).toBeTruthy();
-    expect(screen.getByText(/^На платежи уже отложено: Netflix — 10/)).toBeTruthy();
+    expect(screen.getByText(/^На платежи уже отложено: Страховка — 10/)).toBeTruthy();
     await tap('Выключить');
-    expect(await screen.findByText('Повторяющиеся платежи выключены')).toBeTruthy();
+    expect(await screen.findByText(/повторяющиеся платежи выключены$/)).toBeTruthy();
+    expect(await (await getDb()).get("SELECT recurring FROM categories WHERE name = 'Дом и коммуналка'")).toEqual({ recurring: 0 });
   });
 });
 
@@ -247,7 +287,7 @@ describe('6.6 subscriptions on the operations', () => {
   test('charged another amount than the subscription\'s: "Обновить подписку?"', async () => {
     await openApp(async () => {
       await seedOps();
-      await savePayment({ merchant_key: 'NETFLIX.COM', name: 'Netflix', amount_minor: 2700, currency: 'GEL', period_months: 1, due: '2026-11-10' });
+      await savePayment({ merchant_key: 'NETFLIX.COM', name: 'Netflix', amount_minor: 2700, currency: 'GEL', period: 1, due: '2026-11-10' });
     });
     await tap('NETFLIX.COM');
     expect(await screen.findByText(/^Сумма выросла: было 27/)).toBeTruthy();

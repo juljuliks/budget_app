@@ -10,6 +10,9 @@ import Chip from '@/shared/ui/Chip';
 import DateField from '@/shared/ui/DateField';
 import { formStyles } from '@/shared/theme/formStyles';
 
+/** The plan's repeating payment is every month or rarer (a one-off one is "Разовый платёж"). */
+const MONTHLY_PERIODS = PAYMENT_PERIODS.filter(([p]) => p > 0);
+
 /** The plan sheet's repeating payment: how often and the next charge (none — the amount stands each month). */
 export type RecurringForm = { period: number; next: string | null };
 
@@ -27,7 +30,7 @@ export default function RecurringFields({ categoryId, form }: Props) {
     (async () => {
       const own = await paymentCard(null, undefined, categoryId);
       if (own && !own.sub.merchant_key) {
-        form.reset({ ...form.getValues(), value: toInputValue(own.sub.amount_minor), currency: own.sub.currency, period: own.sub.period_months, next: own.next });
+        form.reset({ ...form.getValues(), value: toInputValue(own.sub.amount_minor), currency: own.sub.currency, period: own.sub.period, next: own.next });
         return;
       }
       const day = await lastCategoryDay(categoryId);
@@ -41,7 +44,7 @@ export default function RecurringFields({ categoryId, form }: Props) {
       <Text style={formStyles.label}>Как часто</Text>
       <Controller control={form.control} name="period" render={({ field }) => (
         <View style={styles.chips}>
-          {PAYMENT_PERIODS.map(([m, label]) => <Chip key={m} label={label} selected={field.value === m} onPress={() => field.onChange(m)} />)}
+          {MONTHLY_PERIODS.map(([m, label]) => <Chip key={m} label={label} selected={field.value === m} onPress={() => field.onChange(m)} />)}
         </View>
       )} />
       <Controller control={form.control} name="next" render={({ field }) => (

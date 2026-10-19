@@ -56,7 +56,7 @@ export default function PaymentNote({ tx }: { tx: Tx }) {
       <View style={styles.box}>
         <View style={styles.head}>
           <RepeatIcon color={colors.accent} size={16} />
-          <Text style={styles.title}>{`${sub.name} · ${periodText(sub.period_months)}`}</Text>
+          <Text style={styles.title}>{`${sub.name} · ${periodText(sub.period)}`}</Text>
           <Text style={styles.amount}>{money(sub.amount_minor)}</Text>
         </View>
         {card.next ? <View style={styles.fact}><Text style={styles.factLabel}>Следующее списание</Text><Text style={styles.factValue}>{dayTitle(card.next)}</Text></View> : null}

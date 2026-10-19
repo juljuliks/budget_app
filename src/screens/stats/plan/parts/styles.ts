@@ -65,6 +65,8 @@ export const styles = StyleSheet.create({
   groupHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: -16 },
   groupTitle: { fontSize: 13, fontWeight: '600', color: colors.muted },
   groupShare: { color: colors.muted, fontWeight: '400' },
+  // the total in the budget's currency before it: the same font, muted
+  groupForeign: { color: colors.muted },
   groupTotal: { fontSize: 13, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
   row: {
     flexDirection: 'row', alignItems: 'center', paddingVertical: 10,
@@ -77,6 +79,9 @@ export const styles = StyleSheet.create({
   amount: { fontSize: 16, color: colors.text, fontVariant: ['tabular-nums'] },
   amountBox: { alignItems: 'flex-end', paddingLeft: 8 },
   amountOriginal: { fontSize: 12, color: colors.muted, fontVariant: ['tabular-nums'] },
+  // another currency's amount before the one shown, as large, muted
+  amountLine: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
+  amountForeign: { color: colors.muted },
   amountEmpty: { color: colors.muted, fontSize: 14 },
 });
 

@@ -13,7 +13,7 @@ import StepsNav from '@/shared/ui/StepsNav';
 import TextInputModal from '@/shared/ui/TextInputModal';
 import { formStyles } from '@/shared/theme/formStyles';
 import { colors } from '@/shared/theme/theme';
-import { todayKey } from '@/db/recurring';
+import { ONCE, todayKey } from '@/db/recurring';
 import { currentYm } from '@/db/plans';
 import { confirmDeletePayment, submitPayment } from '../model/commands';
 import { paymentWords } from '@/entities/category';
@@ -45,6 +45,7 @@ export default function PaymentSheet({ target, onClose, adding }: Props) {
   const skip = () => { if (f.input) submitPayment({ ...f.input, due: null }, target?.id, onClose); else onClose(); };
   const w = paymentWords(target?.category.name ?? '');
   const icon = target?.category.emoji ?? '🔁';
+  const dueLabel = f.period === ONCE ? 'Дата списания' : 'Следующее списание';
   const title = target?.id !== undefined ? `${icon} ${target.name}` : target?.merchant_key ? `${icon} ${w.One} «${target.merchant_key}»` : `${icon} ${w.New}`;
   return (
     <BottomSheet
@@ -77,10 +78,12 @@ export default function PaymentSheet({ target, onClose, adding }: Props) {
           <Chip label={custom ? periodText(f.period) : 'Другое…'} selected={custom} action={!custom} onPress={() => setOtherOpen(true)} />
         </View>
         <DateField
-          label="Следующее списание" value={f.due} format={dayTitle} sheetTitle="Следующее списание" minDay={todayKey()}
+          label={dueLabel} value={f.due} format={dayTitle} sheetTitle={dueLabel} minDay={todayKey()}
           suffix={f.due ? (inTime(f.due, todayKey()) ? ` · ${inTime(f.due, todayKey())}` : null) : null} onChange={f.setDue}
         />
-        <Text style={formStyles.hint}>После списания дата сдвинется сама: пришла операция мерчанта — следующая через период.</Text>
+        <Text style={formStyles.hint}>
+          {f.period === ONCE ? 'Списание одно: после него в план больше не встанет.' : 'После списания дата сдвинется сама: пришла операция мерчанта — следующая через период.'}
+        </Text>
         <SavingFields s={saving} amount={f.input?.amount_minor ?? null} currency={f.currency} due={f.due} />
         {saving.contribution !== null ? (
           <View style={styles.plate}>

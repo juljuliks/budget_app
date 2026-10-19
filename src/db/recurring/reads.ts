@@ -7,9 +7,10 @@ import { placeholders, sqlList } from '../sql';
 import { asCurrency } from '../plans/months';
 import { REMEMBERABLE_KINDS } from '../../domain/types';
 import { EXPENSE_KINDS } from '../spending';
-import { nextCharge } from './schedule';
+import { nextCharge, Period } from './schedule';
+import { periodSql } from './period';
 
-/** A repeating payment ("подписка" in "Подписки"): a merchant's charge every N months, of a category with "Повторяющиеся платежи". */
+/** A repeating payment ("подписка" in "Подписки"): a merchant's charge every period (or once), of a category with "Повторяющиеся платежи". */
 export type RecurringPayment = {
   id: number;
   /** its category (one with "Повторяющиеся платежи") */
@@ -20,8 +21,8 @@ export type RecurringPayment = {
   /** one charge, in `currency` */
   amount_minor: number;
   currency: Currency;
-  /** charged every N months */
-  period_months: number;
+  /** how often (schedule.ts Period: months > 0, weeks < 0, once 0) */
+  period: Period;
   /** a charge's day ('YYYY-MM-DD') the others are counted from; null — "Без даты списания" */
   due: string | null;
   /** the month it was made in: its charges count in plans from it */
@@ -29,7 +30,7 @@ export type RecurringPayment = {
 };
 
 type Row = Omit<RecurringPayment, 'currency'> & { currency: string };
-const COLUMNS = 'id, category_id, merchant_key, name, amount_minor, currency, period_months, due, since_ym';
+const COLUMNS = `id, category_id, merchant_key, name, amount_minor, currency, ${periodSql()} AS period, due, since_ym`;
 const asSub = (r: Row): RecurringPayment => ({ ...r, currency: asCurrency(r.currency) });
 
 /** The day of a moment ('YYYY-MM-DD', local). */
@@ -166,7 +167,7 @@ export async function paymentCard(merchantKey: string | null, now = new Date(), 
   const last = await db.get<{ id: number; amount_minor: number; currency: string }>(
     `SELECT id, amount_minor, currency FROM spend_parts WHERE ${whose} ORDER BY occurred_at DESC, id DESC LIMIT 1`, [key]);
   return {
-    sub, next: sub.due ? nextCharge(sub.due, sub.period_months, days, todayKey(now)) : null,
+    sub, next: sub.due ? nextCharge(sub.due, sub.period, days, todayKey(now)) : null,
     year_count: year?.n ?? 0, year_minor: year?.sum ?? 0, last: last ? { ...last, currency: asCurrency(last.currency) } : null,
   };
 }

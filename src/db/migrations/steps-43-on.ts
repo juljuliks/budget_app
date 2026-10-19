@@ -83,4 +83,9 @@ export const STEPS_43_ON: MigrationStep[][] = [
       }
     },
   ],
+  // 46: a repeating payment's period unit: months (as before), weeks ("Каждую неделю": period_months is the weeks then) or
+  // once ("Один раз": its day only)
+  [
+    "ALTER TABLE recurring_payments ADD COLUMN period_unit TEXT NOT NULL DEFAULT 'month' CHECK (period_unit IN ('month', 'week', 'once'))",
+  ],
 ];

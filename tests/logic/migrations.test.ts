@@ -277,4 +277,17 @@ describe('migrations', () => {
       { ym: '2026-10', category_id: 92, kind: 'subs', limit_minor: 4000 }, { ym: '2026-11', category_id: 90, kind: 'fixed', limit_minor: 60000 },
     ]);
   });
+
+  test('migration 46: the payments there are — in months; weeks and once allowed, nothing else', async () => {
+    const db = openDatabase(':memory:');
+    await migrate(db, MIGRATIONS.slice(0, 45));
+    await db.run("INSERT INTO categories (id, name, recurring) VALUES (92, 'Подписки', 1)");
+    await db.run(`INSERT INTO recurring_payments (id, category_id, merchant_key, name, amount_minor, currency, period_months, due, since_ym, created_at)
+      VALUES (1, 92, 'NETFLIX', 'Netflix', 3000, 'GEL', 12, '2026-10-20', '2026-10', 0)`);
+    await migrate(db);
+    expect(await db.get('SELECT period_months, period_unit FROM recurring_payments')).toEqual({ period_months: 12, period_unit: 'month' });
+    await db.run("UPDATE recurring_payments SET period_unit = 'week', period_months = 1");
+    await db.run("UPDATE recurring_payments SET period_unit = 'once'");
+    await expect(db.run("UPDATE recurring_payments SET period_unit = 'day'")).rejects.toHaveProperty('message', expect.stringContaining('CHECK constraint failed'));
+  });
 });

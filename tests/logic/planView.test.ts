@@ -90,17 +90,22 @@ test('what the budget sheet\'s parts can\'t take: the plan, the funds, what the 
   expect(view([item({})], budget({ carry: { from_ym: '2029-12', debt_minor: 0, plus_minor: 10000 } })).claimed).toBe(21000);
 });
 
-test('the savings in the screen\'s currency, "(N ₾)" under them in the budget\'s one (🔒 as typed)', () => {
-  // 1 $ = 2.5 ₾: the budget 1 000 ₾ = 400 $, 🔒 250 ₾ = 100 $, the plan 500 ₾ = 200 $, what is left 100 $ = 250 ₾
+test('the savings in the screen\'s currency, "(N ₾)" before them in the budget\'s one (🔒 as typed), the funds and the section\'s total too', () => {
+  // 1 $ = 2.5 ₾: the budget 1 000 ₾ = 400 $, 🔒 250 ₾ = 100 $, the plan 500 ₾ = 200 $, a fund 40 $ (100 ₾), what is left 60 $ = 150 ₾
+  const fund = item({ category_id: 3, kind: 'fund', converted_minor: 4000, limit_minor: 10000, currency: 'GEL' });
   const p = planView({
-    ym: '2030-01', currency: 'USD', items: [item({ converted_minor: 20000 })], budget: budget({ locked_minor: 25000 }),
+    ym: '2030-01', currency: 'USD', items: [item({ converted_minor: 20000 }), fund], budget: budget({ locked_minor: 25000 }),
     toShown: (m) => Math.round(m / 2.5), fromShown: (m) => Math.round(m * 2.5), income: 0, unplannedSpentMinor: 0,
     spentBy: { byCategory: new Map(), total: 0 }, hidden: false,
   });
-  const rows = p.systemGroups.find((g) => g.title === 'Сбережения')!.rows;
-  expect(rows.map((r) => [r.key, r.value, r.original])).toEqual([
-    ['locked', 10000, '(250\u00a0₾)'], ['floating', 10000, '(250\u00a0₾)'],
-  ]);
+  const g = p.systemGroups.find((x) => x.title === 'Сбережения')!;
+  expect(g.rows.map((r) => [r.key, r.value, r.inBudget])).toEqual([['locked', 10000, 25000], ['floating', 6000, 15000]]);
+  // the fund's own amount (it's in the budget's currency); the section: all of them
+  expect(p.fundInBudget(fund)).toBe(10000);
+  expect(g.inBudget).toBe(50000);
+  expect(p.budgetMoney!(25000)).toBe('(250\u00a0₾)');
   // the screen in the budget's currency: nothing in brackets
-  expect(view([item({})], budget({ locked_minor: 25000 })).systemGroups[0].rows.every((r) => r.original === undefined)).toBe(true);
+  const same = view([item({})], budget({ locked_minor: 25000 }));
+  expect(same.budgetMoney).toBeNull();
+  expect(same.systemGroups[0].rows.every((r) => r.inBudget === undefined) && same.systemGroups[0].inBudget === undefined).toBe(true);
 });

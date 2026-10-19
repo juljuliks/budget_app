@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import type { Currency } from '@/db/fx';
 import { planEffect } from '@/db/plans';
-import { addMonths, offeredDue, todayKey } from '@/db/recurring';
+import { chargeBefore, offeredDue, Period, todayKey } from '@/db/recurring';
 import { parseAmountInput, toInputValue } from '@/shared/lib/money';
 
 /** The category a payment is of (its name gives the words: "Подписка" in "Подписки", else "Платёж"). */
@@ -16,7 +16,7 @@ export type PaymentTarget = {
   name: string;
   amount_minor: number;
   currency: Currency;
-  period_months: number;
+  period: Period;
   /** the next charge's day; null — none yet */
   due: string | null;
   /** the merchant's last charge: the day offered is it plus the period (and follows the period) */
@@ -29,7 +29,7 @@ export function usePaymentForm(target: PaymentTarget | null) {
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
   const [currency, setCurrency] = useState<Currency>('GEL');
-  const [period, setPeriodState] = useState(1);
+  const [period, setPeriodState] = useState<Period>(1);
   const [due, setDueState] = useState<string | null>(null);
   // the day picked by hand in this sheet stays when the period changes
   const [dueByHand, setDueByHand] = useState(false);
@@ -40,22 +40,22 @@ export function usePaymentForm(target: PaymentTarget | null) {
     setName(target.name);
     setAmount(toInputValue(target.amount_minor));
     setCurrency(target.currency);
-    setPeriodState(target.period_months);
-    setDueState(target.due ?? (target.last_day ? offeredDue(target.last_day, target.period_months, todayKey()) : null));
+    setPeriodState(target.period);
+    setDueState(target.due ?? (target.last_day ? offeredDue(target.last_day, target.period, todayKey()) : null));
     setDueByHand(false);
   }, [target]);
 
   // the charge before the next one: the merchant's last, or a saved payment's next one less its period
-  const lastCharge = target?.last_day ?? (target?.due ? addMonths(target.due, -target.period_months) : null);
-  const setPeriod = (months: number) => {
-    setPeriodState(months);
-    if (!dueByHand && lastCharge) setDueState(offeredDue(lastCharge, months, todayKey()));
+  const lastCharge = target?.last_day ?? (target?.due ? chargeBefore(target.due, target.period) : null);
+  const setPeriod = (p: Period) => {
+    setPeriodState(p);
+    if (!dueByHand && lastCharge) setDueState(offeredDue(lastCharge, p, todayKey()));
   };
   const setDue = (day: string) => { setDueState(day); setDueByHand(true); };
 
   const minor = parseAmountInput(amount);
   const input = target && minor !== null && name.trim()
-    ? { category_id: target.category.id, merchant_key: target.merchant_key, name: name.trim(), amount_minor: minor, currency, period_months: period, due }
+    ? { category_id: target.category.id, merchant_key: target.merchant_key, name: name.trim(), amount_minor: minor, currency, period: period, due }
     : null;
 
   // "В план октября +30 ₾": counted again as the form changes

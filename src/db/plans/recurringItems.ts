@@ -7,7 +7,7 @@
 import { getDb } from '../index';
 import { Currency, makeConverter } from '../fx';
 import { dayOfUnix, listPayments, paymentDays, RecurringPayment, todayKey } from '../recurring/reads';
-import { addMonths, chargesBetween, monthCharges, monthDays, nextCharge } from '../recurring/schedule';
+import { chargeAt, chargesBetween, monthCharges, monthDays, nextCharge, ONCE, Period } from '../recurring/schedule';
 import { savingEffects, storeContributions } from '../recurring/saving';
 import { asCurrency, currentYm, planRateDate } from './months';
 
@@ -56,7 +56,7 @@ export async function monthPayments(ym: string, to?: Currency, now = new Date(),
   for (const sub of subs) {
     if (!sub.due) { out.undated.push(sub); continue; }
     const ops = daysOf(sub);
-    const charges = monthCharges(sub.due, sub.period_months, ym, ops, `${sub.since_ym}-01`);
+    const charges = monthCharges(sub.due, sub.period, ym, ops, `${sub.since_ym}-01`);
     for (const c of charges) {
       const converted = conv(sub.amount_minor, sub.currency, currency, rateDay);
       const saved = savedFrom.has(sub.id) && c.day >= savedFrom.get(sub.id)!;
@@ -64,9 +64,11 @@ export async function monthPayments(ym: string, to?: Currency, now = new Date(),
       if (!saved) out.total_minor += converted ?? 0;
     }
     if (!charges.length) {
-      // the current month: the next one waited for (a late one too); a coming month: the first after it
-      const next = nextCharge(sub.due, sub.period_months, ops, today);
-      out.later.push({ sub, next: next > last || ym === currentYm(now) ? next : firstAfter(sub.due, sub.period_months, last) });
+      // the current month: the next one waited for (a late one too); a coming month: the first after it; a one-off one
+      // done — none
+      const next = nextCharge(sub.due, sub.period, ops, today);
+      const later = next === null ? null : next > last || ym === currentYm(now) ? next : firstAfter(sub.due, sub.period, last);
+      if (later) out.later.push({ sub, next: later });
     }
   }
   out.charges.sort((a, b) => a.day.localeCompare(b.day));
@@ -74,10 +76,11 @@ export async function monthPayments(ym: string, to?: Currency, now = new Date(),
   return out;
 }
 
-/** A repeating payment's first charge after `day` (and not before its set day). */
-function firstAfter(due: string, periodMonths: number, day: string): string {
+/** A repeating payment's first charge after `day` (and not before its set day); null — a one-off one before it. */
+function firstAfter(due: string, p: Period, day: string): string | null {
+  if (p === ONCE) return due > day ? due : null;
   const from = day > due ? day : due;
-  return chargesBetween(due, periodMonths, from, addMonths(from, periodMonths)).find((d) => d > day) ?? due;
+  return chargesBetween(due, p, from, chargeAt(from, p, 1)).find((d) => d > day) ?? due;
 }
 
 /**
@@ -117,7 +120,7 @@ export async function refreshRecurringItems(nowYm = currentYm()): Promise<void> 
   }
 }
 
-export type PaymentDraft = { merchant_key: string | null; category_id?: number | null; amount_minor: number; currency: Currency; period_months: number; due: string | null };
+export type PaymentDraft = { merchant_key: string | null; category_id?: number | null; amount_minor: number; currency: Currency; period: Period; due: string | null };
 
 /**
  * What saving a repeating payment does to the plan: the first month from this one it is charged in ("В план октября +30 ₾"),
@@ -132,13 +135,14 @@ export async function planEffect(draft: PaymentDraft, id?: number, now = new Dat
   const own = { merchant_key: draft.merchant_key, category_id: draft.category_id ?? old?.category_id ?? null };
   const daysOf = await paymentDays(old ? [own, old] : [own], db);
   const since = `${old?.since_ym ?? nowYm}-01`;
-  const chargesIn = (ym: string) => monthCharges(draft.due!, draft.period_months, ym, daysOf(own), since).length;
-  const next = nextCharge(draft.due, draft.period_months, daysOf(own), todayKey(now));
+  const chargesIn = (ym: string) => monthCharges(draft.due!, draft.period, ym, daysOf(own), since).length;
+  // a one-off one already past: this month
+  const next = nextCharge(draft.due, draft.period, daysOf(own), todayKey(now)) ?? draft.due;
   const ym = chargesIn(nowYm) ? nowYm : next.slice(0, 7) < nowYm ? nowYm : next.slice(0, 7);
   const currency = asCurrency((await db.get<{ c: string }>('SELECT budget_currency AS c FROM plan_months WHERE ym = ?', [ym]))?.c);
   const conv = await makeConverter();
   const rateDay = planRateDate(ym);
-  const was = old?.due ? monthCharges(old.due, old.period_months, ym, daysOf(old), `${old.since_ym}-01`).length * (conv(old.amount_minor, old.currency, currency, rateDay) ?? 0) : 0;
+  const was = old?.due ? monthCharges(old.due, old.period, ym, daysOf(old), `${old.since_ym}-01`).length * (conv(old.amount_minor, old.currency, currency, rateDay) ?? 0) : 0;
   const after = chargesIn(ym) * (conv(draft.amount_minor, draft.currency, currency, rateDay) ?? 0);
   return { ym, delta_minor: after - was, currency };
 }

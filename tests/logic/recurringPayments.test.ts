@@ -16,7 +16,7 @@ async function charge(merchant: string, amount: number, when: string, categoryId
       VALUES ('tbc', 'purchase', ?, 'GEL', ?, ?, ?, 'user', ?, ?, ?)`,
     [amount, merchant, merchant, categoryId, at(when), `sms ${n}`, `h${n}`]);
 }
-const NETFLIX = { merchant_key: 'NETFLIX.COM', name: 'Netflix', amount_minor: 3000, currency: 'GEL' as const, period_months: 1 };
+const NETFLIX = { merchant_key: 'NETFLIX.COM', name: 'Netflix', amount_minor: 3000, currency: 'GEL' as const, period: 1 };
 
 beforeEach(async () => {
   jest.useFakeTimers({ now: new Date('2026-10-18T12:00:00'), advanceTimers: true });
@@ -37,7 +37,7 @@ test('any category can have repeating payments: its plan counted from them; off 
   const insurance = await createCategory('Страховка', '🛡');
   await turnRecurring(insurance, true);
   await charge('GPI', 12000, '2026-10-05T10:00:00', insurance);
-  await savePayment({ category_id: insurance, merchant_key: 'GPI', name: 'GPI', amount_minor: 12000, currency: 'GEL', period_months: 12, due: '2027-10-05' });
+  await savePayment({ category_id: insurance, merchant_key: 'GPI', name: 'GPI', amount_minor: 12000, currency: 'GEL', period: 12, due: '2027-10-05' });
   const item = async () => (await listPlan('2026-10')).find((i) => i.category_id === insurance);
   expect(await item()).toMatchObject({ kind: 'subs', limit_minor: 12000, recurring: true });
   // "Подписки" keeps its own
@@ -59,7 +59,7 @@ test('until a subscription has a day the amount put in by hand stays; then it is
   await savePayment({ ...NETFLIX, due: '2026-11-18' });
   expect((await listPlan('2026-10')).find((i) => i.category_id === subs)).toMatchObject({ kind: 'subs', limit_minor: 3000 });
   // a year one charged in March isn't October's
-  await savePayment({ merchant_key: 'APPLE', name: 'iCloud+', amount_minor: 10000, currency: 'GEL', period_months: 12, due: '2027-03-12' });
+  await savePayment({ merchant_key: 'APPLE', name: 'iCloud+', amount_minor: 10000, currency: 'GEL', period: 12, due: '2027-03-12' });
   expect((await listPlan('2026-10')).find((i) => i.category_id === subs)!.limit_minor).toBe(3000);
   expect((await listPlan('2027-03')).find((i) => i.category_id === subs)!.limit_minor).toBe(13000);
   // deleted: counted on, 0 with none charged
@@ -71,9 +71,9 @@ test("the month's sections: charged in it by day, the others by their next charg
   const subs = (await subscriptionsCategoryId())!;
   await charge('NETFLIX.COM', 3000, '2026-10-18T10:00:00', subs);
   await savePayment({ ...NETFLIX, due: '2026-11-18' });
-  await savePayment({ merchant_key: 'SPOTIFY', name: 'Spotify', amount_minor: 1840, currency: 'GEL', period_months: 1, due: '2026-10-25' });
-  await savePayment({ merchant_key: 'ADOBE', name: 'Adobe', amount_minor: 8900, currency: 'USD', period_months: 12, due: '2027-06-03' });
-  await savePayment({ merchant_key: 'YOUTUBE', name: 'YouTube', amount_minor: 1599, currency: 'GEL', period_months: 1, due: null });
+  await savePayment({ merchant_key: 'SPOTIFY', name: 'Spotify', amount_minor: 1840, currency: 'GEL', period: 1, due: '2026-10-25' });
+  await savePayment({ merchant_key: 'ADOBE', name: 'Adobe', amount_minor: 8900, currency: 'USD', period: 12, due: '2027-06-03' });
+  await savePayment({ merchant_key: 'YOUTUBE', name: 'YouTube', amount_minor: 1599, currency: 'GEL', period: 1, due: null });
   const m = await monthPayments('2026-10', 'GEL');
   expect(m.charges.map((c) => [c.sub.name, c.day, c.done])).toEqual([['Netflix', '2026-10-18', true], ['Spotify', '2026-10-25', false]]);
   expect(m.total_minor).toBe(4840);
@@ -101,7 +101,7 @@ test('a payment without a merchant (put in from the plan) is charged by any spen
   const { turnRecurring, paymentCard } = require('../../src/db/recurring');
   const sport = await createCategory('Спорт', '🏋️');
   await turnRecurring(sport, true);
-  await savePayment({ category_id: sport, merchant_key: null, name: 'Спорт', amount_minor: 30000, currency: 'GEL', period_months: 1, due: '2026-10-05' });
+  await savePayment({ category_id: sport, merchant_key: null, name: 'Спорт', amount_minor: 30000, currency: 'GEL', period: 1, due: '2026-10-05' });
   // no operation yet: expected on the 5th
   expect((await monthPayments('2026-10', 'GEL')).charges).toEqual([expect.objectContaining({ day: '2026-10-05', done: false })]);
   await charge('FITPASS', 30000, '2026-10-06T10:00:00', sport);

@@ -25,7 +25,7 @@ export function RecurringItemRow({ p, item, hidden, onOpen }: Props) {
   const w = paymentWords(item.name);
   const one = item.subs?.single;
   // its only payment: how often, paid or when next ("без даты" — the amount stands each month)
-  const single = one ? [periodText(one.period_months),
+  const single = one ? [periodText(one.period),
     one.done && one.day ? `✓ оплачено ${shortDay(one.day)}` : one.day ? [shortDay(one.day), inTime(one.day, todayKey())].filter(Boolean).join(', ') : 'без даты',
   ].join(' · ') : null;
   const note = single ?? (item.kind !== 'subs' ? `вручную · задайте даты ${w.toAll}` : listed || w.noDated);

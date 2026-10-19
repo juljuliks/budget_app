@@ -1,9 +1,7 @@
 import { savedInCategory } from '@/db/recurring';
 import { formatWithCurrency } from '@/shared/lib/money';
-import { UNDO } from '@/shared/lib/strings';
 import { sheetAlert } from '@/shared/ui/sheetAlert';
-import { toast, toastFailure } from '@/shared/ui/toast';
-import { stopRecurring, undoStopRecurring } from '../model/commands';
+import { stopRecurring } from '../model/commands';
 
 /** "Выключить повторяющиеся платежи?" when they saved something (it goes to this month's savings); true — go on. */
 export async function askTurnOff(categoryId: number): Promise<boolean> {
@@ -18,17 +16,9 @@ export async function askTurnOff(categoryId: number): Promise<boolean> {
   });
 }
 
-/**
- * The plan's "Выключить повторяющиеся платежи" (or another kind picked for such a category: `quiet`, its save tells):
- * asked if they saved something, then off, "Отменить" in the toast; false — not turned off.
- */
-export async function turnOffRecurring(categoryId: number, quiet = false): Promise<boolean> {
+/** Another kind picked in the plan for a category with repeating payments: asked if they saved something, then off; false — not. */
+export async function turnOffRecurring(categoryId: number): Promise<boolean> {
   if (!(await askTurnOff(categoryId))) return false;
-  const undo = await stopRecurring(categoryId);
-  if (quiet) return true;
-  toast('Повторяющиеся платежи выключены', undo ? {
-    label: UNDO,
-    onPress: () => { undoStopRecurring(undo).then(() => toast('Повторяющиеся платежи снова включены')).catch(toastFailure('undo recurring', 'Не удалось восстановить')); },
-  } : undefined);
+  await stopRecurring(categoryId);
   return true;
 }

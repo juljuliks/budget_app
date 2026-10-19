@@ -1,5 +1,5 @@
 import {
-  addMonths, chargesBetween, isDone, monthCharges, nextCharge, offeredDue,
+  addMonths, chargeBefore, chargesBetween, isDone, monthCharges, nextCharge, offeredDue, ONCE, savingFor, WEEKLY,
 } from '../../src/db/recurring/schedule';
 
 describe('subscription schedule', () => {
@@ -50,5 +50,36 @@ describe('subscription schedule', () => {
     expect(offeredDue('2026-10-02', 1, '2026-10-18')).toBe('2026-11-02');
     expect(offeredDue('2026-07-02', 1, '2026-10-18')).toBe('2026-11-02');
     expect(offeredDue('2026-03-12', 12, '2026-10-18')).toBe('2027-03-12');
+  });
+
+  test('every week: 4 or 5 charges a month, the window ± 3 days (one operation is one charge)', () => {
+    expect(chargesBetween('2026-10-06', WEEKLY, '2026-10-01', '2026-10-31')).toEqual(['2026-10-06', '2026-10-13', '2026-10-20', '2026-10-27']);
+    expect(chargesBetween('2026-10-06', WEEKLY, '2026-12-01', '2026-12-31')).toEqual(['2026-12-01', '2026-12-08', '2026-12-15', '2026-12-22', '2026-12-29']);
+    expect(chargesBetween('2026-10-06', -2, '2026-10-01', '2026-10-31')).toEqual(['2026-10-06', '2026-10-20']);
+    expect(isDone('2026-10-13', ['2026-10-16'], WEEKLY)).toBe(true);
+    expect(isDone('2026-10-13', ['2026-10-17'], WEEKLY)).toBe(false);
+    // charged on the 14th — the next is the 20th; the 20th missed by more than 3 days — the 27th
+    expect(nextCharge('2026-10-06', WEEKLY, ['2026-10-06', '2026-10-14'], '2026-10-15')).toBe('2026-10-20');
+    expect(nextCharge('2026-10-06', WEEKLY, ['2026-10-14'], '2026-10-24')).toBe('2026-10-27');
+    expect(offeredDue('2026-10-06', WEEKLY, '2026-10-15')).toBe('2026-10-20');
+    expect(chargeBefore('2026-10-20', WEEKLY)).toBe('2026-10-13');
+    expect(monthCharges('2026-10-20', WEEKLY, '2026-10', ['2026-10-13'], '2026-10-01')).toEqual([
+      { day: '2026-10-13', done: true }, { day: '2026-10-20', done: false }, { day: '2026-10-27', done: false },
+    ]);
+  });
+
+  test('once: its day only; done or missed — nothing next; offered — the operation it was made from', () => {
+    expect(chargesBetween('2026-11-18', ONCE, '2026-01-01', '2027-12-31')).toEqual(['2026-11-18']);
+    expect(chargesBetween('2026-11-18', ONCE, '2026-12-01', '2027-12-31')).toEqual([]);
+    expect(monthCharges('2026-11-18', ONCE, '2026-11', [], '2026-10-01')).toEqual([{ day: '2026-11-18', done: false }]);
+    expect(monthCharges('2026-11-18', ONCE, '2026-12', [], '2026-10-01')).toEqual([]);
+    expect(nextCharge('2026-11-18', ONCE, [], '2026-10-18')).toBe('2026-11-18');
+    expect(nextCharge('2026-11-18', ONCE, ['2026-11-18'], '2026-11-19')).toBeNull();
+    expect(nextCharge('2026-11-18', ONCE, [], '2026-11-26')).toBeNull();
+    expect(offeredDue('2026-10-13', ONCE, '2026-10-18')).toBe('2026-10-13');
+    expect(chargeBefore('2026-10-13', ONCE)).toBe('2026-10-13');
+    // saving up for it: the months before it save for it, none after
+    expect(savingFor('2027-03-12', ONCE, '2026-11', [])).toBe('2027-03-12');
+    expect(savingFor('2027-03-12', ONCE, '2027-04', [])).toBeNull();
   });
 });

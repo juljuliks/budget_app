@@ -45,7 +45,7 @@ describe('6.1 the month\'s budget', () => {
     expect(after('🎲 Траты вне плана', 2)).toEqual(['категории без плана и без категории · 10% бюджета', '300 ₾']);
   });
 
-  test('another currency: the savings in it, "(N ₾)" under them in the budget\'s one', async () => {
+  test('another currency: the savings in it, "(N ₾)" before them in the budget\'s one', async () => {
     await openPlan();
     const db = await getDb();
     for (let d = 1; d <= 15; d++) await db.run("INSERT OR REPLACE INTO fx_rates (date, currency, gel_per_unit) VALUES (?, 'USD', 2.5)", [`2026-10-${String(d).padStart(2, '0')}`]);
@@ -53,8 +53,10 @@ describe('6.1 the month\'s budget', () => {
     await tap('$ USD');
     backToTabs();
     expect(await screen.findByText('(300 ₾)')).toBeTruthy();
-    expect(after('🔒 Отложено сразу', 3)).toEqual(['заблокировано в начале месяца · 10% бюджета', '120 $', '(300 ₾)']);
-    expect(after('💰 Сэкономлено', 3)).toEqual(['не запланировано — решите в итогах месяца · 4% бюджета', '44 $', '(110 ₾)']);
+    expect(after('🔒 Отложено сразу', 3)).toEqual(['заблокировано в начале месяца · 10% бюджета', '(300 ₾)', '120 $']);
+    expect(after('💰 Сэкономлено', 3)).toEqual(['не запланировано — решите в итогах месяца · 4% бюджета', '(110 ₾)', '44 $']);
+    // the section's header: its total in the budget's currency first
+    expect(screen.getByText('(410 ₾) ')).toBeTruthy();
   });
 
   test('savings the overspend took part of: a tap on its line — by how much, what took it; a category\'s tap opens its plan', async () => {

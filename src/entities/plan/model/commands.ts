@@ -2,7 +2,7 @@
 import { deleteFund, getFund, restoreFund, setFund, setPlanAmount } from '@/db/plans';
 import type { Currency } from '@/db/fx';
 import { getCategory } from '@/db/categories';
-import { categoryPayment, RecurringUndo, savePayment, turnRecurring, undoRecurring } from '@/db/recurring';
+import { categoryPayment, savePayment, turnRecurring } from '@/db/recurring';
 import { emitTransactionsChanged } from '@/domain/events';
 
 /**
@@ -32,7 +32,7 @@ export async function saveFund(...args: Parameters<typeof setFund>) {
  * "Повторяющийся платёж" from the plan's sheet: the category's payment without a merchant (charged by any of its
  * spending), the category's repeating payments on. Without a day the amount stands in the plan each month (by hand).
  */
-export async function saveRecurring(ym: string, categoryId: number, p: { amount_minor: number; currency: Currency; period_months: number; due: string | null }) {
+export async function saveRecurring(ym: string, categoryId: number, p: { amount_minor: number; currency: Currency; period: number; due: string | null }) {
   const fund = await getFund(categoryId);
   if (fund && !fund.closed_ym) await deleteFund(categoryId);
   const c = await getCategory(categoryId);
@@ -43,15 +43,8 @@ export async function saveRecurring(ym: string, categoryId: number, p: { amount_
   emitTransactionsChanged();
 }
 
-/** The category's repeating payments off (what they saved goes to this month's savings); how to put them back. */
-export async function stopRecurring(categoryId: number): Promise<RecurringUndo | null> {
-  const undo = await turnRecurring(categoryId, false);
-  emitTransactionsChanged();
-  return undo;
-}
-
-/** "Отменить" after the repeating payments were turned off. */
-export async function undoStopRecurring(undo: RecurringUndo): Promise<void> {
-  await undoRecurring(undo);
+/** The category's repeating payments off (what they saved goes to this month's savings). */
+export async function stopRecurring(categoryId: number): Promise<void> {
+  await turnRecurring(categoryId, false);
   emitTransactionsChanged();
 }

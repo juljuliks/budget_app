@@ -40,7 +40,7 @@ export default function AddPaymentSheet({ visible, category, onClose, onPick }: 
   useEffect(() => { if (!visible) setQuery(''); }, [visible]);
 
   const pick = (m: LastCharge) => onPick({
-    category, merchant_key: m.merchant_key, name: m.name, amount_minor: m.amount_minor, currency: m.currency, period_months: 1, due: null, last_day: m.day,
+    category, merchant_key: m.merchant_key, name: m.name, amount_minor: m.amount_minor, currency: m.currency, period: 1, due: null, last_day: m.day,
   });
   const row = (m: LastCharge) => (
     <PaymentRow
@@ -64,7 +64,7 @@ export default function AddPaymentSheet({ visible, category, onClose, onPick }: 
         {rows && !rows.length ? <Text style={formStyles.hint}>Не найдено</Text> : null}
         <SheetActions
           submit={null}
-          extra={[{ title: 'Без мерчанта — ввести название', onPress: () => onPick({ category, merchant_key: null, name: query.trim(), amount_minor: 0, currency: 'GEL', period_months: 1, due: null }) }]}
+          extra={[{ title: 'Без мерчанта — ввести название', onPress: () => onPick({ category, merchant_key: null, name: query.trim(), amount_minor: 0, currency: 'GEL', period: 1, due: null }) }]}
           onCancel={onClose}
         />
       </SheetScrollView>

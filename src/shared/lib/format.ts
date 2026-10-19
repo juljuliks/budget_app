@@ -58,8 +58,14 @@ export function formatPercent(part: number, whole: number): string {
   return p === 0 && part > 0 ? '<1%' : `${p}%`;
 }
 
-/** How often a repeating payment is charged: "каждый месяц", "раз в 3 месяца", "раз в полгода", "раз в год", "раз в 2 года". */
+/**
+ * How often a repeating payment is charged (months > 0, weeks < 0, once 0): "каждую неделю", "раз в 2 недели", "каждый
+ * месяц", "раз в 3 месяца", "раз в полгода", "раз в год", "раз в 2 года", "один раз".
+ */
 export function periodText(months: number): string {
+  if (months === 0) return 'один раз';
+  if (months === -1) return 'каждую неделю';
+  if (months < 0) return `раз в ${-months} ${plural(-months, ['неделю', 'недели', 'недель'])}`;
   if (months === 1) return 'каждый месяц';
   if (months === 6) return 'раз в полгода';
   if (months === 12) return 'раз в год';
@@ -67,5 +73,7 @@ export function periodText(months: number): string {
   return `раз в ${months} ${plural(months, ['месяц', 'месяца', 'месяцев'])}`;
 }
 
-/** A repeating payment's period chips: months and their names (another — "Другое…"). */
-export const PAYMENT_PERIODS: ReadonlyArray<readonly [number, string]> = [[1, 'Каждый месяц'], [3, 'Раз в 3 месяца'], [6, 'Раз в полгода'], [12, 'Раз в год']];
+/** A repeating payment's period chips: periods as periodText has them and their names (another — "Другое…"). */
+export const PAYMENT_PERIODS: ReadonlyArray<readonly [number, string]> = [
+  [-1, 'Каждую неделю'], [1, 'Каждый месяц'], [3, 'Раз в 3 месяца'], [6, 'Раз в полгода'], [12, 'Раз в год'], [0, 'Один раз'],
+];

@@ -35,7 +35,7 @@ async function targetOf(which: { id?: number; txId?: number }): Promise<PaymentT
   if (sub) return { ...sub, category, last_day: dayOfUnix(tx.occurred_at) };
   return {
     category, merchant_key: tx.merchant_key, name: tx.raw_merchant || tx.merchant_key, amount_minor: tx.amount_minor,
-    currency: asCurrency(tx.currency), period_months: 1, due: null, last_day: dayOfUnix(tx.occurred_at), from_operation: true,
+    currency: asCurrency(tx.currency), period: 1, due: null, last_day: dayOfUnix(tx.occurred_at), from_operation: true,
   };
 }
 

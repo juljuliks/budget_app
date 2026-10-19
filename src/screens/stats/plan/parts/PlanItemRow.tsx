@@ -47,13 +47,15 @@ export function PlanItemRow({ p, item, ym, currency, hidden, toShown, onOpen, on
       {/* "Скрыть суммы": the amounts left out (the % of the budget stays in the line under the name) */}
       {hidden ? null : item.limit_minor ? (
         <View style={styles.amountBox}>
-          <Text style={styles.amount}>
-            {item.converted_minor !== null ? p.money(item.converted_minor) : formatWithCurrency(item.limit_minor, item.currency)}
-          </Text>
-          {/* "200 $" under an amount shown converted from another currency */}
-          {item.converted_minor !== null && item.currency !== currency ? (
-            <Text style={styles.amountOriginal}>({formatWithCurrency(item.limit_minor, item.currency)})</Text>
-          ) : null}
+          {/* "(200 $)" before an amount shown converted from another currency */}
+          <View style={styles.amountLine}>
+            {item.converted_minor !== null && item.currency !== currency ? (
+              <Text style={[styles.amount, styles.amountForeign]}>({formatWithCurrency(item.limit_minor, item.currency)})</Text>
+            ) : null}
+            <Text style={styles.amount}>
+              {item.converted_minor !== null ? p.money(item.converted_minor) : formatWithCurrency(item.limit_minor, item.currency)}
+            </Text>
+          </View>
         </View>
       ) : (
         // carried over without an amount: last month's as a muted hint, in the app's currency
@@ -79,8 +81,10 @@ export function SystemRowView({ p, r, hidden, onOpen, onLess }: { p: PlanView; r
       </View>
       {hidden ? null : (
         <View style={styles.amountBox}>
-          <Text style={[styles.amount, toneStyle(r.tone)]}>{`${r.carry === 'plus' ? '+' : ''}${p.money(r.value)}`}</Text>
-          {r.original ? <Text style={styles.amountOriginal}>{r.original}</Text> : null}
+          <View style={styles.amountLine}>
+            {r.inBudget !== undefined && p.budgetMoney ? <Text style={[styles.amount, styles.amountForeign]}>{p.budgetMoney(r.inBudget)}</Text> : null}
+            <Text style={[styles.amount, toneStyle(r.tone)]}>{`${r.carry === 'plus' ? '+' : ''}${p.money(r.value)}`}</Text>
+          </View>
           {/* the overspend took part of it: by how much, ⓘ — what took it */}
           {r.was !== undefined ? <LessNote less={r.was - r.value} money={p.money} onPress={onLess} /> : null}
         </View>

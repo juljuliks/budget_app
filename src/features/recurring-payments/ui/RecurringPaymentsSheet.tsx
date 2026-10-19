@@ -7,17 +7,14 @@ import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
 import { openCategory } from '@/shared/navigation/navigation';
 import Button from '@/shared/ui/Button';
 import Loading from '@/shared/ui/Loading';
-import { toastFailure } from '@/shared/ui/toast';
-import { SAVE_FAILED } from '@/shared/lib/strings';
 import SectionBand from '@/shared/ui/SectionBand';
 import { formatPercent } from '@/shared/lib/format';
 import { formStyles } from '@/shared/theme/formStyles';
 import { colors } from '@/shared/theme/theme';
 import { paymentWords } from '@/entities/category';
-import { turnOffRecurring } from '@/entities/plan';
 import { PaymentCategory, PaymentTarget } from '../model/usePaymentForm';
 import { useRecurringPayments } from '../model/useRecurringPayments';
-import { inMonth, inTime, monthGen, periodText, shortDay } from '../texts';
+import { inMonth, inMonthYear, inTime, monthGen, periodText, shortDay } from '../texts';
 import AddPaymentSheet from './AddPaymentSheet';
 import PaymentRow from './PaymentRow';
 import PaymentSheet from './PaymentSheet';
@@ -73,7 +70,7 @@ export default function RecurringPaymentsSheet({ ym, category, currency, onClose
           {data.charges.length ? data.charges.map((c) => (
             <PaymentRow label={w.One}
               key={`${c.sub.id}-${c.day}`} name={c.sub.name} onPress={() => setOpen(targetOf(c.sub))}
-              note={[periodText(c.sub.period_months), ...(c.saved ? ['из отложенного'] : []), c.done ? `✓ списано ${shortDay(c.day)}` : [shortDay(c.day), inTime(c.day, today)].filter(Boolean).join(', ')]}
+              note={[periodText(c.sub.period), ...(c.saved ? ['из отложенного'] : []), c.done ? `✓ списано ${shortDay(c.day)}` : [shortDay(c.day), inTime(c.day, today)].filter(Boolean).join(', ')]}
               tone={c.done ? 'ok' : undefined} amount={money(c.sub.amount_minor, c.sub.currency)} muted={c.saved}
             />
           )) : <Text style={formStyles.hint}>{`Нет списаний ${inMonth(ym)}`}</Text>}
@@ -85,14 +82,14 @@ export default function RecurringPaymentsSheet({ ym, category, currency, onClose
             return v ? (
               <PaymentRow label={w.One}
                 key={sub.id} name={sub.name} onPress={() => setOpen(targetOf(sub))} ring={sub.amount_minor ? v.end_minor / sub.amount_minor : 0}
-                note={[periodText(sub.period_months), shortDay(next), `${money(v.end_minor, sub.currency)} из ${money(sub.amount_minor, sub.currency)}`]}
+                note={[periodText(sub.period), shortDay(next), `${money(v.end_minor, sub.currency)} из ${money(sub.amount_minor, sub.currency)}`]}
                 amount={money(v.contribution_minor, sub.currency)} amountNote="в месяц"
               />
             ) : (
               <PaymentRow label={w.One}
                 key={sub.id} name={sub.name} onPress={() => setOpen(targetOf(sub))}
-                note={[periodText(sub.period_months), shortDay(next)]}
-                amount={money(sub.amount_minor, sub.currency)} amountNote={inMonth(next.slice(0, 7))} muted
+                note={[periodText(sub.period), shortDay(next)]}
+                amount={money(sub.amount_minor, sub.currency)} amountNote={inMonthYear(next.slice(0, 7))} muted
               />
             );
           })}
@@ -101,23 +98,19 @@ export default function RecurringPaymentsSheet({ ym, category, currency, onClose
           {data.undated.map((sub) => (
             <PaymentRow label={w.One}
               key={sub.id} name={sub.name} onPress={() => setOpen(targetOf(sub))}
-              note={[periodText(sub.period_months), 'Задать дату']} tone="warn" amount={money(sub.amount_minor, sub.currency)}
+              note={[periodText(sub.period), 'Задать дату']} tone="warn" amount={money(sub.amount_minor, sub.currency)}
             />
           ))}
           {data.merchants.map((m) => (
             <PaymentRow label={w.One}
               key={m.merchant_key} name={m.name} note={[`последняя ${shortDay(m.day)}`, 'Задать дату']} tone="warn"
               amount={money(m.amount_minor, m.currency)}
-              onPress={() => setOpen({ category, merchant_key: m.merchant_key, name: m.name, amount_minor: m.amount_minor, currency: m.currency, period_months: 1, due: null, last_day: m.day })}
+              onPress={() => setOpen({ category, merchant_key: m.merchant_key, name: m.name, amount_minor: m.amount_minor, currency: m.currency, period: 1, due: null, last_day: m.day })}
             />
           ))}
 
+          {/* turned on and off in the plan (its kind "Повторяющийся платёж"); one stops — deleted in its sheet */}
           <Button title={`＋ ${w.add}`} outline onPress={() => setAdding('merchant')} style={styles.add} />
-          {/* the plan turns them on ("Повторяющийся платёж") and off; the amount stays, by hand from now on */}
-          <Button
-            title="Выключить повторяющиеся платежи" danger outline style={styles.off}
-            onPress={() => { turnOffRecurring(category.id).then((off) => { if (off) onClose(); }).catch(toastFailure('turn off recurring', SAVE_FAILED)); }}
-          />
         </SheetScrollView>
       )}
     </BottomSheet>
@@ -139,5 +132,4 @@ const styles = StyleSheet.create({
   factValue: { fontSize: 15, fontWeight: '700', color: colors.text, fontVariant: ['tabular-nums'] },
   link: { color: colors.accent },
   add: { marginTop: 16 },
-  off: { marginTop: 8 },
 });

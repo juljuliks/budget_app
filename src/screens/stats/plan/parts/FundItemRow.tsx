@@ -18,6 +18,7 @@ type Props = { p: PlanView; item: PlanItem; hidden: boolean; onOpen: () => void 
 export function FundItemRow({ p, item, hidden, onOpen }: Props) {
   const f = item.fund;
   const saved = f ? isSaved(f.saved_minor, f.target_minor) : false;
+  const inBudget = p.fundInBudget(item);
   return (
     <TouchableOpacity style={styles.row} onPress={onOpen} accessibilityLabel={`Копилка: ${categoryLabel(item)}`}>
       <View style={styles.pin}>
@@ -33,9 +34,13 @@ export function FundItemRow({ p, item, hidden, onOpen }: Props) {
       </View>
       {hidden ? null : (
         <View style={styles.amountBox}>
-          <Text style={styles.amount}>
-            {item.converted_minor !== null ? p.money(item.converted_minor) : formatWithCurrency(item.limit_minor, item.currency)}
-          </Text>
+          {/* "(385 $)" before it: in the budget's currency, when the screen shows another */}
+          <View style={styles.amountLine}>
+            {inBudget !== null && p.budgetMoney ? <Text style={[styles.amount, styles.amountForeign]}>{p.budgetMoney(inBudget)}</Text> : null}
+            <Text style={styles.amount}>
+              {item.converted_minor !== null ? p.money(item.converted_minor) : formatWithCurrency(item.limit_minor, item.currency)}
+            </Text>
+          </View>
           <Text style={styles.amountOriginal}>{saved && !item.limit_minor ? 'можно тратить' : 'в месяц'}</Text>
         </View>
       )}

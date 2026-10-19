@@ -5,6 +5,8 @@ import { currentYm } from '../plans/months';
 import { refreshRecurringItems } from '../plans/recurringItems';
 import { SavingUndo, stopSaving, undoSaving } from './savingWrites';
 import { subscriptionsCategoryId } from '../categories';
+import { periodColumns } from './period';
+import type { Period } from './schedule';
 
 export type PaymentInput = {
   /** the category it is a payment of; none — the one it had (a new one: "Подписки") */
@@ -13,7 +15,8 @@ export type PaymentInput = {
   name: string;
   amount_minor: number;
   currency: Currency;
-  period_months: number;
+  /** schedule.ts Period */
+  period: Period;
   /** null — without a day ("Пропустить": the merchant isn't asked about again) */
   due: string | null;
 };
@@ -27,14 +30,14 @@ export async function savePayment(input: PaymentInput, id?: number): Promise<num
   const category = input.category_id
     ?? (own !== undefined ? (await db.get<{ c: number | null }>('SELECT category_id AS c FROM recurring_payments WHERE id = ?', [own]))?.c : null)
     ?? await subscriptionsCategoryId(db);
-  const values = [category, input.merchant_key, input.name.trim(), input.amount_minor, input.currency, input.period_months, input.due];
+  const values = [category, input.merchant_key, input.name.trim(), input.amount_minor, input.currency, ...periodColumns(input.period), input.due];
   let out: number;
   if (own !== undefined) {
-    await db.run('UPDATE recurring_payments SET category_id = ?, merchant_key = ?, name = ?, amount_minor = ?, currency = ?, period_months = ?, due = ? WHERE id = ?', [...values, own]);
+    await db.run('UPDATE recurring_payments SET category_id = ?, merchant_key = ?, name = ?, amount_minor = ?, currency = ?, period_months = ?, period_unit = ?, due = ? WHERE id = ?', [...values, own]);
     out = own;
   } else {
     const r = await db.run(
-      'INSERT INTO recurring_payments (category_id, merchant_key, name, amount_minor, currency, period_months, due, since_ym, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO recurring_payments (category_id, merchant_key, name, amount_minor, currency, period_months, period_unit, due, since_ym, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [...values, currentYm(), Math.floor(Date.now() / 1000)]);
     out = r.lastInsertRowid;
   }

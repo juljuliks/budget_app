@@ -1,10 +1,18 @@
 // The subscriptions' words (features/recurring-payments/texts.ts, periodText in shared/lib/format.ts).
 import { periodText } from '../../src/shared/lib/format';
-import { inMonth, inTime, longDay, monthGenYear, shortDay } from '../../src/features/recurring-payments/texts';
+import { inMonth, inMonthYear, inTime, longDay, monthGenYear, shortDay } from '../../src/features/recurring-payments/texts';
 
 test('how often', () => {
   expect([1, 3, 6, 12, 24, 5, 2].map(periodText)).toEqual(
     ['каждый месяц', 'раз в 3 месяца', 'раз в полгода', 'раз в год', 'раз в 2 года', 'раз в 5 месяцев', 'раз в 2 месяца']);
+  // weeks (< 0) and once (0)
+  expect([-1, -2, -5, 0].map(periodText)).toEqual(['каждую неделю', 'раз в 2 недели', 'раз в 5 недель', 'один раз']);
+});
+
+test('in a month: another year with the year', () => {
+  const now = new Date('2026-10-15T12:00:00');
+  expect(inMonthYear('2026-12', now)).toBe('в декабре');
+  expect(inMonthYear('2027-09', now)).toBe('в сентябре 2027');
 });
 
 test('when: "сегодня", "завтра", days under four weeks, then months; past — none', () => {

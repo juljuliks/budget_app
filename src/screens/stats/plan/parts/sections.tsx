@@ -40,6 +40,8 @@ export function systemSections(p: PlanView, hidden: boolean, open: SystemOpen) {
         {/* "Скрыть суммы": the share only */}
         {header(g.title, (
           <Text style={[styles.groupTotal, plus && styles.freeValue]}>
+            {/* "(933 $) 2 425.98 ₾": the budget's currency first, when the screen shows another */}
+            {hidden || g.inBudget === undefined || !p.budgetMoney ? null : <Text style={styles.groupForeign}>{`${p.budgetMoney(g.inBudget)} `}</Text>}
             {hidden && p.shownBudget ? null : `${plus ? '+' : ''}${p.money(sum)}`}
             {plus || !p.shownBudget ? null : <Text style={styles.groupShare}>{hidden ? '' : ' · '}{percentOf(sum, p.shownBudget) || '0%'}</Text>}
           </Text>

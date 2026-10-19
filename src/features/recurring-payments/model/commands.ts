@@ -2,6 +2,7 @@
 // for or not (turned off with something saved, or deleted: asked first — what it had goes to this month's savings).
 import { currentYm, planEffect, recurringShort, takeLocked } from '@/db/plans';
 import {
+  ONCE,
   deletePayment, restorePayment, savedNow, savePayment, SavingUndo, startSaving, stopSaving, PaymentInput, undoSaving,
 } from '@/db/recurring';
 import { emitTransactionsChanged } from '@/domain/events';
@@ -37,7 +38,7 @@ async function write(input: PaymentInput, id: number | undefined, onDone: () => 
       toast(`${input.name} — без откладывания, ${released} в сбережениях ${monthGen(currentYm())}`, undoAction(stopped.undo, input.name));
       return;
     }
-    toast(input.due ? `${input.name} — следующее списание ${longDay(input.due)}` : `${input.name} — без даты списания`);
+    toast(!input.due ? `${input.name} — без даты списания` : input.period === ONCE ? `${input.name} — списание ${longDay(input.due)}` : `${input.name} — следующее списание ${longDay(input.due)}`);
   } catch (e) {
     console.error('save payment failed', e);
     toastError(SAVE_FAILED);

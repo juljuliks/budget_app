@@ -48,7 +48,7 @@ function patterns(minor: number | null, currency: Currency, ym: string) {
 async function submitRecurring(ym: string, categoryId: number, minor: number, currency: Currency, v: RecurringForm, saved: () => void): Promise<string | null> {
   if (!minor) return 'Введите сумму платежа';
   if (v.period !== 1 && !v.next) return 'Для платежа реже раза в месяц нужна дата';
-  await saveRecurring(ym, categoryId, { amount_minor: minor, currency, period_months: v.period, due: v.next });
+  await saveRecurring(ym, categoryId, { amount_minor: minor, currency, period: v.period, due: v.next });
   saved();
   return null;
 }
@@ -164,7 +164,7 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
     // the stats and reports open under the dialog count the plan too (savePlanAmount tells them)
     // another kind for a category with repeating payments: they are turned off first (asked if they saved something)
     const off = k !== 'subs' && !!target.recurring;
-    if (off && !(await turnOffRecurring(target.category_id, true))) return false;
+    if (off && !(await turnOffRecurring(target.category_id))) return false;
     const saved = (taken?: string) => { toast(savedText(k, label, !!adding, off, taken)); onSaved(); };
     const byHand = k === 'subs' && target.recurring && target.merchants;
     if (k === 'subs' && !byHand) return submitRecurring(ym, target.category_id, minor, currency, form.getValues(), saved);
