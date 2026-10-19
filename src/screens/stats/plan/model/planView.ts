@@ -65,6 +65,13 @@ type Data = {
   hidden: boolean;
 };
 
+/** A category's spending less what it saved up for its repeating payments: as its row in the plan, the charges only. */
+function withoutSaving(spentBy: SpentBy, saving: PlanItem[]): SpentBy {
+  const byCategory = new Map(spentBy.byCategory);
+  for (const i of saving) byCategory.set(i.category_id, (byCategory.get(i.category_id) ?? 0) - i.subs!.saving_minor);
+  return { ...spentBy, byCategory };
+}
+
 export function planView({ ym, currency, items: all, budget, toShown, fromShown, income, unplannedSpentMinor, spentBy }: Data) {
   const money = (minor: number) => formatWithCurrency(minor, currency);
   // the funds' contributions apart: in "Сбережения" (its section and its column)
@@ -104,7 +111,7 @@ export function planView({ ym, currency, items: all, budget, toShown, fromShown,
 
   // this month: what the overspend already took of the savings (💰 first, then 🔒)
   const less = timing === 'current' && shownBudget !== null
-    ? savingsLess({ items: all, spentBy, unplanned, unplannedSpent: unplannedSpentMinor, free: free ?? 0, locked }) : null;
+    ? savingsLess({ items: [...items, ...funds], spentBy: withoutSaving(spentBy, saving), unplanned, unplannedSpent: unplannedSpentMinor, free: free ?? 0, locked }) : null;
 
   // the bar's parts, left to right; what the budget leaves is shown in "Сбережения" (where it goes: "Итоги месяца") with
   // the funds' contributions
@@ -165,8 +172,8 @@ export function planView({ ym, currency, items: all, budget, toShown, fromShown,
     ];
     if (savingsRows.length || funds.length || saving.length) {
       // the section's total in the budget's currency: its rows', funds' and contributions' (any without a rate — none)
-      const parts = [...savingsRows.map((r) => r.inBudget ?? null), ...funds.map(fundInBudget), ...saving.map(savingInBudget)];
-      const inBudgetTotal = budgetMoney && parts.every((m) => m !== null) ? parts.reduce<number>((a, m) => a + m!, 0) : undefined;
+      const amounts = [...savingsRows.map((r) => r.inBudget ?? null), ...funds.map(fundInBudget), ...saving.map(savingInBudget)];
+      const inBudgetTotal = budgetMoney && amounts.every((m) => m !== null) ? amounts.reduce<number>((a, m) => a + m!, 0) : undefined;
       systemGroups.push({ title: 'Сбережения', rows: savingsRows, funds, saving, inBudget: inBudgetTotal });
     }
     // the share set aside only: the spending against it is in the stats

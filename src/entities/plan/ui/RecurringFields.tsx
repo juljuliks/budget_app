@@ -14,7 +14,7 @@ import { formStyles } from '@/shared/theme/formStyles';
 const PLAN_PERIODS = PAYMENT_PERIODS.filter(([p]) => p !== 0);
 
 /** Why a repeating payment not monthly needs its day. */
-export const dateNeeded = (period: number) => (period < 0 ? 'Для еженедельного платежа нужна дата.' : 'Для платежа реже раза в месяц нужна дата.');
+export const dateNeeded = (period: number) => (period < 0 ? 'Для еженедельного платежа нужна дата' : 'Для платежа реже раза в месяц нужна дата');
 
 /** The plan sheet's repeating payment: how often and the next charge (none — the amount stands each month). */
 export type RecurringForm = { period: number; next: string | null };
@@ -67,7 +67,7 @@ export default function RecurringFields({ categoryId, form }: Props) {
       )} />
       <Text style={formStyles.hint}>
         {next ? `Списание засчитывается тратой категории за ${windowOf(period)} ${plural(windowOf(period), ['день', 'дня', 'дней'])} до или после даты — дата сдвинется сама.`
-          : period === 1 ? 'Без даты сумма просто стоит в плане каждый месяц.' : dateNeeded(period)}
+          : period === 1 ? 'Без даты сумма просто стоит в плане каждый месяц.' : `${dateNeeded(period)}.`}
       </Text>
     </View>
   );

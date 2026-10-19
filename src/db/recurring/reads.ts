@@ -56,6 +56,16 @@ export async function getPayment(id: number): Promise<RecurringPayment | null> {
   return r ? asSub(r) : null;
 }
 
+/**
+ * A repeating payment's next charge as its operations have it (its stored day stays as it was set: the charges after it
+ * are counted, not written); null — no day, or a one-off one past.
+ */
+export async function paymentNext(id: number, now = new Date()): Promise<string | null> {
+  const sub = await getPayment(id);
+  if (!sub?.due) return null;
+  return nextCharge(sub.due, sub.period, (await paymentDays([sub]))(sub), todayKey(now));
+}
+
 /** The merchant's repeating payment (not deleted), or null. */
 export async function paymentOfMerchant(merchantKey: string): Promise<RecurringPayment | null> {
   const r = await (await getDb()).get<Row>(`SELECT ${COLUMNS} FROM recurring_payments WHERE merchant_key = ? AND deleted_at IS NULL`, [merchantKey]);

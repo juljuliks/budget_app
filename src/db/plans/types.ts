@@ -1,5 +1,6 @@
 // The plan's types: an item, the month's budget, the kinds and the spending rhythms.
 import { Currency } from '../fx';
+import type { Period } from '../recurring/schedule';
 
 /**
  * 'limit' = spending cap (progress bar); 'fixed' = a one-off payment, a known amount ("Разовый платёж": a gift; paid / not paid); 'fund' = a fund's contribution
@@ -45,7 +46,7 @@ export type PlanItem = {
     /** it has its own payment without a merchant (put in from the plan's sheet): the row opens that sheet */
     own: boolean;
     /** the category's only payment: how often, its charge this month (done) or the next one; day null — none set */
-    single?: { period: number; day: string | null; done: boolean };
+    single?: { period: Period; day: string | null; done: boolean };
   };
   /** a fund's item (kind 'fund'): how much by when, what it has by the month's end (now, for the current one); in `currency` */
   fund?: { target_minor: number; due: string; saved_minor: number; start_minor: number };

@@ -62,15 +62,15 @@ export function formatPercent(part: number, whole: number): string {
  * How often a repeating payment is charged (months > 0, weeks < 0, once 0): "каждую неделю", "раз в 2 недели", "каждый
  * месяц", "раз в 3 месяца", "раз в полгода", "раз в год", "раз в 2 года", "один раз".
  */
-export function periodText(months: number): string {
-  if (months === 0) return 'один раз';
-  if (months === -1) return 'каждую неделю';
-  if (months < 0) return `раз в ${-months} ${plural(-months, ['неделю', 'недели', 'недель'])}`;
-  if (months === 1) return 'каждый месяц';
-  if (months === 6) return 'раз в полгода';
-  if (months === 12) return 'раз в год';
-  if (months % 12 === 0) return `раз в ${months / 12} ${plural(months / 12, ['год', 'года', 'лет'])}`;
-  return `раз в ${months} ${plural(months, ['месяц', 'месяца', 'месяцев'])}`;
+export function periodText(period: number): string {
+  if (period === 0) return 'один раз';
+  if (period === -1) return 'каждую неделю';
+  if (period < 0) return `раз в ${-period} ${plural(-period, ['неделю', 'недели', 'недель'])}`;
+  if (period === 1) return 'каждый месяц';
+  if (period === 6) return 'раз в полгода';
+  if (period === 12) return 'раз в год';
+  if (period % 12 === 0) return `раз в ${period / 12} ${plural(period / 12, ['год', 'года', 'лет'])}`;
+  return `раз в ${period} ${plural(period, ['месяц', 'месяца', 'месяцев'])}`;
 }
 
 /** A repeating payment's period chips: periods as periodText has them and their names (another — "Другое…"). */

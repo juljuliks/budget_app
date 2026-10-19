@@ -1,6 +1,5 @@
 import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
-import { categoryLabel } from '@/db/categories';
 import { paymentWords } from '@/entities/category';
 import type { PlanItem } from '@/db/plans';
 import ProgressRing from '@/shared/ui/ProgressRing';
@@ -18,8 +17,8 @@ export function SavingItemRow({ p, item, hidden, onOpen }: Props) {
   const s = item.subs!;
   const inBudget = p.savingInBudget(item);
   const w = paymentWords(item.name);
-  // "Подписки" — just "Предстоящие подписки"; another category — its name in the line under
-  const of = w.upcoming === 'Предстоящие подписки' ? '' : `${categoryLabel(item)} · `;
+  // "Подписки" — just "Предстоящие подписки"; another category — its name in the line under (its emoji is in the title)
+  const of = w.subscriptions ? '' : `${item.name} · `;
   const name = `${item.emoji || ''} ${w.upcoming}`.trim();
   return (
     <TouchableOpacity style={styles.row} onPress={onOpen} accessibilityLabel={name}>

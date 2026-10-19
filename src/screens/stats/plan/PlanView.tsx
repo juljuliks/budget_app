@@ -15,7 +15,7 @@ import BudgetSheet from './parts/BudgetSheet';
 import SavingsLessSheet from './parts/SavingsLessSheet';
 import { itemSections, systemSections } from './parts/sections';
 import { FundSheet } from '@/features/fund';
-import { RecurringPaymentsSheet } from '@/features/recurring-payments';
+import { PaymentsView, RecurringPaymentsSheet } from '@/features/recurring-payments';
 import { CarrySheet } from '@/features/month-close';
 import type { PlanItem } from '@/db/plans';
 import { styles } from './parts/styles';
@@ -51,15 +51,15 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
   const [carryOpen, setCarryOpen] = useState<'debt' | 'plus' | null>(null);
   // ⓘ of the savings the overspend took part of
   const [lessOpen, setLessOpen] = useState(false);
-  // "Подписки" opened
-  const [subsOpen, setSubsOpen] = useState<PlanItem | null>(null);
+  // "Подписки" opened: the month's payments, or the coming ones ("Предстоящие подписки" in "Сбережения")
+  const [subsOpen, setSubsOpen] = useState<{ item: PlanItem; view: PaymentsView } | null>(null);
 
   if (!items) return <Loading failed={data.failed} onRetry={load} />;
   const p = planView({ ...data, items, ym, currency, hidden });
   const openBudget = () => setBudgetOpen(true);
 
   // a category with repeating payments: its own payment (from the plan's sheet) — that sheet; the merchants' ones — their list
-  const openRecurring = (item: PlanItem) => (item.subs?.own ? setEditingItem(editTarget(item)) : setSubsOpen(item));
+  const openRecurring = (item: PlanItem, view: PaymentsView = 'month') => (item.subs?.own ? setEditingItem(editTarget(item)) : setSubsOpen({ item, view }));
   return (
     <View style={styles.screen}>
     <StickyScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
@@ -67,12 +67,12 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
       <Text style={styles.pinNote}>{`📌 — переходит в следующий месяц с той же суммой${p.recurring.length ? '\n🔁 — повторяющийся платёж: переходит всегда, сумма — по датам списаний' : ''}`}</Text>
 
       {items.length === 0 ? <Text style={styles.hint}>План пуст. Нажмите ＋, чтобы добавить категории и суммы.</Text> : null}
-      {systemSections(p, hidden, { budget: openBudget, carry: setCarryOpen, less: () => setLessOpen(true), fund: setFundOpen, saving: openRecurring })}
+      {systemSections(p, hidden, { budget: openBudget, carry: setCarryOpen, less: () => setLessOpen(true), fund: setFundOpen, saving: (item) => openRecurring(item, 'upcoming') })}
       {itemSections(p, {
         ym, currency, hidden, toShown,
         onOpen: (item) => setEditingItem(editTarget(item)),
         onPin: actions.togglePin,
-        onOpenRecurring: openRecurring,
+        onOpenRecurring: (item) => openRecurring(item),
       })}
 
       <BudgetSheet
@@ -101,9 +101,9 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
       />
       {subsOpen ? (
         <RecurringPaymentsSheet
-          ym={ym} category={{ id: subsOpen.category_id, name: subsOpen.name, emoji: subsOpen.emoji }} currency={currency}
-          onClose={() => setSubsOpen(null)}
-          onEditAmount={() => { const item = subsOpen; setSubsOpen(null); setEditingItem(editTarget(item)); }}
+          ym={ym} category={{ id: subsOpen.item.category_id, name: subsOpen.item.name, emoji: subsOpen.item.emoji }} currency={currency}
+          view={subsOpen.view} onClose={() => setSubsOpen(null)}
+          onEditAmount={() => { const { item } = subsOpen; setSubsOpen(null); setEditingItem(editTarget(item)); }}
         />
       ) : null}
       <CarrySheet fromYm={carryOpen ? budget?.carry?.from_ym ?? null : null} kind={carryOpen ?? 'debt'} onClose={() => setCarryOpen(null)} />

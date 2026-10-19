@@ -13,10 +13,6 @@ export type Period = number;
 export const ONCE: Period = 0;
 export const WEEKLY: Period = -1;
 
-/** A one-off payment's charges before and after its only one: none, as days no range reaches. */
-const NEVER_BEFORE = '0000-01-01';
-const NEVER_AFTER = '9999-12-31';
-
 /** The window of a period: under half of it (a charge every week: ± 3 days), at most WINDOW_DAYS. */
 export const windowOf = (p: Period) => (p < 0 ? Math.min(WINDOW_DAYS, Math.floor((-p * 7 - 1) / 2)) : WINDOW_DAYS);
 
@@ -50,18 +46,14 @@ export function addDays(day: string, days: number): string {
   return `${d.getUTCFullYear()}-${p2(d.getUTCMonth() + 1)}-${p2(d.getUTCDate())}`;
 }
 
-/** The charge `k` periods from the set day (k < 0 — before it); a one-off one has only k = 0. */
-export function chargeAt(due: string, p: Period, k: number): string {
-  if (p === ONCE) return k === 0 ? due : k > 0 ? NEVER_AFTER : NEVER_BEFORE;
-  return p < 0 ? addDays(due, k * -p * 7) : addMonths(due, k * p);
-}
+/** The charge `k` periods from the set day (k < 0 — before it). Not for a one-off one: its only charge is its day. */
+export const chargeAt = (due: string, p: Period, k: number) => (p < 0 ? addDays(due, k * -p * 7) : addMonths(due, k * p));
 
 /** Was the charge on `day` done: an operation's day (of `opDays`) within the window. */
 export const isDone = (day: string, opDays: string[], p: Period = 1) => opDays.some((o) => Math.abs(daysBetween(day, o)) <= windowOf(p));
 
 /** The k of the first charge on or after `day`. */
 function firstOnOrAfter(due: string, p: Period, day: string): number {
-  if (p === ONCE) return day <= due ? 0 : 1;
   const a = parse(due);
   const b = parse(day);
   let k = p < 0 ? Math.floor(daysBetween(due, day) / (-p * 7)) - 1 : Math.floor(((b.y - a.y) * 12 + (b.m - a.m)) / p) - 1;
@@ -72,10 +64,11 @@ function firstOnOrAfter(due: string, p: Period, day: string): number {
 
 /** The charges with a day in [from, to] (inclusive), in order. */
 export function chargesBetween(due: string, p: Period, from: string, to: string): string[] {
+  if (p === ONCE) return due >= from && due <= to ? [due] : [];
   const out: string[] = [];
   for (let k = firstOnOrAfter(due, p, from); ; k++) {
     const day = chargeAt(due, p, k);
-    if (day > to || day === NEVER_AFTER) return out;
+    if (day > to) return out;
     out.push(day);
   }
 }
@@ -85,10 +78,11 @@ export function chargesBetween(due: string, p: Period, from: string, to: string)
  * missed more than the window ago isn't waited for any more); null — a one-off one done or missed: nothing to wait for.
  */
 export function nextCharge(due: string, p: Period, opDays: string[], today: string): string | null {
+  const waited = (day: string) => daysBetween(day, today) <= windowOf(p) && !isDone(day, opDays, p);
+  if (p === ONCE) return waited(due) ? due : null;
   for (let k = 0; ; k++) {
     const day = chargeAt(due, p, k);
-    if (day === NEVER_AFTER) return null;
-    if (daysBetween(day, today) <= windowOf(p) && !isDone(day, opDays, p)) return day;
+    if (waited(day)) return day;
   }
 }
 
@@ -131,10 +125,10 @@ export const chargeBefore = (due: string, p: Period) => (p === ONCE ? due : char
 export function savingFor(due: string, p: Period, ym: string, opDays: string[], after = ''): string | null {
   const month = `${ym}-01`;
   const from = after > month ? after : month;
+  const its = (d: string) => (d >= due || isDone(d, opDays, p)) && !opDays.some((o) => o < from && Math.abs(daysBetween(d, o)) <= windowOf(p));
+  if (p === ONCE) return due >= month && its(due) ? due : null;
   for (let to = chargeAt(from, p, 1); ; to = chargeAt(to, p, 1)) {
-    const day = chargesBetween(due, p, month, to).find((d) =>
-      (d >= due || isDone(d, opDays, p)) && !opDays.some((o) => o < from && Math.abs(daysBetween(d, o)) <= windowOf(p)));
+    const day = chargesBetween(due, p, month, to).find(its);
     if (day) return day;
-    if (p === ONCE) return null;
   }
 }

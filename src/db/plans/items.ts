@@ -36,7 +36,9 @@ export async function listPlan(ym: string, to?: Currency): Promise<PlanItem[]> {
       .filter((s) => keep(s.id)).map((s) => s.name).filter((n, i, all) => all.indexOf(n) === i);
     const all = [...subs.charges.map((c) => c.sub), ...subs.later.map((l) => l.sub), ...subs.undated].filter((s, i, a) => a.findIndex((x) => x.id === s.id) === i);
     const only = all.length === 1 ? all[0] : null;
-    const charge = only ? subs.charges.find((c) => c.sub.id === only.id) : undefined;
+    // its charge this month: the first not paid yet (a weekly one has several), else the last paid
+    const own = only ? subs.charges.filter((c) => c.sub.id === only.id) : [];
+    const charge = own.find((c) => !c.done) ?? own[own.length - 1];
     subsInfo.set(r.category_id, {
       names: subNames((id) => !savingIds.has(id)), saving_names: subNames((id) => savingIds.has(id)),
       saving_minor: subs.saving.reduce((a, v) => a + (v.converted_minor ?? 0), 0),

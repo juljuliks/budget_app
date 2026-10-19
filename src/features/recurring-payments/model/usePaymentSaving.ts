@@ -1,9 +1,9 @@
-// The repeating payment sheet's "Откладывать каждый месяц?": asked when it is charged less often than monthly (a one-off
-// one: in a coming month); a new one
+// The repeating payment sheet's "Откладывать каждый месяц?": asked when it is charged less often than monthly (not a
+// one-off one: what is left after its charge would have nowhere to go); a new one
 // saves by default. Already saving — what it has; turning it on — "Уже отложено". The month's contribution as a fund's.
 import { useEffect, useState } from 'react';
 import { contributionOf, currentYm, monthsBetween } from '@/db/plans';
-import { ONCE, openSaving, Period, savedNow } from '@/db/recurring';
+import { openSaving, Period, savedNow } from '@/db/recurring';
 import { parseAmountOrZero } from '@/shared/lib/money';
 import type { PaymentTarget } from './usePaymentForm';
 
@@ -26,10 +26,10 @@ export function usePaymentSaving(target: PaymentTarget | null, period: Period, a
     return () => { live = false; };
   }, [target]);
 
-  const nowYm = currentYm();
-  const offered = period > 1 || (period === ONCE && !!due && due.slice(0, 7) > nowYm);
+  const offered = period > 1;
   const on = offered && save;
   const startMinor = had?.saving ? had.balance : parseAmountOrZero(start) ?? 0;
+  const nowYm = currentYm();
   const contribution = on && due && amount !== null ? contributionOf({ target_minor: amount, due }, nowYm, startMinor) : null;
   const months = due ? monthsBetween(nowYm, due.slice(0, 7)) : 0;
   const choice: SavingChoice | null = had ? { on, start: startMinor, had: had.saving, balance: had.balance } : null;

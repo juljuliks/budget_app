@@ -1,6 +1,7 @@
 // The plan screen's arithmetic (screens/stats/plan/model/planView): the budget's split, the sections, the norms.
 import { groupByType, normText, percentOf, planView } from '../../src/screens/stats/plan/model/planView';
 import { savingsLess } from '../../src/screens/stats/plan/model/savingsLess';
+import { currentYm } from '../../src/db/plans';
 import type { PlanBudget, PlanItem } from '../../src/db/plans';
 
 const item = (p: Partial<PlanItem>): PlanItem => ({
@@ -124,4 +125,17 @@ test('what "Подписки" saves up for: in "Сбережения" (as a fund
   expect(savings.rows.find((r) => r.key === 'floating')!.value).toBe(65000);
   // the budget sheet can't take the contributions either
   expect(v.claimed).toBe(35000);
+});
+
+test('the overspend of a category saving up for its payments: its plan and spending without the contribution, as its row', () => {
+  const subs = item({
+    category_id: 7, name: 'Подписки', emoji: '📺', kind: 'subs', recurring: true, limit_minor: 4000, converted_minor: 4000,
+    subs: { names: ['Netflix'], saving_names: ['Bitwarden'], saving_minor: 1000, saving_end_minor: 1000, saving_amount_minor: 4500, own: false },
+  });
+  // the current month: 45 ₾ spent, the contribution (10 ₾) in it — 35 ₾ of charges against 30 ₾ planned
+  const v = planView({
+    ym: currentYm(), currency: 'GEL', items: [subs], budget: budget({}), toShown: (m) => m, fromShown: (m) => m, income: 0,
+    unplannedSpentMinor: 0, spentBy: { byCategory: new Map([[7, 4500]]), total: 4500 }, hidden: false,
+  });
+  expect(v.less!.overs.map((o) => [o.name, o.plan, o.spent, o.over])).toEqual([['Подписки', 3000, 3500, 500]]);
 });

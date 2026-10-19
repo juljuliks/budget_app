@@ -47,7 +47,7 @@ function patterns(minor: number | null, currency: Currency, ym: string) {
 /** "Повторяющийся платёж" saved from the sheet; an error to show, or null. */
 async function submitRecurring(ym: string, categoryId: number, minor: number, currency: Currency, v: RecurringForm, saved: () => void): Promise<string | null> {
   if (!minor) return 'Введите сумму платежа';
-  if (v.period !== 1 && !v.next) return dateNeeded(v.period).slice(0, -1);
+  if (v.period !== 1 && !v.next) return dateNeeded(v.period);
   await saveRecurring(ym, categoryId, { amount_minor: minor, currency, period: v.period, due: v.next });
   saved();
   return null;

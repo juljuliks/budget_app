@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import type { Currency } from '@/db/fx';
 import { planEffect } from '@/db/plans';
-import { chargeBefore, offeredDue, Period, todayKey } from '@/db/recurring';
+import { chargeBefore, offeredDue, paymentNext, Period, todayKey } from '@/db/recurring';
 import { parseAmountInput, toInputValue } from '@/shared/lib/money';
 
 /** The category a payment is of (its name gives the words: "Подписка" in "Подписки", else "Платёж"). */
@@ -33,20 +33,30 @@ export function usePaymentForm(target: PaymentTarget | null) {
   const [due, setDueState] = useState<string | null>(null);
   // the day picked by hand in this sheet stays when the period changes
   const [dueByHand, setDueByHand] = useState(false);
+  // the charge another period is counted from: the merchant's last, or a saved payment's next one less its period
+  const [lastCharge, setLastCharge] = useState<string | null>(null);
   const [effect, setEffect] = useState<Awaited<ReturnType<typeof planEffect>>>(null);
 
   useEffect(() => {
-    if (!target) return;
+    if (!target) return undefined;
     setName(target.name);
     setAmount(toInputValue(target.amount_minor));
     setCurrency(target.currency);
     setPeriodState(target.period);
     setDueState(target.due ?? (target.last_day ? offeredDue(target.last_day, target.period, todayKey()) : null));
     setDueByHand(false);
+    setLastCharge(target.last_day ?? null);
+    if (target.id === undefined || !target.due || target.last_day) return undefined;
+    // its stored day may be long past: the next charge from its operations (a one-off one past — its day)
+    let live = true;
+    paymentNext(target.id).then((next) => {
+      if (!live) return;
+      if (next) setDueState(next);
+      setLastCharge(next ? chargeBefore(next, target.period) : target.due);
+    }).catch((e) => console.error('payment next failed', e));
+    return () => { live = false; };
   }, [target]);
 
-  // the charge before the next one: the merchant's last, or a saved payment's next one less its period
-  const lastCharge = target?.last_day ?? (target?.due ? chargeBefore(target.due, target.period) : null);
   const setPeriod = (p: Period) => {
     setPeriodState(p);
     if (!dueByHand && lastCharge) setDueState(offeredDue(lastCharge, p, todayKey()));
@@ -55,7 +65,7 @@ export function usePaymentForm(target: PaymentTarget | null) {
 
   const minor = parseAmountInput(amount);
   const input = target && minor !== null && name.trim()
-    ? { category_id: target.category.id, merchant_key: target.merchant_key, name: name.trim(), amount_minor: minor, currency, period: period, due }
+    ? { category_id: target.category.id, merchant_key: target.merchant_key, name: name.trim(), amount_minor: minor, currency, period, due }
     : null;
 
   // "В план октября +30 ₾": counted again as the form changes

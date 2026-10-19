@@ -104,7 +104,7 @@ export default function PaymentSheet({ target, onClose, adding }: Props) {
         />
       </SheetScrollView>
       <TextInputModal
-        visible={otherOpen} title="Раз в сколько месяцев" initialValue={custom ? String(f.period) : ''} keyboardType="number-pad"
+        visible={otherOpen} title="Раз в сколько месяцев" initialValue={custom && f.period > 0 ? String(f.period) : ''} keyboardType="number-pad"
         placeholder="Например, 2" submitLabel="Готово" onClose={() => setOtherOpen(false)}
         onSubmit={async (v) => {
           const n = Number(v.trim());

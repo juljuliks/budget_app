@@ -1,23 +1,25 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import type { Currency } from '@/db/fx';
-import { RecurringPayment, todayKey } from '@/db/recurring';
+import type { RecurringPayment } from '@/db/recurring';
 import { formatWithCurrency } from '@/shared/lib/money';
 import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
 import { openCategory } from '@/shared/navigation/navigation';
-import Button from '@/shared/ui/Button';
 import Loading from '@/shared/ui/Loading';
-import SectionBand from '@/shared/ui/SectionBand';
 import { formatPercent } from '@/shared/lib/format';
 import { formStyles } from '@/shared/theme/formStyles';
 import { colors } from '@/shared/theme/theme';
 import { paymentWords } from '@/entities/category';
 import { PaymentCategory, PaymentTarget } from '../model/usePaymentForm';
 import { useRecurringPayments } from '../model/useRecurringPayments';
-import { inMonth, inMonthYear, inTime, monthGen, periodText, shortDay } from '../texts';
+import { inMonth, monthGen } from '../texts';
 import AddPaymentSheet from './AddPaymentSheet';
-import PaymentRow from './PaymentRow';
+import MonthPaymentsView from './MonthPaymentsView';
 import PaymentSheet from './PaymentSheet';
+import UpcomingPaymentsView, { upcomingOf } from './UpcomingPaymentsView';
+
+/** The month's payments, or the coming ones (saved up for, and later) */
+export type PaymentsView = 'month' | 'upcoming';
 
 type Props = {
   /** the plan's month; null = closed */
@@ -25,92 +27,67 @@ type Props = {
   /** the category with "Повторяющиеся платежи" */
   category: PaymentCategory;
   currency: Currency;
+  /** what it opens with; each view has a line to the other */
+  view?: PaymentsView;
   onClose: () => void;
   /** the amount put in by hand (no repeating payment has a day yet): the plan's sheet of "Подписки" */
   onEditAmount: () => void;
 };
 
-
 const savingSum = (m: { saving: Array<{ converted_minor: number | null }> }) => m.saving.reduce((a, v) => a + (v.converted_minor ?? 0), 0);
 
 /**
- * "Подписки" of the plan's month: "Списания в <месяце>" (done ✓ or the day), "Другие списания" (by the next charge),
- * "Без даты списания" (a tap — set the day); "＋ Добавить подписку" step by step. A tap opens the repeating payment.
+ * A category's repeating payments in the plan's month, two views: the month's ("Подписки": its charges, those without a
+ * day, "＋ Добавить подписку") and the coming ones ("Предстоящие подписки": saved up for, and later). A tap opens a payment.
  */
-export default function RecurringPaymentsSheet({ ym, category, currency, onClose, onEditAmount }: Props) {
+export default function RecurringPaymentsSheet({ ym, category, currency, view: initial = 'month', onClose, onEditAmount }: Props) {
   const { data, failed, load } = useRecurringPayments(ym, currency, category.id);
   const w = paymentWords(category.name);
   const targetOf = (s: RecurringPayment): PaymentTarget => ({ ...s, category });
+  const [view, setView] = useState<PaymentsView>(initial);
   const [open, setOpen] = useState<PaymentTarget | null>(null);
   const [adding, setAdding] = useState<'merchant' | 'form' | null>(null);
-  const today = todayKey();
   const money = (minor: number, cur: string = currency) => formatWithCurrency(minor, cur);
   const month = ym ? monthGen(ym) : '';
   // a section's share of the month's budget, as in the plan
   const shareOf = (minor: number) => (data?.budget_minor && minor > 0 ? formatPercent(minor, data.budget_minor) : null);
+  const saving = data ? savingSum(data) : 0;
+  const charges = data ? data.total_minor - saving : 0;
+  const upcoming = data ? upcomingOf(data) : null;
+  const upcomingCount = upcoming ? upcoming.saving.length + upcoming.plain.length : 0;
+  const title = view === 'month' ? `${category.emoji ?? '🔁'} ${category.name}` : `${category.emoji ?? '🔁'} ${w.upcoming}`;
   return (
     <>
-    <BottomSheet visible={ym !== null} onClose={onClose} title={`${category.emoji ?? '🔁'} ${category.name}`} onTitlePress={() => { onClose(); openCategory(category.id); }} style={styles.root}>
+    <BottomSheet
+      visible={ym !== null} onClose={onClose} title={title} style={styles.root}
+      onTitlePress={view === 'month' ? () => { onClose(); openCategory(category.id); } : undefined}
+    >
       {!data || !ym ? <Loading inline failed={failed} onRetry={load} /> : (
         <SheetScrollView contentContainerStyle={styles.body}>
           <View style={styles.fact}>
-            <Text style={styles.factLabel}>{`В плане ${month}`}</Text>
-            <Text style={styles.factValue}>{data.planned_minor === null ? '—' : money(data.planned_minor)}</Text>
+            <Text style={styles.factLabel}>{view === 'month' ? `В плане ${month}` : `Копим ${inMonth(ym)}`}</Text>
+            <Text style={styles.factValue}>
+              {view === 'upcoming' ? money(saving) : data.planned_minor === null ? '—' : money(data.by_hand ? data.planned_minor : charges)}
+            </Text>
           </View>
-          {data.saving.length ? (
-            <Text style={formStyles.hint}>{`списания ${money(data.total_minor - savingSum(data))} + копим ${money(savingSum(data))}`}</Text>
-          ) : null}
-          {data.by_hand ? (
+          {view === 'month' && data.by_hand ? (
             <TouchableOpacity onPress={onEditAmount} accessibilityRole="button">
               <Text style={formStyles.hint}>{`Сумма введена вручную — пока ${w.noneHas} нет даты.`} <Text style={styles.link}>Изменить сумму</Text></Text>
             </TouchableOpacity>
           ) : null}
-
-          <SectionBand title={`Списания ${inMonth(ym)}`} total={money(data.total_minor - savingSum(data))} share={shareOf(data.total_minor - savingSum(data))} />
-          {data.charges.length ? data.charges.map((c) => (
-            <PaymentRow label={w.One}
-              key={`${c.sub.id}-${c.day}`} name={c.sub.name} onPress={() => setOpen(targetOf(c.sub))}
-              note={[periodText(c.sub.period), ...(c.saved ? ['из отложенного'] : []), c.done ? `✓ списано ${shortDay(c.day)}` : [shortDay(c.day), inTime(c.day, today)].filter(Boolean).join(', ')]}
-              tone={c.done ? 'ok' : undefined} amount={money(c.sub.amount_minor, c.sub.currency)} muted={c.saved}
+          {view === 'month' ? (
+            <MonthPaymentsView
+              ym={ym} data={data} w={w} money={money} shareOf={shareOf} chargesMinor={charges} open={setOpen} targetOf={targetOf}
+              upcoming={upcomingCount ? { savingMinor: saving, count: upcomingCount } : null}
+              merchantTarget={(m) => ({ category, merchant_key: m.merchant_key, name: m.name, amount_minor: m.amount_minor, currency: m.currency, period: 1, due: null, last_day: m.day })}
+              onUpcoming={() => setView('upcoming')} onAdd={() => setAdding('merchant')}
             />
-          )) : <Text style={formStyles.hint}>{`Нет списаний ${inMonth(ym)}`}</Text>}
-
-          {/* the later ones in the plan: only what is saved up for them this month */}
-          {data.later.length ? <SectionBand title="Другие списания" total={savingSum(data) ? `копим ${money(savingSum(data))}` : null} share={shareOf(savingSum(data))} /> : null}
-          {data.later.map(({ sub, next }) => {
-            const v = data.saving.find((x) => x.payment_id === sub.id);
-            return v ? (
-              <PaymentRow label={w.One}
-                key={sub.id} name={sub.name} onPress={() => setOpen(targetOf(sub))} ring={sub.amount_minor ? v.end_minor / sub.amount_minor : 0}
-                note={[periodText(sub.period), shortDay(next), `${money(v.end_minor, sub.currency)} из ${money(sub.amount_minor, sub.currency)}`]}
-                amount={money(v.contribution_minor, sub.currency)} amountNote="в месяц"
-              />
-            ) : (
-              <PaymentRow label={w.One}
-                key={sub.id} name={sub.name} onPress={() => setOpen(targetOf(sub))}
-                note={[periodText(sub.period), shortDay(next)]}
-                amount={money(sub.amount_minor, sub.currency)} amountNote={inMonthYear(next.slice(0, 7))} muted
-              />
-            );
-          })}
-
-          {data.undated.length || data.merchants.length ? <SectionBand title="Без даты списания" /> : null}
-          {data.undated.map((sub) => (
-            <PaymentRow label={w.One}
-              key={sub.id} name={sub.name} onPress={() => setOpen(targetOf(sub))}
-              note={[periodText(sub.period), 'Задать дату']} tone="warn" amount={money(sub.amount_minor, sub.currency)}
+          ) : (
+            <UpcomingPaymentsView
+              ym={ym} data={data} w={w} money={money} shareOf={shareOf} savingMinor={saving} chargesMinor={charges}
+              open={setOpen} targetOf={targetOf} onMonth={() => setView('month')}
             />
-          ))}
-          {data.merchants.map((m) => (
-            <PaymentRow label={w.One}
-              key={m.merchant_key} name={m.name} note={[`последняя ${shortDay(m.day)}`, 'Задать дату']} tone="warn"
-              amount={money(m.amount_minor, m.currency)}
-              onPress={() => setOpen({ category, merchant_key: m.merchant_key, name: m.name, amount_minor: m.amount_minor, currency: m.currency, period: 1, due: null, last_day: m.day })}
-            />
-          ))}
-
-          {/* turned on and off in the plan (its kind "Повторяющийся платёж"); one stops — deleted in its sheet */}
-          <Button title={`＋ ${w.add}`} outline onPress={() => setAdding('merchant')} style={styles.add} />
+          )}
         </SheetScrollView>
       )}
     </BottomSheet>
@@ -131,5 +108,4 @@ const styles = StyleSheet.create({
   factLabel: { fontSize: 15, color: colors.muted },
   factValue: { fontSize: 15, fontWeight: '700', color: colors.text, fontVariant: ['tabular-nums'] },
   link: { color: colors.accent },
-  add: { marginTop: 16 },
 });
