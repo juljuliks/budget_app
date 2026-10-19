@@ -124,10 +124,10 @@ export type PaymentDraft = { merchant_key: string | null; category_id?: number |
 
 /**
  * What saving a repeating payment does to the plan: the first month from this one it is charged in ("В план октября +30 ₾"),
- * and by how much that month's "Подписки" changes (the repeating payment `id` as it was taken off), in the month's plan
- * currency. No day — null.
+ * and by how much that month's "Подписки" changes (the repeating payment `id` as it was taken off), and its charges there,
+ * in the month's plan currency. No day — null.
  */
-export async function planEffect(draft: PaymentDraft, id?: number, now = new Date()): Promise<{ ym: string; delta_minor: number; currency: Currency } | null> {
+export async function planEffect(draft: PaymentDraft, id?: number, now = new Date()): Promise<{ ym: string; delta_minor: number; after_minor: number; currency: Currency } | null> {
   if (!draft.due) return null;
   const db = await getDb();
   const nowYm = currentYm(now);
@@ -144,5 +144,5 @@ export async function planEffect(draft: PaymentDraft, id?: number, now = new Dat
   const rateDay = planRateDate(ym);
   const was = old?.due ? monthCharges(old.due, old.period, ym, daysOf(old), `${old.since_ym}-01`).length * (conv(old.amount_minor, old.currency, currency, rateDay) ?? 0) : 0;
   const after = chargesIn(ym) * (conv(draft.amount_minor, draft.currency, currency, rateDay) ?? 0);
-  return { ym, delta_minor: after - was, currency };
+  return { ym, delta_minor: after - was, after_minor: after, currency };
 }

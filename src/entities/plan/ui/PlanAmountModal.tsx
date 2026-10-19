@@ -14,23 +14,15 @@ import TextInputModal from '@/shared/ui/TextInputModal';
 import { useLoadedForm } from '@/shared/ui/form';
 import { toast, toastFailure } from '@/shared/ui/toast';
 import { openCategory } from '@/shared/navigation/navigation';
-import { saveFund, savePlanAmount, saveRecurring } from '../model/commands';
-import RecurringFields, { dateNeeded, RecurringForm } from './RecurringFields';
+import { saveFund, savePlanAmount } from '../model/commands';
+import { submitRecurring } from './submitRecurring';
+import RecurringFields, { RecurringForm } from './RecurringFields';
 import { turnOffRecurring } from './turnOffRecurring';
 import FundFields, { FundForm } from './FundFields';
 import { askTakeLocked } from './askTakeLocked';
 import PlanFacts from './PlanFacts';
 import RepeatField, { RepeatForm } from './RepeatField';
 import { BY_HAND_HINT, KINDS, patterns, savedText } from './sheetOptions';
-
-/** "Повторяющийся платёж" saved from the sheet; an error to show, or null. */
-async function submitRecurring(ym: string, categoryId: number, minor: number, currency: Currency, v: RecurringForm, saved: () => void): Promise<string | null> {
-  if (!minor) return 'Введите сумму платежа';
-  if (v.period !== 1 && !v.next) return dateNeeded(v.period);
-  await saveRecurring(ym, categoryId, { amount_minor: minor, currency, period: v.period, due: v.next });
-  saved();
-  return null;
-}
 
 export type PlanAmountTarget = {
   category_id: number;
@@ -141,7 +133,7 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
     if (off && !(await turnOffRecurring(target.category_id))) return false;
     const saved = (taken?: string) => { toast(savedText(k, label, !!adding, off, taken)); onSaved(); };
     const byHand = k === 'subs' && target.recurring && target.merchants;
-    if (k === 'subs' && !byHand) return submitRecurring(ym, target.category_id, minor, currency, form.getValues(), saved);
+    if (k === 'subs' && !byHand) return submitRecurring(ym, target.category_id, minor, currency, form.getValues(), !!adding, saved, onClose);
     const write = async (takeLocked: boolean) => {
       if (k === 'fund' && date) return saveFund(ym, target.category_id, { target_minor: minor, currency, due: date, start_minor: startMinor ?? 0 }, undefined, takeLocked);
       await savePlanAmount(ym, target.category_id, minor, byHand ? 'fixed' : k, currency, norm, takeLocked);

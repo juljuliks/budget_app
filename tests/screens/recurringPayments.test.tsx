@@ -7,7 +7,7 @@ import { buy, on, planned } from '../e2e/seeds';
 import { getDb } from '../../src/db';
 import { subscriptionsCategoryId } from '../../src/db/categories';
 import { savePayment } from '../../src/db/recurring';
-import { setPlanBudget } from '../../src/db/plans';
+import { setPlanAmount, setPlanBudget } from '../../src/db/plans';
 
 const N = ' ';
 const subs = async () => (await getDb()).all<{ name: string; merchant_key: string | null; amount_minor: number; period_months: number; due: string | null }>(
@@ -155,6 +155,45 @@ describe('6.6 subscriptions', () => {
     expect(screen.getAllByText('каждый месяц · 25 окт, через 10 дней').length).toBe(2);
   });
 
+  describe('nothing free in the plan (Одежда 640 ₾: 2 400 ₾ planned of 2 400)', () => {
+    const openFull = async () => {
+      await openApp(async () => {
+        await seed();
+        const clothes = await (await getDb()).get<{ id: number }>("SELECT id FROM categories WHERE name = 'Одежда'");
+        await setPlanAmount('2026-10', clothes!.id, 64000, 'limit', 'GEL', 'month');
+      });
+      await tap('Статистика');
+      await tap('План');
+      await tap('📺 Подписки');
+      await tap('＋ Добавить подписку');
+      await tap('Подписка: SPOTIFY');
+    };
+
+    test('charged this month: "Вычесть из сбережений?" — "Вычесть и добавить" takes it from 🔒', async () => {
+      await openFull();
+      await tap('Сохранить');
+      expect(await screen.findByText(`Свободного не хватает 18.40${N}₾ — их можно взять из сбережений.`)).toBeTruthy();
+      await tap('Вычесть и добавить');
+      expect(await screen.findByText('SPOTIFY — следующее списание 25 октября')).toBeTruthy();
+      expect(await (await getDb()).get("SELECT locked_minor FROM plan_months WHERE ym = '2026-10'")).toEqual({ locked_minor: 28160 });
+    });
+
+    test('charged in a later month: its contribution asked; not saved up for (0 this month) — nothing asked', async () => {
+      await openFull();
+      await tap('Раз в год');
+      expect(await screen.findByText('Нет списаний в октябре')).toBeTruthy();
+      await tap('Сохранить');
+      // "Да, по 2 ₾ в месяц" by default: the contribution
+      expect(await screen.findByText('Вычесть из сбережений?')).toBeTruthy();
+      expect(screen.getByText(/^Свободного не хватает 2.*₾ — их можно взять из сбережений\.$/)).toBeTruthy();
+      await tap('Отмена');
+      await tap(await screen.findByText('Нет, весь платёж в сентябре 2027'));
+      await tap('Сохранить');
+      expect(await screen.findByText('SPOTIFY — следующее списание 25 сентября')).toBeTruthy();
+      expect(await (await getDb()).get("SELECT locked_minor FROM plan_months WHERE ym = '2026-10'")).toEqual({ locked_minor: 30000 });
+    });
+  });
+
   test('deleted from its sheet, asked; "Отменить" in the toast brings it back', async () => {
     await openSubscriptions();
     await tap('Подписка: NETFLIX.COM');
@@ -228,6 +267,41 @@ describe('6.7.9 "Повторяющийся платёж" from the plan', () => 
       .toEqual({ limit_minor: 0 });
   });
 
+  // the seed's budget: 2 400 ₾ to plan (3 000 less 10% outside and 🔒 300), 2 160 planned — 240 free
+  test('this month\'s charge past what is free: "Вычесть из сбережений?", what is short taken from 🔒', async () => {
+    await openApp(seed);
+    await tap('Статистика');
+    await tap('План');
+    await tap('Изменить: 👕 Одежда');
+    await tap(await screen.findByRole('radio', { name: /Повторяющийся платёж/ }));
+    fireEvent.changeText(await screen.findByDisplayValue('400'), '700');
+    await tap('Сохранить');
+    // ZARA on the 10th: October's charge counted — 300 ₾ more, 60 ₾ short
+    expect(await screen.findByText('Вычесть из сбережений?')).toBeTruthy();
+    expect(screen.getByText(`Свободного не хватает 60${N}₾ — их можно взять из сбережений.`)).toBeTruthy();
+    await tap('Вычесть и сохранить');
+    expect(await screen.findByText(`План «👕 Одежда» сохранён, из 🔒 вычтено 60${N}₾`)).toBeTruthy();
+    expect(await (await getDb()).get("SELECT locked_minor FROM plan_months WHERE ym = '2026-10'")).toEqual({ locked_minor: 24000 });
+  });
+
+  test('more than 🔒 has: asked too — all of it taken, the plan over its budget; "Отмена" — nothing saved', async () => {
+    await openApp(seed);
+    await tap('Статистика');
+    await tap('План');
+    await tap('Изменить: 👕 Одежда');
+    await tap(await screen.findByRole('radio', { name: /Повторяющийся платёж/ }));
+    fireEvent.changeText(await screen.findByDisplayValue('400'), '1000');
+    await tap('Сохранить');
+    expect(await screen.findByText(`Свободного не хватает 360${N}₾, в сбережениях — 300${N}₾. План будет больше бюджета на 60${N}₾.`)).toBeTruthy();
+    await tap('Отмена');
+    expect(await screen.findByDisplayValue('1000')).toBeTruthy();
+    expect(await (await getDb()).get("SELECT count(*) AS n FROM recurring_payments WHERE name = 'Одежда'")).toEqual({ n: 0 });
+    await tap('Сохранить');
+    await tap('Вычесть и сохранить');
+    expect(await screen.findByText(`План «👕 Одежда» сохранён, из 🔒 вычтено 300${N}₾`)).toBeTruthy();
+    expect(await (await getDb()).get("SELECT locked_minor FROM plan_months WHERE ym = '2026-10'")).toEqual({ locked_minor: 0 });
+  });
+
   test('every week from the plan: the day a week after the last spending, ± 3 days; each week\'s charge in the month', async () => {
     await openApp(seed);
     await tap('Статистика');
@@ -239,6 +313,8 @@ describe('6.7.9 "Повторяющийся платёж" from the plan', () => 
     expect(await screen.findByText(/^17 октября 2026/)).toBeTruthy();
     expect(screen.getByText('Списание засчитывается тратой категории за 3 дня до или после даты — дата сдвинется сама.')).toBeTruthy();
     await tap('Сохранить');
+    // 3 200 ₾ past what is free: asked
+    await tap('Вычесть и сохранить');
     await waitFor(async () => expect(await (await getDb()).get("SELECT period_months, period_unit, due FROM recurring_payments WHERE name = 'Дом и коммуналка'"))
       .toEqual({ period_months: 1, period_unit: 'week', due: '2026-10-17' }));
     // its row: the first charge not paid yet

@@ -46,8 +46,8 @@ async function write(input: PaymentInput, id: number | undefined, onDone: () => 
 }
 
 /**
- * Saves a repeating payment. This month's charges past what is free in the plan: "Вычесть из сбережений?" while 🔒 has
- * enough (no — not saved); more than it has — saved, the plan over its budget. Saving turned off with something in it:
+ * Saves a repeating payment. This month's charges (and a new contribution) past what is free in the plan: "Вычесть из
+ * сбережений?" while 🔒 has something (no — not saved; more than it has — all of it, the plan over its budget). Saving turned off with something in it:
  * "Не откладывать на …?" first.
  */
 export function submitPayment(input: PaymentInput, id: number | undefined, onDone: () => void, saving?: SavingChoice | null) {
@@ -62,13 +62,17 @@ export function submitPayment(input: PaymentInput, id: number | undefined, onDon
   check(input, id, onDone, saving);
 }
 
+// this month's plan only: charged first in a later month (0 now) — nothing asked
 async function check(input: PaymentInput, id: number | undefined, onDone: () => void, saving?: SavingChoice | null) {
   try {
+    const ym = currentYm();
     const effect = await planEffect(input, id);
-    const over = effect && effect.ym === currentYm() ? await recurringShort(effect.ym, effect.delta_minor) : null;
-    if (over && over.short <= over.locked) {
-      askTakeLocked({ ...over, adding: id === undefined, onYes: () => {
-        takeLocked(effect!.ym, over.short).then(() => write(input, id, onDone, saving)).catch(toastFailure('take locked', SAVE_FAILED));
+    const charges = effect && effect.ym === ym ? effect.delta_minor : 0;
+    const contribution = saving?.on && input.due ? { minor: saving.contribution, currency: input.currency } : undefined;
+    const over = await recurringShort(ym, charges, contribution);
+    if (over && over.locked > 0) {
+      askTakeLocked({ ...over, adding: id === undefined, onYes: (take) => {
+        takeLocked(ym, take).then(() => write(input, id, onDone, saving)).catch(toastFailure('take locked', SAVE_FAILED));
       } });
       return;
     }

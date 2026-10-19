@@ -7,8 +7,11 @@ import { openSaving, Period, savedNow } from '@/db/recurring';
 import { parseAmountOrZero } from '@/shared/lib/money';
 import type { PaymentTarget } from './usePaymentForm';
 
-/** What the sheet sends on "Сохранить": save up or not, from what; whether it was saving and what it has. */
-export type SavingChoice = { on: boolean; start: number; had: boolean; balance: number };
+/**
+ * What the sheet sends on "Сохранить": save up or not, from what; whether it was saving and what it has; turned on now —
+ * this month's contribution (in the payment's currency; it is checked against the plan's budget).
+ */
+export type SavingChoice = { on: boolean; start: number; had: boolean; balance: number; contribution: number };
 
 export function usePaymentSaving(target: PaymentTarget | null, period: Period, amount: number | null, due: string | null) {
   const [save, setSave] = useState(false);
@@ -32,6 +35,6 @@ export function usePaymentSaving(target: PaymentTarget | null, period: Period, a
   const nowYm = currentYm();
   const contribution = on && due && amount !== null ? contributionOf({ target_minor: amount, due }, nowYm, startMinor) : null;
   const months = due ? monthsBetween(nowYm, due.slice(0, 7)) : 0;
-  const choice: SavingChoice | null = had ? { on, start: startMinor, had: had.saving, balance: had.balance } : null;
+  const choice: SavingChoice | null = had ? { on, start: startMinor, had: had.saving, balance: had.balance, contribution: had.saving ? 0 : contribution ?? 0 } : null;
   return { offered, save, setSave, start, setStart, had, contribution, months, choice, startBad: !had?.saving && on && parseAmountOrZero(start) === null };
 }
