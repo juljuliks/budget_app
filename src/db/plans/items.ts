@@ -156,10 +156,11 @@ export async function addPlanItem(ym: string, categoryId: number, limitMinor?: n
 /**
  * Sets (and adds, if missing) a plan item. `kind` is kept as is when omitted; `currency` too (a new item takes
  * the amount to distribute's). Refused (OverBudgetError) if the month's plan would exceed its amount to distribute —
- * unless `takeLocked`: then what is short is taken from "🔒 Отложить сразу", if it has that much.
+ * unless `takeLocked`: then what is short is taken from "🔒 Отложить сразу", if it has that much; 'all' — what it has,
+ * the plan over its budget by the rest (an obligation: a regular payment).
  */
 export async function setPlanAmount(
-  ym: string, categoryId: number, limitMinor: number, kind?: PlanKind, currency?: Currency, normPeriod?: NormPeriod, takeLocked = false,
+  ym: string, categoryId: number, limitMinor: number, kind?: PlanKind, currency?: Currency, normPeriod?: NormPeriod, takeLocked: boolean | 'all' = false,
 ) {
   // also adds the item (from the stats screen), so the month must exist with its carried-over items first
   await ensureMonthPlan(ym);
@@ -168,8 +169,9 @@ export async function setPlanAmount(
   const existing = await db.get<{ currency: string }>('SELECT currency FROM plan_items WHERE ym = ? AND category_id = ?', [ym, categoryId]);
   const cur = currency ?? (existing ? asCurrency(existing.currency) : await planCurrency(ym));
   const over = await fits(ym, categoryId, limitMinor, cur);
-  const short = over ? over.planned_minor - over.budget_minor : 0;
-  if (over && (!takeLocked || short > ((await storedBudget(ym))?.locked_minor ?? 0))) throw over;
+  const locked = over && takeLocked ? (await storedBudget(ym))?.locked_minor ?? 0 : 0;
+  const short = over ? (takeLocked === 'all' ? Math.min(over.planned_minor - over.budget_minor, locked) : over.planned_minor - over.budget_minor) : 0;
+  if (over && (!takeLocked || (takeLocked !== 'all' && short > locked))) throw over;
   // the checks above read the rates outside: the writes alone in the transaction
   await db.transaction(async (t) => {
     if (short > 0) await t.run('UPDATE plan_months SET locked_minor = locked_minor - ? WHERE ym = ?', [short, ym]);

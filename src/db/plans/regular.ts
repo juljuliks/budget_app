@@ -11,8 +11,8 @@ import type { Every } from './regularTimes';
 
 export type RegularItem = { every: Every; weekdays: number; unit_minor: number; until: string | null };
 
-/** The category's item in `ym` a regular payment within the month; throws OverBudgetError past the budget, as setPlanAmount. */
-export async function setRegularItem(ym: string, categoryId: number, r: RegularItem, currency: Currency, takeLocked = false): Promise<void> {
+/** The category's item in `ym` a regular payment within the month; throws OverBudgetError past the budget, as setPlanAmount (`takeLocked` too). */
+export async function setRegularItem(ym: string, categoryId: number, r: RegularItem, currency: Currency, takeLocked: boolean | 'all' = false): Promise<void> {
   await setPlanAmount(ym, categoryId, r.unit_minor * timesInMonth(ym, r.every, r.weekdays, r.until), 'fixed', currency, undefined, takeLocked);
   await (await getDb()).run(
     'UPDATE plan_items SET every = ?, weekdays = ?, unit_minor = ?, until = ?, pinned = 1 WHERE ym = ? AND category_id = ?',

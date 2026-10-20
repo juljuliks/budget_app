@@ -54,12 +54,12 @@ export async function submitPlanSheet({ ym, target, text, v, adding, locked, fre
   if (off && !(await turnOffRecurring(target.category_id))) return false;
   const saved = (taken?: string) => { toast(savedText(k, target.label, adding, off, taken)); onSaved(); };
   if (own) return submitCategoryPayment(ym, target, { amount_minor: minor, currency: v.currency, period: v.period, due, until: v.until, saving: v.period > 1 ? v.saving : null }, adding, saved, onClose, free);
-  const write = async (takeLocked: boolean) => {
-    if (k === 'fund' && v.due) return saveFund(ym, target.category_id, { target_minor: minor, currency: v.currency, due: v.due, start_minor: startMinor ?? 0 }, undefined, takeLocked);
+  const write = async (takeLocked: boolean | 'all') => {
+    if (k === 'fund' && v.due) return saveFund(ym, target.category_id, { target_minor: minor, currency: v.currency, due: v.due, start_minor: startMinor ?? 0 }, undefined, takeLocked === true);
     if (regular) {
       return saveRegular(ym, target.category_id, { every: v.every as 'day' | 'week', weekdays: v.weekdays, unit_minor: minor, until: v.until }, v.currency, takeLocked);
     }
-    await savePlanAmount(ym, target.category_id, minor, byHand ? 'fixed' : k, v.currency, v.norm, takeLocked);
+    await savePlanAmount(ym, target.category_id, minor, byHand ? 'fixed' : k, v.currency, v.norm, takeLocked === true);
     // "Повторять каждый месяц" and its end: a limit's only (a one-off payment isn't carried over)
     const pin = k === 'limit' && v.pinned;
     const until = pin ? v.until : null;
@@ -70,12 +70,13 @@ export async function submitPlanSheet({ ym, target, text, v, adding, locked, fre
   } catch (e) {
     if (!(e instanceof OverBudgetError)) throw e;
     const short = e.planned_minor - e.budget_minor;
-    // what isn't free is in "🔒 Отложить сразу": asked over the sheet, which stays open
-    if (short <= locked) {
+    // what isn't free is in "🔒 Отложить сразу": asked over the sheet, which stays open; a regular payment (an
+    // obligation, as a subscription) — whatever 🔒 has, the plan over its budget by the rest
+    if (short <= locked || (regular && locked > 0)) {
       askTakeLocked({
         short, locked, currency: e.currency, adding,
-        onYes: () => write(true)
-          .then(() => { saved(formatWithCurrency(short, e.currency)); onClose(); })
+        onYes: (take) => write(regular ? 'all' : true)
+          .then(() => { saved(formatWithCurrency(take, e.currency)); onClose(); })
           .catch(toastFailure('save plan amount from savings', SAVE_FAILED)),
       });
       return false;

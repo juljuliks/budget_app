@@ -250,6 +250,23 @@ describe('6.3 the categories in the plan', () => {
     expect(screen.getByText('9 раз в октябре — 180\u00a0₾')).toBeTruthy();
   });
 
+  test('a regular payment within the month past what is free and 🔒: asked too — all of 🔒 taken, the plan over its budget', async () => {
+    // 2 400 ₾ to plan, 2 160 planned (Одежда 400) — 240 free, 🔒 300; пн и чт × 120 = 1 080 ₾: 680 more, 440 short
+    await tap('Изменить: 👕 Одежда');
+    await tap(await screen.findByRole('radio', { name: /Регулярный платёж/ }));
+    await tap('Каждую неделю');
+    await tap('пн');
+    await tap('чт');
+    fireEvent.changeText(screen.getByDisplayValue('400'), '120');
+    await tap('Сохранить');
+    expect(await screen.findByText('Свободного не хватает 440\u00a0₾, в сбережениях — 300\u00a0₾. План будет больше бюджета на 140\u00a0₾.')).toBeTruthy();
+    await tap('Вычесть и сохранить');
+    expect(await screen.findByText('План «👕 Одежда» сохранён, из 🔒 вычтено 300\u00a0₾')).toBeTruthy();
+    const db = await getDb();
+    expect(await db.get("SELECT locked_minor FROM plan_months WHERE ym = '2026-10'")).toEqual({ locked_minor: 0 });
+    expect(await db.get("SELECT p.limit_minor AS a FROM plan_items p JOIN categories c ON c.id = p.category_id WHERE p.ym = '2026-10' AND c.name = 'Одежда'")).toEqual({ a: 108000 });
+  });
+
   test('"Что значат значки": the plan icons sheet', async () => {
     await tap('Что значат значки');
     for (const t of ['Значки плана', 'Траты с лимитом', 'Разовый платёж', 'Регулярный платёж', 'Повторять каждый месяц', 'Копилка', 'Часть бюджета']) {
