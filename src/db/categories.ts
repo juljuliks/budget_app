@@ -22,6 +22,8 @@ export type Category = {
   system: string | null;
   /** 1 — "Регулярные платежи": its plan item counted from its payments (db/recurring) */
   recurring: number;
+  /** 1 — "По мерчантам": a payment of each merchant (from an operation); 0 — "Траты категории": its spending is its payment */
+  by_merchant: number;
 };
 
 /**
@@ -59,7 +61,13 @@ export async function setRecurring(id: number, on: boolean, db?: Db): Promise<vo
   await db.run('UPDATE categories SET recurring = ? WHERE id = ?', [on ? 1 : 0, id]);
 }
 
-const COLUMNS = `c.id, c.name, c.emoji, c.sort_order, c.type_id, c.deleted_at, c.color, c.system, c.recurring,
+/** "По мерчантам" (a payment of each merchant, from an operation) or "Траты категории" (its spending is its payment). */
+export async function setByMerchant(id: number, on: boolean, db?: Db): Promise<void> {
+  db ??= await getDb();
+  await db.run('UPDATE categories SET by_merchant = ? WHERE id = ?', [on ? 1 : 0, id]);
+}
+
+const COLUMNS = `c.id, c.name, c.emoji, c.sort_order, c.type_id, c.deleted_at, c.color, c.system, c.recurring, c.by_merchant,
     t.name AS type_name, coalesce(t.is_transfer, 0) AS type_is_transfer`;
 const FROM = 'FROM categories c LEFT JOIN category_types t ON t.id = c.type_id';
 const SELECT = `SELECT ${COLUMNS} ${FROM}`;

@@ -13,6 +13,7 @@ import { RepeatIcon } from '@/shared/ui/icons';
 import { toast, toastFailure } from '@/shared/ui/toast';
 import { colors } from '@/shared/theme/theme';
 import type { Tx } from '../model/useTransaction';
+import PaymentQuestion from './PaymentQuestion';
 
 /**
  * An operation in "Подписки": its merchant's repeating payment — how often, the next charge, this year's; "Изменить
@@ -27,7 +28,8 @@ export default function PaymentNote({ tx }: { tx: Tx }) {
       const c = tx.category_id === null ? undefined : await getCategory(tx.category_id);
       if (!c || !isRecurring(c)) return null;
       if (live) setW(paymentWords(c.name));
-      // its merchant's payment; none — "Задать дату" (a payment is made of a merchant: without one — nothing)
+      // "Траты категории": the category's own payment; "По мерчантам": its merchant's, none — "Задать дату"
+      if (!c.by_merchant) return paymentCard(null, undefined, c.id);
       return tx.merchant_key ? (await paymentCard(tx.merchant_key)) ?? 'none' : null;
     };
     const run = () => load().then((c) => { if (live) setCard(c); }).catch((e) => console.error('payment card failed', e));
@@ -46,8 +48,9 @@ export default function PaymentNote({ tx }: { tx: Tx }) {
   }
   const { sub } = card;
   const money = (minor: number) => formatWithCurrency(minor, sub.currency);
-  // the latest charge is this one and its amount isn't the repeating payment's
-  const changed = card.last?.id === tx.id && tx.currency === sub.currency && tx.amount_minor !== sub.amount_minor;
+  // the latest charge is this one and its amount isn't the repeating payment's (a merchant's: the category's own one is
+  // paid by its spending adding up, one of them another amount says nothing)
+  const changed = !!sub.merchant_key && card.last?.id === tx.id && tx.currency === sub.currency && tx.amount_minor !== sub.amount_minor;
   const update = () => savePayment({ ...sub, amount_minor: tx.amount_minor }, sub.id)
     .then(() => { emitTransactionsChanged(); toast(`${sub.name} — ${money(tx.amount_minor)}`); })
     .catch(toastFailure('update payment', SAVE_FAILED));
@@ -68,6 +71,9 @@ export default function PaymentNote({ tx }: { tx: Tx }) {
           <Text style={styles.link}>{`Изменить ${w.acc} ›`}</Text>
         </TouchableOpacity>
       </View>
+      {!sub.merchant_key && sub.category_id !== null ? (
+        <PaymentQuestion tx={tx} categoryId={sub.category_id} name={sub.name} amount={sub.amount_minor} currency={sub.currency} />
+      ) : null}
       {changed ? (
         <TouchableOpacity style={styles.warn} onPress={update} accessibilityRole="button">
           <Text style={styles.warnText}>

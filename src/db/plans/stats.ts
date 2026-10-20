@@ -1,4 +1,7 @@
 // A month's or a period's spending by category and section, against the plan.
+import { regularPaid } from './regularPaid';
+import { askingSql } from '../recurring/answers';
+import { Every, timesInMonth } from './regularTimes';
 import { getDb } from '../index';
 import { categoryColors } from '../colors';
 import { NEUTRAL_COLOR, NO_CATEGORY_EMOJI } from '../../domain/colors';
@@ -24,6 +27,10 @@ export type CategoryStat = {
   plan_kind: PlanKind | null;
   /** a flexible plan item's norm rhythm for period stats; null without a plan */
   plan_norm: NormPeriod | null;
+  /** a regular payment within the month (every day, every week): its days paid by the category's spending, of its days */
+  regular?: { paid: number; times: number };
+  /** its operations of the month waiting for "Это оплата?" (another amount than its payment's) */
+  asking?: number;
   /** chart color: the type's palette shade or the category's own (src/domain/colors.ts) */
   color: string;
   /** deleted category that still has spending in this month: can't be added to a plan */
@@ -143,21 +150,29 @@ export async function monthStats(year: number, month: number, currency: Currency
 
   const colorOf = await categoryColors();
 
-  const cats = await db.all<CategoryRow & { limit_minor: number | null; plan_currency: string | null; plan_kind: PlanKind | null; plan_norm: string | null }>(
+  const cats = await db.all<CategoryRow & { limit_minor: number | null; plan_currency: string | null; plan_kind: PlanKind | null; plan_norm: string | null; every: Every | null; weekdays: number | null; unit_minor: number | null; until: string | null; asking: number }>(
     `SELECT c.id, c.name, c.emoji, c.type_id, ct.name AS type_name, p.limit_minor, p.currency AS plan_currency,
+      CASE WHEN p.kind = 'fixed' THEN p.every END AS every, p.weekdays, p.unit_minor, p.until,
+      -- "Это оплата?" not answered this month (a split one's part in it); in the same look, not one of its own
+      (SELECT count(*) FROM spend_parts s WHERE s.category_id = c.id AND s.occurred_at >= ? AND s.occurred_at < ? AND ${askingSql('s', 's.amount_minor')}) AS asking,
       -- "Подписки" counts as a fixed payment in the stats: paid or not, by the month
       CASE WHEN p.kind = 'subs' THEN 'fixed' ELSE p.kind END AS plan_kind,
         p.norm_period AS plan_norm, c.deleted_at, ct.is_transfer
       FROM categories c
       LEFT JOIN category_types ct ON ct.id = c.type_id
-      LEFT JOIN plan_items p ON p.category_id = c.id AND p.ym = ?`, [ym]);
+      LEFT JOIN plan_items p ON p.category_id = c.id AND p.ym = ?`, [from, to, ym]);
 
+  // a regular payment within the month: its days paid
+  const regular = await regularPaid(ym, cats.filter((c) => c.every).map((c) => ({ ...c, category_id: c.id, currency: c.plan_currency ?? BUDGET_CURRENCY })), db);
   const categories: CategoryStat[] = [];
   for (const c of cats) {
     const s = spentBy.get(c.id) ?? 0;
     const limit = c.limit_minor ? conv(c.limit_minor, asCurrency(c.plan_currency), currency, planDate) : null;
     if (s === 0 && limit === null) continue;
-    categories.push(categoryStat(c, s, colorOf, limit === null ? undefined : { limit, kind: c.plan_kind, norm: c.plan_norm }));
+    const stat = categoryStat(c, s, colorOf, limit === null ? undefined : { limit, kind: c.plan_kind, norm: c.plan_norm });
+    if (c.asking) stat.asking = c.asking;
+    if (c.every && regular.has(c.id)) stat.regular = { paid: regular.get(c.id)!, times: timesInMonth(ym, c.every, c.weekdays ?? 0, c.until) };
+    categories.push(stat);
   }
   const uncategorized = spentBy.get(null) ?? 0;
   if (uncategorized !== 0) categories.push(uncategorizedStat(uncategorized));

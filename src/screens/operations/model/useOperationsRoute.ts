@@ -34,7 +34,7 @@ export function useOperationsRoute(resetFilters: () => void) {
 
   // picking an operation for a category's repeating payment: a tap makes it from the operation, saved — back
   const pick = params.pickPayment;
-  const pickFrom = (tx: TransactionRow) => { if (pick) pickPaymentFrom(tx, pick.id, goBack); };
+  const pickFrom = (tx: TransactionRow) => { if (pick) pickPaymentFrom(tx, pick, goBack); };
 
   return { params, from, tabNavigation, clearParams, goBack, pick, pickFrom };
 }

@@ -122,7 +122,7 @@ export async function refreshRecurringItems(nowYm = currentYm()): Promise<void> 
   }
 }
 
-export type PaymentDraft = { merchant_key: string; category_id?: number | null; amount_minor: number; currency: Currency; period: Period; due: string | null; until?: string | null };
+export type PaymentDraft = { merchant_key: string | null; category_id?: number | null; amount_minor: number; currency: Currency; period: Period; due: string | null; until?: string | null };
 
 /**
  * What saving a repeating payment does to the plan: the first month from this one it is charged in ("В план октября +30 ₾"),
@@ -134,7 +134,7 @@ export async function planEffect(draft: PaymentDraft, id?: number, now = new Dat
   const db = await getDb();
   const nowYm = currentYm(now);
   const old = id === undefined ? null : (await listPayments(db)).find((s) => s.id === id) ?? null;
-  const own = { merchant_key: draft.merchant_key };
+  const own = { merchant_key: draft.merchant_key, category_id: draft.category_id ?? old?.category_id ?? null, amount_minor: draft.amount_minor, currency: draft.currency, period: draft.period };
   const daysOf = await paymentDays(old ? [own, old] : [own], db);
   const since = `${old?.since_ym ?? nowYm}-01`;
   const chargesIn = (ym: string) => monthCharges(draft.due!, draft.period, ym, daysOf(own), since, draft.until).length;

@@ -104,11 +104,15 @@ export function planView({ ym, currency, items: all, budget, toShown, fromShown,
   const locked = !budget || !budget.locked_minor ? 0 : toShown(budget.locked_minor, budget.currency) ?? budget.locked_minor;
   const free = shownBudget === null ? null : shownBudget - total - fundsTotal - unplanned - locked - debt;
   const timing = ym < currentYm() ? 'past' : ym === currentYm() ? 'current' : 'future';
+  // what a category is expected to take: its plan; a regular payment within the month — its days paid and to come (one
+  // gone unpaid goes to the savings), in the screen's currency as its plan is
+  const expectedOf = (i: PlanItem) => (i.expected_minor !== undefined && i.limit_minor
+    ? Math.round((i.converted_minor ?? 0) * (i.expected_minor / i.limit_minor)) : i.converted_minor ?? 0);
   // savings at the month's end if the rest is spent by plan: every category takes its plan (or what it already took,
   // if more), spending outside the plan its share (or more); a past month: what was actually left
   const savingsEnd = shownBudget === null ? null : timing === 'past' ? shownBudget - debt - spentBy.total
     : timing === 'current'
-      ? shownBudget - debt - all.reduce((a, i) => a + Math.max(i.converted_minor ?? 0, spentBy.byCategory.get(i.category_id) ?? 0), 0)
+      ? shownBudget - debt - all.reduce((a, i) => a + Math.max(expectedOf(i), spentBy.byCategory.get(i.category_id) ?? 0), 0)
         - Math.max(unplanned, unplannedSpentMinor)
       : (free ?? 0) + locked;
   const pct = (v: number) => (shownBudget ? percentOf(v, shownBudget) || '0%' : '');

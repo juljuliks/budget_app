@@ -1,6 +1,6 @@
 ---
 name: finish
-description: Definition of done for this app — run after any new feature, fix or change of behavior or texts, before saying it's done. Brings the glossary, IMPROVEMENTS.md, README, the test plan and tests, the architecture rules and the public documentation in line with the change.
+description: Definition of done for this app — run after any new feature, fix or change of behavior or texts, before saying it's done. Brings the glossary, IMPROVEMENTS.md, README, the test plan and tests, and the architecture rules in line with the change (the public documentation is a separate skill, public-docs).
 model: sonnet
 ---
 
@@ -48,18 +48,13 @@ model: sonnet
   (скилл `architecture`).
 - Новый слой, слайс или правило → ARCHITECTURE.md §1; новая папка → «Где что» в README.
 
-## 6. Публичная документация
-
-Страница на claude.ai: https://claude.ai/artifact/7deJ2vgzirC8qzhTz63hbj (ссылка в README).
-
-- Касается ли изменение того, что описано для пользователя (функции, тексты, правила подсчёта)? Нет — пропустить.
-- Да: `Artifact` `action: "read"` с этим `url` → правка сохранённого файла (только затронутые места, тот же стиль и
-  термины глоссария) → `Artifact` publish с тем же `url`. Новую страницу не создавать.
-- Изменился экран на скриншоте → переснять: `scripts/demo/docs.sh` (эмулятор со свежей сборкой, `npm run emulator`;
-  демо-база — `scripts/demo/demoDb.ts`, сценарии — `scripts/demo/flows/docs/`), заменить кадр в странице
-  (JPEG шириной 420 px, data: URI). Новый экран — шаг в сценарий и кадр в нужный раздел.
+Публичная документация здесь не правится — отдельно, скиллом `public-docs` (он находит изменения по коммитам с
+прошлой сверки).
 
 ## Пуш (только по просьбе)
+
+Сообщение коммита — что изменилось для пользователя (поведение, тексты в кавычках), а не только в коде: по ним
+`public-docs` собирает изменения для документации. Без смены поведения — так и написать («No behavior change»).
 
 Перед `git push` — `git fetch`; если `origin/main` ушёл вперёд — `git pull --rebase`, разобрать конфликты (переносы файлов,
 пути импортов), прогнать `tsc` и тесты, затем пушить. Сказать пользователю, какие чужие коммиты пришли.

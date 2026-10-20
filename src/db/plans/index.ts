@@ -19,3 +19,4 @@ export * from './recurringBudget';
 export * from './closeSplit';
 export * from './regular';
 export * from './regularTimes';
+export * from './regularPaid';

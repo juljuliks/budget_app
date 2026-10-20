@@ -137,3 +137,35 @@ export function savingFor(due: string, p: Period, ym: string, opDays: string[], 
     if (until && to > until) return null;
   }
 }
+
+/** How far a spending may be off a payment's amount and still be it (the rate of the day, a fee, rounding): ±3%, 1 ₾ at least. */
+export const toleranceOf = (amount: number) => Math.max(Math.round(amount * 0.03), 100);
+
+/** Is a spending of `minor` a payment of `amount` by itself (within the tolerance). */
+export const matchesAmount = (minor: number, amount: number) => Math.abs(minor - amount) <= toleranceOf(amount);
+
+/**
+ * Does a spending count for a payment of `amount`: answered "Это оплата?" — as answered; not answered — only of its amount
+ * (within the tolerance); another amount waits for the answer.
+ */
+export const countsFor = (s: { minor: number; answer?: number | null }, amount: number) => (s.answer == null ? matchesAmount(s.minor, amount) : s.answer === 1);
+
+/**
+ * The days spending paid a payment of `amount`: spending added up from one within twice the window (a charge's before
+ * and after) — the day the sum reached the amount is the paid one; the next sum starts after it. A small one alone isn't.
+ */
+export function paidDays(all: Array<{ day: string; minor: number; answer?: number | null }>, amount: number, window: number): string[] {
+  // only what counts for it ("Это оплата?"): of its amount, or answered yes (a part of it too)
+  const spends = all.filter((s) => countsFor(s, amount));
+  const need = amount - toleranceOf(amount);
+  const out: string[] = [];
+  let from = 0;
+  let sum = 0;
+  for (let i = 0; i < spends.length; i++) {
+    // the ones too far before this one fall out of the sum
+    while (from < i && daysBetween(spends[from].day, spends[i].day) > 2 * window) { sum -= spends[from].minor; from++; }
+    sum += spends[i].minor;
+    if (sum >= need) { out.push(spends[i].day); sum = 0; from = i + 1; }
+  }
+  return out;
+}

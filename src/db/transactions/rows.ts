@@ -29,6 +29,8 @@ export type TransactionRow = {
   parts: string | null;
   /** in "Подписки": how often its merchant's repeating payment is charged (months); null — none, or without a day */
   payment_period?: number | null;
+  /** 1 — "Это оплата?" waits for an answer (its category's payment is its spending, its amount another) */
+  asks_payment?: number | null;
   /** the list filtered by categories: those (a split operation shows its parts in them) */
   focus?: number[];
 };

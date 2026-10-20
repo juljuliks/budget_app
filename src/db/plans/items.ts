@@ -6,6 +6,7 @@ import { Currency } from '../fx';
 import { asCurrency } from './months';
 import { NormPeriod, PlanItem, PlanKind, asNorm } from './types';
 import { activeFunds, fundLedger } from './funds';
+import { regularExpected } from './regularPaid';
 import { monthPayments } from './recurringItems';
 import type { RecurringPayment } from '../recurring/reads';
 import { OverBudgetError, ensureMonthPlan, planConverter, planCurrency, plannedTotal, storedBudget } from './budget';
@@ -16,7 +17,7 @@ export async function listPlan(ym: string, to?: Currency): Promise<PlanItem[]> {
   const db = await getDb();
   const prev = await db.get<{ ym: string }>('SELECT ym FROM plan_months WHERE ym < ? ORDER BY ym DESC LIMIT 1', [ym]);
   const rows = await db.all<Omit<PlanItem, 'pinned' | 'converted_minor' | 'currency'> & { pinned: number; currency: string }>(
-    `SELECT p.category_id, c.name, c.emoji, c.system, c.recurring = 1 AS recurring, c.type_id, ct.name AS type_name, p.limit_minor, p.currency, p.kind, p.norm_period, p.pinned,
+    `SELECT p.category_id, c.name, c.emoji, c.system, c.recurring = 1 AS recurring, c.by_merchant = 1 AS by_merchant, c.type_id, ct.name AS type_name, p.limit_minor, p.currency, p.kind, p.norm_period, p.pinned,
         p.until, CASE WHEN p.kind = 'fixed' THEN p.every END AS every, p.weekdays, p.unit_minor,
         (SELECT q.limit_minor FROM plan_items q WHERE q.ym = ? AND q.category_id = p.category_id) AS previous_minor
       FROM plan_items p
@@ -46,7 +47,7 @@ export async function listPlan(ym: string, to?: Currency): Promise<PlanItem[]> {
       names: subNames((id) => !savingIds.has(id)), saving_names: subNames((id) => savingIds.has(id)),
       saving_minor: subs.saving.reduce((a, v) => a + (v.converted_minor ?? 0), 0),
       ...savingProgress(subs.saving, all, (minor, from) => conv(minor, from, target) ?? 0),
-      empty: all.length === 0,
+      own: all.some((s) => !s.merchant_key), empty: all.length === 0,
       ...(one ? { in_currency: {
         currency: one,
         charges_minor: subs.charges.filter((c) => !c.saved).reduce((a, c) => a + c.sub.amount_minor, 0),
@@ -62,8 +63,10 @@ export async function listPlan(ym: string, to?: Currency): Promise<PlanItem[]> {
       } } : {}),
     });
   }
+  const expected = await regularExpected(ym, rows.filter((r) => r.kind === 'fixed' && r.every), db);
   return rows.map((r) => ({
     ...r,
+    ...(expected.has(r.category_id) ? { expected_minor: expected.get(r.category_id) } : {}),
     currency: asCurrency(r.currency),
     norm_period: asNorm(r.norm_period),
     converted_minor: conv(r.limit_minor, asCurrency(r.currency), target),
@@ -71,6 +74,7 @@ export async function listPlan(ym: string, to?: Currency): Promise<PlanItem[]> {
     previous_minor: r.previous_minor || null,
     ...(funds.has(r.category_id) ? { fund: funds.get(r.category_id) } : {}),
     recurring: !!r.recurring,
+    by_merchant: !!r.by_merchant,
     ...(subsInfo.has(r.category_id) ? { subs: subsInfo.get(r.category_id) } : {}),
   }));
 }

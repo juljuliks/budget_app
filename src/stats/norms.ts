@@ -1,5 +1,5 @@
 import type { Currency } from '../db/fx';
-import { NormPeriod, NormPlanItem, NormsData, normsData, parseYm, PlanKind, ymOf } from '../db/plans';
+import { NormPeriod, NormPlanItem, NormsData, normsData, parseYm, PlanKind, regularDays, ymOf } from '../db/plans';
 import { DayKey, dayKeyOf, DayRange, daysByMonth, daysInMonth, normWindow, parseDayKey, rangeDays, rangeToUnix } from '@/shared/lib/dateRange';
 import { RHYTHM_DAYS } from '@/shared/lib/dates';
 
@@ -106,8 +106,16 @@ export async function loadNorms(range: DayRange, currency: Currency): Promise<No
   const partsOf = (id: number, r: DayRange): NormPart[] => {
     const out: NormPart[] = [];
     for (const [m, days] of daysByMonth(r)) {
-      const limit = planOf(m).get(id)?.limit ?? 0;
+      const item = planOf(m).get(id);
+      const limit = item?.limit ?? 0;
       const dim = daysInMonth(m);
+      // a regular payment within the month: its own days among these, by each time's amount (not a share of the month)
+      if (item?.regular) {
+        const { every, weekdays, unit, until } = item.regular;
+        const n = regularDays(m, every, weekdays, until).filter((d) => d >= r.from && d <= r.to).length;
+        out.push({ ym: m, days, dim, limit, spentBefore: 0, daysLeft: dim, norm: n * unit, flat: n * unit });
+        continue;
+      }
       // the first of these days in this month, and what was spent in the month before it
       const first = r.from > `${m}-01` ? r.from : `${m}-01`;
       const firstDay = Number(first.slice(8, 10));
@@ -152,7 +160,8 @@ export async function loadNorms(range: DayRange, currency: Currency): Promise<No
     const dim = daysInMonth(ym);
     const perRhythm = (spentSoFar: number, firstDay: number) => (Math.max(0, monthLimit - spentSoFar) / (dim - firstDay + 1)) * RHYTHM_DAYS[rhythm as Exclude<NormPeriod, 'month'>];
     const lastDay = Number(range.to.slice(8, 10));
-    const effect = rhythm === 'month' || monthLimit <= 0 ? null : {
+    // a regular payment within the month: its days, not a limit moved by spending
+    const effect = rhythm === 'month' || monthLimit <= 0 || lastPlan.get(id)?.regular ? null : {
       before: perRhythm(beforePeriod.get(id) ?? 0, Number(periodStartInMonth.slice(8, 10))),
       after: lastDay < dim ? perRhythm(norms.monthToDate.get(id) ?? 0, lastDay + 1) : null,
     };

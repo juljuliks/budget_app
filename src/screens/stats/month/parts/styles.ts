@@ -30,6 +30,8 @@ export const styles = StyleSheet.create({
   rowAmount: { marginLeft: 'auto', paddingLeft: 8, fontSize: 13, color: colors.text, fontVariant: ['tabular-nums'] },
   rowLimit: { color: colors.muted },
   rowStatus: { fontSize: 13, color: colors.muted, marginTop: 4 },
+  // "Это оплата?" waiting: as the operation's own plaque
+  asking: { color: colors.warn, fontWeight: '600' },
   rowStatusMuted: { color: colors.muted },
   paceLine: { fontWeight: '600' },
   // an overspend, the same on every screen: bold orange, no ⚠

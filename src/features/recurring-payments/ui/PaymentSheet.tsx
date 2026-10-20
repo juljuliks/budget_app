@@ -49,11 +49,13 @@ export default function PaymentSheet({ target, onClose, onSaved, onLeave }: Prop
   const periods = w.subscriptions ? PERIODS : PAYMENT_PERIODS;
   const custom = !periods.some(([m]) => m === f.period);
   const amountBad = f.amount.trim() !== '' && f.input === null && !!f.name.trim();
+  // its end before the next charge: no charge at all
+  const endBad = f.period !== ONCE && !!f.until && !!f.due && f.until < f.due;
   const save = () => { if (f.input) submitPayment(f.input, target?.id, () => { onClose(); onSaved?.(); }, saving.choice); };
   const skip = () => { if (f.input) submitPayment({ ...f.input, due: null }, target?.id, onClose); else onClose(); };
   const icon = target?.category.emoji ?? '🔁';
   const dueLabel = f.period === ONCE ? 'Дата списания' : 'Следующее списание';
-  const title = target?.id !== undefined ? `${icon} ${target.name}` : target ? `${icon} ${w.One} «${target.merchant_key}»` : '';
+  const title = target?.id !== undefined ? `${icon} ${target.name}` : target?.merchant_key ? `${icon} ${w.One} «${target.merchant_key}»` : target ? `${icon} ${target.name}` : '';
   return (
     <BottomSheet
       visible={target !== null} onClose={onClose} title={title} style={styles.root}
@@ -98,6 +100,7 @@ export default function PaymentSheet({ target, onClose, onSaved, onLeave }: Prop
             onChange={f.setUntil} onClear={() => f.setUntil(null)}
           />
         )}
+        {endBad ? <Text style={[formStyles.hint, styles.error]}>Дата окончания раньше следующего списания</Text> : null}
         <SavingFields s={saving} amount={f.input?.amount_minor ?? null} currency={f.currency} due={f.due} />
         {saving.contribution !== null ? (
           <View style={styles.plate}>
@@ -113,7 +116,7 @@ export default function PaymentSheet({ target, onClose, onSaved, onLeave }: Prop
           </View>
         ) : null}
         <SheetActions
-          submit={{ title: 'Сохранить', onPress: save, disabled: !f.input || !f.due || saving.startBad || !saving.choice }}
+          submit={{ title: 'Сохранить', onPress: save, disabled: !f.input || !f.due || endBad || saving.startBad || !saving.choice }}
           onCancel={target?.from_operation ? skip : onClose} cancelTitle={target?.from_operation ? 'Пропустить' : 'Отмена'}
         />
       </SheetScrollView>

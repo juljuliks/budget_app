@@ -1,3 +1,4 @@
+import { Every, timesInMonth } from './plans/regularTimes';
 import { getDb } from './index';
 import { Category, findCategoryByName, isSystemCategory, listCategories } from './categories';
 import { currentYm, deleteFund, NormPeriod, planConverter, PlanKind } from './plans';
@@ -5,13 +6,17 @@ import { placeholders } from './sql';
 import { moveParts } from './parts';
 
 /** How a merged category is planned: a limit with its spending pattern, or an obligatory payment. */
-export type MergeRhythm = { kind: PlanKind; norm: NormPeriod };
+/** How the merged item is planned; a regular payment within the month — its days too (`every`, `weekdays`) */
+export type MergeRhythm = { kind: PlanKind; norm: NormPeriod; every?: Every | null; weekdays?: number | null };
 
 export class MergeNameTakenError extends Error {
   constructor(public readonly name: string) { super(`a category named "${name}" already exists in this section`); }
 }
 
-type Item = { ym: string; category_id: number; limit_minor: number; currency: string; kind: PlanKind; norm_period: NormPeriod; pinned: number };
+type Item = {
+  ym: string; category_id: number; limit_minor: number; currency: string; kind: PlanKind; norm_period: NormPeriod; pinned: number;
+  every: Every | null; weekdays: number | null; unit_minor: number | null; until: string | null;
+};
 
 /**
  * Merges `sourceIds` into `targetId`, history included: every month's operations and plan, the merchants' rules and
@@ -34,7 +39,8 @@ export async function mergeCategories(targetId: number, sourceIds: number[], nam
   const db = await getDb();
   const marks = placeholders(all.length);
   const items = await db.all<Item>(
-    `SELECT ym, category_id, limit_minor, currency, kind, norm_period, pinned FROM plan_items WHERE category_id IN (${marks}) ORDER BY ym`, all);
+    `SELECT ym, category_id, limit_minor, currency, kind, norm_period, pinned, CASE WHEN kind = 'fixed' THEN every END AS every, weekdays, unit_minor, until
+      FROM plan_items WHERE category_id IN (${marks}) ORDER BY ym`, all);
   // each month's merged item, computed before the transaction (the rates may need loading)
   const merged: Item[] = [];
   for (const ym of [...new Set(items.map((i) => i.ym))]) {
@@ -43,10 +49,16 @@ export async function mergeCategories(targetId: number, sourceIds: number[], nam
     const conv = month.some((i) => i.currency !== own.currency) ? await planConverter(ym) : null;
     // without a rate an amount is taken as it is: better than dropping it from the plan
     const sum = month.reduce((a, i) => a + (i.currency === own.currency ? i.limit_minor : conv?.(i.limit_minor, i.currency, own.currency) ?? i.limit_minor), 0);
+    // a regular payment within the month picked: the one with those days keeps them and its amount each time (its
+    // item the times by it, not the sum); another rhythm — none
+    const regular = rhythm ? (rhythm.every ? month.find((i) => i.every === rhythm.every && (i.weekdays ?? 0) === (rhythm.weekdays ?? 0)) : undefined)
+      : own.every ? own : undefined;
     merged.push({
-      ym, category_id: targetId, limit_minor: Math.round(sum), currency: own.currency,
+      ym, category_id: targetId, currency: regular?.currency ?? own.currency,
+      limit_minor: regular?.every ? (regular.unit_minor ?? 0) * timesInMonth(ym, regular.every, regular.weekdays ?? 0, regular.until) : Math.round(sum),
       kind: rhythm?.kind ?? own.kind, norm_period: rhythm?.norm ?? own.norm_period,
       pinned: month.some((i) => i.pinned) ? 1 : 0,
+      every: regular?.every ?? null, weekdays: regular?.weekdays ?? null, unit_minor: regular?.unit_minor ?? null, until: regular?.until ?? null,
     });
   }
 
@@ -72,8 +84,8 @@ export async function mergeCategories(targetId: number, sourceIds: number[], nam
     await tx.run(`DELETE FROM plan_items WHERE category_id IN (${marks})`, all);
     for (const m of merged) {
       await tx.run(
-        'INSERT INTO plan_items (ym, category_id, limit_minor, currency, kind, norm_period, pinned) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [m.ym, m.category_id, m.limit_minor, m.currency, m.kind, m.norm_period, m.pinned]);
+        'INSERT INTO plan_items (ym, category_id, limit_minor, currency, kind, norm_period, pinned, every, weekdays, unit_minor, until) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [m.ym, m.category_id, m.limit_minor, m.currency, m.kind, m.norm_period, m.pinned, m.every, m.weekdays, m.unit_minor, m.until]);
     }
     const usage = await tx.get<{ n: number }>(`SELECT coalesce(sum(usage_count), 0) AS n FROM category_usage WHERE category_id IN (${marks})`, all);
     await tx.run(`DELETE FROM category_usage WHERE category_id IN (${marks})`, all);
@@ -88,8 +100,9 @@ export async function mergeCategories(targetId: number, sourceIds: number[], nam
 export async function mergePlanPreview(ids: number[], ym = currentYm()) {
   if (ids.length === 0) return [];
   const db = await getDb();
-  return db.all<{ category_id: number; limit_minor: number; currency: string; kind: PlanKind; norm_period: NormPeriod }>(
-    `SELECT category_id, limit_minor, currency, kind, norm_period FROM plan_items WHERE ym = ? AND category_id IN (${placeholders(ids.length)})`,
+  return db.all<{ category_id: number; limit_minor: number; currency: string; kind: PlanKind; norm_period: NormPeriod; every: Every | null; weekdays: number | null }>(
+    `SELECT category_id, limit_minor, currency, kind, norm_period, CASE WHEN kind = 'fixed' THEN every END AS every, weekdays
+      FROM plan_items WHERE ym = ? AND category_id IN (${placeholders(ids.length)})`,
     [ym, ...ids]);
 }
 

@@ -1,4 +1,5 @@
 // What the norms are counted from, read once: the months' plan items and the spending by day and category.
+import type { Every } from './regularTimes';
 import { getDb } from '../index';
 import { Currency, dateKey } from '../fx';
 import { asCurrency, currentYm, monthStart, parseYm, monthRange, planRateDate } from './months';
@@ -7,7 +8,11 @@ import { NormPeriod, PlanKind, asNorm } from './types';
 import { ensureMonthPlan } from './budget';
 import { placeholders } from '../sql';
 
-export type NormPlanItem = { name: string; limit: number; kind: PlanKind; rhythm: NormPeriod };
+/** `regular`: a regular payment within the month — its norm is its days in the days looked at × each time's amount (converted) */
+export type NormPlanItem = {
+  name: string; limit: number; kind: PlanKind; rhythm: NormPeriod;
+  regular?: { every: Every; weekdays: number; unit: number; until: string | null };
+};
 
 export type NormsData = {
   /** each month's items with an amount (converted on its plan date), in the month stats' order; a month not started yet: none */
@@ -42,9 +47,13 @@ export async function normsData(months: string[], currency: Currency, nowYm = cu
     m.set(key, (m.get(key) ?? 0) + value);
   }
 
-  const planRows = read.length === 0 ? [] : await db.all<{ ym: string; category_id: number; name: string; emoji: string | null; limit_minor: number; currency: string; kind: PlanKind | null; norm_period: string | null }>(
+  const planRows = read.length === 0 ? [] : await db.all<{ ym: string; category_id: number; name: string; emoji: string | null; limit_minor: number; currency: string; kind: PlanKind | null; norm_period: string | null; every: Every | null; weekdays: number | null; unit_minor: number | null; until: string | null }>(
     `SELECT p.ym, p.category_id, c.name, c.emoji, p.limit_minor, p.currency,
-      CASE WHEN p.kind = 'subs' THEN 'fixed' ELSE p.kind END AS kind, p.norm_period
+      -- a regular payment within the month: a limit of its rhythm (every day — the amount each day; every week — the
+      -- month's by its days), not a one-off payment of the whole month
+      CASE WHEN p.kind = 'subs' THEN 'fixed' WHEN p.kind = 'fixed' AND p.every IS NOT NULL THEN 'limit' ELSE p.kind END AS kind,
+      CASE WHEN p.kind = 'fixed' AND p.every IS NOT NULL THEN p.every ELSE p.norm_period END AS norm_period,
+      CASE WHEN p.kind = 'fixed' THEN p.every END AS every, p.weekdays, p.unit_minor, p.until
       FROM plan_items p JOIN categories c ON c.id = p.category_id
       WHERE p.ym IN (${placeholders(read.length)}) ORDER BY c.id`, read);
   const plans: NormsData['plans'] = new Map(months.map((m) => [m, new Map()]));
@@ -55,7 +64,11 @@ export async function normsData(months: string[], currency: Currency, nowYm = cu
     const spent = (id: number) => monthSpent.get(`${m}|${id}`) ?? 0;
     own.sort((a, b) => spent(b.r.category_id) - spent(a.r.category_id) || b.limit - a.limit);
     for (const { r, limit } of own) {
-      plans.get(m)!.set(r.category_id, { name: `${r.emoji || ''} ${r.name}`.trim(), limit, kind: r.kind ?? 'limit', rhythm: asNorm(r.norm_period) });
+      const unit = r.every && r.unit_minor ? conv(r.unit_minor, asCurrency(r.currency), currency, planRateDate(m)) : null;
+      plans.get(m)!.set(r.category_id, {
+        name: `${r.emoji || ''} ${r.name}`.trim(), limit, kind: r.kind ?? 'limit', rhythm: asNorm(r.norm_period),
+        ...(r.every && unit !== null ? { regular: { every: r.every, weekdays: r.every === 'day' ? 127 : r.weekdays ?? 0, unit, until: r.until } } : {}),
+      });
     }
   }
 

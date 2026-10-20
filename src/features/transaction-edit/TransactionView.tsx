@@ -12,6 +12,7 @@ import AmountModal from './ui/AmountModal';
 import NoteSection from './ui/NoteSection';
 import SplitSheet from './ui/SplitSheet';
 import PaymentNote from './ui/PaymentNote';
+import RegularNote from './ui/RegularNote';
 import TransactionCategory from './ui/TransactionCategory';
 import TransactionHeader from './ui/TransactionHeader';
 
@@ -62,6 +63,7 @@ export default function TransactionView({ txId, onClose }: Props) {
       ) : null}
 
       <PaymentNote tx={tx} />
+      <RegularNote tx={tx} />
 
       {tx.raw_sms ? (
         <>

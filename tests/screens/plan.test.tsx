@@ -223,6 +223,8 @@ describe('6.3 the categories in the plan', () => {
   test('a regular payment within the month: every week on Mondays and Thursdays — the times by the amount; not repeated — this month only', async () => {
     await tap('Изменить: 👕 Одежда');
     await tap(await screen.findByRole('radio', { name: /Регулярный платёж/ }));
+    // "Траты категории" for a category without merchants' payments
+    expect(screen.getByText('Любая трата категории около даты — это оплата.')).toBeTruthy();
     await tap('Каждую неделю');
     expect(await screen.findByText('Выберите дни недели')).toBeTruthy();
     expect(screen.getByText('Сумма за раз')).toBeTruthy();
@@ -235,7 +237,8 @@ describe('6.3 the categories in the plan', () => {
     expect(screen.getByText('Дата окончания (необязательно)')).toBeTruthy();
     await tap('Сохранить');
     expect(await screen.findByText('План «👕 Одежда» сохранён')).toBeTruthy();
-    expect(await screen.findByText('пн, чт · 9 × 20\u00a0₾')).toBeTruthy();
+    // the plan, not what was paid: the next day by the calendar (today the 15th, a Thursday)
+    expect(await screen.findByText('пн, чт · 9 × 20\u00a0₾ · 15 окт')).toBeTruthy();
     expect(await (await getDb()).get("SELECT p.limit_minor AS a, p.kind, p.every, p.weekdays, p.unit_minor AS u FROM plan_items p JOIN categories c ON c.id = p.category_id WHERE p.ym = '2026-10' AND c.name = 'Одежда'"))
       .toEqual({ a: 18000, kind: 'fixed', every: 'week', weekdays: 9, u: 2000 });
     // its sheet again: the same, the amount each time

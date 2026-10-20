@@ -9,12 +9,14 @@ import { saveFund, savePlanAmount, saveRegular } from '../model/commands';
 import { turnOffRecurring } from './turnOffRecurring';
 import { askTakeLocked } from './askTakeLocked';
 import { savedText } from './sheetOptions';
-import type { RegularEvery } from './RegularFields';
+import type { RegularEvery, RegularMode } from './RegularFields';
+import { submitCategoryPayment } from './submitCategoryPayment';
+import { dateNeeded, UNTIL_BEFORE } from './sheetOptions';
 import type { PlanAmountTarget } from './PlanAmountModal';
 
 export type PlanSheetValues = {
   kind: PlanKind; currency: Currency; norm: NormPeriod; due: string | null; start: string;
-  pinned: boolean; until: string | null; every: RegularEvery; weekdays: number;
+  pinned: boolean; until: string | null; every: RegularEvery; weekdays: number; mode: RegularMode; period: number; next: string | null;
 };
 
 type Args = {
@@ -29,18 +31,23 @@ export async function submitPlanSheet({ ym, target, text, v, adding, locked, fre
   const minor = parseAmountOrZero(text);
   if (minor === null) return AMOUNT_HINT;
   const k = v.kind;
-  const regular = k === 'subs' && v.every !== 'month';
+  const regular = k === 'subs' && v.mode === 'category' && v.every !== 'month';
+  const own = k === 'subs' && v.mode === 'category' && v.every === 'month';
   const startMinor = parseAmountOrZero(v.start ?? '');
   if (k === 'fund' && (!minor || startMinor === null)) return minor ? AMOUNT_HINT : 'Введите, сколько накопить';
   if (regular && !minor) return 'Введите сумму за раз';
   if (regular && v.every === 'week' && !v.weekdays) return 'Выберите дни недели';
+  if (own && !minor) return 'Введите сумму платежа';
+  if (own && !v.next && v.period !== 1) return dateNeeded();
+  if (own && v.until && v.next && v.until < v.next) return UNTIL_BEFORE;
   // another kind (or a regular payment within the month) for a category with regular payments: they are turned off
   // first (asked if they saved something)
   const off = !!target.recurring && (k !== 'subs' || regular);
   if (off && !(await turnOffRecurring(target.category_id))) return false;
   const saved = (taken?: string) => { toast(savedText(k, target.label, adding, off, taken)); onSaved(); };
+  if (own) return submitCategoryPayment(ym, target, { amount_minor: minor, currency: v.currency, period: v.period, due: v.next, until: v.until }, adding, saved, onClose, free);
   // a category with regular payments: its amount by hand (until one of them has a day)
-  const byHand = k === 'subs' && !regular;
+  const byHand = k === 'subs' && v.mode === 'merchant';
   const write = async (takeLocked: boolean) => {
     if (k === 'fund' && v.due) return saveFund(ym, target.category_id, { target_minor: minor, currency: v.currency, due: v.due, start_minor: startMinor ?? 0 }, undefined, takeLocked);
     if (regular) {

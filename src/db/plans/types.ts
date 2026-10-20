@@ -39,17 +39,26 @@ export type PlanItem = {
   every: Every | null;
   weekdays: number | null;
   unit_minor: number | null;
+  /**
+   * the current month's regular payment within it: what it is expected to take by the month's end — its days paid and
+   * those to come, by the amount (a day gone unpaid is skipped: its amount goes to the savings), in `currency`
+   */
+  expected_minor?: number;
   /** amount of the same item in the month this plan was carried over from (placeholder hint) */
   previous_minor: number | null;
   /** the category's system kind, null / absent for the user's own */
   system?: string | null;
   /** "Регулярные платежи" on: its item counted from its payments */
   recurring?: boolean;
+  /** "Разные мерчанты": a payment of each merchant (from an operation), as "Подписки"; off — the category's spending is its payment */
+  by_merchant?: boolean;
   /** with repeating payments: those charged by name, those saved up for, their contributions in the plan's currency */
   subs?: {
     names: string[]; saving_names: string[];
     /** the month's contributions (in "Сбережения" of the plan), what is saved by the month's end and for how much (its ring) */
     saving_minor: number; saving_end_minor: number; saving_amount_minor: number;
+    /** its own payment (no merchant, "Разные мерчанты" off): the row opens the plan's sheet */
+    own?: boolean;
     /** none at all ("Подписки" without subscriptions) */
     empty?: boolean;
     /** all its payments in one currency: the month's charges and contributions in it */

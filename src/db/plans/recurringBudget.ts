@@ -25,9 +25,11 @@ export async function recurringShort(ym: string, delta: number, contribution?: {
  */
 export async function paymentShort(
   ym: string, categoryId: number, change: number, after: { minor: number; currency: Currency }, contribution?: { minor: number; currency: Currency },
+  replacing = false,
 ): Promise<Short | null> {
   const kind = (await (await getDb()).get<{ kind: string }>('SELECT kind FROM plan_items WHERE ym = ? AND category_id = ?', [ym, categoryId]))?.kind;
-  if (!kind || kind === 'subs') return recurringShort(ym, change, contribution);
+  // `replacing`: the category's own payment goes with it — the item becomes its charges, as one by hand
+  if (!kind || (kind === 'subs' && !replacing)) return recurringShort(ym, change, contribution);
   const budget = await storedBudget(ym);
   if (!budget) return null;
   const was = (await plannedTotal(ym, undefined, budget.currency)) - (await plannedTotal(ym, categoryId, budget.currency));

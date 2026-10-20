@@ -140,4 +140,21 @@ export const STEPS_43_ON: MigrationStep[][] = [
     'ALTER TABLE plan_items ADD COLUMN weekdays INTEGER',
     'ALTER TABLE plan_items ADD COLUMN unit_minor INTEGER CHECK (unit_minor >= 0)',
   ],
+  // 51: "Разные мерчанты" of a category: on — a payment of each merchant (from an operation), as "Подписки"; off — the
+  // category's spending is its payment. On for "Подписки" and the categories with merchants' payments
+  [
+    'ALTER TABLE categories ADD COLUMN by_merchant INTEGER NOT NULL DEFAULT 0',
+    `UPDATE categories SET by_merchant = 1 WHERE name = 'Подписки'
+      OR id IN (SELECT category_id FROM recurring_payments WHERE merchant_key IS NOT NULL AND deleted_at IS NULL AND category_id IS NOT NULL)`,
+  ],
+  // 52: "Это оплата?" — an operation (its part in a category) of another amount than the category's payment ("Траты
+  // категории"): answered yes (1) or no (0); not answered — not counted as paying it
+  [
+    `CREATE TABLE payment_answers (
+      tx_id INTEGER NOT NULL REFERENCES transactions(id) ON DELETE CASCADE,
+      category_id INTEGER NOT NULL,
+      is_payment INTEGER NOT NULL CHECK (is_payment IN (0, 1)),
+      PRIMARY KEY (tx_id, category_id)
+    )`,
+  ],
 ];

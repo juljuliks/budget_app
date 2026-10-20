@@ -17,7 +17,8 @@ import { openCategory, pickPaymentOperation } from '@/shared/navigation/navigati
 import { monthDays } from '@/shared/lib/dateRange';
 import FundFields, { FundForm } from './FundFields';
 import PlanFacts from './PlanFacts';
-import RegularFields, { RegularForm } from './RegularFields';
+import RegularFields, { RegularEvery, RegularForm, RegularMode } from './RegularFields';
+import { askMerchants } from './askMerchants';
 import RepeatField, { RepeatForm } from './RepeatField';
 import { BY_HAND_HINT, COUNTED_HINT, KINDS, patterns, PICK_HINT } from './sheetOptions';
 import { PlanSheetValues, submitPlanSheet } from './submitPlanSheet';
@@ -38,10 +39,13 @@ export type PlanAmountTarget = {
   /** a fund: its target (in `currency`, the sheet's amount), date and what was saved before */
   fund?: { target_minor: number; due: string; start_minor: number };
   /**
-   * "Регулярные платежи" on: its kind is "Регулярный платёж" (its amount here by hand until a payment has a day; the
-   * payments are in their own sheet); another kind turns them off. Off, that kind picks an operation to make one from
+   * "Регулярные платежи" on: its kind is "Регулярный платёж"; another kind turns them off. "По мерчантам" (`by_merchant`):
+   * the payments are in their own sheet (made from operations; the amount here by hand until one has a day); "Траты
+   * категории": its own payment (`own`) is in this sheet
    */
   recurring?: boolean;
+  by_merchant?: boolean;
+  own?: boolean;
   /** "Повторять каждый месяц": the next month has it with the same amount (till `until`, "Дата окончания") */
   pinned?: boolean;
   until?: string | null;
@@ -69,6 +73,22 @@ type Props = {
 };
 
 /**
+ * What the sheet is for its kind: a regular payment within the month (`regular`), the category's own payment (`own`),
+ * "По мерчантам" — an operation to pick (`pick`: none of them yet) or the amount counted from them (`counted`).
+ */
+function sheetMode(target: PlanAmountTarget | null, kind: PlanKind, mode: RegularMode, every: RegularEvery) {
+  const subs = kind === 'subs' && !!target;
+  const merchants = subs && mode === 'merchant';
+  const theirs = !!target?.recurring && !!target.by_merchant;
+  return {
+    regular: subs && mode === 'category' && every !== 'month',
+    own: subs && mode === 'category' && every === 'month',
+    pick: merchants && !theirs,
+    counted: merchants && theirs && target?.kind === 'subs',
+  };
+}
+
+/**
  * "Регулярный платёж" for a category without them: made from an operation — the sheet (and those under it) closes for
  * the category's operations of the month to pick one from.
  */
@@ -92,15 +112,11 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
   const form = useLoadedForm<FundForm & RegularForm & { kind: PlanKind; norm: NormPeriod }>(target ? {
     value: toInputValue(target.fund ? target.fund.target_minor : target.every ? target.unit_minor ?? 0 : target.limit_minor), currency: target.currency,
     kind: target.recurring || target.every ? 'subs' : target.kind ?? 'limit', pinned: !!target.pinned, until: target.until ?? null,
-    every: target.every ?? 'month', weekdays: target.weekdays ?? 0,
+    every: target.every ?? 'month', weekdays: target.weekdays ?? 0, mode: target.by_merchant ? 'merchant' : 'category', period: 1, next: null,
     norm: target.norm_period ?? 'day', due: target.fund?.due ?? null, start: target.fund?.start_minor ? toInputValue(target.fund.start_minor) : '',
   } : null, target !== null);
-  const [kind, due, every] = useWatch({ control: form.control, name: ['kind', 'due', 'every'] });
-  // a regular payment within the month: an amount each time; every month and rarer — made from an operation
-  const regular = kind === 'subs' && every !== 'month';
-  const pick = kind === 'subs' && !regular && !!target && !target.recurring;
-  // counted from its payments' charges: no amount here (another kind, or out of the plan)
-  const counted = kind === 'subs' && !regular && !!target?.recurring && target.kind === 'subs';
+  const [kind, due, every, mode] = useWatch({ control: form.control, name: ['kind', 'due', 'every', 'mode'] });
+  const s = sheetMode(target, kind, mode, every);
   const [entered, enteredCurrency] = useWatch({ control: form.control, name: ['value', 'currency'] });
   const [previous, setPrevious] = useState<{ minor: number; currency: Currency; ym: string } | null>(null);
   // what the category usually takes a month (the latest full months), in the app's currency
@@ -143,8 +159,8 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
 
   async function save(text: string): Promise<string | null | false> {
     if (!target) return null;
-    if (pick) return goPick(target, ym, onLeave ?? onClose);
-    if (counted) return null;
+    if (s.pick) return askMerchants(target, () => goPick(target, ym, onLeave ?? onClose));
+    if (s.counted) return null;
     return submitPlanSheet({ ym, target, text, v: form.getValues() as PlanSheetValues, adding: !!adding, locked, free, onSaved, onClose });
   }
 
@@ -163,7 +179,7 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
       title={adding ? 'Добавить в план' : target?.label ?? ''}
       // the category's name a link to its page (the sheet closes: a page goes under the sheets)
       onTitlePress={!adding && target ? () => { onClose(); openCategory(target.category_id); } : undefined}
-      submitLabel={pick ? 'Выбрать операцию' : adding ? 'Добавить в план' : undefined} noInput={pick || counted}
+      submitLabel={s.pick ? 'Выбрать операцию' : adding ? 'Добавить в план' : undefined} noInput={s.pick || s.counted}
       hint={hint} form={form} placeholder="0" keyboardType="decimal-pad"
       maxLength={12}
       allowEmpty
@@ -172,7 +188,7 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
       // an item in the plan: removing it is a button under "Сохранить", as on the other sheets
       remove={onDelete ? { title: 'Удалить из плана', onPress: () => { onClose(); onDelete(); } } : undefined}
       inputAccessory={<Controller control={form.control} name="currency" render={({ field }) => <CurrencyButton value={field.value} onChange={field.onChange} />} />}
-      label={kind === 'fund' ? 'Накопить' : regular ? 'Сумма за раз' : undefined}
+      label={kind === 'fund' ? 'Накопить' : s.regular ? 'Сумма за раз' : s.own ? 'Сумма платежа' : undefined}
       submitDisabled={kind === 'fund' && !due}
       // the kind first: the field under it is a month's amount or a fund's target
       above={<Controller control={form.control} name="kind" render={({ field }) => <RadioGroup options={KINDS} value={field.value} onChange={field.onChange} />} />}
@@ -185,8 +201,8 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
         </>
       ) : null}
       {kind === 'limit' && target ? <RepeatField ym={ym} form={form as unknown as UseFormReturn<RepeatForm>} entered={entered ?? ''} currency={enteredCurrency} /> : null}
-      {kind === 'subs' && target ? <RegularFields ym={ym} form={form as unknown as Parameters<typeof RegularFields>[0]['form']} /> : null}
-      {kind === 'subs' && target && !regular ? <Text style={formStyles.hint}>{pick ? PICK_HINT : counted ? COUNTED_HINT : BY_HAND_HINT}</Text> : null}
+      {kind === 'subs' && target ? <RegularFields ym={ym} categoryId={target.category_id} form={form as unknown as Parameters<typeof RegularFields>[0]['form']} /> : null}
+      {kind === 'subs' && target && mode === 'merchant' ? <Text style={formStyles.hint}>{s.pick ? PICK_HINT : s.counted ? COUNTED_HINT : BY_HAND_HINT}</Text> : null}
       {kind === 'fund' && target ? <FundFields ym={ym} categoryId={target.category_id} form={form as unknown as UseFormReturn<FundForm>} /> : null}
     </TextInputModal>
   );

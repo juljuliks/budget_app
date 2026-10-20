@@ -12,7 +12,8 @@ export type PaymentCategory = { id: number; name: string; emoji: string | null }
 export type PaymentTarget = {
   id?: number;
   category: PaymentCategory;
-  merchant_key: string;
+  /** null — the category's own payment (its spending is its charges) */
+  merchant_key: string | null;
   name: string;
   amount_minor: number;
   currency: Currency;

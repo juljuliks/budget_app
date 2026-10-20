@@ -93,3 +93,26 @@ test('a merchant of different categories: they merge in its list; all of them me
   expect(await isMixedMerchant('WOLT')).toBe(false);
   expect(await findCategoryForMerchant('WOLT')).toEqual({ category_id: cafe, source: 'rule' });
 });
+
+test('a regular payment within the month picked: the merged item keeps its days and amount each time, not the sum', async () => {
+  const yoga = await createCategory('Йога');
+  const gym = await createCategory('Зал');
+  await plan('2026-10', yoga, 18000, 'fixed', 'month');
+  // Tuesdays and Fridays, 20 ₾ each: 9 times in October
+  await (await getDb()).run("UPDATE plan_items SET every = 'week', weekdays = ?, unit_minor = 2000 WHERE category_id = ?", [(1 << 1) | (1 << 4), yoga]);
+  await plan('2026-10', gym, 30000);
+  await mergeCategories(yoga, [gym], 'Спорт', null, { kind: 'fixed', norm: 'month', every: 'week', weekdays: (1 << 1) | (1 << 4) });
+  expect(await (await getDb()).get('SELECT limit_minor, kind, every, weekdays, unit_minor FROM plan_items WHERE category_id = ?', [yoga]))
+    .toEqual({ limit_minor: 18000, kind: 'fixed', every: 'week', weekdays: 18, unit_minor: 2000 });
+});
+
+test('another rhythm picked: no longer a regular payment — the amounts summed', async () => {
+  const yoga = await createCategory('Йога');
+  const gym = await createCategory('Зал');
+  await plan('2026-10', yoga, 18000, 'fixed', 'month');
+  await (await getDb()).run("UPDATE plan_items SET every = 'week', weekdays = 18, unit_minor = 2000 WHERE category_id = ?", [yoga]);
+  await plan('2026-10', gym, 30000);
+  await mergeCategories(yoga, [gym], 'Спорт', null, { kind: 'limit', norm: 'day' });
+  expect(await (await getDb()).get('SELECT limit_minor, kind, every FROM plan_items WHERE category_id = ?', [yoga]))
+    .toEqual({ limit_minor: 48000, kind: 'limit', every: null });
+});

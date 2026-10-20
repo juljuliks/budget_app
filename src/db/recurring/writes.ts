@@ -4,7 +4,7 @@ import { Currency } from '../fx';
 import { currentYm } from '../plans/months';
 import { refreshRecurringItems } from '../plans/recurringItems';
 import { SavingUndo, stopSaving, undoSaving } from './savingWrites';
-import { subscriptionsCategoryId } from '../categories';
+import { setByMerchant, subscriptionsCategoryId } from '../categories';
 import { periodColumns } from './period';
 import type { Period } from './schedule';
 import { RecurringUndo, turnRecurring, undoRecurring } from './recurring';
@@ -12,8 +12,8 @@ import { RecurringUndo, turnRecurring, undoRecurring } from './recurring';
 export type PaymentInput = {
   /** the category it is a payment of; none — the one it had (a new one: "Подписки") */
   category_id?: number | null;
-  /** the merchant it is made from (an operation's) */
-  merchant_key: string;
+  /** the merchant it is made from (an operation's); null — the category's own ("Разные мерчанты" off) */
+  merchant_key: string | null;
   name: string;
   amount_minor: number;
   currency: Currency;
@@ -31,7 +31,10 @@ export type PaymentInput = {
  */
 export async function savePayment(input: PaymentInput, id?: number): Promise<number> {
   const db = await getDb();
-  const own = id ?? (await db.get<{ id: number }>('SELECT id FROM recurring_payments WHERE merchant_key = ? AND deleted_at IS NULL', [input.merchant_key]))?.id;
+  // the merchant's one, or the category's own: changed, not another made
+  const own = id ?? (input.merchant_key
+    ? (await db.get<{ id: number }>('SELECT id FROM recurring_payments WHERE merchant_key = ? AND deleted_at IS NULL', [input.merchant_key]))?.id
+    : input.category_id ? (await db.get<{ id: number }>('SELECT id FROM recurring_payments WHERE category_id = ? AND merchant_key IS NULL AND deleted_at IS NULL', [input.category_id]))?.id : undefined);
   const category = input.category_id
     ?? (own !== undefined ? (await db.get<{ c: number | null }>('SELECT category_id AS c FROM recurring_payments WHERE id = ?', [own]))?.c : null)
     ?? await subscriptionsCategoryId(db);
@@ -45,6 +48,13 @@ export async function savePayment(input: PaymentInput, id?: number): Promise<num
       'INSERT INTO recurring_payments (category_id, merchant_key, name, amount_minor, currency, period_months, period_unit, due, until, since_ym, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [...values, currentYm(), Math.floor(Date.now() / 1000)]);
     out = r.lastInsertRowid;
+  }
+  // a merchant's payment: the category is "По мерчантам" — its own payment (if it had one) goes now, not when the
+  // operation was only being picked (cancelled, it stays)
+  if (typeof category === 'number' && input.merchant_key) {
+    await setByMerchant(category, true, db);
+    const owns = await db.all<{ id: number }>('SELECT id FROM recurring_payments WHERE category_id = ? AND merchant_key IS NULL AND deleted_at IS NULL', [category]);
+    for (const o of owns) await deletePayment(o.id);
   }
   if (typeof category === 'number') await turnRecurring(category, true);
   else await refreshRecurringItems();

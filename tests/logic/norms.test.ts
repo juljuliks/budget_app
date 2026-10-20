@@ -167,3 +167,19 @@ test('the limit for the viewed days: a share of a weekly limit, the days of a da
   expect(across.byCategory.get(food)!.periodParts.map((p) => p.ym)).toEqual(['2025-09', '2025-10']);
   expect(across.byCategory.get(food)!.periodNorm).toBeCloseTo(5000);
 });
+
+test('a regular payment within the month: a limit of its rhythm in the period\'s stats, not a one-off payment of the whole month', async () => {
+  const { setRegularItem } = require('../../src/db/plans');
+  const lunch = await createCategory('Обеды');
+  const yoga = await createCategory('Йога');
+  await setRegularItem('2025-10', lunch, { every: 'day', weekdays: 0, unit_minor: 500, until: null, pinned: true }, 'GEL');
+  // Tuesdays and Fridays in October 2025: 9 times
+  await setRegularItem('2025-10', yoga, { every: 'week', weekdays: (1 << 1) | (1 << 4), unit_minor: 2000, until: null, pinned: true }, 'GEL');
+  const n = await loadNorms(day, 'GEL');
+  expect(n.byCategory.get(lunch)).toMatchObject({ kind: 'limit', rhythm: 'day', monthLimit: 31 * 500 });
+  // a day: the amount each time — its days, not a share of the month
+  expect(n.byCategory.get(lunch)!.periodNorm).toBe(500);
+  expect(n.byCategory.get(yoga)).toMatchObject({ kind: 'limit', rhythm: 'week', monthLimit: 9 * 2000 });
+  // its week Sep 29 – Oct 5: Tuesday the 30th (September has no plan) and Friday the 3rd — one time, not 18 000 / 31 × 7
+  expect(n.byCategory.get(yoga)!.windowNorm).toBe(2000);
+});

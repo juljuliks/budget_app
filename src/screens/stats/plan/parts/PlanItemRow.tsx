@@ -8,6 +8,7 @@ import { LockIcon } from '@/shared/ui/icons';
 import { colors } from '@/shared/theme/theme';
 import { normText, percentOf, PlanView, SystemRow } from '../model/planView';
 import { regularNote } from '../model/regularNote';
+import { dayKeyOf } from '@/shared/lib/dateRange';
 import LessNote from './LessNote';
 import { KindIcon } from './PlanIcon';
 import { styles, toneStyle } from './styles';
@@ -38,7 +39,7 @@ export function PlanItemRow({ p, item, ym, currency, hidden, toShown, onOpen }: 
   const label = `${item.emoji || ''} ${item.name}`.trim();
   // a regular payment within the month ("каждый день · 31 × 5 ₾"), a one-off payment; a flexible item's amount per its
   // norm rhythm, e.g. "лимит ≈ 46 ₾ в неделю"
-  const note = item.every ? regularNote(item, ym) : item.kind === 'fixed' ? 'разовый платёж' : item.kind === 'limit' && !hidden ? normText(item, ym, currency) : '';
+  const note = item.every ? regularNote(item, ym, dayKeyOf(new Date())) : item.kind === 'fixed' ? 'разовый платёж' : item.kind === 'limit' && !hidden ? normText(item, ym, currency) : '';
   return (
     <TouchableOpacity style={styles.row} onPress={onOpen} accessibilityLabel={`Изменить: ${categoryLabel(item)}`}>
       <KindIcon item={item} />

@@ -17,6 +17,11 @@ export const BY_HAND_HINT = 'Сумма считается из списаний
 
 export const COUNTED_HINT = 'Сумма считается из списаний платежей категории. Другой вид выключит регулярные платежи.';
 
+/** "Траты категории", monthly or rarer: the next charge is needed (the charges are counted from it). */
+export const dateNeeded = () => 'Выберите дату следующего списания';
+
+export const UNTIL_BEFORE = 'Дата окончания раньше следующего списания';
+
 export const PICK_HINT = 'Платёж делается из операции: выберите её среди операций категории за месяц — сумма, мерчант и дата следующего списания возьмутся из неё.';
 
 // how the category is spent: its limit in day / week stats is counted per this period

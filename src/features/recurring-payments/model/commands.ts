@@ -2,7 +2,7 @@
 // for or not (turned off with something saved, or deleted: asked first — what it had goes to this month's savings).
 import { currentYm, paymentShort, planEffect, recurringShort, takeLocked } from '@/db/plans';
 import {
-  ONCE,
+  ONCE, categoryPayment,
   deletePayment, restorePayment, savedNow, savePayment, SavingUndo, startSaving, stopSaving, PaymentInput, undoSaving,
 } from '@/db/recurring';
 import { emitTransactionsChanged } from '@/domain/events';
@@ -71,8 +71,10 @@ async function check(input: PaymentInput, id: number | undefined, onDone: () => 
     const charges = now ? effect.delta_minor : 0;
     const contribution = saving?.on && input.due ? { minor: saving.contribution, currency: input.currency } : undefined;
     // the category's item by hand till now (its first payment with a day): it becomes the month's charges
+    // a merchant's payment replaces the category's own one ("По мерчантам" picked): not on top of it
+    const replacing = !!input.merchant_key && !!input.category_id && !!(await categoryPayment(input.category_id));
     const over = input.category_id
-      ? await paymentShort(ym, input.category_id, charges, { minor: now ? effect.after_minor : 0, currency: effect?.currency ?? input.currency }, contribution)
+      ? await paymentShort(ym, input.category_id, charges, { minor: now ? effect.after_minor : 0, currency: effect?.currency ?? input.currency }, contribution, replacing)
       : await recurringShort(ym, charges, contribution);
     if (over && over.locked > 0) {
       askTakeLocked({ ...over, adding: id === undefined, onYes: (take) => {

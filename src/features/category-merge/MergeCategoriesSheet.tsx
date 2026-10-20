@@ -1,3 +1,4 @@
+import { WEEKDAYS } from '@/shared/lib/dates';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { Category, categoryLabel, listCategories } from '@/db/categories';
@@ -14,8 +15,12 @@ import { NO_SECTION, SPENDING_PATTERN, LOAD_FAILED } from '@/shared/lib/strings'
 import { colors } from '@/shared/theme/theme';
 import { toast, toastError, toastFailure } from '@/shared/ui/toast';
 
-const rhythmKey = (r: MergeRhythm) => `${r.kind}:${r.norm}`;
-const rhythmTitle = (r: MergeRhythm) => (r.kind === 'fixed' ? 'Разовый платёж' : `Лимит · ${SPENDING_PATTERN[r.norm].title.toLowerCase()}`);
+const rhythmKey = (r: MergeRhythm) => `${r.kind}:${r.norm}:${r.every ?? ''}:${r.weekdays ?? ''}`;
+// a regular payment within the month: its days ("Регулярный платёж · пн, чт")
+const regularDaysText = (r: MergeRhythm) => (r.every === 'day' ? 'каждый день'
+  : [0, 1, 2, 3, 4, 5, 6].filter((i) => ((r.weekdays ?? 0) & (1 << i)) !== 0).map((i) => WEEKDAYS[(i + 1) % 7]).join(', '));
+const rhythmTitle = (r: MergeRhythm) => (r.every ? `Регулярный платёж · ${regularDaysText(r)}`
+  : r.kind === 'fixed' ? 'Разовый платёж' : `Лимит · ${SPENDING_PATTERN[r.norm].title.toLowerCase()}`);
 
 /**
  * Merging the categories picked (in the order picked) into the first: its name ("Кафе & Рестораны"), section and
@@ -57,7 +62,7 @@ export default function MergeCategoriesSheet({ ids, onClose, onMerged }: {
       for (const id of ids) {
         const i = items.find((x) => x.category_id === id);
         if (!i) continue;
-        const r: MergeRhythm = { kind: i.kind, norm: i.kind === 'fixed' ? 'month' : i.norm_period };
+        const r: MergeRhythm = { kind: i.kind, norm: i.kind === 'fixed' ? 'month' : i.norm_period, every: i.every, weekdays: i.every === 'week' ? i.weekdays : null };
         const c = picked.find((x) => x.id === id);
         const way = ways.find((w) => rhythmKey(w.rhythm) === rhythmKey(r));
         if (way) way.names.push(c?.name ?? '');

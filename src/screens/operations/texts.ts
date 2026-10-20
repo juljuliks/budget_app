@@ -37,4 +37,13 @@ export function bulkSplitText(split: number, toLabel: string | null) {
 /** Picking an operation for a category's repeating payment (the plan's "Выбрать операцию", "＋ Добавить платёж"). */
 export const pickBanner = (label: string) => `Платёж «${label}»: выберите операцию`;
 export const PICK_NOT_SPENDING = 'Это не трата — платёж делается из покупки, оплаты или перевода';
+export const PICK_TRANSFER = 'Перевод — это платёж по тратам категории: в плане выберите «Траты категории»';
 export const PICK_NO_MERCHANT = 'У операции нет мерчанта — по ней не узнать следующие списания. Выберите другую';
+
+/** The operation picked is of another category than the payment's: move it (and its merchant) there? */
+export const pickMoveText = (from: string, to: string, merchant: string) => ({
+  title: `Перенести в «${to}»?`,
+  message: `Операция в «${from}». Платёж будет в «${to}», а траты ${merchant} останутся в «${from}» — в плане списания и траты разойдутся.`,
+  keep: `Оставить в «${from}»`,
+  move: `Перенести ${merchant} в «${to}»`,
+});
