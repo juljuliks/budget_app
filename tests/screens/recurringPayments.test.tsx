@@ -567,6 +567,22 @@ describe('6.7.13 "Подписки" on a category\'s page', () => {
     expect(await db.get('SELECT count(*) AS n FROM recurring_payments WHERE deleted_at IS NULL')).toEqual({ n: 0 });
   });
 
+  test('on: its subscriptions and its merchants without one under it — "Сделать подпиской" makes one in a tap', async () => {
+    await openApp(seed);
+    await openSettings('Категории');
+    await tap('📺 Подписки');
+    expect(await screen.findByText('Пока нет подписок: сделайте подпиской мерчанта ниже или выберите операцию.')).toBeTruthy();
+    expect(screen.getByText('Мерчанты без подписки')).toBeTruthy();
+    expect(screen.getByText('последняя 10 окт · Сделать подпиской')).toBeTruthy();
+    await tap('Подписка: NETFLIX.COM');
+    // the day offered from its last charge
+    expect(await screen.findByText(/^10 ноября 2026/)).toBeTruthy();
+    await tap('Сохранить');
+    expect(await screen.findByText('каждый месяц · следующее 10 ноя')).toBeTruthy();
+    expect(screen.queryByText('Мерчанты без подписки')).toBeNull();
+    expect(screen.getByText('＋ Добавить подписку')).toBeTruthy();
+  });
+
   test('a category without merchants\' charges: no switch', async () => {
     await openApp(async () => { await seed(); await require('../../src/db/categories').createCategory('Психолог', '🧠'); });
     await openSettings('Категории');

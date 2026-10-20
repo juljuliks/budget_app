@@ -4,6 +4,7 @@ import { Category, getCategory, isSystemCategory, isTransferCategory } from '@/d
 import { hasMerchantCharges } from '@/db/recurring';
 import SwitchRow from '@/shared/ui/SwitchRow';
 import { switchSubscriptions } from '../model/subscriptionsSwitch';
+import CategorySubscriptions from './CategorySubscriptions';
 
 const HINT_ON = 'Каждый мерчант категории — отдельная подписка: сумма, как часто, следующее списание. План категории считается из них.';
 const HINT_OFF = 'Следить за списаниями мерчантов, как у Netflix или страховки: подписка делается из операции.';
@@ -24,10 +25,13 @@ export default function SubscriptionsSwitch({ categoryId }: { categoryId: number
   if (!c || isSystemCategory(c) || isTransferCategory(c) || (!c.by_merchant && !merchants)) return null;
   const on = !!c.by_merchant;
   return (
-    <SwitchRow
-      label="Подписки" hint={on ? HINT_ON : HINT_OFF} on={on} style={styles.row}
-      onChange={(v) => { switchSubscriptions(categoryId, v, load).catch((e) => console.error('subscriptions switch failed', e)); }}
-    />
+    <>
+      <SwitchRow
+        label="Подписки" hint={on ? HINT_ON : HINT_OFF} on={on} style={styles.row}
+        onChange={(v) => { switchSubscriptions(categoryId, v, load).catch((e) => console.error('subscriptions switch failed', e)); }}
+      />
+      {on ? <CategorySubscriptions category={{ id: c.id, name: c.name, emoji: c.emoji }} /> : null}
+    </>
   );
 }
 
