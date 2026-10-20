@@ -207,4 +207,11 @@ export const STEPS_43_ON: MigrationStep[][] = [
   ],
   // 54: a category's own regular payment isn't matched with operations any more: "Это оплата?" answers gone
   ['DROP TABLE IF EXISTS payment_answers'],
+  // 55: a regular payment within the month is always carried over, "Дата окончания" its end: one saved not repeated
+  // ends with its month
+  [
+    `UPDATE plan_items SET pinned = 1, until = CASE WHEN until IS NOT NULL AND until < date(ym || '-01', '+1 month', '-1 day')
+        THEN until ELSE date(ym || '-01', '+1 month', '-1 day') END
+      WHERE kind = 'fixed' AND every IS NOT NULL AND pinned = 0`,
+  ],
 ];

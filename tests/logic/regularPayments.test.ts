@@ -93,18 +93,18 @@ describe('carry-over', () => {
   // future months: ensureMonthPlan treats them as current or coming
   const M1 = '2099-01', M2 = '2099-02', M3 = '2099-03';
 
-  test('a regular payment: its month the times by the amount; repeated — the next month its own days; not — gone', async () => {
-    await setRegularItem(M1, 1, { every: 'day', weekdays: 0, unit_minor: 500, until: null, pinned: true }, 'GEL');
-    await setRegularItem(M1, 2, { every: 'week', weekdays: MON, unit_minor: 3000, until: null, pinned: false }, 'GEL');
+  test('a regular payment: its month the times by the amount; always carried over — the next month its own days; its end ends it', async () => {
+    await setRegularItem(M1, 1, { every: 'day', weekdays: 0, unit_minor: 500, until: null }, 'GEL');
+    await setRegularItem(M1, 2, { every: 'week', weekdays: MON, unit_minor: 3000, until: `${M1}-31` }, 'GEL');
     expect((await listPlan(M1)).map((i) => ({ id: i.category_id, limit: i.limit_minor, kind: i.kind, every: i.every }))).toEqual([
       { id: 1, limit: 31 * 500, kind: 'fixed', every: 'day' }, { id: 2, limit: timesInMonth(M1, 'week', MON) * 3000, kind: 'fixed', every: 'week' }]);
-    // February 2099: 28 days; the weekly one not repeated — not there
+    // February 2099: 28 days; the weekly one ended with January — not there
     expect((await listPlan(M2)).map((i) => ({ id: i.category_id, limit: i.limit_minor, every: i.every, unit: i.unit_minor }))).toEqual([
       { id: 1, limit: 28 * 500, every: 'day', unit: 500 }]);
   });
 
   test('"Дата окончания": a regular payment counts its days up to it and isn\'t carried past it; a limit stops repeating', async () => {
-    await setRegularItem(M1, 1, { every: 'day', weekdays: 0, unit_minor: 500, until: `${M2}-10`, pinned: true }, 'GEL');
+    await setRegularItem(M1, 1, { every: 'day', weekdays: 0, unit_minor: 500, until: `${M2}-10` }, 'GEL');
     await addPlanItem(M1, 2); await setPlanAmount(M1, 2, 30000); await setPlanPinned(M1, 2, true, `${M1}-31`);
     expect((await listPlan(M2)).map((i) => ({ id: i.category_id, limit: i.limit_minor, pinned: i.pinned, until: i.until }))).toEqual([
       // February: up to the 10th; the limit — after its end: carried without its amount, not repeated
@@ -113,7 +113,7 @@ describe('carry-over', () => {
   });
 
   test('another kind saved: no longer a regular payment', async () => {
-    await setRegularItem(M1, 1, { every: 'day', weekdays: 0, unit_minor: 500, until: null, pinned: true }, 'GEL');
+    await setRegularItem(M1, 1, { every: 'day', weekdays: 0, unit_minor: 500, until: null }, 'GEL');
     await setPlanAmount(M1, 1, 20000, 'fixed');
     expect((await listPlan(M1))[0]).toMatchObject({ limit_minor: 20000, every: null, unit_minor: null });
   });

@@ -26,14 +26,14 @@ export function RecurringItemRow({ p, item, hidden, onOpen }: Props) {
   const listed = [names.join(', '), saving.length ? `копим: ${saving.join(', ')}` : ''].filter(Boolean).join(' · ');
   const w = paymentWords(!!item.by_merchant);
   const one = item.subs?.single;
-  // its only payment: how often and when (the plan, not what was paid: a charge done — the next one; "без даты" — the
-  // amount stands each month)
+  // its only payment: how often and when (the plan, not what was paid: a charge done — the next one); a subscription
+  // without a day — "без даты"; a monthly regular payment has none: how often only
   const next = one?.day && one.done ? (one.period === ONCE ? null : chargeAt(one.day, one.period, 1)) : null;
   const single = one ? [periodText(one.period),
     next ? `следующее ${shortDay(next)}` : one.day && one.done ? shortDay(one.day)
       // "через N дней" — from today: in the current month's plan only (in November's "через месяц" read as December)
-      : one.day ? [shortDay(one.day), p.timing === 'current' ? inTime(one.day, todayKey()) : null].filter(Boolean).join(', ') : 'без даты',
-  ].join(' · ') : null;
+      : one.day ? [shortDay(one.day), p.timing === 'current' ? inTime(one.day, todayKey()) : null].filter(Boolean).join(', ') : item.by_merchant ? 'без даты' : null,
+  ].filter(Boolean).join(' · ') : null;
   // "(6 $)": all its payments in one currency, not the screen's
   const own = item.kind === 'subs' ? item.subs?.in_currency : undefined;
   const foreign = own && own.currency !== p.currency && own.charges_minor > 0 ? formatWithCurrency(own.charges_minor, own.currency) : null;

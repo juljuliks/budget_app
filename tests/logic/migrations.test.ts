@@ -379,4 +379,17 @@ describe('migrations', () => {
     await migrate(db);
     expect(await db.get("SELECT 1 AS n FROM sqlite_master WHERE name = 'payment_answers'")).toBeFalsy();
   });
+
+  test('migration 55: a regular payment within the month saved not repeated ends with its month; one with an earlier end keeps it', async () => {
+    const db = openDatabase(':memory:');
+    await migrate(db, MIGRATIONS.slice(0, 54));
+    await db.run("INSERT INTO categories (id, name) VALUES (90, 'Обеды'), (91, 'Йога'), (92, 'Психолог'), (93, 'Еда')");
+    await db.run(`INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency, pinned, every, weekdays, unit_minor, until) VALUES
+      ('2026-10', 90, 15500, 'fixed', 'GEL', 0, 'day', NULL, 500, NULL), ('2026-10', 91, 6000, 'fixed', 'GEL', 0, 'week', 1, 3000, '2026-10-15'),
+      ('2026-10', 92, 60000, 'fixed', 'GEL', 1, 'week', 2, 15000, NULL), ('2026-10', 93, 40000, 'limit', 'GEL', 0, NULL, NULL, NULL, NULL)`);
+    await migrate(db);
+    expect(await db.all('SELECT category_id, pinned, until FROM plan_items ORDER BY category_id')).toEqual([
+      { category_id: 90, pinned: 1, until: '2026-10-31' }, { category_id: 91, pinned: 1, until: '2026-10-15' },
+      { category_id: 92, pinned: 1, until: null }, { category_id: 93, pinned: 0, until: null }]);
+  });
 });

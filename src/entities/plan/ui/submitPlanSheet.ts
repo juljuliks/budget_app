@@ -53,7 +53,7 @@ export async function submitPlanSheet({ ym, target, text, v, adding, locked, fre
   const write = async (takeLocked: boolean) => {
     if (k === 'fund' && v.due) return saveFund(ym, target.category_id, { target_minor: minor, currency: v.currency, due: v.due, start_minor: startMinor ?? 0 }, undefined, takeLocked);
     if (regular) {
-      return saveRegular(ym, target.category_id, { every: v.every as 'day' | 'week', weekdays: v.weekdays, unit_minor: minor, until: v.until, pinned: v.pinned }, v.currency, takeLocked);
+      return saveRegular(ym, target.category_id, { every: v.every as 'day' | 'week', weekdays: v.weekdays, unit_minor: minor, until: v.until }, v.currency, takeLocked);
     }
     await savePlanAmount(ym, target.category_id, minor, byHand ? 'fixed' : k, v.currency, v.norm, takeLocked);
     // "Повторять каждый месяц" and its end: a limit's only (a one-off payment isn't carried over)

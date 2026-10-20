@@ -9,7 +9,7 @@ import { formatWithCurrency, parseAmountOrZero } from '@/shared/lib/money';
 import Chip from '@/shared/ui/Chip';
 import { formStyles } from '@/shared/theme/formStyles';
 import CategoryPaymentFields, { CategoryPaymentForm } from './CategoryPaymentFields';
-import RepeatField, { RepeatForm, UntilField } from './RepeatField';
+import { RepeatForm, UntilField } from './RepeatField';
 
 /** How often: within the month (every day, on weekdays) or every month and rarer (`period` months). */
 export type RegularEvery = 'day' | 'week' | 'month';
@@ -25,7 +25,7 @@ type Props = { ym: string; categoryId: number; form: UseFormReturn<RegularForm &
 
 /**
  * "Регулярный платёж" (a category without "Подписки"): how often — within the month (the weekdays, the times and the
- * sum, repeated, its end) or monthly and rarer (the next charge, its end). Only the plan: nothing is matched with operations.
+ * sum, its end; carried over each month) or monthly and rarer (the next charge, its end). Only the plan: nothing is matched with operations.
  */
 export default function RegularFields({ ym, categoryId, form }: Props) {
   const [every, period, weekdays, until, value, currency] = useWatch({
@@ -57,9 +57,9 @@ export default function RegularFields({ ym, categoryId, form }: Props) {
           <Text style={formStyles.hint}>
             {times ? `${times} ${plural(times, ['раз', 'раза', 'раз'])} в ${MONTHS_PREP[Number(ym.slice(5)) - 1]}${unit ? ` — ${formatWithCurrency(unit * times, currency)}` : ''}` : 'Выберите дни недели'}
           </Text>
-          <RepeatField ym={ym} form={form as unknown as UseFormReturn<RepeatForm>} entered={value ?? ''} currency={currency} regular />
-          {/* the times in this month are counted up to it too */}
+          {/* always carried over: its end — the times in this month are counted up to it too */}
           <UntilField ym={ym} form={form as unknown as UseFormReturn<RepeatForm>} />
+          <Text style={formStyles.hint}>Повторяется каждый месяц, пока не задана дата окончания.</Text>
         </>
       ) : null}
       {every === 'month' ? <CategoryPaymentFields ym={ym} categoryId={categoryId} form={form as unknown as UseFormReturn<CategoryPaymentForm>} /> : null}

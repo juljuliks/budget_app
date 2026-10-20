@@ -220,7 +220,7 @@ describe('6.3 the categories in the plan', () => {
     expect(await item('Одежда')).toBeUndefined();
   });
 
-  test('a regular payment within the month: every week on Mondays and Thursdays — the times by the amount; not repeated — this month only', async () => {
+  test('a regular payment within the month: every week on Mondays and Thursdays — the times by the amount; carried over each month till its end', async () => {
     await tap('Изменить: 👕 Одежда');
     await tap(await screen.findByRole('radio', { name: /Регулярный платёж/ }));
     // a category without "Подписки": how often, no operation to pick
@@ -233,7 +233,9 @@ describe('6.3 the categories in the plan', () => {
     fireEvent.changeText(screen.getByDisplayValue('400'), '20');
     // October: 4 Mondays, 5 Thursdays
     expect(await screen.findByText('9 раз в октябре — 180\u00a0₾')).toBeTruthy();
-    expect(screen.getByText('Только в этом месяце')).toBeTruthy();
+    // no "Повторять каждый месяц": always carried over, its end ends it
+    expect(screen.getByText('Повторяется каждый месяц, пока не задана дата окончания.')).toBeTruthy();
+    expect(screen.queryByText('Повторять каждый месяц')).toBeNull();
     expect(screen.getByText('Дата окончания (необязательно)')).toBeTruthy();
     await tap('Сохранить');
     expect(await screen.findByText('План «👕 Одежда» сохранён')).toBeTruthy();

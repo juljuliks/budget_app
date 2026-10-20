@@ -335,6 +335,9 @@ describe('6.7.9 "Регулярный платёж" from the plan', () => {
     const db = await getDb();
     expect(await db.get('SELECT merchant_key, amount_minor, due FROM recurring_payments')).toEqual({ merchant_key: null, amount_minor: 80000, due: null });
     expect(await db.get(`SELECT kind, limit_minor FROM plan_items WHERE ym = '2026-10' AND category_id = ${home}`)).toEqual({ kind: 'fixed', limit_minor: 80000 });
+    // its row: how often only, no "без даты"
+    expect(await screen.findByText('каждый месяц')).toBeTruthy();
+    expect(screen.queryByText('каждый месяц · без даты')).toBeNull();
     // November: with the same amount
     await tap('Следующий месяц');
     expect(await screen.findByText('Ноябрь 2026')).toBeTruthy();

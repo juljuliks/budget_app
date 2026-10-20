@@ -11,8 +11,6 @@ export type RepeatForm = { pinned: boolean; until: string | null };
 
 type Props = {
   ym: string; form: UseFormReturn<RepeatForm>; entered: string; currency: Currency;
-  /** a regular payment within the month: off — it ends with the month, on — the next month counts its own days */
-  regular?: boolean;
 };
 
 /** "Дата окончания (необязательно)": repeated till that day (the months after don't have it). */
@@ -28,24 +26,23 @@ export function UntilField({ ym, form }: { ym: string; form: UseFormReturn<Repea
 }
 
 /**
- * "Повторять каждый месяц" of a limit (or of a regular payment within the month): on — the next month's plan has it with
- * the same amount (the badge on its icon in the plan) till "Дата окончания", off — it carries over without one.
+ * "Повторять каждый месяц" of a limit: on — the next month's plan has it with the same amount (the badge on its icon in
+ * the plan) till "Дата окончания", off — it carries over without one.
  */
-export default function RepeatField({ ym, form, entered, currency, regular }: Props) {
+export default function RepeatField({ ym, form, entered, currency }: Props) {
   const next = `В ${MONTHS_PREP[Number(ym.slice(5)) % 12]}`;
   const minor = parseAmountOrZero(entered) ?? 0;
   const pinned = useWatch({ control: form.control, name: 'pinned' });
-  const on = regular ? `${next} — снова, по своим дням` : `${next} будет в плане с той же суммой${minor ? ` — ${formatWithCurrency(minor, currency)}` : ''}`;
+  const on = `${next} будет в плане с той же суммой${minor ? ` — ${formatWithCurrency(minor, currency)}` : ''}`;
   return (
     <>
       <Controller control={form.control} name="pinned" render={({ field }) => (
         <SwitchRow
           label="Повторять каждый месяц" on={field.value} onChange={field.onChange} style={styles.row}
-          hint={field.value ? on : regular ? 'Только в этом месяце' : `${next} перейдёт без суммы`}
+          hint={field.value ? on : `${next} перейдёт без суммы`}
         />
       )} />
-      {/* a regular payment's end is always there (it counts this month's times too) */}
-      {pinned && !regular ? <UntilField ym={ym} form={form} /> : null}
+      {pinned ? <UntilField ym={ym} form={form} /> : null}
     </>
   );
 }

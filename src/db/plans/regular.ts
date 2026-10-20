@@ -1,6 +1,6 @@
 // A regular payment within the month (the plan's "Каждый день" / "Каждую неделю"): an amount each time, the month's item
 // the times it comes in the month — every day, or on the weekdays picked — up to its end ("Дата окончания"). Stored as a
-// one-off payment's item ('fixed') with `every`; "Повторять каждый месяц" off — it ends with the month.
+// one-off payment's item ('fixed') with `every`, always carried over (pinned) — its end is "Дата окончания" only.
 // A monthly one has no day: its amount by hand in each month's plan (setUndatedAhead).
 import { getDb } from '../index';
 import type { Db } from '../types';
@@ -9,14 +9,14 @@ import { setPlanAmount } from './items';
 import { timesInMonth } from './regularTimes';
 import type { Every } from './regularTimes';
 
-export type RegularItem = { every: Every; weekdays: number; unit_minor: number; until: string | null; pinned: boolean };
+export type RegularItem = { every: Every; weekdays: number; unit_minor: number; until: string | null };
 
 /** The category's item in `ym` a regular payment within the month; throws OverBudgetError past the budget, as setPlanAmount. */
 export async function setRegularItem(ym: string, categoryId: number, r: RegularItem, currency: Currency, takeLocked = false): Promise<void> {
   await setPlanAmount(ym, categoryId, r.unit_minor * timesInMonth(ym, r.every, r.weekdays, r.until), 'fixed', currency, undefined, takeLocked);
   await (await getDb()).run(
-    'UPDATE plan_items SET every = ?, weekdays = ?, unit_minor = ?, until = ?, pinned = ? WHERE ym = ? AND category_id = ?',
-    [r.every, r.every === 'week' ? r.weekdays : null, r.unit_minor, r.until, r.pinned ? 1 : 0, ym, categoryId]);
+    'UPDATE plan_items SET every = ?, weekdays = ?, unit_minor = ?, until = ?, pinned = 1 WHERE ym = ? AND category_id = ?',
+    [r.every, r.every === 'week' ? r.weekdays : null, r.unit_minor, r.until, ym, categoryId]);
 }
 
 /** A new month's regular items (carried over): their amount the times in it. */
