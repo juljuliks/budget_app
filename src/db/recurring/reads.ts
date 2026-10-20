@@ -122,6 +122,12 @@ export async function categoryPayment(categoryId: number, db?: Db): Promise<Recu
   return r ? asSub(r) : null;
 }
 
+/** Has the category a merchant's charge (a purchase or a payment with a merchant): "Подписки" are offered on its page. */
+export async function hasMerchantCharges(categoryId: number): Promise<boolean> {
+  return !!(await (await getDb()).get(
+    `SELECT 1 FROM transactions WHERE category_id = ? AND merchant_key IS NOT NULL AND ${MERCHANT_CHARGE} LIMIT 1`, [categoryId]));
+}
+
 /** A merchant's last charge: its day, amount and currency, and the merchant's name as the SMS spells it. */
 export type LastCharge = { merchant_key: string; name: string; day: string; amount_minor: number; currency: Currency };
 

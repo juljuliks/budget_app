@@ -17,10 +17,10 @@ export const BY_HAND_HINT = 'Сумма считается из списаний
 
 export const COUNTED_HINT = 'Сумма считается из списаний подписок категории. Другой вид — сумма вводится вручную, подписки останутся.';
 
-/** A regular payment rarer than monthly: the next charge is needed (the charges are counted from it). */
-export const dateNeeded = () => 'Выберите дату следующего списания';
+/** A regular payment rarer than monthly: its charge's day is needed (the charges are counted from it). */
+export const dateNeeded = () => 'Выберите дату списания';
 
-export const UNTIL_BEFORE = 'Дата окончания раньше следующего списания';
+export const UNTIL_BEFORE = 'Дата окончания раньше даты списания';
 
 export const PICK_HINT = 'Подписка делается из операции: выберите её среди операций категории за месяц — сумма, мерчант и дата следующего списания возьмутся из неё.';
 

@@ -1,6 +1,7 @@
 // A regular payment within the month (the plan's "Каждый день" / "Каждую неделю"): an amount each time, the month's item
 // the times it comes in the month — every day, or on the weekdays picked — up to its end ("Дата окончания"). Stored as a
 // one-off payment's item ('fixed') with `every`; "Повторять каждый месяц" off — it ends with the month.
+// A monthly one has no day: its amount by hand in each month's plan (setUndatedAhead).
 import { getDb } from '../index';
 import type { Db } from '../types';
 import type { Currency } from '../fx';
@@ -26,4 +27,13 @@ export async function countRegularItems(ym: string, db: Db): Promise<void> {
     await db.run('UPDATE plan_items SET limit_minor = ? WHERE ym = ? AND category_id = ?',
       [r.unit_minor * timesInMonth(ym, r.every, r.weekdays ?? 0, r.until), ym, r.category_id]);
   }
+}
+
+/**
+ * A monthly regular payment saved without a day: the months after `ym` whose item was counted from its charges ('subs')
+ * get its amount by hand, as `ym`'s.
+ */
+export async function setUndatedAhead(ym: string, categoryId: number, amountMinor: number, currency: string): Promise<void> {
+  await (await getDb()).run("UPDATE plan_items SET kind = 'fixed', limit_minor = ?, currency = ? WHERE category_id = ? AND ym > ? AND kind = 'subs'",
+    [amountMinor, currency, categoryId, ym]);
 }

@@ -49,6 +49,20 @@ describe('the category\'s own payment: its calendar, not its operations', () => 
   });
 });
 
+describe('a monthly regular payment saved without a day', () => {
+  test('the coming months counted from its charges get its amount by hand; other kinds and past months stay', async () => {
+    const { getDb } = require('../../src/db');
+    const { setUndatedAhead } = require('../../src/db/plans');
+    const db = await getDb();
+    await db.run(`INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency) VALUES
+      ('2099-01', 1, 80000, 'fixed', 'GEL'), ('2099-02', 1, 0, 'subs', 'GEL'), ('2099-03', 1, 5000, 'limit', 'GEL'), ('2098-12', 1, 0, 'subs', 'GEL')`);
+    await setUndatedAhead('2099-01', 1, 80000, 'GEL');
+    expect(await db.all('SELECT ym, kind, limit_minor FROM plan_items WHERE category_id = 1 ORDER BY ym')).toEqual([
+      { ym: '2098-12', kind: 'subs', limit_minor: 0 }, { ym: '2099-01', kind: 'fixed', limit_minor: 80000 },
+      { ym: '2099-02', kind: 'fixed', limit_minor: 80000 }, { ym: '2099-03', kind: 'limit', limit_minor: 5000 }]);
+  });
+});
+
 describe('"Подписки" of a category on its page', () => {
   test('on: its own payment goes, the amount stays in the plan by hand; off: its subscriptions go', async () => {
     const { getDb } = require('../../src/db');

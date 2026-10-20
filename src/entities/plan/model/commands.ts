@@ -1,5 +1,5 @@
 // The plan's writes from its sheets: each one tells the screens (the stats, the reports) the data changed.
-import { deleteFund, getFund, RegularItem, restoreFund, setFund, setPlanAmount, setRegularItem } from '@/db/plans';
+import { deleteFund, getFund, RegularItem, restoreFund, setFund, setPlanAmount, setRegularItem, setUndatedAhead } from '@/db/plans';
 import type { Currency } from '@/db/fx';
 import { getCategory } from '@/db/categories';
 import { categoryPayment, savePayment, turnRecurring } from '@/db/recurring';
@@ -42,7 +42,11 @@ export async function saveCategoryPayment(
 ) {
   // without a day: the amount by hand in the plan, each month (carried over with it); past the budget — OverBudgetError
   // before anything else is changed
-  if (!p.due) await setPlanAmount(ym, categoryId, p.amount_minor, 'fixed', p.currency);
+  if (!p.due) {
+    await setPlanAmount(ym, categoryId, p.amount_minor, 'fixed', p.currency);
+    // the coming months' items counted from its charges (it had a day): by hand too, or they'd count none
+    await setUndatedAhead(ym, categoryId, p.amount_minor, p.currency);
+  }
   const fund = await getFund(categoryId);
   if (fund && !fund.closed_ym) await deleteFund(categoryId);
   const c = await getCategory(categoryId);

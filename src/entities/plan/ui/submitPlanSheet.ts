@@ -40,14 +40,16 @@ export async function submitPlanSheet({ ym, target, text, v, adding, locked, fre
   if (regular && !minor) return 'Введите сумму за раз';
   if (regular && v.every === 'week' && !v.weekdays) return 'Выберите дни недели';
   if (own && !minor) return 'Введите сумму платежа';
-  if (own && !v.next && v.period !== 1) return dateNeeded();
-  if (own && v.until && v.next && v.until < v.next) return UNTIL_BEFORE;
+  // monthly: no day — the amount in each month's plan (a day it had is dropped)
+  const due = own && v.period !== 1 ? v.next : null;
+  if (own && !due && v.period !== 1) return dateNeeded();
+  if (own && v.until && due && v.until < due) return UNTIL_BEFORE;
   // another kind (or a regular payment within the month) for a category with regular payments: they are turned off
   // first (asked if they saved something)
   const off = !!target.recurring && (k !== 'subs' || regular);
   if (off && !(await turnOffRecurring(target.category_id))) return false;
   const saved = (taken?: string) => { toast(savedText(k, target.label, adding, off, taken)); onSaved(); };
-  if (own) return submitCategoryPayment(ym, target, { amount_minor: minor, currency: v.currency, period: v.period, due: v.next, until: v.until }, adding, saved, onClose, free);
+  if (own) return submitCategoryPayment(ym, target, { amount_minor: minor, currency: v.currency, period: v.period, due, until: v.until }, adding, saved, onClose, free);
   const write = async (takeLocked: boolean) => {
     if (k === 'fund' && v.due) return saveFund(ym, target.category_id, { target_minor: minor, currency: v.currency, due: v.due, start_minor: startMinor ?? 0 }, undefined, takeLocked);
     if (regular) {
