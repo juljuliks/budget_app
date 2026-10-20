@@ -24,7 +24,8 @@ type Props = {
 
 /**
  * The payments saved up for, with the charge they save for: a later one, this month's not paid yet, or — this month's paid
- * from what was saved — the one after it; the payments not saved up for, by their next charge.
+ * from what was saved — the one after it; the payments not saved up for, by their next charge (one rarer than monthly
+ * charged this month — the one after it).
  */
 export function upcomingOf(data: RecurringPaymentsData) {
   const saving = data.saving.flatMap((v) => {
@@ -37,7 +38,15 @@ export function upcomingOf(data: RecurringPaymentsData) {
     const day = later?.next ?? unpaid?.day ?? (sub.period === ONCE ? last.day : chargeAt(last.day, sub.period, 1));
     return [{ v, sub, day }];
   });
-  const plain = data.later.filter((l) => !data.saving.some((v) => v.payment_id === l.sub.id));
+  const saved = (id: number) => data.saving.some((v) => v.payment_id === id);
+  // one rarer than monthly already charged this month (a year's APPLE.COM): its next charge is a later month's too
+  const paid = [...new Set(data.charges.map((c) => c.sub))].flatMap((sub) => {
+    const own = data.charges.filter((c) => c.sub.id === sub.id);
+    if (sub.period <= 1 || saved(sub.id) || own.some((c) => !c.done)) return [];
+    const next = chargeAt(own[own.length - 1].day, sub.period, 1);
+    return sub.until && next > sub.until ? [] : [{ sub, next }];
+  });
+  const plain = [...data.later.filter((l) => !saved(l.sub.id)), ...paid].sort((a, b) => a.next.localeCompare(b.next));
   return { saving, plain };
 }
 

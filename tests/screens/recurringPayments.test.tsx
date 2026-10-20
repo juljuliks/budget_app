@@ -143,6 +143,21 @@ describe('6.6 subscriptions', () => {
     expect(await screen.findByText('Списания в октябре')).toBeTruthy();
   });
 
+  test('"Предстоящие подписки": a year one charged this month, not saved up for — with its next charge, next year', async () => {
+    await openApp(async () => {
+      await seed();
+      await savePayment({ merchant_key: 'NETFLIX.COM', name: 'Netflix', amount_minor: 3000, currency: 'GEL', period: 12, due: '2026-10-10' });
+    });
+    await tap('Статистика');
+    await tap('План');
+    await tap('📺 Подписки');
+    expect(await screen.findByText('раз в год · ✓ списано 10 окт')).toBeTruthy();
+    await tap('Перейти: Предстоящие подписки ›');
+    expect(await screen.findByText('Без откладывания')).toBeTruthy();
+    expect(screen.getByText('раз в год · 10 окт 2027')).toBeTruthy();
+    expect(screen.getByText('в октябре 2027')).toBeTruthy();
+  });
+
   test('"＋ Добавить подписку": the month\'s operations of "Подписки" to pick from; the subscription made of the one picked, back in the plan', async () => {
     await openSubscriptions();
     await tap('＋ Добавить подписку');
