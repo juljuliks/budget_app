@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import type { PlanItem } from '@/db/plans';
-import { LimitIcon, OneOffIcon, TiltedPinIcon } from '@/shared/ui/icons';
+import { LimitIcon, OneOffIcon, RepeatIcon, TiltedPinIcon } from '@/shared/ui/icons';
 import { colors } from '@/shared/theme/theme';
 import { styles } from './styles';
 
@@ -14,12 +14,12 @@ export function PinBadge({ corner = false }: { corner?: boolean }) {
   );
 }
 
-/** A plan item's kind: a limit's bars or a one-off's tag; pinned — the badge on its corner. */
+/** A plan item's kind: a limit's bars, a regular payment's 🔁 or a one-off's tag; pinned — the badge on its corner. */
 export function KindIcon({ item }: { item: PlanItem }) {
   return (
     <View style={styles.pin}>
       <View>
-        {item.kind === 'fixed' ? <OneOffIcon color={colors.muted} /> : <LimitIcon color={colors.muted} />}
+        {item.every ? <RepeatIcon color={colors.accent} size={20} /> : item.kind === 'fixed' ? <OneOffIcon color={colors.muted} /> : <LimitIcon color={colors.muted} />}
         {item.pinned ? <PinBadge corner /> : null}
       </View>
     </View>

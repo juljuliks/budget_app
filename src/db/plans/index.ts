@@ -17,3 +17,5 @@ export * from './addable';
 export * from './recurringItems';
 export * from './recurringBudget';
 export * from './closeSplit';
+export * from './regular';
+export * from './regularTimes';

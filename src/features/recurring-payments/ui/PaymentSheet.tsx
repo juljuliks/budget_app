@@ -92,6 +92,12 @@ export default function PaymentSheet({ target, onClose, onSaved, onLeave }: Prop
         <Text style={formStyles.hint}>
           {f.period === ONCE ? 'Списание одно: после него в план больше не встанет.' : 'После списания дата сдвинется сама: пришла операция мерчанта — следующая через период.'}
         </Text>
+        {f.period === ONCE ? null : (
+          <DateField
+            label="Дата окончания (необязательно)" value={f.until} format={dayTitle} sheetTitle="Дата окончания" minDay={f.due ?? todayKey()}
+            onChange={f.setUntil} onClear={() => f.setUntil(null)}
+          />
+        )}
         <SavingFields s={saving} amount={f.input?.amount_minor ?? null} currency={f.currency} due={f.due} />
         {saving.contribution !== null ? (
           <View style={styles.plate}>

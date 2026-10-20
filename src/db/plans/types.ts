@@ -1,6 +1,7 @@
 // The plan's types: an item, the month's budget, the kinds and the spending rhythms.
 import { Currency } from '../fx';
 import type { Period } from '../recurring/schedule';
+import type { Every } from './regularTimes';
 
 /**
  * 'limit' = spending cap (progress bar); 'fixed' = a one-off payment, a known amount ("Разовый платёж": a gift; paid / not paid); 'fund' = a fund's contribution
@@ -32,6 +33,12 @@ export type PlanItem = {
   kind: PlanKind;
   norm_period: NormPeriod;
   pinned: boolean;
+  /** "Дата окончания" of one repeated each month (or of a regular payment within it); null — none */
+  until: string | null;
+  /** a regular payment within the month (kind 'fixed'): every day or on the `weekdays` (Monday — bit 0), `unit_minor` each time */
+  every: Every | null;
+  weekdays: number | null;
+  unit_minor: number | null;
   /** amount of the same item in the month this plan was carried over from (placeholder hint) */
   previous_minor: number | null;
   /** the category's system kind, null / absent for the user's own */

@@ -202,8 +202,11 @@ describe('6.3 the categories in the plan', () => {
     expect(screen.queryByLabelText('повторяется каждый месяц')).toBeNull();
     await tap('Изменить: 👕 Одежда');
     expect(await screen.findByText('В ноябре перейдёт без суммы')).toBeTruthy();
+    expect(screen.queryByText('Дата окончания (необязательно)')).toBeNull();
     toggleSwitch(true);
     expect(await screen.findByText(/^В ноябре будет в плане с той же суммой — /)).toBeTruthy();
+    // repeated: till an end, if it has one
+    expect(screen.getByText('Дата окончания (необязательно)')).toBeTruthy();
     await tap('Сохранить');
     expect(await screen.findByText('План «👕 Одежда» сохранён')).toBeTruthy();
     expect(await screen.findByLabelText('повторяется каждый месяц')).toBeTruthy();
@@ -215,6 +218,31 @@ describe('6.3 the categories in the plan', () => {
     await tap('Убрать из плана');
     expect(await screen.findByText(/^«.*» убрана из плана$/)).toBeTruthy();
     expect(await item('Одежда')).toBeUndefined();
+  });
+
+  test('a regular payment within the month: every week on Mondays and Thursdays — the times by the amount; not repeated — this month only', async () => {
+    await tap('Изменить: 👕 Одежда');
+    await tap(await screen.findByRole('radio', { name: /Регулярный платёж/ }));
+    await tap('Каждую неделю');
+    expect(await screen.findByText('Выберите дни недели')).toBeTruthy();
+    expect(screen.getByText('Сумма за раз')).toBeTruthy();
+    await tap('пн');
+    await tap('чт');
+    fireEvent.changeText(screen.getByDisplayValue('400'), '20');
+    // October: 4 Mondays, 5 Thursdays
+    expect(await screen.findByText('9 раз в октябре — 180\u00a0₾')).toBeTruthy();
+    expect(screen.getByText('Только в этом месяце')).toBeTruthy();
+    expect(screen.getByText('Дата окончания (необязательно)')).toBeTruthy();
+    await tap('Сохранить');
+    expect(await screen.findByText('План «👕 Одежда» сохранён')).toBeTruthy();
+    expect(await screen.findByText('пн, чт · 9 × 20\u00a0₾')).toBeTruthy();
+    expect(await (await getDb()).get("SELECT p.limit_minor AS a, p.kind, p.every, p.weekdays, p.unit_minor AS u FROM plan_items p JOIN categories c ON c.id = p.category_id WHERE p.ym = '2026-10' AND c.name = 'Одежда'"))
+      .toEqual({ a: 18000, kind: 'fixed', every: 'week', weekdays: 9, u: 2000 });
+    // its sheet again: the same, the amount each time
+    await tap('Изменить: 👕 Одежда');
+    expect(await screen.findByRole('radio', { name: /Регулярный платёж/, checked: true })).toBeTruthy();
+    expect(screen.getByDisplayValue('20')).toBeTruthy();
+    expect(screen.getByText('9 раз в октябре — 180\u00a0₾')).toBeTruthy();
   });
 
   test('"Что значат значки": the plan icons sheet', async () => {

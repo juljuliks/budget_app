@@ -19,6 +19,8 @@ export type PaymentTarget = {
   period: Period;
   /** the next charge's day; null — none yet */
   due: string | null;
+  /** "Дата окончания": no charges after it */
+  until?: string | null;
   /** the merchant's last charge: the day offered is it plus the period (and follows the period) */
   last_day?: string;
   /** opened from that operation ("Пропустить" instead of "Отмена") */
@@ -31,6 +33,7 @@ export function usePaymentForm(target: PaymentTarget | null) {
   const [currency, setCurrency] = useState<Currency>('GEL');
   const [period, setPeriodState] = useState<Period>(1);
   const [due, setDueState] = useState<string | null>(null);
+  const [until, setUntil] = useState<string | null>(null);
   // the day picked by hand in this sheet stays when the period changes
   const [dueByHand, setDueByHand] = useState(false);
   // the charge another period is counted from: the merchant's last, or a saved payment's next one less its period
@@ -43,6 +46,7 @@ export function usePaymentForm(target: PaymentTarget | null) {
     setAmount(toInputValue(target.amount_minor));
     setCurrency(target.currency);
     setPeriodState(target.period);
+    setUntil(target.until ?? null);
     setDueState(target.due ?? (target.last_day ? offeredDue(target.last_day, target.period, todayKey()) : null));
     setDueByHand(false);
     setLastCharge(target.last_day ?? null);
@@ -65,7 +69,7 @@ export function usePaymentForm(target: PaymentTarget | null) {
 
   const minor = parseAmountInput(amount);
   const input = target && minor !== null && name.trim()
-    ? { category_id: target.category.id, merchant_key: target.merchant_key, name: name.trim(), amount_minor: minor, currency, period, due }
+    ? { category_id: target.category.id, merchant_key: target.merchant_key, name: name.trim(), amount_minor: minor, currency, period, due, until: period === 0 ? null : until }
     : null;
 
   // "В план октября +30 ₾": counted again as the form changes
@@ -79,5 +83,5 @@ export function usePaymentForm(target: PaymentTarget | null) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, target?.id]);
 
-  return { name, setName, amount, setAmount, currency, setCurrency, period, setPeriod, due, setDue, input, effect };
+  return { name, setName, amount, setAmount, currency, setCurrency, period, setPeriod, due, setDue, until, setUntil, input, effect };
 }

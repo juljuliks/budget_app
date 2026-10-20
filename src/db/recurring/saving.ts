@@ -31,13 +31,15 @@ export type Saving = {
   currency: Currency;
   period: Period;
   due: string | null;
+  /** "Дата окончания" of the payment */
+  until: string | null;
 };
 
 export type SavingLedger = { saving: Saving; months: SavingMonth[]; balance: number; byTx: Map<number, { before: number; after: number }> };
 
 type Row = Omit<Saving, 'currency'> & { currency: string };
 const COLUMNS = `v.id, v.payment_id, v.since_ym, v.start_minor, v.closed_ym, v.released_minor, v.created_at,
-  s.category_id, s.merchant_key, s.name, s.amount_minor, s.currency, ${periodSql('s.')} AS period, s.due`;
+  s.category_id, s.merchant_key, s.name, s.amount_minor, s.currency, ${periodSql('s.')} AS period, s.due, s.until`;
 const asSaving = (r: Row): Saving => ({ ...r, currency: asCurrency(r.currency) });
 
 /** The savings that count in `ym`: started by then, not closed before it (one closed in it gives back what it had). */
@@ -78,7 +80,7 @@ export async function savingLedger(v: Saving, until = currentYm(), nowYm = curre
   const ops = (await paymentDays([v], db))(v);
   const r = savingMonths({
     since: v.since_ym, last, nowYm, start: v.start_minor, amount: v.amount_minor, planned: (ym) => planned.has(ym), stored,
-    dueOf: (ym) => (v.due ? savingFor(v.due, v.period, ym, ops, v.created_at ? dayOfUnix(v.created_at) : '') : null),
+    dueOf: (ym) => (v.due ? savingFor(v.due, v.period, ym, ops, v.created_at ? dayOfUnix(v.created_at) : '', v.until) : null),
     spends: items.map(({ row, value }) => ({ id: row.id, at: row.occurred_at, value })),
   });
   return { saving: v, ...r };

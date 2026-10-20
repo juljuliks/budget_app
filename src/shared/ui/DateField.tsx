@@ -21,13 +21,15 @@ type Props = {
   sheetTitle: string;
   minDay?: DayKey;
   maxDay?: DayKey;
+  /** an optional day ("Дата окончания"): "Убрать" next to "Изменить" clears it */
+  onClear?: () => void;
 };
 
 /**
  * A day in a form, one look across the app: the day as text with "Изменить" on the right (none yet — "Не выбрана",
  * "Выбрать"); a tap opens the calendar in a sheet, "Выбрать" sets it.
  */
-export default function DateField({ label, value, onChange, format, suffix, sheetTitle, minDay, maxDay }: Props) {
+export default function DateField({ label, value, onChange, format, suffix, sheetTitle, minDay, maxDay, onClear }: Props) {
   const [open, setOpen] = useState(false);
   // the day being picked in the calendar
   const [draft, setDraft] = useState<DayKey | null>(null);
@@ -39,6 +41,11 @@ export default function DateField({ label, value, onChange, format, suffix, shee
           {value ? format(value) : 'Не выбрана'}
           {value && suffix ? <Text style={styles.muted}>{suffix}</Text> : null}
         </Text>
+        {value && onClear ? (
+          <TouchableOpacity onPress={onClear} hitSlop={8} accessibilityRole="button" accessibilityLabel={`Убрать: ${label}`}>
+            <Text style={styles.clear}>Убрать</Text>
+          </TouchableOpacity>
+        ) : null}
         <TouchableOpacity onPress={() => { setDraft(value); setOpen(true); }} hitSlop={8} accessibilityRole="button" accessibilityLabel={value ? 'Изменить дату' : 'Выбрать дату'}>
           <Text style={styles.change}>{value ? 'Изменить' : 'Выбрать'}</Text>
         </TouchableOpacity>
@@ -61,5 +68,6 @@ const styles = StyleSheet.create({
   date: { flex: 1, fontSize: 16, color: colors.text },
   muted: { color: colors.muted, fontSize: 14 },
   change: { fontSize: 15, color: colors.accent },
+  clear: { fontSize: 15, color: colors.muted },
   sheet: { paddingHorizontal: 16 },
 });

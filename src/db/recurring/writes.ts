@@ -21,6 +21,8 @@ export type PaymentInput = {
   period: Period;
   /** null — without a day ("Пропустить": the merchant isn't asked about again) */
   due: string | null;
+  /** "Дата окончания": no charges after it */
+  until?: string | null;
 };
 
 /**
@@ -33,14 +35,14 @@ export async function savePayment(input: PaymentInput, id?: number): Promise<num
   const category = input.category_id
     ?? (own !== undefined ? (await db.get<{ c: number | null }>('SELECT category_id AS c FROM recurring_payments WHERE id = ?', [own]))?.c : null)
     ?? await subscriptionsCategoryId(db);
-  const values = [category, input.merchant_key, input.name.trim(), input.amount_minor, input.currency, ...periodColumns(input.period), input.due];
+  const values = [category, input.merchant_key, input.name.trim(), input.amount_minor, input.currency, ...periodColumns(input.period), input.due, input.until ?? null];
   let out: number;
   if (own !== undefined) {
-    await db.run('UPDATE recurring_payments SET category_id = ?, merchant_key = ?, name = ?, amount_minor = ?, currency = ?, period_months = ?, period_unit = ?, due = ? WHERE id = ?', [...values, own]);
+    await db.run('UPDATE recurring_payments SET category_id = ?, merchant_key = ?, name = ?, amount_minor = ?, currency = ?, period_months = ?, period_unit = ?, due = ?, until = ? WHERE id = ?', [...values, own]);
     out = own;
   } else {
     const r = await db.run(
-      'INSERT INTO recurring_payments (category_id, merchant_key, name, amount_minor, currency, period_months, period_unit, due, since_ym, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO recurring_payments (category_id, merchant_key, name, amount_minor, currency, period_months, period_unit, due, until, since_ym, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [...values, currentYm(), Math.floor(Date.now() / 1000)]);
     out = r.lastInsertRowid;
   }

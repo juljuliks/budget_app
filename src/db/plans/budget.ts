@@ -6,6 +6,7 @@ import { convertSpending, spendRows, sumBy } from './spend';
 import { PlanBudget } from './types';
 import { refreshFundItems, ymBefore } from './funds';
 import { refreshRecurringItem } from './recurringItems';
+import { countRegularItems } from './regular';
 
 /** The unplanned share of a budget, in its currency. */
 export const unplannedOf = (b: Pick<PlanBudget, 'amount_minor' | 'unplanned_pct' | 'unplanned_minor'>) =>
@@ -32,14 +33,21 @@ async function createMonthPlan(ym: string): Promise<boolean> {
   await db.transaction(async (tx) => {
     const source = await tx.get<{ ym: string }>('SELECT ym FROM plan_months WHERE ym < ? ORDER BY ym DESC LIMIT 1', [ym]);
     if (source) {
+      // "Дата окончания" before this month: not repeated any more
+      const ended = `p.until IS NOT NULL AND p.until < '${ym}-01'`;
       await tx.run(
-        `INSERT OR IGNORE INTO plan_items (ym, category_id, limit_minor, pinned, kind, currency, norm_period)
-          -- a category with repeating payments always goes on with its amount (a dated one is counted again right after)
-          SELECT ?, p.category_id, CASE WHEN p.pinned = 1 OR c.recurring = 1 THEN p.limit_minor ELSE 0 END, p.pinned, p.kind, p.currency, p.norm_period
+        `INSERT OR IGNORE INTO plan_items (ym, category_id, limit_minor, pinned, kind, currency, norm_period, until, every, weekdays, unit_minor)
+          -- a category with regular payments always goes on with its amount (a dated one is counted again right after)
+          SELECT ?, p.category_id, CASE WHEN (p.pinned = 1 AND NOT (${ended})) OR c.recurring = 1 THEN p.limit_minor ELSE 0 END,
+            CASE WHEN ${ended} THEN 0 ELSE p.pinned END, p.kind, p.currency, p.norm_period,
+            CASE WHEN ${ended} THEN NULL ELSE p.until END, p.every, p.weekdays, p.unit_minor
           FROM plan_items p JOIN categories c ON c.id = p.category_id
           WHERE p.ym = ? AND c.deleted_at IS NULL
-            AND (p.kind != 'fund' OR EXISTS (SELECT 1 FROM funds f WHERE f.category_id = p.category_id AND f.closed_ym IS NULL))`,
+            AND (p.kind != 'fund' OR EXISTS (SELECT 1 FROM funds f WHERE f.category_id = p.category_id AND f.closed_ym IS NULL))
+            -- a regular payment within the month goes on only repeated each month, till its end
+            AND NOT (p.kind = 'fixed' AND p.every IS NOT NULL AND (p.pinned = 0 OR ${ended}))`,
         [ym, source.ym]);
+      await countRegularItems(ym, tx);
     }
     // the amount to distribute (usually the salary) carries over as well, with its currency, unplanned share, savings choice
     // and what is locked for savings

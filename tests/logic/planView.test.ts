@@ -6,7 +6,7 @@ import type { PlanBudget, PlanItem } from '../../src/db/plans';
 
 const item = (p: Partial<PlanItem>): PlanItem => ({
   category_id: 1, name: 'Продукты', emoji: '🛒', type_id: 1, type_name: 'Жизнь', limit_minor: 31000, currency: 'GEL',
-  converted_minor: 31000, kind: 'limit', norm_period: 'week', pinned: false, previous_minor: null, ...p,
+  converted_minor: 31000, kind: 'limit', norm_period: 'week', pinned: false, previous_minor: null, until: null, every: null, weekdays: null, unit_minor: null, ...p,
 });
 const budget = (p: Partial<PlanBudget>): PlanBudget => ({
   amount_minor: 100000, currency: 'GEL', unplanned_pct: 0, to_savings: false, locked_minor: 0, unplanned_minor: null, carry: null, ...p,

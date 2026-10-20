@@ -17,6 +17,7 @@ export async function listPlan(ym: string, to?: Currency): Promise<PlanItem[]> {
   const prev = await db.get<{ ym: string }>('SELECT ym FROM plan_months WHERE ym < ? ORDER BY ym DESC LIMIT 1', [ym]);
   const rows = await db.all<Omit<PlanItem, 'pinned' | 'converted_minor' | 'currency'> & { pinned: number; currency: string }>(
     `SELECT p.category_id, c.name, c.emoji, c.system, c.recurring = 1 AS recurring, c.type_id, ct.name AS type_name, p.limit_minor, p.currency, p.kind, p.norm_period, p.pinned,
+        p.until, CASE WHEN p.kind = 'fixed' THEN p.every END AS every, p.weekdays, p.unit_minor,
         (SELECT q.limit_minor FROM plan_items q WHERE q.ym = ? AND q.category_id = p.category_id) AS previous_minor
       FROM plan_items p
       JOIN categories c ON c.id = p.category_id
@@ -174,16 +175,16 @@ export async function setPlanAmount(
     await t.run(
       `INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency, norm_period) VALUES (?, ?, ?, coalesce(?, 'limit'), ?, coalesce(?, 'day'))
         ON CONFLICT(ym, category_id) DO UPDATE SET limit_minor = excluded.limit_minor, kind = coalesce(?, kind), currency = excluded.currency,
-          norm_period = coalesce(?, norm_period)`,
+          norm_period = coalesce(?, norm_period), every = NULL, weekdays = NULL, unit_minor = NULL`,
       [ym, categoryId, limitMinor, kind ?? null, cur, normPeriod ?? null, kind ?? null, normPeriod ?? null]);
     await markPlanned(ym, t);
   });
 }
 
-/** Pinned items move to the next month together with their amount. */
-export async function setPlanPinned(ym: string, categoryId: number, pinned: boolean) {
+/** Pinned items move to the next month together with their amount, till `until` ("Дата окончания"; null — always). */
+export async function setPlanPinned(ym: string, categoryId: number, pinned: boolean, until: string | null = null) {
   const db = await getDb();
-  await db.run('UPDATE plan_items SET pinned = ? WHERE ym = ? AND category_id = ?', [pinned ? 1 : 0, ym, categoryId]);
+  await db.run('UPDATE plan_items SET pinned = ?, until = ? WHERE ym = ? AND category_id = ?', [pinned ? 1 : 0, pinned ? until : null, ym, categoryId]);
 }
 
 export async function removePlanItem(ym: string, categoryId: number): Promise<RemovedPlanItem | null> {

@@ -1,5 +1,5 @@
 // The plan's writes from its sheets: each one tells the screens (the stats, the reports) the data changed.
-import { deleteFund, getFund, restoreFund, setFund, setPlanAmount } from '@/db/plans';
+import { deleteFund, getFund, RegularItem, restoreFund, setFund, setPlanAmount, setRegularItem } from '@/db/plans';
 import type { Currency } from '@/db/fx';
 import { turnRecurring } from '@/db/recurring';
 import { emitTransactionsChanged } from '@/domain/events';
@@ -18,6 +18,14 @@ export async function savePlanAmount(...args: Parameters<typeof setPlanAmount>) 
     if (deleted) await restoreFund(deleted);
     throw e;
   }
+  emitTransactionsChanged();
+}
+
+/** A regular payment within the month (every day, on weekdays); throws OverBudgetError past the budget. A fund stops being one. */
+export async function saveRegular(ym: string, categoryId: number, r: RegularItem, currency: Currency, takeLocked = false) {
+  const fund = await getFund(categoryId);
+  if (fund && !fund.closed_ym) await deleteFund(categoryId);
+  await setRegularItem(ym, categoryId, r, currency, takeLocked);
   emitTransactionsChanged();
 }
 

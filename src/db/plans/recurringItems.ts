@@ -56,7 +56,7 @@ export async function monthPayments(ym: string, to?: Currency, now = new Date(),
   for (const sub of subs) {
     if (!sub.due) { out.undated.push(sub); continue; }
     const ops = daysOf(sub);
-    const charges = monthCharges(sub.due, sub.period, ym, ops, `${sub.since_ym}-01`);
+    const charges = monthCharges(sub.due, sub.period, ym, ops, `${sub.since_ym}-01`, sub.until);
     for (const c of charges) {
       const converted = conv(sub.amount_minor, sub.currency, currency, rateDay);
       const saved = savedFrom.has(sub.id) && c.day >= savedFrom.get(sub.id)!;
@@ -66,8 +66,10 @@ export async function monthPayments(ym: string, to?: Currency, now = new Date(),
     if (!charges.length) {
       // the current month: the next one waited for (a late one too); a coming month: the first after it; a one-off one
       // done — none
-      const next = nextCharge(sub.due, sub.period, ops, today);
-      const later = next === null ? null : next > last || ym === currentYm(now) ? next : firstAfter(sub.due, sub.period, last);
+      const next = nextCharge(sub.due, sub.period, ops, today, sub.until);
+      const after = next === null ? null : next > last || ym === currentYm(now) ? next : firstAfter(sub.due, sub.period, last);
+      // past its end ("Дата окончания"): none
+      const later = after && sub.until && after > sub.until ? null : after;
       if (later) out.later.push({ sub, next: later });
     }
   }
@@ -120,7 +122,7 @@ export async function refreshRecurringItems(nowYm = currentYm()): Promise<void> 
   }
 }
 
-export type PaymentDraft = { merchant_key: string; category_id?: number | null; amount_minor: number; currency: Currency; period: Period; due: string | null };
+export type PaymentDraft = { merchant_key: string; category_id?: number | null; amount_minor: number; currency: Currency; period: Period; due: string | null; until?: string | null };
 
 /**
  * What saving a repeating payment does to the plan: the first month from this one it is charged in ("В план октября +30 ₾"),
@@ -135,14 +137,14 @@ export async function planEffect(draft: PaymentDraft, id?: number, now = new Dat
   const own = { merchant_key: draft.merchant_key };
   const daysOf = await paymentDays(old ? [own, old] : [own], db);
   const since = `${old?.since_ym ?? nowYm}-01`;
-  const chargesIn = (ym: string) => monthCharges(draft.due!, draft.period, ym, daysOf(own), since).length;
+  const chargesIn = (ym: string) => monthCharges(draft.due!, draft.period, ym, daysOf(own), since, draft.until).length;
   // a one-off one already past: this month
   const next = nextCharge(draft.due, draft.period, daysOf(own), todayKey(now)) ?? draft.due;
   const ym = chargesIn(nowYm) ? nowYm : next.slice(0, 7) < nowYm ? nowYm : next.slice(0, 7);
   const currency = asCurrency((await db.get<{ c: string }>('SELECT budget_currency AS c FROM plan_months WHERE ym = ?', [ym]))?.c);
   const conv = await makeConverter();
   const rateDay = planRateDate(ym);
-  const was = old?.due ? monthCharges(old.due, old.period, ym, daysOf(old), `${old.since_ym}-01`).length * (conv(old.amount_minor, old.currency, currency, rateDay) ?? 0) : 0;
+  const was = old?.due ? monthCharges(old.due, old.period, ym, daysOf(old), `${old.since_ym}-01`, old.until).length * (conv(old.amount_minor, old.currency, currency, rateDay) ?? 0) : 0;
   const after = chargesIn(ym) * (conv(draft.amount_minor, draft.currency, currency, rateDay) ?? 0);
   return { ym, delta_minor: after - was, after_minor: after, currency };
 }

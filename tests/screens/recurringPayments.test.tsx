@@ -55,6 +55,8 @@ describe('6.6 subscriptions', () => {
     await tap('Подписка: NETFLIX.COM');
     await tap('Раз в год');
     expect(await screen.findByText(/^10 октября 2027/)).toBeTruthy();
+    // no charges after it, if set
+    expect(screen.getByText('Дата окончания (необязательно)')).toBeTruthy();
     await tap('Сохранить');
     // October's charge (the 10th) is the year's: done
     expect(await screen.findByText('раз в год · ✓ списано 10 окт')).toBeTruthy();
@@ -114,6 +116,7 @@ describe('6.6 subscriptions', () => {
     expect(await screen.findByText('Дата списания')).toBeTruthy();
     expect(screen.getByText(/^10 октября 2026/)).toBeTruthy();
     expect(screen.getByText('Списание одно: после него в план больше не встанет.')).toBeTruthy();
+    expect(screen.queryByText('Дата окончания (необязательно)')).toBeNull();
     await tap('Сохранить');
     expect(await screen.findByText('NETFLIX.COM — списание 10 октября')).toBeTruthy();
     expect(await screen.findByText('один раз · ✓ списано 10 окт')).toBeTruthy();

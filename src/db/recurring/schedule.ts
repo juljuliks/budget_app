@@ -75,13 +75,15 @@ export function chargesBetween(due: string, p: Period, from: string, to: string)
 
 /**
  * The next charge: the first from the set day on that isn't done and whose window hasn't passed by `today` (a charge
- * missed more than the window ago isn't waited for any more); null — a one-off one done or missed: nothing to wait for.
+ * missed more than the window ago isn't waited for any more); null — a one-off one done or missed, or past its end
+ * (`until`, "Дата окончания"): nothing to wait for.
  */
-export function nextCharge(due: string, p: Period, opDays: string[], today: string): string | null {
+export function nextCharge(due: string, p: Period, opDays: string[], today: string, until?: string | null): string | null {
   const waited = (day: string) => daysBetween(day, today) <= windowOf(p) && !isDone(day, opDays, p);
   if (p === ONCE) return waited(due) ? due : null;
   for (let k = 0; ; k++) {
     const day = chargeAt(due, p, k);
+    if (until && day > until) return null;
     if (waited(day)) return day;
   }
 }
@@ -94,11 +96,11 @@ export function monthDays(ym: string): [string, string] {
 
 /**
  * The month's charges: those from the set day on, and the done ones before it (the operation the repeating payment was made
- * from); none before `sinceDay` (the first day of the month it was made in).
+ * from); none before `sinceDay` (the first day of the month it was made in) or after `until` ("Дата окончания").
  */
-export function monthCharges(due: string, p: Period, ym: string, opDays: string[], sinceDay: string): Array<{ day: string; done: boolean }> {
+export function monthCharges(due: string, p: Period, ym: string, opDays: string[], sinceDay: string, until?: string | null): Array<{ day: string; done: boolean }> {
   const [from, to] = monthDays(ym);
-  return chargesBetween(due, p, from, to)
+  return chargesBetween(due, p, from, until && until < to ? until : to)
     .map((day) => ({ day, done: isDone(day, opDays, p) }))
     .filter((c) => (c.day >= due || c.done) && c.day >= sinceDay);
 }
@@ -122,13 +124,16 @@ export const chargeBefore = (due: string, p: Period) => (p === ONCE ? due : char
  * paid before the month (a charge a few days early belongs to the month it was paid in) or before `after` (the day the
  * saving was made: one paid already isn't its); null — a one-off one already past.
  */
-export function savingFor(due: string, p: Period, ym: string, opDays: string[], after = ''): string | null {
+export function savingFor(due: string, p: Period, ym: string, opDays: string[], after = '', until?: string | null): string | null {
   const month = `${ym}-01`;
+  if (until && until < month) return null;
   const from = after > month ? after : month;
   const its = (d: string) => (d >= due || isDone(d, opDays, p)) && !opDays.some((o) => o < from && Math.abs(daysBetween(d, o)) <= windowOf(p));
   if (p === ONCE) return due >= month && its(due) ? due : null;
   for (let to = chargeAt(from, p, 1); ; to = chargeAt(to, p, 1)) {
     const day = chargesBetween(due, p, month, to).find(its);
-    if (day) return day;
+    // past its end: nothing more to save for
+    if (day) return until && day > until ? null : day;
+    if (until && to > until) return null;
   }
 }

@@ -26,10 +26,12 @@ export type RecurringPayment = {
   due: string | null;
   /** the month it was made in: its charges count in plans from it */
   since_ym: string;
+  /** "Дата окончания": no charges after it; null — none */
+  until: string | null;
 };
 
 type Row = Omit<RecurringPayment, 'currency'> & { currency: string };
-const COLUMNS = `id, category_id, merchant_key, name, amount_minor, currency, ${periodSql()} AS period, due, since_ym`;
+const COLUMNS = `id, category_id, merchant_key, name, amount_minor, currency, ${periodSql()} AS period, due, since_ym, until`;
 const asSub = (r: Row): RecurringPayment => ({ ...r, currency: asCurrency(r.currency) });
 
 /** The day of a moment ('YYYY-MM-DD', local). */
@@ -62,7 +64,7 @@ export async function getPayment(id: number): Promise<RecurringPayment | null> {
 export async function paymentNext(id: number, now = new Date()): Promise<string | null> {
   const sub = await getPayment(id);
   if (!sub?.due) return null;
-  return nextCharge(sub.due, sub.period, (await paymentDays([sub]))(sub), todayKey(now));
+  return nextCharge(sub.due, sub.period, (await paymentDays([sub]))(sub), todayKey(now), sub.until);
 }
 
 /** The merchant's repeating payment (not deleted), or null. */
@@ -130,7 +132,7 @@ export async function paymentCard(merchantKey: string, now = new Date()): Promis
   const last = await db.get<{ id: number; amount_minor: number; currency: string }>(
     `SELECT id, amount_minor, currency FROM spend_parts WHERE ${whose} ORDER BY occurred_at DESC, id DESC LIMIT 1`, [key]);
   return {
-    sub, next: sub.due ? nextCharge(sub.due, sub.period, days, todayKey(now)) : null,
+    sub, next: sub.due ? nextCharge(sub.due, sub.period, days, todayKey(now), sub.until) : null,
     year_count: year?.n ?? 0, year_minor: year?.sum ?? 0, last: last ? { ...last, currency: asCurrency(last.currency) } : null,
   };
 }

@@ -130,4 +130,14 @@ export const STEPS_43_ON: MigrationStep[][] = [
       await db.run("UPDATE plan_items SET pinned = 0 WHERE kind = 'fixed' AND ym >= ?", [ym]);
     },
   ],
+  // 50: "Дата окончания" of a repeating payment and of a plan item repeated each month (`until`, its last day, 'YYYY-MM-DD');
+  // a regular payment within the month (a one-off payment's kind, 'fixed', with `every`): every day or on the weekdays
+  // (`weekdays`, Monday — bit 0), `unit_minor` each time, the item the times in the month by it
+  [
+    'ALTER TABLE recurring_payments ADD COLUMN until TEXT',
+    'ALTER TABLE plan_items ADD COLUMN until TEXT',
+    "ALTER TABLE plan_items ADD COLUMN every TEXT CHECK (every IN ('day', 'week'))",
+    'ALTER TABLE plan_items ADD COLUMN weekdays INTEGER',
+    'ALTER TABLE plan_items ADD COLUMN unit_minor INTEGER CHECK (unit_minor >= 0)',
+  ],
 ];
