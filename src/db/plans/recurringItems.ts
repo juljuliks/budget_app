@@ -10,6 +10,7 @@ import { dayOfUnix, listPayments, paymentDays, RecurringPayment, todayKey } from
 import { chargeAt, chargesBetween, monthCharges, monthDays, nextCharge, ONCE, Period } from '../recurring/schedule';
 import { savingEffects, storeContributions } from '../recurring/saving';
 import { asCurrency, currentYm, planRateDate } from './months';
+import { systemCurrency } from '../settings';
 
 /** `saved`: paid from what was saved for it (not in the month's sum) */
 export type PaymentCharge = { sub: RecurringPayment; day: string; done: boolean; converted_minor: number | null; saved: boolean };
@@ -106,9 +107,9 @@ export async function refreshRecurringItem(ym: string, nowYm = currentYm()): Pro
     // an amount by hand stays until a payment has a day (once counted, it's counted on — 0 with none left); no item and
     // no payments — none made
     if (r.kind === null ? !r.any : r.kind !== 'subs' && !r.dated) continue;
-    // in its payments' currency when they share one (750 ₾ stays 750 ₾, not 288.61 $ shown as 749.99 ₾); else the plan's
+    // in its payments' currency when they share one (750 ₾ stays 750 ₾, not 288.61 $ shown as 749.99 ₾); else the app's
     const own = [...new Set((await listPayments(db, r.id)).map((p) => p.currency))];
-    const { total_minor, currency } = await monthPayments(ym, own.length === 1 ? own[0] : asCurrency(c), undefined, r.id);
+    const { total_minor, currency } = await monthPayments(ym, own.length === 1 ? own[0] : await systemCurrency(db), undefined, r.id);
     await db.run(
       `INSERT INTO plan_items (ym, category_id, limit_minor, pinned, kind, currency) VALUES (?, ?, ?, 0, 'subs', ?)
         ON CONFLICT (ym, category_id) DO UPDATE SET limit_minor = excluded.limit_minor, kind = 'subs', currency = excluded.currency`,

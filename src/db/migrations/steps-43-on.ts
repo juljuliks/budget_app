@@ -214,4 +214,15 @@ export const STEPS_43_ON: MigrationStep[][] = [
         THEN until ELSE date(ym || '-01', '+1 month', '-1 day') END
       WHERE kind = 'fixed' AND every IS NOT NULL AND pinned = 0`,
   ],
+  // 56: a new plan item starts in the app's currency (Настройки → Валюта), not the budget's: the current and coming months'
+  // items without an amount yet (but funds — in the budget's) take it
+  [
+    async (db) => {
+      const now = new Date();
+      const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      await db.run(
+        `UPDATE plan_items SET currency = coalesce((SELECT CASE WHEN value IN ('USD', 'EUR') THEN value END FROM app_settings WHERE key = 'display_currency'), 'GEL')
+          WHERE limit_minor = 0 AND kind <> 'fund' AND ym >= ?`, [ym]);
+    },
+  ],
 ];

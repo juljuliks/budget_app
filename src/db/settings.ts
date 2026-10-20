@@ -12,4 +12,13 @@ export async function setSetting(key: string, value: string | null, db?: Db) {
   await db.run('INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value', [key, value]);
 }
 
+/**
+ * The app's currency (Настройки → Валюта, 'display_currency'): what amounts are shown in and what a new plan item or
+ * payment starts in; GEL until picked.
+ */
+export async function systemCurrency(db?: Db): Promise<'GEL' | 'USD' | 'EUR'> {
+  const v = await getSetting('display_currency', db);
+  return v === 'USD' || v === 'EUR' ? v : 'GEL';
+}
+
 export default { getSetting, setSetting };

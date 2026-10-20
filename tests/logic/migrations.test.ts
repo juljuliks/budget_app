@@ -392,4 +392,18 @@ describe('migrations', () => {
       { category_id: 90, pinned: 1, until: '2026-10-31' }, { category_id: 91, pinned: 1, until: '2026-10-15' },
       { category_id: 92, pinned: 1, until: null }, { category_id: 93, pinned: 0, until: null }]);
   });
+
+  test('migration 56: the current and coming months\' items without an amount (not funds) — in the app\'s currency', async () => {
+    jest.useFakeTimers({ now: new Date('2026-10-20T12:00:00'), advanceTimers: true });
+    const db = openDatabase(':memory:');
+    await migrate(db, MIGRATIONS.slice(0, 55));
+    await db.run("INSERT INTO categories (id, name) VALUES (90, 'Еда'), (91, 'Кафе'), (92, 'Отпуск')");
+    await db.run(`INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency) VALUES
+      ('2026-10', 90, 0, 'limit', 'USD'), ('2026-10', 91, 5000, 'limit', 'USD'), ('2026-10', 92, 0, 'fund', 'USD'), ('2026-09', 90, 0, 'limit', 'USD')`);
+    await migrate(db);
+    jest.useRealTimers();
+    expect(await db.all('SELECT ym, category_id, currency FROM plan_items ORDER BY ym, category_id')).toEqual([
+      { ym: '2026-09', category_id: 90, currency: 'USD' }, { ym: '2026-10', category_id: 90, currency: 'GEL' },
+      { ym: '2026-10', category_id: 91, currency: 'USD' }, { ym: '2026-10', category_id: 92, currency: 'USD' }]);
+  });
 });

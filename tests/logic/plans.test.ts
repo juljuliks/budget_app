@@ -357,3 +357,17 @@ test('the share outside the plan as an amount of one\'s own', async () => {
   await setPlanBudget('2026-10', 100000, 'GEL', 20, true, 0, null);
   expect(unplannedOf(await getPlanBudget('2026-10'))).toBe(20000);
 });
+
+describe('the currency of a new plan item', () => {
+  beforeEach(() => freshDb());
+  test('the app\'s (Настройки → Валюта), not the budget\'s; one entered in another keeps it', async () => {
+    const { setSetting } = require('../../src/db/settings');
+    const ym = '2099-01';
+    await setPlanBudget(ym, 100000, 'USD');
+    await setSetting('display_currency', 'GEL');
+    await addPlanItem(ym, 1);
+    await setPlanAmount(ym, 2, 5000);
+    await setPlanAmount(ym, 3, 2000, undefined, 'EUR');
+    expect((await listPlan(ym)).map((i) => [i.category_id, i.currency])).toEqual([[1, 'GEL'], [2, 'GEL'], [3, 'EUR']]);
+  });
+});

@@ -123,6 +123,11 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
   const [previous, setPrevious] = useState<{ minor: number; currency: Currency; ym: string } | null>(null);
   // what the category usually takes a month (the latest full months), in the app's currency
   const [average, setAverage] = useState<{ minor: number; months: number; from: string; to: string } | null>(null);
+  // the month's budget currency: a fund (as the savings) is in it
+  const [budgetCurrency, setBudgetCurrency] = useState<Currency | null>(null);
+  useEffect(() => {
+    if (kind === 'fund' && !target?.fund && budgetCurrency) form.setValue('currency', budgetCurrency, { shouldDirty: true });
+  }, [kind, budgetCurrency, target, form]);
   // a category with "Подписки": has it subscriptions (off in the plan — they count again)
   const [hasSubs, setHasSubs] = useState(false);
   useEffect(() => {
@@ -144,6 +149,7 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
       // the unplanned share is not for the plan
       setFree(budget ? inShown(Math.max(budget.plannable_minor - others, 0), budget.currency) : null);
       setLocked(budget?.locked_minor ?? 0);
+      setBudgetCurrency(budget?.currency ?? null);
       setPrevious(last ? { ...inShown(last.limit_minor, last.currency), ym: last.ym } : null);
       setAverage(avg && avg.average_minor > 0 ? { minor: avg.average_minor, months: avg.months, from: avg.from, to: avg.to } : null);
       // not in the plan yet: the amount it was opened with (what the category spent), else last month's item —

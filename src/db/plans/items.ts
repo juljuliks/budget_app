@@ -1,5 +1,6 @@
 // The plan's items: listed, added, their amount, pinned, removed; within the budget.
 import { getDb } from '../index';
+import { systemCurrency } from '../settings';
 import type { Db, SqlParam } from '../types';
 import { placeholders } from '../sql';
 import { Currency } from '../fx';
@@ -136,7 +137,8 @@ export async function addPlanItem(ym: string, categoryId: number, limitMinor?: n
   let amount = limitMinor ?? 0;
   let kind: PlanKind = 'limit';
   let norm: NormPeriod = 'day';
-  let cur = currency ?? (await planCurrency(ym));
+  // a new one in the app's currency (Настройки → Валюта), not the budget's
+  let cur = currency ?? (await systemCurrency(db));
   if (limitMinor === undefined) {
     const last = await lastPlanItem(ym, categoryId);
     if (last) {
@@ -155,7 +157,7 @@ export async function addPlanItem(ym: string, categoryId: number, limitMinor?: n
 
 /**
  * Sets (and adds, if missing) a plan item. `kind` is kept as is when omitted; `currency` too (a new item takes
- * the amount to distribute's). Refused (OverBudgetError) if the month's plan would exceed its amount to distribute —
+ * the app's, Настройки → Валюта). Refused (OverBudgetError) if the month's plan would exceed its amount to distribute —
  * unless `takeLocked`: then what is short is taken from "🔒 Отложить сразу", if it has that much; 'all' — what it has,
  * the plan over its budget by the rest (an obligation: a regular payment).
  */
@@ -167,7 +169,7 @@ export async function setPlanAmount(
   limitMinor = Math.max(0, limitMinor);
   const db = await getDb();
   const existing = await db.get<{ currency: string }>('SELECT currency FROM plan_items WHERE ym = ? AND category_id = ?', [ym, categoryId]);
-  const cur = currency ?? (existing ? asCurrency(existing.currency) : await planCurrency(ym));
+  const cur = currency ?? (existing ? asCurrency(existing.currency) : await systemCurrency(db));
   const over = await fits(ym, categoryId, limitMinor, cur);
   const locked = over && takeLocked ? (await storedBudget(ym))?.locked_minor ?? 0 : 0;
   const short = over ? (takeLocked === 'all' ? Math.min(over.planned_minor - over.budget_minor, locked) : over.planned_minor - over.budget_minor) : 0;
