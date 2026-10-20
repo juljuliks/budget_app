@@ -17,8 +17,6 @@ export type TabParamList = {
     nonce?: number;
     /** a category being deleted: its operations of this month to sort out to other categories, then it goes */
     sortOut?: number;
-    /** a category's repeating payment being made: a tap on an operation makes it from it (its label in the banner) */
-    pickPayment?: { id: number; label: string };
     /** where back returns: a tab, or a page over them (the merchants, the categories) */
     from?: BackTarget;
   } | undefined;
@@ -101,18 +99,11 @@ const left: NavigationState[] = [];
  * "Показать все ›" / "N операций ›" of a merchant's or a category's page: the operations tab with its filter; back
  * from there (backToPages) puts the pages back as they were (the operation it was opened from under it too).
  */
-export function showOperationsFrom(filter: { category?: number; query?: string; range?: DayRange; pickPayment?: { id: number; label: string } }) {
+export function showOperationsFrom(filter: { category?: number; query?: string; range?: DayRange }) {
   left.push(navigationRef.getRootState());
   // `as never`: a nested navigate the root types don't describe
   navigationRef.navigate('Main', { screen: 'Transactions', params: { ...filter, nonce: Date.now(), from: 'pages' } } as never);
 }
-
-/**
- * "Выбрать операцию" of a category's repeating payment: its operations of the month (the filters can be changed); a tap
- * on one makes the payment from it, and back — or the payment saved — puts the screen as it was.
- */
-export const pickPaymentOperation = (category: { id: number; label: string }, range: DayRange) =>
-  showOperationsFrom({ category: category.id, range, pickPayment: category });
 
 /** Back from the operations a page's link opened: those pages again; false — there were none. */
 export function backToPages(): boolean {

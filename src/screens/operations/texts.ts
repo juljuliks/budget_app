@@ -33,17 +33,3 @@ export function bulkSplitText(split: number, toLabel: string | null) {
     ok: 'Продолжить',
   };
 }
-
-/** Picking an operation for a category's subscription (the plan's "Выбрать операцию", "＋ Добавить подписку"). */
-export const pickBanner = (label: string) => `Подписка «${label}»: выберите операцию`;
-export const PICK_NOT_SPENDING = 'Это не трата — подписка делается из покупки или оплаты';
-export const PICK_TRANSFER = 'Перевод — не подписка: для него задайте регулярный платёж в плане категории без «Подписок»';
-export const PICK_NO_MERCHANT = 'У операции нет мерчанта — по ней не узнать следующие списания. Выберите другую';
-
-/** The operation picked is of another category than the subscription's: move it (and its merchant) there? */
-export const pickMoveText = (from: string, to: string, merchant: string) => ({
-  title: `Перенести в «${to}»?`,
-  message: `Операция в «${from}». Подписка будет в «${to}», а траты ${merchant} останутся в «${from}» — в плане списания и траты разойдутся.`,
-  keep: `Оставить в «${from}»`,
-  move: `Перенести ${merchant} в «${to}»`,
-});

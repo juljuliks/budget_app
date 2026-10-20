@@ -13,13 +13,15 @@ import StepsNav from '@/shared/ui/StepsNav';
 import TextInputModal from '@/shared/ui/TextInputModal';
 import { useLoadedForm } from '@/shared/ui/form';
 import { toastFailure } from '@/shared/ui/toast';
-import { openCategory, pickPaymentOperation } from '@/shared/navigation/navigation';
-import { monthDays } from '@/shared/lib/dateRange';
+import { openCategory } from '@/shared/navigation/navigation';
+import { paymentsOfCategory } from '@/db/recurring';
+import { toast } from '@/shared/ui/toast';
+import { resumeSubscriptions } from '../model/commands';
 import FundFields, { FundForm } from './FundFields';
 import PlanFacts from './PlanFacts';
 import RegularFields, { RegularEvery, RegularForm } from './RegularFields';
 import RepeatField, { RepeatForm } from './RepeatField';
-import { BY_HAND_HINT, COUNTED_HINT, KINDS, patterns, PICK_HINT } from './sheetOptions';
+import { BY_HAND_HINT, COUNTED_HINT, KINDS, patterns, PICK_HINT, RESUME_HINT } from './sheetOptions';
 import { PlanSheetValues, submitPlanSheet } from './submitPlanSheet';
 
 export type PlanAmountTarget = {
@@ -72,8 +74,8 @@ type Props = {
 
 /**
  * What the sheet is for its kind: a regular payment within the month (`regular`), the category's own payment (`own`);
- * a category with "Подписки" — an operation to pick (`pick`: they're off in the plan) or the amount counted from them
- * (`counted`).
+ * a category with "Подписки" — off in the plan (`pick`: its subscriptions count again, none — made of its merchants on
+ * its page) or the amount counted from them (`counted`).
  */
 function sheetMode(target: PlanAmountTarget | null, kind: PlanKind, every: RegularEvery) {
   const subs = kind === 'subs' && !!target;
@@ -87,13 +89,15 @@ function sheetMode(target: PlanAmountTarget | null, kind: PlanKind, every: Regul
 }
 
 /**
- * "Регулярный платёж" for a category with "Подписки" off in the plan: a subscription is made from an operation — the
- * sheet (and those under it) closes for the category's operations of the month to pick one from.
+ * "Регулярный платёж" for a category with "Подписки" off in the plan: its subscriptions count again; none — the sheet
+ * (and those under it) closes for its page, where they are made of its merchants ("Сделать подпиской").
  */
-function goPick(target: PlanAmountTarget, ym: string, leave: () => void): false {
-  leave();
-  pickPaymentOperation({ id: target.category_id, label: target.label }, monthDays(ym));
-  return false;
+async function goSubscriptions(target: PlanAmountTarget, has: boolean, leave: () => void, onSaved: () => void): Promise<null | false> {
+  if (!has) { leave(); openCategory(target.category_id); return false; }
+  await resumeSubscriptions(target.category_id);
+  toast(`План «${target.label}» сохранён`);
+  onSaved();
+  return null;
 }
 
 /**
@@ -119,6 +123,12 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
   const [previous, setPrevious] = useState<{ minor: number; currency: Currency; ym: string } | null>(null);
   // what the category usually takes a month (the latest full months), in the app's currency
   const [average, setAverage] = useState<{ minor: number; months: number; from: string; to: string } | null>(null);
+  // a category with "Подписки": has it subscriptions (off in the plan — they count again)
+  const [hasSubs, setHasSubs] = useState(false);
+  useEffect(() => {
+    if (!target?.by_merchant) { setHasSubs(false); return; }
+    paymentsOfCategory(target.category_id).then((all) => setHasSubs(all.some((p) => p.merchant_key))).catch(toastFailure('load subscriptions', LOAD_FAILED));
+  }, [target]);
 
   useEffect(() => {
     if (!target) return;
@@ -157,7 +167,7 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
 
   async function save(text: string): Promise<string | null | false> {
     if (!target) return null;
-    if (s.pick) return goPick(target, ym, onLeave ?? onClose);
+    if (s.pick) return goSubscriptions(target, hasSubs, onLeave ?? onClose, onSaved);
     if (s.counted) return null;
     return submitPlanSheet({ ym, target, text, v: form.getValues() as PlanSheetValues, adding: !!adding, locked, free, onSaved, onClose });
   }
@@ -177,7 +187,7 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
       title={adding ? 'Добавить в план' : target?.label ?? ''}
       // the category's name a link to its page (the sheet closes: a page goes under the sheets)
       onTitlePress={!adding && target ? () => { onClose(); openCategory(target.category_id); } : undefined}
-      submitLabel={s.pick ? 'Выбрать операцию' : adding ? 'Добавить в план' : undefined} noInput={s.pick || s.counted}
+      submitLabel={s.pick && !hasSubs ? 'Выбрать мерчанта' : adding ? 'Добавить в план' : undefined} noInput={s.pick || s.counted}
       hint={hint} form={form} placeholder="0" keyboardType="decimal-pad"
       maxLength={12}
       allowEmpty
@@ -200,7 +210,7 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
       ) : null}
       {kind === 'limit' && target ? <RepeatField ym={ym} form={form as unknown as UseFormReturn<RepeatForm>} entered={entered ?? ''} currency={enteredCurrency} /> : null}
       {kind === 'subs' && target && !target.by_merchant ? <RegularFields ym={ym} categoryId={target.category_id} form={form as unknown as Parameters<typeof RegularFields>[0]['form']} /> : null}
-      {kind === 'subs' && target?.by_merchant ? <Text style={formStyles.hint}>{s.pick ? PICK_HINT : s.counted ? COUNTED_HINT : BY_HAND_HINT}</Text> : null}
+      {kind === 'subs' && target?.by_merchant ? <Text style={formStyles.hint}>{s.pick ? (hasSubs ? RESUME_HINT : PICK_HINT) : s.counted ? COUNTED_HINT : BY_HAND_HINT}</Text> : null}
       {kind === 'fund' && target ? <FundFields ym={ym} categoryId={target.category_id} form={form as unknown as UseFormReturn<FundForm>} /> : null}
     </TextInputModal>
   );

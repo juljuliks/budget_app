@@ -2,7 +2,7 @@
 // a subscription made of an operation picked in the operations. Today: 15 October 2026; the seed `planned` (Подписки 30 ₾ by hand) and NETFLIX.COM
 // charged 30 ₾ on the 10th in "Подписки".
 import { fireEvent, waitFor } from '@testing-library/react-native';
-import { backToTabs, openApp, openSettings, screen, tap, texts, toggleSwitch } from './app';
+import { back, backToTabs, openApp, openSettings, screen, tap, texts, toggleSwitch } from './app';
 import { buy, on, planned } from '../e2e/seeds';
 import { getDb } from '../../src/db';
 import { subscriptionsCategoryId } from '../../src/db/categories';
@@ -158,25 +158,7 @@ describe('6.6 subscriptions', () => {
     expect(screen.getByText('в октябре 2027')).toBeTruthy();
   });
 
-  test('"＋ Добавить подписку": the month\'s operations of "Подписки" to pick from; the subscription made of the one picked, back in the plan', async () => {
-    await openSubscriptions();
-    await tap('＋ Добавить подписку');
-    expect(await screen.findByText('Подписка «📺 Подписки»: выберите операцию')).toBeTruthy();
-    await tap('NETFLIX.COM');
-    // from the operation: its amount, its day plus a month; "Отмена", not "Пропустить"
-    expect(await screen.findByText('📺 Подписка «NETFLIX.COM»')).toBeTruthy();
-    expect(screen.getByDisplayValue('30')).toBeTruthy();
-    expect(screen.getByText(/^10 ноября 2026/)).toBeTruthy();
-    expect(screen.queryByText('Пропустить')).toBeNull();
-    await tap('Сохранить');
-    expect(await screen.findByText('NETFLIX.COM — следующее списание 10 ноября')).toBeTruthy();
-    expect(await subs()).toEqual([{ name: 'NETFLIX.COM', merchant_key: 'NETFLIX.COM', amount_minor: 3000, period_months: 1, due: '2026-11-10' }]);
-    // the operations left: the plan again
-    await waitFor(() => expect(screen.queryByText('Подписка «📺 Подписки»: выберите операцию')).toBeNull());
-    expect(await screen.findByText('📺 Подписки')).toBeTruthy();
-  });
-
-  test('not to be picked: one not a spending, one without a merchant; "Отменить" — back in the plan, nothing made', async () => {
+  test('no "＋ Добавить подписку": a subscription is made of a merchant of the category; one not a spending, one without a merchant — not listed', async () => {
     await openApp(async () => {
       await seed();
       const id = await subscriptionsCategoryId();
@@ -186,15 +168,11 @@ describe('6.6 subscriptions', () => {
     await tap('Статистика');
     await tap('План');
     await tap('📺 Подписки');
-    await tap('＋ Добавить подписку');
-    await tap(/APPLE/);
-    expect(await screen.findByText('⚠️  Это не трата — подписка делается из покупки или оплаты')).toBeTruthy();
-    await tap(/Кино дома/);
-    expect(await screen.findByText('⚠️  У операции нет мерчанта — по ней не узнать следующие списания. Выберите другую')).toBeTruthy();
-    await tap('#pick-payment-cancel');
-    await waitFor(() => expect(screen.queryByText('Подписка «📺 Подписки»: выберите операцию')).toBeNull());
-    expect(await screen.findByText('📺 Подписки')).toBeTruthy();
-    expect(await subs()).toEqual([]);
+    expect(await screen.findByText('Без даты списания')).toBeTruthy();
+    expect(screen.getByLabelText('Подписка: NETFLIX.COM')).toBeTruthy();
+    expect(screen.queryByLabelText('Подписка: APPLE')).toBeNull();
+    expect(screen.queryByText(/Кино дома/)).toBeNull();
+    expect(screen.queryByText('＋ Добавить подписку')).toBeNull();
   });
 
   describe('nothing free in the plan (Одежда 640 ₾: 2 400 ₾ planned of 2 400)', () => {
@@ -261,33 +239,40 @@ describe('6.7.9 "Регулярный платёж" from the plan', () => {
   const subscriptionsOn = async (name: string) => { await (await getDb()).run('UPDATE categories SET by_merchant = 1 WHERE name = ?', [name]); };
   const withSubscriptions = (name: string) => async () => { await seed(); await subscriptionsOn(name); };
 
-  // the plan's sheet of "Дом и коммуналка" with "Подписки": "Регулярный платёж" — "Выбрать операцию", RENT of the 3rd picked
+  // the plan's sheet of "Дом и коммуналка" with "Подписки": "Регулярный платёж" — "Выбрать мерчанта": its page, RENT of
+  // the 3rd made a subscription there
   async function pickRent() {
     await tap('Изменить: 🏠 Дом и коммуналка');
     await tap(await screen.findByRole('radio', { name: /Регулярный платёж/ }));
-    await tap('Выбрать операцию');
-    expect(await screen.findByText('Подписка «🏠 Дом и коммуналка»: выберите операцию')).toBeTruthy();
-    await tap('Оплата · RENT');
+    await tap('Выбрать мерчанта');
+    expect(await screen.findByText('Мерчанты без подписки')).toBeTruthy();
+    await tap('Подписка: RENT');
     // RENT on the 3rd plus a month
     expect(await screen.findByText(/^3 ноября 2026/)).toBeTruthy();
   }
+  /** the subscription saved on the category's page: back to the plan */
+  async function saveBack() {
+    await tap('Сохранить');
+    expect(await screen.findByText(/— следующее списание/)).toBeTruthy();
+    back();
+  }
 
-  test('a category with "Подписки": "Выбрать операцию" — the category\'s operations; the one picked is a subscription, then it is counted', async () => {
+  test('a category with "Подписки": "Выбрать мерчанта" — its page; its merchant made a subscription, then it is counted', async () => {
     await openApp(withSubscriptions('Дом и коммуналка'));
     await tap('Статистика');
     await tap('План');
     await tap('Изменить: 🏠 Дом и коммуналка');
     expect(await screen.findByRole('radio', { name: /Разовый платёж/, checked: true })).toBeTruthy();
     await tap(screen.getByRole('radio', { name: /Регулярный платёж/ }));
-    // no amount, no "Как часто": they come from the operation
-    expect(await screen.findByText(/^Подписка делается из операции/)).toBeTruthy();
+    // no amount, no "Как часто": a subscription is made of a merchant on the category's page
+    expect(await screen.findByText(/^Подписки делаются из мерчантов категории/)).toBeTruthy();
     expect(screen.queryByDisplayValue('800')).toBeNull();
     expect(screen.queryByText('Как часто')).toBeNull();
-    await tap('Выбрать операцию');
-    expect(await screen.findByText('Подписка «🏠 Дом и коммуналка»: выберите операцию')).toBeTruthy();
-    await tap('Оплата · RENT');
+    await tap('Выбрать мерчанта');
+    expect(await screen.findByText('Пока нет подписок: сделайте подпиской мерчанта ниже.')).toBeTruthy();
+    await tap('Подписка: RENT');
     expect(await screen.findByText(/^3 ноября 2026/)).toBeTruthy();
-    await tap('Сохранить');
+    await saveBack();
     expect(await screen.findByText('каждый месяц · следующее 3 ноя')).toBeTruthy();
     expect(await (await getDb()).get("SELECT name, merchant_key, amount_minor, period_months, due FROM recurring_payments"))
       .toEqual({ name: 'RENT', merchant_key: 'RENT', amount_minor: 80000, period_months: 1, due: '2026-11-03' });
@@ -388,30 +373,12 @@ describe('6.7.9 "Регулярный платёж" from the plan', () => {
     expect(await screen.findByText('Сумма стоит в плане каждый месяц.')).toBeTruthy();
   });
 
-  test('an operation of another category picked: asked — moved with its merchant to the subscription\'s one, or left', async () => {
-    await openApp(withSubscriptions('Дом и коммуналка'));
-    await tap('Статистика');
-    await tap('План');
-    await tap('Изменить: 🏠 Дом и коммуналка');
-    await tap(await screen.findByRole('radio', { name: /Регулярный платёж/ }));
-    await tap('Выбрать операцию');
-    await screen.findByText('Подписка «🏠 Дом и коммуналка»: выберите операцию');
-    // all the operations: ZARA is in "Одежда"
-    await tap('Сбросить все');
-    await tap('ZARA');
-    expect(await screen.findByText('Перенести в «🏠 Дом и коммуналка»?')).toBeTruthy();
-    expect(screen.getByText('Операция в «👕 Одежда». Подписка будет в «🏠 Дом и коммуналка», а траты ZARA останутся в «👕 Одежда» — в плане списания и траты разойдутся.')).toBeTruthy();
-    await tap('Перенести ZARA в «🏠 Дом и коммуналка»');
-    expect(await screen.findByText('🏠 Подписка «ZARA»')).toBeTruthy();
-    expect(await (await getDb()).get("SELECT c.name FROM transactions t JOIN categories c ON c.id = t.category_id WHERE t.merchant_key = 'ZARA'")).toEqual({ name: 'Дом и коммуналка' });
-  });
-
   test('a coming month\'s plan says the day, not "через …" (counted from today, it read as the month after)', async () => {
     await openApp(withSubscriptions('Дом и коммуналка'));
     await tap('Статистика');
     await tap('План');
     await pickRent();
-    await tap('Сохранить');
+    await saveBack();
     expect(await screen.findByText('каждый месяц · следующее 3 ноя')).toBeTruthy();
     await tap('Следующий месяц');
     expect(await screen.findByText('Ноябрь 2026')).toBeTruthy();
@@ -440,7 +407,7 @@ describe('6.7.9 "Регулярный платёж" from the plan', () => {
     await tap('Статистика');
     await tap('План');
     await pickRent();
-    await tap('Сохранить');
+    await saveBack();
     expect(await screen.findByText('каждый месяц · следующее 3 ноя')).toBeTruthy();
     // November's plan made: the subscription counted there too
     await tap('Следующий месяц');
@@ -467,8 +434,8 @@ describe('6.7.9 "Регулярный платёж" from the plan', () => {
   async function pickZara(amount: string) {
     await tap('Изменить: 👕 Одежда');
     await tap(await screen.findByRole('radio', { name: /Регулярный платёж/ }));
-    await tap('Выбрать операцию');
-    await tap('ZARA');
+    await tap('Выбрать мерчанта');
+    await tap('Подписка: ZARA');
     expect(await screen.findByText('👕 Подписка «ZARA»')).toBeTruthy();
     fireEvent.changeText(screen.getByLabelText('Сумма'), amount);
     await tap('Сохранить');
@@ -502,7 +469,7 @@ describe('6.7.9 "Регулярный платёж" from the plan', () => {
     expect(await (await getDb()).get("SELECT locked_minor FROM plan_months WHERE ym = '2026-10'")).toEqual({ locked_minor: 0 });
   });
 
-  test('turned off with its subscription left: its operation picked again — that subscription, saved — on again', async () => {
+  test('turned off in the plan with its subscription left: "Регулярный платёж" again — it counts again, nothing to pick', async () => {
     await openApp(async () => {
       await seed();
       const id = (await (await getDb()).get<{ id: number }>("SELECT id FROM categories WHERE name = 'Дом и коммуналка'"))!.id;
@@ -511,9 +478,12 @@ describe('6.7.9 "Регулярный платёж" from the plan', () => {
     });
     await tap('Статистика');
     await tap('План');
-    await pickRent();
-    expect(screen.getByText('🏠 Квартира')).toBeTruthy();
+    await tap('Изменить: 🏠 Дом и коммуналка');
+    await tap(await screen.findByRole('radio', { name: /Регулярный платёж/ }));
+    expect(await screen.findByText('Сумма будет считаться из списаний подписок категории.')).toBeTruthy();
+    expect(screen.queryByText('Выбрать мерчанта')).toBeNull();
     await tap('Сохранить');
+    expect(await screen.findByText('План «🏠 Дом и коммуналка» сохранён')).toBeTruthy();
     expect(await screen.findByText('каждый месяц · следующее 3 ноя')).toBeTruthy();
     expect(await (await getDb()).get("SELECT recurring FROM categories WHERE name = 'Дом и коммуналка'")).toEqual({ recurring: 1 });
     expect(await (await getDb()).get('SELECT count(*) AS n FROM recurring_payments')).toEqual({ n: 1 });
@@ -558,6 +528,7 @@ describe('6.7.9 "Регулярный платёж" from the plan', () => {
     await tap('Вычесть и добавить');
     await waitFor(async () => expect(await (await getDb()).get("SELECT period_months, period_unit, due FROM recurring_payments WHERE merchant_key = 'RENT'"))
       .toEqual({ period_months: 1, period_unit: 'week', due: '2026-10-17' }));
+    back();
     // its row: the first charge not paid yet
     expect(await screen.findByText('каждую неделю · 17 окт, через 2 дня')).toBeTruthy();
     // October: the 3rd (paid), the 17th, 24th, 31st — 4 × 800 ₾
@@ -567,7 +538,7 @@ describe('6.7.9 "Регулярный платёж" from the plan', () => {
 
   test('"Подписки": no "Выключить регулярные платежи" in its sheet — the plan turns them off, a subscription is deleted', async () => {
     await openSubscriptions();
-    expect(await screen.findByText('＋ Добавить подписку')).toBeTruthy();
+    expect(await screen.findByText('Без даты списания')).toBeTruthy();
     expect(screen.queryByText('Выключить регулярные платежи')).toBeNull();
   });
 });
@@ -586,7 +557,7 @@ describe('6.7.13 "Подписки" on a category\'s page', () => {
       const id = (await (await getDb()).get<{ id: number }>("SELECT id FROM categories WHERE name = 'Дом и коммуналка'"))!.id;
       await savePayment({ category_id: id, merchant_key: null, name: 'Дом и коммуналка', amount_minor: 80000, currency: 'GEL', period: 1, due: '2026-10-25' });
     });
-    expect(screen.getByText('Следить за списаниями мерчантов, как у Netflix или страховки: подписка делается из операции.')).toBeTruthy();
+    expect(screen.getByText('Следить за списаниями мерчантов, как у Netflix или страховки: подписка делается из мерчанта категории.')).toBeTruthy();
     toggleSwitch(true);
     expect(await screen.findByText('Включить подписки?')).toBeTruthy();
     expect(screen.getByText('Регулярный платёж «Дом и коммуналка» удалится; сумма в плане останется, пока у подписок нет даты.')).toBeTruthy();
@@ -613,7 +584,7 @@ describe('6.7.13 "Подписки" on a category\'s page', () => {
     await openApp(seed);
     await openSettings('Категории');
     await tap('📺 Подписки');
-    expect(await screen.findByText('Пока нет подписок: сделайте подпиской мерчанта ниже или выберите операцию.')).toBeTruthy();
+    expect(await screen.findByText('Пока нет подписок: сделайте подпиской мерчанта ниже.')).toBeTruthy();
     expect(screen.getByText('Мерчанты без подписки')).toBeTruthy();
     expect(screen.getByText('последняя 10 окт · Сделать подпиской')).toBeTruthy();
     await tap('Подписка: NETFLIX.COM');
@@ -622,7 +593,7 @@ describe('6.7.13 "Подписки" on a category\'s page', () => {
     await tap('Сохранить');
     expect(await screen.findByText('каждый месяц · следующее 10 ноя')).toBeTruthy();
     expect(screen.queryByText('Мерчанты без подписки')).toBeNull();
-    expect(screen.getByText('＋ Добавить подписку')).toBeTruthy();
+    expect(screen.queryByText('＋ Добавить подписку')).toBeNull();
   });
 
   test('a category without merchants\' charges: no switch', async () => {

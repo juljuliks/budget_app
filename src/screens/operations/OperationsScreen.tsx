@@ -17,7 +17,6 @@ import { openAddTransaction } from '@/shared/navigation/sheets';
 import { openTransaction } from '@/shared/navigation/navigation';
 import { useStableCallback } from '@/shared/lib/useStableCallback';
 import Fab from '@/shared/ui/Fab';
-import ModeBanner from '@/shared/ui/ModeBanner';
 import { colors } from '@/shared/theme/theme';
 import { GroupBy, useDaySpent } from './model/listData';
 import { useBulkCategory } from './model/useBulkCategory';
@@ -31,13 +30,13 @@ import FilterSheets from './parts/FilterSheets';
 import FiltersBar, { FilterSheet } from './parts/FiltersBar';
 import OperationsList from './parts/OperationsList';
 import SelectToolbar from './parts/SelectToolbar';
-import { EMPTY, EMPTY_FILTERED, pickBanner, SEARCH_PLACEHOLDER } from './texts';
+import { EMPTY, EMPTY_FILTERED, SEARCH_PLACEHOLDER } from './texts';
 import { toastFailure } from '@/shared/ui/toast';
 import { LOAD_FAILED, SAVE_FAILED } from '@/shared/lib/strings';
 
 /**
  * The operations tab: the search and the filters, the list by day or grouped, selecting several, sorting out a
- * category being deleted (features/category-delete), picking an operation for a category's repeating payment.
+ * category being deleted (features/category-delete).
  */
 export default function OperationsScreen() {
   // a view, not a filter: kept by "Сбросить все", back to by day when leaving the tab
@@ -68,7 +67,7 @@ export default function OperationsScreen() {
   useTabLifecycle({
     tabNavigation: route.tabNavigation, from: route.from, sortingOut: sortOut !== null, askLeave: so.askLeave,
     editMode: sel.editMode, toggleEditMode: sel.toggleEditMode,
-    resetOnLeave: () => { sel.setEditMode(false); sel.clear(); filters.reset(); setGroupBy('day'); route.tabNavigation.setParams({ pickPayment: undefined }); },
+    resetOnLeave: () => { sel.setEditMode(false); sel.clear(); filters.reset(); setGroupBy('day'); },
   });
 
   useListRefresh({
@@ -89,8 +88,8 @@ export default function OperationsScreen() {
   const daySpent = useDaySpent(list.sections, list.groups !== null, currency, list.viewRef.current.filter);
   const showRowActions = sel.editMode && !selecting;
   // the rows' handlers, the same every render (the rows are memoized): a long press starts selecting (with this row),
-  // while selecting a tap toggles, picking for a payment — picks, otherwise opens
-  const onPressRow = useStableCallback((tx: TransactionRow) => (selecting ? sel.toggle(tx.id) : route.pick ? route.pickFrom(tx) : openTransaction(tx.id)));
+  // while selecting a tap toggles, otherwise opens
+  const onPressRow = useStableCallback((tx: TransactionRow) => (selecting ? sel.toggle(tx.id) : openTransaction(tx.id)));
   const onLongPressRow = useStableCallback((tx: TransactionRow) => sel.start(tx.id));
 
   if (list.loading) {
@@ -114,7 +113,7 @@ export default function OperationsScreen() {
           onOpen={setSheet}
           onReset={filters.resetExtra}
         >
-          {sortOut ? <SortOutBanner label={sortOut.label} remaining={so.remaining} onCancel={so.askLeave} /> : route.pick ? <ModeBanner text={pickBanner(route.pick.label)} onCancel={route.goBack} testID="pick-payment" /> : null}
+          {sortOut ? <SortOutBanner label={sortOut.label} remaining={so.remaining} onCancel={so.askLeave} /> : null}
         </FiltersBar>
         {selecting ? (
           <SelectToolbar count={selected.size} allSelected={sel.allSelected} onToggleAll={sel.toggleSelectAll} onCancel={sortOut ? undefined : sel.clear} />
@@ -136,7 +135,7 @@ export default function OperationsScreen() {
         // the stats tab with this day picked
         onOpenDay={(dayStart) => guardLeave(() => route.tabNavigation.navigate('Stats', { day: dayStart, nonce: Date.now() }))}
         onPressRow={onPressRow}
-        onLongPressRow={selecting || route.pick ? undefined : onLongPressRow}
+        onLongPressRow={selecting ? undefined : onLongPressRow}
         onDeleteRow={showRowActions ? confirmDeleteTransaction : undefined}
         loadMore={list.loadMore}
         refreshing={list.refreshing}

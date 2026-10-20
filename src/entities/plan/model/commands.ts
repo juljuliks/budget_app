@@ -63,6 +63,12 @@ export async function saveCategoryPayment(
   emitTransactionsChanged();
 }
 
+/** The category's subscriptions in the plan again (its item counted from their charges). */
+export async function resumeSubscriptions(categoryId: number): Promise<void> {
+  await turnRecurring(categoryId, true);
+  emitTransactionsChanged();
+}
+
 /** The category's repeating payments off (what they saved goes to this month's savings). */
 export async function stopRecurring(categoryId: number): Promise<void> {
   await turnRecurring(categoryId, false);

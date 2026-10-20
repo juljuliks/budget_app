@@ -30,15 +30,13 @@ async function targetOf(which: PaymentOpen): Promise<PaymentTarget | null> {
   const tx = which.txId === undefined ? null : await getTransaction(which.txId);
   if (!tx?.merchant_key) return null;
   const sub = await paymentOfMerchant(tx.merchant_key);
-  // picked for a category ("Выбрать операцию"): the payment is that category's (the merchant's one moves there)
-  const picked = which.categoryId !== undefined;
   // one without a day yet: its day offered from this operation
-  const category = await categoryOf(picked ? which.categoryId! : sub?.category_id ?? tx.category_id);
+  const category = await categoryOf(sub?.category_id ?? tx.category_id);
   if (!category) return null;
   if (sub) return { ...sub, category, last_day: dayOfUnix(tx.occurred_at) };
   return {
     category, merchant_key: tx.merchant_key, name: tx.raw_merchant || tx.merchant_key, amount_minor: tx.amount_minor,
-    currency: asCurrency(tx.currency), period: 1, due: null, last_day: dayOfUnix(tx.occurred_at), from_operation: !picked,
+    currency: asCurrency(tx.currency), period: 1, due: null, last_day: dayOfUnix(tx.occurred_at), from_operation: true,
   };
 }
 

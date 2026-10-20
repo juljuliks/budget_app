@@ -25,8 +25,6 @@ export type SheetState = {
 export type PaymentOpen = {
   id?: number;
   txId?: number;
-  /** an operation picked for this category's payment ("Выбрать операцию"): the payment is the category's */
-  categoryId?: number;
   /** after it is saved (not on "Отмена") */
   onSaved?: () => void;
 };

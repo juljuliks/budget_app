@@ -22,7 +22,10 @@ export const dateNeeded = () => 'Выберите дату списания';
 
 export const UNTIL_BEFORE = 'Дата окончания раньше даты списания';
 
-export const PICK_HINT = 'Подписка делается из операции: выберите её среди операций категории за месяц — сумма, мерчант и дата следующего списания возьмутся из неё.';
+export const PICK_HINT = 'Подписки делаются из мерчантов категории: на её странице — «Сделать подпиской». Сумма в плане будет считаться из их списаний.';
+
+/** A category with "Подписки" off in the plan, its subscriptions there: they count again. */
+export const RESUME_HINT = 'Сумма будет считаться из списаний подписок категории.';
 
 // how the category is spent: its limit in day / week stats is counted per this period
 const PATTERN_KEYS = ['day', 'week', '2weeks', 'month'] as const;

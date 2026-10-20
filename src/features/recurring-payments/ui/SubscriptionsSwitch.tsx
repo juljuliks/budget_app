@@ -7,7 +7,7 @@ import { switchSubscriptions } from '../model/subscriptionsSwitch';
 import CategorySubscriptions from './CategorySubscriptions';
 
 const HINT_ON = 'Каждый мерчант категории — отдельная подписка: сумма, как часто, следующее списание. План категории считается из них.';
-const HINT_OFF = 'Следить за списаниями мерчантов, как у Netflix или страховки: подписка делается из операции.';
+const HINT_OFF = 'Следить за списаниями мерчантов, как у Netflix или страховки: подписка делается из мерчанта категории.';
 
 /**
  * A category's page: "Подписки" — its merchants' subscriptions followed by their charges; only for a category with

@@ -1,7 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text } from 'react-native';
 import { RecurringPayment, todayKey } from '@/db/recurring';
-import Button from '@/shared/ui/Button';
 import SectionBand from '@/shared/ui/SectionBand';
 import { formStyles } from '@/shared/theme/formStyles';
 import type { PaymentWords } from '@/entities/category';
@@ -25,14 +24,13 @@ type Props = {
   merchantTarget: (m: RecurringPaymentsData['merchants'][number]) => PaymentTarget;
   targetOf: (s: RecurringPayment) => PaymentTarget;
   onUpcoming: () => void;
-  onAdd: () => void;
 };
 
 /**
  * The month's payments: "Списания в <месяце>" (done ✓ or the day), "Без даты списания" (a tap — set the day), the line to
- * the coming ones ("Предстоящие подписки ›"), "＋ Добавить подписку".
+ * the coming ones ("Предстоящие подписки ›"). A subscription is made of a merchant there ("Задать дату").
  */
-export default function MonthPaymentsView({ ym, data, w, money, shareOf, chargesMinor, upcoming, open, merchantTarget, targetOf, onUpcoming, onAdd }: Props) {
+export default function MonthPaymentsView({ ym, data, w, money, shareOf, chargesMinor, upcoming, open, merchantTarget, targetOf, onUpcoming }: Props) {
   const today = todayKey();
   // "через N дней" — from today: in the current month only (a coming month's sheet says the day)
   const soon = (day: string) => (ym === today.slice(0, 7) ? inTime(day, today) : null);
@@ -67,12 +65,6 @@ export default function MonthPaymentsView({ ym, data, w, money, shareOf, charges
           amount={null}
         />
       ) : null}
-      {/* turned on and off in the plan (its kind "Регулярный платёж"); one stops — deleted in its sheet */}
-      <Button title={`＋ ${w.add}`} outline onPress={onAdd} style={styles.add} />
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  add: { marginTop: 16 },
-});

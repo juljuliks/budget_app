@@ -4,8 +4,7 @@ import type { Currency } from '@/db/fx';
 import type { RecurringPayment } from '@/db/recurring';
 import { formatWithCurrency } from '@/shared/lib/money';
 import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
-import { openCategory, pickPaymentOperation } from '@/shared/navigation/navigation';
-import { monthDays } from '@/shared/lib/dateRange';
+import { openCategory } from '@/shared/navigation/navigation';
 import Loading from '@/shared/ui/Loading';
 import TextLink from '@/shared/ui/TextLink';
 import { formatPercent } from '@/shared/lib/format';
@@ -39,7 +38,7 @@ const savingSum = (m: { saving: Array<{ converted_minor: number | null }> }) => 
 
 /**
  * A category's repeating payments in the plan's month, two views: the month's ("Подписки": its charges, those without a
- * day, "＋ Добавить подписку") and the coming ones ("Предстоящие подписки": saved up for, and later). A tap opens a payment.
+ * day — its merchants without one too: a tap makes one) and the coming ones ("Предстоящие подписки": saved up for, and later). A tap opens a payment.
  */
 export default function RecurringPaymentsSheet({ ym, category, currency, view: initial = 'month', onClose, onEditAmount }: Props) {
   const { data, failed, load } = useRecurringPayments(ym, currency, category.id);
@@ -80,8 +79,6 @@ export default function RecurringPaymentsSheet({ ym, category, currency, view: i
               upcoming={upcomingCount ? { savingMinor: saving, count: upcomingCount } : null}
               merchantTarget={(m) => ({ category, merchant_key: m.merchant_key, name: m.name, amount_minor: m.amount_minor, currency: m.currency, period: 1, due: null, last_day: m.day })}
               onUpcoming={() => setView('upcoming')}
-              // the month's operations of the category to pick one from (the filters can be changed there)
-              onAdd={() => { onClose(); pickPaymentOperation({ id: category.id, label: `${category.emoji ?? ''} ${category.name}`.trim() }, monthDays(ym)); }}
             />
           ) : (
             <UpcomingPaymentsView
