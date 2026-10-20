@@ -332,7 +332,7 @@ describe('migrations', () => {
       { ym: '2026-09', kind: 'subs', limit_minor: 130000 }, { ym: '2026-10', kind: 'fixed', limit_minor: 130000 }]);
   });
 
-  test('migration 49: "Повторять каждый месяц" is a limit\'s only — one-off payments of this month on unpinned, the past ones as they were', async () => {
+  test('migration 49: a one-off payment repeated each month — a regular payment of the category\'s spending, monthly, no day; the pin goes', async () => {
     jest.useFakeTimers({ now: new Date('2026-10-20T12:00:00'), advanceTimers: true });
     const db = openDatabase(':memory:');
     await migrate(db, MIGRATIONS.slice(0, 48));
@@ -344,5 +344,10 @@ describe('migrations', () => {
     jest.useRealTimers();
     expect(await db.all('SELECT ym, category_id, pinned FROM plan_items ORDER BY ym, category_id')).toEqual([
       { ym: '2026-09', category_id: 90, pinned: 1 }, { ym: '2026-10', category_id: 90, pinned: 0 }, { ym: '2026-10', category_id: 91, pinned: 1 }]);
+    // "Подарки": the same amount each month as its own payment ("Траты категории"), without a day
+    expect(await db.all('SELECT category_id, merchant_key, name, amount_minor, period_months, due FROM recurring_payments')).toEqual([
+      { category_id: 90, merchant_key: null, name: 'Подарки', amount_minor: 5000, period_months: 1, due: null }]);
+    expect(await db.all('SELECT id, recurring, by_merchant FROM categories WHERE id IN (90, 91) ORDER BY id')).toEqual([
+      { id: 90, recurring: 1, by_merchant: 0 }, { id: 91, recurring: 0, by_merchant: 0 }]);
   });
 });

@@ -122,11 +122,28 @@ export const STEPS_43_ON: MigrationStep[][] = [
       }
     },
   ],
-  // 49: "Повторять каждый месяц" is a limit's only: one-off payments of this month on are not carried over any more
+  // 49: "Повторять каждый месяц" is a limit's only. A one-off payment repeated each month (this month on) is a regular
+  // payment now: the category's own one ("Траты категории"), every month, without a day — the same amount stands in
+  // each month's plan, carried over as its category has regular payments; the pin goes
   [
     async (db) => {
       const now = new Date();
       const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const items = await db.all<{ category_id: number; limit_minor: number; currency: string; name: string }>(
+        `SELECT p.category_id, p.limit_minor, p.currency, c.name FROM plan_items p JOIN categories c ON c.id = p.category_id
+          WHERE p.kind = 'fixed' AND p.pinned = 1 AND p.ym >= ? AND p.limit_minor > 0 AND c.deleted_at IS NULL
+          ORDER BY p.ym`, [ym]);
+      const done = new Set<number>();
+      for (const it of items) {
+        if (done.has(it.category_id)) continue;
+        done.add(it.category_id);
+        // it has payments already: they count it
+        if (await db.get('SELECT 1 FROM recurring_payments WHERE category_id = ? AND deleted_at IS NULL', [it.category_id])) continue;
+        await db.run(
+          `INSERT INTO recurring_payments (category_id, merchant_key, name, amount_minor, currency, period_months, period_unit, due, since_ym, created_at)
+            VALUES (?, NULL, ?, ?, ?, 1, 'month', NULL, ?, ?)`, [it.category_id, it.name, it.limit_minor, it.currency, ym, Math.floor(now.getTime() / 1000)]);
+        await db.run('UPDATE categories SET recurring = 1 WHERE id = ?', [it.category_id]);
+      }
       await db.run("UPDATE plan_items SET pinned = 0 WHERE kind = 'fixed' AND ym >= ?", [ym]);
     },
   ],
