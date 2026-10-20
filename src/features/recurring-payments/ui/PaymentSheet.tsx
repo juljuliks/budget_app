@@ -3,13 +3,13 @@ import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-nativ
 import { dayTitle } from '@/shared/lib/dates';
 import { formatWithCurrency } from '@/shared/lib/money';
 import { AMOUNT_HINT } from '@/shared/lib/strings';
+import { PAYMENT_PERIODS } from '@/shared/lib/format';
 import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
 import { SheetActions } from '@/shared/ui/Button';
 import Chip from '@/shared/ui/Chip';
 import CurrencyButton from '@/shared/ui/CurrencyButton';
 import DateField from '@/shared/ui/DateField';
 import { TrashIcon } from '@/shared/ui/icons';
-import StepsNav from '@/shared/ui/StepsNav';
 import TextInputModal from '@/shared/ui/TextInputModal';
 import { formStyles } from '@/shared/theme/formStyles';
 import { colors } from '@/shared/theme/theme';
@@ -28,8 +28,8 @@ type Props = {
   /** null = closed */
   target: PaymentTarget | null;
   onClose: () => void;
-  /** step 2 of "Добавить подписку": "‹ Назад" to the merchants */
-  adding?: { onBack: () => void };
+  /** after it is saved (an operation picked for it: back to where it was picked for) */
+  onSaved?: () => void;
   /** before going to its operations: closes this sheet and the ones under it (by default — this one) */
   onLeave?: () => void;
 };
@@ -39,19 +39,21 @@ type Props = {
  * period until picked by hand) and what it does to the plan ("В план октября +30 ₾"). Opened from an operation just
  * put in "Подписки": "Пропустить" keeps it without a day ("Без даты списания"), not asked again.
  */
-export default function PaymentSheet({ target, onClose, adding, onLeave }: Props) {
+export default function PaymentSheet({ target, onClose, onSaved, onLeave }: Props) {
   const f = usePaymentForm(target);
   const ops = usePaymentOperations(target);
   const saving = usePaymentSaving(target, f.period, f.input?.amount_minor ?? null, f.due);
   const [otherOpen, setOtherOpen] = useState(false);
-  const custom = !PERIODS.some(([m]) => m === f.period);
-  const amountBad = f.amount.trim() !== '' && f.input === null && !!f.name.trim();
-  const save = () => { if (f.input) submitPayment(f.input, target?.id, onClose, saving.choice); };
-  const skip = () => { if (f.input) submitPayment({ ...f.input, due: null }, target?.id, onClose); else onClose(); };
   const w = paymentWords(target?.category.name ?? '');
+  // every week: a category's payments (rent, a class), not a subscription's
+  const periods = w.subscriptions ? PERIODS : PAYMENT_PERIODS;
+  const custom = !periods.some(([m]) => m === f.period);
+  const amountBad = f.amount.trim() !== '' && f.input === null && !!f.name.trim();
+  const save = () => { if (f.input) submitPayment(f.input, target?.id, () => { onClose(); onSaved?.(); }, saving.choice); };
+  const skip = () => { if (f.input) submitPayment({ ...f.input, due: null }, target?.id, onClose); else onClose(); };
   const icon = target?.category.emoji ?? '🔁';
   const dueLabel = f.period === ONCE ? 'Дата списания' : 'Следующее списание';
-  const title = target?.id !== undefined ? `${icon} ${target.name}` : target?.merchant_key ? `${icon} ${w.One} «${target.merchant_key}»` : `${icon} ${w.New}`;
+  const title = target?.id !== undefined ? `${icon} ${target.name}` : target ? `${icon} ${w.One} «${target.merchant_key}»` : '';
   return (
     <BottomSheet
       visible={target !== null} onClose={onClose} title={title} style={styles.root}
@@ -62,7 +64,6 @@ export default function PaymentSheet({ target, onClose, adding, onLeave }: Props
       ) : null}
     >
       <SheetScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        {adding ? <StepsNav at={1} count={2} name={w.One} onBack={adding.onBack} /> : null}
         {/* like a merchant's and a category's page: how many operations and how much — a link to them */}
         {ops ? <CategorySummaryRow summary={ops.summary} onShow={() => { (onLeave ?? onClose)(); showOperationsFrom(ops.filter); }} /> : null}
         {target?.from_operation ? (
@@ -81,7 +82,7 @@ export default function PaymentSheet({ target, onClose, adding, onLeave }: Props
         {amountBad ? <Text style={[formStyles.hint, styles.error]}>{AMOUNT_HINT}</Text> : null}
         <Text style={formStyles.label}>Как часто</Text>
         <View style={styles.chips}>
-          {PERIODS.map(([m, label]) => <Chip key={m} label={label} selected={f.period === m} onPress={() => f.setPeriod(m)} />)}
+          {periods.map(([m, label]) => <Chip key={m} label={label} selected={f.period === m} onPress={() => f.setPeriod(m)} />)}
           <Chip label={custom ? periodText(f.period) : 'Другое…'} selected={custom} action={!custom} onPress={() => setOtherOpen(true)} />
         </View>
         <DateField

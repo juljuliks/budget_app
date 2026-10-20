@@ -27,8 +27,8 @@ export default function PaymentNote({ tx }: { tx: Tx }) {
       const c = tx.category_id === null ? undefined : await getCategory(tx.category_id);
       if (!c || !isRecurring(c)) return null;
       if (live) setW(paymentWords(c.name));
-      // its merchant's payment, or its category's one without a merchant; none — "Задать дату" (with a merchant to make it of)
-      return (await paymentCard(tx.merchant_key, undefined, c.id)) ?? (tx.merchant_key ? 'none' : null);
+      // its merchant's payment; none — "Задать дату" (a payment is made of a merchant: without one — nothing)
+      return tx.merchant_key ? (await paymentCard(tx.merchant_key)) ?? 'none' : null;
     };
     const run = () => load().then((c) => { if (live) setCard(c); }).catch((e) => console.error('payment card failed', e));
     run();

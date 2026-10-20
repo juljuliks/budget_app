@@ -12,7 +12,8 @@ import { RecurringUndo, turnRecurring, undoRecurring } from './recurring';
 export type PaymentInput = {
   /** the category it is a payment of; none — the one it had (a new one: "Подписки") */
   category_id?: number | null;
-  merchant_key: string | null;
+  /** the merchant it is made from (an operation's) */
+  merchant_key: string;
   name: string;
   amount_minor: number;
   currency: Currency;
@@ -22,12 +23,13 @@ export type PaymentInput = {
   due: string | null;
 };
 
-/** Makes a repeating payment (the merchant's, if it had one, is changed instead) or changes `id`; its id. */
+/**
+ * Makes a repeating payment (the merchant's, if it had one, is changed instead) or changes `id`; its id. Its category's
+ * repeating payments go on (an operation picked for a category's first one).
+ */
 export async function savePayment(input: PaymentInput, id?: number): Promise<number> {
   const db = await getDb();
-  const own = id ?? (input.merchant_key
-    ? (await db.get<{ id: number }>('SELECT id FROM recurring_payments WHERE merchant_key = ? AND deleted_at IS NULL', [input.merchant_key]))?.id
-    : undefined);
+  const own = id ?? (await db.get<{ id: number }>('SELECT id FROM recurring_payments WHERE merchant_key = ? AND deleted_at IS NULL', [input.merchant_key]))?.id;
   const category = input.category_id
     ?? (own !== undefined ? (await db.get<{ c: number | null }>('SELECT category_id AS c FROM recurring_payments WHERE id = ?', [own]))?.c : null)
     ?? await subscriptionsCategoryId(db);
@@ -42,7 +44,8 @@ export async function savePayment(input: PaymentInput, id?: number): Promise<num
       [...values, currentYm(), Math.floor(Date.now() / 1000)]);
     out = r.lastInsertRowid;
   }
-  await refreshRecurringItems();
+  if (typeof category === 'number') await turnRecurring(category, true);
+  else await refreshRecurringItems();
   return out;
 }
 

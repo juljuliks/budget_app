@@ -9,12 +9,12 @@ import { deletePayment, merchantsWithoutPayment, savePayment, paymentOfMerchant 
 let n = 0;
 const at = (s: string) => Math.floor(new Date(s).getTime() / 1000);
 /** A bank operation of `merchant` (its key the same) in `categoryId`. */
-async function charge(merchant: string, amount: number, when: string, categoryId: number | null) {
+async function charge(merchant: string, amount: number, when: string, categoryId: number | null, kind = 'purchase') {
   n++;
   await (await getDb()).run(
     `INSERT INTO transactions (bank, kind, amount_minor, currency, raw_merchant, merchant_key, category_id, category_source, occurred_at, raw_sms, sms_hash)
-      VALUES ('tbc', 'purchase', ?, 'GEL', ?, ?, ?, 'user', ?, ?, ?)`,
-    [amount, merchant, merchant, categoryId, at(when), `sms ${n}`, `h${n}`]);
+      VALUES ('tbc', ?, ?, 'GEL', ?, ?, ?, 'user', ?, ?, ?)`,
+    [kind, amount, merchant, merchant, categoryId, at(when), `sms ${n}`, `h${n}`]);
 }
 const NETFLIX = { merchant_key: 'NETFLIX.COM', name: 'Netflix', amount_minor: 3000, currency: 'GEL' as const, period: 1 };
 
@@ -96,18 +96,21 @@ test('the merchants charged in "Подписки" with no subscription: their la
   ]);
 });
 
-test('a payment without a merchant (put in from the plan) is charged by any spending of its category', async () => {
+test('a payment made of a transfer\'s recipient (rent): its transfers are its charges; its category goes on', async () => {
   const { createCategory } = require('../../src/db/categories');
-  const { turnRecurring, paymentCard } = require('../../src/db/recurring');
-  const sport = await createCategory('Спорт', '🏋️');
-  await turnRecurring(sport, true);
-  await savePayment({ category_id: sport, merchant_key: null, name: 'Спорт', amount_minor: 30000, currency: 'GEL', period: 1, due: '2026-10-05' });
-  // no operation yet: expected on the 5th
+  const { paymentCard } = require('../../src/db/recurring');
+  const rent = await createCategory('Аренда', '🏠');
+  await charge('LANDLORD', 130000, '2026-09-05T10:00:00', rent, 'transfer');
+  await savePayment({ category_id: rent, merchant_key: 'LANDLORD', name: 'Аренда', amount_minor: 130000, currency: 'GEL', period: 1, due: '2026-10-05' });
+  const recurring = (await (await getDb()).get<{ r: number }>('SELECT recurring AS r FROM categories WHERE id = ?', [rent]))!.r;
+  expect(recurring).toBe(1);
+  // no transfer yet: expected on the 5th; the transfer of the 6th is it
   expect((await monthPayments('2026-10', 'GEL')).charges).toEqual([expect.objectContaining({ day: '2026-10-05', done: false })]);
-  await charge('FITPASS', 30000, '2026-10-06T10:00:00', sport);
+  await charge('LANDLORD', 130000, '2026-10-06T10:00:00', rent, 'transfer');
   expect((await monthPayments('2026-10', 'GEL')).charges).toEqual([expect.objectContaining({ day: '2026-10-05', done: true })]);
-  // its card for an operation of any merchant of the category
-  expect((await paymentCard('FITPASS', new Date('2026-10-18T12:00:00'), sport))?.next).toBe('2026-11-05');
+  // another merchant of the category is not its charge
+  expect(await paymentCard('FITPASS', new Date('2026-10-18T12:00:00'))).toBeNull();
+  expect((await paymentCard('LANDLORD', new Date('2026-10-18T12:00:00')))?.next).toBe('2026-11-05');
 });
 
 test('a category\'s last payment deleted: its repeating payments go off, the item a one-off one; "Отменить" puts both back', async () => {
@@ -116,7 +119,7 @@ test('a category\'s last payment deleted: its repeating payments go off, the ite
   const rent = await createCategory('Аренда', '🏠');
   await turnRecurring(rent, true);
   await charge('LANDLORD', 130000, '2026-10-13T10:00:00', rent);
-  const id = await savePayment({ category_id: rent, merchant_key: null, name: 'Аренда', amount_minor: 130000, currency: 'GEL', period: 1, due: '2026-11-13' });
+  const id = await savePayment({ category_id: rent, merchant_key: 'LANDLORD', name: 'Аренда', amount_minor: 130000, currency: 'GEL', period: 1, due: '2026-11-13' });
   const recurring = async () => (await (await getDb()).get<{ r: number }>('SELECT recurring AS r FROM categories WHERE id = ?', [rent]))!.r;
   expect((await listPlan('2026-10')).find((i) => i.category_id === rent)).toMatchObject({ kind: 'subs', limit_minor: 130000 });
   const deleted = await deletePayment(id);

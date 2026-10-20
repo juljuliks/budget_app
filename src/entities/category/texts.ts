@@ -18,13 +18,13 @@ export const QUICK_HINT = 'Цвет подберётся сам. Изменит�
 export function paymentWords(categoryName: string) {
   return categoryName.trim().toLowerCase() === 'подписки'
     ? {
-      One: 'Подписка', one: 'подписка', acc: 'подписку', New: 'Новая подписка', deleted: 'удалена', noneHas: 'ни у одной подписки',
-      toAll: 'подпискам', noDated: 'нет подписок с датой', none: 'нет подписок', like: 'Похожи на подписку', add: 'Добавить подписку',
+      One: 'Подписка', one: 'подписка', acc: 'подписку', deleted: 'удалена', noneHas: 'ни у одной подписки',
+      toAll: 'подпискам', noDated: 'нет подписок с датой', none: 'нет подписок', add: 'Добавить подписку',
       upcoming: 'Предстоящие подписки', Many: 'Подписки', subscriptions: true,
     }
     : {
-      One: 'Платёж', one: 'платёж', acc: 'платёж', New: 'Новый платёж', deleted: 'удалён', noneHas: 'ни у одного платежа',
-      toAll: 'платежам', noDated: 'нет платежей с датой', none: 'нет платежей', like: 'Похожи на повторяющиеся', add: 'Добавить платёж',
+      One: 'Платёж', one: 'платёж', acc: 'платёж', deleted: 'удалён', noneHas: 'ни у одного платежа',
+      toAll: 'платежам', noDated: 'нет платежей с датой', none: 'нет платежей', add: 'Добавить платёж',
       upcoming: 'Предстоящие платежи', Many: 'Платежи', subscriptions: false,
     };
 }

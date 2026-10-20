@@ -47,6 +47,8 @@ type Props<V extends TextFormValues & FieldValues> = {
   label?: string;
   /** the submit button greyed even with changes: something it needs is not filled in yet */
   submitDisabled?: boolean;
+  /** no field: the choice above is all (the plan's "Повторяющийся платёж" goes to pick an operation) */
+  noInput?: boolean;
   /** returns an error message to show, null when saved, false to stay open without one (a question asked over it) */
   onSubmit: (value: string) => Promise<string | null | false>;
   onClose: () => void;
@@ -58,7 +60,7 @@ type Props<V extends TextFormValues & FieldValues> = {
  */
 export default function TextInputModal<V extends TextFormValues & FieldValues = TextFormValues>({
   visible, title, onTitlePress, initialValue = '', form: outer, placeholder, submitLabel = 'Сохранить', hint, keyboardType, maxLength = 30,
-  allowEmpty, multiline, onSubmit, onClose, children, inputAccessory, headerRight, remove, label, submitDisabled, above,
+  allowEmpty, multiline, onSubmit, onClose, children, inputAccessory, headerRight, remove, label, submitDisabled, above, noInput,
 }: Props<V>) {
   // used only without a form of the caller's (a hook can't be skipped)
   const own = useLoadedForm<TextFormValues>(outer ? null : { value: initialValue }, visible);
@@ -81,8 +83,8 @@ export default function TextInputModal<V extends TextFormValues & FieldValues = 
         <SheetScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.dialog} style={styles.scroll}>
           {typeof hint === 'string' ? <Text style={styles.hint}>{hint}</Text> : hint ?? null}
           {above ? <View style={styles.above}>{above}</View> : null}
-          {label ? <Text style={[formStyles.label, styles.label]}>{label}</Text> : null}
-          <View style={styles.inputRow}>
+          {label && !noInput ? <Text style={[formStyles.label, styles.label]}>{label}</Text> : null}
+          {noInput ? null : <View style={styles.inputRow}>
           <Controller
             control={form.control}
             name="value"
@@ -104,7 +106,7 @@ export default function TextInputModal<V extends TextFormValues & FieldValues = 
             )}
           />
           {inputAccessory}
-          </View>
+          </View>}
           {children ? <View style={styles.extra}>{children}</View> : null}
         </SheetScrollView>
         <View style={styles.dialog}>

@@ -4,8 +4,10 @@ import type { Currency } from '@/db/fx';
 import type { RecurringPayment } from '@/db/recurring';
 import { formatWithCurrency } from '@/shared/lib/money';
 import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
-import { openCategory } from '@/shared/navigation/navigation';
+import { openCategory, pickPaymentOperation } from '@/shared/navigation/navigation';
+import { monthDays } from '@/shared/lib/dateRange';
 import Loading from '@/shared/ui/Loading';
+import TextLink from '@/shared/ui/TextLink';
 import { formatPercent } from '@/shared/lib/format';
 import { formStyles } from '@/shared/theme/formStyles';
 import { colors } from '@/shared/theme/theme';
@@ -13,7 +15,6 @@ import { paymentWords } from '@/entities/category';
 import { PaymentCategory, PaymentTarget } from '../model/usePaymentForm';
 import { useRecurringPayments } from '../model/useRecurringPayments';
 import { inMonth, monthGen } from '../texts';
-import AddPaymentSheet from './AddPaymentSheet';
 import MonthPaymentsView from './MonthPaymentsView';
 import PaymentSheet from './PaymentSheet';
 import UpcomingPaymentsView, { upcomingOf } from './UpcomingPaymentsView';
@@ -30,7 +31,7 @@ type Props = {
   /** what it opens with; each view has a line to the other */
   view?: PaymentsView;
   onClose: () => void;
-  /** the amount put in by hand (no repeating payment has a day yet): the plan's sheet of "Подписки" */
+  /** the category's plan sheet: the amount put in by hand (no payment has a day yet), another kind, out of the plan */
   onEditAmount: () => void;
 };
 
@@ -46,7 +47,6 @@ export default function RecurringPaymentsSheet({ ym, category, currency, view: i
   const targetOf = (s: RecurringPayment): PaymentTarget => ({ ...s, category });
   const [view, setView] = useState<PaymentsView>(initial);
   const [open, setOpen] = useState<PaymentTarget | null>(null);
-  const [adding, setAdding] = useState<'merchant' | 'form' | null>(null);
   const money = (minor: number, cur: string = currency) => formatWithCurrency(minor, cur);
   const month = ym ? monthGen(ym) : '';
   // a section's share of the month's budget, as in the plan
@@ -74,13 +74,15 @@ export default function RecurringPaymentsSheet({ ym, category, currency, view: i
             <TouchableOpacity onPress={onEditAmount} accessibilityRole="button">
               <Text style={formStyles.hint}>{`Сумма введена вручную — пока ${w.noneHas} нет даты.`} <Text style={styles.link}>Изменить сумму</Text></Text>
             </TouchableOpacity>
-          ) : null}
+          ) : view === 'month' ? <TextLink label="Изменить в плане" onPress={onEditAmount} style={styles.planLink} containerStyle={styles.planLinkBox} /> : null}
           {view === 'month' ? (
             <MonthPaymentsView
               ym={ym} data={data} w={w} money={money} shareOf={shareOf} chargesMinor={charges} open={setOpen} targetOf={targetOf}
               upcoming={upcomingCount ? { savingMinor: saving, count: upcomingCount } : null}
               merchantTarget={(m) => ({ category, merchant_key: m.merchant_key, name: m.name, amount_minor: m.amount_minor, currency: m.currency, period: 1, due: null, last_day: m.day })}
-              onUpcoming={() => setView('upcoming')} onAdd={() => setAdding('merchant')}
+              onUpcoming={() => setView('upcoming')}
+              // the month's operations of the category to pick one from (the filters can be changed there)
+              onAdd={() => { onClose(); pickPaymentOperation({ id: category.id, label: `${category.emoji ?? ''} ${category.name}`.trim() }, monthDays(ym)); }}
             />
           ) : (
             <UpcomingPaymentsView
@@ -92,13 +94,7 @@ export default function RecurringPaymentsSheet({ ym, category, currency, view: i
       )}
     </BottomSheet>
     {/* over it: siblings, not inside (each sheet its own window; the topmost draws the toast) */}
-    <PaymentSheet
-      target={open} onClose={() => { setOpen(null); setAdding(null); }} onLeave={() => { setOpen(null); setAdding(null); onClose(); }}
-      adding={adding === 'form' ? { onBack: () => { setOpen(null); setAdding('merchant'); } } : undefined} />
-      <AddPaymentSheet
-        visible={adding === 'merchant'} category={category} onClose={() => setAdding(null)}
-        onPick={(target) => { setAdding('form'); setOpen(target); }}
-      />
+    <PaymentSheet target={open} onClose={() => setOpen(null)} onLeave={() => { setOpen(null); onClose(); }} />
     </>
   );
 }
@@ -110,4 +106,6 @@ const styles = StyleSheet.create({
   factLabel: { fontSize: 15, color: colors.muted },
   factValue: { fontSize: 15, fontWeight: '700', color: colors.text, fontVariant: ['tabular-nums'] },
   link: { color: colors.accent },
+  planLink: { fontSize: 14 },
+  planLinkBox: { alignSelf: 'flex-start', marginTop: 4 },
 });

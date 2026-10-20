@@ -33,3 +33,8 @@ export function bulkSplitText(split: number, toLabel: string | null) {
     ok: 'Продолжить',
   };
 }
+
+/** Picking an operation for a category's repeating payment (the plan's "Выбрать операцию", "＋ Добавить платёж"). */
+export const pickBanner = (label: string) => `Платёж «${label}»: выберите операцию`;
+export const PICK_NOT_SPENDING = 'Это не трата — платёж делается из покупки, оплаты или перевода';
+export const PICK_NO_MERCHANT = 'У операции нет мерчанта — по ней не узнать следующие списания. Выберите другую';

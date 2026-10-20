@@ -43,8 +43,6 @@ export type PlanItem = {
     names: string[]; saving_names: string[];
     /** the month's contributions (in "Сбережения" of the plan), what is saved by the month's end and for how much (its ring) */
     saving_minor: number; saving_end_minor: number; saving_amount_minor: number;
-    /** it has its own payment without a merchant (put in from the plan's sheet): the row opens that sheet */
-    own: boolean;
     /** none at all ("Подписки" without subscriptions) */
     empty?: boolean;
     /** all its payments in one currency: the month's charges and contributions in it */

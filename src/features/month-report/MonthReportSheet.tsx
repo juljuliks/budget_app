@@ -49,7 +49,11 @@ export default function MonthReportSheet({ ym, onClose }: { ym: string | null; o
         </SheetScrollView>
       )}
       {/* planned into the report's own month */}
-      <PlanAmountModal ym={ym ?? currentYm()} currency={currency} target={planTarget} onClose={() => setPlanTarget(null)} onSaved={() => setPlanTarget(null)} />
+      <PlanAmountModal
+        ym={ym ?? currentYm()} currency={currency} target={planTarget} onClose={() => setPlanTarget(null)} onSaved={() => setPlanTarget(null)}
+        // to the operations: the report closes too (it would cover them)
+        onLeave={() => { setPlanTarget(null); onClose(); }}
+      />
     </BottomSheet>
   );
 }

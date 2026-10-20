@@ -1,6 +1,6 @@
 // A repeating payment saved (its charges past what is free in the plan: "Вычесть из сбережений?"), skipped, deleted; saved up
 // for or not (turned off with something saved, or deleted: asked first — what it had goes to this month's savings).
-import { currentYm, planEffect, recurringShort, takeLocked } from '@/db/plans';
+import { currentYm, paymentShort, planEffect, recurringShort, takeLocked } from '@/db/plans';
 import {
   ONCE,
   deletePayment, restorePayment, savedNow, savePayment, SavingUndo, startSaving, stopSaving, PaymentInput, undoSaving,
@@ -67,9 +67,13 @@ async function check(input: PaymentInput, id: number | undefined, onDone: () => 
   try {
     const ym = currentYm();
     const effect = await planEffect(input, id);
-    const charges = effect && effect.ym === ym ? effect.delta_minor : 0;
+    const now = effect && effect.ym === ym;
+    const charges = now ? effect.delta_minor : 0;
     const contribution = saving?.on && input.due ? { minor: saving.contribution, currency: input.currency } : undefined;
-    const over = await recurringShort(ym, charges, contribution);
+    // the category's item by hand till now (its first payment with a day): it becomes the month's charges
+    const over = input.category_id
+      ? await paymentShort(ym, input.category_id, charges, { minor: now ? effect.after_minor : 0, currency: effect?.currency ?? input.currency }, contribution)
+      : await recurringShort(ym, charges, contribution);
     if (over && over.locked > 0) {
       askTakeLocked({ ...over, adding: id === undefined, onYes: (take) => {
         takeLocked(ym, take).then(() => write(input, id, onDone, saving)).catch(toastFailure('take locked', SAVE_FAILED));

@@ -35,7 +35,6 @@ import PlanAddModal from './PlanAddModal';
 const editTarget = (item: PlanItem): PlanAmountTarget => ({
   ...item, label: categoryLabel(item),
   fund: item.fund && { target_minor: item.fund.target_minor, due: item.fund.due, start_minor: item.fund.start_minor },
-  merchants: !!item.recurring && !item.subs?.own,
 });
 
 export default function PlanView({ ym, currency }: { ym: string; currency: Currency }) {
@@ -63,8 +62,8 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
   const p = planView({ ...data, items, ym, currency, hidden });
   const openBudget = () => setBudgetOpen(true);
 
-  // a category with repeating payments: its own payment (from the plan's sheet) — that sheet; the merchants' ones — their list
-  const openRecurring = (item: PlanItem, view: PaymentsView = 'month') => (item.subs?.own ? setEditingItem(editTarget(item)) : setSubsOpen({ item, view }));
+  // a category with repeating payments: their list
+  const openRecurring = (item: PlanItem, view: PaymentsView = 'month') => setSubsOpen({ item, view });
   return (
     <View style={styles.screen}>
     <StickyScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">

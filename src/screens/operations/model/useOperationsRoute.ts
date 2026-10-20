@@ -1,9 +1,12 @@
-// How the tab was opened (from the stats, a merchant's card, a category's sheet, a sort-out) and the way back there.
+// How the tab was opened (from the stats, a merchant's card, a category's sheet, a sort-out, picking a payment's
+// operation) and the way back there.
 import { useEffect } from 'react';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { Filter } from '@/features/operations-filters';
+import type { TransactionRow } from '@/db/transactions';
 import { backToPages, TabParamList, useRootNavigation } from '@/shared/navigation/navigation';
+import { pickPaymentFrom } from './paymentPick';
 
 export type TabNavigation = BottomTabNavigationProp<TabParamList, 'Transactions'>;
 
@@ -15,7 +18,7 @@ export function useOperationsRoute(resetFilters: () => void) {
   const { from } = params;
 
   function clearParams() {
-    tabNavigation.setParams({ from: undefined, category: undefined, query: undefined, range: undefined, kinds: undefined, sortOut: undefined });
+    tabNavigation.setParams({ from: undefined, category: undefined, query: undefined, range: undefined, kinds: undefined, sortOut: undefined, pickPayment: undefined });
     resetFilters();
   }
 
@@ -29,7 +32,11 @@ export function useOperationsRoute(resetFilters: () => void) {
     else if (target) navigation.navigate(target);
   }
 
-  return { params, from, tabNavigation, clearParams, goBack };
+  // picking an operation for a category's repeating payment: a tap makes it from the operation, saved — back
+  const pick = params.pickPayment;
+  const pickFrom = (tx: TransactionRow) => { if (pick) pickPaymentFrom(tx, pick.id, goBack); };
+
+  return { params, from, tabNavigation, clearParams, goBack, pick, pickFrom };
 }
 
 /** Opened with a filter (the stats: a category; a merchant's card: its name): only what was asked for is shown. */

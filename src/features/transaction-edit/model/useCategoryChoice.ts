@@ -25,9 +25,8 @@ export function useCategoryChoice(txId: number, tx: Tx | null, visible: boolean,
       else if (choice === 'merchant' && tx) toast(`Категория «${categoryLabel(c)}» назначена мерчанту «${merchantLabel(tx)}»`);
       else toast(`Категория «${categoryLabel(c)}» назначена`);
       onClose();
-      // a category with repeating payments for a merchant with none (and no payment of the category without a merchant):
-      // how often, when next (over the sheet that just closed)
-      if (c && isRecurring(c) && tx?.merchant_key && !(await paymentCard(tx.merchant_key, undefined, c.id))) setTimeout(() => openPayment({ txId }), 250);
+      // a category with repeating payments for a merchant with none: how often, when next (over the sheet that just closed)
+      if (c && isRecurring(c) && tx?.merchant_key && !(await paymentCard(tx.merchant_key))) setTimeout(() => openPayment({ txId }), 250);
     } catch (e) {
       console.error('assign category failed', e);
       toastError('Не удалось сохранить');

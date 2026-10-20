@@ -8,11 +8,11 @@ import { parseAmountInput, toInputValue } from '@/shared/lib/money';
 /** The category a payment is of (its name gives the words: "Подписка" in "Подписки", else "Платёж"). */
 export type PaymentCategory = { id: number; name: string; emoji: string | null };
 
-/** What the sheet opens with: a payment (`id`), or a new one — of a merchant, from its last charge. */
+/** What the sheet opens with: a payment (`id`), or a new one — of an operation's merchant, from that operation. */
 export type PaymentTarget = {
   id?: number;
   category: PaymentCategory;
-  merchant_key: string | null;
+  merchant_key: string;
   name: string;
   amount_minor: number;
   currency: Currency;

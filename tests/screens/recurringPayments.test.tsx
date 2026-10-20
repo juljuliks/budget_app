@@ -1,12 +1,13 @@
 // 6.6 "Подписки": its section in the plan, the sheet of the month's subscriptions, a day set for a merchant of "Подписки",
-// a subscription added step by step. Today: 15 October 2026; the seed `planned` (Подписки 30 ₾ by hand) and NETFLIX.COM
+// a subscription made of an operation picked in the operations. Today: 15 October 2026; the seed `planned` (Подписки 30 ₾ by hand) and NETFLIX.COM
 // charged 30 ₾ on the 10th in "Подписки".
 import { fireEvent, waitFor } from '@testing-library/react-native';
 import { openApp, screen, tap } from './app';
 import { buy, on, planned } from '../e2e/seeds';
 import { getDb } from '../../src/db';
 import { subscriptionsCategoryId } from '../../src/db/categories';
-import { savePayment } from '../../src/db/recurring';
+import { savePayment, turnRecurring } from '../../src/db/recurring';
+import { addManualTransaction } from '../../src/db/transactions';
 import { setPlanAmount, setPlanBudget } from '../../src/db/plans';
 
 const N = ' ';
@@ -139,20 +140,43 @@ describe('6.6 subscriptions', () => {
     expect(await screen.findByText('Списания в октябре')).toBeTruthy();
   });
 
-  test('"＋ Добавить подписку": step 1 the merchant (charged the same in two months — "Похожи на подписку"), step 2 the subscription', async () => {
+  test('"＋ Добавить подписку": the month\'s operations of "Подписки" to pick from; the subscription made of the one picked, back in the plan', async () => {
     await openSubscriptions();
     await tap('＋ Добавить подписку');
-    expect(await screen.findByText('Шаг 1 из 2 · Мерчант')).toBeTruthy();
-    expect(screen.getByText('Похожи на подписку')).toBeTruthy();
-    await tap('Подписка: SPOTIFY');
-    expect(await screen.findByText('Шаг 2 из 2 · Подписка')).toBeTruthy();
-    // its last charge on 25 August plus months, not in the past: 25 October
-    expect(screen.getByText(/^25 октября 2026/)).toBeTruthy();
+    expect(await screen.findByText('Платёж «📺 Подписки»: выберите операцию')).toBeTruthy();
+    await tap('NETFLIX.COM');
+    // from the operation: its amount, its day plus a month; "Отмена", not "Пропустить"
+    expect(await screen.findByText('📺 Подписка «NETFLIX.COM»')).toBeTruthy();
+    expect(screen.getByDisplayValue('30')).toBeTruthy();
+    expect(screen.getByText(/^10 ноября 2026/)).toBeTruthy();
+    expect(screen.queryByText('Пропустить')).toBeNull();
     await tap('Сохранить');
-    expect(await screen.findByText('SPOTIFY — следующее списание 25 октября')).toBeTruthy();
-    // in the sheet and in the plan's row (its only payment: how often and when)
-    expect((await screen.findAllByText(/25 окт, через 10 дней/)).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('каждый месяц · 25 окт, через 10 дней').length).toBe(2);
+    expect(await screen.findByText('NETFLIX.COM — следующее списание 10 ноября')).toBeTruthy();
+    expect(await subs()).toEqual([{ name: 'NETFLIX.COM', merchant_key: 'NETFLIX.COM', amount_minor: 3000, period_months: 1, due: '2026-11-10' }]);
+    // the operations left: the plan again
+    await waitFor(() => expect(screen.queryByText('Платёж «📺 Подписки»: выберите операцию')).toBeNull());
+    expect(await screen.findByText('📺 Подписки')).toBeTruthy();
+  });
+
+  test('not to be picked: one not a spending, one without a merchant; "Отменить" — back in the plan, nothing made', async () => {
+    await openApp(async () => {
+      await seed();
+      const id = await subscriptionsCategoryId();
+      await buy('APPLE', 5, on(12, 10), id, { kind: 'refund' });
+      await addManualTransaction({ amount_minor: 1200, category_id: id, description: 'Кино дома', occurred_at: on(13, 10) });
+    });
+    await tap('Статистика');
+    await tap('План');
+    await tap('📺 Подписки');
+    await tap('＋ Добавить подписку');
+    await tap(/APPLE/);
+    expect(await screen.findByText('⚠️  Это не трата — платёж делается из покупки, оплаты или перевода')).toBeTruthy();
+    await tap(/Кино дома/);
+    expect(await screen.findByText('⚠️  У операции нет мерчанта — по ней не узнать следующие списания. Выберите другую')).toBeTruthy();
+    await tap('#pick-payment-cancel');
+    await waitFor(() => expect(screen.queryByText('Платёж «📺 Подписки»: выберите операцию')).toBeNull());
+    expect(await screen.findByText('📺 Подписки')).toBeTruthy();
+    expect(await subs()).toEqual([]);
   });
 
   describe('nothing free in the plan (Одежда 640 ₾: 2 400 ₾ planned of 2 400)', () => {
@@ -161,11 +185,13 @@ describe('6.6 subscriptions', () => {
         await seed();
         const clothes = await (await getDb()).get<{ id: number }>("SELECT id FROM categories WHERE name = 'Одежда'");
         await setPlanAmount('2026-10', clothes!.id, 64000, 'limit', 'GEL', 'month');
+        // "Подписки" counted from its payments (Netflix's 30 ₾, as by hand), SPOTIFY charged there before
+        await savePayment({ merchant_key: 'NETFLIX.COM', name: 'Netflix', amount_minor: 3000, currency: 'GEL', period: 1, due: '2026-11-10' });
+        await (await getDb()).run("UPDATE transactions SET category_id = ? WHERE merchant_key = 'SPOTIFY'", [await subscriptionsCategoryId()]);
       });
       await tap('Статистика');
       await tap('План');
       await tap('📺 Подписки');
-      await tap('＋ Добавить подписку');
       await tap('Подписка: SPOTIFY');
     };
 
@@ -181,7 +207,7 @@ describe('6.6 subscriptions', () => {
     test('charged in a later month: its contribution asked; not saved up for (0 this month) — nothing asked', async () => {
       await openFull();
       await tap('Раз в год');
-      expect(await screen.findByText('Нет списаний в октябре')).toBeTruthy();
+      expect(await screen.findByText(/^25 сентября 2027/)).toBeTruthy();
       await tap('Сохранить');
       // "Да, по 2 ₾ в месяц" by default: the contribution
       expect(await screen.findByText('Вычесть из сбережений?')).toBeTruthy();
@@ -212,24 +238,42 @@ describe('6.6 subscriptions', () => {
 });
 
 describe('6.7.9 "Повторяющийся платёж" from the plan', () => {
-  test('a one-off one made a repeating payment: the day offered from the last operation, then it is counted', async () => {
+  // the plan's sheet of "Дом и коммуналка": "Повторяющийся платёж" — "Выбрать операцию", RENT of the 3rd picked
+  async function pickRent() {
+    await tap('Изменить: 🏠 Дом и коммуналка');
+    await tap(await screen.findByRole('radio', { name: /Повторяющийся платёж/ }));
+    await tap('Выбрать операцию');
+    expect(await screen.findByText('Платёж «🏠 Дом и коммуналка»: выберите операцию')).toBeTruthy();
+    await tap('Оплата · RENT');
+    // RENT on the 3rd plus a month
+    expect(await screen.findByText(/^3 ноября 2026/)).toBeTruthy();
+  }
+
+  test('a one-off one made a repeating payment: "Выбрать операцию" — the category\'s operations; the one picked is it, then it is counted', async () => {
     await openApp(seed);
     await tap('Статистика');
     await tap('План');
     await tap('Изменить: 🏠 Дом и коммуналка');
     expect(await screen.findByRole('radio', { name: /Разовый платёж/, checked: true })).toBeTruthy();
     await tap(screen.getByRole('radio', { name: /Повторяющийся платёж/ }));
-    // RENT on the 3rd plus a month
+    // no amount: it comes from the operation
+    expect(await screen.findByText(/^Платёж делается из операции/)).toBeTruthy();
+    expect(screen.queryByDisplayValue('800')).toBeNull();
+    await tap('Выбрать операцию');
+    expect(await screen.findByText('Платёж «🏠 Дом и коммуналка»: выберите операцию')).toBeTruthy();
+    await tap('Оплата · RENT');
     expect(await screen.findByText(/^3 ноября 2026/)).toBeTruthy();
     await tap('Сохранить');
     expect(await screen.findByText('каждый месяц · следующее 3 ноя')).toBeTruthy();
-    expect(await (await getDb()).get("SELECT merchant_key, amount_minor, period_months, due FROM recurring_payments WHERE name = 'Дом и коммуналка'"))
-      .toEqual({ merchant_key: null, amount_minor: 80000, period_months: 1, due: '2026-11-03' });
+    expect(await (await getDb()).get("SELECT name, merchant_key, amount_minor, period_months, due FROM recurring_payments"))
+      .toEqual({ name: 'RENT', merchant_key: 'RENT', amount_minor: 80000, period_months: 1, due: '2026-11-03' });
     expect(await (await getDb()).get("SELECT recurring FROM categories WHERE name = 'Дом и коммуналка'")).toEqual({ recurring: 1 });
-    // its row opens the plan's sheet again, the payment in it; another kind turns the repeating payments off
+    // its row opens its payments; "Изменить в плане" — the plan's sheet, no amount (counted); another kind turns them off
     await tap('🏠 Дом и коммуналка');
+    expect(await screen.findByLabelText('Платёж: RENT')).toBeTruthy();
+    await tap('Изменить в плане ›');
     expect(await screen.findByRole('radio', { name: /Повторяющийся платёж/, checked: true })).toBeTruthy();
-    expect(await screen.findByText(/^3 ноября 2026/)).toBeTruthy();
+    expect(screen.getByText('Сумма считается из списаний платежей категории. Другой вид выключит повторяющиеся платежи.')).toBeTruthy();
     await tap(screen.getByRole('radio', { name: /Разовый платёж/ }));
     await tap('Сохранить');
     expect(await screen.findByText('План «🏠 Дом и коммуналка» сохранён, повторяющиеся платежи выключены')).toBeTruthy();
@@ -240,24 +284,22 @@ describe('6.7.9 "Повторяющийся платёж" from the plan', () => 
     await openApp(seed);
     await tap('Статистика');
     await tap('План');
-    await tap('Изменить: 🏠 Дом и коммуналка');
-    await tap(await screen.findByRole('radio', { name: /Повторяющийся платёж/ }));
-    expect(await screen.findByText(/^3 ноября 2026/)).toBeTruthy();
+    await pickRent();
     await tap('Сохранить');
     expect(await screen.findByText('каждый месяц · следующее 3 ноя')).toBeTruthy();
     await tap('Следующий месяц');
     expect(await screen.findByText('Ноябрь 2026')).toBeTruthy();
     expect(await screen.findByText('каждый месяц · 3 ноя')).toBeTruthy();
-    expect(screen.queryByText(/через/)).toBeNull();
+    // the payment's sheet gone (it closes animated)
+    await waitFor(() => expect(screen.queryByText(/через/)).toBeNull());
   });
 
   test('not charged this month: 0 at the right, "30 ₾ в ноябре" under its name', async () => {
     await openApp(async () => {
       await seed();
       const { createCategory } = require('../../src/db/categories');
-      const { turnRecurring } = require('../../src/db/recurring');
       const sport = await createCategory('Спорт', '🏋️');
-      await savePayment({ category_id: sport, merchant_key: null, name: 'Спорт', amount_minor: 3000, currency: 'GEL', period: 1, due: '2026-11-20' });
+      await savePayment({ category_id: sport, merchant_key: 'FITPASS', name: 'Спорт', amount_minor: 3000, currency: 'GEL', period: 1, due: '2026-11-20' });
       await turnRecurring(sport, true);
     });
     await tap('Статистика');
@@ -271,9 +313,7 @@ describe('6.7.9 "Повторяющийся платёж" from the plan', () => 
     await openApp(seed);
     await tap('Статистика');
     await tap('План');
-    await tap('Изменить: 🏠 Дом и коммуналка');
-    await tap(await screen.findByRole('radio', { name: /Повторяющийся платёж/ }));
-    expect(await screen.findByText(/^3 ноября 2026/)).toBeTruthy();
+    await pickRent();
     await tap('Сохранить');
     expect(await screen.findByText('каждый месяц · следующее 3 ноя')).toBeTruthy();
     // November's plan made: the payment counted there too
@@ -281,6 +321,7 @@ describe('6.7.9 "Повторяющийся платёж" from the plan', () => 
     expect(await screen.findByText('каждый месяц · 3 ноя')).toBeTruthy();
     await tap('Предыдущий месяц');
     await tap(await screen.findByText('🏠 Дом и коммуналка'));
+    await tap('Изменить в плане ›');
     await tap('Удалить из плана');
     expect(await screen.findByText('Убрать «🏠 Дом и коммуналка» из плана?')).toBeTruthy();
     expect(screen.getByText('У категории повторяющиеся платежи — они выключатся, а категория пропадёт из плана с октября. Операции не изменятся.')).toBeTruthy();
@@ -296,20 +337,27 @@ describe('6.7.9 "Повторяющийся платёж" from the plan', () => 
     expect(await db.get("SELECT recurring FROM categories WHERE name = 'Дом и коммуналка'")).toEqual({ recurring: 1 });
   });
 
-  // the seed's budget: 2 400 ₾ to plan (3 000 less 10% outside and 🔒 300), 2 160 planned — 240 free
-  test('this month\'s charge past what is free: "Вычесть из сбережений?", what is short taken from 🔒', async () => {
+  // the seed's budget: 2 400 ₾ to plan (3 000 less 10% outside and 🔒 300), 2 160 planned — 240 free; Одежда 400 ₾ by hand
+  async function pickZara(amount: string) {
+    await tap('Изменить: 👕 Одежда');
+    await tap(await screen.findByRole('radio', { name: /Повторяющийся платёж/ }));
+    await tap('Выбрать операцию');
+    await tap('ZARA');
+    expect(await screen.findByText('👕 Платёж «ZARA»')).toBeTruthy();
+    fireEvent.changeText(screen.getByLabelText('Сумма'), amount);
+    await tap('Сохранить');
+  }
+
+  test('this month\'s charge past what is free: "Вычесть из сбережений?" — the item by hand becomes the charge, what is short taken from 🔒', async () => {
     await openApp(seed);
     await tap('Статистика');
     await tap('План');
-    await tap('Изменить: 👕 Одежда');
-    await tap(await screen.findByRole('radio', { name: /Повторяющийся платёж/ }));
-    fireEvent.changeText(await screen.findByDisplayValue('400'), '700');
-    await tap('Сохранить');
-    // ZARA on the 10th: October's charge counted — 300 ₾ more, 60 ₾ short
+    await pickZara('700');
+    // ZARA on the 10th: October's charge counted instead of the 400 by hand — 300 ₾ more, 60 ₾ short
     expect(await screen.findByText('Вычесть из сбережений?')).toBeTruthy();
     expect(screen.getByText(`Свободного не хватает 60${N}₾ — их можно взять из сбережений.`)).toBeTruthy();
-    await tap('Вычесть и сохранить');
-    expect(await screen.findByText(`План «👕 Одежда» сохранён, из 🔒 вычтено 60${N}₾`)).toBeTruthy();
+    await tap('Вычесть и добавить');
+    expect(await screen.findByText('ZARA — следующее списание 10 ноября')).toBeTruthy();
     expect(await (await getDb()).get("SELECT locked_minor FROM plan_months WHERE ym = '2026-10'")).toEqual({ locked_minor: 24000 });
   });
 
@@ -317,34 +365,32 @@ describe('6.7.9 "Повторяющийся платёж" from the plan', () => 
     await openApp(seed);
     await tap('Статистика');
     await tap('План');
-    await tap('Изменить: 👕 Одежда');
-    await tap(await screen.findByRole('radio', { name: /Повторяющийся платёж/ }));
-    fireEvent.changeText(await screen.findByDisplayValue('400'), '1000');
-    await tap('Сохранить');
+    await pickZara('1000');
     expect(await screen.findByText(`Свободного не хватает 360${N}₾, в сбережениях — 300${N}₾. План будет больше бюджета на 60${N}₾.`)).toBeTruthy();
     await tap('Отмена');
     expect(await screen.findByDisplayValue('1000')).toBeTruthy();
-    expect(await (await getDb()).get("SELECT count(*) AS n FROM recurring_payments WHERE name = 'Одежда'")).toEqual({ n: 0 });
+    expect(await (await getDb()).get("SELECT count(*) AS n FROM recurring_payments")).toEqual({ n: 0 });
     await tap('Сохранить');
-    await tap('Вычесть и сохранить');
-    expect(await screen.findByText(`План «👕 Одежда» сохранён, из 🔒 вычтено 300${N}₾`)).toBeTruthy();
+    await tap('Вычесть и добавить');
+    expect(await screen.findByText('ZARA — следующее списание 10 ноября')).toBeTruthy();
     expect(await (await getDb()).get("SELECT locked_minor FROM plan_months WHERE ym = '2026-10'")).toEqual({ locked_minor: 0 });
   });
 
-  test('turned off with its payment left: "Повторяющийся платёж" again — its payment back in the sheet, "Сохранить" on', async () => {
+  test('turned off with its payment left: its operation picked again — that payment, saved — on again', async () => {
     await openApp(async () => {
       await seed();
       const home = (await (await getDb()).get<{ id: number }>("SELECT id FROM categories WHERE name = 'Дом и коммуналка'"))!.id;
-      await savePayment({ category_id: home, merchant_key: null, name: 'Дом и коммуналка', amount_minor: 80000, currency: 'GEL', period: 1, due: '2026-11-03' });
+      await savePayment({ category_id: home, merchant_key: 'RENT', name: 'Квартира', amount_minor: 80000, currency: 'GEL', period: 1, due: '2026-11-03' });
+      await turnRecurring(home, false);
     });
     await tap('Статистика');
     await tap('План');
-    await tap('Изменить: 🏠 Дом и коммуналка');
-    await tap(screen.getByRole('radio', { name: /Повторяющийся платёж/ }));
-    expect(await screen.findByText(/^3 ноября 2026/)).toBeTruthy();
+    await pickRent();
+    expect(screen.getByText('🏠 Квартира')).toBeTruthy();
     await tap('Сохранить');
     expect(await screen.findByText('каждый месяц · следующее 3 ноя')).toBeTruthy();
     expect(await (await getDb()).get("SELECT recurring FROM categories WHERE name = 'Дом и коммуналка'")).toEqual({ recurring: 1 });
+    expect(await (await getDb()).get('SELECT count(*) AS n FROM recurring_payments')).toEqual({ n: 1 });
   });
 
   test('a category\'s last payment deleted: its repeating payments off, the row a one-off payment; "Отменить" — back', async () => {
@@ -374,20 +420,18 @@ describe('6.7.9 "Повторяющийся платёж" from the plan', () => 
     expect(await screen.findByText('нет подписок')).toBeTruthy();
   });
 
-  test('every week from the plan: the day a week after the last spending, ± 3 days; each week\'s charge in the month', async () => {
+  test('every week: a category\'s payment (not a subscription\'s) — the day a week after its operation; each week\'s charge in the month', async () => {
     await openApp(seed);
     await tap('Статистика');
     await tap('План');
-    await tap('Изменить: 🏠 Дом и коммуналка');
-    await tap(await screen.findByRole('radio', { name: /Повторяющийся платёж/ }));
+    await pickRent();
     await tap('Каждую неделю');
     // RENT on the 3rd: the 10th is past — the 17th
     expect(await screen.findByText(/^17 октября 2026/)).toBeTruthy();
-    expect(screen.getByText('Списание засчитывается тратой категории за 3 дня до или после даты — дата сдвинется сама.')).toBeTruthy();
     await tap('Сохранить');
-    // 3 200 ₾ past what is free: asked
-    await tap('Вычесть и сохранить');
-    await waitFor(async () => expect(await (await getDb()).get("SELECT period_months, period_unit, due FROM recurring_payments WHERE name = 'Дом и коммуналка'"))
+    // 3 200 ₾ instead of the 800 by hand: past what is free — asked
+    await tap('Вычесть и добавить');
+    await waitFor(async () => expect(await (await getDb()).get("SELECT period_months, period_unit, due FROM recurring_payments WHERE merchant_key = 'RENT'"))
       .toEqual({ period_months: 1, period_unit: 'week', due: '2026-10-17' }));
     // its row: the first charge not paid yet
     expect(await screen.findByText('каждую неделю · 17 окт, через 2 дня')).toBeTruthy();
@@ -498,13 +542,14 @@ describe('6.7.8 saving up for a subscription', () => {
       const db = await getDb();
       const home = (await db.get<{ id: number }>("SELECT id FROM categories WHERE name = 'Дом и коммуналка'"))!.id;
       await db.run('UPDATE categories SET recurring = 1 WHERE id = ?', [home]);
-      const id = await savePayment({ category_id: home, merchant_key: null, name: 'Страховка', amount_minor: 3000, currency: 'GEL', period: 12, due: '2027-10-10' });
-      // "Уже отложено" 10 ₾ (its category's spending before — RENT — isn't paid from it)
+      const id = await savePayment({ category_id: home, merchant_key: 'INSURER', name: 'Страховка', amount_minor: 3000, currency: 'GEL', period: 12, due: '2027-10-10' });
+      // "Уже отложено" 10 ₾
       await db.run("INSERT INTO payment_savings (id, payment_id, since_ym, start_minor) VALUES (5, ?, '2026-10', 1000)", [id]);
     });
     await tap('Статистика');
     await tap('План');
     await tap('🏠 Дом и коммуналка');
+    await tap('Изменить в плане ›');
     await tap(await screen.findByRole('radio', { name: /Разовый платёж/ }));
     await tap('Сохранить');
     expect(await screen.findByText('Выключить повторяющиеся платежи?')).toBeTruthy();

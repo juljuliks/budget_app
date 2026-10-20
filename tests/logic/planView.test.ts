@@ -120,7 +120,7 @@ test('the savings in the screen\'s currency, "(N ₾)" before them in the budget
 test('what "Подписки" saves up for: in "Сбережения" (as a fund\'s contribution), its row in its section — the charges only', () => {
   const subs = item({
     category_id: 7, name: 'Подписки', emoji: '📺', type_name: null, kind: 'subs', recurring: true, limit_minor: 4000, converted_minor: 4000,
-    subs: { names: ['Netflix'], saving_names: ['Bitwarden'], saving_minor: 1000, saving_end_minor: 3000, saving_amount_minor: 4500, own: false },
+    subs: { names: ['Netflix'], saving_names: ['Bitwarden'], saving_minor: 1000, saving_end_minor: 3000, saving_amount_minor: 4500 },
   });
   const v = view([item({}), subs], budget({}));
   // 310 + 30 ₾ planned; 10 ₾ saved up — in the savings with what the plan leaves (1 000 − 340 − 10 = 650)
@@ -136,7 +136,7 @@ test('what "Подписки" saves up for: in "Сбережения" (as a fund
 test('the overspend of a category saving up for its payments: its plan and spending without the contribution, as its row', () => {
   const subs = item({
     category_id: 7, name: 'Подписки', emoji: '📺', kind: 'subs', recurring: true, limit_minor: 4000, converted_minor: 4000,
-    subs: { names: ['Netflix'], saving_names: ['Bitwarden'], saving_minor: 1000, saving_end_minor: 1000, saving_amount_minor: 4500, own: false },
+    subs: { names: ['Netflix'], saving_names: ['Bitwarden'], saving_minor: 1000, saving_end_minor: 1000, saving_amount_minor: 4500 },
   });
   // the current month: 45 ₾ spent, the contribution (10 ₾) in it — 35 ₾ of charges against 30 ₾ planned
   const v = planView({

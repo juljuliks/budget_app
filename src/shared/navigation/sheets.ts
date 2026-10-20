@@ -19,7 +19,16 @@ export type SheetState = {
   /** "Блокировка" (Настройки → "Настроить"): the fingerprint, when to ask, the notifications, a new PIN */
   lockOptions: boolean;
   /** a repeating payment: one (`id`), or the one of an operation's merchant (`txId`: made from it if it has none) */
-  payment: { id?: number; txId?: number } | null;
+  payment: PaymentOpen | null;
+};
+
+export type PaymentOpen = {
+  id?: number;
+  txId?: number;
+  /** an operation picked for this category's payment ("Выбрать операцию"): the payment is the category's */
+  categoryId?: number;
+  /** after it is saved (not on "Отмена") */
+  onSaved?: () => void;
 };
 
 export const CLOSED: SheetState = { addTransaction: false, categoryTypes: false, categoryDelete: null, monthReport: null, monthClose: null, backup: false, lockOptions: false, payment: null };
@@ -38,7 +47,7 @@ export const openMonthReport = (ym: string) => open({ monthReport: ym });
 export const openMonthClose = (ym: string) => open({ monthClose: ym });
 export const openBackup = () => open({ backup: true });
 export const openLockOptions = () => open({ lockOptions: true });
-export const openPayment = (which: { id?: number; txId?: number }) => open({ payment: which });
+export const openPayment = (which: PaymentOpen) => open({ payment: which });
 
 /** ModalHost registers itself; returns what was asked for before it was mounted. */
 export function attachSheetHost(h: (patch: Partial<SheetState>) => void): Partial<SheetState> {
