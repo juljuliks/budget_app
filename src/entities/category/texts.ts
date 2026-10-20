@@ -13,18 +13,18 @@ export const QUICK_HINT = 'Цвет подберётся сам. Изменит�
 
 /**
  * The words of a category's repeating payments: with "Подписки" (its merchants') — subscriptions ("Подписка «Netflix»",
- * "＋ Добавить подписку"), else its own regular payment ("Платёж «…»").
+ * "Удалить подписку"), else its own regular payment ("Платёж «…»").
  */
 export function paymentWords(byMerchant: boolean) {
   return byMerchant
     ? {
       One: 'Подписка', one: 'подписка', acc: 'подписку', deleted: 'удалена', noneHas: 'ни у одной подписки',
-      toAll: 'подпискам', noDated: 'нет подписок с датой', none: 'нет подписок', add: 'Добавить подписку',
+      toAll: 'подпискам', noDated: 'нет подписок с датой', none: 'нет подписок',
       upcoming: 'Предстоящие подписки', Many: 'Подписки', subscriptions: true,
     }
     : {
       One: 'Платёж', one: 'платёж', acc: 'платёж', deleted: 'удалён', noneHas: 'ни у одного платежа',
-      toAll: 'платежам', noDated: 'нет платежей с датой', none: 'нет платежей', add: 'Добавить платёж',
+      toAll: 'платежам', noDated: 'нет платежей с датой', none: 'нет платежей',
       upcoming: 'Предстоящие платежи', Many: 'Платежи', subscriptions: false,
     };
 }

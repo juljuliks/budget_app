@@ -49,8 +49,6 @@ export const styles = StyleSheet.create({
   lessText: { fontSize: 12, color: colors.muted, fontVariant: ['tabular-nums'] },
   lessMinus: { color: colors.danger },
   // "(−15 ₾ ⓘ)" after them in the legend
-  lessParen: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  lessParenText: { fontSize: 13, color: colors.muted, fontVariant: ['tabular-nums'] },
   // the legend's names laid out unseen: the widest sets the names' column
   measure: { position: 'absolute', opacity: 0, alignItems: 'flex-start' },
   // a share ("43%") or a word ("сэкономлено") right by the name

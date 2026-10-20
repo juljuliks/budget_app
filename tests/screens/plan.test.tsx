@@ -38,8 +38,8 @@ describe('6.1 the month\'s budget', () => {
     await openPlan();
     expect(after('План', 2)).toEqual(['72%', '2 160 ₾']);
     expect(after('Вне плана', 2)).toEqual(['10%', '300 ₾']);
-    // the overspend took 130 of them (see the next test): what is left, by how much
-    expect(after('Сбережения', 4)).toEqual(['14%', '(−130 ₾', ')', '410 ₾']);
+    // the overspend took 130 of them (see the next test): what is left, then a line of its own for what it took
+    expect(after('Сбережения', 4)).toEqual(['14%', '410 ₾', 'Перерасход', '4%']);
     expect(after('🔒 Отложено сразу', 3)).toEqual(['заблокировано в начале месяца', '300 ₾', '10%']);
     expect(after('💰 Сэкономлено', 4)).toEqual(['перерасход: ', '−130 ₾', '110 ₾', '4%']);
     expect(after('🎲 Траты вне плана', 3)).toEqual(['категории без плана и без категории', '300 ₾', '10%']);
@@ -59,15 +59,16 @@ describe('6.1 the month\'s budget', () => {
     expect(screen.getByText('(410 ₾) ')).toBeTruthy();
   });
 
-  test('savings the overspend took part of: a tap on its line — by how much, what took it; a category\'s tap opens its plan', async () => {
+  test('savings the overspend took part of: "Перерасход" in the legend, a tap — by how much — by how much, what took it; a category\'s tap opens its plan', async () => {
     await openPlan();
     expect(screen.queryByText(/^Сбережения к концу месяца/)).toBeNull();
     // the savings section's line: ⓘ in its "перерасход: −130 ₾ ⓘ"
     await tap('Почему сбережения меньше');
     expect(await screen.findByText('Сбережения меньше на 130 ₾')).toBeTruthy();
     await tap('Понятно');
-    // the legend's line: a tap on it
-    await tap('Сбережения: почему меньше');
+    // the legend's own line for it, red as in the bar: the shares add up to the whole
+    expect(after('Перерасход', 2)).toEqual(['4%', '130 ₾']);
+    await tap('Перерасход: что съело сбережения');
     // 3 000 − (620 + 310 + 800 + 450 + 30) − 380 outside the plan
     expect(await screen.findByText('Сбережения меньше на 130 ₾')).toBeTruthy();
     expect(screen.getByText('Эти категории потратили больше плана. Если дальше тратить по плану, в сбережения пойдёт 410 ₾ (−130 ₾)')).toBeTruthy();
@@ -241,6 +242,8 @@ describe('6.3 the categories in the plan', () => {
     expect(await screen.findByText('План «👕 Одежда» сохранён')).toBeTruthy();
     // the plan, not what was paid: the next day by the calendar (today the 15th, a Thursday)
     expect(await screen.findByText('пн, чт · 9 × 20\u00a0₾ · 15 окт')).toBeTruthy();
+    // repeats by itself: 🔁, no pin on it (that's a limit's "Повторять каждый месяц")
+    expect(screen.queryByLabelText('повторяется каждый месяц')).toBeNull();
     expect(await (await getDb()).get("SELECT p.limit_minor AS a, p.kind, p.every, p.weekdays, p.unit_minor AS u FROM plan_items p JOIN categories c ON c.id = p.category_id WHERE p.ym = '2026-10' AND c.name = 'Одежда'"))
       .toEqual({ a: 18000, kind: 'fixed', every: 'week', weekdays: 9, u: 2000 });
     // its sheet again: the same, the amount each time

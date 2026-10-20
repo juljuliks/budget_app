@@ -14,13 +14,16 @@ export function PinBadge({ corner = false }: { corner?: boolean }) {
   );
 }
 
-/** A plan item's kind: a limit's bars, a regular payment's 🔁 or a one-off's tag; pinned — the badge on its corner. */
+/**
+ * A plan item's kind: a limit's bars, a regular payment's 🔁 or a one-off's tag; a limit with "Повторять каждый месяц" —
+ * the pin on its corner (a regular payment repeats by itself: no pin, whatever `pinned` it keeps).
+ */
 export function KindIcon({ item }: { item: PlanItem }) {
   return (
     <View style={styles.pin}>
       <View>
         {item.every ? <RepeatIcon color={colors.accent} size={20} /> : item.kind === 'fixed' ? <OneOffIcon color={colors.muted} /> : <LimitIcon color={colors.muted} />}
-        {item.pinned ? <PinBadge corner /> : null}
+        {item.pinned && item.kind === 'limit' ? <PinBadge corner /> : null}
       </View>
     </View>
   );
