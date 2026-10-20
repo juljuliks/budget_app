@@ -1,4 +1,4 @@
-// A category with "Повторяющиеся платежи" ("Подписки" one) in a month's plan: its item (kind 'subs') is the month's
+// A category with "Регулярные платежи" ("Подписки" one) in a month's plan: its item (kind 'subs') is the month's
 // charges, counted from its payments (repeating payments) with a day
 // (db/recurring/schedule.ts). Until one has a day the item keeps the amount put in by hand (what it had before the
 // repeating payments). The current and the coming months are counted again on each look; past ones stay as they were. A
@@ -84,7 +84,7 @@ function firstAfter(due: string, p: Period, day: string): string | null {
 }
 
 /**
- * The items of the categories with "Повторяющиеся платежи" in `ym` (the current or a coming month with a plan) set to
+ * The items of the categories with "Регулярные платежи" in `ym` (the current or a coming month with a plan) set to
  * their charges, in the plan's currency; made if the month has none and the category has payments. An amount by hand
  * stays until one of them has a day.
  */

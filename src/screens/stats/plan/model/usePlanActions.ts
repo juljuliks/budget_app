@@ -71,7 +71,7 @@ export function usePlanActions(ym: string, load: () => void) {
     try {
       const removed = await removeRecurringFrom(ym, item.category_id);
       emitTransactionsChanged();
-      toast(`«${label}» убрана из плана, повторяющиеся платежи выключены`, {
+      toast(`«${label}» убрана из плана, регулярные платежи выключены`, {
         label: UNDO,
         onPress: () => {
           restoreRecurring(removed).then(() => { emitTransactionsChanged(); toast(`«${label}» снова в плане`); })
@@ -93,7 +93,7 @@ export function usePlanActions(ym: string, load: () => void) {
       const kept = saved.length ? ` На платежи уже отложено: ${saved.map((x) => `${x.name} — ${formatWithCurrency(x.minor, x.currency)}`).join(', ')} — это уйдёт в сбережения месяца.` : '';
       sheetAlert(
         `Убрать «${categoryLabel(item)}» из плана?`,
-        `У категории повторяющиеся платежи — они выключатся, а категория пропадёт из плана с ${MONTHS_GEN[Number(ym.slice(5)) - 1]}. Операции не изменятся.${kept}`,
+        `У категории регулярные платежи — они выключатся, а категория пропадёт из плана с ${MONTHS_GEN[Number(ym.slice(5)) - 1]}. Операции не изменятся.${kept}`,
         [
           { text: 'Отмена', style: 'cancel' },
           { text: 'Убрать из плана', style: 'destructive', onPress: () => { removeRecurring(item); } },

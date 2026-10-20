@@ -223,7 +223,7 @@ export const STEPS_33_ON: MigrationStep[][] = [
       PRIMARY KEY (saving_id, ym)
     )`,
   ],
-  // 42: repeating payments in any category ("Повторяющиеся платежи", categories.recurring): its plan item counted from
+  // 42: repeating payments in any category ("Регулярные платежи", categories.recurring): its plan item counted from
   // them (kind 'subs'), each subscription (a repeating payment) of its category (subscriptions.category_id). "Подписки"
   // is no longer a system category: one with the switch on, its subscriptions its own
   [

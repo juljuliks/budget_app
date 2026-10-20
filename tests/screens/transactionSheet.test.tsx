@@ -48,7 +48,7 @@ test('2.7.3a: the category\'s name a link (as the merchant\'s) opens its sheet o
   expect(all.slice(all.lastIndexOf('Категория'), all.lastIndexOf('Категория') + 2)).toEqual(['Категория', 'Разделить по категориям']);
   await tap('🛒 Продукты ›');
   expect(await screen.findByDisplayValue('Продукты')).toBeTruthy();
-  expect(screen.queryByText('Повторяющиеся платежи')).toBeNull();
+  expect(screen.queryByText('Регулярные платежи')).toBeNull();
 });
 
 describe('2.7.4: the merchant has another category', () => {

@@ -25,7 +25,7 @@ export type PaymentsView = 'month' | 'upcoming';
 type Props = {
   /** the plan's month; null = closed */
   ym: string | null;
-  /** the category with "Повторяющиеся платежи" */
+  /** the category with "Регулярные платежи" */
   category: PaymentCategory;
   currency: Currency;
   /** what it opens with; each view has a line to the other */

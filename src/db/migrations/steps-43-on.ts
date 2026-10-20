@@ -122,4 +122,12 @@ export const STEPS_43_ON: MigrationStep[][] = [
       }
     },
   ],
+  // 49: "Повторять каждый месяц" is a limit's only: one-off payments of this month on are not carried over any more
+  [
+    async (db) => {
+      const now = new Date();
+      const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      await db.run("UPDATE plan_items SET pinned = 0 WHERE kind = 'fixed' AND ym >= ?", [ym]);
+    },
+  ],
 ];

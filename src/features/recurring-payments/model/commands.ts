@@ -93,7 +93,7 @@ async function remove(id: number, name: string, category: PaymentCategory, onDon
     emitTransactionsChanged();
     onDone();
     // the category's last one: its repeating payments went off
-    toast(`${w.One} «${name}» ${w.deleted}${deleted.off ? ', повторяющиеся платежи выключены' : ''}`, {
+    toast(`${w.One} «${name}» ${w.deleted}${deleted.off ? ', регулярные платежи выключены' : ''}`, {
       label: UNDO,
       onPress: () => {
         restorePayment(id, deleted).then(() => { emitTransactionsChanged(); toast(`${w.One} «${name}» снова в плане`); })

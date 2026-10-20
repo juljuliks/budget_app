@@ -24,7 +24,7 @@ const past = (label: string, p: DeletePreview) =>
 const plan = (label: string) => `План «${label}» на этот месяц удалится.`;
 // its repeating payments go with it; what they saved — to this month's savings
 const payments = (p: DeletePreview) => [
-  p.payments ? `${p.payments === 1 ? 'Её повторяющийся платёж удалится' : 'Её повторяющиеся платежи удалятся'}.` : '',
+  p.payments ? `${p.payments === 1 ? 'Её регулярный платёж удалится' : 'Её регулярные платежи удалятся'}.` : '',
   p.saved?.length ? `Отложенное на них (${p.saved.map((x) => `${x.name} — ${formatMoneyWithCurrency(x.minor, x.currency)}`).join(', ')}) уйдёт в сбережения месяца.` : '',
 ].filter(Boolean).join(' ');
 

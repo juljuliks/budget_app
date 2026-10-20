@@ -237,11 +237,11 @@ describe('6.6 subscriptions', () => {
   });
 });
 
-describe('6.7.9 "Повторяющийся платёж" from the plan', () => {
-  // the plan's sheet of "Дом и коммуналка": "Повторяющийся платёж" — "Выбрать операцию", RENT of the 3rd picked
+describe('6.7.9 "Регулярный платёж" from the plan', () => {
+  // the plan's sheet of "Дом и коммуналка": "Регулярный платёж" — "Выбрать операцию", RENT of the 3rd picked
   async function pickRent() {
     await tap('Изменить: 🏠 Дом и коммуналка');
-    await tap(await screen.findByRole('radio', { name: /Повторяющийся платёж/ }));
+    await tap(await screen.findByRole('radio', { name: /Регулярный платёж/ }));
     await tap('Выбрать операцию');
     expect(await screen.findByText('Платёж «🏠 Дом и коммуналка»: выберите операцию')).toBeTruthy();
     await tap('Оплата · RENT');
@@ -255,7 +255,7 @@ describe('6.7.9 "Повторяющийся платёж" from the plan', () => 
     await tap('План');
     await tap('Изменить: 🏠 Дом и коммуналка');
     expect(await screen.findByRole('radio', { name: /Разовый платёж/, checked: true })).toBeTruthy();
-    await tap(screen.getByRole('radio', { name: /Повторяющийся платёж/ }));
+    await tap(screen.getByRole('radio', { name: /Регулярный платёж/ }));
     // no amount: it comes from the operation
     expect(await screen.findByText(/^Платёж делается из операции/)).toBeTruthy();
     expect(screen.queryByDisplayValue('800')).toBeNull();
@@ -272,11 +272,11 @@ describe('6.7.9 "Повторяющийся платёж" from the plan', () => 
     await tap('🏠 Дом и коммуналка');
     expect(await screen.findByLabelText('Платёж: RENT')).toBeTruthy();
     await tap('Изменить в плане ›');
-    expect(await screen.findByRole('radio', { name: /Повторяющийся платёж/, checked: true })).toBeTruthy();
-    expect(screen.getByText('Сумма считается из списаний платежей категории. Другой вид выключит повторяющиеся платежи.')).toBeTruthy();
+    expect(await screen.findByRole('radio', { name: /Регулярный платёж/, checked: true })).toBeTruthy();
+    expect(screen.getByText('Сумма считается из списаний платежей категории. Другой вид выключит регулярные платежи.')).toBeTruthy();
     await tap(screen.getByRole('radio', { name: /Разовый платёж/ }));
     await tap('Сохранить');
-    expect(await screen.findByText('План «🏠 Дом и коммуналка» сохранён, повторяющиеся платежи выключены')).toBeTruthy();
+    expect(await screen.findByText('План «🏠 Дом и коммуналка» сохранён, регулярные платежи выключены')).toBeTruthy();
     expect(await (await getDb()).get("SELECT recurring FROM categories WHERE name = 'Дом и коммуналка'")).toEqual({ recurring: 0 });
   });
 
@@ -324,9 +324,9 @@ describe('6.7.9 "Повторяющийся платёж" from the plan', () => 
     await tap('Изменить в плане ›');
     await tap('Удалить из плана');
     expect(await screen.findByText('Убрать «🏠 Дом и коммуналка» из плана?')).toBeTruthy();
-    expect(screen.getByText('У категории повторяющиеся платежи — они выключатся, а категория пропадёт из плана с октября. Операции не изменятся.')).toBeTruthy();
+    expect(screen.getByText('У категории регулярные платежи — они выключатся, а категория пропадёт из плана с октября. Операции не изменятся.')).toBeTruthy();
     await tap('Убрать из плана');
-    expect(await screen.findByText('«🏠 Дом и коммуналка» убрана из плана, повторяющиеся платежи выключены')).toBeTruthy();
+    expect(await screen.findByText('«🏠 Дом и коммуналка» убрана из плана, регулярные платежи выключены')).toBeTruthy();
     const db = await getDb();
     const items = () => db.all("SELECT ym FROM plan_items WHERE category_id = (SELECT id FROM categories WHERE name = 'Дом и коммуналка') ORDER BY ym");
     await waitFor(async () => expect(await items()).toEqual([{ ym: '2026-09' }]));
@@ -340,7 +340,7 @@ describe('6.7.9 "Повторяющийся платёж" from the plan', () => 
   // the seed's budget: 2 400 ₾ to plan (3 000 less 10% outside and 🔒 300), 2 160 planned — 240 free; Одежда 400 ₾ by hand
   async function pickZara(amount: string) {
     await tap('Изменить: 👕 Одежда');
-    await tap(await screen.findByRole('radio', { name: /Повторяющийся платёж/ }));
+    await tap(await screen.findByRole('radio', { name: /Регулярный платёж/ }));
     await tap('Выбрать операцию');
     await tap('ZARA');
     expect(await screen.findByText('👕 Платёж «ZARA»')).toBeTruthy();
@@ -406,7 +406,7 @@ describe('6.7.9 "Повторяющийся платёж" from the plan', () => 
     await tap('Платёж: RENT');
     await tap('Удалить платёж');
     await tap('Удалить');
-    expect(await screen.findByText('Платёж «RENT» удалён, повторяющиеся платежи выключены')).toBeTruthy();
+    expect(await screen.findByText('Платёж «RENT» удалён, регулярные платежи выключены')).toBeTruthy();
     expect(await (await getDb()).get("SELECT recurring FROM categories WHERE name = 'Дом и коммуналка'")).toEqual({ recurring: 0 });
     await tap('Отменить');
     expect(await screen.findByText('Платёж «RENT» снова в плане')).toBeTruthy();
@@ -440,10 +440,10 @@ describe('6.7.9 "Повторяющийся платёж" from the plan', () => 
       .toEqual({ limit_minor: 320000 });
   });
 
-  test('"Подписки": no "Выключить повторяющиеся платежи" in its sheet — the plan turns them off, a subscription is deleted', async () => {
+  test('"Подписки": no "Выключить регулярные платежи" in its sheet — the plan turns them off, a subscription is deleted', async () => {
     await openSubscriptions();
     expect(await screen.findByText('＋ Добавить подписку')).toBeTruthy();
-    expect(screen.queryByText('Выключить повторяющиеся платежи')).toBeNull();
+    expect(screen.queryByText('Выключить регулярные платежи')).toBeNull();
   });
 });
 
@@ -552,10 +552,10 @@ describe('6.7.8 saving up for a subscription', () => {
     await tap('Изменить в плане ›');
     await tap(await screen.findByRole('radio', { name: /Разовый платёж/ }));
     await tap('Сохранить');
-    expect(await screen.findByText('Выключить повторяющиеся платежи?')).toBeTruthy();
+    expect(await screen.findByText('Выключить регулярные платежи?')).toBeTruthy();
     expect(screen.getByText(/^На платежи уже отложено: Страховка — 10/)).toBeTruthy();
     await tap('Выключить');
-    expect(await screen.findByText(/повторяющиеся платежи выключены$/)).toBeTruthy();
+    expect(await screen.findByText(/регулярные платежи выключены$/)).toBeTruthy();
     expect(await (await getDb()).get("SELECT recurring FROM categories WHERE name = 'Дом и коммуналка'")).toEqual({ recurring: 0 });
   });
 });

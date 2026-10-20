@@ -4,7 +4,7 @@ import type { Period } from '../recurring/schedule';
 
 /**
  * 'limit' = spending cap (progress bar); 'fixed' = a one-off payment, a known amount ("Разовый платёж": a gift; paid / not paid); 'fund' = a fund's contribution
- * (funds.ts); 'subs' = a category with "Повторяющиеся платежи", the month's charges (recurringItems.ts).
+ * (funds.ts); 'subs' = a category with "Регулярные платежи", the month's charges (recurringItems.ts).
  */
 export type PlanKind = 'limit' | 'fixed' | 'fund' | 'subs';
 
@@ -36,7 +36,7 @@ export type PlanItem = {
   previous_minor: number | null;
   /** the category's system kind, null / absent for the user's own */
   system?: string | null;
-  /** "Повторяющиеся платежи" on: its item counted from its payments */
+  /** "Регулярные платежи" on: its item counted from its payments */
   recurring?: boolean;
   /** with repeating payments: those charged by name, those saved up for, their contributions in the plan's currency */
   subs?: {

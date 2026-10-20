@@ -20,7 +20,7 @@ export type Category = {
   color: string | null;
   /** 'topup' for "Пополнение счёта", 'own' (system categories: can't be deleted or renamed), else null */
   system: string | null;
-  /** 1 — "Повторяющиеся платежи": its plan item counted from its payments (db/recurring) */
+  /** 1 — "Регулярные платежи": its plan item counted from its payments (db/recurring) */
   recurring: number;
 };
 
@@ -34,7 +34,7 @@ export const isTopUp = (c: { system?: string | null }) => c.system === TOP_UP;
 /** "Между своими картами": money between one's own cards and accounts (other banks, a savings one) — not spending, not income. */
 export const OWN_TRANSFER = 'own';
 /**
- * "Повторяющиеся платежи" on: its merchants' payments are remembered (how often, the next one; db/recurring), its
+ * "Регулярные платежи" on: its merchants' payments are remembered (how often, the next one; db/recurring), its
  * plan item counted from them ('subs'). "Подписки" is one ("подписка" its word), any can be.
  */
 export const isRecurring = (c: { recurring?: number | boolean | null }) => !!c.recurring;
@@ -53,7 +53,7 @@ export async function subscriptionsCategoryId(db?: Db): Promise<number | null> {
   return (await db.get<{ id: number }>("SELECT id FROM categories WHERE recurring = 1 AND name = 'Подписки' AND deleted_at IS NULL"))?.id ?? null;
 }
 
-/** "Повторяющиеся платежи" on or off. */
+/** "Регулярные платежи" on or off. */
 export async function setRecurring(id: number, on: boolean, db?: Db): Promise<void> {
   db ??= await getDb();
   await db.run('UPDATE categories SET recurring = ? WHERE id = ?', [on ? 1 : 0, id]);

@@ -47,7 +47,7 @@ type Props<V extends TextFormValues & FieldValues> = {
   label?: string;
   /** the submit button greyed even with changes: something it needs is not filled in yet */
   submitDisabled?: boolean;
-  /** no field: the choice above is all (the plan's "Повторяющийся платёж" goes to pick an operation) */
+  /** no field: the choice above is all (the plan's "Регулярный платёж" goes to pick an operation) */
   noInput?: boolean;
   /** returns an error message to show, null when saved, false to stay open without one (a question asked over it) */
   onSubmit: (value: string) => Promise<string | null | false>;

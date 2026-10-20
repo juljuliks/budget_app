@@ -39,7 +39,7 @@ export type PlanAmountTarget = {
   /** a fund: its target (in `currency`, the sheet's amount), date and what was saved before */
   fund?: { target_minor: number; due: string; start_minor: number };
   /**
-   * "Повторяющиеся платежи" on: its kind is "Повторяющийся платёж" (its amount here by hand until a payment has a day; the
+   * "Регулярные платежи" on: its kind is "Регулярный платёж" (its amount here by hand until a payment has a day; the
    * payments are in their own sheet); another kind turns them off. Off, that kind picks an operation to make one from
    */
   recurring?: boolean;
@@ -65,7 +65,7 @@ type Props = {
 };
 
 /**
- * "Повторяющийся платёж" for a category without them: made from an operation — the sheet (and those under it) closes for
+ * "Регулярный платёж" for a category without them: made from an operation — the sheet (and those under it) closes for
  * the category's operations of the month to pick one from.
  */
 function goPick(target: PlanAmountTarget, ym: string, leave: () => void): false {
@@ -153,8 +153,8 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
     const write = async (takeLocked: boolean) => {
       if (k === 'fund' && date) return saveFund(ym, target.category_id, { target_minor: minor, currency, due: date, start_minor: startMinor ?? 0 }, undefined, takeLocked);
       await savePlanAmount(ym, target.category_id, minor, byHand ? 'fixed' : k, currency, norm, takeLocked);
-      // "Повторять каждый месяц": a limit's or a one-off payment's
-      if (!byHand && pinned !== !!target.pinned) await setPlanPinned(ym, target.category_id, pinned);
+      // "Повторять каждый месяц": a limit's only (a one-off payment isn't carried over)
+      if (!byHand && (k === 'limit' && pinned) !== !!target.pinned) await setPlanPinned(ym, target.category_id, k === 'limit' && pinned);
     };
     try {
       await write(false);
@@ -214,7 +214,7 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
           <Text style={formStyles.hint}>По этому в статистике считается лимит на день или неделю.</Text>
         </>
       ) : null}
-      {(kind === 'limit' || kind === 'fixed') && target ? <RepeatField ym={ym} form={form as unknown as UseFormReturn<RepeatForm>} entered={entered ?? ''} currency={enteredCurrency} /> : null}
+      {kind === 'limit' && target ? <RepeatField ym={ym} form={form as unknown as UseFormReturn<RepeatForm>} entered={entered ?? ''} currency={enteredCurrency} /> : null}
       {kind === 'subs' && target ? <Text style={formStyles.hint}>{pick ? PICK_HINT : counted ? COUNTED_HINT : BY_HAND_HINT}</Text> : null}
       {kind === 'fund' && target ? <FundFields ym={ym} categoryId={target.category_id} form={form as unknown as UseFormReturn<FundForm>} /> : null}
     </TextInputModal>

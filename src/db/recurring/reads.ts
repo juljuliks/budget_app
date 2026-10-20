@@ -9,10 +9,10 @@ import { EXPENSE_KINDS } from '../spending';
 import { nextCharge, Period } from './schedule';
 import { periodSql } from './period';
 
-/** A repeating payment ("подписка" in "Подписки"): a merchant's charge every period (or once), of a category with "Повторяющиеся платежи". */
+/** A repeating payment ("подписка" in "Подписки"): a merchant's charge every period (or once), of a category with "Регулярные платежи". */
 export type RecurringPayment = {
   id: number;
-  /** its category (one with "Повторяющиеся платежи") */
+  /** its category (one with "Регулярные платежи") */
   category_id: number | null;
   /** its merchant: what it was made from (an operation), its charges are the merchant's */
   merchant_key: string;

@@ -14,7 +14,7 @@ export const PARTS_COLUMN = `(SELECT group_concat(x, char(30)) FROM (
     FROM transaction_parts p JOIN categories pc ON pc.id = p.category_id LEFT JOIN category_types pct ON pct.id = pc.type_id
     WHERE p.tx_id = t.id ORDER BY p.amount_minor DESC, p.category_id)) AS parts`;
 
-/** In a category with "Повторяющиеся платежи": its merchant's payment's period (schedule.ts Period), if it has a day; else null. */
+/** In a category with "Регулярные платежи": its merchant's payment's period (schedule.ts Period), if it has a day; else null. */
 export const PAYMENT_PERIOD_COLUMN = `CASE WHEN c.recurring = 1 THEN (SELECT ${periodSql('s.')} FROM recurring_payments s
     WHERE s.merchant_key = t.merchant_key AND s.category_id = c.id AND s.deleted_at IS NULL AND s.due IS NOT NULL LIMIT 1) END AS payment_period`;
 

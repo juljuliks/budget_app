@@ -331,4 +331,18 @@ describe('migrations', () => {
     expect(await db.all('SELECT ym, kind, limit_minor FROM plan_items WHERE category_id = 90 ORDER BY ym')).toEqual([
       { ym: '2026-09', kind: 'subs', limit_minor: 130000 }, { ym: '2026-10', kind: 'fixed', limit_minor: 130000 }]);
   });
+
+  test('migration 49: "Повторять каждый месяц" is a limit\'s only — one-off payments of this month on unpinned, the past ones as they were', async () => {
+    jest.useFakeTimers({ now: new Date('2026-10-20T12:00:00'), advanceTimers: true });
+    const db = openDatabase(':memory:');
+    await migrate(db, MIGRATIONS.slice(0, 48));
+    await db.run("INSERT INTO categories (id, name) VALUES (90, 'Подарки'), (91, 'Еда')");
+    await db.run("INSERT INTO plan_months (ym) VALUES ('2026-09'), ('2026-10')");
+    await db.run(`INSERT INTO plan_items (ym, category_id, limit_minor, pinned, kind, currency) VALUES
+      ('2026-09', 90, 5000, 1, 'fixed', 'GEL'), ('2026-10', 90, 5000, 1, 'fixed', 'GEL'), ('2026-10', 91, 60000, 1, 'limit', 'GEL')`);
+    await migrate(db);
+    jest.useRealTimers();
+    expect(await db.all('SELECT ym, category_id, pinned FROM plan_items ORDER BY ym, category_id')).toEqual([
+      { ym: '2026-09', category_id: 90, pinned: 1 }, { ym: '2026-10', category_id: 90, pinned: 0 }, { ym: '2026-10', category_id: 91, pinned: 1 }]);
+  });
 });

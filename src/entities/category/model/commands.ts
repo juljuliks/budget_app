@@ -6,8 +6,8 @@ import { emitTransactionsChanged } from '@/domain/events';
 export type CategoryFields = { name: string; emoji: string; typeId: number | null; color: string | null };
 
 /**
- * Creates the category (no `id`) or saves it; its id. "Повторяющиеся платежи" are not here: the plan's sheet turns them
- * on ("Повторяющийся платёж") and off.
+ * Creates the category (no `id`) or saves it; its id. "Регулярные платежи" are not here: the plan's sheet turns them
+ * on ("Регулярный платёж") and off.
  */
 export async function saveCategory(id: number | undefined, v: CategoryFields): Promise<number> {
   const saved = id ?? await createCategory(v.name, v.emoji, v.typeId, v.color);

@@ -67,7 +67,7 @@ export default function MonthPaymentsView({ ym, data, w, money, shareOf, charges
           amount={null}
         />
       ) : null}
-      {/* turned on and off in the plan (its kind "Повторяющийся платёж"); one stops — deleted in its sheet */}
+      {/* turned on and off in the plan (its kind "Регулярный платёж"); one stops — deleted in its sheet */}
       <Button title={`＋ ${w.add}`} outline onPress={onAdd} style={styles.add} />
     </>
   );

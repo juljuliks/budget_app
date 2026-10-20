@@ -31,7 +31,7 @@ export default function CategoryInfo({ v, id, p }: { v: PeriodView; id: number; 
   if (p.kind !== 'limit') {
     return (
       <Text style={styles.infoText}>
-        Платёж (разовый или повторяющийся): по дням не делится. Прогресс — план на {monthIn}:{' '}
+        Платёж (разовый или регулярный): по дням не делится. Прогресс — план на {monthIn}:{' '}
         <Text style={styles.infoBold}>{money(mtd)} из {money(p.monthLimit)}</Text>.
       </Text>
     );

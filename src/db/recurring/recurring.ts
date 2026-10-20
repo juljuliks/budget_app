@@ -1,4 +1,4 @@
-// "Повторяющиеся платежи" of a category turned on and off. Off: what its payments saved goes to this month's savings,
+// "Регулярные платежи" of a category turned on and off. Off: what its payments saved goes to this month's savings,
 // its plan items from this month on keep their amount as an obligatory payment (by hand from now on), the payments stay
 // (on again — they count again). "Отменить" puts it back as it was.
 import { getDb } from '../index';

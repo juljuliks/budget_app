@@ -91,7 +91,7 @@ describe('4.1–4.2 the list; creating and changing a category', () => {
     expect(await screen.findByDisplayValue('Подписки')).toBeTruthy();
     expect(screen.getByDisplayValue('Подписки').props.editable).not.toBe(false);
     expect(screen.getByText('Удалить категорию')).toBeTruthy();
-    expect(screen.queryByLabelText('Повторяющиеся платежи')).toBeNull();
+    expect(screen.queryByLabelText('Регулярные платежи')).toBeNull();
   });
 
   test('"Пополнение счёта": a system one too — what it is for, can\'t be deleted', async () => {

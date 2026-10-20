@@ -195,7 +195,7 @@ describe('6.3 the categories in the plan', () => {
     await tap('Открыть: 🛒 Продукты');
     expect(await screen.findByDisplayValue('Продукты')).toBeTruthy();
     // the repeating payments are turned on and off in the plan only
-    expect(screen.queryByText('Повторяющиеся платежи')).toBeNull();
+    expect(screen.queryByText('Регулярные платежи')).toBeNull();
   });
 
   test('"Повторять каждый месяц" in the sheet: the badge on its icon; removing such a one asks', async () => {
@@ -219,7 +219,7 @@ describe('6.3 the categories in the plan', () => {
 
   test('"Что значат значки": the plan icons sheet', async () => {
     await tap('Что значат значки');
-    for (const t of ['Значки плана', 'Траты с лимитом', 'Разовый платёж', 'Повторяющийся платёж', 'Повторять каждый месяц', 'Копилка', 'Часть бюджета']) {
+    for (const t of ['Значки плана', 'Траты с лимитом', 'Разовый платёж', 'Регулярный платёж', 'Повторять каждый месяц', 'Копилка', 'Часть бюджета']) {
       expect(await screen.findByText(t)).toBeTruthy();
     }
     await tap('Понятно');

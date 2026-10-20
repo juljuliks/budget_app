@@ -10,7 +10,7 @@ import { PinBadge } from './PlanIcon';
 const ROWS: Array<{ icon: React.ReactNode; title: string; note: string }> = [
   { icon: <LimitIcon color={colors.muted} />, title: 'Траты с лимитом', note: 'Сумма меняется — следим, сколько осталось' },
   { icon: <OneOffIcon color={colors.muted} />, title: 'Разовый платёж', note: 'Известная сумма в этом месяце' },
-  { icon: <RepeatIcon color={colors.accent} size={22} />, title: 'Повторяющийся платёж', note: 'Переходит в следующий месяц всегда, сумма — по датам списаний' },
+  { icon: <RepeatIcon color={colors.accent} size={22} />, title: 'Регулярный платёж', note: 'Переходит в следующий месяц всегда, сумма — по датам списаний' },
   {
     icon: <PinBadge />, title: 'Повторять каждый месяц',
     note: 'В углу значка: в следующем месяце будет в плане с той же суммой. Включается в шите категории',

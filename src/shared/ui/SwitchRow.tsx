@@ -13,7 +13,7 @@ type Props = {
   style?: StyleProp<ViewStyle>;
 };
 
-/** A setting with its switch ("Автокопия", "Повторяющиеся платежи"): its state in a line, a link to change it while on. */
+/** A setting with its switch ("Автокопия", "Регулярные платежи"): its state in a line, a link to change it while on. */
 export default function SwitchRow({ label, hint, on, onChange, change, style }: Props) {
   return (
     <View style={[styles.row, style]}>
