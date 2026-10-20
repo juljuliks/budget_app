@@ -5,8 +5,8 @@ import { currencySymbol, formatWithCurrency } from '@/shared/lib/money';
 import RadioGroup from '@/shared/ui/RadioGroup';
 import { formStyles } from '@/shared/theme/formStyles';
 import { colors } from '@/shared/theme/theme';
+import { inMonthYear, longDayYear, monthGenYear } from '@/shared/lib/dates';
 import { usePaymentSaving } from '../model/usePaymentSaving';
-import { inMonthYear, longDayYear, monthGenYear } from '../texts';
 
 type Props = { s: ReturnType<typeof usePaymentSaving>; amount: number | null; currency: Currency; due: string | null };
 

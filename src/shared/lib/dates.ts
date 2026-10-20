@@ -25,3 +25,25 @@ export function dayTitle(key: string): string {
   const [y, m, d] = key.split('-').map(Number);
   return `${d} ${MONTHS_GEN[m - 1]} ${y}`;
 }
+
+const parts = (day: string) => day.split('-').map(Number);
+
+/** "18 октября". */
+export const longDay = (day: string) => { const [, m, d] = parts(day); return `${d} ${MONTHS_GEN[m - 1]}`; };
+
+/** "18 октября"; another year — "18 октября 2027". */
+export const longDayYear = (day: string, now = new Date()) => `${longDay(day)}${parts(day)[0] === now.getFullYear() ? '' : ` ${parts(day)[0]}`}`;
+
+/** "в октябре" of 'YYYY-MM'. */
+export const inMonth = (ym: string) => `в ${MONTHS_PREP[Number(ym.slice(5)) - 1]}`;
+
+/** "в октябре"; another year — "в сентябре 2027". */
+export const inMonthYear = (ym: string, now = new Date()) =>
+  `${inMonth(ym)}${Number(ym.slice(0, 4)) === now.getFullYear() ? '' : ` ${ym.slice(0, 4)}`}`;
+
+/** "октября" of 'YYYY-MM'. */
+export const monthGen = (ym: string) => MONTHS_GEN[Number(ym.slice(5)) - 1];
+
+/** "октября"; another year — "сентября 2027". */
+export const monthGenYear = (ym: string, now = new Date()) =>
+  `${monthGen(ym)}${Number(ym.slice(0, 4)) === now.getFullYear() ? '' : ` ${ym.slice(0, 4)}`}`;

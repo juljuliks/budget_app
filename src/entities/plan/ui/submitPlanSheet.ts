@@ -10,6 +10,7 @@ import { turnOffRecurring } from './turnOffRecurring';
 import { askTakeLocked } from './askTakeLocked';
 import { savedText } from './sheetOptions';
 import type { RegularEvery } from './RegularFields';
+import type { SavingChoice } from '../model/usePaymentSaving';
 import { submitCategoryPayment } from './submitCategoryPayment';
 import { dateNeeded, UNTIL_BEFORE } from './sheetOptions';
 import type { PlanAmountTarget } from './PlanAmountModal';
@@ -17,6 +18,8 @@ import type { PlanAmountTarget } from './PlanAmountModal';
 export type PlanSheetValues = {
   kind: PlanKind; currency: Currency; norm: NormPeriod; due: string | null; start: string;
   pinned: boolean; until: string | null; every: RegularEvery; weekdays: number; period: number; next: string | null;
+  /** "Откладывать каждый месяц?" of a regular payment rarer than monthly; `startBad` — "Уже отложено" not an amount */
+  saving?: (SavingChoice & { startBad: boolean }) | null;
 };
 
 type Args = {
@@ -44,12 +47,13 @@ export async function submitPlanSheet({ ym, target, text, v, adding, locked, fre
   const due = own && v.period !== 1 ? v.next : null;
   if (own && !due && v.period !== 1) return dateNeeded();
   if (own && v.until && due && v.until < due) return UNTIL_BEFORE;
+  if (own && v.saving?.startBad) return AMOUNT_HINT;
   // another kind (or a regular payment within the month) for a category with regular payments: they are turned off
   // first (asked if they saved something)
   const off = !!target.recurring && (k !== 'subs' || regular);
   if (off && !(await turnOffRecurring(target.category_id))) return false;
   const saved = (taken?: string) => { toast(savedText(k, target.label, adding, off, taken)); onSaved(); };
-  if (own) return submitCategoryPayment(ym, target, { amount_minor: minor, currency: v.currency, period: v.period, due, until: v.until }, adding, saved, onClose, free);
+  if (own) return submitCategoryPayment(ym, target, { amount_minor: minor, currency: v.currency, period: v.period, due, until: v.until, saving: v.period > 1 ? v.saving : null }, adding, saved, onClose, free);
   const write = async (takeLocked: boolean) => {
     if (k === 'fund' && v.due) return saveFund(ym, target.category_id, { target_minor: minor, currency: v.currency, due: v.due, start_minor: startMinor ?? 0 }, undefined, takeLocked);
     if (regular) {

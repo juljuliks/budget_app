@@ -289,6 +289,30 @@ describe('6.7.9 "Регулярный платёж" from the plan', () => {
     expect(await (await getDb()).get("SELECT recurring, by_merchant FROM categories WHERE name = 'Дом и коммуналка'")).toEqual({ recurring: 0, by_merchant: 1 });
   });
 
+  test('without "Подписки", once a year: "Откладывать каждый месяц?" in the plan\'s sheet — "Да" saves up for it as a fund', async () => {
+    await openApp(async () => {
+      await seed();
+      const id = (await (await getDb()).get<{ id: number }>(`SELECT id FROM categories WHERE name = 'Дом и коммуналка'`))!.id;
+      await savePayment({ category_id: id, merchant_key: null, name: 'Дом и коммуналка', amount_minor: 120000, currency: 'GEL', period: 12, due: '2027-09-15' });
+    });
+    await tap('Статистика');
+    await tap('План');
+    await tap('🏠 Дом и коммуналка');
+    expect(await screen.findByText('Откладывать каждый месяц?')).toBeTruthy();
+    // saved before without it: "Нет" chosen
+    expect(screen.getByRole('radio', { name: /^Нет, весь платёж в сентябре 2027/, checked: true })).toBeTruthy();
+    await tap(screen.getByRole('radio', { name: /^Да, каждый месяц/ }));
+    // chosen: the month's contribution in its title
+    expect(await screen.findByRole('radio', { name: /^Да, по .* в месяц/, checked: true })).toBeTruthy();
+    expect(screen.getByText('Уже отложено (необязательно)')).toBeTruthy();
+    await tap('Сохранить');
+    await waitFor(async () => expect(await (await getDb()).get('SELECT count(*) AS n FROM payment_savings WHERE closed_ym IS NULL')).toEqual({ n: 1 }));
+    // monthly: no question
+    await tap(await screen.findByText('🏠 Дом и коммуналка'));
+    await tap('Каждый месяц');
+    expect(screen.queryByText('Откладывать каждый месяц?')).toBeNull();
+  });
+
   test('without "Подписки", once a year from a day past this month: only the plan — this month\'s charge in it, the next by the period; the operations aren\'t matched with it', async () => {
     await openApp(async () => {
       await seed();

@@ -12,7 +12,7 @@ import { sheetAlert } from '@/shared/ui/sheetAlert';
 import { toast, toastError, toastFailure } from '@/shared/ui/toast';
 import { formatWithCurrency } from '@/shared/lib/money';
 import { longDay, monthGen } from '../texts';
-import type { SavingChoice } from './usePaymentSaving';
+import type { SavingChoice } from '@/entities/plan';
 import type { PaymentCategory } from './usePaymentForm';
 import { SUBSCRIPTION_WORDS as w } from '@/entities/category';
 

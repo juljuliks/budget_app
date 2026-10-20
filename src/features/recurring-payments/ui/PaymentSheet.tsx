@@ -20,8 +20,7 @@ import { CategorySummaryRow, SUBSCRIPTION_WORDS as w } from '@/entities/category
 import { showOperationsFrom } from '@/shared/navigation/navigation';
 import { PaymentTarget, usePaymentForm } from '../model/usePaymentForm';
 import { usePaymentOperations } from '../model/usePaymentOperations';
-import { usePaymentSaving } from '../model/usePaymentSaving';
-import SavingFields from './SavingFields';
+import { SavingFields, usePaymentSaving } from '@/entities/plan';
 import { inTime, monthGenYear, periodText } from '../texts';
 
 type Props = {

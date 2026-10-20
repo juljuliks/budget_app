@@ -5,7 +5,6 @@ import { useEffect, useState } from 'react';
 import { contributionOf, currentYm, monthsBetween } from '@/db/plans';
 import { openSaving, Period, savedNow } from '@/db/recurring';
 import { parseAmountOrZero } from '@/shared/lib/money';
-import type { PaymentTarget } from './usePaymentForm';
 
 /**
  * What the sheet sends on "Сохранить": save up or not, from what; whether it was saving and what it has; turned on now —
@@ -13,7 +12,8 @@ import type { PaymentTarget } from './usePaymentForm';
  */
 export type SavingChoice = { on: boolean; start: number; had: boolean; balance: number; contribution: number };
 
-export function usePaymentSaving(target: PaymentTarget | null, period: Period, amount: number | null, due: string | null) {
+/** `target`: the payment (`id`; none — a new one), null — not yet known; another object — asked again from the start. */
+export function usePaymentSaving(target: { id?: number } | null, period: Period, amount: number | null, due: string | null) {
   const [save, setSave] = useState(false);
   const [start, setStart] = useState('');
   const [had, setHad] = useState<{ saving: boolean; balance: number } | null>(null);
