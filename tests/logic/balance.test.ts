@@ -164,3 +164,15 @@ test('migration 34: a transfer TBC dated the next day, stored at its 00:00, is p
   expect((await db.get<{ at: number }>('SELECT occurred_at AS at FROM transactions WHERE raw_sms = ?', [TRANSFER]))!.at)
     .toBe(new Date('2026-09-12T21:01:00').getTime() / 1000 - 1);
 });
+
+test('a deposit in dollars to a multi-currency card: its "Bal: … GEL" sets the balance (the card in lari)', async () => {
+  const deposit = 'Deposit: 2500.00USD\n(*0060)\nP2P_KMIV_CREDIT $\nBal: 6775.46 GEL\n20/10/26 16:27';
+  expect(parseTbcBalance(deposit)).toMatchObject({ minor: 677546, currency: 'GEL', occurred_at: '2026-10-20T16:27:00' });
+  await sms('30.00GEL\n(*0060)\nWolt\nBalance: 425.46GEL\n\n20/10/26 01:05', '2026-10-20T01:05:00');
+  await sms(deposit, '2026-10-20T16:27:30');
+  await sms('Deposit: 914.60USD\n(*0060)\nP2P_KMIV_CREDIT $\nBal: 15448.54 GEL\n20/10/26 16:32', '2026-10-20T16:32:30');
+  // a conversion between its accounts isn't an operation; the transfer after the last balance is taken off it
+  await sms('Conversion:\n602.00 USD\n1558.58 GEL\nRate: 2.589\n20/10/2026', '2026-10-20T16:45:00');
+  await sms('Money Transfer:\n1557.00 GEL\nTBC CARD\n20/10/2026', '2026-10-20T16:49:00');
+  expect(await cardBalance()).toMatchObject({ minor: 1544854 - 155700, currency: 'GEL', pending: 1 });
+});

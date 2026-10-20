@@ -13,7 +13,8 @@ const CURRENCY_CODES: Record<string, string> = { '₾': 'GEL', '$': 'USD', '€'
 
 const DATE_TIME = /(\d{1,2})\/(\d{1,2})\/(\d{4}|\d{2})(?:\s+(\d{1,2}):(\d{2}))?/;
 const CARD_MASK = /\(\*[^)]+\)/;
-const BALANCE_LINE = /^(balance|available)\b/i;
+// "Balance: 283.14GEL"; a multi-currency card's deposit: "Bal: 6775.46 GEL" (all its accounts in lari)
+const BALANCE_LINE = /^(balance|bal|available)\b/i;
 
 // Not money movements we record: declined payments, currency conversions between own accounts
 // ("Conversion: 14.02 USD / 36.40 GEL / Rate: ..."), one-time codes ("Code: 195448 27.00 GEL payment ...").
@@ -174,8 +175,9 @@ function extractMerchant(lines: string[]): string {
 }
 
 /**
- * The card balance a TBC SMS reports ("Balance: 283.14GEL"): purchase SMS and balance-only SMS have it, deposits
- * don't. It is the balance after the operation in the same SMS.
+ * The card balance a TBC SMS reports ("Balance: 283.14GEL", a deposit to a multi-currency card "Bal: 6775.46 GEL"):
+ * purchase SMS, balance-only SMS and such deposits have it, "Deposit Money" ones don't. It is the balance after the
+ * operation in the same SMS.
  */
 export function parseTbcBalance(raw_sms: string): { minor: number; currency: string; occurred_at?: string; has_time: boolean } | null {
   const lines = raw_sms.replace(/\r\n?/g, '\n').split('\n').map((l) => l.trim()).filter(Boolean);
