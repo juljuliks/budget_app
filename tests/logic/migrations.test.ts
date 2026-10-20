@@ -350,4 +350,25 @@ describe('migrations', () => {
     expect(await db.all('SELECT id, recurring, by_merchant FROM categories WHERE id IN (90, 91) ORDER BY id')).toEqual([
       { id: 90, recurring: 1, by_merchant: 0 }, { id: 91, recurring: 0, by_merchant: 0 }]);
   });
+
+  test('migration 53: a payment stored in the budget\'s dollars that is whole lari by the plan\'s rate — in lari again; typed in dollars — stays', async () => {
+    jest.useFakeTimers({ now: new Date('2026-10-20T12:00:00'), advanceTimers: true });
+    const db = openDatabase(':memory:');
+    await migrate(db, MIGRATIONS.slice(0, 52));
+    await db.run("INSERT INTO categories (id, name) VALUES (90, 'Спорт'), (91, 'Подписки'), (92, 'Отпуск'), (93, 'Еда')");
+    await db.run("INSERT INTO plan_months (ym, budget_currency) VALUES ('2026-09', 'USD'), ('2026-10', 'USD')");
+    await db.run("INSERT INTO fx_rates (date, currency, gel_per_unit) VALUES ('2026-10-01', 'USD', 2.6)");
+    // 288.46 $ × 2.6 = 749.996 ₾ — whole; 70.73 $ = 183.898 ₾ — not (a regular category's: counted again by its payments);
+    // 100 $ typed; a limit's own; September — past
+    await db.run(`INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency) VALUES
+      ('2026-10', 90, 28846, 'fixed', 'USD'), ('2026-10', 91, 7073, 'subs', 'USD'), ('2026-10', 92, 10000, 'fixed', 'USD'),
+      ('2026-10', 93, 28846, 'limit', 'USD'), ('2026-09', 90, 28846, 'fixed', 'USD')`);
+    await migrate(db);
+    jest.useRealTimers();
+    expect(await db.all('SELECT ym, category_id, limit_minor, currency FROM plan_items ORDER BY ym, category_id')).toEqual([
+      { ym: '2026-09', category_id: 90, limit_minor: 28846, currency: 'USD' },
+      { ym: '2026-10', category_id: 90, limit_minor: 75000, currency: 'GEL' }, { ym: '2026-10', category_id: 91, limit_minor: 7073, currency: 'USD' },
+      { ym: '2026-10', category_id: 92, limit_minor: 10000, currency: 'USD' }, { ym: '2026-10', category_id: 93, limit_minor: 28846, currency: 'USD' },
+    ]);
+  });
 });

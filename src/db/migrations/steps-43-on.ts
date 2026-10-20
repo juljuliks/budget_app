@@ -174,4 +174,35 @@ export const STEPS_43_ON: MigrationStep[][] = [
       PRIMARY KEY (tx_id, category_id)
     )`,
   ],
+  // 53: a regular category's item was stored in the budget's currency (750 ₾ as 288.61 $, shown as 749.99 ₾ — a
+  // kopeck over the plan); 48 left such ones as one-off payments. The current and coming months' payments in the
+  // budget's currency that come to whole lari (±2 tetri) by the plan's rate are in lari again, whole
+  [
+    async (db) => {
+      const now = new Date();
+      const p2 = (n: number) => String(n).padStart(2, '0');
+      const ym = `${now.getFullYear()}-${p2(now.getMonth() + 1)}`;
+      const today = `${ym}-${p2(now.getDate())}`;
+      const rows = await db.all<{ ym: string; category_id: number; limit_minor: number; currency: string }>(
+        `SELECT p.ym, p.category_id, p.limit_minor, p.currency FROM plan_items p JOIN plan_months m ON m.ym = p.ym
+          WHERE p.ym >= ? AND p.kind IN ('fixed', 'subs') AND p.currency = m.budget_currency AND p.currency <> 'GEL' AND p.limit_minor > 0
+            -- converted ones have cents; one typed in dollars is whole and stays
+            AND p.limit_minor % 100 <> 0`, [ym]);
+      for (const r of rows) {
+        // the plan's rate: its month's last day, not after today (as planRateDate)
+        const [y, m] = r.ym.split('-').map(Number);
+        const last = `${r.ym}-${p2(new Date(y, m, 0).getDate())}`;
+        const day = last < today ? last : today;
+        const rate = (await db.get<{ g: number }>(
+          `SELECT coalesce((SELECT gel_per_unit FROM fx_rates WHERE currency = ? AND date <= ? ORDER BY date DESC LIMIT 1),
+            (SELECT gel_per_unit FROM fx_rates WHERE currency = ? ORDER BY date LIMIT 1)) AS g`, [r.currency, day, r.currency]))?.g;
+        if (!rate) continue;
+        const lari = r.limit_minor * rate;
+        const whole = Math.round(lari / 100) * 100;
+        if (whole > 0 && Math.abs(lari - whole) <= 2) {
+          await db.run("UPDATE plan_items SET currency = 'GEL', limit_minor = ? WHERE ym = ? AND category_id = ?", [whole, r.ym, r.category_id]);
+        }
+      }
+    },
+  ],
 ];

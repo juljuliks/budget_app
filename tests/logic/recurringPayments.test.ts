@@ -139,3 +139,13 @@ test('"Подписки" without subscriptions keeps its repeating payments on',
   expect((await deletePayment(id)).off).toBeNull();
   expect(await (await getDb()).get('SELECT recurring FROM categories WHERE id = ?', [subs])).toEqual({ recurring: 1 });
 });
+
+test('a budget in dollars: the item of payments in lari is in lari — 750 ₾ stays 750 ₾ (not 288.61 $ shown as 749.99 ₾)', async () => {
+  const { createCategory } = require('../../src/db/categories');
+  const db = await getDb();
+  const sport = await createCategory('Спорт', '🏋️');
+  await db.run("INSERT OR REPLACE INTO plan_months (ym, budget_minor, budget_currency) VALUES ('2026-10', 400000, 'USD')");
+  await db.run("INSERT INTO fx_rates (date, currency, gel_per_unit) VALUES ('2026-10-01', 'USD', 2.5987)");
+  await savePayment({ category_id: sport, merchant_key: null, name: 'Спорт', amount_minor: 75000, currency: 'GEL', period: 1, due: '2026-10-20' });
+  expect(await db.get("SELECT limit_minor, currency FROM plan_items WHERE ym = '2026-10' AND category_id = ?", [sport])).toEqual({ limit_minor: 75000, currency: 'GEL' });
+});
