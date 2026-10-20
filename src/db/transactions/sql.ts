@@ -1,6 +1,5 @@
 // The SQL every operations query starts from: the columns, the join with the category, the newest first.
 import { periodSql } from '../recurring/period';
-import { askingSql } from '../recurring/answers';
 
 
 export const CATEGORY_COLUMNS = 'c.name AS category_name, c.emoji AS category_emoji, ct.name AS category_type_name';
@@ -15,16 +14,12 @@ export const PARTS_COLUMN = `(SELECT group_concat(x, char(30)) FROM (
     FROM transaction_parts p JOIN categories pc ON pc.id = p.category_id LEFT JOIN category_types pct ON pct.id = pc.type_id
     WHERE p.tx_id = t.id ORDER BY p.amount_minor DESC, p.category_id)) AS parts`;
 
-/** In a category with "Регулярные платежи": its merchant's payment's period (schedule.ts Period), if it has a day; else null. */
-export const PAYMENT_PERIOD_COLUMN = `CASE WHEN c.recurring = 1 THEN (SELECT ${periodSql('s.')} FROM recurring_payments s
-    WHERE (s.merchant_key = t.merchant_key OR s.merchant_key IS NULL) AND s.category_id = c.id AND s.deleted_at IS NULL AND s.due IS NOT NULL
-    ORDER BY s.merchant_key IS NULL LIMIT 1) END AS payment_period`;
-
-/** "Это оплата?" not answered (its part in its own category: the amount less its parts in others) — 1 / 0. */
-export const ASKING_COLUMN = `${askingSql('t', 't.amount_minor - coalesce((SELECT sum(q.amount_minor) FROM transaction_parts q WHERE q.tx_id = t.id), 0)')} AS asks_payment`;
+/** In a category with "Подписки": its merchant's subscription's period (schedule.ts Period), if it has a day; else null. */
+export const PAYMENT_PERIOD_COLUMN = `CASE WHEN c.by_merchant = 1 THEN (SELECT ${periodSql('s.')} FROM recurring_payments s
+    WHERE s.merchant_key = t.merchant_key AND s.category_id = c.id AND s.deleted_at IS NULL AND s.due IS NOT NULL LIMIT 1) END AS payment_period`;
 
 export const TX_COLUMNS = `t.id, t.bank, t.kind, t.amount_minor, t.currency, t.raw_merchant, t.merchant_key, t.note, t.category_id,
-    t.category_source, t.occurred_at, t.seen_at, t.refund_settled_at, ${CATEGORY_COLUMNS}, ${PARTS_COLUMN}, ${PAYMENT_PERIOD_COLUMN}, ${ASKING_COLUMN}`;
+    t.category_source, t.occurred_at, t.seen_at, t.refund_settled_at, ${CATEGORY_COLUMNS}, ${PARTS_COLUMN}, ${PAYMENT_PERIOD_COLUMN}`;
 
 export const FROM_TX = `FROM transactions t
     LEFT JOIN categories c ON c.id = t.category_id

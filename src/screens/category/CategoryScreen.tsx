@@ -4,6 +4,7 @@ import { categoryLabel, categorySummary, getCategory } from '@/db/categories';
 import { CategoryView } from '@/entities/category';
 import { RecentOperations, useRecentOperations } from '@/entities/transaction';
 import { startCategoryDelete } from '@/features/category-delete';
+import { SubscriptionsSwitch } from '@/features/recurring-payments';
 import { RootStackParamList, showOperationsFrom } from '@/shared/navigation/navigation';
 import { toastFailure } from '@/shared/ui/toast';
 import { LOAD_FAILED } from '@/shared/lib/strings';
@@ -30,6 +31,7 @@ export default function CategoryScreen({ route, navigation }: Props) {
       onClose={back}
       onShowOperations={showAll}
       onDelete={() => startCategoryDelete(id, { close: back, onDeleted: () => {} })}
+      extra={<SubscriptionsSwitch categoryId={id} />}
       recent={<RecentOperations rows={rows} count={count} of="category" onShowAll={showAll} />}
     />
   );

@@ -22,7 +22,7 @@ export type Category = {
   system: string | null;
   /** 1 — "Регулярные платежи": its plan item counted from its payments (db/recurring) */
   recurring: number;
-  /** 1 — "По мерчантам": a payment of each merchant (from an operation); 0 — "Траты категории": its spending is its payment */
+  /** 1 — "Подписки" (on its page): a subscription of each merchant, made from an operation and followed by its charges */
   by_merchant: number;
 };
 
@@ -36,8 +36,8 @@ export const isTopUp = (c: { system?: string | null }) => c.system === TOP_UP;
 /** "Между своими картами": money between one's own cards and accounts (other banks, a savings one) — not spending, not income. */
 export const OWN_TRANSFER = 'own';
 /**
- * "Регулярные платежи" on: its merchants' payments are remembered (how often, the next one; db/recurring), its
- * plan item counted from them ('subs'). "Подписки" is one ("подписка" its word), any can be.
+ * "Регулярные платежи" on: its plan item counted from its payments ('subs'; db/recurring) — its subscriptions (with
+ * "Подписки" on), else its own regular payment.
  */
 export const isRecurring = (c: { recurring?: number | boolean | null }) => !!c.recurring;
 /** A category of the system: "Пополнение счёта", "Между своими картами" (not deleted, merged, added to the plan by hand). */
@@ -49,10 +49,11 @@ export async function topUpCategoryId(db?: Db): Promise<number | null> {
   return (await db.get<{ id: number }>("SELECT id FROM categories WHERE system = 'topup'"))?.id ?? null;
 }
 
-/** The id of "Подписки" (the seeded one with repeating payments; the seeds and tests make repeating payments in it). */
+/** A category with "Подписки" on, the seeded one first: a subscription without a category goes there. */
 export async function subscriptionsCategoryId(db?: Db): Promise<number | null> {
   db ??= await getDb();
-  return (await db.get<{ id: number }>("SELECT id FROM categories WHERE recurring = 1 AND name = 'Подписки' AND deleted_at IS NULL"))?.id ?? null;
+  return (await db.get<{ id: number }>(
+    "SELECT id FROM categories WHERE by_merchant = 1 AND deleted_at IS NULL ORDER BY name = 'Подписки' DESC, id LIMIT 1"))?.id ?? null;
 }
 
 /** "Регулярные платежи" on or off. */
@@ -61,7 +62,7 @@ export async function setRecurring(id: number, on: boolean, db?: Db): Promise<vo
   await db.run('UPDATE categories SET recurring = ? WHERE id = ?', [on ? 1 : 0, id]);
 }
 
-/** "По мерчантам" (a payment of each merchant, from an operation) or "Траты категории" (its spending is its payment). */
+/** "Подписки" on or off (a subscription of each merchant, from an operation). */
 export async function setByMerchant(id: number, on: boolean, db?: Db): Promise<void> {
   db ??= await getDb();
   await db.run('UPDATE categories SET by_merchant = ? WHERE id = ?', [on ? 1 : 0, id]);
@@ -131,7 +132,7 @@ export async function createCategory(name: string, emoji?: string | null, typeId
 
 export async function updateCategory(id: number, fields: { name: string; emoji?: string | null; typeId: number | null; color?: string | null }) {
   const db = await getDb();
-  // a system category ("Подписки") keeps its name
+  // a system category ("Пополнение счёта", "Между своими картами") keeps its name
   await db.run('UPDATE categories SET name = CASE WHEN system IS NULL THEN ? ELSE name END, emoji = ?, type_id = ?, color = ? WHERE id = ?',
     [fields.name.trim(), fields.emoji?.trim() || null, fields.typeId, fields.color ?? null, id]);
 }

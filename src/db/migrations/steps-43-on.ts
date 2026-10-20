@@ -205,4 +205,6 @@ export const STEPS_43_ON: MigrationStep[][] = [
       }
     },
   ],
+  // 54: a category's own regular payment isn't matched with operations any more: "Это оплата?" answers gone
+  ['DROP TABLE IF EXISTS payment_answers'],
 ];

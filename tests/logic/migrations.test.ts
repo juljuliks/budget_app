@@ -371,4 +371,12 @@ describe('migrations', () => {
       { ym: '2026-10', category_id: 92, limit_minor: 10000, currency: 'USD' }, { ym: '2026-10', category_id: 93, limit_minor: 28846, currency: 'USD' },
     ]);
   });
+
+  test('migration 54: "Это оплата?" answers gone with their table (a category\'s own payment isn\'t matched with operations)', async () => {
+    const db = openDatabase(':memory:');
+    await migrate(db, MIGRATIONS.slice(0, 53));
+    expect(await db.get("SELECT 1 AS n FROM sqlite_master WHERE name = 'payment_answers'")).toEqual({ n: 1 });
+    await migrate(db);
+    expect(await db.get("SELECT 1 AS n FROM sqlite_master WHERE name = 'payment_answers'")).toBeFalsy();
+  });
 });

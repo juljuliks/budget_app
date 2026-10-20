@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { getCategory, isRecurring } from '@/db/categories';
-import { paymentWords, PaymentWords } from '@/entities/category';
+import { getCategory } from '@/db/categories';
+import { SUBSCRIPTION_WORDS as w } from '@/entities/category';
 import { savePayment, paymentCard, PaymentCard } from '@/db/recurring';
 import { emitTransactionsChanged, onTransactionsChanged } from '@/domain/events';
 import { dayTitle } from '@/shared/lib/dates';
@@ -13,7 +13,6 @@ import { RepeatIcon } from '@/shared/ui/icons';
 import { toast, toastFailure } from '@/shared/ui/toast';
 import { colors } from '@/shared/theme/theme';
 import type { Tx } from '../model/useTransaction';
-import PaymentQuestion from './PaymentQuestion';
 
 /**
  * An operation in "Подписки": its merchant's repeating payment — how often, the next charge, this year's; "Изменить
@@ -21,23 +20,20 @@ import PaymentQuestion from './PaymentQuestion';
  */
 export default function PaymentNote({ tx }: { tx: Tx }) {
   const [card, setCard] = useState<PaymentCard | null | 'none'>(null);
-  const [w, setW] = useState<PaymentWords | null>(null);
   useEffect(() => {
     let live = true;
     const load = async () => {
       const c = tx.category_id === null ? undefined : await getCategory(tx.category_id);
-      if (!c || !isRecurring(c)) return null;
-      if (live) setW(paymentWords(c.name));
-      // "Траты категории": the category's own payment; "По мерчантам": its merchant's, none — "Задать дату"
-      if (!c.by_merchant) return paymentCard(null, undefined, c.id);
-      return tx.merchant_key ? (await paymentCard(tx.merchant_key)) ?? 'none' : null;
+      // a category with "Подписки": its merchant's subscription, none — "Задать дату"
+      if (!c?.by_merchant || !tx.merchant_key) return null;
+      return (await paymentCard(tx.merchant_key)) ?? 'none';
     };
     const run = () => load().then((c) => { if (live) setCard(c); }).catch((e) => console.error('payment card failed', e));
     run();
     const off = onTransactionsChanged(run);
     return () => { live = false; off(); };
   }, [tx.id, tx.merchant_key, tx.category_id, tx.amount_minor]);
-  if (!card || !w) return null;
+  if (!card) return null;
   if (card === 'none' || !card.sub.due) {
     return (
       <TouchableOpacity style={styles.box} onPress={() => openPayment({ txId: tx.id })} accessibilityRole="button">
@@ -48,9 +44,8 @@ export default function PaymentNote({ tx }: { tx: Tx }) {
   }
   const { sub } = card;
   const money = (minor: number) => formatWithCurrency(minor, sub.currency);
-  // the latest charge is this one and its amount isn't the repeating payment's (a merchant's: the category's own one is
-  // paid by its spending adding up, one of them another amount says nothing)
-  const changed = !!sub.merchant_key && card.last?.id === tx.id && tx.currency === sub.currency && tx.amount_minor !== sub.amount_minor;
+  // the latest charge is this one and its amount isn't the subscription's
+  const changed = card.last?.id === tx.id && tx.currency === sub.currency && tx.amount_minor !== sub.amount_minor;
   const update = () => savePayment({ ...sub, amount_minor: tx.amount_minor }, sub.id)
     .then(() => { emitTransactionsChanged(); toast(`${sub.name} — ${money(tx.amount_minor)}`); })
     .catch(toastFailure('update payment', SAVE_FAILED));
@@ -71,9 +66,6 @@ export default function PaymentNote({ tx }: { tx: Tx }) {
           <Text style={styles.link}>{`Изменить ${w.acc} ›`}</Text>
         </TouchableOpacity>
       </View>
-      {!sub.merchant_key && sub.category_id !== null ? (
-        <PaymentQuestion tx={tx} categoryId={sub.category_id} name={sub.name} amount={sub.amount_minor} currency={sub.currency} />
-      ) : null}
       {changed ? (
         <TouchableOpacity style={styles.warn} onPress={update} accessibilityRole="button">
           <Text style={styles.warnText}>

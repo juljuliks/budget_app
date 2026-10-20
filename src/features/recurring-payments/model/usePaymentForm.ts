@@ -5,7 +5,7 @@ import { planEffect } from '@/db/plans';
 import { chargeBefore, offeredDue, paymentNext, Period, todayKey } from '@/db/recurring';
 import { parseAmountInput, toInputValue } from '@/shared/lib/money';
 
-/** The category a payment is of (its name gives the words: "Подписка" in "Подписки", else "Платёж"). */
+/** The category a subscription is of (one with "Подписки"). */
 export type PaymentCategory = { id: number; name: string; emoji: string | null };
 
 /** What the sheet opens with: a payment (`id`), or a new one — of an operation's merchant, from that operation. */

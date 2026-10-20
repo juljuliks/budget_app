@@ -1,12 +1,11 @@
-// "Траты категории", monthly or rarer: the category's own payment saved from the plan's sheet. Its merchants' payments
-// (it was "По мерчантам") — asked first; this month's charges past what is free — "Вычесть из сбережений?".
+// A regular payment, monthly or rarer: the category's own payment saved from the plan's sheet; this month's charges
+// past what is free — "Вычесть из сбережений?".
 import { Currency } from '@/db/fx';
 import { currentYm, OverBudgetError, paymentShort, planEffect, takeLocked } from '@/db/plans';
 import { categoryPayment } from '@/db/recurring';
 import { formatWithCurrency } from '@/shared/lib/money';
 import { SAVE_FAILED } from '@/shared/lib/strings';
-import { sheetAlert } from '@/shared/ui/sheetAlert';
-import { toastError, toastFailure } from '@/shared/ui/toast';
+import { toastFailure } from '@/shared/ui/toast';
 import { saveCategoryPayment } from '../model/commands';
 import { askTakeLocked } from './askTakeLocked';
 import type { PlanAmountTarget } from './PlanAmountModal';
@@ -19,17 +18,6 @@ type Free = { minor: number; currency: Currency } | null;
 export async function submitCategoryPayment(
   ym: string, target: PlanAmountTarget, p: Payment, adding: boolean, saved: (taken?: string) => void, onClose: () => void, free: Free,
 ): Promise<string | null | false> {
-  const done = (taken?: string) => { saved(taken); onClose(); };
-  const save = () => checkAndSave(ym, target.category_id, p, adding, free, done)
-    .then((err) => { if (err) toastError(err); })
-    .catch(toastFailure('save category payment', SAVE_FAILED));
-  if (target.recurring && target.by_merchant) {
-    sheetAlert(
-      'Перейти на траты категории?',
-      'Платежи по мерчантам удалятся; отложенное на них уйдёт в сбережения месяца. Оплата — любая трата категории около даты.',
-      [{ text: 'Отмена', style: 'cancel' }, { text: 'Удалить и сохранить', style: 'destructive', onPress: () => { save(); } }]);
-    return false;
-  }
   return checkAndSave(ym, target.category_id, p, adding, free, (taken) => saved(taken), onClose);
 }
 

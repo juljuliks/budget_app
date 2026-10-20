@@ -1,6 +1,6 @@
-// Picking an operation for a category's repeating payment: a tap makes the payment from it (its merchant, amount and day),
+// Picking an operation for a category's subscription: a tap makes the subscription from it (its merchant, amount and day),
 // saved — back to where it was picked for. Only purchases with a merchant: the next charges are the merchant's (a
-// transfer is a category's payment, "Траты категории"). One of
+// transfer is a regular payment of the plan, not a subscription). One of
 // another category: asked whether it (and its merchant) moves to the payment's one, else spending and charges part.
 import { assignCategory } from '@/categorize/assign';
 import { EXPENSE_KINDS } from '@/db/spending';

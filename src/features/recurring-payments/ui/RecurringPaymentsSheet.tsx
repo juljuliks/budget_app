@@ -11,7 +11,7 @@ import TextLink from '@/shared/ui/TextLink';
 import { formatPercent } from '@/shared/lib/format';
 import { formStyles } from '@/shared/theme/formStyles';
 import { colors } from '@/shared/theme/theme';
-import { paymentWords } from '@/entities/category';
+import { SUBSCRIPTION_WORDS as w } from '@/entities/category';
 import { PaymentCategory, PaymentTarget } from '../model/usePaymentForm';
 import { useRecurringPayments } from '../model/useRecurringPayments';
 import { inMonth, monthGen } from '../texts';
@@ -43,7 +43,6 @@ const savingSum = (m: { saving: Array<{ converted_minor: number | null }> }) => 
  */
 export default function RecurringPaymentsSheet({ ym, category, currency, view: initial = 'month', onClose, onEditAmount }: Props) {
   const { data, failed, load } = useRecurringPayments(ym, currency, category.id);
-  const w = paymentWords(category.name);
   const targetOf = (s: RecurringPayment): PaymentTarget => ({ ...s, category });
   const [view, setView] = useState<PaymentsView>(initial);
   const [open, setOpen] = useState<PaymentTarget | null>(null);

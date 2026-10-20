@@ -1,7 +1,7 @@
 // Picking the operation's category: for this operation only, or for its merchant too (asked when that changes others).
 import { useEffect, useState } from 'react';
 import { assignCategory, MerchantChoice, merchantChangePreview } from '@/categorize/assign';
-import { categoryLabel, getCategory, isRecurring } from '@/db/categories';
+import { categoryLabel, getCategory } from '@/db/categories';
 import { paymentCard } from '@/db/recurring';
 import { openPayment } from '@/shared/navigation/sheets';
 import { showLimitAlert } from '@/notifications/notifeeIntegration';
@@ -26,7 +26,7 @@ export function useCategoryChoice(txId: number, tx: Tx | null, visible: boolean,
       else toast(`Категория «${categoryLabel(c)}» назначена`);
       onClose();
       // a category with payments by merchant, for a merchant with none: how often, when next (over the sheet that just closed)
-      if (c && isRecurring(c) && c.by_merchant && tx?.merchant_key && !(await paymentCard(tx.merchant_key))) setTimeout(() => openPayment({ txId }), 250);
+      if (c?.by_merchant && tx?.merchant_key && !(await paymentCard(tx.merchant_key))) setTimeout(() => openPayment({ txId }), 250);
     } catch (e) {
       console.error('assign category failed', e);
       toastError('Не удалось сохранить');

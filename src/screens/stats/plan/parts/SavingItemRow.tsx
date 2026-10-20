@@ -19,9 +19,9 @@ type Props = { p: PlanView; item: PlanItem; hidden: boolean; onOpen: () => void 
 export function SavingItemRow({ p, item, hidden, onOpen }: Props) {
   const s = item.subs!;
   const own = s.in_currency && s.in_currency.currency !== p.currency && s.in_currency.saving_minor > 0 ? formatWithCurrency(s.in_currency.saving_minor, s.in_currency.currency) : null;
-  const w = paymentWords(item.name);
-  // "Подписки" — just "Предстоящие подписки"; another category — its name in the line under (its emoji is in the title)
-  const of = w.subscriptions ? '' : `${item.name} · `;
+  const w = paymentWords(!!item.by_merchant);
+  // "Подписки" — just "Предстоящие подписки"; another category ("Страховки") — its name in the line under (its emoji is in the title)
+  const of = item.name === w.Many ? '' : `${item.name} · `;
   const name = `${item.emoji || ''} ${w.upcoming}`.trim();
   return (
     <TouchableOpacity style={styles.row} onPress={onOpen} accessibilityLabel={name}>

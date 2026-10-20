@@ -14,7 +14,7 @@ import { formatWithCurrency } from '@/shared/lib/money';
 import { longDay, monthGen } from '../texts';
 import type { SavingChoice } from './usePaymentSaving';
 import type { PaymentCategory } from './usePaymentForm';
-import { paymentWords } from '@/entities/category';
+import { SUBSCRIPTION_WORDS as w } from '@/entities/category';
 
 /** "Отменить" of a saving turned off: it back, with what it had. */
 const undoAction = (undo: SavingUndo, name: string) => ({
@@ -71,7 +71,7 @@ async function check(input: PaymentInput, id: number | undefined, onDone: () => 
     const charges = now ? effect.delta_minor : 0;
     const contribution = saving?.on && input.due ? { minor: saving.contribution, currency: input.currency } : undefined;
     // the category's item by hand till now (its first payment with a day): it becomes the month's charges
-    // a merchant's payment replaces the category's own one ("По мерчантам" picked): not on top of it
+    // a subscription replaces the category's own payment: not on top of it
     const replacing = !!input.merchant_key && !!input.category_id && !!(await categoryPayment(input.category_id));
     const over = input.category_id
       ? await paymentShort(ym, input.category_id, charges, { minor: now ? effect.after_minor : 0, currency: effect?.currency ?? input.currency }, contribution, replacing)
@@ -89,7 +89,6 @@ async function check(input: PaymentInput, id: number | undefined, onDone: () => 
 }
 
 async function remove(id: number, name: string, category: PaymentCategory, onDone: () => void) {
-  const w = paymentWords(category.name);
   try {
     const deleted = await deletePayment(id);
     emitTransactionsChanged();
@@ -113,7 +112,6 @@ async function remove(id: number, name: string, category: PaymentCategory, onDon
  * it goes to this month's savings.
  */
 export async function confirmDeletePayment(id: number, name: string, currency: string, category: PaymentCategory, onDone: () => void) {
-  const w = paymentWords(category.name);
   const saved = await savedNow(id).catch(() => 0);
   const kept = saved > 0 ? ` На ${w.acc} уже отложено ${formatWithCurrency(saved, currency)} — они уйдут в сбережения ${monthGen(currentYm())}.` : '';
   sheetAlert(

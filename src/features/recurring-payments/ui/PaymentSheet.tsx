@@ -3,7 +3,7 @@ import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-nativ
 import { dayTitle } from '@/shared/lib/dates';
 import { formatWithCurrency } from '@/shared/lib/money';
 import { AMOUNT_HINT } from '@/shared/lib/strings';
-import { PAYMENT_PERIODS } from '@/shared/lib/format';
+import { PAYMENT_PERIODS as periods } from '@/shared/lib/format';
 import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
 import { SheetActions } from '@/shared/ui/Button';
 import Chip from '@/shared/ui/Chip';
@@ -16,13 +16,13 @@ import { colors } from '@/shared/theme/theme';
 import { ONCE, todayKey } from '@/db/recurring';
 import { currentYm } from '@/db/plans';
 import { confirmDeletePayment, submitPayment } from '../model/commands';
-import { CategorySummaryRow, paymentWords } from '@/entities/category';
+import { CategorySummaryRow, SUBSCRIPTION_WORDS as w } from '@/entities/category';
 import { showOperationsFrom } from '@/shared/navigation/navigation';
 import { PaymentTarget, usePaymentForm } from '../model/usePaymentForm';
 import { usePaymentOperations } from '../model/usePaymentOperations';
 import { usePaymentSaving } from '../model/usePaymentSaving';
 import SavingFields from './SavingFields';
-import { inTime, monthGenYear, periodText, PERIODS } from '../texts';
+import { inTime, monthGenYear, periodText } from '../texts';
 
 type Props = {
   /** null = closed */
@@ -44,9 +44,6 @@ export default function PaymentSheet({ target, onClose, onSaved, onLeave }: Prop
   const ops = usePaymentOperations(target);
   const saving = usePaymentSaving(target, f.period, f.input?.amount_minor ?? null, f.due);
   const [otherOpen, setOtherOpen] = useState(false);
-  const w = paymentWords(target?.category.name ?? '');
-  // every week: a category's payments (rent, a class), not a subscription's
-  const periods = w.subscriptions ? PERIODS : PAYMENT_PERIODS;
   const custom = !periods.some(([m]) => m === f.period);
   const amountBad = f.amount.trim() !== '' && f.input === null && !!f.name.trim();
   // its end before the next charge: no charge at all

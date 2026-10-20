@@ -78,8 +78,6 @@ function TransactionItem({ tx, onPress, onLongPress, selectable, selected, onDel
           {formatAmount(split?.amount_minor ?? tx.amount_minor, tx.currency, tx.kind)}
         </Text>
         {split?.part ? <Text style={styles.whole}>из {formatMoneyWithCurrency(tx.amount_minor, tx.currency)}</Text> : null}
-        {/* "Это оплата?" not answered: on its page */}
-        {tx.asks_payment ? <Text style={styles.asks}>Это оплата?</Text> : null}
         {tx.payment_period ? (
           <View style={styles.inline}>
             <RepeatIcon color={colors.muted} size={12} />
@@ -99,7 +97,6 @@ const styles = StyleSheet.create({
   },
   rowSelected: { backgroundColor: '#EFF6FF' },
   checkbox: { marginRight: 12 },
-  asks: { fontSize: 12, fontWeight: '600', color: colors.warn },
   main: { flex: 1, marginRight: 12 },
   titleRow: { flexDirection: 'row', alignItems: 'center' },
   unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accent, marginRight: 8 },

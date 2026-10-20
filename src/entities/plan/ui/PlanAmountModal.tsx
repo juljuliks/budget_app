@@ -17,8 +17,7 @@ import { openCategory, pickPaymentOperation } from '@/shared/navigation/navigati
 import { monthDays } from '@/shared/lib/dateRange';
 import FundFields, { FundForm } from './FundFields';
 import PlanFacts from './PlanFacts';
-import RegularFields, { RegularEvery, RegularForm, RegularMode } from './RegularFields';
-import { askMerchants } from './askMerchants';
+import RegularFields, { RegularEvery, RegularForm } from './RegularFields';
 import RepeatField, { RepeatForm } from './RepeatField';
 import { BY_HAND_HINT, COUNTED_HINT, KINDS, patterns, PICK_HINT } from './sheetOptions';
 import { PlanSheetValues, submitPlanSheet } from './submitPlanSheet';
@@ -39,13 +38,12 @@ export type PlanAmountTarget = {
   /** a fund: its target (in `currency`, the sheet's amount), date and what was saved before */
   fund?: { target_minor: number; due: string; start_minor: number };
   /**
-   * "Регулярные платежи" on: its kind is "Регулярный платёж"; another kind turns them off. "По мерчантам" (`by_merchant`):
-   * the payments are in their own sheet (made from operations; the amount here by hand until one has a day); "Траты
-   * категории": its own payment (`own`) is in this sheet
+   * "Регулярные платежи" on: its kind is "Регулярный платёж"; another kind turns them off. A category with "Подписки"
+   * (`by_merchant`, on its page): its subscriptions are in their own sheet (made from operations; the amount here by
+   * hand until one has a day); else its own payment (amount, how often, the dates) is in this sheet
    */
   recurring?: boolean;
   by_merchant?: boolean;
-  own?: boolean;
   /** "Повторять каждый месяц": the next month has it with the same amount (till `until`, "Дата окончания") */
   pinned?: boolean;
   until?: string | null;
@@ -73,24 +71,24 @@ type Props = {
 };
 
 /**
- * What the sheet is for its kind: a regular payment within the month (`regular`), the category's own payment (`own`),
- * "По мерчантам" — an operation to pick (`pick`: none of them yet) or the amount counted from them (`counted`).
+ * What the sheet is for its kind: a regular payment within the month (`regular`), the category's own payment (`own`);
+ * a category with "Подписки" — an operation to pick (`pick`: they're off in the plan) or the amount counted from them
+ * (`counted`).
  */
-function sheetMode(target: PlanAmountTarget | null, kind: PlanKind, mode: RegularMode, every: RegularEvery) {
+function sheetMode(target: PlanAmountTarget | null, kind: PlanKind, every: RegularEvery) {
   const subs = kind === 'subs' && !!target;
-  const merchants = subs && mode === 'merchant';
-  const theirs = !!target?.recurring && !!target.by_merchant;
+  const merchants = subs && !!target?.by_merchant;
   return {
-    regular: subs && mode === 'category' && every !== 'month',
-    own: subs && mode === 'category' && every === 'month',
-    pick: merchants && !theirs,
-    counted: merchants && theirs && target?.kind === 'subs',
+    regular: subs && !merchants && every !== 'month',
+    own: subs && !merchants && every === 'month',
+    pick: merchants && !target?.recurring,
+    counted: merchants && !!target?.recurring && target?.kind === 'subs',
   };
 }
 
 /**
- * "Регулярный платёж" for a category without them: made from an operation — the sheet (and those under it) closes for
- * the category's operations of the month to pick one from.
+ * "Регулярный платёж" for a category with "Подписки" off in the plan: a subscription is made from an operation — the
+ * sheet (and those under it) closes for the category's operations of the month to pick one from.
  */
 function goPick(target: PlanAmountTarget, ym: string, leave: () => void): false {
   leave();
@@ -112,11 +110,11 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
   const form = useLoadedForm<FundForm & RegularForm & { kind: PlanKind; norm: NormPeriod }>(target ? {
     value: toInputValue(target.fund ? target.fund.target_minor : target.every ? target.unit_minor ?? 0 : target.limit_minor), currency: target.currency,
     kind: target.recurring || target.every ? 'subs' : target.kind ?? 'limit', pinned: !!target.pinned, until: target.until ?? null,
-    every: target.every ?? 'month', weekdays: target.weekdays ?? 0, mode: target.by_merchant ? 'merchant' : 'category', period: 1, next: null,
+    every: target.every ?? 'month', weekdays: target.weekdays ?? 0, period: 1, next: null,
     norm: target.norm_period ?? 'day', due: target.fund?.due ?? null, start: target.fund?.start_minor ? toInputValue(target.fund.start_minor) : '',
   } : null, target !== null);
-  const [kind, due, every, mode] = useWatch({ control: form.control, name: ['kind', 'due', 'every', 'mode'] });
-  const s = sheetMode(target, kind, mode, every);
+  const [kind, due, every] = useWatch({ control: form.control, name: ['kind', 'due', 'every'] });
+  const s = sheetMode(target, kind, every);
   const [entered, enteredCurrency] = useWatch({ control: form.control, name: ['value', 'currency'] });
   const [previous, setPrevious] = useState<{ minor: number; currency: Currency; ym: string } | null>(null);
   // what the category usually takes a month (the latest full months), in the app's currency
@@ -159,7 +157,7 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
 
   async function save(text: string): Promise<string | null | false> {
     if (!target) return null;
-    if (s.pick) return askMerchants(target, () => goPick(target, ym, onLeave ?? onClose));
+    if (s.pick) return goPick(target, ym, onLeave ?? onClose);
     if (s.counted) return null;
     return submitPlanSheet({ ym, target, text, v: form.getValues() as PlanSheetValues, adding: !!adding, locked, free, onSaved, onClose });
   }
@@ -201,8 +199,8 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
         </>
       ) : null}
       {kind === 'limit' && target ? <RepeatField ym={ym} form={form as unknown as UseFormReturn<RepeatForm>} entered={entered ?? ''} currency={enteredCurrency} /> : null}
-      {kind === 'subs' && target ? <RegularFields ym={ym} categoryId={target.category_id} form={form as unknown as Parameters<typeof RegularFields>[0]['form']} /> : null}
-      {kind === 'subs' && target && mode === 'merchant' ? <Text style={formStyles.hint}>{s.pick ? PICK_HINT : s.counted ? COUNTED_HINT : BY_HAND_HINT}</Text> : null}
+      {kind === 'subs' && target && !target.by_merchant ? <RegularFields ym={ym} categoryId={target.category_id} form={form as unknown as Parameters<typeof RegularFields>[0]['form']} /> : null}
+      {kind === 'subs' && target?.by_merchant ? <Text style={formStyles.hint}>{s.pick ? PICK_HINT : s.counted ? COUNTED_HINT : BY_HAND_HINT}</Text> : null}
       {kind === 'fund' && target ? <FundFields ym={ym} categoryId={target.category_id} form={form as unknown as UseFormReturn<FundForm>} /> : null}
     </TextInputModal>
   );

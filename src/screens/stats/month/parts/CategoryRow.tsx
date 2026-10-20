@@ -44,8 +44,7 @@ export default function CategoryRow({ stat, total, currency, evenPace, dim, ym, 
   const ratio = limit ? spent / limit : 0;
   // fixed payment (rent, repeating payment): paid once this month's spending covers its plan (the share is by the amount)
   const fixed = stat.plan_kind === 'fixed';
-  // a regular payment within the month: paid when all its days are (by its days, not the sum)
-  const paid = stat.regular ? stat.regular.paid >= stat.regular.times : !!limit && spent >= limit;
+  const paid = !!limit && spent >= limit;
   const rhythm = !fixed && stat.plan_norm && stat.plan_norm !== 'month' ? stat.plan_norm : null;
 
   return (
@@ -74,10 +73,6 @@ export default function CategoryRow({ stat, total, currency, evenPace, dim, ym, 
               : formatWithCurrency(spent, currency)}{limit ? <Text style={styles.rowLimit}> / {formatWithCurrency(limit, currency)}</Text> : null}{limit ? <Text style={[styles.rowLimit, overStyle(spent, limit)]}>{planShare(spent, limit)}</Text> : null}</>}
         </Text>
       </View>
-      {/* its operations waiting for "Это оплата?" (asked on each one's page; the row opens them) */}
-      {stat.asking ? <Text style={[styles.rowStatus, styles.asking]}>{`«Это оплата?» — ждут ответа: ${stat.asking}`}</Text> : null}
-      {/* a regular payment within the month: its days paid ("Оплачено 3 из 5") */}
-      {stat.regular ? <Text style={styles.rowStatus}>{`Оплачено ${stat.regular.paid} из ${stat.regular.times}`}</Text> : null}
       {/* an obligatory payment paid more than planned: an overspend like a limit's */}
       {limit && fixed && spent > limit ? (
         <>

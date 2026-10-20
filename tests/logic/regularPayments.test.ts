@@ -1,9 +1,10 @@
 // A regular payment within the month (every day, on weekdays) and "Дата окончания": the times in a month, the carry-over
-// of it and of a limit repeated each month, a repeating payment's charges up to its end.
+// of it and of a limit repeated each month, a repeating payment's charges up to its end; the category's own payment is its
+// calendar only; "Подписки" of a category turned on and off.
 jest.mock('../../src/shared/navigation/navigation', () => ({ navigateWhenReady: jest.fn() }));
 
-import { addPlanItem, listPlan, paidTimes, regularDays, setPlanAmount, setPlanPinned, setRegularItem, timesInMonth } from '../../src/db/plans';
-import { countsFor, matchesAmount, monthCharges, nextCharge, paidDays, savingFor } from '../../src/db/recurring';
+import { addPlanItem, listPlan, setPlanAmount, setPlanPinned, setRegularItem, timesInMonth } from '../../src/db/plans';
+import { monthCharges, nextCharge, paymentDays, savingFor } from '../../src/db/recurring';
 import { regularNote } from '../../src/screens/stats/plan/model/regularNote';
 import { freshDb } from '../helpers';
 
@@ -35,60 +36,42 @@ describe('the times in a month', () => {
   });
 });
 
-describe('paid by the category\'s spending', () => {
-  const TUE = 1 << 1;
-  const at = (...xs: Array<[string, number, (number | null)?]>) => xs.map(([day, minor, answer]) => ({ day, minor, answer: answer ?? null }));
-  test('its amount within ±3% (1 ₾ at least) — by itself; another one — only answered "Это оплата?" yes', () => {
-    expect(matchesAmount(14600, 15000)).toBe(true);
-    expect(matchesAmount(14400, 15000)).toBe(false);
-    // a small amount: 1 ₾
-    expect(matchesAmount(560, 500)).toBe(true);
-    expect(countsFor({ minor: 30000, answer: null }, 15000)).toBe(false);
-    expect(countsFor({ minor: 30000, answer: 1 }, 15000)).toBe(true);
-    expect(countsFor({ minor: 15000, answer: 0 }, 15000)).toBe(false);
-  });
-
-  test('every week: the spending within ±3 days of one (closer days — less) adding up to the amount; one pays one day', () => {
-    // October: Tuesdays 6, 13, 20, 27
-    const tuesdays = regularDays('2026-10', 'week', TUE);
-    expect(tuesdays).toEqual(['2026-10-06', '2026-10-13', '2026-10-20', '2026-10-27']);
-    expect(paidTimes(tuesdays, TUE, at(['2026-10-05', 15000], ['2026-10-16', 15000]), 15000)).toBe(2);
-    // half and half: answered yes — paid; not answered — not
-    expect(paidTimes(tuesdays, TUE, at(['2026-10-05', 7500, 1], ['2026-10-07', 7500, 1]), 15000)).toBe(1);
-    expect(paidTimes(tuesdays, TUE, at(['2026-10-05', 7500], ['2026-10-07', 7500]), 15000)).toBe(0);
-    // a bigger one not answered (sneakers) — not
-    expect(paidTimes(tuesdays, TUE, at(['2026-10-06', 30000]), 15000)).toBe(0);
-    expect(paidTimes(tuesdays, TUE, at(['2026-10-01', 15000]), 15000)).toBe(0);
-    // Monday and Thursday: ±1 day — Wednesday the 7th pays Thursday only
-    const monThu = regularDays('2026-10', 'week', MON | THU);
-    expect(paidTimes(monThu, MON | THU, at(['2026-10-07', 2000]), 2000)).toBe(1);
-    expect(paidTimes(monThu, MON | THU, at(['2026-10-06', 2000], ['2026-10-09', 2000]), 2000)).toBe(2);
-  });
-
-  test('the category\'s own payment: paid on the day what counts for it reached the amount', () => {
-    expect(paidDays(at(['2026-10-01', 5000, 1], ['2026-10-03', 5000, 1], ['2026-10-20', 1000]), 10000, 7)).toEqual(['2026-10-03']);
-    // too far apart to be one payment
-    expect(paidDays(at(['2026-10-01', 5000, 1], ['2026-10-20', 5000, 1]), 10000, 7)).toEqual([]);
-    expect(paidDays(at(['2026-10-01', 9800], ['2026-11-02', 10000]), 10000, 7)).toEqual(['2026-10-01', '2026-11-02']);
-    // answered no: not, though of its amount
-    expect(paidDays(at(['2026-10-01', 10000, 0]), 10000, 7)).toEqual([]);
+describe('the category\'s own payment: its calendar, not its operations', () => {
+  test('its charges up to yesterday are done; today\'s and later ones are waited for; none before its day or after its end', async () => {
+    const own = { merchant_key: null, period: 1, due: '2026-08-05', until: null };
+    const days = (await paymentDays([own], undefined, '2026-10-05'))(own);
+    expect(days).toEqual(['2026-08-05', '2026-09-05']);
+    expect(nextCharge(own.due, own.period, days, '2026-10-05')).toBe('2026-10-05');
+    const ended = { ...own, until: '2026-08-31' };
+    expect((await paymentDays([ended], undefined, '2026-10-05'))(ended)).toEqual(['2026-08-05']);
+    // without a day — nothing
+    expect((await paymentDays([{ ...own, due: null }], undefined, '2026-10-05'))({ ...own, due: null })).toEqual([]);
   });
 });
 
-describe('the savings forecast of the current month', () => {
-  test('a regular payment expects its days paid and those to come: a Tuesday gone unpaid is skipped', async () => {
-    const { regularExpected } = require('../../src/db/plans');
+describe('"Подписки" of a category on its page', () => {
+  test('on: its own payment goes, the amount stays in the plan by hand; off: its subscriptions go', async () => {
     const { getDb } = require('../../src/db');
-    const { createCategory } = require('../../src/db/categories');
-    const { addManualTransaction } = require('../../src/db/transactions');
-    const shrink = await createCategory('Психолог');
-    // October 2026: Tuesdays 6, 13, 20, 27; the 6th paid, the 13th not; today the 15th
-    await addManualTransaction({ amount_minor: 15000, category_id: shrink, occurred_at: Math.floor(new Date('2026-10-06T12:00:00').getTime() / 1000), kind: 'transfer' });
-    const row = { category_id: shrink, currency: 'GEL', every: 'week' as const, weekdays: 1 << 1, unit_minor: 15000, until: null };
-    const expected = await regularExpected('2026-10', [row], await getDb(), new Date('2026-10-15T12:00:00'));
-    // paid one + the 20th and 27th to come: 3 × 150 ₾ (the plan 4 × 150 ₾)
-    expect(expected.get(shrink)).toBe(45000);
-    expect((await regularExpected('2026-11', [row], await getDb(), new Date('2026-10-15T12:00:00'))).size).toBe(0);
+    const { createCategory, getCategory } = require('../../src/db/categories');
+    const { savePayment, setSubscriptions, paymentsOfCategory } = require('../../src/db/recurring');
+    const { currentYm } = require('../../src/db/plans');
+    const db = await getDb();
+    const ins = await createCategory('Страховки');
+    const ym = currentYm();
+    await addPlanItem(ym, ins);
+    await savePayment({ category_id: ins, merchant_key: null, name: 'Страховки', amount_minor: 5000, currency: 'GEL', period: 1, due: `${ym}-28` });
+    expect((await listPlan(ym)).find((i) => i.category_id === ins)).toMatchObject({ kind: 'subs', limit_minor: 5000 });
+    await setSubscriptions(ins, true);
+    expect(await getCategory(ins)).toMatchObject({ by_merchant: 1, recurring: 0 });
+    expect(await paymentsOfCategory(ins)).toEqual([]);
+    expect((await listPlan(ym)).find((i) => i.category_id === ins)).toMatchObject({ kind: 'fixed', limit_minor: 5000 });
+    // a subscription: its repeating payments on again
+    await savePayment({ category_id: ins, merchant_key: 'AIG', name: 'AIG', amount_minor: 7000, currency: 'GEL', period: 12, due: `${ym}-27` });
+    expect(await getCategory(ins)).toMatchObject({ by_merchant: 1, recurring: 1 });
+    await setSubscriptions(ins, false);
+    expect(await getCategory(ins)).toMatchObject({ by_merchant: 0, recurring: 0 });
+    expect(await paymentsOfCategory(ins)).toEqual([]);
+    expect((await db.get('SELECT kind FROM plan_items WHERE ym = ? AND category_id = ?', [ym, ins])).kind).toBe('fixed');
   });
 });
 
@@ -132,25 +115,5 @@ describe('a repeating payment\'s end', () => {
     expect(nextCharge('2026-10-05', 1, [], '2026-10-20', '2026-12-31')).toBe('2026-11-05');
     expect(savingFor('2026-10-05', 12, '2026-11', [], '', '2027-06-30')).toBeNull();
     expect(savingFor('2026-10-05', 12, '2026-11', [], '')).toBe('2027-10-05');
-  });
-});
-
-describe('"Это оплата?" waiting, in the list and the stats', () => {
-  test('another currency than the payment\'s: by the rate of its day — of its amount, not asked; another — asked; no rate — not', async () => {
-    const { getDb } = require('../../src/db');
-    const { createCategory } = require('../../src/db/categories');
-    const { addManualTransaction } = require('../../src/db/transactions');
-    const { savePayment, askingSql } = require('../../src/db/recurring');
-    const db = await getDb();
-    const home = await createCategory('Аренда');
-    await savePayment({ category_id: home, merchant_key: null, name: 'Аренда', amount_minor: 270000, currency: 'GEL', period: 1, due: '2026-10-05' });
-    await db.run("INSERT INTO fx_rates (date, currency, gel_per_unit) VALUES ('2026-10-01', 'USD', 2.7)");
-    const at = Math.floor(new Date('2026-10-05T12:00:00').getTime() / 1000);
-    // 1 000 $ = 2 700 ₾: the payment's; 500 $ — not; 1 000 € — no rate: not asked
-    const usd = await addManualTransaction({ amount_minor: 100000, currency: 'USD', category_id: home, occurred_at: at, kind: 'transfer' });
-    const half = await addManualTransaction({ amount_minor: 50000, currency: 'USD', category_id: home, occurred_at: at, kind: 'transfer' });
-    const eur = await addManualTransaction({ amount_minor: 100000, currency: 'EUR', category_id: home, occurred_at: at, kind: 'transfer' });
-    const asks = async (id: number) => (await db.get(`SELECT ${askingSql('t', 't.amount_minor')} AS a FROM transactions t WHERE t.id = ?`, [id])).a;
-    expect([await asks(usd), await asks(half), await asks(eur)]).toEqual([0, 1, 0]);
   });
 });

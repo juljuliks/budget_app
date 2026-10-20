@@ -6,5 +6,5 @@ export { default as CategorySummaryRow } from './ui/CategorySummaryRow';
 export { default as CategoryView } from './ui/CategoryView';
 export { default as TypeEditModal } from './ui/TypeEditModal';
 export type { CategoryInfo } from './model/types';
-export { paymentWords } from './texts';
+export { paymentWords, SUBSCRIPTION_WORDS } from './texts';
 export type { PaymentWords } from './texts';

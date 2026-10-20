@@ -24,7 +24,7 @@ export function RecurringItemRow({ p, item, hidden, onOpen }: Props) {
   const names = item.subs?.names ?? [];
   const saving = item.subs?.saving_names ?? [];
   const listed = [names.join(', '), saving.length ? `копим: ${saving.join(', ')}` : ''].filter(Boolean).join(' · ');
-  const w = paymentWords(item.name);
+  const w = paymentWords(!!item.by_merchant);
   const one = item.subs?.single;
   // its only payment: how often and when (the plan, not what was paid: a charge done — the next one; "без даты" — the
   // amount stands each month)

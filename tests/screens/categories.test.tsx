@@ -86,17 +86,19 @@ describe('4.1–4.2 the list; creating and changing a category', () => {
     expect(await screen.findByText('Разделы')).toBeTruthy();
   });
 
-  test('"Подписки": a category of its own — renamed, deleted as any; its repeating payments are not switched here (the plan does)', async () => {
+  test('"Подписки": a category of its own — renamed, deleted as any; its switch "Подписки" on', async () => {
     await tap('📺 Подписки');
     expect(await screen.findByDisplayValue('Подписки')).toBeTruthy();
     expect(screen.getByDisplayValue('Подписки').props.editable).not.toBe(false);
     expect(screen.getByText('Удалить категорию')).toBeTruthy();
-    expect(screen.queryByLabelText('Регулярные платежи')).toBeNull();
+    expect((await screen.findByLabelText('Подписки')).props.value).toBe(true);
   });
 
   test('"Пополнение счёта": a system one too — what it is for, can\'t be deleted', async () => {
     await tap('💳 Пополнение счёта');
     expect(await screen.findByText(/^Системная категория: сюда попадают все пополнения карты/)).toBeTruthy();
+    // no "Подписки" for a system one
+    expect(screen.queryByLabelText('Подписки')).toBeNull();
     expect(screen.getByDisplayValue('Пополнение счёта').props.editable).toBe(false);
     expect(screen.queryByText('Удалить категорию')).toBeNull();
   });

@@ -223,8 +223,8 @@ describe('6.3 the categories in the plan', () => {
   test('a regular payment within the month: every week on Mondays and Thursdays — the times by the amount; not repeated — this month only', async () => {
     await tap('Изменить: 👕 Одежда');
     await tap(await screen.findByRole('radio', { name: /Регулярный платёж/ }));
-    // "Траты категории" for a category without merchants' payments
-    expect(screen.getByText('Любая трата категории около даты — это оплата.')).toBeTruthy();
+    // a category without "Подписки": how often, no operation to pick
+    expect(screen.queryByText('Выбрать операцию')).toBeNull();
     await tap('Каждую неделю');
     expect(await screen.findByText('Выберите дни недели')).toBeTruthy();
     expect(screen.getByText('Сумма за раз')).toBeTruthy();

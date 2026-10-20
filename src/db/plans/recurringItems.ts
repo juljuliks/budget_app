@@ -136,7 +136,7 @@ export async function planEffect(draft: PaymentDraft, id?: number, now = new Dat
   const db = await getDb();
   const nowYm = currentYm(now);
   const old = id === undefined ? null : (await listPayments(db)).find((s) => s.id === id) ?? null;
-  const own = { merchant_key: draft.merchant_key, category_id: draft.category_id ?? old?.category_id ?? null, amount_minor: draft.amount_minor, currency: draft.currency, period: draft.period };
+  const own = { merchant_key: draft.merchant_key, category_id: draft.category_id ?? old?.category_id ?? null, amount_minor: draft.amount_minor, currency: draft.currency, period: draft.period, due: draft.due, until: draft.until };
   const daysOf = await paymentDays(old ? [own, old] : [own], db);
   const since = `${old?.since_ym ?? nowYm}-01`;
   const chargesIn = (ym: string) => monthCharges(draft.due!, draft.period, ym, daysOf(own), since, draft.until).length;

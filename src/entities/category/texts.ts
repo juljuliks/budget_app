@@ -12,11 +12,11 @@ export function systemCategoryHint(systemKind: string): string {
 export const QUICK_HINT = 'Цвет подберётся сам. Изменить категорию полностью можно в Настройки → Категории.';
 
 /**
- * The words of a category's repeating payments: "Подписки" calls them repeating payments ("Подписка «Netflix»", "＋ Добавить
- * подписку"), any other — payments ("Платёж «…»", "＋ Добавить платёж").
+ * The words of a category's repeating payments: with "Подписки" (its merchants') — subscriptions ("Подписка «Netflix»",
+ * "＋ Добавить подписку"), else its own regular payment ("Платёж «…»").
  */
-export function paymentWords(categoryName: string) {
-  return categoryName.trim().toLowerCase() === 'подписки'
+export function paymentWords(byMerchant: boolean) {
+  return byMerchant
     ? {
       One: 'Подписка', one: 'подписка', acc: 'подписку', deleted: 'удалена', noneHas: 'ни у одной подписки',
       toAll: 'подпискам', noDated: 'нет подписок с датой', none: 'нет подписок', add: 'Добавить подписку',
@@ -29,3 +29,6 @@ export function paymentWords(categoryName: string) {
     };
 }
 export type PaymentWords = ReturnType<typeof paymentWords>;
+
+/** A subscription's words: the subscriptions' sheets are a category with "Подписки"'s only. */
+export const SUBSCRIPTION_WORDS = paymentWords(true);
