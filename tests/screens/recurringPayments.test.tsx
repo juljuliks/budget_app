@@ -734,7 +734,7 @@ describe('6.6 subscriptions on the operations', () => {
   test('"Подписки" set on an operation of a merchant with none: how often, the next charge — from it', async () => {
     await openApp(seedOps);
     await tap('SPOTIFY');
-    expect(await screen.findByText('Выберите категорию')).toBeTruthy();
+    await tap('Сменить');
     await tap('📺 Подписки');
     expect(await screen.findByText('📺 Подписка «SPOTIFY»')).toBeTruthy();
     expect(screen.getByText(/^12 ноября 2026/)).toBeTruthy();
@@ -748,6 +748,7 @@ describe('6.6 subscriptions on the operations', () => {
   test('"Пропустить": kept without a day, not asked again', async () => {
     await openApp(seedOps);
     await tap('SPOTIFY');
+    await tap('Сменить');
     await tap('📺 Подписки');
     await tap('Пропустить');
     expect(await screen.findByText('SPOTIFY — без даты списания')).toBeTruthy();

@@ -6,8 +6,9 @@ appId: com.budgetapp
     end: 50%, 80%
 - tapOn: "Покупка — 12\\.00.₾"
 - extendedWaitUntil:
-    visible: "Выберите категорию"
+    visible: "Сменить"
     timeout: 30000
 - assertVisible: "NEWSHOP ›"
+- tapOn: "Сменить"
 - tapOn: ".*Кафе и рестораны"
 - assertVisible: "Категория «.*Кафе и рестораны» назначена"

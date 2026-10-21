@@ -1,14 +1,17 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Controller } from 'react-hook-form';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
-import { CategoryPicker } from '@/entities/category';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { categoryLabel, getCategory } from '@/db/categories';
+import { CategoryPickerModal } from '@/entities/category';
 import { parseAmountInput } from '@/shared/lib/money';
 import { dayKeyOf } from '@/shared/lib/dateRange';
-import { AMOUNT_HINT } from '@/shared/lib/strings';
+import { AMOUNT_HINT, NO_CATEGORY } from '@/shared/lib/strings';
 import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
 import { SheetActions } from '@/shared/ui/Button';
 import CurrencyButton from '@/shared/ui/CurrencyButton';
 import DateField from '@/shared/ui/DateField';
+import { PencilIcon } from '@/shared/ui/icons';
+import SectionHeading from '@/shared/ui/SectionHeading';
 import Segmented from '@/shared/ui/Segmented';
 import { formStyles } from '@/shared/theme/formStyles';
 import { colors } from '@/shared/theme/theme';
@@ -70,7 +73,7 @@ export default function AddTransactionSheet({ visible, onClose }: { visible: boo
         control={form.control}
         name="categoryId"
         render={({ field }) => (
-          <CategoryPicker selectedId={field.value} onSelect={field.onChange} allowNone deposit={kind === 'deposit'} disabled={saving} />
+          <CategoryField value={field.value} onChange={field.onChange} deposit={kind === 'deposit'} disabled={saving} />
         )}
       />
       <SheetActions submit={{ title: 'Добавить', onPress: save, disabled: saving }} onCancel={onClose} />
@@ -85,4 +88,49 @@ const styles = StyleSheet.create({
   // stretch: the currency button as tall as the amount field
   amountRow: { flexDirection: 'row', alignItems: 'stretch', gap: 8 },
   amount: { flex: 1, fontSize: 24, fontWeight: '600' },
+  none: { fontSize: 18, color: colors.text, paddingVertical: 8 },
+  change: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16,
+    borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed',
+  },
+  changeText: { fontSize: 15, color: colors.accent },
 });
+
+/** The new operation's category: the current one, "Сменить" opens the shared list. */
+function CategoryField({ value, onChange, deposit, disabled }: {
+  value: number | null;
+  onChange: (id: number | null) => void;
+  deposit: boolean;
+  disabled: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [label, setLabel] = useState(NO_CATEGORY);
+  useEffect(() => {
+    if (value == null) { setLabel(NO_CATEGORY); return; }
+    getCategory(value).then((c) => { if (c) setLabel(categoryLabel(c)); }).catch(() => undefined);
+  }, [value]);
+  return (
+    <>
+      <SectionHeading
+        title="Категория"
+        right={(
+          <TouchableOpacity style={styles.change} disabled={disabled} onPress={() => setOpen(true)} accessibilityLabel="Сменить категорию">
+            <PencilIcon color={colors.accent} size={16} />
+            <Text style={styles.changeText}>Сменить</Text>
+          </TouchableOpacity>
+        )}
+      />
+      <Text style={styles.none}>{label}</Text>
+      <CategoryPickerModal
+        visible={open}
+        title="Категория"
+        selectedId={value}
+        allowNone
+        deposit={deposit}
+        onPick={(id) => { onChange(id); setOpen(false); }}
+        onClose={() => setOpen(false)}
+      />
+    </>
+  );
+}

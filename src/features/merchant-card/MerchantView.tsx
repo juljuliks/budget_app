@@ -49,6 +49,7 @@ export default function MerchantView({ merchantId, onClose, onShowOperations, re
         saving={saving}
         toggle={card.toggle}
         setSingle={card.setSingle}
+        setList={card.setList}
       />
       {recent}
     </Page>

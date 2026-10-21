@@ -32,3 +32,9 @@ export type PaymentWords = ReturnType<typeof paymentWords>;
 
 /** A subscription's words: the subscriptions' sheets are a category with "Подписки"'s only. */
 export const SUBSCRIPTION_WORDS = paymentWords(true);
+
+/** The category list's search, in the picker and on the categories page. */
+export const FIND_CATEGORY = 'Найти категорию';
+
+/** Under the search, until a long press starts picking several. */
+export const SEVERAL_HINT = 'Несколько категорий можно выбрать зажатием.';

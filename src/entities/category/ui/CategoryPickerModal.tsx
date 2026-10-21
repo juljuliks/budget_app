@@ -1,61 +1,83 @@
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity } from 'react-native';
-import { SheetActions } from '@/shared/ui/Button';
+import React from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
-import CategoryPicker from './CategoryPicker';
-import type { RootStackParamList } from '@/shared/navigation/navigation';
+import { SheetActions } from '@/shared/ui/Button';
+import { CreateButton } from '@/shared/ui/PlusButton';
+import SearchBar from '@/shared/ui/SearchBar';
 import { colors } from '@/shared/theme/theme';
+import { useCategoryChoose, type ChooseProps } from '../model/useCategoryChoose';
+import { FIND_CATEGORY, SEVERAL_HINT } from '../texts';
+import CategoryChooseList from './CategoryChooseList';
+import CategorySheet from './CategorySheet';
 
-type Props = {
-  visible: boolean;
-  title: string;
-  selectedId?: number | null;
-  /** several picked: each tap reports its id (the parent toggles it), the sheet stays open until "Готово" */
-  selectedIds?: number[];
-  transferFirst?: boolean;
-  /** a deposit: "Пополнение счёта" offered, first */
-  deposit?: boolean;
-  allowNone?: boolean;
-  /** categories not offered (e.g. the one being deleted) */
-  excludeIds?: number[];
-  /** one picked, then this button reports it (instead of a tap reporting it right away) */
-  saveTitle?: string;
-  onPick: (categoryId: number | null) => void;
-  onClose: () => void;
-};
+type Props = ChooseProps & { title: string };
 
-/** Bottom sheet with the shared CategoryPicker (categories, "+ Новая категория"). */
-export default function CategoryPickerModal({ visible, title, selectedId, selectedIds, transferFirst, deposit, allowNone, excludeIds, saveTitle, onPick, onClose }: Props) {
-  // with saveTitle: the one picked so far (undefined = none yet)
-  const [picked, setPicked] = useState<number | null | undefined>(undefined);
-  useEffect(() => { if (visible) setPicked(undefined); }, [visible]);
+/**
+ * The one category list, wherever a category is chosen: sections like Настройки → Категории, a search, "＋ Создать".
+ * One tap picks and closes (unless saveTitle: highlight, then the button). A long press picks several
+ * ("Готово" / "Отмена"); "Отмена" clears them and stays, unless the sheet opened already on several — then it closes.
+ */
+export default function CategoryPickerModal(props: Props) {
+  const c = useCategoryChoose(props);
+  const empty = !c.none && c.sections.length === 0;
   return (
-    <BottomSheet visible={visible} onClose={onClose} title={title} style={styles.sheet}>
-        <SheetScrollView contentContainerStyle={styles.content}>
-          {/* remounted on opening: the selected ones go first in the order of that moment */}
-          {visible ? <CategoryPicker
-            selectedId={saveTitle ? picked : selectedId}
-            selectedIds={selectedIds}
-            selectedFirst={!!selectedIds}
-            onSelect={saveTitle ? setPicked : onPick}
-            allowNone={allowNone}
-            transferFirst={transferFirst}
-            deposit={deposit}
-            excludeIds={excludeIds}
-            showAll
-          /> : null}
-        </SheetScrollView>
-        {saveTitle
-          ? <SheetActions submit={{ title: saveTitle, disabled: picked === undefined, onPress: () => { if (picked !== undefined) onPick(picked); } }} onCancel={onClose} style={styles.actions} />
-          : selectedIds
-          ? <SheetActions submit={{ title: 'Готово', onPress: onClose }} style={styles.actions} />
-          : <SheetActions submit={null} onCancel={onClose} style={styles.actions} />}
+    <BottomSheet
+      visible={props.visible}
+      onClose={props.onClose}
+      title={props.title}
+      style={styles.sheet}
+      headerRight={<CreateButton onPress={() => c.setCreating(true)} accessibilityLabel="Новая категория" style={styles.create} />}
+    >
+      <SheetScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <View style={styles.top}>
+          <SearchBar value={c.query} onChange={c.setQuery} placeholder={FIND_CATEGORY} />
+          {c.hint ? <Text style={styles.hint}>{SEVERAL_HINT}</Text> : null}
+          {c.many ? <Text style={styles.picked}>Выбрано: {c.picked.length}</Text> : null}
+        </View>
+        <CategoryChooseList
+          sections={c.sections}
+          colorOf={c.colorOf}
+          none={c.none}
+          many={c.many}
+          picked={c.picked}
+          current={c.current}
+          onPress={c.press}
+          onHold={c.hold}
+          onNone={c.pressNone}
+        />
+        {empty ? <Text style={styles.empty}>Не найдено.</Text> : null}
+      </SheetScrollView>
+      {c.many ? (
+        <SheetActions
+          submit={{ title: 'Готово', disabled: c.picked.length < c.min, onPress: c.done }}
+          onCancel={c.cancelMany}
+          style={styles.actions}
+        />
+      ) : props.saveTitle ? (
+        <SheetActions
+          submit={{ title: props.saveTitle, disabled: c.draft === undefined, onPress: () => { if (c.draft !== undefined) props.onPick(c.draft); } }}
+          onCancel={props.onClose}
+          style={styles.actions}
+        />
+      ) : null}
+      <CategorySheet
+        visible={c.creating}
+        typeId={props.transferFirst ? c.transferTypeId ?? undefined : undefined}
+        quick
+        onClose={() => c.setCreating(false)}
+        onSaved={(id) => c.created(id)}
+      />
     </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  sheet: { maxHeight: '75%' },
-  content: { paddingHorizontal: 16 },
+  sheet: { maxHeight: '85%' },
+  content: { paddingBottom: 8 },
+  top: { paddingHorizontal: 16, paddingBottom: 8, gap: 8 },
+  create: { marginTop: 8 },
+  hint: { fontSize: 13, color: colors.muted, lineHeight: 18 },
+  picked: { fontSize: 15, color: colors.text },
+  empty: { padding: 32, textAlign: 'center', color: colors.muted },
   actions: { paddingHorizontal: 16 },
 });

@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { txCategoryLabel } from '@/db/categories';
 import { EXPENSE_KINDS } from '@/db/spending';
-import { CategoryLink, CategoryPicker, CategoryPickerModal } from '@/entities/category';
+import { CategoryLink, CategoryPickerModal } from '@/entities/category';
 import { splitParts } from '@/entities/transaction';
 import Chip from '@/shared/ui/Chip';
 import SectionHeading from '@/shared/ui/SectionHeading';
-import { PencilIcon, SplitIcon } from '@/shared/ui/icons';
+import { PencilIcon } from '@/shared/ui/icons';
+import { NO_CATEGORY } from '@/shared/lib/strings';
 import { colors } from '@/shared/theme/theme';
 import type { Tx } from '../model/useTransaction';
 import FundNote from './FundNote';
@@ -18,77 +19,56 @@ type Props = {
   mixedCats: Array<{ id: number; label: string }> | null;
   saving: boolean;
   choose: (categoryId: number | null) => void;
-  /** opens "Разделить по категориям" */
-  onSplit: () => void;
+  /** opens "Разделить по категориям"; ids — the categories a long press picked */
+  onSplit: (ids?: number[]) => void;
 };
 
 /**
- * The operation's category: a settled refund says so; a merchant of different categories offers its ones; a categorized
- * one shows its name (a link to its sheet) with "Сменить"; none yet — the categories right away. Spending and a refund can
- * be split between categories ("Разделить по категориям", right of the "Категория" title); a split one shows its parts.
+ * The operation's category. "Сменить" (right of "Категория") opens the category list; with none yet, the value is
+ * "Без категории". A long press there picks several and opens the split. A merchant of different categories keeps its
+ * chips. A split one shows its parts; a settled refund says so.
  */
 export default function TransactionCategory({ tx, mixedCats, saving, choose, onSplit }: Props) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const category = txCategoryLabel(tx);
   const parts = splitParts(tx);
-  // spending and a refund (money back for a purchase of several categories)
-  const splitLink = [...EXPENSE_KINDS, 'refund'].includes(tx.kind) ? (
-    <TouchableOpacity style={styles.splitLink} onPress={onSplit} disabled={saving} hitSlop={8} accessibilityRole="button">
-      <SplitIcon color={colors.accent} size={16} />
-      <Text style={styles.changeText}>Разделить по категориям</Text>
+  const canSplit = [...EXPENSE_KINDS, 'refund'].includes(tx.kind);
+  const change = (
+    <TouchableOpacity style={styles.changeButton} disabled={saving} onPress={() => setPickerOpen(true)} accessibilityLabel="Сменить категорию">
+      <PencilIcon color={colors.accent} size={16} />
+      <Text style={styles.changeText}>Сменить</Text>
     </TouchableOpacity>
-  ) : null;
+  );
 
-  // settled on its purchase earlier (the purchase was reduced / deleted): it no longer counts by itself
   if (tx.refund_settled_at) return <Text style={styles.refundDone}>✓ Возврат учтён в покупке</Text>;
-  if (parts) return <SplitView parts={parts} total={tx.amount_minor} currency={tx.currency} onEdit={onSplit} />;
-  if (!category && !mixedCats?.length) {
-    return (
-      <>
-      <CategoryPicker
-        title="Выберите категорию"
-        selectedId={tx.category_id}
-        onSelect={choose}
-        allowNone
-        // money transfers: transfer-type categories first
-        transferFirst={tx.kind === 'transfer'}
-        deposit={tx.kind === 'deposit'}
-        disabled={saving}
-        headingRight={splitLink}
-      />
-      </>
-    );
-  }
+  if (parts) return <SplitView parts={parts} total={tx.amount_minor} currency={tx.currency} onEdit={() => onSplit()} />;
   return (
     <>
-      {/* no gear here: category management is in the "Сменить категорию" sheet */}
-      <SectionHeading title="Категория" right={splitLink} />
-      <View style={styles.currentRow}>
-        {mixedCats?.length ? (
-          <>
-            {mixedCats.map((c) => (
-              <Chip key={c.id} label={c.label} selected={c.id === tx.category_id} disabled={saving} onPress={() => { if (c.id !== tx.category_id) choose(c.id); }} />
-            ))}
-            {/* picked elsewhere, not among the merchant's yet (e.g. just now from "Сменить") */}
-            {category && !mixedCats.some((c) => c.id === tx.category_id) ? <Chip label={category} selected /> : null}
-          </>
-        ) : (
-          tx.category_id !== null && category ? <CategoryLink categoryId={tx.category_id} label={category} style={styles.catName} containerStyle={styles.catLink} /> : null
-        )}
-        <TouchableOpacity style={styles.changeButton} disabled={saving} onPress={() => setPickerOpen(true)} accessibilityLabel="Сменить категорию">
-          <PencilIcon color={colors.accent} size={16} />
-          <Text style={styles.changeText}>Сменить</Text>
-        </TouchableOpacity>
-      </View>
-      <FundNote txId={tx.id} categoryId={tx.category_id} merchantKey={tx.merchant_key} occurredAt={tx.occurred_at} amount={tx.amount_minor} />
+      <SectionHeading title="Категория" right={change} />
+      {mixedCats?.length ? (
+        <View style={styles.currentRow}>
+          {mixedCats.map((c) => (
+            <Chip key={c.id} label={c.label} selected={c.id === tx.category_id} disabled={saving} onPress={() => { if (c.id !== tx.category_id) choose(c.id); }} />
+          ))}
+          {category && !mixedCats.some((c) => c.id === tx.category_id) ? <Chip label={category} selected /> : null}
+        </View>
+      ) : tx.category_id !== null && category ? (
+        <CategoryLink categoryId={tx.category_id} label={category} style={styles.catName} containerStyle={styles.catLink} />
+      ) : (
+        <Text style={styles.none}>{NO_CATEGORY}</Text>
+      )}
+      {category || mixedCats?.length ? (
+        <FundNote txId={tx.id} categoryId={tx.category_id} merchantKey={tx.merchant_key} occurredAt={tx.occurred_at} amount={tx.amount_minor} />
+      ) : null}
       <CategoryPickerModal
         visible={pickerOpen}
         title="Сменить категорию"
         selectedId={tx.category_id}
-        transferFirst={!mixedCats?.length && tx.kind === 'transfer'}
-        deposit={!mixedCats?.length && tx.kind === 'deposit'}
+        transferFirst={tx.kind === 'transfer'}
+        deposit={tx.kind === 'deposit'}
         allowNone
         onPick={(id) => { setPickerOpen(false); choose(id); }}
+        onSeveral={canSplit ? (ids) => { setPickerOpen(false); onSplit(ids); } : undefined}
         onClose={() => setPickerOpen(false)}
       />
     </>
@@ -99,12 +79,12 @@ const styles = StyleSheet.create({
   currentRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
   catLink: { flex: 1, minWidth: 0, paddingVertical: 8 },
   catName: { fontSize: 18 },
+  none: { fontSize: 18, color: colors.text, paddingVertical: 8 },
   changeButton: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16,
     borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed',
   },
   changeText: { fontSize: 15, color: colors.accent },
-  splitLink: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   refundDone: { fontSize: 15, color: colors.income, fontWeight: '600' },
 });

@@ -1,4 +1,3 @@
-export { default as CategoryPicker } from './ui/CategoryPicker';
 export { default as CategoryPickerModal } from './ui/CategoryPickerModal';
 export { default as CategorySheet } from './ui/CategorySheet';
 export { default as CategoryLink } from './ui/CategoryLink';
@@ -6,5 +5,6 @@ export { default as CategorySummaryRow } from './ui/CategorySummaryRow';
 export { default as CategoryView } from './ui/CategoryView';
 export { default as TypeEditModal } from './ui/TypeEditModal';
 export type { CategoryInfo } from './model/types';
-export { paymentWords, SUBSCRIPTION_WORDS } from './texts';
+export { paymentWords, SUBSCRIPTION_WORDS, FIND_CATEGORY } from './texts';
+export { matchesQuery } from './model/chooseList';
 export type { PaymentWords } from './texts';

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { CategoryInfo, CategoryPicker, CategoryPickerModal } from '@/entities/category';
+import { CategoryInfo, CategoryPickerModal } from '@/entities/category';
 import Chip from '@/shared/ui/Chip';
 import SectionHeading from '@/shared/ui/SectionHeading';
 import { PencilIcon } from '@/shared/ui/icons';
@@ -18,38 +18,29 @@ type Props = {
   saving: boolean;
   toggle: (id: number | null) => void;
   setSingle: (id: number | null) => void;
+  setList: (ids: number[]) => void;
 };
 
+/** "Сменить", right of the title, as on an operation. */
+function ChangeButton({ disabled, onPress }: { disabled: boolean; onPress: () => void }) {
+  return (
+    <TouchableOpacity style={styles.changeButton} disabled={disabled} onPress={onPress} accessibilityLabel="Сменить категорию">
+      <PencilIcon color={colors.accent} size={16} />
+      <Text style={styles.changeText}>Сменить</Text>
+    </TouchableOpacity>
+  );
+}
+
 /**
- * The merchant's category: one it has — with "Сменить" (every category in a sheet), as on an operation; different
- * ones — its list (✕ takes one off) and "Добавить категорию"; none yet — the categories right here.
+ * The merchant's category: one it has — its name and "Сменить"; different ones — its list (✕ takes one off) and
+ * "Добавить категорию" (the list, these checked, "Готово" is the new set); none yet — "Без категории" and "Сменить".
+ * The page's "Сохранить" writes it.
  */
-export default function MerchantCategories({ name, savedCategoryId, categories, mixed, single, list, saving, toggle, setSingle }: Props) {
+export default function MerchantCategories({ name, savedCategoryId, categories, mixed, single, list, saving, toggle, setSingle, setList }: Props) {
   const [changing, setChanging] = useState(false);
   const [adding, setAdding] = useState(false);
+  const label = single === null ? NO_CATEGORY : categories.get(single)?.label ?? '…';
 
-  if (!mixed && savedCategoryId !== null) {
-    return (
-      <View style={styles.pickerTop}>
-        <SectionHeading title="Категория" />
-        <View style={[styles.currentRow, styles.singleRow]}>
-          <Chip label={single === null ? NO_CATEGORY : categories.get(single)?.label ?? '…'} selected />
-          <TouchableOpacity style={styles.changeButton} disabled={saving} onPress={() => setChanging(true)} accessibilityLabel="Сменить категорию">
-            <PencilIcon color={colors.accent} size={16} />
-            <Text style={styles.changeText}>Сменить</Text>
-          </TouchableOpacity>
-        </View>
-        <CategoryPickerModal
-          visible={changing}
-          title="Сменить категорию"
-          selectedId={single}
-          allowNone
-          onPick={(id) => { setChanging(false); setSingle(id); }}
-          onClose={() => setChanging(false)}
-        />
-      </View>
-    );
-  }
   if (mixed) {
     return (
       <View style={styles.pickerTop}>
@@ -63,21 +54,29 @@ export default function MerchantCategories({ name, savedCategoryId, categories, 
             <Text style={styles.changeText}>＋ Добавить категорию</Text>
           </TouchableOpacity>
         </View>
-        {/* several at once: the merchant's ones selected and first, a tap adds or takes one off */}
         <CategoryPickerModal
           visible={adding}
           title="Категории мерчанта"
           selectedIds={list}
-          onPick={(id) => { if (id !== null) toggle(id); }}
+          onPick={() => undefined}
+          onSeveral={setList}
           onClose={() => setAdding(false)}
         />
       </View>
     );
   }
   return (
-    // "Без категории" among them
     <View style={styles.pickerTop}>
-      <CategoryPicker title="Выберите категорию" selectedId={single} onSelect={toggle} allowNone disabled={saving} />
+      <SectionHeading title="Категория" right={<ChangeButton disabled={saving} onPress={() => setChanging(true)} />} />
+      {savedCategoryId !== null ? <Chip label={label} selected /> : <Text style={styles.none}>{label}</Text>}
+      <CategoryPickerModal
+        visible={changing}
+        title="Сменить категорию"
+        selectedId={single}
+        allowNone
+        onPick={(id) => { setChanging(false); setSingle(id); }}
+        onClose={() => setChanging(false)}
+      />
     </View>
   );
 }
@@ -86,7 +85,7 @@ const styles = StyleSheet.create({
   pickerTop: { marginTop: 8 },
   listHint: { fontSize: 14, color: colors.muted, marginBottom: 10 },
   currentRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
-  singleRow: { justifyContent: 'space-between' },
+  none: { fontSize: 18, color: colors.text, paddingVertical: 8 },
   changeButton: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16,

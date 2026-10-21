@@ -1,6 +1,6 @@
 // 2.7: an operation's card — what it shows, its category (this one or the merchant's), the amount, the note, deleting.
 import { fireEvent, waitFor } from '@testing-library/react-native';
-import { openApp, screen, tap, texts, back } from './app';
+import { openApp, screen, tap, texts, back, longPress } from './app';
 import { ops } from '../e2e/seeds';
 import { getDb } from '../../src/db';
 import { createCategory } from '../../src/db/categories';
@@ -29,10 +29,11 @@ test('2.7.1: the card — the amount, the merchant as a link, the date, the cate
   expect(screen.getByText('Удалить операцию')).toBeTruthy();
 });
 
-test('2.7.2–2.7.3: without a category: the categories right away; the merchant without one gets it, no question', async () => {
+test('2.7.2–2.7.3: without a category — "Сменить", search, the merchant without one gets it, no question', async () => {
   await tap('GLOVO');
-  expect(await screen.findByText('Выберите категорию')).toBeTruthy();
-  expect(screen.getByText('Все категории')).toBeTruthy();
+  expect(await screen.findByText('⚪️ Без категории')).toBeTruthy();
+  await tap('Сменить');
+  fireEvent.changeText(await screen.findByPlaceholderText('Найти категорию'), 'кафе');
   await tap('☕️ Кафе и рестораны');
   expect(await screen.findByText('Категория «☕️ Кафе и рестораны» назначена')).toBeTruthy();
   await waitFor(async () => expect((await opsOf('GLOVO'))[0]).toMatchObject({ c: 'Кафе и рестораны', s: 'rule' }));
@@ -42,10 +43,11 @@ test('2.7.2–2.7.3: without a category: the categories right away; the merchant
 test('2.7.3a: the category\'s name a link (as the merchant\'s) opens its sheet over the card, "Сменить" on the right picks another', async () => {
   await openApp(ops);
   await tap('SPAR');
-  // "Разделить по категориям" right of the "Категория" title
-  await screen.findByText('Разделить по категориям');
+  // "Сменить" right of the "Категория" title
+  await screen.findByText('Сменить');
   const all = texts();
-  expect(all.slice(all.lastIndexOf('Категория'), all.lastIndexOf('Категория') + 2)).toEqual(['Категория', 'Разделить по категориям']);
+  expect(all.slice(all.lastIndexOf('Категория'), all.lastIndexOf('Категория') + 2)).toEqual(['Категория', 'Сменить']);
+  expect(screen.queryByText('Разделить по категориям')).toBeNull();
   await tap('🛒 Продукты ›');
   expect(await screen.findByDisplayValue('Продукты')).toBeTruthy();
   expect(screen.queryByText('Регулярные платежи')).toBeNull();
@@ -95,12 +97,13 @@ test('2.7.7: "Без категории" stays: the merchant\'s category won\'t 
 test('2.7.8: a transfer: the transfer categories first, no merchant category', async () => {
   await createCategory('Маме', '👩', await getTransferTypeId());
   await tap('Перевод · NINO B');
-  expect(await screen.findByText('Выберите категорию')).toBeTruthy();
+  expect(await screen.findByText('⚪️ Без категории')).toBeTruthy();
+  await tap('Сменить');
+  expect(await screen.findByText('👩 Маме')).toBeTruthy();
   const all = texts();
-  // "Без категории" first (what it has now), then the transfer ones
-  const i = all.indexOf('Выберите категорию');
-  expect(all.slice(i + 1, i + 4)).toEqual(['Разделить по категориям', '⚪️ Без категории', '👩 Переводы: Маме']);
-  // "Пополнение счёта" is for deposits only
+  // the transfer section first; "Пополнение счёта" is for deposits only
+  expect(all.indexOf('Переводы')).toBeLessThan(all.indexOf('👩 Маме'));
+  expect(all.indexOf('👩 Маме')).toBeLessThan(all.indexOf('🛒 Продукты'));
   expect(all).not.toContain('💳 Пополнение счёта');
   // the person isn't a merchant: no link
   expect(screen.queryByText('Перевод · NINO B ›')).toBeNull();
@@ -112,11 +115,11 @@ test('2.7.8: a deposit: in "Пополнение счёта", first; then the tr
   expect(await screen.findByText('Сменить')).toBeTruthy();
   expect(screen.getByText('💳 Пополнение счёта ›')).toBeTruthy();
   await tap('Сменить');
-  expect(await screen.findByText('👩 Переводы: Маме')).toBeTruthy();
+  expect(await screen.findByText('💳 Пополнение счёта')).toBeTruthy();
   const all = texts();
-  const i = all.indexOf('💳 Пополнение счёта', all.indexOf('Сменить') + 1);
-  expect(all.slice(i, i + 2)).toEqual(['💳 Пополнение счёта', '👩 Переводы: Маме']);
-  await tap('👩 Переводы: Маме');
+  expect(all.indexOf('💳 Пополнение счёта')).toBeLessThan(all.indexOf('👩 Маме'));
+  expect(all.indexOf('Переводы')).toBeLessThan(all.indexOf('👩 Маме'));
+  await tap('👩 Маме');
   await waitFor(async () => expect((await opsOf('SALARY'))[0].c).toBe('Маме'));
 });
 
@@ -213,12 +216,19 @@ test('2.7.6: a merchant of different categories: its categories to tap, no quest
 });
 
 describe('2.7.16 split between categories', () => {
-  test('"Разделить по категориям": the own category gets the rest; saved — the card shows the parts; "Убрать разделение" asks, "Отменить" puts them back', async () => {
+  test('"Разделить по категориям": a long press picks several; the own category gets the rest; saved — the card shows the parts; "Убрать разделение" asks, "Отменить" puts them back', async () => {
     await tap('SPAR');
-    await tap('Разделить по категориям');
+    await tap('Сменить');
+    await longPress('👕 Одежда');
+    await tap('Отмена');
+    expect(await screen.findByText('Несколько категорий можно выбрать зажатием.')).toBeTruthy();
+    await longPress('👕 Одежда');
+    await tap('🛒 Продукты');
+    await tap('Готово');
     expect(await screen.findByText('остальное')).toBeTruthy();
     await tap('+ Ещё категория');
-    await tap('👕 Одежда');
+    expect(await screen.findByText('Выбрано: 2')).toBeTruthy();
+    await tap('Готово');
     fireEvent.changeText(await screen.findByLabelText('Сумма: 👕 Одежда'), '42');
     expect(await screen.findByText('Части больше суммы операции на 12.00\u00a0₾')).toBeTruthy();
     fireEvent.changeText(screen.getByLabelText('Сумма: 👕 Одежда'), '12');
@@ -253,15 +263,17 @@ describe('2.7.17 the type of money that came in', () => {
     await tap('Возврат');
     expect(await screen.findByText('Теперь это возврат')).toBeTruthy();
     expect(await kindOf('SALARY')).toEqual({ kind: 'refund', c: null });
-    expect(await screen.findByText('Выберите категорию')).toBeTruthy();
-    expect(screen.getByText('Разделить по категориям')).toBeTruthy();
+    expect(await screen.findByText('⚪️ Без категории')).toBeTruthy();
+    expect(screen.getByText('Сменить')).toBeTruthy();
+    expect(screen.queryByText('Разделить по категориям')).toBeNull();
   });
 
   test('a refund is split; made a deposit — whole, in "Пополнение счёта"', async () => {
     await tap('Возврат · ZARA');
-    await tap('Разделить по категориям');
-    await tap('+ Ещё категория');
-    await tap('🛒 Продукты');
+    await tap('Сменить');
+    await longPress('🛒 Продукты');
+    await tap('👕 Одежда');
+    await tap('Готово');
     fireEvent.changeText(await screen.findByLabelText('Сумма: 🛒 Продукты'), '2');
     await tap('Сохранить');
     expect(await screen.findByText('Разделена · 2 категории')).toBeTruthy();

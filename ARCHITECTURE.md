@@ -39,7 +39,7 @@ src/
 |---|---|---|
 | Кнопка, шит, чип, календарь — не знает про операции и категории | `shared/ui` | `Button`, `BottomSheet`, `RangeCalendar` |
 | Чистая функция или хук без бизнес-смысла | `shared/lib` | `format`, `money`, `dates`, `useLatestRequest`, `useStableCallback` |
-| Показать, выбрать или просто изменить одну сущность, без сценария | `entities/<сущность>` | `TransactionItem`, `CategoryPicker`, `CategoryView`, `RecentOperations` |
+| Показать, выбрать или просто изменить одну сущность, без сценария | `entities/<сущность>` | `TransactionItem`, `CategoryPickerModal`, `CategoryView`, `RecentOperations` |
 | Действие пользователя в несколько шагов | `features/<действие>` | удалить категорию с разбором, мерчант (правило: `MerchantView`), объединить, импорт SMS |
 | Вкладка и её части, которые нигде больше не нужны | `screens/<вкладка>/parts` | заголовок раздела операций, строка категории статистики |
 | Корень приложения: стек, вкладки, хосты, старт | `app` | `App.tsx`, `MainTabs`, `ModalHost`, `useAppStartup` |
@@ -130,7 +130,7 @@ src/
 - **shared/navigation**: `navigation.ts`, `sheets.ts`, `leaveGuard.ts`.
 - **entities/transaction**: `TransactionItem`, команды и подтверждения удаления (`transactionActions`).
   `transactionGroups` — в `screens/operations` (группировки списка).
-- **entities/category**: `CategoryPicker`, `CategoryPickerModal`, `CategorySheet` (+ `useCategoryForm`,
+- **entities/category**: `CategoryPickerModal`, `CategorySheet` (+ `useCategoryForm`,
   `CategoryNameField`, `CategorySummaryRow`), `TypeEditModal`, команды, тип `CategoryInfo`.
 - **entities/merchant**: `MerchantLink` — имя мерчанта ссылкой на его карточку (`openMerchant`). Заголовок операции
   `merchantLabel` («Оплата · TELMICO») — из `shared/lib/format` в `entities/transaction`.

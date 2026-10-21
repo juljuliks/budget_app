@@ -64,6 +64,7 @@ describe('1.5 a manual operation', () => {
     await open();
     fireEvent.changeText(screen.getByPlaceholderText('0.00'), '12,5');
     fireEvent.changeText(screen.getByPlaceholderText('Например, рынок'), 'Рынок');
+    await tap('Сменить');
     await tap('🛒 Продукты');
     await tap('Добавить');
     expect(await screen.findByText('Операция добавлена')).toBeTruthy();

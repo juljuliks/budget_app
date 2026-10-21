@@ -10,11 +10,12 @@ import type { RootStackParamList } from '@/shared/navigation/navigation';
 import { formStyles } from '@/shared/theme/formStyles';
 import { colors } from '@/shared/theme/theme';
 import { CreateButton } from '@/shared/ui/PlusButton';
-import { CategorySheet } from '@/entities/category';
+import { CategorySheet, FIND_CATEGORY, matchesQuery } from '@/entities/category';
 import { openCategoryTypes } from '@/shared/navigation/sheets';
 import { openCategory } from '@/shared/navigation/navigation';
 import { onTransactionsChanged } from '@/domain/events';
 import Checkbox from '@/shared/ui/Checkbox';
+import SearchBar from '@/shared/ui/SearchBar';
 import { MergeCategoriesSheet } from '@/features/category-merge';
 import Button from '@/shared/ui/Button';
 import { toastFailure } from '@/shared/ui/toast';
@@ -30,6 +31,7 @@ export default function CategoriesScreen({ navigation }: Props) {
   const [creating, setCreating] = useState(false);
   // picked to merge, in the order picked (the first is merged into); empty = not picking
   const [picked, setPicked] = useState<number[]>([]);
+  const [query, setQuery] = useState('');
   const [merging, setMerging] = useState<number[]>([]);
   const picking = picked.length > 0;
   // the "Разделы" row's height: the picking toolbar in its place takes the same
@@ -57,12 +59,12 @@ export default function CategoriesScreen({ navigation }: Props) {
   // a category deleted / a section edited in a sheet over this page
   useEffect(() => onTransactionsChanged(load), [load]);
 
-  // listCategories is ordered by type, so consecutive runs form the sections
+  // listCategories is ordered by type, so consecutive runs form the sections; a search hides the empty ones
   const sections: Array<{ title: string; data: Category[] }> = [];
-  for (const c of cats) {
-    const title = c.type_name ?? NO_SECTION;
+  for (const item of cats.filter((c) => matchesQuery(c.name, query))) {
+    const title = item.type_name ?? NO_SECTION;
     if (sections.length === 0 || sections[sections.length - 1].title !== title) sections.push({ title, data: [] });
-    sections[sections.length - 1].data.push(c);
+    sections[sections.length - 1].data.push(item);
   }
 
   return (
@@ -91,26 +93,19 @@ export default function CategoriesScreen({ navigation }: Props) {
           <Text style={[styles.chevron, picking && styles.invisible]}>›</Text>
         </TouchableOpacity>
       )}
-      // the category types live one level down from here
-      ListHeaderComponent={picking ? (
-        // picking several (started by a long press); "Объединить" at the bottom once two are picked. As tall as the
-        // "Разделы" row it replaces (measured): a shorter header moved the list up
-        <View style={[styles.toolbar, headerHeight ? { height: headerHeight } : null]}>
-          <Text style={[styles.pickLabel, styles.flex]}>Выбрано: {picked.length}</Text>
-          <TouchableOpacity onPress={() => setPicked([])} hitSlop={8} accessibilityRole="button">
-            <Text style={styles.toolbarCancel}>Отмена</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <TouchableOpacity style={styles.typesRow} onPress={openCategoryTypes} accessibilityRole="button" onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}>
-          <View style={styles.flex}>
-            <Text style={styles.typesTitle}>Разделы</Text>
-            <Text style={styles.typesNote} numberOfLines={1}>{types.length ? types.join(', ') : 'Разделы объединяют категории и задают им цвета'}</Text>
-          </View>
-          <Text style={styles.chevron}>›</Text>
-        </TouchableOpacity>
+      ListHeaderComponent={(
+        <CategoriesHeader
+          picking={picking}
+          headerHeight={headerHeight}
+          picked={picked.length}
+          types={types}
+          query={query}
+          onQuery={setQuery}
+          onLayout={setHeaderHeight}
+          onCancel={() => setPicked([])}
+        />
       )}
-      ListEmptyComponent={<Text style={styles.empty}>Категорий нет. Нажмите «Создать».</Text>}
+      ListEmptyComponent={<Text style={styles.empty}>{cats.length === 0 ? 'Категорий нет. Нажмите «Создать».' : 'Не найдено.'}</Text>}
     />
     <CategorySheet visible={creating} onClose={() => setCreating(false)} onSaved={load} />
     {picked.length > 1 ? (
@@ -123,6 +118,43 @@ export default function CategoriesScreen({ navigation }: Props) {
       onClose={() => setMerging([])}
       onMerged={() => { setMerging([]); setPicked([]); load(); }}
     />
+    </View>
+  );
+}
+
+/** "Разделы" (or the merge toolbar in its place) and the search under it. */
+function CategoriesHeader({ picking, headerHeight, picked, types, query, onQuery, onLayout, onCancel }: {
+  picking: boolean;
+  headerHeight: number;
+  picked: number;
+  types: string[];
+  query: string;
+  onQuery: (q: string) => void;
+  onLayout: (height: number) => void;
+  onCancel: () => void;
+}) {
+  return (
+    <View>
+      {picking ? (
+        // as tall as the "Разделы" row it replaces (measured): a shorter header moved the list up
+        <View style={[styles.toolbar, headerHeight ? { height: headerHeight } : null]}>
+          <Text style={[styles.pickLabel, styles.flex]}>Выбрано: {picked}</Text>
+          <TouchableOpacity onPress={onCancel} hitSlop={8} accessibilityRole="button">
+            <Text style={styles.toolbarCancel}>Отмена</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <TouchableOpacity style={styles.typesRow} onPress={openCategoryTypes} accessibilityRole="button" onLayout={(e) => onLayout(e.nativeEvent.layout.height)}>
+          <View style={styles.flex}>
+            <Text style={styles.typesTitle}>Разделы</Text>
+            <Text style={styles.typesNote} numberOfLines={1}>{types.length ? types.join(', ') : 'Разделы объединяют категории и задают им цвета'}</Text>
+          </View>
+          <Text style={styles.chevron}>›</Text>
+        </TouchableOpacity>
+      )}
+      <View style={styles.search}>
+        <SearchBar value={query} onChange={onQuery} placeholder={FIND_CATEGORY} />
+      </View>
     </View>
   );
 }
@@ -143,6 +175,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   typesTitle: { fontSize: 16, color: colors.text, fontWeight: '600' },
   typesNote: { fontSize: 13, color: colors.muted, marginTop: 2 },
+  search: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 },
   chevron: { fontSize: 24, color: colors.muted, marginLeft: 8 },
   check: { marginRight: 10 },
   off: { opacity: 0.35 },

@@ -1,7 +1,7 @@
 // "Разделить по категориям" being edited (features/transaction-edit/model/splitDraft.ts) and a split row's look
 // (entities/transaction/model/parts.ts).
 import {
-  draftParts, splitDraftOf, splitState, withNewPart, withOwn, withPartCategory,
+  draftFromIds, draftParts, splitDraftOf, splitState, withNewPart, withOwn, withPartCategory,
 } from '../../src/features/transaction-edit/model/splitDraft';
 import { partsLabel, splitRow } from '../../src/entities/transaction/model/parts';
 
@@ -16,6 +16,14 @@ test('the own category takes what the parts leave; saved only with every amount 
     .toMatchObject({ rest: -500, error: 'Части больше суммы операции на 5.00\u00a0₾', canSave: false });
   expect(splitState(8640, 'GEL', { ...d, parts: [{ category_id: 2, text: '86.40' }] }).error).toBe('Первой категории ничего не остаётся');
   expect(splitState(8640, 'GEL', { own: null, parts: typed.parts }).canSave).toBe(false);
+});
+
+test('a selection keeps the operation\'s category first and amounts already typed', () => {
+  const prev = { own: 1, parts: [{ category_id: 2, text: '10' }, { category_id: 3, text: '5' }] };
+  expect(draftFromIds(1, [2, 1, 4], prev)).toEqual({ own: 1, parts: [{ category_id: 2, text: '10' }, { category_id: 4, text: '' }] });
+  // the current one is not among them: the previous own, else the first picked
+  expect(draftFromIds(9, [3, 2], prev)).toEqual({ own: 3, parts: [{ category_id: 2, text: '10' }] });
+  expect(draftFromIds(null, [2], prev)).toEqual({ own: 2, parts: [] });
 });
 
 test('picking categories: no category twice; the own one picked from the parts takes that part in', () => {

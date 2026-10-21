@@ -70,7 +70,7 @@ describe('3.2 a merchant\'s card', () => {
 
   test('the first category: no question; the hand-picked operation keeps its own', async () => {
     await tap('WOLT');
-    expect(await screen.findByText('Выберите категорию')).toBeTruthy();
+    await tap('Сменить');
     await tap('🛒 Продукты');
     await tap('Сохранить');
     expect(await screen.findByText('Категория «🛒 Продукты» назначена мерчанту «WOLT»')).toBeTruthy();
@@ -220,6 +220,7 @@ describe('3.2.6–3.2.7 turning "Разные категории" off', () => {
   const isMixed = async () => (await q('SELECT 1 FROM mixed_merchants WHERE merchant_key = ?', ['GLOVO'])).length === 1;
 
   test('with a category: its new operations get it', async () => {
+    await tap('Сменить');
     await tap('☕️ Кафе и рестораны');
     await tap('Сохранить');
     expect(await screen.findByText('Категория «☕️ Кафе и рестораны» для «GLOVO»')).toBeTruthy();

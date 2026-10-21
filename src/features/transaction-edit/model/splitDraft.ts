@@ -48,6 +48,18 @@ export function withPartCategory(d: SplitDraft, index: number, id: number): Spli
   return { ...d, parts: d.parts.map((p, i) => (i === index ? { ...p, category_id: id } : p)) };
 }
 
+/**
+ * Categories chosen together (a long press, or "Ещё категория" with the current ones checked). The operation's own
+ * stays first when it is among them; an amount already typed for a category that remains is kept.
+ */
+export function draftFromIds(currentId: number | null, ids: number[], prev?: SplitDraft): SplitDraft {
+  const own = currentId !== null && ids.includes(currentId) ? currentId
+    : prev?.own != null && ids.includes(prev.own) ? prev.own
+    : ids[0] ?? null;
+  const texts = new Map((prev?.parts ?? []).map((p) => [p.category_id, p.text]));
+  return { own, parts: ids.filter((id) => id !== own).map((id) => ({ category_id: id, text: texts.get(id) ?? '' })) };
+}
+
 /** "Ещё категория": a new part, its amount to type. */
 export function withNewPart(d: SplitDraft, id: number): SplitDraft {
   if (id === d.own || d.parts.some((p) => p.category_id === id)) return d;

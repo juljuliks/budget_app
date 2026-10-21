@@ -29,6 +29,15 @@ describe('4.1–4.2 the list; creating and changing a category', () => {
     expect(all.indexOf('Разделы')).toBeLessThan(all.indexOf('🛒 Продукты'));
   });
 
+  test('search under "Разделы": a name, empty sections hidden, nothing found', async () => {
+    fireEvent.changeText(screen.getByPlaceholderText('Найти категорию'), 'одеж');
+    expect(await screen.findByText('👕 Одежда')).toBeTruthy();
+    expect(screen.queryByText('🛒 Продукты')).toBeNull();
+    expect(screen.queryByText('🔁 Между своими картами')).toBeNull();
+    fireEvent.changeText(screen.getByPlaceholderText('Найти категорию'), 'ыыы');
+    expect(await screen.findByText('Не найдено.')).toBeTruthy();
+  });
+
   test('a new one: the name required, the preview, created at the end of the list', async () => {
     await tap('Новая категория');
     expect(await screen.findByText('Новая категория')).toBeTruthy();

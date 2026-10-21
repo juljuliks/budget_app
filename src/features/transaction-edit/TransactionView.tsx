@@ -32,6 +32,7 @@ export default function TransactionView({ txId, onClose }: Props) {
   const { saving, choose } = useCategoryChoice(txId, tx ?? null, true, onClose);
   const [amountOpen, setAmountOpen] = useState(false);
   const [splitOpen, setSplitOpen] = useState(false);
+  const [splitSeed, setSplitSeed] = useState<number[] | null>(null);
   const [kindOpen, setKindOpen] = useState(false);
 
   if (!tx) {
@@ -52,7 +53,7 @@ export default function TransactionView({ txId, onClose }: Props) {
       ]} />
     )}>
       <TransactionHeader tx={tx} onEditAmount={() => setAmountOpen(true)} onEditKind={() => setKindOpen(true)} merchantLinked={rememberable} />
-      <TransactionCategory tx={tx} mixedCats={mixedCats} saving={saving} choose={choose} onSplit={() => setSplitOpen(true)} />
+      <TransactionCategory tx={tx} mixedCats={mixedCats} saving={saving} choose={choose} onSplit={(ids) => { setSplitSeed(ids ?? null); setSplitOpen(true); }} />
 
       {rememberable && mixedCats ? (
         <Text style={styles.merchantInfo}>У «{merchantName}» разные категории: каждая новая операция спрашивает.</Text>
@@ -75,7 +76,7 @@ export default function TransactionView({ txId, onClose }: Props) {
       <NoteSection txId={tx.id} note={tx.note} onSaved={reload} />
       <AmountModal visible={amountOpen} tx={tx} onClose={() => setAmountOpen(false)} onSaved={reload} />
       <KindSheet visible={kindOpen} tx={tx} onClose={() => setKindOpen(false)} />
-      <SplitSheet visible={splitOpen} tx={tx} onClose={() => setSplitOpen(false)} />
+      <SplitSheet visible={splitOpen} tx={tx} seed={splitSeed} onClose={() => { setSplitOpen(false); setSplitSeed(null); }} />
     </Page>
   );
 }

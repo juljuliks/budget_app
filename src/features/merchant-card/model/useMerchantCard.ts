@@ -67,5 +67,5 @@ export function useMerchantCard(merchantId: string | null, given: Map<number, Ca
     else setSingle(id);
   }
 
-  return { m, categories, mixed, single, list, dirty, label, load, switchMixed, toggle, setSingle };
+  return { m, categories, mixed, single, list, dirty, label, load, switchMixed, toggle, setSingle, setList };
 }
