@@ -1,13 +1,20 @@
 // The operation's writes: each one tells the screens the data changed.
 import { incrementCategoryUsage } from '@/db/categories';
 import {
-  addManualTransaction, DeletedTransaction, deleteTransactions, markTransactionSeen, markTransactionsSeen, restoreTransactions, setTransactionAmount, setTransactionNote,
+  addManualTransaction, DeletedTransaction, deleteTransactions, IncomeKind, markTransactionSeen, markTransactionsSeen, restoreTransactions, setTransactionAmount,
+  setTransactionKind, setTransactionNote,
 } from '@/db/transactions';
 import { getParts, splitTransaction, TxPart, unsplitTransactions } from '@/db/parts';
 import { emitTransactionsChanged } from '@/domain/events';
 
 export async function saveTransactionAmount(id: number, amountMinor: number, currency: string) {
   await setTransactionAmount(id, amountMinor, currency);
+  emitTransactionsChanged();
+}
+
+/** "Сменить тип": a deposit made a refund or back (see setTransactionKind). */
+export async function changeIncomeKind(id: number, kind: IncomeKind) {
+  await setTransactionKind(id, kind);
   emitTransactionsChanged();
 }
 

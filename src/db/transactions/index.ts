@@ -3,3 +3,4 @@ export * from './rows';
 export * from './filter';
 export * from './writes';
 export * from './groups';
+export * from './kind';

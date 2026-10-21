@@ -125,3 +125,28 @@ test('setting a merchant\'s category also gives it to its open refunds (settled 
   const cat = async (id: number) => (await db.get<{ category_id: number | null }>('SELECT category_id FROM transactions WHERE id = ?', [id]))!.category_id;
   expect([await cat(open), await cat(settled), await cat(manual)]).toEqual([4, null, 9]);
 });
+
+test('"Сменить тип": a deposit made a refund leaves the month\'s income for its merchant\'s category; split, each part is subtracted from its category', async () => {
+  const { setTransactionKind } = require('../../src/db/transactions');
+  const { monthIncome } = require('../../src/db/plans');
+  const { splitTransaction } = require('../../src/db/parts');
+  const { topUpCategoryId } = require('../../src/db/categories');
+  const now = new Date();
+  const at = Math.floor(now.getTime() / 1000);
+  const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  await add('purchase', 10000, 'SHOP', at - 60, 1);
+  await add('purchase', 5000, 'SPAR', at - 60, 2);
+  const money = await add('deposit', 3000, 'SHOP', at, await topUpCategoryId());
+  expect(await monthIncome(ym)).toBe(3000);
+  await setTransactionKind(money, 'refund');
+  expect(await monthIncome(ym)).toBe(0);
+  // the category of its merchant's last purchase
+  expect((await (await getDb()).get<{ category_id: number }>('SELECT category_id FROM transactions WHERE id = ?', [money]))!.category_id).toBe(1);
+  await splitTransaction(money, 1, [{ category_id: 2, amount_minor: 1000 }]);
+  const s = await monthStats(now.getFullYear(), now.getMonth());
+  expect(s.categories.map((c) => [c.category_id, c.spent_minor]).sort()).toEqual([[1, 8000], [2, 4000]]);
+  // back to a deposit: whole, income again
+  await setTransactionKind(money, 'deposit');
+  expect(await monthIncome(ym)).toBe(3000);
+  expect(await (await getDb()).all('SELECT * FROM transaction_parts')).toEqual([]);
+});

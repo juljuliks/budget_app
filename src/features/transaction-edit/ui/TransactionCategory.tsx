@@ -24,14 +24,15 @@ type Props = {
 
 /**
  * The operation's category: a settled refund says so; a merchant of different categories offers its ones; a categorized
- * one shows its name (a link to its sheet) with "Сменить"; none yet — the categories right away. Spending can be split
- * between categories ("Разделить по категориям", right of the "Категория" title); a split one shows its parts.
+ * one shows its name (a link to its sheet) with "Сменить"; none yet — the categories right away. Spending and a refund can
+ * be split between categories ("Разделить по категориям", right of the "Категория" title); a split one shows its parts.
  */
 export default function TransactionCategory({ tx, mixedCats, saving, choose, onSplit }: Props) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const category = txCategoryLabel(tx);
   const parts = splitParts(tx);
-  const splitLink = (EXPENSE_KINDS as ReadonlyArray<string>).includes(tx.kind) ? (
+  // spending and a refund (money back for a purchase of several categories)
+  const splitLink = [...EXPENSE_KINDS, 'refund'].includes(tx.kind) ? (
     <TouchableOpacity style={styles.splitLink} onPress={onSplit} disabled={saving} hitSlop={8} accessibilityRole="button">
       <SplitIcon color={colors.accent} size={16} />
       <Text style={styles.changeText}>Разделить по категориям</Text>

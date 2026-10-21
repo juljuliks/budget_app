@@ -9,6 +9,7 @@ import { colors } from '@/shared/theme/theme';
 import { useCategoryChoice } from './model/useCategoryChoice';
 import { useTransaction } from './model/useTransaction';
 import AmountModal from './ui/AmountModal';
+import KindSheet from './ui/KindSheet';
 import NoteSection from './ui/NoteSection';
 import SplitSheet from './ui/SplitSheet';
 import PaymentNote from './ui/PaymentNote';
@@ -31,6 +32,7 @@ export default function TransactionView({ txId, onClose }: Props) {
   const { saving, choose } = useCategoryChoice(txId, tx ?? null, true, onClose);
   const [amountOpen, setAmountOpen] = useState(false);
   const [splitOpen, setSplitOpen] = useState(false);
+  const [kindOpen, setKindOpen] = useState(false);
 
   if (!tx) {
     return tx === null
@@ -49,7 +51,7 @@ export default function TransactionView({ txId, onClose }: Props) {
         { title: 'Удалить операцию', danger: true, onPress: () => confirmDeleteTransaction(tx, onClose) },
       ]} />
     )}>
-      <TransactionHeader tx={tx} onEditAmount={() => setAmountOpen(true)} merchantLinked={rememberable} />
+      <TransactionHeader tx={tx} onEditAmount={() => setAmountOpen(true)} onEditKind={() => setKindOpen(true)} merchantLinked={rememberable} />
       <TransactionCategory tx={tx} mixedCats={mixedCats} saving={saving} choose={choose} onSplit={() => setSplitOpen(true)} />
 
       {rememberable && mixedCats ? (
@@ -72,6 +74,7 @@ export default function TransactionView({ txId, onClose }: Props) {
 
       <NoteSection txId={tx.id} note={tx.note} onSaved={reload} />
       <AmountModal visible={amountOpen} tx={tx} onClose={() => setAmountOpen(false)} onSaved={reload} />
+      <KindSheet visible={kindOpen} tx={tx} onClose={() => setKindOpen(false)} />
       <SplitSheet visible={splitOpen} tx={tx} onClose={() => setSplitOpen(false)} />
     </Page>
   );

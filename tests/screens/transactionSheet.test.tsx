@@ -240,3 +240,41 @@ describe('2.7.16 split between categories', () => {
     expect(await screen.findByText('Разделена · 2 категории')).toBeTruthy();
   });
 });
+
+describe('2.7.17 the type of money that came in', () => {
+  const kindOf = async (merchant: string) => (await getDb()).get<{ kind: string; c: string | null }>(
+    'SELECT t.kind, c.name AS c FROM transactions t LEFT JOIN categories c ON c.id = t.category_id WHERE t.raw_merchant = ?', [merchant]);
+
+  test('a deposit made a refund: "Тип операции" (one choice), out of "Пополнение счёта", the categories, "Разделить по категориям"', async () => {
+    await tap('Пополнение · SALARY');
+    await tap('Сменить тип');
+    expect(await screen.findByText('Тип операции')).toBeTruthy();
+    expect(screen.getByText('Доход месяца, в «Пополнении счёта»')).toBeTruthy();
+    await tap('Возврат');
+    expect(await screen.findByText('Теперь это возврат')).toBeTruthy();
+    expect(await kindOf('SALARY')).toEqual({ kind: 'refund', c: null });
+    expect(await screen.findByText('Выберите категорию')).toBeTruthy();
+    expect(screen.getByText('Разделить по категориям')).toBeTruthy();
+  });
+
+  test('a refund is split; made a deposit — whole, in "Пополнение счёта"', async () => {
+    await tap('Возврат · ZARA');
+    await tap('Разделить по категориям');
+    await tap('+ Ещё категория');
+    await tap('🛒 Продукты');
+    fireEvent.changeText(await screen.findByLabelText('Сумма: 🛒 Продукты'), '2');
+    await tap('Сохранить');
+    expect(await screen.findByText('Разделена · 2 категории')).toBeTruthy();
+    await tap('Сменить тип');
+    await tap('Пополнение');
+    expect(await screen.findByText('Теперь это пополнение')).toBeTruthy();
+    expect(await kindOf('ZARA')).toEqual({ kind: 'deposit', c: 'Пополнение счёта' });
+    expect(await (await getDb()).all('SELECT * FROM transaction_parts')).toEqual([]);
+  });
+
+  test('a purchase has no "Сменить тип"', async () => {
+    await tap('SPAR');
+    await screen.findByText('Сменить');
+    expect(screen.queryByLabelText('Сменить тип')).toBeNull();
+  });
+});
