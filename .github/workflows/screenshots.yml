@@ -41,6 +41,10 @@ jobs:
           git checkout --quiet "$TAG"
           gh release download "$TAG" -p 'budget-app-*.apk' -D "$RUNNER_TEMP/apk"
           ls "$RUNNER_TEMP/apk"
+          # this emulator is x86_64; a release may also carry the phone APK (arm64-v8a) or, before the split, one universal APK
+          APK="$(find "$RUNNER_TEMP/apk" -name '*x86_64*.apk' -print -quit)"
+          [ -n "$APK" ] || APK="$(find "$RUNNER_TEMP/apk" -name 'budget-app-*.apk' -print -quit)"
+          echo "apk=$APK" >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-node@v4
         with:
@@ -79,7 +83,7 @@ jobs:
           profile: pixel_6
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
-          script: bash scripts/demo/screenshots.sh "$(ls $RUNNER_TEMP/apk/*.apk | head -1)" "$RUNNER_TEMP/demo.db" "$RUNNER_TEMP/screenshots"
+          script: bash scripts/demo/screenshots.sh "${{ steps.build.outputs.apk }}" "$RUNNER_TEMP/demo.db" "$RUNNER_TEMP/screenshots"
 
       - name: Add them to the release
         run: |

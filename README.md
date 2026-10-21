@@ -206,8 +206,9 @@ scripts/demo/docs.sh     # скриншоты для документации: �
 (`adb install -r`), APK подписан release-ключом.
 
 **GitHub Actions:** каждый пуш в `main` проверяет типы, архитектуру (`npm run lint`) и тесты, затем собирает
-подписанный APK и публикует релиз `1.0.N` — его можно скачать и поставить прямо с телефона ([android-release.yml](.github/workflows/android-release.yml)). Скриншоты основных экранов
-на демо-базе — вручную, workflow «Screenshots» ([scripts/demo/](scripts/demo/)).
+подписанные APK по архитектурам и публикует релиз `1.0.N` ([android-release.yml](.github/workflows/android-release.yml)).
+На телефон — `budget-app-1.0.N-arm64-v8a.apk`, для эмулятора в CI — `budget-app-1.0.N-x86_64.apk`. Скриншоты основных
+экранов на демо-базе — вручную, workflow «Screenshots» ([scripts/demo/](scripts/demo/)).
 
 ## Где что
 

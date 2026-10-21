@@ -68,6 +68,21 @@ android {
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
     }
+
+    // -PabiSplits (the GitHub release): one APK per ABI from reactNativeArchitectures, no universal APK.
+    // Local release stays one app-release.apk so the desktop and emulator scripts keep their path.
+    if (project.hasProperty("abiSplits")) {
+        def abiList = (findProperty("reactNativeArchitectures") ?: "armeabi-v7a,arm64-v8a,x86,x86_64")
+                .toString().split(",").collect { it.trim() }.findAll { it }
+        splits {
+            abi {
+                enable true
+                reset()
+                include(*abiList)
+                universalApk false
+            }
+        }
+    }
 }
 
 dependencies {
