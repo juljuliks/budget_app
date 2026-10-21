@@ -3,13 +3,14 @@ import { getDb } from '../index';
 import { categoryColors } from '../colors';
 import { NEUTRAL_COLOR, NO_CATEGORY_EMOJI } from '../../domain/colors';
 import { Currency } from '../fx';
-import { BUDGET_CURRENCY, asCurrency, monthRange, planRateDate, ymOf } from './months';
+import { BUDGET_CURRENCY, asCurrency, currentYm, monthRange, planRateDate, ymOf } from './months';
 import { REFUND_KEY, categoryKey, convertSpending, spendRows, sumBy } from './spend';
 import { NormPeriod, PlanKind, asNorm } from './types';
 import { ensureMonthPlan } from './budget';
 import { placeholders } from '../sql';
 import { activeFunds, fundLedger } from './funds';
 import { savingSpend } from '../recurring/saving';
+import { monthPayments } from './recurringItems';
 
 export type CategoryStat = {
   category_id: number | null; // null = uncategorized
@@ -128,7 +129,7 @@ const refundsUnassignedOf = (spentBy: Map<number | null | typeof REFUND_KEY, num
 
 const listTypes = async () => (await getDb()).all<{ id: number; name: string }>('SELECT id, name FROM category_types ORDER BY sort_order, name');
 
-/** The month's spending and plan by category, in `currency` (spending on each day's rate, the plan on planRateDate). */
+/** The month's spending and plan by category, in `currency` (spending on each day's rate, the plan on planRateDate; subscriptions — a done charge on its operation's day). */
 export async function monthStats(year: number, month: number, currency: Currency = BUDGET_CURRENCY): Promise<MonthStats> {
   const ym = ymOf(year, month);
   await ensureMonthPlan(ym);
@@ -143,8 +144,8 @@ export async function monthStats(year: number, month: number, currency: Currency
 
   const colorOf = await categoryColors();
 
-  const cats = await db.all<CategoryRow & { limit_minor: number | null; plan_currency: string | null; plan_kind: PlanKind | null; plan_norm: string | null }>(
-    `SELECT c.id, c.name, c.emoji, c.type_id, ct.name AS type_name, p.limit_minor, p.currency AS plan_currency,
+  const cats = await db.all<CategoryRow & { limit_minor: number | null; plan_currency: string | null; item_kind: PlanKind | null; plan_kind: PlanKind | null; plan_norm: string | null }>(
+    `SELECT c.id, c.name, c.emoji, c.type_id, ct.name AS type_name, p.limit_minor, p.currency AS plan_currency, p.kind AS item_kind,
       -- "Подписки" counts as a fixed payment in the stats: paid or not, by the month
       CASE WHEN p.kind = 'subs' THEN 'fixed' ELSE p.kind END AS plan_kind,
         p.norm_period AS plan_norm, c.deleted_at, ct.is_transfer
@@ -155,7 +156,12 @@ export async function monthStats(year: number, month: number, currency: Currency
   const categories: CategoryStat[] = [];
   for (const c of cats) {
     const s = spentBy.get(c.id) ?? 0;
-    const limit = c.limit_minor ? conv(c.limit_minor, asCurrency(c.plan_currency), currency, planDate) : null;
+    // subscriptions: each charge on its own day (a done one — the operation's), not the whole sum on the plan's rate day
+    const live = c.item_kind === 'subs' && c.limit_minor && ym >= currentYm() ? (await monthPayments(ym, currency, undefined, c.id)).total_minor : null;
+    if (live !== null && asCurrency(c.plan_currency) === currency && c.limit_minor !== live) {
+      await db.run('UPDATE plan_items SET limit_minor = ? WHERE ym = ? AND category_id = ?', [live, ym, c.id]);
+    }
+    const limit = live ?? (c.limit_minor ? conv(c.limit_minor, asCurrency(c.plan_currency), currency, planDate) : null);
     if (s === 0 && limit === null) continue;
     const stat = categoryStat(c, s, colorOf, limit === null ? undefined : { limit, kind: c.plan_kind, norm: c.plan_norm });
     categories.push(stat);

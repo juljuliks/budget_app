@@ -52,6 +52,21 @@ export const chargeAt = (due: string, p: Period, k: number) => (p < 0 ? addDays(
 /** Was the charge on `day` done: an operation's day (of `opDays`) within the window. */
 export const isDone = (day: string, opDays: string[], p: Period = 1) => opDays.some((o) => Math.abs(daysBetween(day, o)) <= windowOf(p));
 
+/**
+ * The operation day that paid the charge on `day` (the closest within the window; the earlier one on a tie); null — none
+ * (a category's own payment counts its own day, once it has passed, as that operation).
+ */
+export function paidOn(day: string, opDays: string[], p: Period): string | null {
+  const w = windowOf(p);
+  return opDays.reduce<string | null>((best, o) => {
+    const dist = Math.abs(daysBetween(day, o));
+    if (dist > w) return best;
+    if (best === null) return o;
+    const bestDist = Math.abs(daysBetween(day, best));
+    return dist < bestDist || (dist === bestDist && o < best) ? o : best;
+  }, null);
+}
+
 /** The k of the first charge on or after `day`. */
 function firstOnOrAfter(due: string, p: Period, day: string): number {
   const a = parse(due);

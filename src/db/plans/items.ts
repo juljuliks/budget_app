@@ -4,7 +4,7 @@ import { systemCurrency } from '../settings';
 import type { Db, SqlParam } from '../types';
 import { placeholders } from '../sql';
 import { Currency } from '../fx';
-import { asCurrency } from './months';
+import { asCurrency, currentYm } from './months';
 import { NormPeriod, PlanItem, PlanKind, asNorm } from './types';
 import { activeFunds, fundLedger } from './funds';
 import { monthPayments } from './recurringItems';
@@ -31,8 +31,17 @@ export async function listPlan(ym: string, to?: Currency): Promise<PlanItem[]> {
   const funds = await fundsOf(ym, rows.filter((r) => r.kind === 'fund').map((r) => r.category_id));
   // a category with repeating payments: their names, those saved up for, the contributions
   const subsInfo = new Map<number, NonNullable<PlanItem['subs']>>();
+  // a subscriptions item recounted from its charges (a done one at the charge day's rate); a past month keeps what it stored
+  const liveTotal = new Map<number, number>();
   for (const r of rows.filter((x) => x.recurring)) {
     const subs = await monthPayments(ym, target, undefined, r.category_id);
+    if (r.kind === 'subs' && ym >= currentYm()) {
+      liveTotal.set(r.category_id, subs.total_minor);
+      // stored in this currency already: bring it to the recounted sum, so the next look and the budget agree
+      if (asCurrency(r.currency) === target && r.limit_minor !== subs.total_minor) {
+        await db.run('UPDATE plan_items SET limit_minor = ? WHERE ym = ? AND category_id = ?', [subs.total_minor, ym, r.category_id]);
+      }
+    }
     const savingIds = new Set(subs.saving.map((v) => v.payment_id));
     const subNames = (keep: (id: number) => boolean) => [...subs.charges.map((c) => c.sub), ...subs.later.map((l) => l.sub)]
       .filter((s) => keep(s.id)).map((s) => s.name).filter((n, i, all) => all.indexOf(n) === i);
@@ -67,7 +76,7 @@ export async function listPlan(ym: string, to?: Currency): Promise<PlanItem[]> {
     ...r,
     currency: asCurrency(r.currency),
     norm_period: asNorm(r.norm_period),
-    converted_minor: conv(r.limit_minor, asCurrency(r.currency), target),
+    converted_minor: liveTotal.get(r.category_id) ?? conv(r.limit_minor, asCurrency(r.currency), target),
     pinned: r.pinned === 1,
     previous_minor: r.previous_minor || null,
     ...(funds.has(r.category_id) ? { fund: funds.get(r.category_id) } : {}),
