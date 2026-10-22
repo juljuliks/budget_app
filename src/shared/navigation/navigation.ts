@@ -43,7 +43,7 @@ export type RootStackParamList = {
   Banks: undefined;
   /** an operation: its amount, category, SMS, note (a list's row, a notification, the merchant's and category's pages) */
   Operation: { id: number };
-  /** a merchant: its operations, category, "Разные категории" (its key) */
+  /** a merchant: its operations and category (its key) */
   Merchant: { key: string };
   /** a category: its operations, section, name, color */
   Category: { id: number };

@@ -1,6 +1,6 @@
 // 3: the merchants — the list by category, a merchant's card (its category, "Разные категории", deleting), several at once.
 import { fireEvent, waitFor, within } from '@testing-library/react-native';
-import { longPress, openApp, openSettings, rowOf, screen, tap, toggleSwitch, back } from './app';
+import { longPress, openApp, openSettings, rowOf, screen, tap, back } from './app';
 import { ops } from '../e2e/seeds';
 import { getDb } from '../../src/db';
 
@@ -63,8 +63,8 @@ describe('3.2 a merchant\'s card', () => {
     // its latest operations; not more than 5 — no "Показать все"
     expect(screen.getByText('Последние операции')).toBeTruthy();
     expect(screen.queryByText('Показать все ›')).toBeNull();
-    expect(screen.getByText('Разные категории')).toBeTruthy();
-    expect(screen.getByText('Каждая новая операция спрашивает категорию')).toBeTruthy();
+    expect(screen.getByText('Сменить')).toBeTruthy();
+    expect(screen.queryByText('Каждая новая операция спрашивает категорию')).toBeNull();
     expect(screen.getByText('👕 Одежда')).toBeTruthy();
   });
 
@@ -114,15 +114,11 @@ describe('3.2 a merchant\'s card', () => {
     expect(await opsOf('SPAR')).toEqual([[null, null]]);
   });
 
-  test('"Разные категории": its list, then each new operation asks', async () => {
+  test('"Разные категории": a long press picks several, then each new operation asks', async () => {
     await tap('ZARA');
-    await screen.findByText('Разные категории');
-    toggleSwitch(true);
-    expect(await screen.findByText('Категории мерчанта')).toBeTruthy();
-    expect(screen.getByText('Какие обычно категории у «ZARA»?')).toBeTruthy();
-    // it starts with the categories its operations have
-    expect(screen.getByText('👕 Одежда')).toBeTruthy();
-    await tap('＋ Добавить категорию');
+    await tap('Сменить');
+    expect(await screen.findByText('Несколько категорий можно выбрать зажатием.')).toBeTruthy();
+    await longPress('👕 Одежда');
     await tap('🛍️ Покупки');
     await tap('Готово');
     await tap('Сохранить');
@@ -146,7 +142,7 @@ describe('3.2 a merchant\'s card', () => {
     expect(await screen.findByDisplayValue('SPAR')).toBeTruthy();
     await tap('Назад');
     // its page again, over the merchants
-    expect(await screen.findByText('Разные категории')).toBeTruthy();
+    expect(await screen.findByText('Удалить мерчанта')).toBeTruthy();
     back();
     expect(await screen.findByPlaceholderText('Найти мерчанта')).toBeTruthy();
   });
@@ -158,7 +154,7 @@ describe('3.2 a merchant\'s card', () => {
     expect(await screen.findByText('Удалить операцию')).toBeTruthy();
     expect(screen.getByText('Возврат · ZARA')).toBeTruthy();
     back();
-    expect(await screen.findByText('Разные категории')).toBeTruthy();
+    expect(await screen.findByText('Удалить мерчанта')).toBeTruthy();
   });
 
   test('deleting it: its operations stay, without the merchant', async () => {
@@ -207,15 +203,15 @@ describe('3.3 several merchants', () => {
   });
 });
 
-describe('3.2.6–3.2.7 turning "Разные категории" off', () => {
+describe('3.2.6–3.2.7 one category again', () => {
   // GLOVO of different categories (its card loads it on opening)
   beforeEach(async () => {
     const db = await getDb();
     await db.run("INSERT INTO mixed_merchants (merchant_key, created_at) VALUES ('GLOVO', 0)");
     await db.run("INSERT INTO merchant_categories (merchant_key, category_id) SELECT 'GLOVO', id FROM categories WHERE name IN ('Кафе и рестораны', 'Продукты')");
     await tap('GLOVO');
-    expect(await screen.findByText('Категории мерчанта')).toBeTruthy();
-    toggleSwitch(false);
+    expect(await screen.findByText('☕️ Кафе и рестораны')).toBeTruthy();
+    expect(screen.getByText('🛒 Продукты')).toBeTruthy();
   });
   const isMixed = async () => (await q('SELECT 1 FROM mixed_merchants WHERE merchant_key = ?', ['GLOVO'])).length === 1;
 
@@ -231,6 +227,8 @@ describe('3.2.6–3.2.7 turning "Разные категории" off', () => {
     expect(await ruleOf('GLOVO')).toBe('Кафе и рестораны');
   });
   test('without one: new operations come without a category', async () => {
+    await tap('Сменить');
+    await tap('⚪️ Без категории');
     await tap('Сохранить');
     expect(await screen.findByText('Новые операции «GLOVO» будут приходить без категории')).toBeTruthy();
     expect(await isMixed()).toBe(false);

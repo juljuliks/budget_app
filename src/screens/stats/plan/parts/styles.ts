@@ -41,8 +41,9 @@ export const styles = StyleSheet.create({
   // the second dot covers a third of the first, a ring of the card's colour between them
   legendOver: { width: 12, height: 12, borderRadius: 6, marginLeft: -5, borderWidth: 2, borderColor: colors.surface },
   partLabel: { fontSize: 14, color: colors.muted },
-  // the amounts right-aligned at the edge; the shares in a column right by the names
-  partValues: { flex: 1, flexDirection: 'row', alignItems: 'baseline', justifyContent: 'flex-end', gap: 6 },
+  // the amounts right-aligned at the edge; the shares in a column right by the names.
+  // center, not baseline: the overspend's ⓘ is a drawing, and baseline drops it under the amount
+  partValues: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 6 },
   partValue: { textAlign: 'right', fontSize: 14, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
   // "перерасход: −15 ₾ ⓘ" under savings the overspend took part of (a plan's row)
   less: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 2 },

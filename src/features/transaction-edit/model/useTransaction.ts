@@ -24,11 +24,13 @@ export function useTransaction(txId: number, visible: boolean) {
     const t = await getTransaction(txId);
     // gone while open (deleted from this sheet: it slides away): the last one stays on screen
     setTx((prev) => t ?? (prev === undefined ? null : prev));
-    const rule = t?.merchant_key && isRememberable(t.kind) ? await findCategoryForMerchant(t.merchant_key) : null;
+    // a refund is not remembered, but a merchant of different categories still offers its list on the refund
+    const key = t?.merchant_key && (isRememberable(t.kind) || t.kind === 'refund') ? t.merchant_key : null;
+    const rule = key && t && isRememberable(t.kind) ? await findCategoryForMerchant(key) : null;
     const c = rule ? await getCategory(rule.category_id) : undefined;
     setMerchantCategory(c ? categoryLabel(c) : null);
-    const mixed = t?.merchant_key && isRememberable(t.kind) && await isMixedMerchant(t.merchant_key);
-    setMixedCats(mixed ? (await merchantCategories(t!.merchant_key!, 50)).map((x) => ({ id: x.id, label: categoryLabel(x) })) : null);
+    const mixed = !!key && await isMixedMerchant(key);
+    setMixedCats(mixed ? (await merchantCategories(key, 50)).map((x) => ({ id: x.id, label: categoryLabel(x) })) : null);
     return t;
   }, [txId]);
 

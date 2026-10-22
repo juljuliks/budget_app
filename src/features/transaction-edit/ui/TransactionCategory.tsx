@@ -26,7 +26,7 @@ type Props = {
 /**
  * The operation's category. "Сменить" (right of "Категория") opens the category list; with none yet, the value is
  * "Без категории". A long press there picks several and opens the split. A merchant of different categories keeps its
- * chips. A split one shows its parts; a settled refund says so.
+ * chips, and so does its refund. A split one shows its parts; a settled refund says so.
  */
 export default function TransactionCategory({ tx, mixedCats, saving, choose, onSplit }: Props) {
   const [pickerOpen, setPickerOpen] = useState(false);

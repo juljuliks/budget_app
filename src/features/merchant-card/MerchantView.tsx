@@ -19,10 +19,9 @@ type Props = {
 };
 
 /**
- * A merchant's page: its operations (a link to them), "Разные категории", the categories right in it — the merchant's
- * one or "Без категории", or, of different categories, several (offered for its operations); its latest operations.
- * "Сохранить" (pinned at the bottom) says what a change means first (no question for a merchant getting its first
- * category or none).
+ * A merchant's page: its operations (a link to them), its category — one, "Без категории", or several, picked in
+ * "Сменить" (a long press picks several) — and its latest operations. "Сохранить" (pinned at the bottom) says what a
+ * change means first (no question for a merchant getting its first category or none).
  */
 export default function MerchantView({ merchantId, onClose, onShowOperations, recent }: Props) {
   const card = useMerchantCard(merchantId, undefined, onClose);
@@ -38,18 +37,15 @@ export default function MerchantView({ merchantId, onClose, onShowOperations, re
         extra={[{ title: 'Удалить мерчанта', danger: true, onPress: remove }]}
       />
     )}>
-      <MerchantHead m={m} mixed={mixed} saving={saving} onShowTransactions={() => onShowOperations(m.name)} onSwitchMixed={card.switchMixed} />
+      <MerchantHead m={m} onShowTransactions={() => onShowOperations(m.name)} />
       <MerchantCategories
-        name={m.name}
-        savedCategoryId={m.category_id}
         categories={card.categories}
         mixed={mixed}
         single={card.single}
         list={card.list}
         saving={saving}
-        toggle={card.toggle}
-        setSingle={card.setSingle}
-        setList={card.setList}
+        chooseOne={card.chooseOne}
+        chooseSeveral={card.chooseSeveral}
       />
       {recent}
     </Page>

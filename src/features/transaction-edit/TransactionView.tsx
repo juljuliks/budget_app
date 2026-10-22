@@ -55,7 +55,7 @@ export default function TransactionView({ txId, onClose }: Props) {
       <TransactionHeader tx={tx} onEditAmount={() => setAmountOpen(true)} onEditKind={() => setKindOpen(true)} merchantLinked={rememberable} />
       <TransactionCategory tx={tx} mixedCats={mixedCats} saving={saving} choose={choose} onSplit={(ids) => { setSplitSeed(ids ?? null); setSplitOpen(true); }} />
 
-      {rememberable && mixedCats ? (
+      {(rememberable || tx.kind === 'refund') && mixedCats ? (
         <Text style={styles.merchantInfo}>У «{merchantName}» разные категории: каждая новая операция спрашивает.</Text>
       ) : null}
       {rememberable && merchantCategory ? (

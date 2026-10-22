@@ -1,6 +1,6 @@
-// What the card shows and edits: the merchant, of different categories or not, its category or its list.
+// What the card shows and edits: the merchant, its category or several (a long press in "Сменить").
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { getMerchant, merchantCategories, MerchantDetails, merchantUsedCategories } from '@/db/merchants';
+import { getMerchant, merchantCategories, MerchantDetails } from '@/db/merchants';
 import { categoryLabel, categoryLabelOf, listCategories } from '@/db/categories';
 import { categoryColors } from '@/db/colors';
 import type { CategoryInfo } from '@/entities/category';
@@ -54,18 +54,15 @@ export function useMerchantCard(merchantId: string | null, given: Map<number, Ca
   const sameList = list.length === savedList.length && list.every((id) => savedList.includes(id));
   const dirty = !!m && (mixed !== m.mixed || (mixed ? !sameList : single !== m.category_id));
 
-  // switched on with an empty list: the categories its operations have, picked already
-  function switchMixed(on: boolean) {
-    setMixed(on);
-    if (on && m && list.length === 0) merchantUsedCategories(m.id).then(setList).catch(toastFailure('load used categories', LOAD_FAILED));
+  // one category (or none): no longer of different ones. Several: each new operation asks among these.
+  function chooseOne(id: number | null) {
+    setMixed(false);
+    setSingle(id);
+  }
+  function chooseSeveral(ids: number[]) {
+    setMixed(true);
+    setList(ids);
   }
 
-  function toggle(id: number | null) {
-    // "Без категории": the merchant's own choice (not offered in the list of different ones)
-    if (id === null) { if (!mixed) setSingle(null); return; }
-    if (mixed) setList((l) => (l.includes(id) ? l.filter((x) => x !== id) : [...l, id]));
-    else setSingle(id);
-  }
-
-  return { m, categories, mixed, single, list, dirty, label, load, switchMixed, toggle, setSingle, setList };
+  return { m, categories, mixed, single, list, dirty, label, load, chooseOne, chooseSeveral };
 }

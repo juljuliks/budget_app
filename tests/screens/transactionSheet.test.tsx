@@ -1,7 +1,7 @@
 // 2.7: an operation's card — what it shows, its category (this one or the merchant's), the amount, the note, deleting.
 import { fireEvent, waitFor } from '@testing-library/react-native';
 import { openApp, screen, tap, texts, back, longPress } from './app';
-import { ops } from '../e2e/seeds';
+import { at, buy, ops } from '../e2e/seeds';
 import { getDb } from '../../src/db';
 import { createCategory } from '../../src/db/categories';
 import { getTransferTypeId } from '../../src/db/categoryTypes';
@@ -155,12 +155,12 @@ test('2.7.10: a note — added, shown, found, removed', async () => {
 test('2.7.11: the merchant\'s name opens its page over the operation\'s; its operations, "Назад" — the pages again', async () => {
   await tap('SPAR');
   await tap('SPAR ›');
-  expect(await screen.findByText('Разные категории')).toBeTruthy();
+  expect(await screen.findByText('Удалить мерчанта')).toBeTruthy();
   await tap(/^\d+ операци.* ›$/);
   expect(await screen.findByDisplayValue('SPAR')).toBeTruthy();
-  expect(screen.queryByText('Разные категории')).toBeNull();
+  expect(screen.queryByText('Удалить мерчанта')).toBeNull();
   await tap('Назад');
-  expect(await screen.findByText('Разные категории')).toBeTruthy();
+  expect(await screen.findByText('Удалить мерчанта')).toBeTruthy();
   expect(screen.queryByDisplayValue('SPAR')).toBeNull();
   // under the merchant's page — the operation's
   back();
@@ -213,6 +213,21 @@ test('2.7.6: a merchant of different categories: its categories to tap, no quest
   await tap('👕 Одежда');
   expect(await screen.findByText('Категория «👕 Одежда» назначена')).toBeTruthy();
   expect(await mixedOf('GLOVO')).toEqual(['Кафе и рестораны', 'Одежда', 'Продукты']);
+});
+
+test('2.7.6: a refund of such a merchant offers its categories; the pick stays this refund\'s', async () => {
+  await mixedGlovo();
+  await buy('GLOVO', 4, at(0, 10), null, { kind: 'refund' });
+  // the list was already open: search reloads it and brings the refund in
+  fireEvent.changeText(screen.getByPlaceholderText('Поиск: мерчант, описание, сумма…'), 'GLOVO');
+  await tap('Возврат · GLOVO');
+  expect(await screen.findByText('У «GLOVO» разные категории: каждая новая операция спрашивает.')).toBeTruthy();
+  expect(screen.getByText('☕️ Кафе и рестораны')).toBeTruthy();
+  expect(screen.getByText('🛒 Продукты')).toBeTruthy();
+  await tap('☕️ Кафе и рестораны');
+  expect(await screen.findByText('Категория «☕️ Кафе и рестораны» назначена')).toBeTruthy();
+  expect((await opsOf('GLOVO'))[0]).toMatchObject({ c: 'Кафе и рестораны', s: 'user' });
+  expect(await ruleOf('GLOVO')).toBeNull();
 });
 
 describe('2.7.16 split between categories', () => {
