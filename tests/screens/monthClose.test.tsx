@@ -202,4 +202,35 @@ describe('6.6 month close', () => {
       expect(screen.queryByText('Сентябрь не закрыт')).toBeNull();
     });
   });
+
+  test('"Остаток": August\'s balance plus what September would save, edited down', async () => {
+    await openApp(async () => {
+      await planned();
+      await (await getDb()).run(
+        "INSERT INTO month_closes (ym, by_balance, balance_minor, carry_currency, closed_at) VALUES ('2026-08', 1, 120000, 'GEL', 1)");
+    });
+    await open();
+    await tap('Остаток');
+    const field = await screen.findByLabelText('Остаток на счёте');
+    expect(field.props.value).toBe('2350');
+    expect(screen.getByText(m('В августе было 1 200 ₾, по бюджету +1 150 ₾ — по расчёту 2 350 ₾.'))).toBeTruthy();
+    expect(screen.getByText(m('За сентябрь +1 150 ₾'))).toBeTruthy();
+    act(() => { field.props.onChangeText('2300'); field.props.onBlur(); });
+    expect(await screen.findByText(m('За сентябрь +1 100 ₾'))).toBeTruthy();
+    expect(screen.getByText(m('На 50 ₾ меньше расчёта'))).toBeTruthy();
+    expect(screen.getByText(m('+1 100 ₾'))).toBeTruthy();
+    expect(screen.getByText(m('1 100 ₾'))).toBeTruthy();
+    expect(disabled('Отчёт за сентябрь')).toBe(false);
+  });
+
+  test('the first "Остаток": "В августе было" once, then the account opens on it plus what to save', async () => {
+    await openApp(planned);
+    await open();
+    await tap('Остаток');
+    expect(await screen.findByText('Прошлого остатка нет — его нужно ввести один раз.')).toBeTruthy();
+    const was = screen.getByLabelText('В августе было');
+    act(() => { was.props.onChangeText('1200'); was.props.onBlur(); });
+    expect((await screen.findByLabelText('Остаток на счёте')).props.value).toBe('2350');
+    expect(screen.queryByText('Прошлого остатка нет — его нужно ввести один раз.')).toBeNull();
+  });
 });

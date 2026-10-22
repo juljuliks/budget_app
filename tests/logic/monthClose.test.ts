@@ -3,7 +3,8 @@
 import { freshDb } from '../helpers';
 import { getDb } from '../../src/db';
 import {
-  answerClose, carryInto, finishClose, fundLedger, getFund, monthClose, monthToClose, OverBudgetError, setSplit, planRateDate, setFund, setPlanBudget,
+  answerClose, balanceView, carryInto, finishClose, fundLedger, getFund, monthClose, monthToClose, OverBudgetError, setSplit, planRateDate, setFund, setPlanBudget,
+  splitKept,
   storedBudget,
 } from '../../src/db/plans';
 import { createCategory } from '../../src/db/categories';
@@ -213,4 +214,52 @@ test('the report\'s plan and fact: the leftover moved — apart, not in the tota
   expect(await savingsPlanFact('2026-09', 'GEL')).toMatchObject({ rest: { plan: 20000, fact: null, choice: 'next' }, plan: 30000, fact: 30000 });
   await (await getDb()).run("UPDATE month_closes SET saved = NULL, saved_minor = NULL WHERE ym = '2026-09'");
   expect(await savingsPlanFact('2026-09', 'GEL')).toMatchObject({ closed: false, fact: null });
+});
+
+test('splitKept: a shortfall comes off 💰, then 🔒, then the farthest fund; extra goes to 💰', () => {
+  // 80 + 40 of funds, 🔒 70, 💰 30 is 220. 50 short: 💰 gone, 🔒 50, both funds whole
+  expect(splitKept(170, [80, 40], 70, 30)).toEqual({ funds: [80, 40], locked: 50, rest: 0 });
+  // 170 short: 💰 and 🔒 gone, then the farther fund, then 30 of the nearer
+  expect(splitKept(50, [80, 40], 70, 30)).toEqual({ funds: [50, 0], locked: 0, rest: 0 });
+  // 70 past the plan of 180 goes to 💰
+  expect(splitKept(250, [80], 70, 30)).toEqual({ funds: [80], locked: 70, rest: 100 });
+  expect(splitKept(-40, [80], 70, 30)).toEqual({ funds: [0], locked: 0, rest: 0 });
+  expect(balanceView(1200, null, 1650, 500)).toMatchObject({ suggested: 1700, delta: 450, short: 50 });
+  expect(balanceView(null, null, null, 500).suggested).toBeNull();
+});
+
+test('"Остаток": the month before\'s balance plus what to save; a shortfall off 💰 then 🔒; a fall stores nothing below 0', async () => {
+  await september(50000);
+  const db = await getDb();
+  await db.run("INSERT INTO month_closes (ym, by_balance, balance_minor, carry_currency, closed_at) VALUES ('2026-08', 1, 120000, 'GEL', 1)");
+  await answerClose('2026-09', { by_balance: 1, balance_minor: 165000, saved: 'other', saved_minor: 45000 });
+  const c = await monthClose('2026-09');
+  // 🔒 300 and 💰 200 asked; 50 short of 1 700: 💰 150, 🔒 whole
+  expect(c.balance).toMatchObject({ on: true, prior: 120000, suggested: 170000, delta: 45000, short: 5000 });
+  expect(c.put_minor).toBe(45000);
+  expect(c.split).toMatchObject({ locked: 30000, rest: 15000 });
+  expect(c.complete).toBe(true);
+  expect(await finishClose('2026-09')).toBe(true);
+  expect(await db.get('SELECT by_balance, balance_minor FROM month_closes WHERE ym = ?', ['2026-09'])).toEqual({ by_balance: 1, balance_minor: 165000 });
+
+  await answerClose('2026-09', { by_balance: 1, balance_minor: 100000, saved: 'other', saved_minor: -20000 });
+  const down = await monthClose('2026-09');
+  expect(down.put_minor).toBe(-20000);
+  expect(down.split).toMatchObject({ locked: 0, rest: 0 });
+  expect(down.saved_minor).toBe(0);
+
+  await answerClose('2026-09', { by_balance: 0, balance_minor: null, balance_open_minor: null, saved: null, saved_minor: null });
+  expect(await monthClose('2026-09')).toMatchObject({ put_minor: null, balance: { on: false, prior: 120000 } });
+});
+
+test('"Остаток" the first time is the typed opening; a balance kept in another currency is converted into this month\'s', async () => {
+  await september(50000);
+  await answerClose('2026-09', { by_balance: 1, balance_open_minor: 120000, balance_minor: 165000, saved: 'other', saved_minor: 45000 });
+  expect(await monthClose('2026-09')).toMatchObject({ balance: { prior: null, open: 120000, delta: 45000 }, put_minor: 45000 });
+
+  await setPlanBudget('2026-08', 100000, 'USD', 0, true, 0);
+  const db = await getDb();
+  await db.run("INSERT INTO month_closes (ym, by_balance, balance_minor, closed_at) VALUES ('2026-08', 1, 10000, 1)");
+  await db.run("INSERT INTO fx_rates (date, currency, gel_per_unit) VALUES ('2026-09-30', 'USD', 2.7)");
+  expect((await monthClose('2026-09')).balance.prior).toBe(27000);
 });

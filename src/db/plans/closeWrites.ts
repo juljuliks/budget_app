@@ -45,7 +45,9 @@ export async function setSplit(ym: string, parts: Array<{ category_id: number; m
   await keepCarry(ym, nowYm);
 }
 
-const COLUMNS: Array<keyof CloseAnswers> = ['over_cover', 'over_rest_cover', 'rest_choice', 'saved', 'saved_minor'];
+const COLUMNS: Array<keyof CloseAnswers> = [
+  'over_cover', 'over_rest_cover', 'rest_choice', 'saved', 'saved_minor', 'by_balance', 'balance_minor', 'balance_open_minor',
+];
 
 /** Answers of the close of `ym` (the ones given; the others stay). */
 export async function answerClose(ym: string, patch: Partial<CloseAnswers>, nowYm = currentYm()): Promise<void> {

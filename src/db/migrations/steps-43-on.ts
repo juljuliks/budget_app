@@ -225,4 +225,11 @@ export const STEPS_43_ON: MigrationStep[][] = [
           WHERE limit_minor = 0 AND kind <> 'fund' AND ym >= ?`, [ym]);
     },
   ],
+  // 57: "Остаток" answers the close by the account at the month's end (the budget's currency), not by "За месяц".
+  // balance_open_minor is "В августе было" when the month before has no balance of its own
+  [
+    'ALTER TABLE month_closes ADD COLUMN by_balance INTEGER NOT NULL DEFAULT 0',
+    'ALTER TABLE month_closes ADD COLUMN balance_minor INTEGER',
+    'ALTER TABLE month_closes ADD COLUMN balance_open_minor INTEGER',
+  ],
 ];

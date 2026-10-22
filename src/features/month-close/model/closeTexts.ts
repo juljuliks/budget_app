@@ -4,6 +4,11 @@ import { MONTHS, MONTHS_GEN, MONTHS_NOM, MONTHS_PREP } from '@/shared/lib/dates'
 
 export const STEP_NAMES: Record<CloseStep, string> = { over: 'Перерасход', savings: 'Сбережения' };
 
+/** "августе" of the month before `ym`: "В августе было". */
+export function monthBeforePrep(ym: string): string {
+  return MONTHS_PREP[(Number(ym.slice(5)) + 10) % 12];
+}
+
 /** "сентябрь", "сентября", "в сентябре", "Сентябрь 2026" of a month key */
 export function monthWords(ym: string) {
   const m = Number(ym.slice(5)) - 1;
