@@ -61,7 +61,8 @@ describe('merchant', () => {
   test.each([
     ['LTD KEEPZ.ME*YANDEX GO', 'YANDEX GO'],     // gateway prefix
     ['AMZN Mktp US*2K3AB', 'AMZN Mktp US'],      // order id suffix
-    ['TBCTPBUS 28/09/26 14:08', 'TBCTPBUS'],     // date on the same line
+    ['TBCTPBUS 28/09/26 14:08', 'TBCTPBUS'],     // date on the same line, no seconds
+    ['Wolt 28/09/26 14:08:52', 'Wolt'],          // the same, with seconds — they are not part of the name
   ])('%s -> %s', (line, merchant) => {
     expect(parseTbc(purchase('1.00GEL', line))!.raw_merchant).toBe(merchant);
   });

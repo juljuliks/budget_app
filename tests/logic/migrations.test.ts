@@ -406,4 +406,23 @@ describe('migrations', () => {
       { ym: '2026-09', category_id: 90, currency: 'USD' }, { ym: '2026-10', category_id: 90, currency: 'GEL' },
       { ym: '2026-10', category_id: 91, currency: 'USD' }, { ym: '2026-10', category_id: 92, currency: 'USD' }]);
   });
+
+  test('migration 59: seconds left on a merchant ("Wolt :17", "Wolt: 25") join into one shop', async () => {
+    const db = openDatabase(':memory:');
+    await migrate(db, MIGRATIONS.slice(0, 58));
+    const sms = (sec: string) => `12.00GEL\n(*1234)\nWolt 05/02/26 14:08:${sec}\nBalance: 10.00GEL`;
+    const add = (name: string, key: string, body: string, hash: string) => db.run(
+      `INSERT INTO transactions (bank, kind, amount_minor, currency, raw_merchant, merchant_key, occurred_at, raw_sms, sms_hash)
+        VALUES ('tbc', 'purchase', 100, 'GEL', ?, ?, 1, ?, ?)`, [name, key, body, hash]);
+    await add('Wolt :17', 'WOLT :17', sms('17'), 'a');
+    await add('Wolt :25', 'WOLT :25', sms('25'), 'b');
+    await add('Wolt: 36', 'WOLT: 36', 'not an sms', 'c');
+    await add('SPAR', 'SPAR', '4.00GEL\n(*1234)\nSPAR\nBalance: 1GEL\n05/02/26 12:00', 'd');
+    await db.run("INSERT INTO merchant_rules (match_type, pattern, category_id, created_at) VALUES ('exact', 'WOLT :17', 1, 0)");
+    await migrate(db);
+    expect(await db.all('SELECT raw_merchant AS m, merchant_key AS k FROM transactions ORDER BY sms_hash')).toEqual([
+      { m: 'Wolt', k: 'WOLT' }, { m: 'Wolt', k: 'WOLT' }, { m: 'Wolt', k: 'WOLT' }, { m: 'SPAR', k: 'SPAR' },
+    ]);
+    expect(await db.all('SELECT pattern FROM merchant_rules')).toEqual([{ pattern: 'WOLT' }]);
+  });
 });

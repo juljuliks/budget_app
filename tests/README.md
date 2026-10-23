@@ -38,7 +38,7 @@
 
 | Раздел плана | Где |
 |---|---|
-| 1.1 разбор SMS, 1.6 автокатегория | `sms.test.tsx` |
+| 1.1 разбор SMS, 1.6 автокатегория | `sms.test.tsx`; секунды в дате на строке мерчанта — `logic/parserEdgeCases.test.ts`, склейка «Wolt :17» — `logic/migrations.test.ts` |
 | 1.2 баланс карты, 1.5 ручная операция, SMS при открытом списке | `incoming.test.tsx` |
 | 1.7 «Не распознано», разметка, шаблоны сообщений | `messages.test.tsx`; разбор по шаблону — `logic/messageTemplates.test.ts`, приём — `logic/unparsed.test.ts` |
 | 1.1.10, 1.1.17, 1.1.18 приём SMS в фоне, фильтр отправителя, длинное SMS | Maestro `sms-receive` |

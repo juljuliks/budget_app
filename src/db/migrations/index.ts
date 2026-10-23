@@ -4,6 +4,7 @@ import { STEPS_1_12 } from './steps-1-12';
 import { STEPS_13_ON } from './steps-13-on';
 import { STEPS_33_ON } from './steps-33-on';
 import { STEPS_43_ON } from './steps-43-on';
+import { STEPS_59_ON } from './steps-59-on';
 import type { MigrationStep } from './step';
 
 export type { MigrationStep } from './step';
@@ -11,7 +12,7 @@ export type { MigrationStep } from './step';
 // Each migration is a list of single statements (quick-sqlite executes one statement per call).
 // Append new migrations to the end; never edit ones that have shipped.
 // PRAGMA user_version stores how many have been applied.
-export const MIGRATIONS: MigrationStep[][] = [...STEPS_1_12, ...STEPS_13_ON, ...STEPS_33_ON, ...STEPS_43_ON];
+export const MIGRATIONS: MigrationStep[][] = [...STEPS_1_12, ...STEPS_13_ON, ...STEPS_33_ON, ...STEPS_43_ON, ...STEPS_59_ON];
 
 export async function getSchemaVersion(db: Db): Promise<number> {
   const row = await db.get<{ user_version: number }>('PRAGMA user_version');

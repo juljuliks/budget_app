@@ -11,7 +11,9 @@ const AMOUNT_AFTER = new RegExp(`${NUM}\\s*${CUR}`, 'i');
 const AMOUNT_BEFORE = new RegExp(`${CUR}\\s*${NUM}`, 'i');
 const CURRENCY_CODES: Record<string, string> = { '₾': 'GEL', '$': 'USD', '€': 'EUR' };
 
-const DATE_TIME = /(\d{1,2})\/(\d{1,2})\/(\d{4}|\d{2})(?:\s+(\d{1,2}):(\d{2}))?/;
+// "28/09/26", "28/09/26 14:08" and "28/09/26 14:08:52". Seconds are not stored, but they are part of the
+// time: a merchant sharing the line must not keep them ("Wolt 28/09/26 14:08:52" → "Wolt", not "Wolt :52").
+const DATE_TIME = /(\d{1,2})\/(\d{1,2})\/(\d{4}|\d{2})(?:\s+(\d{1,2}):(\d{2})(?::\d{2})?)?/;
 const CARD_MASK = /\(\*[^)]+\)/;
 // "Balance: 283.14GEL"; a multi-currency card's deposit: "Bal: 6775.46 GEL" (all its accounts in lari)
 const BALANCE_LINE = /^(balance|bal|available)\b/i;
