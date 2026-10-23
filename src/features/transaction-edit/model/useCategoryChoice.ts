@@ -11,12 +11,12 @@ import { toast, toastError } from '@/shared/ui/toast';
 import { merchantChoiceText } from '../texts';
 import type { Tx } from './useTransaction';
 
-export function useCategoryChoice(txId: number, tx: Tx | null, visible: boolean, onClose: () => void) {
+export function useCategoryChoice(txId: number, tx: Tx | null, visible: boolean) {
   const [saving, setSaving] = useState(false);
   useEffect(() => { if (visible) setSaving(false); }, [visible, txId]);
 
-  /** `close`: leave the page ("Сменить"). A mixed merchant's chip stays. */
-  async function assign(categoryId: number | null, choice?: MerchantChoice, close = true) {
+  /** Saves and stays on the page. `onSaved` runs after a chip pick from "Сменить" (the chips follow it). */
+  async function assign(categoryId: number | null, choice?: MerchantChoice, onSaved?: () => void) {
     setSaving(true);
     try {
       await assignCategory(txId, categoryId, choice);
@@ -25,9 +25,9 @@ export function useCategoryChoice(txId: number, tx: Tx | null, visible: boolean,
       if (!c) toast('Категория убрана');
       else if (choice === 'merchant' && tx) toast(`Категория «${categoryLabel(c)}» назначена мерчанту «${merchantLabel(tx)}»`);
       else toast(`Категория «${categoryLabel(c)}» назначена`);
-      if (close) onClose();
-      else setSaving(false);
-      // a category with payments by merchant, for a merchant with none: how often, when next (over the sheet that just closed)
+      setSaving(false);
+      onSaved?.();
+      // a category with payments by merchant, for a merchant with none: how often, when next (over this page)
       if (c?.by_merchant && tx?.merchant_key && !(await paymentCard(tx.merchant_key))) setTimeout(() => openPayment({ txId }), 250);
     } catch (e) {
       console.error('assign category failed', e);
@@ -38,16 +38,16 @@ export function useCategoryChoice(txId: number, tx: Tx | null, visible: boolean,
 
   // A purchase / payment at a merchant with another category or none: ask whether the new one is for this
   // operation only (the usual choice) or becomes the merchant's (with what that changes), or nothing changes
-  async function choose(categoryId: number | null, close = true) {
+  async function choose(categoryId: number | null, onSaved?: () => void) {
     if (saving) return;
     const change = await merchantChangePreview(txId, categoryId).catch((e) => { console.error('preview failed', e); return null; });
-    if (!change) { await assign(categoryId, undefined, close); return; }
+    if (!change) { await assign(categoryId, undefined, onSaved); return; }
     const [from, to] = await Promise.all([change.fromCategoryId === null ? null : getCategory(change.fromCategoryId), getCategory(categoryId!)]);
     const t = merchantChoiceText(change, from ? categoryLabel(from) : null, to ? categoryLabel(to) : '?');
     sheetAlert(t.title, t.message, [
       { text: 'Отмена', style: 'cancel' },
-      { text: 'Только для этой операции', onPress: () => { assign(categoryId, 'only', close); } },
-      { text: 'Для мерчанта', style: 'secondary', onPress: () => { assign(categoryId, 'merchant', close); } },
+      { text: 'Только для этой операции', onPress: () => { assign(categoryId, 'only', onSaved); } },
+      { text: 'Для мерчанта', style: 'secondary', onPress: () => { assign(categoryId, 'merchant', onSaved); } },
     ]);
   }
 

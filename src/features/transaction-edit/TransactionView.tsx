@@ -19,7 +19,7 @@ import TransactionHeader from './ui/TransactionHeader';
 
 type Props = {
   txId: number;
-  /** leaves the page: the operation deleted, a category picked */
+  /** leaves the page: the operation deleted */
   onClose: () => void;
 };
 
@@ -30,11 +30,11 @@ type Props = {
  */
 export default function TransactionView({ txId, onClose }: Props) {
   const { tx, merchantCategory, mixedCats, reload, failed } = useTransaction(txId, true);
-  const { saving, choose } = useCategoryChoice(txId, tx ?? null, true, onClose);
+  const { saving, choose } = useCategoryChoice(txId, tx ?? null, true);
   const split = !!tx && splitParts(tx) !== null;
   const showChips = !!tx && tx.id === txId && !split && !!mixedCats?.length;
   const currentId = showChips && tx ? tx.category_id : null;
-  const { picked, toggle } = useMixedPick(txId, currentId, showChips);
+  const { picked, toggle, select } = useMixedPick(txId, currentId, showChips);
   const chooseRef = useRef(choose);
   chooseRef.current = choose;
   const savedChip = useRef<number | null>(null);
@@ -44,7 +44,7 @@ export default function TransactionView({ txId, onClose }: Props) {
   useEffect(() => {
     if (lone == null || lone === currentId || lone === savedChip.current) return;
     savedChip.current = lone;
-    chooseRef.current(lone, false);
+    chooseRef.current(lone);
   }, [lone, currentId]);
   const [amountOpen, setAmountOpen] = useState(false);
   const [splitOpen, setSplitOpen] = useState(false);
@@ -74,7 +74,8 @@ export default function TransactionView({ txId, onClose }: Props) {
     )}>
       <TransactionHeader tx={tx} onEditAmount={() => setAmountOpen(true)} onEditKind={() => setKindOpen(true)} merchantLinked={rememberable} />
       <TransactionCategory
-        tx={tx} mixedCats={showChips ? mixedCats : null} picked={picked} saving={saving} choose={choose} onToggle={toggle}
+        tx={tx} mixedCats={showChips ? mixedCats : null} picked={picked} saving={saving} onToggle={toggle}
+        choose={(id) => { choose(id, () => { savedChip.current = id; select(id); }); }}
         onSplit={(ids) => { setSplitSeed(ids ?? null); setSplitOpen(true); }}
       />
 

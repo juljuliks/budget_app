@@ -35,9 +35,10 @@ function chipList(mixed: Cat[], categoryId: number | null, category: string | nu
 }
 
 /**
- * The operation's category. "Сменить" (right of "Категория") opens the category list; with none yet, the value is
- * "Без категории". A long press there picks several and opens the split. A merchant of different categories keeps its
- * chips: a tap highlights one (saved at once; the back arrow leaves) or several ("Разделить" opens the split).
+ * The operation's category. "Сменить" (right of "Категория") opens the category list and saves the pick without
+ * leaving the page; with none yet, the value is "Без категории". A long press there picks several and opens the split.
+ * A merchant of different categories keeps its chips: a tap highlights one (saved at once; the back arrow leaves) or
+ * several ("Разделить" opens the split).
  * A refund keeps the chips. A split one shows its parts; a settled refund says so.
  */
 export default function TransactionCategory({ tx, mixedCats, picked, saving, choose, onToggle, onSplit }: Props) {

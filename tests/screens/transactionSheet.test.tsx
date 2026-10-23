@@ -36,6 +36,7 @@ test('2.7.2–2.7.3: without a category — "Сменить", search, the mercha
   fireEvent.changeText(await screen.findByPlaceholderText('Найти категорию'), 'кафе');
   await tap('☕️ Кафе и рестораны');
   expect(await screen.findByText('Категория «☕️ Кафе и рестораны» назначена')).toBeTruthy();
+  expect(screen.getByText('Удалить операцию')).toBeTruthy();
   await waitFor(async () => expect((await opsOf('GLOVO'))[0]).toMatchObject({ c: 'Кафе и рестораны', s: 'rule' }));
   expect(await ruleOf('GLOVO')).toBe('Кафе и рестораны');
 });
@@ -66,6 +67,7 @@ describe('2.7.4: the merchant has another category', () => {
     await pick();
     await tap('Только для этой операции');
     expect(await screen.findByText('Категория «🛒 Продукты» назначена')).toBeTruthy();
+    expect(screen.getByText('Удалить операцию')).toBeTruthy();
     expect((await opsOf('ZARA')).map((o) => [o.c, o.s])).toEqual([['Одежда', 'rule'], ['Одежда', 'rule'], ['Продукты', 'user']]);
     expect(await ruleOf('ZARA')).toBe('Одежда');
   });
@@ -75,6 +77,7 @@ describe('2.7.4: the merchant has another category', () => {
     expect(screen.getByText('Сейчас у мерчанта «👕 Одежда». Для мерчанта: категория изменится у 3 операций на 195.00 ₾, и новые операции мерчанта будут получать её автоматически. Выбранные вручную категории не изменятся.')).toBeTruthy();
     await tap('Для мерчанта');
     expect(await screen.findByText('Категория «🛒 Продукты» назначена мерчанту «ZARA»')).toBeTruthy();
+    expect(screen.getByText('Удалить операцию')).toBeTruthy();
     expect((await opsOf('ZARA')).map((o) => o.c)).toEqual(['Продукты', 'Продукты', 'Продукты']);
     expect(await ruleOf('ZARA')).toBe('Продукты');
   });
@@ -91,6 +94,7 @@ test('2.7.7: "Без категории" stays: the merchant\'s category won\'t 
   await tap('Сменить');
   await tap('⚪️ Без категории');
   expect(await screen.findByText('Категория убрана')).toBeTruthy();
+  expect(screen.getByText('Удалить операцию')).toBeTruthy();
   expect((await opsOf('SPAR'))[0]).toMatchObject({ c: null, s: 'user' });
 });
 
@@ -214,6 +218,10 @@ test('2.7.6: a merchant of different categories: its categories to tap, no quest
   await tap('Сменить');
   await tap('👕 Одежда');
   expect(await screen.findByText('Категория «👕 Одежда» назначена')).toBeTruthy();
+  expect(screen.getByText('Удалить операцию')).toBeTruthy();
+  await waitFor(() => expect(rowOf('👕 Одежда').props.accessibilityState).toMatchObject({ selected: true }));
+  expect(rowOf('☕️ Кафе и рестораны').props.accessibilityState).toMatchObject({ selected: false });
+  expect(screen.queryByText('Разделить')).toBeNull();
   expect(await mixedOf('GLOVO')).toEqual(['Кафе и рестораны', 'Одежда', 'Продукты']);
 });
 

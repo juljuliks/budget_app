@@ -741,7 +741,10 @@ describe('6.6 subscriptions on the operations', () => {
     await tap('Сохранить');
     expect(await screen.findByText('SPOTIFY — следующее списание 12 ноября')).toBeTruthy();
     expect((await subs())[0]).toMatchObject({ merchant_key: 'SPOTIFY', amount_minor: 1840, due: '2026-11-12' });
-    // the list: how often under its amount
+    // the operation stays: its subscription, not the list behind it
+    expect(await screen.findByText('SPOTIFY · каждый месяц')).toBeTruthy();
+    expect(screen.getByText('Удалить операцию')).toBeTruthy();
+    back();
     expect(await screen.findByText(' каждый месяц')).toBeTruthy();
   });
 
@@ -752,6 +755,8 @@ describe('6.6 subscriptions on the operations', () => {
     await tap('📺 Подписки');
     await tap('Пропустить');
     expect(await screen.findByText('SPOTIFY — без даты списания')).toBeTruthy();
+    expect(screen.getByText('Подписка без даты списания')).toBeTruthy();
+    expect(screen.getByText('Задать дату ›')).toBeTruthy();
     expect((await subs())[0]).toMatchObject({ merchant_key: 'SPOTIFY', due: null });
   });
 
