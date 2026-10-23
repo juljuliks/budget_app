@@ -234,11 +234,16 @@ test('2.7.6: a refund of such a merchant offers its categories; the pick stays t
 test('2.7.6: two chips turn "Готово" into "Разделить"', async () => {
   await mixedGlovo();
   await tap('GLOVO');
-  expect(await screen.findByText('Готово')).toBeTruthy();
+  expect(await screen.findByText('☕️ Кафе и рестораны')).toBeTruthy();
+  expect(screen.queryByText('Готово')).toBeNull();
   await tap('☕️ Кафе и рестораны');
   expect(await screen.findByText('Категория «☕️ Кафе и рестораны» назначена')).toBeTruthy();
   expect(screen.getByText('Готово')).toBeTruthy();
   expect(rowOf('☕️ Кафе и рестораны').props.accessibilityState).toMatchObject({ selected: true });
+  await tap('☕️ Кафе и рестораны');
+  expect(screen.queryByText('Готово')).toBeNull();
+  await tap('☕️ Кафе и рестораны');
+  expect(await screen.findByText('Готово')).toBeTruthy();
   await tap('🛒 Продукты');
   expect(await screen.findByText('Разделить')).toBeTruthy();
   expect(screen.queryByText('Готово')).toBeNull();

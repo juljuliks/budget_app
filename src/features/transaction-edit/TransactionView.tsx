@@ -60,14 +60,14 @@ export default function TransactionView({ txId, onClose }: Props) {
   // only purchases / payments are remembered for their merchant (see assignCategory)
   const rememberable = !!tx.merchant_key && isRememberable(tx.kind);
   const distribute = showChips && picked.length >= 2;
+  const one = showChips && picked.length === 1;
 
   return (
     <Page contentStyle={styles.content} footer={(
       <SheetActions
-        submit={showChips ? {
-          title: distribute ? 'Разделить' : 'Готово',
-          onPress: distribute ? () => { setSplitSeed(picked); setSplitOpen(true); } : onClose,
-        } : null}
+        submit={distribute
+          ? { title: 'Разделить', onPress: () => { setSplitSeed(picked); setSplitOpen(true); } }
+          : one ? { title: 'Готово', onPress: onClose } : null}
         style={styles.actions}
         extra={[
           ...(split ? [{ title: 'Убрать разделение', onPress: () => confirmUnsplit(tx) }] : []),
