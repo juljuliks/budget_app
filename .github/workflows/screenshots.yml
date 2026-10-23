@@ -1,7 +1,8 @@
 # Screenshots of the main screens of a published build, on demand (Actions → "Screenshots" → Run workflow, or the
-# API): an Android 13 emulator, the build's APK with a demo database in place of the app's (scripts/demo), Maestro
-# shooting the month, week, day, plan and operations screens. The PNGs are added to that build's release as
-# screenshots-1.0.N.zip. Not run on every push: the emulator takes ~10 minutes.
+# API): an Android 13 emulator, an x86_64 APK of that build's commit (built here, not taken from the release) with a
+# demo database in place of the app's (scripts/demo), Maestro shooting the month, week, day, plan and operations
+# screens. The PNGs are added to that build's release as screenshots-1.0.N.zip. The APK is not. Not run on every
+# push: the emulator takes ~10 minutes.
 name: Screenshots
 
 on:
@@ -39,12 +40,6 @@ jobs:
           echo "number=${TAG#v}" >> "$GITHUB_OUTPUT"
           # the demo database and the flows of that build's code (its schema)
           git checkout --quiet "$TAG"
-          gh release download "$TAG" -p 'budget-app-*.apk' -D "$RUNNER_TEMP/apk"
-          ls "$RUNNER_TEMP/apk"
-          # this emulator is x86_64; a release may also carry the phone APK (arm64-v8a) or, before the split, one universal APK
-          APK="$(find "$RUNNER_TEMP/apk" -name '*x86_64*.apk' -print -quit)"
-          [ -n "$APK" ] || APK="$(find "$RUNNER_TEMP/apk" -name 'budget-app-*.apk' -print -quit)"
-          echo "apk=$APK" >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-node@v4
         with:
@@ -56,9 +51,36 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
+          cache: gradle
 
       - name: Install JS dependencies
         run: npm ci
+
+      - name: Emulator APK
+        id: apk
+        working-directory: android
+        env:
+          KEYSTORE: ${{ secrets.BUDGETAPP_KEYSTORE_BASE64 }}
+          ORG_GRADLE_PROJECT_BUDGETAPP_RELEASE_STORE_FILE: ${{ runner.temp }}/release.keystore
+          ORG_GRADLE_PROJECT_BUDGETAPP_RELEASE_STORE_PASSWORD: ${{ secrets.BUDGETAPP_RELEASE_STORE_PASSWORD }}
+          ORG_GRADLE_PROJECT_BUDGETAPP_RELEASE_KEY_ALIAS: ${{ secrets.BUDGETAPP_RELEASE_KEY_ALIAS }}
+          ORG_GRADLE_PROJECT_BUDGETAPP_RELEASE_KEY_PASSWORD: ${{ secrets.BUDGETAPP_RELEASE_KEY_PASSWORD }}
+        run: |
+          # an older release may still carry the emulator APK; a new one does not, so build it and do not upload it
+          mkdir -p "$RUNNER_TEMP/apk"
+          gh release download "${{ steps.build.outputs.tag }}" -p '*x86_64*.apk' -D "$RUNNER_TEMP/apk" || true
+          FOUND="$(find "$RUNNER_TEMP/apk" -name '*x86_64*.apk' -print -quit)"
+          if [ -n "$FOUND" ]; then echo "apk=$FOUND" >> "$GITHUB_OUTPUT"; exit 0; fi
+          if [ -z "$KEYSTORE" ] || [ -z "$ORG_GRADLE_PROJECT_BUDGETAPP_RELEASE_STORE_PASSWORD" ] || [ -z "$ORG_GRADLE_PROJECT_BUDGETAPP_RELEASE_KEY_ALIAS" ] || [ -z "$ORG_GRADLE_PROJECT_BUDGETAPP_RELEASE_KEY_PASSWORD" ]; then
+            echo "::error::Release key secrets are not set (see android-release.yml)."
+            exit 1
+          fi
+          echo "$KEYSTORE" | base64 --decode > "$RUNNER_TEMP/release.keystore"
+          chmod +x ./gradlew
+          ./gradlew assembleRelease --no-daemon -PabiSplits -PreactNativeArchitectures=x86_64
+          APK="$GITHUB_WORKSPACE/android/app/build/outputs/apk/release/app-x86_64-release.apk"
+          test -f "$APK"
+          echo "apk=$APK" >> "$GITHUB_OUTPUT"
 
       - name: Demo database
         run: |
@@ -83,7 +105,7 @@ jobs:
           profile: pixel_6
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
-          script: bash scripts/demo/screenshots.sh "${{ steps.build.outputs.apk }}" "$RUNNER_TEMP/demo.db" "$RUNNER_TEMP/screenshots"
+          script: bash scripts/demo/screenshots.sh "${{ steps.apk.outputs.apk }}" "$RUNNER_TEMP/demo.db" "$RUNNER_TEMP/screenshots"
 
       - name: Add them to the release
         run: |

@@ -93,9 +93,9 @@ cd android && ./gradlew assembleRelease
 
 ### Сборка без компьютера (GitHub Actions)
 
-Каждый пуш в `main` собирает release-APK по архитектурам, подписывает их тем же ключом и публикует в **Releases** репозитория
-(`1.0.N`): `budget-app-1.0.N-arm64-v8a.apk` — на телефон, `budget-app-1.0.N-x86_64.apk` — на эмулятор. Скачать
-arm64 и поставить поверх можно прямо с телефона. Вручную: Actions → «Android release APK» → Run workflow.
+Каждый пуш в `main` собирает release-APK телефона, подписывает его тем же ключом и публикует в **Releases** репозитория
+(`1.0.N`): `budget-app-1.0.N-arm64-v8a.apk`. Сборки для эмулятора в релизе нет. Скачать APK и поставить поверх можно
+прямо с телефона. Вручную: Actions → «Android release APK» → Run workflow.
 
 Один раз добавить секреты (Settings → Secrets and variables → Actions → New repository secret):
 

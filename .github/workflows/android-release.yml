@@ -1,7 +1,6 @@
-# Builds the release APKs, signed with the app's release key, on every push to main (or by hand from the Actions
-# tab), and publishes them as a GitHub release "1.0.N": budget-app-1.0.N-arm64-v8a.apk for the phone and
-# budget-app-1.0.N-x86_64.apk for the CI emulator. N counts the builds since 1.0.0; only the last KEEP_RELEASES
-# releases are kept.
+# Builds the phone release APK (arm64-v8a), signed with the app's release key, on every push to main (or by hand
+# from the Actions tab), and publishes it as a GitHub release "1.0.N": budget-app-1.0.N-arm64-v8a.apk. The emulator
+# build is not attached. N counts the builds since 1.0.0; only the last KEEP_RELEASES releases are kept.
 #
 # One-time setup (repo → Settings → Secrets and variables → Actions → New repository secret):
 #   BUDGETAPP_KEYSTORE_BASE64          the release keystore file as base64 (macOS: base64 -i release.keystore | pbcopy)
@@ -88,18 +87,12 @@ jobs:
           ORG_GRADLE_PROJECT_BUDGETAPP_VERSION_NAME: ${{ steps.version.outputs.name }}
         run: |
           chmod +x ./gradlew
-          # phone and the CI emulator only; armeabi-v7a and x86 are not installed anywhere
-          ./gradlew assembleRelease --no-daemon -PabiSplits -PreactNativeArchitectures=arm64-v8a,x86_64
+          # the phone only; the emulator APK is built by the screenshots workflow and is not published
+          ./gradlew assembleRelease --no-daemon -PabiSplits -PreactNativeArchitectures=arm64-v8a
           VERSION="${{ steps.version.outputs.name }}"
           mkdir -p "$RUNNER_TEMP/apks"
-          for apk in app/build/outputs/apk/release/app-*-release.apk; do
-            abi="${apk##*/app-}"
-            abi="${abi%-release.apk}"
-            cp "$apk" "$RUNNER_TEMP/apks/budget-app-${VERSION}-${abi}.apk"
-          done
+          cp app/build/outputs/apk/release/app-arm64-v8a-release.apk "$RUNNER_TEMP/apks/budget-app-${VERSION}-arm64-v8a.apk"
           ls -lh "$RUNNER_TEMP/apks"
-          test -f "$RUNNER_TEMP/apks/budget-app-${VERSION}-arm64-v8a.apk"
-          test -f "$RUNNER_TEMP/apks/budget-app-${VERSION}-x86_64.apk"
 
       # a version published before under the same number (the numbering restarted): replaced, not mixed with it
       - name: Free the version's tag
@@ -116,8 +109,7 @@ jobs:
             Коммит ${{ github.sha }}: ${{ github.event.head_commit.message }}
 
             На телефон: `budget-app-${{ steps.version.outputs.name }}-arm64-v8a.apk` — скачайте и откройте, установится поверх, данные сохранятся.
-            Для эмулятора: `budget-app-${{ steps.version.outputs.name }}-x86_64.apk`.
-          files: ${{ runner.temp }}/apks/budget-app-*.apk
+          files: ${{ runner.temp }}/apks/budget-app-*-arm64-v8a.apk
           make_latest: true
 
       # the old per-push "Сборка N" releases, and versions older than the last KEEP_RELEASES, go with their tags

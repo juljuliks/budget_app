@@ -118,9 +118,8 @@
 
 1. **Prettier и общие правила ESLint**: ESLint с лимитами и слоями уже есть (`eslint.config.js`); добавить
    `typescript-eslint` recommended, Prettier и скрипт `format`.
-2. **Размер APK**: релиз на GitHub уже раздельный (`arm64-v8a` для телефона, `x86_64` для эмулятора в CI). Локальная
-   сборка по-прежнему кладёт все 4 ABI в один APK (`reactNativeArchitectures` в `android/gradle.properties`). Позже R8
-   с keep-правилами (Notifee, quick-sqlite).
+2. **Размер APK**: релиз на GitHub — только телефон (`arm64-v8a`). Локальная сборка по-прежнему кладёт все 4 ABI в один
+   APK (`reactNativeArchitectures` в `android/gradle.properties`). Позже R8 с keep-правилами (Notifee, quick-sqlite).
 3. **Скрипты не только под macOS**: `java_home` только если есть, образ эмулятора по `uname -m`, `OUT_DIR` вместо `~/Desktop`.
 4. **БД**: `foreign_keys` сейчас OFF — включить после миграций или периодический `foreign_key_check`; CHECK на
    `kind` / `amount`; миграция 9 не должна зависеть от текущего парсера; миграции только при старте UI.

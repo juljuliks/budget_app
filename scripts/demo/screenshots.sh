@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# On a booted emulator (CI: .github/workflows/android-release.yml): installs the APK, puts the demo database in place
+# On a booted emulator (CI: .github/workflows/screenshots.yml): installs the APK, puts the demo database in place
 # of the app's and shoots the screens of flows/screens.yaml with Maestro into OUT_DIR.
 # Usage: scripts/demo/screenshots.sh app.apk demo.db OUT_DIR
 set -euo pipefail
