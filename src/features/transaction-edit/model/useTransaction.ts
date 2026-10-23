@@ -17,7 +17,7 @@ export function useTransaction(txId: number, visible: boolean) {
   const { failed, started, fail } = useLoadFailed('load transaction');
   // the merchant's category (its rule): new transactions of the merchant get it automatically
   const [merchantCategory, setMerchantCategory] = useState<string | null>(null);
-  // a merchant of different categories: the ones its operations had (picked with a tap)
+  // a merchant of different categories: the ones its operations had (taps toggle; one is saved, two open the split)
   const [mixedCats, setMixedCats] = useState<Array<{ id: number; label: string }> | null>(null);
 
   const load = useCallback(async () => {

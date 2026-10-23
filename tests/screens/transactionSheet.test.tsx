@@ -1,6 +1,6 @@
 // 2.7: an operation's card — what it shows, its category (this one or the merchant's), the amount, the note, deleting.
 import { fireEvent, waitFor } from '@testing-library/react-native';
-import { openApp, screen, tap, texts, back, longPress } from './app';
+import { openApp, screen, tap, texts, back, longPress, rowOf } from './app';
 import { at, buy, ops } from '../e2e/seeds';
 import { getDb } from '../../src/db';
 import { createCategory } from '../../src/db/categories';
@@ -208,7 +208,8 @@ test('2.7.6: a merchant of different categories: its categories to tap, no quest
   expect(await screen.findByText('Категория «☕️ Кафе и рестораны» назначена')).toBeTruthy();
   expect((await opsOf('GLOVO')).map((o) => [o.c, o.s])).toEqual([['Кафе и рестораны', 'user']]);
   expect(await ruleOf('GLOVO')).toBeNull();
-  await tap('GLOVO');
+  // the page stays open: "Готово" closes it
+  expect(screen.getByText('Готово')).toBeTruthy();
   await tap('Сменить');
   await tap('👕 Одежда');
   expect(await screen.findByText('Категория «👕 Одежда» назначена')).toBeTruthy();
@@ -228,6 +229,26 @@ test('2.7.6: a refund of such a merchant offers its categories; the pick stays t
   expect(await screen.findByText('Категория «☕️ Кафе и рестораны» назначена')).toBeTruthy();
   expect((await opsOf('GLOVO'))[0]).toMatchObject({ c: 'Кафе и рестораны', s: 'user' });
   expect(await ruleOf('GLOVO')).toBeNull();
+});
+
+test('2.7.6: two chips turn "Готово" into "Разделить"', async () => {
+  await mixedGlovo();
+  await tap('GLOVO');
+  expect(await screen.findByText('Готово')).toBeTruthy();
+  await tap('☕️ Кафе и рестораны');
+  expect(await screen.findByText('Категория «☕️ Кафе и рестораны» назначена')).toBeTruthy();
+  expect(screen.getByText('Готово')).toBeTruthy();
+  expect(rowOf('☕️ Кафе и рестораны').props.accessibilityState).toMatchObject({ selected: true });
+  await tap('🛒 Продукты');
+  expect(await screen.findByText('Разделить')).toBeTruthy();
+  expect(screen.queryByText('Готово')).toBeNull();
+  expect(rowOf('🛒 Продукты').props.accessibilityState).toMatchObject({ selected: true });
+  expect(rowOf('☕️ Кафе и рестораны').props.accessibilityState).toMatchObject({ selected: true });
+  await tap('Разделить');
+  expect(await screen.findByText('Разделить по категориям')).toBeTruthy();
+  expect(screen.getByText('остальное')).toBeTruthy();
+  expect(screen.getByLabelText('Категория: ☕️ Кафе и рестораны')).toBeTruthy();
+  expect(screen.getByLabelText('Сумма: 🛒 Продукты')).toBeTruthy();
 });
 
 describe('2.7.16 split between categories', () => {
