@@ -40,7 +40,7 @@ export default function TransactionView({ txId, onClose }: Props) {
   const savedChip = useRef<number | null>(null);
   useEffect(() => { savedChip.current = null; }, [txId]);
   const lone = showChips && picked.length === 1 ? picked[0] : null;
-  // one chip: save it and stay. "Готово" closes; a second chip turns the button into "Разделить"
+  // one chip: save it and stay. Two or more add "Разделить"
   useEffect(() => {
     if (lone == null || lone === currentId || lone === savedChip.current) return;
     savedChip.current = lone;
@@ -60,14 +60,11 @@ export default function TransactionView({ txId, onClose }: Props) {
   // only purchases / payments are remembered for their merchant (see assignCategory)
   const rememberable = !!tx.merchant_key && isRememberable(tx.kind);
   const distribute = showChips && picked.length >= 2;
-  const one = showChips && picked.length === 1;
 
   return (
     <Page contentStyle={styles.content} footer={(
       <SheetActions
-        submit={distribute
-          ? { title: 'Разделить', onPress: () => { setSplitSeed(picked); setSplitOpen(true); } }
-          : one ? { title: 'Готово', onPress: onClose } : null}
+        submit={distribute ? { title: 'Разделить', onPress: () => { setSplitSeed(picked); setSplitOpen(true); } } : null}
         style={styles.actions}
         extra={[
           ...(split ? [{ title: 'Убрать разделение', onPress: () => confirmUnsplit(tx) }] : []),

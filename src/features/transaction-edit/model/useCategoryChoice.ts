@@ -15,7 +15,7 @@ export function useCategoryChoice(txId: number, tx: Tx | null, visible: boolean,
   const [saving, setSaving] = useState(false);
   useEffect(() => { if (visible) setSaving(false); }, [visible, txId]);
 
-  /** `close`: leave the page. A mixed merchant's chip stays (`false`) — "Готово" closes it. */
+  /** `close`: leave the page ("Сменить"). A mixed merchant's chip stays. */
   async function assign(categoryId: number | null, choice?: MerchantChoice, close = true) {
     setSaving(true);
     try {

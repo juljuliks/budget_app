@@ -208,8 +208,9 @@ test('2.7.6: a merchant of different categories: its categories to tap, no quest
   expect(await screen.findByText('Категория «☕️ Кафе и рестораны» назначена')).toBeTruthy();
   expect((await opsOf('GLOVO')).map((o) => [o.c, o.s])).toEqual([['Кафе и рестораны', 'user']]);
   expect(await ruleOf('GLOVO')).toBeNull();
-  // the page stays open: "Готово" closes it
-  expect(screen.getByText('Готово')).toBeTruthy();
+  // the page stays open; one chip does not add a button
+  expect(screen.queryByText('Готово')).toBeNull();
+  expect(screen.queryByText('Разделить')).toBeNull();
   await tap('Сменить');
   await tap('👕 Одежда');
   expect(await screen.findByText('Категория «👕 Одежда» назначена')).toBeTruthy();
@@ -231,22 +232,21 @@ test('2.7.6: a refund of such a merchant offers its categories; the pick stays t
   expect(await ruleOf('GLOVO')).toBeNull();
 });
 
-test('2.7.6: two chips turn "Готово" into "Разделить"', async () => {
+test('2.7.6: two chips add "Разделить"; one does not', async () => {
   await mixedGlovo();
   await tap('GLOVO');
   expect(await screen.findByText('☕️ Кафе и рестораны')).toBeTruthy();
-  expect(screen.queryByText('Готово')).toBeNull();
+  expect(screen.queryByText('Разделить')).toBeNull();
   await tap('☕️ Кафе и рестораны');
   expect(await screen.findByText('Категория «☕️ Кафе и рестораны» назначена')).toBeTruthy();
-  expect(screen.getByText('Готово')).toBeTruthy();
+  expect(screen.queryByText('Разделить')).toBeNull();
   expect(rowOf('☕️ Кафе и рестораны').props.accessibilityState).toMatchObject({ selected: true });
-  await tap('☕️ Кафе и рестораны');
-  expect(screen.queryByText('Готово')).toBeNull();
-  await tap('☕️ Кафе и рестораны');
-  expect(await screen.findByText('Готово')).toBeTruthy();
   await tap('🛒 Продукты');
   expect(await screen.findByText('Разделить')).toBeTruthy();
-  expect(screen.queryByText('Готово')).toBeNull();
+  await tap('🛒 Продукты');
+  expect(screen.queryByText('Разделить')).toBeNull();
+  await tap('🛒 Продукты');
+  expect(await screen.findByText('Разделить')).toBeTruthy();
   expect(rowOf('🛒 Продукты').props.accessibilityState).toMatchObject({ selected: true });
   expect(rowOf('☕️ Кафе и рестораны').props.accessibilityState).toMatchObject({ selected: true });
   await tap('Разделить');
