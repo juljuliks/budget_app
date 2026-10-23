@@ -79,10 +79,12 @@ export default function TransactionView({ txId, onClose }: Props) {
         onSplit={(ids) => { setSplitSeed(ids ?? null); setSplitOpen(true); }}
       />
 
-      {(rememberable || tx.kind === 'refund') && mixedCats ? (
-        <Text style={styles.merchantInfo}>У «{merchantName}» разные категории: каждая новая операция спрашивает.</Text>
+      {(rememberable || tx.kind === 'refund') && mixedCats?.length ? (
+        <Text style={styles.merchantInfo}>
+          У «{merchantName}» разные категории. Основная — «{merchantCategory ?? mixedCats[0].label}»: новые операции получают её, если в уведомлении не выбрать другую.
+        </Text>
       ) : null}
-      {rememberable && merchantCategory ? (
+      {rememberable && merchantCategory && !mixedCats ? (
         <Text style={styles.merchantInfo}>
           Категория мерчанта «{merchantName}»: {merchantCategory}. Новые операции мерчанта получают её автоматически.
         </Text>

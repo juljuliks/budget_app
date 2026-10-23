@@ -27,8 +27,10 @@ export default async function SmsBackgroundTask(data: SmsTaskData): Promise<void
       await createNotificationChannel();
       await showUncategorizedTransactionNotification(result.txId);
     } else if (result.status === 'inserted') {
-      // a fund's category: taken from the fund (said so); else the merchant's category may be near its limit now
       await createNotificationChannel();
+      // a merchant of different categories already got its primary category, and the notification still asks
+      await showUncategorizedTransactionNotification(result.txId);
+      // a fund's category: taken from the fund (said so); else the category may be near its limit now
       if (!(await showFundSpent(result.txId, CHANNEL_ID))) await showLimitAlert(result.categoryId);
     }
     // the month's report on the 1st, with what is put aside after this operation

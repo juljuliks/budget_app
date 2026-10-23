@@ -91,7 +91,7 @@ export async function autoCategory() {
   await createRule('prefix', 'WOLT', cafe);
   await createRule('exact', 'NINO B', cafe);
   await db.run("INSERT INTO mixed_merchants (merchant_key, created_at) VALUES ('GLOVO', 0)");
-  for (const c of [cafe, food]) await db.run("INSERT INTO merchant_categories (merchant_key, category_id) VALUES ('GLOVO', ?)", [c]);
+  for (const [i, c] of [cafe, food].entries()) await db.run("INSERT INTO merchant_categories (merchant_key, category_id, position) VALUES ('GLOVO', ?, ?)", [c, i]);
   await buy('TEMU.COM', 60, daysAgo(10), shop);
   await db.run("UPDATE transactions SET merchant_key = 'TEMU COM' WHERE raw_merchant = 'TEMU.COM'");
   await buy('OLDSHOP', 40, daysAgo(100), shop);

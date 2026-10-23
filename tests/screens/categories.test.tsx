@@ -314,9 +314,10 @@ test('4.4.3: merchants of different categories — merged in their lists; all of
   // no "Покупка — 12.00 ₾" with the categories to pick (its limit's warning may come)
   const asks = () => display.mock.calls.filter(([x]) => String(x.id).startsWith('tx_')).map(([x]) => x);
   expect(asks()).toEqual([]);
-  // MARKETX: still two — it asks, both on the buttons
+  // MARKETX: still two — the operation gets the primary one, and the notification still asks, both on the buttons
   await sms('MARKETX');
-  expect((await q<{ c: number | null }>("SELECT category_id AS c FROM transactions WHERE merchant_key = 'MARKETX'"))[0].c).toBeNull();
+  const primary = (await q<{ c: number }>("SELECT category_id AS c FROM merchant_categories WHERE merchant_key = 'MARKETX' ORDER BY position, category_id LIMIT 1"))[0].c;
+  expect((await q<{ c: number | null }>("SELECT category_id AS c FROM transactions WHERE merchant_key = 'MARKETX'"))[0].c).toBe(primary);
   await waitFor(() => expect(asks()).toHaveLength(1));
   const [n] = asks();
   expect(n.android.actions.map((a: { title: string }) => a.title).slice(0, 2).sort()).toEqual(['💻 Техника', '🛍️ Покупки & Одежда'].sort());

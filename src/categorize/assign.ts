@@ -24,7 +24,7 @@ export async function assignCategory(txId: number, categoryId: number | null, ch
   const tx = await db.get<{ kind: string; merchant_key: string | null }>(
     'SELECT kind, merchant_key FROM transactions WHERE id = ?', [txId]);
   // only purchases / payments are remembered: a transfer or deposit "merchant" is a person or the card
-  // a merchant of different categories has none of its own: a pick is always this operation's
+  // a merchant of different categories keeps its primary one: a pick is always this operation's
   const key = tx?.merchant_key && isRememberable(tx.kind) && !(await isMixedMerchant(tx.merchant_key)) ? tx.merchant_key : null;
   const forMerchant = categoryId !== null && key !== null
     && (choice === 'merchant' || (choice === undefined && !(await findCategoryForMerchant(key))));
@@ -191,8 +191,10 @@ export async function assignCategoryToMany(
 /** The category picked for these operations joins the lists of their merchants of different categories. */
 async function rememberForMixed(txIds: number[], categoryId: number, db: Db) {
   await db.run(
-    `INSERT OR IGNORE INTO merchant_categories (merchant_key, category_id)
-      SELECT DISTINCT t.merchant_key, ? FROM transactions t JOIN mixed_merchants m ON m.merchant_key = t.merchant_key
+    `INSERT OR IGNORE INTO merchant_categories (merchant_key, category_id, position)
+      SELECT DISTINCT t.merchant_key, ?,
+        coalesce((SELECT max(mc.position) FROM merchant_categories mc WHERE mc.merchant_key = t.merchant_key), -1) + 1
+      FROM transactions t JOIN mixed_merchants m ON m.merchant_key = t.merchant_key
         WHERE t.id IN (${placeholders(txIds.length)}) AND t.kind IN (${placeholders(REMEMBERABLE_KINDS.length)})`,
     [categoryId, ...txIds, ...REMEMBERABLE_KINDS]);
 }

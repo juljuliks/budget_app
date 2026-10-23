@@ -39,6 +39,9 @@ describe('8.1 a new operation', () => {
     await db.run("INSERT INTO merchant_categories (merchant_key, category_id) SELECT 'GLOVO', id FROM categories WHERE name = 'Кафе и рестораны'");
     await sms(`20.00GEL\n(*1234)\nGLOVO\n${today}`);
     expect(shown()).toEqual([['Покупка — 20.00 ₾', 'GLOVO · выберите категорию', ['☕️ Кафе и рестораны', '🛒 Продукты', '➡️ К категориям']]]);
+    // the primary category is already on the operation; leaving the notification keeps it
+    expect(await db.get("SELECT c.name AS n, t.category_source AS s FROM transactions t JOIN categories c ON c.id = t.category_id WHERE t.raw_merchant = 'GLOVO' AND t.amount_minor = 2000"))
+      .toEqual({ n: 'Кафе и рестораны', s: 'rule' });
   });
   test('a refund without a category: just news', async () => {
     await sms('A refund of 7.00 GEL has been initiated by NOBODY to your MC GOLD (*1834).');

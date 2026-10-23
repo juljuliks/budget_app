@@ -114,6 +114,18 @@ test('autoCategorizeRefunds takes what refundCategory would: the rule (the longe
   expect(cats).toEqual(expected);
 });
 
+test('a refund of a merchant of different categories takes its primary category, not its latest purchase', async () => {
+  const { autoCategorizeRefunds, refundCategory } = require('../../src/db/refunds');
+  const db = await getDb();
+  await db.run("INSERT INTO mixed_merchants (merchant_key, created_at) VALUES ('MIXED SHOP', 1)");
+  await db.run("INSERT INTO merchant_categories (merchant_key, category_id, position) VALUES ('MIXED SHOP', 4, 0), ('MIXED SHOP', 5, 1)");
+  await add('purchase', 1000, 'MIXED SHOP', NOW - DAY, 7);
+  const id = await add('refund', 100, 'MIXED SHOP', NOW);
+  expect(await refundCategory('MIXED SHOP', NOW)).toBe(4);
+  expect(await autoCategorizeRefunds()).toBe(1);
+  expect((await db.get<{ c: number }>('SELECT category_id AS c FROM transactions WHERE id = ?', [id]))!.c).toBe(4);
+});
+
 test('setting a merchant\'s category also gives it to its open refunds (settled ones and manual choices stay)', async () => {
   const { setMerchantCategory } = require('../../src/db/merchants');
   const open = await add('refund', 300, 'TEMU COM', NOW);

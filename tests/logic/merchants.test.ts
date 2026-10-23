@@ -4,7 +4,7 @@ import { getDb } from '../../src/db';
 import { ingestSms } from '../../src/ingest/ingest';
 import { assignCategory, categoryChangeTotals, merchantChangePreview } from '../../src/categorize/assign';
 import {
-  addMerchantCategory, deleteMerchants, listMerchants, merchantCategories, merchantFollowers, merchantsCategoryPreview, removeMerchantCategory, setMerchantCategory, setMerchantMixed, setMerchantsCategory,
+  addMerchantCategory, deleteMerchants, listMerchants, merchantCategories, merchantFollowers, merchantsCategoryPreview, removeMerchantCategory, replaceMerchantCategories, setMerchantCategory, setMerchantMixed, setMerchantsCategory,
 } from '../../src/db/merchants';
 import { findCategoryForMerchant } from '../../src/categorize/rules';
 import { freshDb } from '../helpers';
@@ -197,27 +197,28 @@ describe('bulk category change: the selected operations only, or their merchants
 });
 
 describe('a merchant of different categories', () => {
-  test('has no category of its own: new operations arrive without one, picks stay theirs, no question asked', async () => {
+  test('its primary category is the first of the list: a new operation gets it, a pick stays that operation\'s', async () => {
     const first = await sms('WOLT');
     await assignCategory(first, 1); // the first pick became the merchant's
     const followed = await sms('WOLT');
     expect(await categoryOf(followed)).toBe(1);
 
     await setMerchantMixed('WOLT', true);
-    expect(await findCategoryForMerchant('WOLT')).toBeNull();
-    // what followed the merchant keeps its category, as its own
+    // the most used category it had is the primary one; what followed it keeps the category, as its own
+    expect(await findCategoryForMerchant('WOLT')).toEqual({ category_id: 1, source: 'rule' });
     expect(await (await getDb()).get('SELECT category_id, category_source FROM transactions WHERE id = ?', [followed])).toEqual({ category_id: 1, category_source: 'user' });
 
     const next = await sms('WOLT');
-    expect(await categoryOf(next)).toBeNull();
+    expect(await categoryOf(next)).toBe(1);
     expect(await merchantChangePreview(next, 2)).toBeNull();
     await assignCategory(next, 2);
-    expect(await findCategoryForMerchant('WOLT')).toBeNull();
+    // the pick does not change the primary category
+    expect(await findCategoryForMerchant('WOLT')).toEqual({ category_id: 1, source: 'rule' });
     expect(await categoryOf(next)).toBe(2);
 
     const list = await listMerchants();
     expect(list.find((m) => m.id === 'WOLT')).toEqual(expect.objectContaining({ mixed: true, category_id: null }));
-    // the categories its operations had, the most used first
+    // the order it was given: the most used first, a later pick appended
     expect((await merchantCategories('WOLT')).map((c) => [c.id, c.n])).toEqual([[1, 2], [2, 1]]);
   });
 
@@ -237,9 +238,22 @@ describe('a merchant of different categories', () => {
     await addMerchantCategory('WOLT', 2);
     expect((await merchantCategories('WOLT')).map((c) => [c.id, c.n])).toEqual([[1, 0], [2, 0]]);
     await assignCategory(op, 2);
-    expect((await merchantCategories('WOLT')).map((c) => [c.id, c.n])).toEqual([[2, 1], [1, 0]]);
+    // a pick does not move the category up: the saved order stays
+    expect((await merchantCategories('WOLT')).map((c) => [c.id, c.n])).toEqual([[1, 0], [2, 1]]);
     await removeMerchantCategory('WOLT', 1);
-    await assignCategory(await sms('WOLT'), 3);
+    const another = await sms('WOLT');
+    expect(await categoryOf(another)).toBe(2);
+    await assignCategory(another, 3);
     expect((await merchantCategories('WOLT')).map((c) => c.id)).toEqual([2, 3]);
+  });
+
+  test('the saved order is the order everywhere, and the first is what a new operation gets', async () => {
+    await setMerchantMixed('WOLT', true);
+    await replaceMerchantCategories('WOLT', [2, 1]);
+    expect((await merchantCategories('WOLT')).map((c) => c.id)).toEqual([2, 1]);
+    expect((await findCategoryForMerchant('WOLT'))?.category_id).toBe(2);
+    expect(await categoryOf(await sms('WOLT'))).toBe(2);
+    await replaceMerchantCategories('WOLT', [1, 2]);
+    expect(await categoryOf(await sms('WOLT'))).toBe(1);
   });
 });

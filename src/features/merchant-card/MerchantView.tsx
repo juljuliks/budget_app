@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { SheetActions } from '@/shared/ui/Button';
 import Loading from '@/shared/ui/Loading';
@@ -19,18 +19,19 @@ type Props = {
 };
 
 /**
- * A merchant's page: its operations (a link to them), its category — one, "Без категории", or several, picked in
- * "Сменить" (a long press picks several) — and its latest operations. "Сохранить" (pinned at the bottom) says what a
+ * A merchant's page: its operations (a link to them), its categories — one, "Без категории", or several (the first,
+ * with a star, is the primary one) — and its latest operations. "Сохранить" (pinned at the bottom) says what a
  * change means first (no question for a merchant getting its first category or none).
  */
 export default function MerchantView({ merchantId, onClose, onShowOperations, recent }: Props) {
   const card = useMerchantCard(merchantId, undefined, onClose);
   const { m, mixed, dirty } = card;
   const { saving, save, remove } = useMerchantActions(merchantId, card, onClose);
+  const [ordering, setOrdering] = useState(false);
   if (!m) return <Loading />;
 
   return (
-    <Page contentStyle={styles.content} footer={(
+    <Page contentStyle={styles.content} scrollEnabled={!ordering} footer={(
       <SheetActions
         style={styles.actions}
         submit={{ title: 'Сохранить', onPress: save, disabled: !dirty || saving }}
@@ -39,6 +40,7 @@ export default function MerchantView({ merchantId, onClose, onShowOperations, re
     )}>
       <MerchantHead m={m} onShowTransactions={() => onShowOperations(m.name)} />
       <MerchantCategories
+        merchantId={merchantId}
         categories={card.categories}
         mixed={mixed}
         single={card.single}
@@ -46,6 +48,10 @@ export default function MerchantView({ merchantId, onClose, onShowOperations, re
         saving={saving}
         chooseOne={card.chooseOne}
         chooseSeveral={card.chooseSeveral}
+        addIds={card.addIds}
+        moveCategory={card.moveCategory}
+        removeCategory={card.removeCategory}
+        onOrderingChange={setOrdering}
       />
       {recent}
     </Page>

@@ -1,17 +1,12 @@
 // The merchant card's writes: each one tells the screens the data changed.
-import {
-  addMerchantCategory, merchantCategories, removeMerchantCategory, setMerchantCategory, setMerchantMixed,
-} from '@/db/merchants';
+import { replaceMerchantCategories, setMerchantCategory, setMerchantMixed } from '@/db/merchants';
 import { emitTransactionsChanged } from '@/domain/events';
 import { removeMerchants } from '@/entities/merchant';
 
-/** Of different categories, with exactly this list (each new operation asks among them). */
+/** Of different categories, with exactly this list: the first is the primary category new operations get. */
 export async function saveMixed(merchantId: string, list: number[]) {
   await setMerchantMixed(merchantId, true);
-  // the list as picked: setMerchantMixed adds the ones its operations had
-  const now = (await merchantCategories(merchantId, 1000)).map((c) => c.id);
-  for (const id of now) if (!list.includes(id)) await removeMerchantCategory(merchantId, id);
-  for (const id of list) if (!now.includes(id)) await addMerchantCategory(merchantId, id);
+  await replaceMerchantCategories(merchantId, list);
   emitTransactionsChanged();
 }
 

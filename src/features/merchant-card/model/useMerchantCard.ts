@@ -1,4 +1,4 @@
-// What the card shows and edits: the merchant, its category or several (a long press in "Сменить").
+// What the card shows and edits: the merchant, its category or several (the first is the primary one).
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getMerchant, merchantCategories, MerchantDetails } from '@/db/merchants';
 import { categoryLabel, categoryLabelOf, listCategories } from '@/db/categories';
@@ -51,10 +51,10 @@ export function useMerchantCard(merchantId: string | null, given: Map<number, Ca
   }, [merchantId, load]);
 
   const label = async (id: number) => categories.get(id)?.label ?? await categoryLabelOf(id);
-  const sameList = list.length === savedList.length && list.every((id) => savedList.includes(id));
+  const sameList = list.length === savedList.length && list.every((id, i) => id === savedList[i]);
   const dirty = !!m && (mixed !== m.mixed || (mixed ? !sameList : single !== m.category_id));
 
-  // one category (or none): no longer of different ones. Several: each new operation asks among these.
+  // one category (or none): no longer of different ones. Several: the first is the primary category.
   function chooseOne(id: number | null) {
     setMixed(false);
     setSingle(id);
@@ -63,6 +63,30 @@ export function useMerchantCard(merchantId: string | null, given: Map<number, Ca
     setMixed(true);
     setList(ids);
   }
+  // "Добавить": new ones go after the ones already there, so the primary category stays the first
+  function addIds(ids: number[]) {
+    const base = mixed ? list : single !== null ? [single] : [];
+    const next = [...base];
+    for (const id of ids) if (!next.includes(id)) next.push(id);
+    if (next.length > 1) { setMixed(true); setList(next); return; }
+    setMixed(false);
+    setSingle(next[0] ?? null);
+    setList(next);
+  }
+  function moveCategory(from: number, to: number) {
+    if (to < 0 || to >= list.length || to === from) return;
+    const next = list.slice();
+    const [item] = next.splice(from, 1);
+    next.splice(to, 0, item);
+    setList(next);
+  }
+  function removeCategory(index: number) {
+    const next = list.filter((_, i) => i !== index);
+    setList(next);
+    if (next.length > 1) return;
+    setMixed(false);
+    setSingle(next[0] ?? null);
+  }
 
-  return { m, categories, mixed, single, list, dirty, label, load, chooseOne, chooseSeveral };
+  return { m, categories, mixed, single, list, dirty, label, load, chooseOne, chooseSeveral, addIds, moveCategory, removeCategory };
 }

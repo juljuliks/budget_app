@@ -4,16 +4,25 @@ import { merchantSpendingSql } from '../db/spending';
 
 export type MatchType = 'exact' | 'prefix';
 
-/** A merchant of different categories: no category of its own, each new operation asks (see mixed_merchants). */
+/** A merchant of different categories: a list, the first of it its primary category (see mixed_merchants). */
 export async function isMixedMerchant(merchantKey: string, db?: Db): Promise<boolean> {
   db ??= await getDb();
   return !!(await db.get('SELECT 1 FROM mixed_merchants WHERE merchant_key = ?', [merchantKey]));
 }
 
-/** The merchant's category, by the transaction's merchant_key; none for a merchant of different categories. */
+/**
+ * The merchant's category, by the transaction's merchant_key. A merchant of different categories has its primary one:
+ * the first of its list (a new operation gets it; a notification still asks, and a pick does not change this).
+ */
 export async function findCategoryForMerchant(merchantKey: string, db?: Db): Promise<{ category_id: number; source: 'rule' } | null> {
   db ??= await getDb();
-  if (await isMixedMerchant(merchantKey, db)) return null;
+  if (await isMixedMerchant(merchantKey, db)) {
+    const first = await db.get<{ category_id: number }>(
+      `SELECT mc.category_id FROM merchant_categories mc
+        JOIN categories c ON c.id = mc.category_id AND c.deleted_at IS NULL
+        WHERE mc.merchant_key = ? ORDER BY mc.position, mc.category_id LIMIT 1`, [merchantKey]);
+    return first ? { category_id: first.category_id, source: 'rule' } : null;
+  }
   const exact = await db.get<{ category_id: number }>(
     'SELECT category_id FROM merchant_rules WHERE match_type = ? AND pattern = ?', ['exact', merchantKey]);
   if (exact) return { category_id: exact.category_id, source: 'rule' };

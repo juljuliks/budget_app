@@ -232,4 +232,25 @@ export const STEPS_43_ON: MigrationStep[][] = [
     'ALTER TABLE month_closes ADD COLUMN balance_minor INTEGER',
     'ALTER TABLE month_closes ADD COLUMN balance_open_minor INTEGER',
   ],
+  // 58: a merchant of different categories keeps that list in an order. The first (position 0) is its primary
+  // category: a new operation gets it, and the notification still asks. Lists already saved keep the order they
+  // were shown in (the most used first).
+  [
+    'ALTER TABLE merchant_categories ADD COLUMN position INTEGER NOT NULL DEFAULT 0',
+    async (db) => {
+      const rows = await db.all<{ merchant_key: string; category_id: number }>(
+        `SELECT mc.merchant_key, mc.category_id
+          FROM merchant_categories mc JOIN categories c ON c.id = mc.category_id
+          ORDER BY mc.merchant_key,
+            (SELECT count(*) FROM transactions t WHERE t.merchant_key = mc.merchant_key AND t.category_id = mc.category_id
+              AND t.kind IN ('purchase', 'payment')) DESC,
+            c.sort_order, c.id`);
+      let prev = '';
+      let pos = 0;
+      for (const r of rows) {
+        if (r.merchant_key !== prev) { prev = r.merchant_key; pos = 0; }
+        await db.run('UPDATE merchant_categories SET position = ? WHERE merchant_key = ? AND category_id = ?', [pos++, r.merchant_key, r.category_id]);
+      }
+    },
+  ],
 ];

@@ -207,7 +207,7 @@ const mixedOf = async (m: string) => (await (await getDb()).all<{ name: string }
 test('2.7.6: a merchant of different categories: its categories to tap, no question; another one joins its list', async () => {
   await mixedGlovo();
   await tap('GLOVO');
-  expect(await screen.findByText('У «GLOVO» разные категории: каждая новая операция спрашивает.')).toBeTruthy();
+  expect(await screen.findByText(/У «GLOVO» разные категории\. Основная — «.+»: новые операции получают её, если в уведомлении не выбрать другую\./)).toBeTruthy();
   await tap('☕️ Кафе и рестораны');
   expect(await screen.findByText('Категория «☕️ Кафе и рестораны» назначена')).toBeTruthy();
   expect((await opsOf('GLOVO')).map((o) => [o.c, o.s])).toEqual([['Кафе и рестораны', 'user']]);
@@ -231,7 +231,7 @@ test('2.7.6: a refund of such a merchant offers its categories; the pick stays t
   // the list was already open: search reloads it and brings the refund in
   fireEvent.changeText(screen.getByPlaceholderText('Поиск: мерчант, описание, сумма…'), 'GLOVO');
   await tap('Возврат · GLOVO');
-  expect(await screen.findByText('У «GLOVO» разные категории: каждая новая операция спрашивает.')).toBeTruthy();
+  expect(await screen.findByText(/У «GLOVO» разные категории\. Основная — «.+»: новые операции получают её, если в уведомлении не выбрать другую\./)).toBeTruthy();
   expect(screen.getByText('☕️ Кафе и рестораны')).toBeTruthy();
   expect(screen.getByText('🛒 Продукты')).toBeTruthy();
   await tap('☕️ Кафе и рестораны');

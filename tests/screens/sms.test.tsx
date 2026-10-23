@@ -75,7 +75,7 @@ test('1.1.8–1.1.9: not operations — declined, a conversion, a code, an ad, z
   expect((await (await getDb()).get<{ n: number }>('SELECT count(*) AS n FROM transactions'))!.n).toBe(0);
 });
 
-test('1.6: the category a new one gets — its merchant\'s, by a prefix, a refund\'s purchase; none for a transfer or a merchant of different categories', async () => {
+test('1.6: the category a new one gets — its merchant\'s, by a prefix, a refund\'s purchase; a merchant of different categories gets its primary one; none for a transfer', async () => {
   await openApp(autoCategory);
   await sms('12.00GEL\n(*1234)\nSPAR\n15/10/2026 11:50');
   await sms('30.00GEL\n(*1234)\nWOLT MARKET\n15/10/2026 11:51');
@@ -88,10 +88,12 @@ test('1.6: the category a new one gets — its merchant\'s, by a prefix, a refun
   expect(row('SPAR').getByText('🤖 авто')).toBeTruthy();
   expect(row('WOLT MARKET').getByText(/^☕️ Кафе и рестораны · /)).toBeTruthy();
   expect(row('Перевод · NINO B').getByText('⚪️ Без категории')).toBeTruthy();
-  expect(row('GLOVO').getByText('⚪️ Без категории')).toBeTruthy();
+  // GLOVO's primary category (the first of its list); the notification would still ask
+  expect(row('GLOVO').getByText(/^☕️ Кафе и рестораны · /)).toBeTruthy();
+  expect(row('GLOVO').getByText('🤖 авто')).toBeTruthy();
   // its purchase 10 days before has a category; OLDSHOP's 100 days before is too long ago
   expect(row('Возврат · TEMU.COM').getByText(/^🛍️ Покупки · /)).toBeTruthy();
   expect(row('Возврат · OLDSHOP').getByText('⚪️ Без категории')).toBeTruthy();
-  // unread: the ones without a category
-  expect(screen.getByText('3')).toBeTruthy();
+  // unread and without a category: the transfer and OLDSHOP (GLOVO already has its primary one)
+  expect(screen.getByText('2')).toBeTruthy();
 });

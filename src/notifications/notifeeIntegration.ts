@@ -29,17 +29,19 @@ const MAX_ACTIONS = 3;
 
 export async function showUncategorizedTransactionNotification(txId: number) {
   const db = await getDb();
-  const tx = await db.get<{ kind: string; amount_minor: number; currency: string; raw_merchant: string | null; merchant_key: string | null }>(
-    'SELECT kind, amount_minor, currency, raw_merchant, merchant_key FROM transactions WHERE id = ? AND category_id IS NULL', [txId]);
+  const tx = await db.get<{ kind: string; amount_minor: number; currency: string; raw_merchant: string | null; merchant_key: string | null; category_id: number | null }>(
+    'SELECT kind, amount_minor, currency, raw_merchant, merchant_key, category_id FROM transactions WHERE id = ?', [txId]);
   if (!tx) return;
 
   if (tx.kind === 'refund') {
+    if (tx.category_id != null) return;
     await showRefundNotification(txId, tx);
     return;
   }
 
-  // a merchant of different categories (a delivery: groceries or meals) offers the ones it had, then the usual ones
+  // a merchant of different categories already has its primary category, and still asks — its own first, in its order
   const mixed = !!tx.merchant_key && isRememberable(tx.kind) && await isMixedMerchant(tx.merchant_key);
+  if (tx.category_id != null && !mixed) return;
   const own = mixed ? (await merchantCategories(tx.merchant_key!, MAX_ACTIONS - 1)) : [];
   const suggestions = [...own, ...(await buildCategorySuggestions(tx.kind, MAX_ACTIONS - 1)).filter((s) => !own.some((o) => o.id === s.id))]
     .slice(0, MAX_ACTIONS - 1);

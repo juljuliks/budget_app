@@ -26,9 +26,9 @@ export async function getRefund(id: number): Promise<Refund | undefined> {
 }
 
 /**
- * The category a refund is subtracted from: the merchant's category (its rule),
- * else the category of the latest purchase / payment at that merchant within REFUND_LOOKBACK_DAYS before it; null
- * when unknown (counted as "Возвраты без категории").
+ * The category a refund is subtracted from: the merchant's category (its rule, or the primary one of a merchant of
+ * different categories), else the category of the latest purchase / payment at that merchant within
+ * REFUND_LOOKBACK_DAYS before it; null when unknown (counted as "Возвраты без категории").
  */
 export async function refundCategory(merchantKey: string | null | undefined, occurredAt: number, db?: Db): Promise<number | null> {
   if (!merchantKey) return null;
@@ -46,7 +46,11 @@ export async function refundCategory(merchantKey: string | null | undefined, occ
 
 /** refundCategory in SQL, for the refund row `transactions` being updated. */
 const REFUND_CATEGORY_SQL = `coalesce(
-    CASE WHEN EXISTS (SELECT 1 FROM mixed_merchants m WHERE m.merchant_key = transactions.merchant_key) THEN NULL ELSE coalesce(
+    CASE WHEN EXISTS (SELECT 1 FROM mixed_merchants m WHERE m.merchant_key = transactions.merchant_key) THEN (
+      SELECT mc.category_id FROM merchant_categories mc
+        JOIN categories c ON c.id = mc.category_id AND c.deleted_at IS NULL
+        WHERE mc.merchant_key = transactions.merchant_key ORDER BY mc.position, mc.category_id LIMIT 1)
+    ELSE coalesce(
       (SELECT category_id FROM merchant_rules WHERE match_type = 'exact' AND pattern = transactions.merchant_key),
       (SELECT category_id FROM merchant_rules WHERE match_type = 'prefix' AND substr(transactions.merchant_key, 1, length(pattern)) = pattern
         ORDER BY length(pattern) DESC LIMIT 1)) END,

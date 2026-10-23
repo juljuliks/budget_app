@@ -15,6 +15,8 @@ export type ChooseProps = {
   selectedIds?: number[];
   /** "Готово" with the whole set. Also: a long press may start several, when this is set. */
   onSeveral?: (ids: number[]) => void;
+  /** a long press that starts several keeps selectedId checked, and first */
+  keepSelected?: boolean;
   /** "Готово" needs at least this many. Default 2, or 1 when opened with selectedIds. */
   severalMin?: number;
   allowNone?: boolean;
@@ -77,7 +79,12 @@ export function useCategoryChoose(p: ChooseProps) {
     },
     hold(id: number) {
       if (!p.onSeveral || p.saveTitle) return;
-      if (!many) { setMany(true); setPicked([id]); return; }
+      if (!many) {
+        setMany(true);
+        const kept = p.keepSelected && p.selectedId != null && p.selectedId !== id ? [p.selectedId] : [];
+        setPicked([...kept, id]);
+        return;
+      }
       toggle(id);
     },
     pressNone() {
