@@ -49,11 +49,13 @@ export function ShareField({ form, name, other, planned, toShown, screen, title,
   useEffect(() => {
     if (opened.current || !amount) return;
     opened.current = true;
-    if (room > 0 && mine === room) setMode('max');
-  }, [amount, mine, room]);
+    const isLockedMax = name === 'locked' && form.getValues('lockedIsMax');
+    if (isLockedMax || (room > 0 && mine === room)) setMode('max');
+  }, [amount, mine, room]); // eslint-disable-line react-hooks/exhaustive-deps
   // "max": all that is free, following it (the budget or the other part changed); off with nothing free (or all of it in)
   useEffect(() => { if (mode === 'max' && mine !== room) set(room); }, [mode, mine, room]); // eslint-disable-line react-hooks/exhaustive-deps
   function switchMode(m: 'pct' | 'amount' | 'max') {
+    if (name === 'locked') form.setValue('lockedIsMax', m === 'max', { shouldDirty: true });
     if (m === 'max') set(room);
     // to the slider: the nearest stop that fits
     if (m === 'pct' && stop === undefined && amount > 0) {

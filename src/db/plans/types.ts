@@ -75,6 +75,8 @@ export type PlanBudget = {
   unplanned_minor: number | null;
   /** locked for savings right away (🔒), in the budget's currency */
   locked_minor: number;
+  /** locked_minor follows the free budget remainder automatically (MAX mode) */
+  locked_is_max: boolean;
   /** what the plan can take: the amount minus the unplanned share and the locked savings */
   plannable_minor: number;
   /** what the budget leaves (not planned, not spent) goes to "Сбережения" */

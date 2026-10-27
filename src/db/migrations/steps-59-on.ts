@@ -96,4 +96,6 @@ async function glueSecondMerchants(db: Db) {
 /** Migrations 59 and on. */
 export const STEPS_59_ON: MigrationStep[][] = [
   [glueSecondMerchants],
+  // 60: "locked MAX" flag: re-derive the locked amount from the free budget each time, so it follows rate/plan changes
+  ['ALTER TABLE plan_months ADD COLUMN locked_is_max INTEGER NOT NULL DEFAULT 0'],
 ];

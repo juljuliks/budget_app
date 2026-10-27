@@ -11,8 +11,8 @@ async function openPlan(seed = planned) {
   await tap('План');
   await screen.findByText('Бюджет месяца');
 }
-const month = async () => (await getDb()).get<{ b: number | null; l: number; p: number; u: number | null; s: number }>(
-  "SELECT budget_minor AS b, locked_minor AS l, unplanned_pct AS p, unplanned_minor AS u, to_savings AS s FROM plan_months WHERE ym = '2026-10'");
+const month = async () => (await getDb()).get<{ b: number | null; l: number; m: number; p: number; u: number | null; s: number }>(
+  "SELECT budget_minor AS b, locked_minor AS l, locked_is_max AS m, unplanned_pct AS p, unplanned_minor AS u, to_savings AS s FROM plan_months WHERE ym = '2026-10'");
 const item = async (name: string, ym = '2026-10') => (await getDb()).get<{ a: number; kind: string; norm: string; pinned: number }>(
   `SELECT p.limit_minor AS a, p.kind, p.norm_period AS norm, p.pinned FROM plan_items p JOIN categories c ON c.id = p.category_id
     WHERE p.ym = ? AND c.name = ?`, [ym, name]);
@@ -114,7 +114,7 @@ describe('6.2 locked for savings, the share outside the plan, the leftover', () 
     expect(screen.getAllByRole('tab', { name: 'MAX' })[1].props.accessibilityState).toMatchObject({ disabled: true });
     await tap('Сохранить');
     expect(await screen.findByText('Бюджет месяца сохранён')).toBeTruthy();
-    expect(await month()).toMatchObject({ l: 54000 });
+    expect(await month()).toMatchObject({ l: 0, m: 1 });
   });
 
   test('all that is free opens as "MAX"', async () => {

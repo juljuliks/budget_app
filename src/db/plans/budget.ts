@@ -52,14 +52,15 @@ async function createMonthPlan(ym: string): Promise<boolean> {
     // the amount to distribute (usually the salary) carries over as well, with its currency, unplanned share, savings choice
     // and what is locked for savings
     await tx.run(
-      `INSERT OR IGNORE INTO plan_months (ym, budget_minor, budget_currency, unplanned_pct, to_savings, locked_minor, unplanned_minor) VALUES (?,
+      `INSERT OR IGNORE INTO plan_months (ym, budget_minor, budget_currency, unplanned_pct, to_savings, locked_minor, unplanned_minor, locked_is_max) VALUES (?,
         (SELECT budget_minor FROM plan_months WHERE ym = ?),
         coalesce((SELECT budget_currency FROM plan_months WHERE ym = ?), ?),
         coalesce((SELECT unplanned_pct FROM plan_months WHERE ym = ?), 0),
         coalesce((SELECT to_savings FROM plan_months WHERE ym = ?), 1),
         coalesce((SELECT locked_minor FROM plan_months WHERE ym = ?), 0),
-        (SELECT unplanned_minor FROM plan_months WHERE ym = ?))`,
-      [ym, source?.ym ?? '', source?.ym ?? '', BUDGET_CURRENCY, source?.ym ?? '', source?.ym ?? '', source?.ym ?? '', source?.ym ?? '']);
+        (SELECT unplanned_minor FROM plan_months WHERE ym = ?),
+        coalesce((SELECT locked_is_max FROM plan_months WHERE ym = ?), 0))`,
+      [ym, source?.ym ?? '', source?.ym ?? '', BUDGET_CURRENCY, source?.ym ?? '', source?.ym ?? '', source?.ym ?? '', source?.ym ?? '', source?.ym ?? '']);
   });
   return true;
 }
@@ -82,16 +83,25 @@ export async function carryIn(ym: string, currency: Currency): Promise<PlanBudge
 
 export async function storedBudget(ym: string): Promise<PlanBudget | null> {
   const db = await getDb();
-  const row = await db.get<{ budget_minor: number | null; budget_currency: string | null; unplanned_pct: number; to_savings: number; locked_minor: number; unplanned_minor: number | null }>(
-    'SELECT budget_minor, budget_currency, unplanned_pct, to_savings, locked_minor, unplanned_minor FROM plan_months WHERE ym = ?', [ym]);
+  const row = await db.get<{ budget_minor: number | null; budget_currency: string | null; unplanned_pct: number; to_savings: number; locked_minor: number; unplanned_minor: number | null; locked_is_max: number }>(
+    'SELECT budget_minor, budget_currency, unplanned_pct, to_savings, locked_minor, unplanned_minor, locked_is_max FROM plan_months WHERE ym = ?', [ym]);
   if (row?.budget_minor == null) return null;
   const share = unplannedOf({ amount_minor: row.budget_minor, unplanned_pct: row.unplanned_pct, unplanned_minor: row.unplanned_minor });
   const currency = asCurrency(row.budget_currency);
   const carry = await carryIn(ym, currency);
+  const lockedIsMax = row.locked_is_max === 1;
+  const carryDelta = (carry?.plus_minor ?? 0) - (carry?.debt_minor ?? 0);
+  const locked_minor = lockedIsMax
+    ? Math.max(0, row.budget_minor - share - await plannedTotal(ym, undefined, currency) + carryDelta)
+    : row.locked_minor;
+  // for MAX, locked auto-adjusts; plannable = the full free budget (cap = budget − share), not limited by locked
+  const plannable_minor = lockedIsMax
+    ? row.budget_minor - share + carryDelta
+    : row.budget_minor - share - locked_minor + carryDelta;
   return {
     amount_minor: row.budget_minor, currency, unplanned_pct: row.unplanned_pct,
-    unplanned_minor: row.unplanned_minor, locked_minor: row.locked_minor,
-    plannable_minor: row.budget_minor - share - row.locked_minor + (carry?.plus_minor ?? 0) - (carry?.debt_minor ?? 0),
+    unplanned_minor: row.unplanned_minor, locked_minor, locked_is_max: lockedIsMax,
+    plannable_minor,
     to_savings: row.to_savings === 1, carry,
   };
 }
@@ -171,17 +181,19 @@ export class OverBudgetError extends Error {
  */
 export async function setPlanBudget(
   ym: string, budgetMinor: number | null, currency: Currency = BUDGET_CURRENCY, unplannedPct?: number, toSavings?: boolean, lockedMinor?: number,
-  unplannedMinor?: number | null,
+  unplannedMinor?: number | null, lockedIsMax?: boolean,
 ) {
   await ensureMonthPlan(ym);
   const db = await getDb();
-  const stored = await db.get<{ p: number; s: number; l: number; u: number | null }>(
-    'SELECT unplanned_pct AS p, to_savings AS s, locked_minor AS l, unplanned_minor AS u FROM plan_months WHERE ym = ?', [ym]);
+  const stored = await db.get<{ p: number; s: number; l: number; u: number | null; m: number }>(
+    'SELECT unplanned_pct AS p, to_savings AS s, locked_minor AS l, unplanned_minor AS u, locked_is_max AS m FROM plan_months WHERE ym = ?', [ym]);
   const own = unplannedMinor === undefined ? stored?.u ?? null : unplannedMinor === null ? null : Math.max(0, unplannedMinor);
   const pct = unplannedPct ?? stored?.p ?? 0;
   const savings = toSavings ?? (stored ? stored.s === 1 : true);
-  const locked = Math.max(0, lockedMinor ?? stored?.l ?? 0);
-  if (budgetMinor !== null) {
+  const isMax = lockedIsMax ?? (stored?.m === 1);
+  // when MAX: store 0, recomputed on each read; otherwise store the explicit amount
+  const locked = isMax ? 0 : Math.max(0, lockedMinor ?? stored?.l ?? 0);
+  if (budgetMinor !== null && !isMax) {
     const planned = await plannedTotal(ym, undefined, currency);
     const carry = await carryIn(ym, currency);
     const plannable = budgetMinor - unplannedOf({ amount_minor: budgetMinor, unplanned_pct: pct, unplanned_minor: own }) - locked
@@ -190,7 +202,7 @@ export async function setPlanBudget(
   }
   await db.transaction(async (t) => {
     await t.run('INSERT OR IGNORE INTO plan_months (ym) VALUES (?)', [ym]);
-    await t.run('UPDATE plan_months SET budget_minor = ?, budget_currency = ?, unplanned_pct = ?, to_savings = ?, locked_minor = ?, unplanned_minor = ? WHERE ym = ?',
-      [budgetMinor, currency, pct, savings ? 1 : 0, budgetMinor === null ? 0 : locked, budgetMinor === null ? null : own, ym]);
+    await t.run('UPDATE plan_months SET budget_minor = ?, budget_currency = ?, unplanned_pct = ?, to_savings = ?, locked_minor = ?, unplanned_minor = ?, locked_is_max = ? WHERE ym = ?',
+      [budgetMinor, currency, pct, savings ? 1 : 0, budgetMinor === null ? 0 : locked, budgetMinor === null ? null : own, budgetMinor === null ? 0 : (isMax ? 1 : 0), ym]);
   });
 }

@@ -3,7 +3,7 @@ import { getDb } from '../index';
 import { Currency } from '../fx';
 import { BUDGET_CURRENCY, currentYm, monthRange, parseYm, planRateDate, ymOf } from './months';
 import { convertSpending, spendByDay, spendRows } from './spend';
-import { unplannedOf } from './budget';
+import { storedBudget, unplannedOf } from './budget';
 import { monthStats, spentOf } from './stats';
 import { allFunds, fundLedger } from './funds';
 import { allSavings, savingLedger } from '../recurring/saving';
@@ -107,8 +107,8 @@ export async function planHistory(nowYm = currentYm(), currency: Currency = BUDG
 
   const items = await db.all<{ ym: string; limit_minor: number; currency: string }>('SELECT ym, limit_minor, currency FROM plan_items');
   const budgets = await db.all<{
-    ym: string; budget_minor: number; budget_currency: string; locked_minor: number; unplanned_pct: number; unplanned_minor: number | null;
-  }>('SELECT ym, budget_minor, budget_currency, locked_minor, unplanned_pct, unplanned_minor FROM plan_months WHERE budget_minor IS NOT NULL');
+    ym: string; budget_minor: number; budget_currency: string; locked_minor: number; unplanned_pct: number; unplanned_minor: number | null; locked_is_max: number;
+  }>('SELECT ym, budget_minor, budget_currency, locked_minor, unplanned_pct, unplanned_minor, locked_is_max FROM plan_months WHERE budget_minor IS NOT NULL');
   const planYms = [...new Set([...items.map((i) => i.ym), ...budgets.map((b) => b.ym)])];
   const { days, conv } = await spendByDay(0, Number.MAX_SAFE_INTEGER, currency, planYms.map(planRateDate));
   const spentBy = new Map<string, number>();
@@ -116,11 +116,14 @@ export async function planHistory(nowYm = currentYm(), currency: Currency = BUDG
   const plannedBy = new Map<string, number>();
   for (const i of items) plannedBy.set(i.ym, (plannedBy.get(i.ym) ?? 0) + (conv(i.limit_minor, i.currency, currency, planRateDate(i.ym)) ?? 0));
   const budgetBy = new Map(budgets.map((b) => [b.ym, conv(b.budget_minor, b.budget_currency, currency, planRateDate(b.ym))]));
-  const savingsBy = new Map(budgets.map((b) => {
+  const savingsBy = new Map<string, { locked_minor: number; unplanned_minor: number }>();
+  for (const b of budgets) {
     const toShown = (v: number) => conv(v, b.budget_currency, currency, planRateDate(b.ym)) ?? 0;
     const share = unplannedOf({ amount_minor: b.budget_minor, unplanned_pct: b.unplanned_pct, unplanned_minor: b.unplanned_minor });
-    return [b.ym, { locked_minor: toShown(b.locked_minor), unplanned_minor: toShown(share) }];
-  }));
+    // for MAX months the stored value is 0; recompute using storedBudget (which re-derives from the plan total)
+    const lockedRaw = b.locked_is_max === 1 ? ((await storedBudget(b.ym))?.locked_minor ?? 0) : b.locked_minor;
+    savingsBy.set(b.ym, { locked_minor: toShown(lockedRaw), unplanned_minor: toShown(share) });
+  }
   // the months' "Итоги": what was put aside is in the budget's currency
   const closes = new Map((await db.all<{ ym: string; closed_at: number | null; rest_choice: RestChoice | null; confirmed_minor: number | null }>(
     'SELECT ym, closed_at, rest_choice, confirmed_minor FROM month_closes')).map((r) => [r.ym, r]));

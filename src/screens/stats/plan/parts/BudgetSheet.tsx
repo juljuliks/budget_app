@@ -29,6 +29,7 @@ export default function BudgetSheet({ visible, budget, currency, planned, hint, 
     value: toInputValue(budget?.amount_minor), currency: budget?.currency ?? currency,
     unplanned: budget && unplannedOf(budget) ? toInputValue(unplannedOf(budget)) : '',
     locked: budget?.locked_minor ? toInputValue(budget.locked_minor) : '',
+    lockedIsMax: budget?.locked_is_max ?? false,
   } : null, visible);
   return (
     <TextInputModal
