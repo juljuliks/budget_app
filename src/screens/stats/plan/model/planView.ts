@@ -166,7 +166,9 @@ export function planView({ ym, currency, items: all, budget, toShown, fromShown,
         key: 'locked', name: '🔒 Отложено сразу', tone: 'locked' as const, value: less ? less.locked.now : locked,
         // as typed while the overspend took none of it
         ...inBudget(less ? less.locked.now : locked, less && less.locked.now < locked ? undefined : budget!.locked_minor),
-        ...(less && less.locked.now < locked ? { note: 'перерасход', was: locked } : { note: 'заблокировано в начале месяца' }),
+        ...(less && less.locked.now < locked
+          ? { note: `из сбережений ушло ${money(locked - less.locked.now)} · осталось ${money(less.locked.now)}` }
+          : { note: 'заблокировано в начале месяца' }),
       }] : []),
       // none left — not shown
       ...(floating > 0 ? [{

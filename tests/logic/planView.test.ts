@@ -90,6 +90,20 @@ test('the overspend takes the savings: 🌊 first, then 🔒; the biggest oversp
   expect(savingsLess({ items, spentBy: spentBy(30050, 0), unplanned: 0, unplannedSpent: 0, free: 1000, locked: 0 })).toBeNull();
 });
 
+test('locked row note when overspend took part of 🔒: "из сбережений ушло X · осталось Y", no LessNote (no was)', () => {
+  // budget 3000 ₾, plan 1000 ₾, locked 500 ₾ → free 1500 ₾; spent 2600 ₾ (1600 ₾ over): 1500 from free, 100 from locked
+  const v = planView({
+    ym: currentYm(), currency: 'GEL', items: [item({ converted_minor: 100000 })],
+    budget: budget({ amount_minor: 300000, locked_minor: 50000 }),
+    toShown: (m) => m, fromShown: (m) => m, income: 0, unplannedSpentMinor: 0,
+    spentBy: { byCategory: new Map([[1, 260000]]), total: 260000 }, hidden: false,
+  });
+  const row = v.systemGroups.find((g) => g.title === 'Сбережения')!.rows.find((r) => r.key === 'locked')!;
+  expect(row.value).toBe(40000);
+  expect(row.was).toBeUndefined();
+  expect(row.note).toBe('из сбережений ушло 100 ₾ · осталось 400 ₾');
+});
+
 test('what the budget sheet\'s parts can\'t take: the plan, the funds, what the month before owes, less what it moved in', () => {
   const fund = item({ category_id: 3, kind: 'fund', converted_minor: 5000 });
   expect(view([item({}), fund], budget({})).claimed).toBe(36000);
