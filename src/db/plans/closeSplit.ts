@@ -12,6 +12,24 @@ export function splitSaved(total: number, funds: number[], locked: number): Save
   return { funds: out, locked: l, rest: left - l };
 }
 
+export type OverCoverParts = { locked: number; funds: number[]; past: number };
+
+/**
+ * "Из сбережений": an overspend comes off 🔒 first, then off the funds' contributions — the last of `funds` is the
+ * farthest due, so it is cut first — and what is left of it off the savings from before.
+ */
+export function coverOver(over: number, locked: number, funds: number[]): OverCoverParts {
+  let left = Math.max(0, over);
+  const l = Math.min(Math.max(0, locked), left);
+  left -= l;
+  const out = funds.map(() => 0);
+  for (let i = funds.length - 1; i >= 0 && left > 0; i--) {
+    out[i] = Math.min(Math.max(0, funds[i]), left);
+    left -= out[i];
+  }
+  return { locked: l, funds: out, past: left };
+}
+
 /** What the funds took of `total` as answered by hand: the rest is the savings', 🔒 first. */
 export function savingsOf(total: number, fundsPart: number, locked: number): { locked: number; rest: number } {
   const savings = Math.max(0, total - fundsPart);

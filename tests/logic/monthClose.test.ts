@@ -86,13 +86,42 @@ test('B1, C5–C6: an overspend 🔒 covers — from savings by default (🔒 le
   expect(await carryInto('2026-10')).toBeNull();
 });
 
-test('B2: an overspend bigger than 🔒 — what it doesn\'t cover goes to October by default; 🔒 spent whole — no savings step', async () => {
+test('B2: an overspend bigger than 🔒 — the rest off the savings from before; 🔒 spent whole — no savings step', async () => {
   await september(110000, 5000);
   const c = await monthClose('2026-09');
-  expect(c.budget).toMatchObject({ over_minor: 15000, from_savings_minor: 5000, over_rest_minor: 10000, kept_locked_minor: 0, rest_minor: 0 });
+  expect(c.budget).toMatchObject({
+    over_minor: 15000, cover: { locked: 5000, funds: 0, past: 10000 }, from_savings_minor: 5000, from_past_minor: 10000,
+    over_rest_minor: 0, kept_locked_minor: 0, rest_minor: 0,
+  });
   expect(c.steps).toEqual(['over']);
-  expect(c.answers.over_rest_cover).toBe('next');
-  expect(c).toMatchObject({ complete: true, carry: { debt_minor: 10000 } });
+  expect(c).toMatchObject({ complete: true, carry: { debt_minor: 0 }, account_minor: -10000 });
+});
+
+test('B2: past 🔒 the funds\' contributions, the farthest due first — they are asked less', async () => {
+  await september(97000, 5000);
+  const far = await createCategory('Отпуск', '🏖');
+  await setFund('2026-09', far, { target_minor: 300000, currency: 'GEL', due: '2027-07-31', start_minor: 0 }, '2026-09');
+  const near = await createCategory('Страховка', '🛡');
+  await setFund('2026-09', near, { target_minor: 20000, currency: 'GEL', due: '2026-12-31', start_minor: 0 }, '2026-09');
+  // spent 970 + the contributions 323 of 950: 343 over — 🔒 50, Отпуск 273, Страховка 20
+  const c = await monthClose('2026-09');
+  expect(c.budget).toMatchObject({ over_minor: 34300, from_savings_minor: 5000, from_funds_minor: 29300, from_past_minor: 0 });
+  expect(c.funds.map((f) => [f.name, f.planned_minor, f.asked_minor])).toEqual([['Отпуск', 27300, 0], ['Страховка', 5000, 3000]]);
+  expect(c.ask_minor).toBe(3000);
+  expect(c.planned.funds.map((f) => f.minor)).toEqual([3000, 0]);
+  // from October instead: the contributions as planned, 🔒 whole
+  await answerClose('2026-09', { over_cover: 'next' });
+  expect((await monthClose('2026-09')).ask_minor).toBe(32300 + 5000);
+});
+
+test('B2: a month closed before the funds and the savings from before covered an overspend keeps 🔒 alone, until answered again', async () => {
+  await september(110000, 5000);
+  await finishClose('2026-09');
+  await (await getDb()).run("UPDATE month_closes SET over_rest_cover = 'next', locked_cover = 1 WHERE ym = '2026-09'");
+  expect((await monthClose('2026-09')).budget).toMatchObject({ from_savings_minor: 5000, over_rest_minor: 10000, from_past_minor: 0 });
+  expect(await monthClose('2026-09')).toMatchObject({ carry: { debt_minor: 10000 } });
+  await answerClose('2026-09', { over_cover: 'savings' });
+  expect(await monthClose('2026-09')).toMatchObject({ budget: { over_rest_minor: 0, from_past_minor: 10000 }, carry: { debt_minor: 0 } });
 });
 
 test('B3: no 🔒 — nothing chosen for the overspend until answered', async () => {

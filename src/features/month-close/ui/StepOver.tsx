@@ -8,10 +8,20 @@ import { styles } from './styles';
 
 type Props = { c: MonthClose; onAnswer: (patch: Partial<CloseAnswers>) => void };
 
+/** "🔒 300 → 200 · копилки −50 ₾ · прошлые сбережения −20 ₾": what "Из сбережений" takes. */
+export function coverNote(b: NonNullable<MonthClose['budget']>, money: (minor: number) => string): string {
+  return [
+    b.cover.locked > 0 ? `🔒 ${money(b.locked_minor)} → ${money(b.locked_minor - b.cover.locked)}` : '',
+    b.cover.funds > 0 ? `копилки −${money(b.cover.funds)}` : '',
+    b.cover.past > 0 ? `прошлые сбережения −${money(b.cover.past)}` : '',
+  ].filter(Boolean).join(' · ');
+}
+
 /**
- * Step "Перерасход": spending went past the budget less 🔒 — what covers it: "Из сбережений сентября" (🔒 less it; not
- * offered without 🔒), "Из бюджета октября" (owed, red in October's plan; not offered once October is over too),
- * "Уже покрыт". 🔒 smaller than it: what 🔒 doesn't cover, asked apart.
+ * Step "Перерасход": spending went past the budget less 🔒 — what covers it: "Из сбережений сентября" (🔒 first, then
+ * the funds' contributions, the farthest due first, then the savings from before), "Из бюджета октября" (owed, red in
+ * October's plan; not offered once October is over too), "Уже покрыт". A month closed before: 🔒 alone, what it
+ * doesn't cover asked apart.
  */
 export default function StepOver({ c, onAnswer }: Props) {
   const b = c.budget!;
@@ -19,15 +29,15 @@ export default function StepOver({ c, onAnswer }: Props) {
   const m = monthWords(c.ym);
   const next = monthWords(c.next_ym);
   const carry = c.can_carry || c.answers.over_cover === 'next' || c.answers.over_rest_cover === 'next';
-  const partial = b.locked_minor > 0 && b.locked_minor < b.over_minor;
-  const covered = { value: 'covered' as const, title: 'Уже покрыт', note: 'из прошлых сбережений или со стороны — только в «Истории»' };
+  // a month closed before: 🔒 alone covered it
+  const partial = b.over_rest_minor > 0;
+  const covered = { value: 'covered' as const, title: 'Уже покрыт', note: 'со стороны — только в «Истории»' };
   const options: Array<{ value: OverCover; title: string; note: string }> = [
-    ...(b.locked_minor > 0 ? [{
-      value: 'savings' as const,
+    {
+      value: 'savings',
       title: partial ? `Из сбережений ${m.gen} — ${money(b.locked_minor)} из ${money(b.over_minor)}` : `Из сбережений ${m.gen}`,
-      note: partial ? `🔒 ${money(b.locked_minor)} → 0: больше сбережений в ${m.prep} нет`
-        : `🔒 ${money(b.locked_minor)} → ${money(b.locked_minor - b.over_minor)} — отложено меньше`,
-    }] : []),
+      note: partial ? `🔒 ${money(b.locked_minor)} → 0: больше сбережений в ${m.prep} нет` : coverNote(b, money),
+    },
     ...(carry ? [{ value: 'next' as const, title: `Из бюджета ${next.gen}${partial ? ` — все ${money(b.over_minor)}` : ''}`, note: `вычтем из бюджета ${next.gen} — красным в плане` }] : []),
     covered,
   ];

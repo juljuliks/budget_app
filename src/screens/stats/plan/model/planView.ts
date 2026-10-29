@@ -113,9 +113,11 @@ export function planView({ ym, currency, items: all, budget, toShown, fromShown,
       : (free ?? 0) + locked;
   const pct = (v: number) => (shownBudget ? percentOf(v, shownBudget) || '0%' : '');
 
-  // this month: what the overspend already took of the savings (💰 first, then 🔒)
-  const less = timing === 'current' && shownBudget !== null
-    ? savingsLess({ items: [...items, ...funds], spentBy: withoutSaving(spentBy, saving), unplanned, unplannedSpent: unplannedSpentMinor, free: free ?? 0, locked }) : null;
+  // this month: what the overspend already took of the savings (💰 first, then 🔒, then the funds' contributions)
+  const less = timing === 'current' && shownBudget !== null ? savingsLess({
+    items: [...items, ...funds], spentBy: withoutSaving(spentBy, saving), unplanned, unplannedSpent: unplannedSpentMinor, free: free ?? 0, locked,
+    funds: funds.map((i) => ({ category_id: i.category_id, value: i.converted_minor ?? 0, due: i.fund?.due ?? '' })),
+  }) : null;
 
   // the bar's parts, left to right; what the budget leaves is shown in "Сбережения" (where it goes: "Итоги месяца") with
   // the funds' contributions
@@ -130,7 +132,7 @@ export function planView({ ym, currency, items: all, budget, toShown, fromShown,
       ? { key: 'free', label: 'Сбережения', value: Math.abs(saved), color: RING_SAVINGS, note: saved < 0 ? 'бюджет превышен' : 'сэкономлено', tone: saved < 0 ? 'over' : 'savings', noteTone: saved < 0 ? 'over' : undefined }
       // the locked part and the leftover together: one savings column; what it's made of (🔒 + 💰) is in the section below
       : less
-        ? { key: 'free', label: 'Сбережения', value: less.now + fundsTotal, was: less.was + fundsTotal, color: RING_SAVINGS, note: pct(less.now + fundsTotal), tone: 'savings' }
+        ? { key: 'free', label: 'Сбережения', value: less.now + fundsTotal - less.funds.less, was: less.was + fundsTotal, color: RING_SAVINGS, note: pct(less.now + fundsTotal - less.funds.less), tone: 'savings' }
         : { key: 'free', label: 'Сбережения', value: Math.max(0, free ?? 0) + locked + fundsTotal, color: RING_SAVINGS, note: pct(Math.max(0, free ?? 0) + locked + fundsTotal), tone: 'savings' },
   ] : [];
 

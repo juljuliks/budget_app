@@ -9,6 +9,7 @@ import Loading from '@/shared/ui/Loading';
 import { monthWords } from './model/closeTexts';
 import { useMonthClose } from './model/useMonthClose';
 import Choice from './ui/Choice';
+import { coverNote } from './ui/StepOver';
 import { styles } from './ui/styles';
 
 type Props = {
@@ -38,18 +39,16 @@ export default function CarrySheet({ fromYm, kind, onClose }: Props) {
   const next = c ? monthWords(c.next_ym) : null;
   const money = (minor: number) => formatWithCurrency(minor, b?.currency);
 
-  // the overspend 🔒 covered in part: only what it didn't cover is asked again
+  // the overspend 🔒 covered in part (a month closed before): only what it didn't cover is asked again
   const field: keyof CloseAnswers = kind === 'plus' ? 'rest_choice' : c?.answers.over_cover === 'savings' ? 'over_rest_cover' : 'over_cover';
   const options: Option[] = !c || !b || !m || !next ? [] : kind === 'plus' ? [
     { value: 'next', title: `Перенести на ${next.nom}`, note: `как сейчас: бюджет ${next.gen} + ${money(b.rest_minor)}` },
     { value: 'savings', title: 'В сбережения', note: `💰 «Сэкономлено» ${m.gen} — спросим, удалось ли отложить` },
   ] : [
     { value: 'next', title: `Из бюджета ${next.gen}`, note: `как сейчас: вычтен из бюджета ${next.gen}` },
-    ...(field === 'over_cover' && b.locked_minor > 0 ? [{
-      value: 'savings', title: `Из сбережений ${m.gen}`,
-      note: `🔒 ${money(b.locked_minor)} → ${money(Math.max(0, b.locked_minor - b.over_minor))} — в «Истории» ${m.gen} отложено меньше`,
-    }] : []),
-    { value: 'covered', title: 'Уже покрыт', note: 'из прошлых сбережений или со стороны — перерасход останется только в «Истории»' },
+    // 🔒 first, then the funds' contributions, then the savings from before
+    ...(field === 'over_cover' ? [{ value: 'savings', title: `Из сбережений ${m.gen}`, note: coverNote(b, money) }] : []),
+    { value: 'covered', title: 'Уже покрыт', note: 'со стороны — перерасход останется только в «Истории»' },
   ];
   const current = c ? (c.answers[field] as string | null) : null;
   const chosen = draft ?? current;

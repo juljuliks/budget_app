@@ -1,5 +1,5 @@
 // "Итоги месяца": a month over is closed with answers, step by step — what covers an overspend (spending past the budget
-// less 🔒), then "Сколько удалось отложить?": one sum, laid out over the funds' contributions, 🔒 and 💰 (closeSplit.ts;
+// less 🔒: "Из сбережений" takes 🔒, then the funds' contributions, then the savings from before), then "Сколько удалось отложить?": one sum, laid out over the funds' contributions, 🔒 and 💰 (closeSplit.ts;
 // "Изменить распределение" — by hand: the funds' parts are fund_confirms). The leftover can go to the next month instead.
 // What the answers send to the next month (an overspend owed, the leftover moved) is its carry. Answers are kept as
 // given (a draft until closed); an unanswered question takes its default.
@@ -9,7 +9,7 @@ import { currentYm, parseYm, ymOf } from './months';
 import { planConverter, storedBudget } from './budget';
 import { monthStats } from './stats';
 import { activeFunds, fundLedger } from './funds';
-import { savingsOf, splitKept, splitSaved } from './closeSplit';
+import { coverOver, savingsOf, splitKept, splitSaved } from './closeSplit';
 import { SavingsBalance, savingsBalance } from './closeBalance';
 
 export type { SavingsBalance };
@@ -49,6 +49,8 @@ export type CloseFund = {
   target_minor: number;
   due: string;
   planned_minor: number;
+  /** that less what the overspend took of it ("Из сбережений") */
+  asked_minor: number;
   /** what went in; null — not answered */
   confirmed_minor: number | null;
   /** what it would have at the month's end with the planned contribution in */
@@ -64,8 +66,12 @@ export type CloseBudget = {
   spent_minor: number;
   /** spent past the budget less 🔒 */
   over_minor: number;
-  /** the overspend 🔒 covers ("Из сбережений"), and what is left of it */
+  /** what "Из сбережений" takes: 🔒, the funds' contributions (the farthest due first), the savings from before */
+  cover: { locked: number; funds: number; past: number };
+  /** what of it is taken (answered "Из сбережений"); a month closed before — 🔒 alone, the rest asked apart */
   from_savings_minor: number;
+  from_funds_minor: number;
+  from_past_minor: number;
   over_rest_minor: number;
   /** 🔒 less what covered the overspend */
   kept_locked_minor: number;
@@ -91,8 +97,9 @@ export type MonthClose = {
   currency: Currency;
   /** all that was put aside; null — not answered. "Остаток": how much the account changed, and it may be negative */
   put_minor: number | null;
-  /** "Остаток": the account, in the budget's currency */
+  /** "Остаток": the account, in the budget's currency; what the month changes it by, as planned */
   balance: SavingsBalance;
+  account_minor: number;
   /** it laid out (the funds' parts by hand, if changed), and as it would be by itself; null — not answered */
   split: CloseSplit | null;
   auto: CloseSplit | null;
@@ -106,7 +113,7 @@ export type MonthClose = {
   carry: { debt_minor: number; plus_minor: number };
 };
 
-type CloseRow = CloseAnswers & { closed_at: number | null };
+type CloseRow = CloseAnswers & { closed_at: number | null; locked_cover: number };
 
 const nextOf = (ym: string) => { const { year, month } = parseYm(ym); return ymOf(year, month + 1); };
 
@@ -122,7 +129,7 @@ async function closeFunds(ym: string, nowYm: string): Promise<CloseFund[]> {
     const c = await db.get<{ name: string; emoji: string | null }>('SELECT name, emoji FROM categories WHERE id = ?', [fund.category_id]);
     out.push({
       category_id: fund.category_id, name: c?.name ?? '', emoji: c?.emoji ?? null, currency: fund.currency,
-      target_minor: fund.target_minor, due: fund.due, planned_minor: planned, confirmed_minor: confirmed ?? null,
+      target_minor: fund.target_minor, due: fund.due, planned_minor: planned, asked_minor: planned, confirmed_minor: confirmed ?? null,
       with_planned_minor: Math.max(0, (m?.end ?? 0) - (m?.contribution ?? 0) + planned),
     });
   }
@@ -140,7 +147,7 @@ async function lastRestChoice(ym: string): Promise<RestChoice | null> {
 export async function monthClose(ym: string, nowYm = currentYm()): Promise<MonthClose> {
   const db = await getDb();
   const row = await db.get<CloseRow>(
-    `SELECT over_cover, over_rest_cover, rest_choice, saved, saved_minor, by_balance, balance_minor, balance_open_minor, closed_at
+    `SELECT over_cover, over_rest_cover, rest_choice, saved, saved_minor, by_balance, balance_minor, balance_open_minor, closed_at, locked_cover
        FROM month_closes WHERE ym = ?`, [ym]);
   const next_ym = nextOf(ym);
   const can_carry = next_ym >= nowYm;
@@ -163,8 +170,11 @@ export async function monthClose(ym: string, nowYm = currentYm()): Promise<Month
   const currency = stored?.currency ?? funds[0]?.currency ?? 'GEL';
   const conv = await planConverter(ym);
   const inCur = (minor: number, from: Currency) => conv(minor, from, currency) ?? 0;
-  // the funds' contributions as planned: what the month set aside for them (the answer lays out what went in)
-  const fundsPlanned = funds.reduce((a, f) => a + inCur(f.planned_minor, f.currency), 0);
+  // the funds' contributions as planned, the nearest due first: what the month set aside for them (the answer lays out
+  // what went in); less what an overspend takes of them
+  const order = [...funds].sort((a, b) => a.due.localeCompare(b.due));
+  const amounts = order.map((f) => inCur(f.planned_minor, f.currency));
+  const fundsPlanned = amounts.reduce((a, v) => a + v, 0);
   if (stored) {
     const { year, month } = parseYm(ym);
     const stats = await monthStats(year, month, currency);
@@ -173,29 +183,36 @@ export async function monthClose(ym: string, nowYm = currentYm()): Promise<Month
     const locked = stored.locked_minor;
     const over = Math.max(0, spent - (amount - locked));
     const rest = Math.max(0, amount - locked - spent);
-    answers.over_cover ??= locked > 0 ? 'savings' : can_carry ? null : 'covered';
-    const fromSavings = over > 0 && answers.over_cover === 'savings' ? Math.min(locked, over) : 0;
-    const overRest = over > 0 && answers.over_cover === 'savings' ? over - fromSavings : 0;
+    answers.over_cover ??= locked > 0 || fundsPlanned > 0 ? 'savings' : can_carry ? null : 'covered';
+    const cover = coverOver(over, locked, amounts);
+    const taken = over > 0 && answers.over_cover === 'savings';
+    // closed before the funds and the savings from before covered it too: 🔒 alone, the rest as answered then
+    const legacy = taken && row?.locked_cover === 1;
+    const cut = taken && !legacy ? cover.funds : amounts.map(() => 0);
+    cut.forEach((v, i) => { amounts[i] -= v; });
+    for (const [i, f] of order.entries()) f.asked_minor = Math.max(0, f.planned_minor - (conv(cut[i], currency, f.currency) ?? cut[i]));
     budget = {
       currency, amount_minor: amount, locked_minor: locked, spent_minor: spent, over_minor: over,
-      from_savings_minor: fromSavings, over_rest_minor: overRest, kept_locked_minor: locked - fromSavings, rest_minor: rest,
+      cover: { locked: cover.locked, funds: cover.funds.reduce((a, v) => a + v, 0), past: cover.past },
+      from_savings_minor: taken ? cover.locked : 0, from_funds_minor: cut.reduce((a, v) => a + v, 0), from_past_minor: taken && !legacy ? cover.past : 0,
+      over_rest_minor: legacy ? over - cover.locked : 0, kept_locked_minor: locked - (taken ? cover.locked : 0), rest_minor: rest,
       own_spent_minor: stats.spent_minor,
     };
     if (over > 0) {
-      carry.debt_minor = answers.over_cover === 'next' ? over : answers.over_rest_cover === 'next' ? overRest : 0;
+      carry.debt_minor = answers.over_cover === 'next' ? over : answers.over_rest_cover === 'next' ? budget.over_rest_minor : 0;
     }
     if (answers.rest_choice === 'next') carry.plus_minor = rest;
   }
   const kept = budget?.kept_locked_minor ?? 0;
   const restPlanned = budget && answers.rest_choice === 'savings' ? budget.rest_minor : 0;
-  const ask = fundsPlanned + kept + restPlanned;
-  const bal = await savingsBalance(ym, currency, conv, row ?? null, ask);
+  const ask = amounts.reduce((a, v) => a + v, 0) + kept + restPlanned;
+  // the account: what the month puts aside, less what the overspend took of the savings from before
+  const past = budget?.from_past_minor ?? 0;
+  const bal = await savingsBalance(ym, currency, conv, row ?? null, ask - past);
   const monthPut = !answers.saved ? null : answers.saved === 'yes' ? ask : answers.saved === 'no' ? 0 : answers.saved_minor;
-  const put = bal.balance.on ? bal.put : monthPut;
-  // the nearest due first. "Остаток" keeps the funds: a shortfall comes off 💰, then 🔒, then the farthest fund
-  const order = [...funds].sort((a, b) => a.due.localeCompare(b.due));
+  const put = bal.balance.on ? (bal.put === null ? null : bal.put + past) : monthPut;
+  // "Остаток" keeps the funds: a shortfall comes off 💰, then 🔒, then the farthest fund
   const autoOf = (total: number): CloseSplit => {
-    const amounts = order.map((f) => inCur(f.planned_minor, f.currency));
     const parts = bal.balance.on ? splitKept(total, amounts, kept, restPlanned) : splitSaved(total, amounts, kept);
     return {
       funds: order.map((f, i) => ({ category_id: f.category_id, budget_minor: parts.funds[i], minor: conv(parts.funds[i], currency, f.currency) ?? parts.funds[i] })),
@@ -219,7 +236,7 @@ export async function monthClose(ym: string, nowYm = currentYm()): Promise<Month
   const complete = overAnswered && (ask <= 0 || put !== null);
   return {
     ym, next_ym, can_carry, closed: row?.closed_at != null, steps, funds, budget, answers, ask_minor: ask, currency, put_minor: put,
-    balance: bal.balance, split, auto, planned: autoOf(ask), saved_minor, complete, carry,
+    balance: bal.balance, account_minor: ask - past, split, auto, planned: autoOf(ask), saved_minor, complete, carry,
   };
 }
 

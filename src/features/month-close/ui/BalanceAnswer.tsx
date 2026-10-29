@@ -34,7 +34,7 @@ function MoneyField({ minor, label, currency, onCommit }: {
 
 /**
  * "Остаток": one field, in the budget's currency, opening on the month before's balance plus what the budget would
- * save. No previous balance — "В августе было" once. Under the field: the calculation, the month's change, and how far
+ * save (less what the overspend took of the savings from before). No previous balance — "В августе было" once. Under the field: the calculation, the month's change, and how far
  * the account is from the calculation.
  */
 export default function BalanceAnswer({ c, onAnswer }: Props) {
@@ -42,9 +42,11 @@ export default function BalanceAnswer({ c, onAnswer }: Props) {
   const signed = (n: number) => (n > 0 ? `+${money(n)}` : money(n));
   const b = c.balance;
   const was = `В ${monthBeforePrep(c.ym)} было`;
+  // what the overspend took of the savings from before
+  const past = c.ask_minor - c.account_minor;
   const commitOpen = (minor: number) => {
-    const followed = b.value === null || (b.open !== null && b.value === b.open + c.ask_minor);
-    const value = followed ? minor + c.ask_minor : b.value ?? minor;
+    const followed = b.value === null || (b.open !== null && b.value === b.open + c.account_minor);
+    const value = followed ? minor + c.account_minor : b.value ?? minor;
     onAnswer({ by_balance: 1, balance_open_minor: minor, balance_minor: value, saved: 'other', saved_minor: value - minor });
   };
   const commitBalance = (minor: number) => {
@@ -65,7 +67,8 @@ export default function BalanceAnswer({ c, onAnswer }: Props) {
         <>
           <MoneyField minor={b.value} label="Остаток на счёте" currency={c.currency} onCommit={commitBalance} />
           <Text style={styles.calc}>
-            {`${was} ${money(b.prior ?? b.open ?? 0)}, по бюджету ${signed(c.ask_minor)} — по расчёту ${money(b.suggested)}.`}
+            {`${was} ${money(b.prior ?? b.open ?? 0)}, по бюджету ${signed(c.ask_minor)}${past > 0 ? `, на перерасход −${money(past)}` : ''}`
+              + ` — по расчёту ${money(b.suggested)}.`}
           </Text>
           {b.delta !== null ? (
             <Text style={[styles.delta, b.delta < 0 && styles.down]}>{`За ${monthWords(c.ym).nom} ${signed(b.delta)}`}</Text>

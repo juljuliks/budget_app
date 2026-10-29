@@ -31,7 +31,7 @@ function Row({ n, name, note, value, of, warn, action }: {
 
 /**
  * What was put aside laid out (or would be — "Разложим так"): the funds, the nearest due first (one short — "не хватило
- * …, следующие взносы станут больше"), 🔒 "Отложено сразу", 💰 "Сэкономлено" ("Перенести на октябрь" — the leftover
+ * …, следующие взносы станут больше"; one the overspend took part of — "перерасход −…"), 🔒 "Отложено сразу", 💰 "Сэкономлено" ("Перенести на октябрь" — the leftover
  * to the next month's budget instead).
  */
 export default function SplitRows({ c, onAnswer }: Props) {
@@ -46,12 +46,16 @@ export default function SplitRows({ c, onAnswer }: Props) {
     <>
       {s.funds.map((part) => {
         const f = c.funds.find((x) => x.category_id === part.category_id)!;
-        const short = answered && part.minor < f.planned_minor;
+        // the overspend took part of it ("Из сбережений")
+        const cut = f.planned_minor - f.asked_minor;
+        const short = answered && part.minor < f.asked_minor;
+        const note = short ? `не хватило ${money(f.asked_minor - part.minor, f.currency)} — следующие взносы станут больше`
+          : cut > 0 ? `перерасход −${money(cut, f.currency)} — следующие взносы станут больше` : `копилка · к ${dayTitle(f.due)}`;
         return (
           <Row
-            key={f.category_id} n={++n} name={`${f.emoji ?? ''} ${f.name}`.trim()} warn={short}
-            note={short ? `не хватило ${money(f.planned_minor - part.minor, f.currency)} — следующие взносы станут больше` : `копилка · к ${dayTitle(f.due)}`}
-            value={`${money(part.minor, f.currency)}${answered && !short ? ' ✓' : ''}`} of={short ? `из ${money(f.planned_minor, f.currency)}` : undefined}
+            key={f.category_id} n={++n} name={`${f.emoji ?? ''} ${f.name}`.trim()} warn={short || cut > 0} note={note}
+            value={`${money(part.minor, f.currency)}${answered && !short ? ' ✓' : ''}`}
+            of={short ? `из ${money(f.asked_minor, f.currency)}` : cut > 0 ? `из ${money(f.planned_minor, f.currency)}` : undefined}
           />
         );
       })}

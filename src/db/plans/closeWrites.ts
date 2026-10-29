@@ -56,6 +56,8 @@ export async function answerClose(ym: string, patch: Partial<CloseAnswers>, nowY
   const db = await getDb();
   await db.run('INSERT OR IGNORE INTO month_closes (ym) VALUES (?)', [ym]);
   await db.run(`UPDATE month_closes SET ${keys.map((k) => `${k} = ?`).join(', ')} WHERE ym = ?`, [...keys.map((k) => patch[k] ?? null), ym]);
+  // the overspend answered again: covered in today's order
+  if ('over_cover' in patch) await db.run('UPDATE month_closes SET locked_cover = 0 WHERE ym = ?', [ym]);
   // what was put aside laid out again by itself (a split by hand is gone with a new answer)
   const c = await monthClose(ym, nowYm);
   await writeFunds(ym, c.auto ? c.auto.funds : null, nowYm);

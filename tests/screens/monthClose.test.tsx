@@ -41,7 +41,7 @@ describe('6.6 month close', () => {
     expect(await closedAt()).not.toBeNull();
   });
 
-  test('a fund, an overspend bigger than 🔒: the overspend, then one sum laid out — the fund first; by hand; "Назад", "Подвести позже" keeps the answers', async () => {
+  test('a fund, an overspend bigger than 🔒 (🔒, the fund, the savings from before): the overspend, then one sum laid out — the fund first; by hand; "Назад", "Подвести позже" keeps the answers', async () => {
     await openApp(async () => {
       await planned();
       const holiday = await category('Отпуск', '🏖');
@@ -51,11 +51,12 @@ describe('6.6 month close', () => {
       await buy('BOLT', 1500, on(20, 12, 1), taxi);
     });
     await open();
-    // 3 350 spent and the fund's 300, 2 500 for spending: 1 150 over, 🔒 500 covers part of it
+    // 3 350 spent and the fund's 300, 2 500 for spending: 1 150 over — 🔒 500, the fund's 300, the savings from before 350
     expect(screen.getByText('Шаг 1 из 2 · Перерасход')).toBeTruthy();
-    expect(screen.getByText(m('Из сбережений сентября — 500 ₾ из 1 150 ₾'))).toBeTruthy();
-    expect(screen.getByText(m('Остальные 650 ₾?'))).toBeTruthy();
-    await tap(m('Из бюджета октября — все 1 150 ₾'));
+    expect(screen.getByText('Из сбережений сентября')).toBeTruthy();
+    expect(screen.getByText(m('🔒 500 ₾ → 0 ₾ · копилки −300 ₾ · прошлые сбережения −350 ₾'))).toBeTruthy();
+    expect(screen.queryByText(/^Остальные/)).toBeNull();
+    await tap('Из бюджета октября');
     await tap('Далее');
 
     // 🔒 kept whole: the fund's 300 and 🔒 500 asked
@@ -121,8 +122,9 @@ describe('6.6 month close', () => {
     expect(screen.getByText(/^вычтен из бюджета октября/)).toBeTruthy();
     await tap('Изменить: ⚠️ Перерасход сентября');
     expect(await screen.findByText('Покрыть иначе?')).toBeTruthy();
-    // no 🔒 in September: not from its savings
-    expect(screen.queryByText('Из сбережений сентября')).toBeNull();
+    // no 🔒 in September: all of it off the savings from before
+    expect(screen.getByText('Из сбережений сентября')).toBeTruthy();
+    expect(screen.getByText(/^прошлые сбережения −/)).toBeTruthy();
     await tap('Уже покрыт');
     await tap('Сохранить');
     await act(async () => { await new Promise((r) => setTimeout(r, 300)); });

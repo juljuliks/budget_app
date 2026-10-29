@@ -1,5 +1,6 @@
 // The current month's savings, less what the overspend already took: every category past its plan, and spending outside
-// the plan past its share, comes out of what the plan leaves (💰 "Сэкономлено"), then out of 🔒 "Отложено сразу". No React.
+// the plan past its share, comes out of what the plan leaves (💰 "Сэкономлено"), then out of 🔒 "Отложено сразу", then
+// out of the funds' contributions (the farthest due first), then out of the savings from before. No React.
 import type { PlanItem } from '@/db/plans';
 import type { SpentBy } from './usePlanData';
 
@@ -14,6 +15,10 @@ export type SavingsLess = {
   /** 💰 and 🔒, as planned and now */
   free: { was: number; now: number };
   locked: { was: number; now: number };
+  /** what it took of the funds' contributions, by fund */
+  funds: { less: number; cut: Map<number, number> };
+  /** what none of them covers: off the savings from before */
+  past: number;
   /** the biggest first */
   overs: Overspent[];
 };
@@ -21,10 +26,15 @@ export type SavingsLess = {
 /** less than this (a unit): noise of rates, not worth a word */
 const NOISE = 100;
 
-type Input = { items: PlanItem[]; spentBy: SpentBy; unplanned: number; unplannedSpent: number; free: number; locked: number };
+/** a fund's contribution this month */
+type FundPart = { category_id: number; value: number; due: string };
+
+type Input = {
+  items: PlanItem[]; spentBy: SpentBy; unplanned: number; unplannedSpent: number; free: number; locked: number; funds: FundPart[];
+};
 
 /** null: the overspend took nothing (or less than a unit). */
-export function savingsLess({ items, spentBy, unplanned, unplannedSpent, free, locked }: Input): SavingsLess | null {
+export function savingsLess({ items, spentBy, unplanned, unplannedSpent, free, locked, funds }: Input): SavingsLess | null {
   const overs: Overspent[] = items.map((i) => {
     const plan = i.converted_minor ?? 0;
     const spent = spentBy.byCategory.get(i.category_id) ?? 0;
@@ -38,9 +48,17 @@ export function savingsLess({ items, spentBy, unplanned, unplannedSpent, free, l
   const wasFree = Math.max(0, free);
   const fromFree = Math.min(wasFree, less);
   const fromLocked = Math.min(locked, less - fromFree);
+  let left = less - fromFree - fromLocked;
+  const cut = new Map<number, number>();
+  for (const f of [...funds].sort((a, b) => b.due.localeCompare(a.due))) {
+    const take = Math.min(Math.max(0, f.value), left);
+    if (take > 0) cut.set(f.category_id, take);
+    left -= take;
+  }
   return {
     was: wasFree + locked, now: wasFree + locked - fromFree - fromLocked, less,
     free: { was: wasFree, now: wasFree - fromFree }, locked: { was: locked, now: locked - fromLocked },
+    funds: { less: less - fromFree - fromLocked - left, cut }, past: left,
     overs: overs.sort((a, b) => b.over - a.over),
   };
 }

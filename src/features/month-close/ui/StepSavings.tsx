@@ -39,10 +39,10 @@ export default function StepSavings({ c, onAnswer, onSplit }: Props) {
       return;
     }
     if (c.balance.on) return;
-    const value = c.balance.prior === null ? null : c.balance.prior + c.ask_minor;
+    const value = c.balance.prior === null ? null : c.balance.prior + c.account_minor;
     onAnswer({
       by_balance: 1, balance_open_minor: null, balance_minor: value,
-      saved: value === null ? null : 'other', saved_minor: value === null ? null : c.ask_minor,
+      saved: value === null ? null : 'other', saved_minor: value === null ? null : c.account_minor,
     });
   };
   return (

@@ -36,7 +36,7 @@ export function systemSections(p: PlanView, hidden: boolean, open: SystemOpen) {
     const funds = g.funds ?? [];
     const saving = g.saving ?? [];
     const sum = g.rows.reduce((a, r) => a + r.value, 0) + funds.reduce((a, i) => a + (i.converted_minor ?? 0), 0)
-      + saving.reduce((a, i) => a + (i.subs?.saving_minor ?? 0), 0);
+      + saving.reduce((a, i) => a + (i.subs?.saving_minor ?? 0), 0) - (funds.length ? p.less?.funds.less ?? 0 : 0);
     // the leftover moved in: on top of the budget, "+", no share
     const plus = g.rows.length > 0 && g.rows.every((r) => r.carry === 'plus');
     const row = (r: PlanView['systemGroups'][number]['rows'][number]) => (
@@ -56,7 +56,7 @@ export function systemSections(p: PlanView, hidden: boolean, open: SystemOpen) {
         <View>
           {/* 🔒 first, then the funds and what is saved up for the repeating payments, then 💰 */}
           {g.rows.filter((r) => r.key === 'locked').map(row)}
-          {funds.map((item) => <FundItemRow key={item.category_id} p={p} item={item} hidden={hidden} onOpen={() => open.fund(item)} />)}
+          {funds.map((item) => <FundItemRow key={item.category_id} p={p} item={item} hidden={hidden} onOpen={() => open.fund(item)} onLess={open.less} />)}
           {saving.map((item) => <SavingItemRow key={item.category_id} p={p} item={item} hidden={hidden} onOpen={() => open.saving(item)} />)}
           {g.rows.filter((r) => r.key !== 'locked').map(row)}
         </View>

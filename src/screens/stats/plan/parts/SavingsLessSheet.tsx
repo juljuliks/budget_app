@@ -32,7 +32,8 @@ function Row({ o, money, onOpen }: { o: Overspent; money: (minor: number) => str
 }
 
 /**
- * ⓘ of the savings the overspend took part of: by how much, what they'll be if the rest is spent by plan, and every
+ * ⓘ of the savings the overspend took part of: by how much, what they'll be if the rest is spent by plan (the funds'
+ * contributions less, the savings from before — what none of them covers), and every
  * category past its plan (the spending outside the plan past its share too), the biggest first; a tap opens its plan.
  */
 export default function SavingsLessSheet({ less, visible, money, onClose, onOpen }: Props) {
@@ -41,7 +42,9 @@ export default function SavingsLessSheet({ less, visible, money, onClose, onOpen
       {less ? (
         <SheetScrollView contentContainerStyle={styles.content}>
           <Text style={styles.lead}>
-            {`Эти категории потратили больше плана. Если дальше тратить по плану, в сбережения пойдёт ${money(less.now)} (−${money(less.less)})`}
+            {`Эти категории потратили больше плана. Если дальше тратить по плану, в сбережения пойдёт ${money(less.now)} (−${money(less.was - less.now)})`
+              + (less.funds.less > 0 ? `, в копилки — на ${money(less.funds.less)} меньше` : '')
+              + (less.past > 0 ? `, ещё ${money(less.past)} — из прошлых сбережений` : '')}
           </Text>
           {less.overs.map((o) => (
             <Row key={o.key} o={o} money={money} onOpen={o.category_id === null ? undefined : () => { onClose(); onOpen(o.category_id!); }} />

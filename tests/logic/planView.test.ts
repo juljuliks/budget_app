@@ -80,14 +80,26 @@ test('no budget: no split, the hint asks for one', () => {
 test('the overspend takes the savings: 🌊 first, then 🔒; the biggest overspend first; under a unit — nothing', () => {
   const items = [item({ category_id: 1, converted_minor: 30000 }), item({ category_id: 2, name: 'Такси', converted_minor: 10000 })];
   const spentBy = (a: number, b: number) => ({ byCategory: new Map([[1, a], [2, b]]), total: a + b });
-  const l = savingsLess({ items, spentBy: spentBy(38050, 13529), unplanned: 5000, unplannedSpent: 4000, free: 25732, locked: 259940 })!;
+  const l = savingsLess({ items, spentBy: spentBy(38050, 13529), unplanned: 5000, unplannedSpent: 4000, free: 25732, locked: 259940, funds: [] })!;
   expect(l).toMatchObject({ less: 11579, was: 285672, now: 274093, free: { was: 25732, now: 14153 }, locked: { was: 259940, now: 259940 } });
   expect(l.overs.map((o) => [o.name, o.over])).toEqual([['Продукты', 8050], ['Такси', 3529]]);
   // past the leftover: into 🔒; spending outside the plan past its share, a row of its own
-  const big = savingsLess({ items, spentBy: spentBy(60000, 10000), unplanned: 5000, unplannedSpent: 8000, free: 25000, locked: 100000 })!;
+  const big = savingsLess({ items, spentBy: spentBy(60000, 10000), unplanned: 5000, unplannedSpent: 8000, free: 25000, locked: 100000, funds: [] })!;
   expect(big).toMatchObject({ less: 33000, free: { now: 0 }, locked: { now: 92000 } });
   expect(big.overs.map((o) => o.key)).toEqual(['1', 'unplanned']);
-  expect(savingsLess({ items, spentBy: spentBy(30050, 0), unplanned: 0, unplannedSpent: 0, free: 1000, locked: 0 })).toBeNull();
+  expect(savingsLess({ items, spentBy: spentBy(30050, 0), unplanned: 0, unplannedSpent: 0, free: 1000, locked: 0, funds: [] })).toBeNull();
+});
+
+test('past 💰 and 🔒: the funds\' contributions, the farthest due first, then the savings from before', () => {
+  const items = [item({ category_id: 1, converted_minor: 30000 })];
+  const spent = (v: number) => ({ byCategory: new Map([[1, v]]), total: v });
+  const funds = [{ category_id: 7, value: 5000, due: '2026-12-31' }, { category_id: 8, value: 4000, due: '2027-07-31' }];
+  const l = savingsLess({ items, spentBy: spent(41000), unplanned: 0, unplannedSpent: 0, free: 1000, locked: 3000, funds })!;
+  // 11 000 over: 💰 1 000, 🔒 3 000, the farthest fund 4 000, the nearest 3 000
+  expect(l).toMatchObject({ less: 11000, now: 0, past: 0, funds: { less: 7000 } });
+  expect([...l.funds.cut]).toEqual([[8, 4000], [7, 3000]]);
+  const all = savingsLess({ items, spentBy: spent(45000), unplanned: 0, unplannedSpent: 0, free: 1000, locked: 3000, funds })!;
+  expect(all).toMatchObject({ funds: { less: 9000 }, past: 2000 });
 });
 
 test('locked row note when overspend took part of 🔒: "из сбережений ушло X · осталось Y", no LessNote (no was)', () => {

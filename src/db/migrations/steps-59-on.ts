@@ -98,4 +98,10 @@ export const STEPS_59_ON: MigrationStep[][] = [
   [glueSecondMerchants],
   // 60: "locked MAX" flag: re-derive the locked amount from the free budget each time, so it follows rate/plan changes
   ['ALTER TABLE plan_months ADD COLUMN locked_is_max INTEGER NOT NULL DEFAULT 0'],
+  // 61: "Из сбережений" takes 🔒, then the funds' contributions, then the savings from before. A month closed before
+  // keeps what 🔒 alone covered (the rest as answered then) until its overspend is answered again
+  [
+    'ALTER TABLE month_closes ADD COLUMN locked_cover INTEGER NOT NULL DEFAULT 0',
+    'UPDATE month_closes SET locked_cover = 1 WHERE closed_at IS NOT NULL',
+  ],
 ];
