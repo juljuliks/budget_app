@@ -37,6 +37,10 @@ export const styles = StyleSheet.create({
   overLine: { color: colors.warn, fontWeight: '600' },
   overNum: { color: colors.warn },
   paceOk: { color: colors.income },
+  // «Сбережения»: under its band, what the amounts mean; ⓘ after an amount; "Подвести итоги ›"
+  savingsCaption: { fontSize: 12, color: colors.muted, marginTop: 8 },
+  infoGap: { marginLeft: 4 },
+  closeLink: { fontSize: 14, color: colors.accent, marginTop: 10 },
   paceAhead: { color: colors.warn },
   crossed: { textDecorationLine: 'line-through' },
   refundsAmount: { fontSize: 15, color: colors.income, fontVariant: ['tabular-nums'] },

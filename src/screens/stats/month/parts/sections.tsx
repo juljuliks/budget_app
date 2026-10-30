@@ -19,7 +19,8 @@ const UNPLANNED = 'Вне плана';
 /** A row of a category (made by the screen: it knows the month, the norms, "＋ В план"). */
 type RowOf = (c: CategoryStat, unplanned: boolean) => React.ReactElement;
 
-const header = (title: string, total: React.ReactNode) => (
+/** A section's sticky grey band: its title, its total at the right. */
+export const header = (title: string, total: React.ReactNode) => (
   <SectionHeader style={[formStyles.sectionHeader, styles.groupHeader, styles.group]}>
     <Text style={styles.groupTitle}>{title}</Text>
     {total}

@@ -38,11 +38,11 @@ describe('6.1 the month\'s budget', () => {
     await openPlan();
     expect(after('План', 2)).toEqual(['72%', '2 160 ₾']);
     expect(after('Вне плана', 2)).toEqual(['10%', '300 ₾']);
-    // the overspend took 130 of them (see the next test): what is left, then a line of its own for what it took
-    expect(after('Сбережения', 4)).toEqual(['14%', '410 ₾', 'Перерасход', '4%']);
-    expect(after('🔒 Отложено сразу', 3)).toEqual(['заблокировано в начале месяца', '300 ₾', '10%']);
-    expect(after('💰 Сэкономлено', 4)).toEqual(['перерасход: ', '−130 ₾', '110 ₾', '4%']);
-    expect(after('🎲 Траты вне плана', 3)).toEqual(['категории без плана и без категории', '300 ₾', '10%']);
+    // as planned; how each goes under it (the overspend took 130 of 💰: the stats tell it)
+    expect(after('Сбережения', 2)).toEqual(['18%', '540 ₾']);
+    expect(after('🔒 Отложено сразу', 4)).toEqual(['заблокировано в начале месяца', '✓ отложено', '300 ₾', '10%']);
+    expect(after('💰 Сэкономлено', 4)).toEqual(['не запланировано — решите в итогах месяца', 'выходит 110 ₾ — перерасход', '240 ₾', '8%']);
+    expect(after('🎲 Траты вне плана', 4)).toEqual(['категории без плана и без категории', 'больше доли на 80 ₾', '300 ₾', '10%']);
   });
 
   test('another currency: the savings in it, "(N ₾)" before them in the budget\'s one', async () => {
@@ -53,22 +53,20 @@ describe('6.1 the month\'s budget', () => {
     await tap('$ USD');
     backToTabs();
     expect(await screen.findByText('(300 ₾)')).toBeTruthy();
-    expect(after('🔒 Отложено сразу', 4)).toEqual(['заблокировано в начале месяца', '(300 ₾)', '120 $', '10%']);
-    expect(after('💰 Сэкономлено', 5)).toEqual(['перерасход: ', '−52 $', '(110 ₾)', '44 $', '4%']);
+    expect(after('🔒 Отложено сразу', 5)).toEqual(['заблокировано в начале месяца', '✓ отложено', '(300 ₾)', '120 $', '10%']);
+    expect(after('💰 Сэкономлено', 5)).toEqual(['не запланировано — решите в итогах месяца', 'выходит 44 $ — перерасход', '(240 ₾)', '96 $', '8%']);
     // the section's header: its total in the budget's currency first
-    expect(screen.getByText('(410 ₾) ')).toBeTruthy();
+    expect(screen.getByText('(540 ₾) ')).toBeTruthy();
   });
 
-  test('savings the overspend took part of: "Перерасход" in the legend, a tap — by how much — by how much, what took it; a category\'s tap opens its plan', async () => {
+  test('what goes to savings under the budget; "Подробнее ›" — the stats\' «Сбережения», ⓘ what took it; a category\'s tap opens its plan', async () => {
     await openPlan();
-    expect(screen.queryByText(/^Сбережения к концу месяца/)).toBeNull();
-    // the savings section's line: ⓘ in its "перерасход: −130 ₾ ⓘ"
-    await tap('Почему сбережения меньше');
-    expect(await screen.findByText('Сбережения меньше на 130 ₾')).toBeTruthy();
-    await tap('Понятно');
-    // the legend's own line for it, red as in the bar: the shares add up to the whole
-    expect(after('Перерасход', 2)).toEqual(['4%', '130 ₾']);
-    await tap('Перерасход: что съело сбережения');
+    expect(screen.queryByText('Перерасход')).toBeNull();
+    expect(screen.getByText('В сбережения идёт 410 ₾ из 540 ₾')).toBeTruthy();
+    await tap('Сбережения подробнее');
+    expect(await screen.findByText('К концу месяца, если дальше тратить по плану')).toBeTruthy();
+    expect(screen.getByText('Перерасход взял 130 ₾ ')).toBeTruthy();
+    await tap('💰 Сэкономлено: что съело сбережения');
     // 3 000 − (620 + 310 + 800 + 450 + 30) − 380 outside the plan
     expect(await screen.findByText('Сбережения меньше на 130 ₾')).toBeTruthy();
     expect(screen.getByText('Эти категории потратили больше плана. Если дальше тратить по плану, в сбережения пойдёт 410 ₾ (−130 ₾)')).toBeTruthy();
@@ -167,11 +165,11 @@ describe('6.2 locked for savings, the share outside the plan, the leftover', () 
 describe('6.3 the categories in the plan', () => {
   beforeEach(() => openPlan());
 
-  test('a row: its limit per rhythm, its share of the budget; the obligatory ones', async () => {
-    expect(after('🛒 Продукты', 3)).toEqual(['лимит ≈ 20 ₾ в день', '620 ₾', '21%']);
-    expect(after('☕️ Кафе и рестораны', 3)).toEqual(['лимит ≈ 70 ₾ в неделю', '310 ₾', '10%']);
-    expect(after('🏠 Дом и коммуналка', 3)).toEqual(['разовый платёж', '800 ₾', '27%']);
-    expect(after('👕 Одежда', 3)).toEqual(['крупно, раз в месяц', '400 ₾', '13%']);
+  test('a row: its limit per rhythm, how it goes, its share of the budget; the obligatory ones', async () => {
+    expect(after('🛒 Продукты', 4)).toEqual(['лимит ≈ 20 ₾ в день', 'потрачено 305 ₾', '620 ₾', '21%']);
+    expect(after('☕️ Кафе и рестораны', 4)).toEqual(['лимит ≈ 70 ₾ в неделю', 'потрачено 90 ₾', '310 ₾', '10%']);
+    expect(after('🏠 Дом и коммуналка', 4)).toEqual(['разовый платёж', '✓ оплачено', '800 ₾', '27%']);
+    expect(after('👕 Одежда', 4)).toEqual(['крупно, раз в месяц', 'больше на 50 ₾', '400 ₾', '13%']);
   });
 
   test('an amount: what helps to pick it; more than is free refused; saved', async () => {
@@ -270,7 +268,10 @@ describe('6.3 the categories in the plan', () => {
     expect(await db.get("SELECT p.limit_minor AS a FROM plan_items p JOIN categories c ON c.id = p.category_id WHERE p.ym = '2026-10' AND c.name = 'Одежда'")).toEqual({ a: 108000 });
   });
 
-  test('"Что значат значки": the plan icons sheet', async () => {
+  test('"Что значат значки": under every section; the plan icons sheet', async () => {
+    await screen.findByText('👕 Одежда');
+    const all = texts();
+    expect(all.indexOf('Что значат значки')).toBeGreaterThan(all.indexOf('👕 Одежда'));
     await tap('Что значат значки');
     for (const t of ['Значки плана', 'Траты с лимитом', 'Разовый платёж', 'Регулярный платёж', 'Повторять каждый месяц', 'Копилка', 'Часть бюджета']) {
       expect(await screen.findByText(t)).toBeTruthy();

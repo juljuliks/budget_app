@@ -11,14 +11,13 @@ import BudgetBar from './BudgetBar';
 import BudgetLegend from './BudgetLegend';
 import { styles } from './styles';
 
-/** `onLess`: ⓘ of savings the overspend took part of */
-type Props = { p: PlanView; budget: PlanBudget | null; currency: Currency; hidden: boolean; onEdit: () => void; onLess: () => void };
+type Props = { p: PlanView; budget: PlanBudget | null; currency: Currency; hidden: boolean; onEdit: () => void };
 
 /**
  * The budget in one line, then its split as one bar: planned / for spending outside the plan / the funds / savings (or
  * not distributed); under it a line for each part, as a legend (BudgetLegend).
  */
-export default function BudgetCard({ p, budget, currency, hidden, onEdit, onLess }: Props) {
+export default function BudgetCard({ p, budget, currency, hidden, onEdit }: Props) {
   const { shownBudget, locked, free } = p;
   return (
     <View style={styles.budgetBox}>
@@ -41,7 +40,7 @@ export default function BudgetCard({ p, budget, currency, hidden, onEdit, onLess
       {shownBudget ? (
         <>
           <BudgetBar p={p} />
-          <BudgetLegend p={p} onLess={onLess} />
+          <BudgetLegend p={p} />
         </>
       ) : (
         <Text style={[styles.caption, styles.left]}>

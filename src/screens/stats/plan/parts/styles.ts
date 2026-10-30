@@ -46,9 +46,13 @@ export const styles = StyleSheet.create({
   partValues: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 6 },
   partValue: { textAlign: 'right', fontSize: 14, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
   // "перерасход: −15 ₾ ⓘ" under savings the overspend took part of (a plan's row)
-  less: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 2 },
-  lessText: { fontSize: 12, color: colors.muted, fontVariant: ['tabular-nums'] },
-  lessMinus: { color: colors.danger },
+  // how a row is going ("потрачено 320 ₾", "✓ оплачено", "больше на 50 ₾"): a line under its note
+  mark: { fontSize: 12, color: colors.muted, marginTop: 2, fontVariant: ['tabular-nums'] },
+  markOk: { color: colors.income },
+  markWarn: { color: colors.warn },
+  // "В сбережения идёт … · Подробнее ›" under the budget
+  savingsLine: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 8, paddingVertical: 4 },
+  savingsLineText: { flexShrink: 1, fontSize: 14, color: colors.text, fontVariant: ['tabular-nums'] },
   // "(−15 ₾ ⓘ)" after them in the legend
   // the legend's names laid out unseen: the widest sets the names' column
   measure: { position: 'absolute', opacity: 0, alignItems: 'flex-start' },
@@ -60,8 +64,8 @@ export const styles = StyleSheet.create({
   lockedValue: { color: RING_LOCKED },
   lockedPart: { backgroundColor: RING_LOCKED, alignItems: 'center', justifyContent: 'center' },
   freeValue: { color: colors.income },
-  // "Что значат значки" under the budget
-  iconsLink: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingVertical: 4, marginBottom: 4 },
+  // "Что значат значки" under every section
+  iconsLink: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingVertical: 4, marginTop: 16 },
   iconsLinkText: { fontSize: 14, color: colors.accent },
   caption: { fontSize: 13, color: colors.muted, textAlign: 'center' },
   hint: { color: colors.muted, fontSize: 14, textAlign: 'center', marginVertical: 12 },

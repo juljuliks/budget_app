@@ -172,7 +172,7 @@ describe('5.4–5.6 hidden amounts, the currency, the warning', () => {
   test('the eye hides the amounts, the % stay; remembered', async () => {
     await tap('Скрыть суммы бюджета');
     await waitFor(() => expect(screen.queryByText('1 645 / 2 160 ₾ (76%)')).toBeNull());
-    expect(screen.getByText('76%')).toBeTruthy();
+    expect(screen.getAllByText('76%').length).toBeGreaterThan(0);
     expect(screen.getAllByText('49% плана').length).toBeGreaterThan(0);
     expect(screen.getAllByText(/^\d+% трат$/).length).toBeGreaterThan(0);
     // the lines under the bars: what's left as a share of the limit, an overspend just named — no amounts

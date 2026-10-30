@@ -13,7 +13,7 @@ import { planView } from './model/planView';
 import BudgetCard from './parts/BudgetCard';
 import BudgetSheet from './parts/BudgetSheet';
 import PlanIconsSheet from './parts/PlanIconsSheet';
-import SavingsLessSheet from './parts/SavingsLessSheet';
+import SavingsLine from './parts/SavingsLine';
 import { InfoIcon } from '@/shared/ui/icons';
 import { colors } from '@/shared/theme/theme';
 import { itemSections, systemSections } from './parts/sections';
@@ -37,7 +37,8 @@ const editTarget = (item: PlanItem): PlanAmountTarget => ({
   fund: item.fund && { target_minor: item.fund.target_minor, due: item.fund.due, start_minor: item.fund.start_minor },
 });
 
-export default function PlanView({ ym, currency }: { ym: string; currency: Currency }) {
+/** `onSavings`: "Подробнее ›" of what goes to savings — the stats' «Сбережения» of the month */
+export default function PlanView({ ym, currency, onSavings }: { ym: string; currency: Currency; onSavings: () => void }) {
   const hidden = useHideAmounts();
   const data = usePlanData(ym, currency);
   const { items, budget, toShown, load } = data;
@@ -51,8 +52,6 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
   const [fundOpen, setFundOpen] = useState<PlanItem | null>(null);
   // what the month before sent, opened: its overspend or its leftover
   const [carryOpen, setCarryOpen] = useState<'debt' | 'plus' | null>(null);
-  // ⓘ of the savings the overspend took part of
-  const [lessOpen, setLessOpen] = useState(false);
   // "Подписки" opened: the month's payments, or the coming ones ("Предстоящие подписки" in "Сбережения")
   const [subsOpen, setSubsOpen] = useState<{ item: PlanItem; view: PaymentsView } | null>(null);
   // "Что значат значки"
@@ -67,19 +66,21 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
   return (
     <View style={styles.screen}>
     <StickyScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      <BudgetCard p={p} budget={budget} currency={currency} hidden={hidden} onEdit={openBudget} onLess={() => setLessOpen(true)} />
-      <TouchableOpacity style={styles.iconsLink} onPress={() => setIconsOpen(true)} hitSlop={8} accessibilityRole="button">
-        <InfoIcon color={colors.accent} size={16} />
-        <Text style={styles.iconsLinkText}>Что значат значки</Text>
-      </TouchableOpacity>
+      <BudgetCard p={p} budget={budget} currency={currency} hidden={hidden} onEdit={openBudget} />
+      <SavingsLine p={p} onMore={onSavings} />
 
       {items.length === 0 ? <Text style={styles.hint}>План пуст. Нажмите ＋, чтобы добавить категории и суммы.</Text> : null}
-      {systemSections(p, hidden, { budget: openBudget, carry: setCarryOpen, less: () => setLessOpen(true), fund: setFundOpen, saving: (item) => openRecurring(item, 'upcoming') })}
+      {systemSections(p, hidden, { budget: openBudget, carry: setCarryOpen, fund: setFundOpen, saving: (item) => openRecurring(item, 'upcoming') })}
       {itemSections(p, {
         ym, currency, hidden, toShown,
         onOpen: (item) => setEditingItem(editTarget(item)),
         onOpenRecurring: (item) => openRecurring(item),
       })}
+      {/* under every section: what the rows' icons mean */}
+      <TouchableOpacity style={styles.iconsLink} onPress={() => setIconsOpen(true)} hitSlop={8} accessibilityRole="button">
+        <InfoIcon color={colors.accent} size={16} />
+        <Text style={styles.iconsLinkText}>Что значат значки</Text>
+      </TouchableOpacity>
 
       <BudgetSheet
         visible={budgetOpen} budget={budget} currency={currency} planned={p.claimed} hint={p.budgetHint} toShown={toShown}
@@ -100,10 +101,6 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
         label={fundOpen ? `${fundOpen.emoji || ''} ${fundOpen.name}`.trim() : ''}
         onClose={() => setFundOpen(null)}
         onEdit={() => { const f = fundOpen; setFundOpen(null); if (f) setEditingItem(editTarget(f)); }}
-      />
-      <SavingsLessSheet
-        less={p.less} visible={lessOpen} money={p.money} onClose={() => setLessOpen(false)}
-        onOpen={(id) => { const item = items.find((i) => i.category_id === id); if (item) setEditingItem(editTarget(item)); }}
       />
       {subsOpen ? (
         <RecurringPaymentsSheet

@@ -11,14 +11,18 @@ import { daysInMonth, monthDays } from '@/shared/lib/dateRange';
 import { formatMoneyWithCurrency, formatWithCurrency } from '@/shared/lib/money';
 import { NO_RATE } from '@/shared/lib/strings';
 import { useOpenCategoryTransactions } from '@/shared/navigation/navigation';
+import { openMonthClose } from '@/shared/navigation/sheets';
 import Donut, { DonutSegment } from '@/shared/ui/Donut';
 import StickyScrollView from '@/shared/ui/StickyScrollView';
 import DonutCenter from '../parts/DonutCenter';
 import RefundsRow from '../parts/RefundsRow';
+import SavingsLessSheet from '../plan/parts/SavingsLessSheet';
 import { useMonthData } from './model/useMonthData';
+import { useMonthSavings } from './model/useMonthSavings';
 import CategoryRow from './parts/CategoryRow';
 import MonthTotal from './parts/MonthTotal';
 import FundStatRow from './parts/FundStatRow';
+import { savingsSection } from './parts/savingsSection';
 import { fundsSection, spentFunds, typeSections, unplannedSection } from './parts/sections';
 import { styles } from './parts/styles';
 
@@ -32,7 +36,7 @@ function donutSegments(groups: StatGroup[]): DonutSegment[] {
     .map((c) => ({ key: String(c.category_id), value: c.spent_minor, color: c.color }));
 }
 
-/** A month's spending: the donut, the month against its plan, the categories by section, "Вне плана". */
+/** A month's spending: the donut, the month against its plan, «Сбережения», the categories by section, "Вне плана". */
 export default function StatsView({ year, month, currency }: { year: number; month: number; currency: Currency }) {
   const hidden = useHideAmounts();
   const { stats, share, today, load, failed } = useMonthData(year, month, currency);
@@ -42,6 +46,9 @@ export default function StatsView({ year, month, currency }: { year: number; mon
   const [selected, setSelected] = useState<string | null>(null);
   const segments = useMemo(() => (stats ? donutSegments(stats.groups) : []), [stats]);
   const openTransactions = useOpenCategoryTransactions();
+  // «Сбережения»: what goes to savings against the plan; ⓘ — what the overspend took
+  const savings = useMonthSavings(ymOf(year, month), currency, hidden);
+  const [lessOpen, setLessOpen] = useState(false);
 
   if (!stats) return <Loading failed={failed} onRetry={load} />;
 
@@ -88,6 +95,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
 
       {/* the funds' spending is from what they saved: said under the month's total */}
       {fromFunds > 0 && !hidden ? <Text style={styles.fundsLine}>{`Из копилок ${formatWithCurrency(fromFunds, stats.currency)} — не из бюджета месяца`}</Text> : null}
+      {savingsSection(savings.section, currency, { less: () => setLessOpen(true), close: openMonthClose })}
       {fundsSection(stats, (f) => (
         <FundStatRow key={f.category_id} f={f} ym={ym} currency={stats.currency} hidden={hidden} openTransactions={openTransactions} />
       ))}
@@ -102,6 +110,13 @@ export default function StatsView({ year, month, currency }: { year: number; mon
       ) : null}
 
       <PlanAmountModal ym={ym} currency={currency} target={planTarget} onClose={() => setPlanTarget(null)} onSaved={load} />
+      <SavingsLessSheet
+        less={savings.view?.less ?? null} visible={lessOpen} money={(minor) => formatWithCurrency(minor, currency)} onClose={() => setLessOpen(false)}
+        onOpen={(id) => {
+          const item = savings.view?.groups.flatMap((g) => g.items).find((i) => i.category_id === id) ?? savings.view?.funds.find((i) => i.category_id === id);
+          if (item) setPlanTarget({ ...item, label: categoryLabel(item) });
+        }}
+      />
     </StickyScrollView>
   );
 }

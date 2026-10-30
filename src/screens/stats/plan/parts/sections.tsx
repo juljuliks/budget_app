@@ -21,7 +21,7 @@ const header = (title: string, total: React.ReactNode) => (
 );
 
 type SystemOpen = {
-  budget: () => void; carry: (kind: 'debt' | 'plus') => void; less: () => void; fund: (item: PlanItem) => void;
+  budget: () => void; carry: (kind: 'debt' | 'plus') => void; fund: (item: PlanItem) => void;
   /** a category's contributions to its repeating payments: its payments */
   saving: (item: PlanItem) => void;
 };
@@ -36,11 +36,11 @@ export function systemSections(p: PlanView, hidden: boolean, open: SystemOpen) {
     const funds = g.funds ?? [];
     const saving = g.saving ?? [];
     const sum = g.rows.reduce((a, r) => a + r.value, 0) + funds.reduce((a, i) => a + (i.converted_minor ?? 0), 0)
-      + saving.reduce((a, i) => a + (i.subs?.saving_minor ?? 0), 0) - (funds.length ? p.less?.funds.less ?? 0 : 0);
+      + saving.reduce((a, i) => a + (i.subs?.saving_minor ?? 0), 0);
     // the leftover moved in: on top of the budget, "+", no share
     const plus = g.rows.length > 0 && g.rows.every((r) => r.carry === 'plus');
     const row = (r: PlanView['systemGroups'][number]['rows'][number]) => (
-      <SystemRowView key={r.key} p={p} r={r} hidden={hidden} onOpen={r.carry ? () => open.carry(r.carry!) : open.budget} onLess={open.less} />
+      <SystemRowView key={r.key} p={p} r={r} hidden={hidden} onOpen={r.carry ? () => open.carry(r.carry!) : open.budget} />
     );
     return (
       <React.Fragment key={g.title}>
@@ -56,7 +56,7 @@ export function systemSections(p: PlanView, hidden: boolean, open: SystemOpen) {
         <View>
           {/* 🔒 first, then the funds and what is saved up for the repeating payments, then 💰 */}
           {g.rows.filter((r) => r.key === 'locked').map(row)}
-          {funds.map((item) => <FundItemRow key={item.category_id} p={p} item={item} hidden={hidden} onOpen={() => open.fund(item)} onLess={open.less} />)}
+          {funds.map((item) => <FundItemRow key={item.category_id} p={p} item={item} hidden={hidden} onOpen={() => open.fund(item)} />)}
           {saving.map((item) => <SavingItemRow key={item.category_id} p={p} item={item} hidden={hidden} onOpen={() => open.saving(item)} />)}
           {g.rows.filter((r) => r.key !== 'locked').map(row)}
         </View>

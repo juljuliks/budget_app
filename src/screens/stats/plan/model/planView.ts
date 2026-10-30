@@ -1,5 +1,6 @@
-// What the plan screen shows, worked out from its data: the budget's split (planned / outside the plan / savings or
-// free), what the overspend took of the savings, the system sections, the items by type. No React.
+// What the plan screen shows, worked out from its data: the budget's split as planned (planned / outside the plan /
+// savings or free), the system sections, the items by type, how each row is going (marks) and what goes to savings — the
+// overspend's detail is the stats' («Сбережения» there). No React.
 import type { Currency } from '@/db/fx';
 import { currentYm, PlanBudget, PlanItem, unplannedOf } from '@/db/plans';
 import { daysInMonth } from '@/shared/lib/dateRange';
@@ -10,18 +11,18 @@ import { NO_SECTION, PER_PERIOD, SPENDING_PATTERN } from '@/shared/lib/strings';
 import { chart } from '@/shared/theme/theme';
 import { RING_DEBT, RING_SAVINGS, RING_UNPLANNED } from '../parts/palette';
 import type { SpentBy } from './usePlanData';
+import { Mark, savingsMark, shareMark, Timing } from './marks';
 import { savingsLess } from './savingsLess';
 
 /** how a part's amount is colored: over the budget, savings, locked, free */
 export type Tone = 'over' | 'savings' | 'locked' | 'free';
-/** `was`: as planned, struck before `value` (the overspend took the rest; ⓘ — what took it) */
-export type BudgetPart = { key: string; label: string; value: number; color: string; note: string; tone?: Tone; noteTone?: Tone; was?: number };
+export type BudgetPart = { key: string; label: string; value: number; color: string; note: string; tone?: Tone; noteTone?: Tone };
 /**
  * `carry`: what the month before sent (a tap: "Покрыть иначе?" / "Куда остаток?"); a moved leftover with its "+", no share.
- * `was`: as planned, struck (the overspend took part of it). `inBudget`: it in the budget's currency (the one 🔒 is typed
- * in) when the screen shows another — "(300 ₾)" before it.
+ * `mark`: how it is going. `inBudget`: it in the budget's currency (the one 🔒 is typed in) when the screen shows another
+ * — "(300 ₾)" before it.
  */
-export type SystemRow = { key: string; name: string; note: string; value: number; tone?: Tone; carry?: 'debt' | 'plus'; was?: number; inBudget?: number };
+export type SystemRow = { key: string; name: string; note: string; value: number; tone?: Tone; carry?: 'debt' | 'plus'; mark?: Mark | null; inBudget?: number };
 /** "сентября" of a month key */
 const genOf = (ym: string) => MONTHS_GEN[Number(ym.slice(5)) - 1];
 
@@ -76,7 +77,7 @@ function withoutSaving(spentBy: SpentBy, saving: PlanItem[]): SpentBy {
   return { ...spentBy, byCategory };
 }
 
-export function planView({ ym, currency, items: all, budget, toShown, fromShown, income, unplannedSpentMinor, spentBy }: Data) {
+export function planView({ ym, currency, items: all, budget, toShown, fromShown, income, unplannedSpentMinor, spentBy, hidden }: Data) {
   const money = (minor: number) => formatWithCurrency(minor, currency);
   // the funds' contributions apart: in "Сбережения" (its section and its column)
   const funds = all.filter((i) => i.kind === 'fund');
@@ -103,7 +104,7 @@ export function planView({ ym, currency, items: all, budget, toShown, fromShown,
   // locked for savings right away (🔒), in the screen's currency
   const locked = !budget || !budget.locked_minor ? 0 : toShown(budget.locked_minor, budget.currency) ?? budget.locked_minor;
   const free = shownBudget === null ? null : shownBudget - total - fundsTotal - unplanned - locked - debt;
-  const timing = ym < currentYm() ? 'past' : ym === currentYm() ? 'current' : 'future';
+  const timing: Timing = ym < currentYm() ? 'past' : ym === currentYm() ? 'current' : 'future';
   // savings at the month's end if the rest is spent by plan: every category takes its plan (or what it already took,
   // if more), spending outside the plan its share (or more); a past month: what was actually left
   const savingsEnd = shownBudget === null ? null : timing === 'past' ? shownBudget - debt - spentBy.total
@@ -113,15 +114,22 @@ export function planView({ ym, currency, items: all, budget, toShown, fromShown,
       : (free ?? 0) + locked;
   const pct = (v: number) => (shownBudget ? percentOf(v, shownBudget) || '0%' : '');
 
+  // each category's spending as its row (a category saving up for its payments: the charges only)
+  const spent = withoutSaving(spentBy, saving).byCategory;
   // this month: what the overspend already took of the savings (💰 first, then 🔒, then the funds' contributions)
   const less = timing === 'current' && shownBudget !== null ? savingsLess({
-    items: [...items, ...funds], spentBy: withoutSaving(spentBy, saving), unplanned, unplannedSpent: unplannedSpentMinor, free: free ?? 0, locked,
+    items: [...items, ...funds], spentBy: { ...spentBy, byCategory: spent }, unplanned, unplannedSpent: unplannedSpentMinor, free: free ?? 0, locked,
     funds: funds.map((i) => ({ category_id: i.category_id, value: i.converted_minor ?? 0, due: i.fund?.due ?? '' })),
   }) : null;
 
   // the bar's parts, left to right; what the budget leaves is shown in "Сбережения" (where it goes: "Итоги месяца") with
   // the funds' contributions
   const saved = (savingsEnd ?? 0) + fundsTotal;
+  // what goes to savings: as planned, and as it goes (this month: less what the overspend took; a past month: what was
+  // left); a coming month — not yet
+  const savingsPlanned = Math.max(0, free ?? 0) + locked + fundsTotal;
+  const savingsNow = timing === 'future' || shownBudget === null ? null
+    : timing === 'past' ? saved : less ? less.now + fundsTotal - less.funds.less : savingsPlanned;
   const parts: BudgetPart[] = shownBudget ? [
     // owed by the month before: first, red
     ...(carry && debt > 0 ? [{ key: 'debt', label: `Перерасход ${genOf(carry.from_ym)}`, value: debt, color: RING_DEBT, note: pct(debt), tone: 'over' as const }] : []),
@@ -130,10 +138,9 @@ export function planView({ ym, currency, items: all, budget, toShown, fromShown,
     { key: 'unplanned', label: 'Вне плана', value: unplanned, color: RING_UNPLANNED, note: pct(unplanned) },
     timing === 'past'
       ? { key: 'free', label: 'Сбережения', value: Math.abs(saved), color: RING_SAVINGS, note: saved < 0 ? 'бюджет превышен' : 'сэкономлено', tone: saved < 0 ? 'over' : 'savings', noteTone: saved < 0 ? 'over' : undefined }
-      // the locked part and the leftover together: one savings column; what it's made of (🔒 + 💰) is in the section below
-      : less
-        ? { key: 'free', label: 'Сбережения', value: less.now + fundsTotal - less.funds.less, was: less.was + fundsTotal, color: RING_SAVINGS, note: pct(less.now + fundsTotal - less.funds.less), tone: 'savings' }
-        : { key: 'free', label: 'Сбережения', value: Math.max(0, free ?? 0) + locked + fundsTotal, color: RING_SAVINGS, note: pct(Math.max(0, free ?? 0) + locked + fundsTotal), tone: 'savings' },
+      // the locked part and the leftover together: one savings column, as planned; what it's made of (🔒 + 💰) is in the
+      // section below
+      : { key: 'free', label: 'Сбережения', value: savingsPlanned, color: RING_SAVINGS, note: pct(savingsPlanned), tone: 'savings' },
   ] : [];
 
   // the plan's system sections: savings (🔒 locked, the funds, 💰 floating: what the plan leaves) and the share outside it
@@ -162,21 +169,15 @@ export function planView({ ym, currency, items: all, budget, toShown, fromShown,
       const minor = own ?? fromShown(shown, budget.currency);
       return minor === null ? {} : { inBudget: minor };
     };
-    const floating = less ? less.free.now : free ?? 0;
     const savingsRows: SystemRow[] = [
       ...(locked > 0 ? [{
-        key: 'locked', name: '🔒 Отложено сразу', tone: 'locked' as const, value: less ? less.locked.now : locked,
-        // as typed while the overspend took none of it
-        ...inBudget(less ? less.locked.now : locked, less && less.locked.now < locked ? undefined : budget!.locked_minor),
-        ...(less && less.locked.now < locked
-          ? { note: `из сбережений ушло ${money(locked - less.locked.now)} · осталось ${money(less.locked.now)}` }
-          : { note: 'заблокировано в начале месяца' }),
+        key: 'locked', name: '🔒 Отложено сразу', tone: 'locked' as const, value: locked, ...inBudget(locked, budget!.locked_minor),
+        note: 'заблокировано в начале месяца', mark: savingsMark(locked, less ? less.locked.now : locked, timing, '✓ отложено', money, hidden),
       }] : []),
-      // none left — not shown
-      ...(floating > 0 ? [{
-        key: 'floating', name: '💰 Сэкономлено', tone: 'savings' as const,
-        value: less ? less.free.now : free!, ...inBudget(less ? less.free.now : free!),
-        ...(less && less.free.now < free! ? { note: 'перерасход', was: free! } : { note: 'не запланировано — решите в итогах месяца' }),
+      // none — not shown
+      ...((free ?? 0) > 0 ? [{
+        key: 'floating', name: '💰 Сэкономлено', tone: 'savings' as const, value: free!, ...inBudget(free!),
+        note: 'не запланировано — решите в итогах месяца', mark: savingsMark(free!, less ? less.free.now : free!, timing, '✓ выходит', money, hidden),
       }] : []),
     ];
     if (savingsRows.length || funds.length || saving.length) {
@@ -186,7 +187,12 @@ export function planView({ ym, currency, items: all, budget, toShown, fromShown,
       systemGroups.push({ title: 'Сбережения', rows: savingsRows, funds, saving, inBudget: inBudgetTotal });
     }
     // the share set aside only: the spending against it is in the stats
-    if (unplanned > 0) systemGroups.push({ title: 'Вне плана', rows: [{ key: 'unplanned', name: '🎲 Траты вне плана', value: unplanned, note: 'категории без плана и без категории' }] });
+    if (unplanned > 0) {
+      systemGroups.push({ title: 'Вне плана', rows: [{
+        key: 'unplanned', name: '🎲 Траты вне плана', value: unplanned, note: 'категории без плана и без категории',
+        mark: shareMark(unplanned, unplannedSpentMinor, timing, money, hidden),
+      }] });
+    }
   } else if (funds.length || saving.length) systemGroups.push({ title: 'Сбережения', rows: [], funds, saving });
 
   const budgetHint = [
@@ -202,7 +208,10 @@ export function planView({ ym, currency, items: all, budget, toShown, fromShown,
   // funds, what the month before owes, less the leftover it moved in (that one is room)
   const claimed = total + fundsTotal + debt - plus;
 
-  return { currency, money, budgetMoney, fundInBudget, savingInBudget, total, fundsTotal, funds, recurring, shownBudget, budgetSub, claimed, unplanned, locked, free, timing, parts, less, systemGroups, budgetHint, groups: groupByType(items) };
+  return {
+    currency, money, hidden, budgetMoney, fundInBudget, savingInBudget, total, fundsTotal, funds, saving, recurring, shownBudget, budgetSub, claimed,
+    unplanned, locked, free, timing, parts, less, spent, savingsPlanned, savingsNow, systemGroups, budgetHint, groups: groupByType(items),
+  };
 }
 
 export type PlanView = ReturnType<typeof planView>;

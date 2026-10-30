@@ -141,7 +141,8 @@ export default function StatsHome() {
           />
         ) : null}
         {section === 'stats' && !byPeriod ? <StatsView year={shown.year} month={shown.month} currency={currency} /> : null}
-        {section === 'plan' ? <PlanView key={shownYm} ym={shownYm} currency={currency} /> : null}
+        {/* "Подробнее ›" of what goes to savings: the month's stats, «Сбережения» right under its total */}
+        {section === 'plan' ? <PlanView key={shownYm} ym={shownYm} currency={currency} onSavings={() => { setKind('month'); setSection('stats'); }} /> : null}
         {section === 'history' ? <HistoryView currency={currency} /> : null}
       </View>
 
