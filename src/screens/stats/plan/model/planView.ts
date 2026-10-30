@@ -102,8 +102,12 @@ export function planView({ ym, currency, items: all, budget, toShown, fromShown,
   // the share set aside for spending outside the plan, then what nothing claims yet
   const unplanned = shownBudget === null || !budget ? 0 : toShown(unplannedOf(budget), budget.currency) ?? unplannedOf(budget);
   // locked for savings right away (🔒), in the screen's currency
-  const locked = !budget || !budget.locked_minor ? 0 : toShown(budget.locked_minor, budget.currency) ?? budget.locked_minor;
-  const free = shownBudget === null ? null : shownBudget - total - fundsTotal - unplanned - locked - debt;
+  const lockedOwn = !budget || !budget.locked_minor ? 0 : toShown(budget.locked_minor, budget.currency) ?? budget.locked_minor;
+  const freeOwn = shownBudget === null ? null : shownBudget - total - fundsTotal - unplanned - lockedOwn - debt;
+  // "MAX": 🔒 takes all that is free — no tetri left over in 💰 by the rounding of the screen's currency
+  const max = budget?.locked_is_max === true && freeOwn !== null && lockedOwn + freeOwn >= 0;
+  const locked = max ? lockedOwn + freeOwn! : lockedOwn;
+  const free = max ? 0 : freeOwn;
   const timing: Timing = ym < currentYm() ? 'past' : ym === currentYm() ? 'current' : 'future';
   // savings at the month's end if the rest is spent by plan: every category takes its plan (or what it already took,
   // if more), spending outside the plan its share (or more); a past month: what was actually left

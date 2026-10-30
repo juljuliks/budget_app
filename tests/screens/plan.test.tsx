@@ -122,6 +122,19 @@ describe('6.2 locked for savings, the share outside the plan, the leftover', () 
     await tap('Изменить бюджет месяца');
     await screen.findByDisplayValue('540');
     await waitFor(() => expect(screen.getAllByRole('tab', { name: 'MAX' })[0].props.accessibilityState).toMatchObject({ selected: true }));
+    // saved as an amount before: saved as "max" now, to follow the plan and the rate
+    await tap('Сохранить');
+    expect(await screen.findByText('Бюджет месяца сохранён')).toBeTruthy();
+    expect(await month()).toMatchObject({ l: 0, m: 1 });
+  });
+
+  test('an amount typed over "MAX" is kept as the amount', async () => {
+    await tap('Изменить бюджет месяца');
+    await tap(screen.getAllByRole('tab', { name: 'MAX' })[0]);
+    fireEvent.changeText(await screen.findByDisplayValue('540'), '200');
+    await tap('Сохранить');
+    expect(await screen.findByText('Бюджет месяца сохранён')).toBeTruthy();
+    expect(await month()).toMatchObject({ l: 20000, m: 0 });
   });
 
   test('what doesn\'t fit can\'t be picked; less is', async () => {

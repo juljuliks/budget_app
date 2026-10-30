@@ -93,6 +93,48 @@ async function glueSecondMerchants(db: Db) {
   for (const [from, to] of joined) await retarget(db, from, to);
 }
 
+/**
+ * 🔒 picked as "MAX" before 60 (or saved after it by a sheet that opened on "MAX" without the flag) is a fixed amount
+ * that was all that is free then; the rate moved since. The current and coming months whose 🔒 is all that is free
+ * within 1% of the budget (budget − share − planned + the month before's carry, by today's rate) follow it again.
+ */
+async function lockedMaxAgain(db: Db) {
+  const now = new Date();
+  const p2 = (n: number) => String(n).padStart(2, '0');
+  const ym = `${now.getFullYear()}-${p2(now.getMonth() + 1)}`;
+  const today = `${ym}-${p2(now.getDate())}`;
+  const rate = async (currency: string) => (currency === 'GEL' ? 1 : (await db.get<{ g: number }>(
+    'SELECT gel_per_unit AS g FROM fx_rates WHERE currency = ? AND date <= ? ORDER BY date DESC LIMIT 1', [currency, today]))?.g ?? null);
+  const months = await db.all<{ ym: string; budget: number; currency: string; pct: number; own: number | null; locked: number }>(
+    `SELECT ym, budget_minor AS budget, budget_currency AS currency, unplanned_pct AS pct, unplanned_minor AS own, locked_minor AS locked
+      FROM plan_months WHERE ym >= ? AND budget_minor IS NOT NULL AND locked_minor > 0 AND locked_is_max = 0`, [ym]);
+  for (const m of months) {
+    const to = await rate(m.currency);
+    if (!to) continue;
+    const inBudget = async (minor: number, currency: string) => {
+      const from = await rate(currency);
+      return from === null ? null : (minor * from) / to;
+    };
+    let planned = 0;
+    for (const i of await db.all<{ v: number; c: string }>('SELECT limit_minor AS v, currency AS c FROM plan_items WHERE ym = ?', [m.ym])) {
+      const v = await inBudget(i.v, i.c);
+      if (v === null) { planned = NaN; break; }
+      planned += v;
+    }
+    const [y, mo] = m.ym.split('-').map(Number);
+    const before = mo === 1 ? `${y - 1}-12` : `${y}-${p2(mo - 1)}`;
+    const carry = await db.get<{ debt: number; plus: number; c: string }>(
+      `SELECT carry_debt_minor AS debt, carry_plus_minor AS plus, carry_currency AS c FROM month_closes
+        WHERE ym = ? AND closed_at IS NOT NULL AND carry_currency IS NOT NULL`, [before]);
+    const carryDelta = carry ? await inBudget(carry.plus - carry.debt, carry.c) : 0;
+    const share = m.own ?? m.budget - Math.round((m.budget * (100 - m.pct)) / 100);
+    const free = m.budget - share - planned + (carryDelta ?? NaN);
+    if (Number.isFinite(free) && free > 0 && Math.abs(free - m.locked) <= m.budget / 100) {
+      await db.run('UPDATE plan_months SET locked_minor = 0, locked_is_max = 1 WHERE ym = ?', [m.ym]);
+    }
+  }
+}
+
 /** Migrations 59 and on. */
 export const STEPS_59_ON: MigrationStep[][] = [
   [glueSecondMerchants],
@@ -104,4 +146,6 @@ export const STEPS_59_ON: MigrationStep[][] = [
     'ALTER TABLE month_closes ADD COLUMN locked_cover INTEGER NOT NULL DEFAULT 0',
     'UPDATE month_closes SET locked_cover = 1 WHERE closed_at IS NOT NULL',
   ],
+  // 62: a 🔒 that is all that is free (the rate moved it off a little) is "MAX" again: it follows the plan and the rate
+  [lockedMaxAgain],
 ];

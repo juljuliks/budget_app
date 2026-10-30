@@ -50,7 +50,10 @@ export function ShareField({ form, name, other, planned, toShown, screen, title,
     if (opened.current || !amount) return;
     opened.current = true;
     const isLockedMax = name === 'locked' && form.getValues('lockedIsMax');
-    if (isLockedMax || (room > 0 && mine === room)) setMode('max');
+    if (!isLockedMax && !(room > 0 && mine === room)) return;
+    setMode('max');
+    // saved as an amount (before the flag, or by the slider): to follow the plan and the rate it is saved as "max" now
+    if (name === 'locked' && !isLockedMax) form.setValue('lockedIsMax', true, { shouldDirty: true });
   }, [amount, mine, room]); // eslint-disable-line react-hooks/exhaustive-deps
   // "max": all that is free, following it (the budget or the other part changed); off with nothing free (or all of it in)
   useEffect(() => { if (mode === 'max' && mine !== room) set(room); }, [mode, mine, room]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -86,7 +89,12 @@ export function ShareField({ form, name, other, planned, toShown, screen, title,
                 style={[formStyles.input, styles.lockInput]}
                 value={field.value}
                 // typed by hand: an amount of one's own, not "max" any more
-                onChangeText={(t) => { field.onChange(t); if (mode === 'max') setMode('amount'); }}
+                onChangeText={(t) => {
+                  field.onChange(t);
+                  if (mode !== 'max') return;
+                  setMode('amount');
+                  if (name === 'locked') form.setValue('lockedIsMax', false, { shouldDirty: true });
+                }}
                 placeholder="0"
                 placeholderTextColor={colors.muted}
                 keyboardType="decimal-pad"

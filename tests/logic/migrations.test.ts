@@ -425,4 +425,22 @@ describe('migrations', () => {
     ]);
     expect(await db.all('SELECT pattern FROM merchant_rules')).toEqual([{ pattern: 'WOLT' }]);
   });
+  test('migration 62: a 🔒 that is all that is free within 1% (the rate moved it) is "MAX" again; less, or a past month — kept', async () => {
+    jest.useFakeTimers({ now: new Date('2026-10-30T12:00:00'), advanceTimers: true });
+    const db = openDatabase(':memory:');
+    await migrate(db, MIGRATIONS.slice(0, 61));
+    await db.run("INSERT INTO fx_rates (date, currency, gel_per_unit) VALUES ('2026-10-01', 'USD', 2.6)");
+    await db.run("INSERT INTO categories (id, name) VALUES (90, 'Еда'), (91, 'Ортогнатия')");
+    // 4 000 $, 5% outside the plan, 6 850.40 ₾ planned, 385 $ to a fund: 780.23 $ free, 775.50 $ locked
+    await db.run(`INSERT INTO plan_months (ym, budget_minor, budget_currency, unplanned_pct, locked_minor) VALUES
+      ('2026-09', 400000, 'USD', 5, 77550), ('2026-10', 400000, 'USD', 5, 77550), ('2026-11', 400000, 'USD', 5, 30000)`);
+    for (const ym of ['2026-09', '2026-10', '2026-11']) {
+      await db.run(`INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency) VALUES
+        (?, 90, 685040, 'limit', 'GEL'), (?, 91, 38500, 'fund', 'USD')`, [ym, ym]);
+    }
+    await migrate(db);
+    jest.useRealTimers();
+    expect(await db.all('SELECT ym, locked_minor AS l, locked_is_max AS m FROM plan_months ORDER BY ym')).toEqual([
+      { ym: '2026-09', l: 77550, m: 0 }, { ym: '2026-10', l: 0, m: 1 }, { ym: '2026-11', l: 30000, m: 0 }]);
+  });
 });
