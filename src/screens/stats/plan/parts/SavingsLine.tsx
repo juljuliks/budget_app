@@ -5,7 +5,8 @@ import { styles } from './styles';
 
 /**
  * Under the budget: what goes to savings of what is planned — "В сбережения идёт 741.57 из 746.85 ₾" (a past month:
- * "ушло"); "Подробнее ›" — the stats' «Сбережения» (what the overspend took). A coming month, nothing planned: none.
+ * "ушло"); "Подробнее ›" — what the overspend took («Сбережения меньше на …»), or with none the stats' «Сбережения». A coming month,
+ * nothing planned: none.
  */
 export default function SavingsLine({ p, onMore }: { p: PlanView; onMore: () => void }) {
   if (p.savingsNow === null || p.savingsPlanned <= 0) return null;

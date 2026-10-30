@@ -4,6 +4,7 @@ import { act, fireEvent, waitFor } from '@testing-library/react-native';
 import { openApp, screen, tap, texts, backToTabs, toggleSwitch } from './app';
 import { base, planned } from '../e2e/seeds';
 import { getDb } from '../../src/db';
+import { emitTransactionsChanged } from '../../src/domain/events';
 
 async function openPlan(seed = planned) {
   await openApp(seed);
@@ -59,14 +60,11 @@ describe('6.1 the month\'s budget', () => {
     expect(screen.getByText('(540 ₾) ')).toBeTruthy();
   });
 
-  test('what goes to savings under the budget; "Подробнее ›" — the stats\' «Сбережения», ⓘ what took it; a category\'s tap opens its plan', async () => {
+  test('what goes to savings under the budget; "Подробнее ›" with an overspend — what it took; a category\'s tap opens its plan', async () => {
     await openPlan();
     expect(screen.queryByText('Перерасход')).toBeNull();
     expect(screen.getByText('В сбережения идёт 410 ₾ из 540 ₾')).toBeTruthy();
     await tap('Сбережения подробнее');
-    expect(await screen.findByText('К концу месяца, если дальше тратить по плану')).toBeTruthy();
-    expect(screen.getByText('Перерасход взял 130 ₾ ')).toBeTruthy();
-    await tap('💰 Сэкономлено: что съело сбережения');
     // 3 000 − (620 + 310 + 800 + 450 + 30) − 380 outside the plan
     expect(await screen.findByText('Сбережения меньше на 130 ₾')).toBeTruthy();
     expect(screen.getByText('Эти категории потратили больше плана. Если дальше тратить по плану:')).toBeTruthy();
@@ -76,6 +74,23 @@ describe('6.1 the month\'s budget', () => {
     expect(screen.getByText('план 400 ₾ · потрачено 450 ₾')).toBeTruthy();
     await tap('План: Одежда');
     expect(await screen.findByDisplayValue('400')).toBeTruthy();
+  });
+
+  test('"Подробнее ›" without an overspend — the stats\' «Сбережения»', async () => {
+    await openPlan();
+    await act(async () => { await (await getDb()).run('DELETE FROM transactions'); emitTransactionsChanged(); });
+    expect(await screen.findByText('В сбережения идёт 540 ₾ из 540 ₾')).toBeTruthy();
+    await tap('Сбережения подробнее');
+    expect(await screen.findByText('К концу месяца, если дальше тратить по плану')).toBeTruthy();
+    expect(screen.queryByText(/Перерасход взял/)).toBeNull();
+  });
+
+  test('the stats\' «Сбережения»: what the overspend took, ⓘ — the same sheet', async () => {
+    await openApp(planned);
+    await tap('Статистика');
+    expect(await screen.findByText('Перерасход взял 130 ₾ ')).toBeTruthy();
+    await tap('💰 Сэкономлено: что съело сбережения');
+    expect(await screen.findByText('Сбережения меньше на 130 ₾')).toBeTruthy();
   });
 
   test('less than what is planned with the locked and the share: refused', async () => {

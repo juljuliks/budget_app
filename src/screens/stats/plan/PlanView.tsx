@@ -13,6 +13,7 @@ import { planView } from './model/planView';
 import BudgetCard from './parts/BudgetCard';
 import BudgetSheet from './parts/BudgetSheet';
 import PlanIconsSheet from './parts/PlanIconsSheet';
+import SavingsLessSheet from './parts/SavingsLessSheet';
 import SavingsLine from './parts/SavingsLine';
 import { InfoIcon } from '@/shared/ui/icons';
 import { colors } from '@/shared/theme/theme';
@@ -37,7 +38,7 @@ const editTarget = (item: PlanItem): PlanAmountTarget => ({
   fund: item.fund && { target_minor: item.fund.target_minor, due: item.fund.due, start_minor: item.fund.start_minor },
 });
 
-/** `onSavings`: "Подробнее ›" of what goes to savings — the stats' «Сбережения» of the month */
+/** `onSavings`: "Подробнее ›" of what goes to savings — the stats' «Сбережения» of the month (the overspend took some: «Сбережения меньше на …» here) */
 export default function PlanView({ ym, currency, onSavings }: { ym: string; currency: Currency; onSavings: () => void }) {
   const hidden = useHideAmounts();
   const data = usePlanData(ym, currency);
@@ -56,6 +57,8 @@ export default function PlanView({ ym, currency, onSavings }: { ym: string; curr
   const [subsOpen, setSubsOpen] = useState<{ item: PlanItem; view: PaymentsView } | null>(null);
   // "Что значат значки"
   const [iconsOpen, setIconsOpen] = useState(false);
+  // "Подробнее ›" with the overspend taking part of the savings: «Сбережения меньше на …»
+  const [lessOpen, setLessOpen] = useState(false);
 
   if (!items) return <Loading failed={data.failed} onRetry={load} />;
   const p = planView({ ...data, items, ym, currency, hidden });
@@ -67,7 +70,7 @@ export default function PlanView({ ym, currency, onSavings }: { ym: string; curr
     <View style={styles.screen}>
     <StickyScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <BudgetCard p={p} budget={budget} currency={currency} hidden={hidden} onEdit={openBudget} />
-      <SavingsLine p={p} onMore={onSavings} />
+      <SavingsLine p={p} onMore={p.less ? () => setLessOpen(true) : onSavings} />
 
       {items.length === 0 ? <Text style={styles.hint}>План пуст. Нажмите ＋, чтобы добавить категории и суммы.</Text> : null}
       {systemSections(p, hidden, { budget: openBudget, carry: setCarryOpen, fund: setFundOpen, saving: (item) => openRecurring(item, 'upcoming') })}
@@ -109,6 +112,10 @@ export default function PlanView({ ym, currency, onSavings }: { ym: string; curr
           onEditAmount={() => { const { item } = subsOpen; setSubsOpen(null); setEditingItem(editTarget(item)); }}
         />
       ) : null}
+      <SavingsLessSheet
+        less={p.less} visible={lessOpen} money={p.money} onClose={() => setLessOpen(false)}
+        onOpen={(id) => { const item = items.find((i) => i.category_id === id); if (item) setEditingItem(editTarget(item)); }}
+      />
       <PlanIconsSheet visible={iconsOpen} onClose={() => setIconsOpen(false)} />
       <CarrySheet fromYm={carryOpen ? budget?.carry?.from_ym ?? null : null} kind={carryOpen ?? 'debt'} onClose={() => setCarryOpen(null)} />
     </StickyScrollView>
