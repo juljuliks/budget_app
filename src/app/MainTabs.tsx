@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { AppState, View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { OperationsScreen } from '@/screens/operations';
-import { StatsHome } from '@/screens/stats';
+import { StatsHome, TrendsButton } from '@/screens/stats';
 import { HideAmountsButton } from '@/features/hide-amounts';
 import { confirmShowAmounts } from '@/features/app-lock';
 import { SettingsButton } from '@/features/settings';
@@ -59,8 +59,8 @@ export default function MainTabs() {
         options={{
           title: 'Статистика',
           tabBarIcon: ({ color }) => <StatsIcon color={color} />,
-          // the eye blurs the budget and plan totals, e.g. to show the stats to someone
-          headerRight: () => <View style={[headerRightStyle, statsHeaderRight]}><HideAmountsButton confirmShow={confirmShowAmounts} /><SettingsButton /></View>,
+          // «Динамика трат»; the eye blurs the budget and plan totals, e.g. to show the stats to someone
+          headerRight: () => <View style={[headerRightStyle, statsHeaderRight]}><TrendsButton /><HideAmountsButton confirmShow={confirmShowAmounts} /><SettingsButton /></View>,
         }}
       />
       <Tab.Screen

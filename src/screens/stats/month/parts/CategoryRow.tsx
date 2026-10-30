@@ -22,7 +22,7 @@ function planShare(spent: number, limit: number): string {
 
 const RHYTHM_NOW = { day: 'Сегодня', week: 'На этой неделе', '2weeks': 'За эти 2 недели' } as const;
 
-export default function CategoryRow({ stat, total, currency, evenPace, dim, ym, openTransactions, now, monthToDate, onAddToPlan, withType }: {
+export default function CategoryRow({ stat, total, currency, evenPace, dim, ym, openTransactions, now, monthToDate, onAddToPlan, withType, usual }: {
   stat: CategoryStat;
   /** the month's spending: a row's share of it when the amounts are hidden */
   total: number;
@@ -35,6 +35,8 @@ export default function CategoryRow({ stat, total, currency, evenPace, dim, ym, 
   onAddToPlan?: () => void;
   /** "Жизнь: Покупки": outside the plan, where the rows aren't under their type's section */
   withType?: boolean;
+  /** the current month, well off its usual by the same days: "+44% к обычному" (Динамика трат) */
+  usual?: string;
 }) {
   const { limit_minor: limit } = stat;
   // a transfer category: sent minus what came back; more came back = "+", and nothing spent for its plan
@@ -132,6 +134,7 @@ export default function CategoryRow({ stat, total, currency, evenPace, dim, ym, 
           })() : null}
         </>
       ) : null}
+      {usual ? <Text style={styles.rowStatus}>{usual}</Text> : null}
     </TouchableOpacity>
   );
 }

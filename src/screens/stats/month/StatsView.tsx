@@ -18,6 +18,7 @@ import DonutCenter from '../parts/DonutCenter';
 import RefundsRow from '../parts/RefundsRow';
 import SavingsLessSheet from '../plan/parts/SavingsLessSheet';
 import { useMonthData } from './model/useMonthData';
+import { useMonthUsual } from './model/useMonthUsual';
 import { lessTarget, useMonthSavings } from './model/useMonthSavings';
 import CategoryRow from './parts/CategoryRow';
 import MonthTotal from './parts/MonthTotal';
@@ -50,6 +51,8 @@ export default function StatsView({ year, month, currency }: { year: number; mon
   const openTransactions = useOpenCategoryTransactions();
   // «Сбережения»: what goes to savings against the plan; ⓘ — what the overspend took
   const savings = useMonthSavings(ymOf(year, month), currency, hidden);
+  // the current month: "+44% к обычному" under a category spent well off its usual
+  const usual = useMonthUsual(ymOf(year, month), currency);
   const [lessOpen, setLessOpen] = useState(false);
 
   // the next month: nothing spent yet, its plan in advance
@@ -78,6 +81,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
       now={unplanned || c.category_id === null ? undefined : today?.byCategory.get(c.category_id)}
       monthToDate={unplanned || c.category_id === null ? 0 : today?.monthToDate.get(c.category_id) ?? 0}
       withType={unplanned}
+      usual={c.category_id === null ? undefined : usual.get(c.category_id)}
       onAddToPlan={c.category_id !== null && (unplanned || c.limit_minor === null) && !c.deleted && spentOf(c) > 0
         ? () => setPlanTarget({ category_id: c.category_id!, label: categoryLabel(c), limit_minor: 0, currency: stats.currency, suggested_minor: c.spent_minor })
         : undefined}

@@ -1,5 +1,5 @@
 import React from 'react';
-import Svg, { Circle, G, Path } from 'react-native-svg';
+import Svg, { Circle, G, Path, Rect } from 'react-native-svg';
 
 type P = { color: string; size?: number };
 
@@ -188,5 +188,15 @@ export const TiltedPinIcon = ({ color, size = 11 }: P) => (
       <Path d="M12 17v5M8 3h8" />
       <Path d="M9 10.76V6h6v4.76l2 3.24H7z" />
     </G>
+  </Svg>
+);
+
+/** «Динамика трат»: bars on a base line (by the eye in the stats, on a category's page). */
+export const TrendsIcon = ({ color, size = 22 }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M4 20h16" />
+    <Rect x={5.5} y={11} width={3} height={6} rx={1} />
+    <Rect x={10.5} y={6} width={3} height={11} rx={1} />
+    <Rect x={15.5} y={9} width={3} height={8} rx={1} />
   </Svg>
 );

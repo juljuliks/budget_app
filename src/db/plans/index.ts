@@ -8,6 +8,7 @@ export * from './stats';
 export * from './history';
 export { spendingEntries } from './spend';
 export * from './normsData';
+export * from './trendsData';
 export * from './funds';
 export * from './fundEntries';
 export * from './fundWrites';

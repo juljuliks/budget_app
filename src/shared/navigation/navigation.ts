@@ -2,6 +2,7 @@ import { createNavigationContainerRef, NavigationState, StackActions, useNavigat
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { DayRange } from '../lib/dateRange';
+import type { TrendMode } from '@/stats/trends';
 
 export type TabParamList = {
   /** day: open the stats of that day (a day header in the transactions list), its local midnight in unix seconds */
@@ -51,7 +52,12 @@ export type RootStackParamList = {
   Plan: { ym: string };
   /** plan and spending by months, from the stats */
   History: undefined;
+  /** «Динамика трат»: the categories spent more / less than usual this week or month (the icon by the eye in the stats) */
+  Trends: { mode?: TrendMode } | undefined;
+  /** one category's dynamics (a row of «Динамика трат», «Динамика трат» on the category's page) */
+  CategoryTrend: { id: number; mode?: TrendMode };
 };
+
 
 export const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
@@ -97,6 +103,8 @@ export const openMerchant = (key: string) => navigateWhenReady({ name: 'Merchant
 export const openCategory = (id: number) => navigateWhenReady({ name: 'Category', params: { id } }, true);
 export const openPlan = (ym: string) => navigateWhenReady({ name: 'Plan', params: { ym } });
 export const openHistory = () => navigateWhenReady({ name: 'History', params: undefined });
+export const openTrends = () => navigateWhenReady({ name: 'Trends', params: undefined });
+export const openCategoryTrend = (id: number, mode?: TrendMode) => navigateWhenReady({ name: 'CategoryTrend', params: { id, mode } }, true);
 
 // the pages "Показать все ›" took the user away from, the latest last: back from the operations restores them
 const left: NavigationState[] = [];

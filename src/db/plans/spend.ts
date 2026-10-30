@@ -12,7 +12,11 @@ import { sqlList } from '../sql';
  * from it like a refund. A refund is subtracted: from its category (its merchant's, see refundCategory), or, without
  * one, as "Возвраты без категории" (REFUND_KEY) apart from the uncategorized spending.
  */
-export type SpendRow = { id: number; category_id: number | null; kind: string; amount_minor: number; currency: string; occurred_at: number; refund_settled_at: number | null };
+export type SpendRow = {
+  id: number; category_id: number | null; kind: string; amount_minor: number; currency: string; occurred_at: number; refund_settled_at: number | null;
+  /** where it was spent (the dynamics' merchants) */
+  merchant_key?: string | null; raw_merchant?: string | null;
+};
 
 /** The key refunds without a category are summed under (instead of null, "Без категории"). */
 export const REFUND_KEY = 'refund' as const;
@@ -45,7 +49,7 @@ export async function spendRows(from: number, to: number, only?: TxFilter): Prom
   const db = await getDb();
   const w = spendWhere(only);
   return db.all<SpendRow>(
-    `SELECT id, category_id, kind, amount_minor, currency, occurred_at, refund_settled_at FROM spend_parts t WHERE ${w.sql}`,
+    `SELECT id, category_id, kind, amount_minor, currency, occurred_at, refund_settled_at, merchant_key, raw_merchant FROM spend_parts t WHERE ${w.sql}`,
     [from, to, ...w.params]);
 }
 
