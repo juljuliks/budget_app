@@ -1,7 +1,7 @@
 // 9.10: a load that failed — "Не удалось загрузить" and "Повторить" instead of a spinner forever; an operation that's
 // gone. Today: Thursday 15 October 2026 (setup.ts).
 import { act, fireEvent } from '@testing-library/react-native';
-import { openApp, screen, tap } from './app';
+import { openApp, screen, tap, openHistoryPage } from './app';
 import { ops, planned } from '../e2e/seeds';
 import { getDb } from '../../src/db';
 import { openTransaction } from '../../src/shared/navigation/navigation';
@@ -39,7 +39,7 @@ test('9.10.2: the history failed to load: the same', async () => {
   await tap('Статистика');
   await screen.findByText('Потрачено 2 010 / 2 460 ₾ (82%)');
   const fix = await breakOperations();
-  await tap('История');
+  await openHistoryPage();
   expect(await screen.findByText('Не удалось загрузить')).toBeTruthy();
   await fix();
   await tap('Повторить');

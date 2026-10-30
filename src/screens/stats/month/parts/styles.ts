@@ -41,6 +41,12 @@ export const styles = StyleSheet.create({
   savingsCaption: { fontSize: 12, color: colors.muted, marginTop: 8 },
   infoGap: { marginLeft: 4 },
   closeLink: { fontSize: 14, color: colors.accent, marginTop: 10 },
+  // «Изменить план ›» under the month, on the right
+  planLinks: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 4 },
+  planLink: { fontSize: 14, color: colors.accent },
+  // the next month: not begun, its plan in advance
+  coming: { flex: 1, justifyContent: 'center', paddingHorizontal: 16, paddingBottom: 48 },
+  comingTitle: { fontSize: 18, fontWeight: '600', color: colors.text, textAlign: 'center' },
   paceAhead: { color: colors.warn },
   crossed: { textDecorationLine: 'line-through' },
   refundsAmount: { fontSize: 15, color: colors.income, fontVariant: ['tabular-nums'] },

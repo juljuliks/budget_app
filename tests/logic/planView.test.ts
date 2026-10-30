@@ -102,7 +102,7 @@ test('past 💰 and 🔒: the funds\' contributions, the farthest due first, the
   expect(all).toMatchObject({ funds: { less: 9000 }, past: 2000 });
 });
 
-test('the overspend took part of 🔒: the row as planned, its mark says what goes; what goes to savings in all', () => {
+test('the overspend took part of 🔒: the row as planned, no mark (the stats tell it); `less` for the stats\' «Сбережения»', () => {
   // budget 3000 ₾, plan 1000 ₾, locked 500 ₾ → free 1500 ₾; spent 2600 ₾ (1600 ₾ over): 1500 from free, 100 from locked
   const v = planView({
     ym: currentYm(), currency: 'GEL', items: [item({ converted_minor: 100000 })],
@@ -111,8 +111,9 @@ test('the overspend took part of 🔒: the row as planned, its mark says what go
     spentBy: { byCategory: new Map([[1, 260000]]), total: 260000 }, hidden: false,
   });
   const row = v.systemGroups.find((g) => g.title === 'Сбережения')!.rows.find((r) => r.key === 'locked')!;
-  expect(row).toMatchObject({ value: 50000, note: 'заблокировано в начале месяца', mark: { text: 'выходит 400\u00a0₾ — перерасход', tone: 'warn' } });
-  expect(v).toMatchObject({ savingsPlanned: 200000, savingsNow: 40000 });
+  expect(row).toEqual({ key: 'locked', name: '🔒 Отложено сразу', tone: 'locked', value: 50000, note: 'заблокировано в начале месяца' });
+  expect(v.savingsPlanned).toBe(200000);
+  expect(v.less).toMatchObject({ locked: { was: 50000, now: 40000 }, free: { was: 150000, now: 0 } });
 });
 
 test('what the budget sheet\'s parts can\'t take: the plan, the funds, what the month before owes, less what it moved in', () => {

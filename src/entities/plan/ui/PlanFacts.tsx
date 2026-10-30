@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import type { Currency } from '@/db/fx';
-import { MONTHS_NOM } from '@/shared/lib/dates';
+import { MONTHS_NOM, MONTHS_PREP } from '@/shared/lib/dates';
 import { plural } from '@/shared/lib/format';
 import { formatWithCurrency } from '@/shared/lib/money';
 import { colors } from '@/shared/theme/theme';
@@ -14,9 +14,14 @@ function monthName(ym: string): string {
   return `${MONTHS_NOM[m - 1]}${y !== new Date().getFullYear() ? ` ${y}` : ''}`;
 }
 
-/** Over a plan amount's field, what helps to pick it: the room in the budget, the last plan, the usual spending. */
-export default function PlanFacts({ free, previous, average, shown }: {
+/**
+ * Over a plan amount's field, what helps to pick it: the room in the budget, what the month spent so far (this month and
+ * the ones before; the plan's list has none of that), the last plan, the usual spending.
+ */
+export default function PlanFacts({ free, spent, previous, average, shown }: {
   free: Money | null;
+  /** the month's spending so far, in `shown`; null — a coming month */
+  spent: { minor: number; ym: string } | null;
   previous: (Money & { ym: string }) | null;
   average: { minor: number; months: number } | null;
   /** the app's currency: the average is in it */
@@ -25,6 +30,7 @@ export default function PlanFacts({ free, previous, average, shown }: {
   const facts: Array<{ label: string; value: string }> = [];
   // the month's budget minus the other categories' plans: not about what is spent
   if (free) facts.push({ label: 'Можно запланировать', value: `до ${formatWithCurrency(free.minor, free.currency)}` });
+  if (spent) facts.push({ label: `Потрачено в ${MONTHS_PREP[Number(spent.ym.slice(5)) - 1]}`, value: formatWithCurrency(spent.minor, shown) });
   if (previous) facts.push({ label: `В плане на ${monthName(previous.ym)}`, value: formatWithCurrency(previous.minor, previous.currency) });
   if (average) {
     facts.push({

@@ -73,6 +73,15 @@ export async function categoryMonthlyAverage(categoryId: number, ym: string, cur
   return { average_minor: Math.round(total / months), months, from: start, to: last };
 }
 
+/** What a category has spent in `ym` so far, in `currency` (the plan sheet's «Потрачено в октябре»). */
+export async function categoryMonthSpent(categoryId: number, ym: string, currency: Currency = BUDGET_CURRENCY): Promise<number> {
+  const { year, month } = parseYm(ym);
+  const [fromSec, toSec] = monthRange(year, month);
+  const rows = (await spendRows(fromSec, toSec)).filter((r) => r.category_id === categoryId);
+  const { items } = await convertSpending(rows, currency);
+  return items.reduce((sum, i) => sum + i.value, 0);
+}
+
 export type HistoryMonth = {
   ym: string;
   planned_minor: number;

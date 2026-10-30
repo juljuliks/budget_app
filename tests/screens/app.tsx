@@ -110,6 +110,19 @@ export function backToTabs() {
   act(() => { while (navigationRef.canGoBack() && navigationRef.getRootState().routes.length > 1) navigationRef.goBack(); });
 }
 
+/** From the month stats: its plan, a page («Изменить план ›» / «Составить план ›»). */
+export const openPlanPage = () => tap(/^(Изменить|Составить) план ›$/);
+/** From the stats: plan and spending by months, a page (the last item of the period list). */
+export async function openHistoryPage() {
+  await tap('Выбрать период');
+  await tap('История по месяцам ›');
+}
+/** From the current month's stats: the next month (its stats empty), then its plan. */
+export async function openNextPlan() {
+  await tap('Следующий месяц');
+  await tap(/^(Изменить|Составить) план$/);
+}
+
 /** The switch on the screen (the last one: a sheet's), toggled. */
 /** The last switch of the topmost open sheet (a closed one keeps its content drawn), else of the page. */
 export function toggleSwitch(on: boolean) {

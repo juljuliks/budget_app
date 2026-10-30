@@ -47,6 +47,10 @@ export type RootStackParamList = {
   Merchant: { key: string };
   /** a category: its operations, section, name, color */
   Category: { id: number };
+  /** a month's plan ('YYYY-MM'), from its stats */
+  Plan: { ym: string };
+  /** plan and spending by months, from the stats */
+  History: undefined;
 };
 
 export const navigationRef = createNavigationContainerRef<RootStackParamList>();
@@ -91,6 +95,8 @@ export function flushPendingNavigation() {
 export const openTransaction = (id: number) => navigateWhenReady({ name: 'Operation', params: { id } }, true);
 export const openMerchant = (key: string) => navigateWhenReady({ name: 'Merchant', params: { key } }, true);
 export const openCategory = (id: number) => navigateWhenReady({ name: 'Category', params: { id } }, true);
+export const openPlan = (ym: string) => navigateWhenReady({ name: 'Plan', params: { ym } });
+export const openHistory = () => navigateWhenReady({ name: 'History', params: undefined });
 
 // the pages "Показать все ›" took the user away from, the latest last: back from the operations restores them
 const left: NavigationState[] = [];

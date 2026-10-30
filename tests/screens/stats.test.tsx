@@ -72,8 +72,16 @@ describe('5.1 a month', () => {
     expect(await screen.findByText('60 / 60 ₾ (100%)')).toBeTruthy();
   });
 
-  test('the previous month: its numbers, its report row; no going past this month', async () => {
+  test('the next month: not begun, «Составить план» — its plan\'s page; no further', async () => {
+    await tap('Следующий месяц');
+    expect(await screen.findByText('Ноябрь ещё не начался')).toBeTruthy();
+    expect(screen.getByText('Составьте план заранее: бюджет, лимиты, что отложить сразу.')).toBeTruthy();
     expect(screen.getByLabelText('Следующий месяц').props.accessibilityState?.disabled ?? true).toBeTruthy();
+    await tap('Составить план');
+    expect(await screen.findByText('Бюджет месяца')).toBeTruthy();
+  });
+
+  test('the previous month: its numbers, its report row', async () => {
     await tap('Предыдущий месяц');
     expect(await screen.findByText('Сентябрь 2026')).toBeTruthy();
     expect(await screen.findByText('Отложено 1 150 ₾ · могли ещё 250 ₾')).toBeTruthy();
@@ -81,11 +89,12 @@ describe('5.1 a month', () => {
     expect(screen.getByText('Перерасход 150 ₾')).toBeTruthy();
   });
 
-  test('a month without a plan: no report, a hint about the plan', async () => {
+  test('a month without a plan: no report, a hint about the plan, «Составить план ›»', async () => {
     await tap('Предыдущий месяц');
     await tap('Предыдущий месяц');
     expect(await screen.findByText('Август 2026')).toBeTruthy();
-    expect(await screen.findByText('Составьте план на месяц во вкладке «План», чтобы видеть, сколько осталось по категориям.')).toBeTruthy();
+    expect(await screen.findByText('Составьте план на месяц, чтобы видеть, сколько осталось по категориям.')).toBeTruthy();
+    expect(await screen.findByText('Составить план ›')).toBeTruthy();
     expect(screen.queryByText(/^Отложено |^Потрачено \d/)).toBeNull();
   });
 });

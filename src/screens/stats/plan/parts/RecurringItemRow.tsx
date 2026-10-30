@@ -8,10 +8,8 @@ import { chargeAt, ONCE, todayKey } from '@/db/recurring';
 import { RepeatIcon } from '@/shared/ui/icons';
 import { formatWithCurrency } from '@/shared/lib/money';
 import { colors } from '@/shared/theme/theme';
-import { itemMark } from '../model/marks';
 import type { PlanView } from '../model/planView';
 import { Share } from './PlanItemRow';
-import RowMark from './RowMark';
 import { styles } from './styles';
 
 type Props = { p: PlanView; item: PlanItem; hidden: boolean; onOpen: () => void };
@@ -19,7 +17,7 @@ type Props = { p: PlanView; item: PlanItem; hidden: boolean; onOpen: () => void 
 /**
  * A category with repeating payments in the plan: the repeat sign for its icon, its payments with a day by name ("копим: …" — those
  * saved up for), the month's charges (counted from them; by hand until one has a day; the contributions — in
- * "Сбережения", SavingItemRow) and their share, paid or not ("✓ оплачено"). All its payments in another currency — "(6 $)"
+ * "Сбережения", SavingItemRow) and their share. All its payments in another currency — "(6 $)"
  * before. A tap opens the "Подписки" sheet.
  */
 export function RecurringItemRow({ p, item, hidden, onOpen }: Props) {
@@ -50,7 +48,6 @@ export function RecurringItemRow({ p, item, hidden, onOpen }: Props) {
       <View style={styles.nameBox}>
         <Text style={styles.name} numberOfLines={1}>{`${item.emoji || ''} ${item.name}`.trim()}</Text>
         <Text style={styles.percent} numberOfLines={1}>{note}</Text>
-        <RowMark mark={itemMark('payment', item.converted_minor ?? 0, p.spent.get(item.category_id) ?? 0, p.timing, p.money, hidden)} />
       </View>
       <View style={styles.amountBox}>
         {hidden ? null : (

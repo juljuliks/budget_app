@@ -58,7 +58,8 @@ src/
   собирает `screens/merchant`; формы — шиты через `sheets.ts`, их рисует `ModalHost`.
 
 **Страницы и шиты.** Продуктовые сущности — страницы стека (`screens/operation`, `merchant`, `category`): открываются
-`openTransaction` / `openMerchant` / `openCategory` поверх текущей (`push`), «назад» идёт по цепочке. Тело страницы —
+`openTransaction` / `openMerchant` / `openCategory` поверх текущей (`push`), «назад» идёт по цепочке. План месяца —
+тоже страница (`openPlan(ym)`, `screens/stats/plan/PlanScreen`): он в слайсе статистики, её модели считают из него. Тело страницы —
 `View` слайса (`TransactionView`, `MerchantView`, `CategoryView`) в `shared/ui/Page`: содержимое прокручивается, кнопки
 прижаты книзу. Формы и выборы (сумма, «Сменить категорию», разделение, описание, новая категория, подтверждения) —
 шиты. Имя мерчанта или категории — `MerchantLink` / `CategoryLink` (обе на `shared/ui/TextLink`: синий текст со

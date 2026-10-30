@@ -45,15 +45,6 @@ export const styles = StyleSheet.create({
   // center, not baseline: the overspend's ⓘ is a drawing, and baseline drops it under the amount
   partValues: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 6 },
   partValue: { textAlign: 'right', fontSize: 14, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
-  // "перерасход: −15 ₾ ⓘ" under savings the overspend took part of (a plan's row)
-  // how a row is going ("потрачено 320 ₾", "✓ оплачено", "больше на 50 ₾"): a line under its note
-  mark: { fontSize: 12, color: colors.muted, marginTop: 2, fontVariant: ['tabular-nums'] },
-  markOk: { color: colors.income },
-  markWarn: { color: colors.warn },
-  // "В сбережения идёт … · Подробнее ›" under the budget
-  savingsLine: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 8, paddingVertical: 4 },
-  savingsLineText: { flexShrink: 1, fontSize: 14, color: colors.text, fontVariant: ['tabular-nums'] },
-  // "(−15 ₾ ⓘ)" after them in the legend
   // the legend's names laid out unseen: the widest sets the names' column
   measure: { position: 'absolute', opacity: 0, alignItems: 'flex-start' },
   // a share ("43%") or a word ("сэкономлено") right by the name

@@ -1,6 +1,5 @@
-// How plan rows are going (screens/stats/plan/model/marks) and the stats' «Сбережения» (screens/stats/month/model/
-// savingsSection): this month's parts as they go, the overspend's order, a month over by its "Итоги".
-import { itemMark, savingsMark, shareMark } from '../../src/screens/stats/plan/model/marks';
+// The stats' «Сбережения» (screens/stats/month/model/savingsSection): this month's parts as they go, the overspend's
+// order, a month over by its "Итоги".
 import { planView } from '../../src/screens/stats/plan/model/planView';
 import { currentSavings, pastSavings } from '../../src/screens/stats/month/model/savingsSection';
 import { currentYm } from '../../src/db/plans';
@@ -10,31 +9,6 @@ const money = (minor: number) => `${minor / 100} ₾`;
 const item = (p: Partial<PlanItem>): PlanItem => ({
   category_id: 1, name: 'Еда', emoji: '🛒', type_id: 1, type_name: 'Жизнь', limit_minor: 40000, currency: 'GEL',
   converted_minor: 40000, kind: 'limit', norm_period: 'week', pinned: false, previous_minor: null, until: null, every: null, weekdays: null, unit_minor: null, ...p,
-});
-
-test('a limit: spent; past it — by how much; a month over within it — "✓ уложились"; a coming month — none', () => {
-  expect(itemMark('limit', 40000, 32000, 'current', money, false)).toEqual({ text: 'потрачено 320 ₾', tone: 'muted' });
-  expect(itemMark('limit', 40000, 45000, 'current', money, false)).toEqual({ text: 'больше на 50 ₾', tone: 'warn' });
-  expect(itemMark('limit', 40000, 30000, 'past', money, false)).toEqual({ text: '✓ уложились', tone: 'ok' });
-  expect(itemMark('limit', 40000, 0, 'future', money, false)).toBeNull();
-  expect(itemMark('limit', 0, 0, 'current', money, false)).toBeNull();
-  // "Скрыть суммы": words and shares only
-  expect(itemMark('limit', 40000, 10000, 'current', money, true)).toEqual({ text: 'потрачено 25%', tone: 'muted' });
-});
-
-test('a payment: paid, in part, not yet; paid more — both sums', () => {
-  expect(itemMark('payment', 5000, 5000, 'current', money, false)).toEqual({ text: '✓ оплачено', tone: 'ok' });
-  expect(itemMark('payment', 5000, 2000, 'current', money, false)).toEqual({ text: 'оплачено 20 ₾ из 50 ₾', tone: 'muted' });
-  expect(itemMark('payment', 5000, 0, 'past', money, false)).toEqual({ text: 'не оплачено', tone: 'muted' });
-  expect(itemMark('payment', 155754, 156282, 'current', money, false)).toEqual({ text: 'оплачено 1562.82 ₾ · больше на 5.28 ₾', tone: 'warn' });
-});
-
-test('savings: this month only — all of it goes, or what goes; the share outside the plan', () => {
-  expect(savingsMark(14859, 14859, 'current', '✓ отложено', money, false)).toEqual({ text: '✓ отложено', tone: 'ok' });
-  expect(savingsMark(926, 398, 'current', '✓ выходит', money, false)).toEqual({ text: 'выходит 3.98 ₾ — перерасход', tone: 'warn' });
-  expect(savingsMark(926, 398, 'past', '✓ выходит', money, false)).toBeNull();
-  expect(shareMark(30000, 38000, 'current', money, false)).toEqual({ text: 'больше доли на 80 ₾', tone: 'warn' });
-  expect(shareMark(30000, 12000, 'current', money, false)).toEqual({ text: 'потрачено 120 ₾ из доли', tone: 'muted' });
 });
 
 test('«Сбережения» this month: 💰, 🔒, then the farthest fund, then the savings from before', () => {

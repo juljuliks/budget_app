@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Controller, UseFormReturn, useWatch } from 'react-hook-form';
 import { Currency } from '@/db/fx';
-import { categoryMonthlyAverage, Every, getPlanBudget, lastPlanItem, NormPeriod, PlanKind, planConverter, plannedTotal } from '@/db/plans';
+import { categoryMonthlyAverage, categoryMonthSpent, currentYm, Every, getPlanBudget, lastPlanItem, NormPeriod, PlanKind, planConverter, plannedTotal } from '@/db/plans';
 import { StyleSheet, Text, View } from 'react-native';
 import { colors } from '@/shared/theme/theme';
 import { LOAD_FAILED } from '@/shared/lib/strings';
@@ -123,6 +123,8 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
   const [previous, setPrevious] = useState<{ minor: number; currency: Currency; ym: string } | null>(null);
   // what the category usually takes a month (the latest full months), in the app's currency
   const [average, setAverage] = useState<{ minor: number; months: number; from: string; to: string } | null>(null);
+  // what the category spent in the month so far (not in a coming one), in the app's currency
+  const [spent, setSpent] = useState<{ minor: number; ym: string } | null>(null);
   // the month's budget currency: a fund (as the savings) is in it
   const [budgetCurrency, setBudgetCurrency] = useState<Currency | null>(null);
   useEffect(() => {
@@ -138,8 +140,9 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
   useEffect(() => {
     if (!target) return;
     (async () => {
-      const [budget, last, conv, avg] = await Promise.all([
-        getPlanBudget(ym), lastPlanItem(ym, target.category_id), planConverter(ym), categoryMonthlyAverage(target.category_id, ym, shown)]);
+      const [budget, last, conv, avg, spentMinor] = await Promise.all([
+        getPlanBudget(ym), lastPlanItem(ym, target.category_id), planConverter(ym), categoryMonthlyAverage(target.category_id, ym, shown),
+        ym > currentYm() ? null : categoryMonthSpent(target.category_id, ym, shown)]);
       const others = budget ? await plannedTotal(ym, target.category_id, budget.currency) : 0;
       // in the app's currency; the original one when there is no rate
       const inShown = (minor: number, from: Currency) => {
@@ -152,6 +155,7 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
       setBudgetCurrency(budget?.currency ?? null);
       setPrevious(last ? { ...inShown(last.limit_minor, last.currency), ym: last.ym } : null);
       setAverage(avg && avg.average_minor > 0 ? { minor: avg.average_minor, months: avg.months, from: avg.from, to: avg.to } : null);
+      setSpent(spentMinor === null ? null : { minor: spentMinor, ym });
       // not in the plan yet: the amount it was opened with (what the category spent), else last month's item —
       // ready to save as is (so it counts as a change); the kind and pattern from last month either way
       const dirty = { shouldDirty: true };
@@ -183,9 +187,9 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
     <View>
       <StepsNav at={1} count={2} name="Сумма" onBack={adding.onBack} />
       <Text style={styles.category}>{target?.label}</Text>
-      <PlanFacts free={free} previous={previous} average={average} shown={shown} />
+      <PlanFacts free={free} spent={spent} previous={previous} average={average} shown={shown} />
     </View>
-  ) : <PlanFacts free={free} previous={previous} average={average} shown={shown} />;
+  ) : <PlanFacts free={free} spent={spent} previous={previous} average={average} shown={shown} />;
 
   return (
     <TextInputModal

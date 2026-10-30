@@ -1,9 +1,8 @@
 import React, { useEffect, useLayoutEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
-import type { TabParamList } from '@/shared/navigation/navigation';
-import { currentYm, ymOf } from '@/db/plans';
-import Segmented from '@/shared/ui/Segmented';
+import { openHistory, TabParamList } from '@/shared/navigation/navigation';
+import { ymOf } from '@/db/plans';
 import { SheetActions } from '@/shared/ui/Button';
 import BottomSheet from '@/shared/ui/BottomSheet';
 import RangeCalendar from '@/shared/ui/RangeCalendar';
@@ -12,16 +11,11 @@ import { useDisplayCurrency } from '@/shared/settings/displayCurrency';
 import { colors } from '@/shared/theme/theme';
 import { ChevronDownIcon } from '@/shared/ui/icons';
 import PeriodStatsView from './period/PeriodStatsView';
-import HistoryView from './history/HistoryView';
 import { monthTitle } from '@/shared/lib/dates';
 import PeriodNav from './parts/PeriodNav';
 import CloseBanner from './parts/CloseBanner';
 import PlanAlert from './parts/PlanAlert';
-import PlanView from './plan/PlanView';
 import StatsView from './month/StatsView';
-
-const SECTIONS = [['stats', 'Статистика'], ['plan', 'План'], ['history', 'История']] as const;
-type Section = typeof SECTIONS[number][0];
 
 const PERIODS: Array<[PeriodKind, string, string]> = [
   ['day', 'За день', 'за день'],
@@ -32,14 +26,16 @@ const PERIODS: Array<[PeriodKind, string, string]> = [
   ['custom', 'Свой период', 'за период'],
 ];
 
-/** "Статистика" tab: stats for a period (a month by default), the month's plan and plan-vs-actual history. */
+/**
+ * "Статистика" tab: stats for a period (a month by default; its plan — a page, «Изменить план ›»); plan-vs-actual by
+ * months — a page too, «История по месяцам ›» at the end of the period list.
+ */
 export default function StatsHome() {
   const now = new Date();
   const navigation = useNavigation();
-  const [section, setSection] = useState<Section>('stats');
-  // shared by stats and plan, so switching between them keeps the month
+  // the month of the stats
   const [period, setPeriod] = useState({ year: now.getFullYear(), month: now.getMonth() });
-  // stats, plan and history are shown converted to the app's currency (Настройки → Валюта)
+  // the stats are shown converted to the app's currency (Настройки → Валюта)
   const currency = useDisplayCurrency();
 
   // what the stats cover: a month (the default, with the plan) or a day / week / year around `anchor`, or a range
@@ -55,15 +51,13 @@ export default function StatsHome() {
   const { day, nonce } = route.params ?? {};
   useEffect(() => {
     if (day === undefined) return;
-    setSection('stats');
     setKind('day');
     setAnchor(new Date(day * 1000));
   }, [day, nonce]);
 
   const ym = ymOf(period.year, period.month);
-  const thisYm = currentYm(now);
-  // the plan can be prepared one month ahead; stats stop at the current month
-  const maxYm = section === 'plan' ? ymOf(now.getFullYear(), now.getMonth() + 1) : thisYm;
+  // the stats go a month ahead: nothing spent yet, its plan made in advance
+  const maxYm = ymOf(now.getFullYear(), now.getMonth() + 1);
   const shownYm = ym > maxYm ? maxYm : ym;
   const shown = shownYm === ym ? period : { year: now.getFullYear(), month: now.getMonth() };
 
@@ -72,7 +66,7 @@ export default function StatsHome() {
     return { year: d.getFullYear(), month: d.getMonth() };
   });
 
-  const byPeriod = section === 'stats' && kind !== 'month';
+  const byPeriod = kind !== 'month';
   // a week across two months shows only its days in one month (the arrows step to the other part)
   const range: DayRange | null = kind === 'custom' ? custom : kind === 'month' ? null
     : kind === 'week' ? weekInMonth(anchor) : periodRange(kind, anchor);
@@ -87,15 +81,15 @@ export default function StatsHome() {
   // the header title picks the period while the stats are shown: "Статистика за месяц ▾"
   useLayoutEffect(() => {
     navigation.setOptions({
-      headerTitle: () => (section === 'stats' ? (
+      headerTitle: () => (
         <TouchableOpacity style={styles.titleRow} onPress={() => setMenuOpen(true)} accessibilityRole="button" accessibilityLabel="Выбрать период">
           <Text style={styles.title}>Статистика</Text>
           <Text style={styles.titlePeriod}>{PERIODS.find((p) => p[0] === kind)![2]}</Text>
           <View style={styles.titleArrow}><ChevronDownIcon color={colors.accent} size={20} /></View>
         </TouchableOpacity>
-      ) : <Text style={styles.title}>Статистика</Text>),
+      ),
     });
-  }, [navigation, section, kind]);
+  }, [navigation, kind]);
 
   function pick(k: PeriodKind) {
     setMenuOpen(false);
@@ -114,12 +108,11 @@ export default function StatsHome() {
 
   return (
     <View style={styles.screen}>
-      <Segmented options={SECTIONS} value={section} onChange={setSection} style={styles.segmented} />
-      {/* the 1st to the 3rd: a month over to close, over every section */}
+      {/* the 1st to the 3rd: a month over to close */}
       <CloseBanner />
-      {section === 'stats' ? <PlanAlert currency={currency} /> : null}
+      <PlanAlert currency={currency} />
 
-      {section === 'history' ? null : byPeriod && range ? (
+      {byPeriod && range ? (
         <PeriodNav
           unit="период"
           label={periodLabel(kind, range)}
@@ -133,17 +126,14 @@ export default function StatsHome() {
       )}
 
       <View style={styles.body}>
-        {section === 'stats' && byPeriod && range ? (
+        {byPeriod && range ? (
           <PeriodStatsView
             key={`${range.from}-${range.to}`}
             range={range}
             normLabel={kind === 'day' ? 'на день' : kind === 'week' ? 'на неделю' : 'на период'}
           />
         ) : null}
-        {section === 'stats' && !byPeriod ? <StatsView year={shown.year} month={shown.month} currency={currency} /> : null}
-        {/* "Подробнее ›" of what goes to savings: the month's stats, «Сбережения» right under its total */}
-        {section === 'plan' ? <PlanView key={shownYm} ym={shownYm} currency={currency} onSavings={() => { setKind('month'); setSection('stats'); }} /> : null}
-        {section === 'history' ? <HistoryView currency={currency} /> : null}
+        {!byPeriod ? <StatsView year={shown.year} month={shown.month} currency={currency} /> : null}
       </View>
 
       {/* the period list, as a sheet like every other choice */}
@@ -154,6 +144,10 @@ export default function StatsHome() {
             {k === kind ? <Text style={styles.menuCheck}>✓</Text> : null}
           </TouchableOpacity>
         ))}
+        {/* plan and spending by months: not a period of these stats, a page of its own */}
+        <TouchableOpacity style={styles.menuItem} onPress={() => { setMenuOpen(false); openHistory(); }} accessibilityRole="button">
+          <Text style={styles.menuText}>История по месяцам ›</Text>
+        </TouchableOpacity>
       </BottomSheet>
 
       {/* "Свой период": the transactions' range calendar in a sheet */}
@@ -170,8 +164,6 @@ export default function StatsHome() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  // close under the header title
-  segmented: { marginHorizontal: 16, marginTop: 4, marginBottom: 8 },
   body: { flex: 1 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   title: { fontSize: 20, fontWeight: '500', color: colors.text },

@@ -9,6 +9,7 @@ import { SettingsScreen } from '@/screens/settings';
 import { OperationScreen } from '@/screens/operation';
 import { MerchantScreen } from '@/screens/merchant';
 import { CategoryScreen } from '@/screens/category';
+import { HistoryScreen, PlanScreen } from '@/screens/stats';
 import MainTabs from './MainTabs';
 import { ModalHost } from './ModalHost';
 import { useAppStartup } from './useAppStartup';
@@ -37,6 +38,8 @@ export default function App() {
         <Stack.Screen name="Operation" component={OperationScreen} options={{ title: 'Операция' }} />
         <Stack.Screen name="Merchant" component={MerchantScreen} options={{ title: '' }} />
         <Stack.Screen name="Category" component={CategoryScreen} options={{ title: '' }} />
+        <Stack.Screen name="Plan" component={PlanScreen} options={{ title: 'План' }} />
+        <Stack.Screen name="History" component={HistoryScreen} options={{ title: 'История по месяцам' }} />
       </Stack.Navigator>
       {/* the sheets over the pages (a new operation, sections, deleting a category, a repeating payment, …) */}
       <ModalHost />

@@ -14,7 +14,7 @@ import { styles } from './styles';
 export default function BudgetBar({ p }: { p: PlanView }) {
   // where the locked part sits in the bar: its 🔒 is drawn over it, taller than the bar
   const [lockBox, setLockBox] = useState<{ x: number; width: number } | null>(null);
-  const { locked, free, timing } = p;
+  const { locked, free } = p;
   const freeNow = Math.max(0, free ?? 0);
   const lockedNow = locked;
   const lockedPart = <View style={[styles.lockedPart, { flex: lockedNow }]} onLayout={(e) => setLockBox({ x: e.nativeEvent.layout.x, width: e.nativeEvent.layout.width })} />;
@@ -23,7 +23,7 @@ export default function BudgetBar({ p }: { p: PlanView }) {
     <View style={styles.barBox}>
       <View style={styles.bar} accessibilityLabel={`Запланировано ${percentOf(p.total, p.shownBudget!) || '0%'} бюджета`}>
         {/* the savings part: the leftover light, the locked part dark, its 🔒 drawn over it below */}
-        {p.parts.filter((x) => x.key !== 'locked').map((x) => (x.key === 'free' && timing !== 'past' ? (
+        {p.parts.filter((x) => x.key !== 'locked').map((x) => (x.key === 'free' ? (
           <React.Fragment key={x.key}>
             {freeNow > 0 ? <View style={{ flex: freeNow, backgroundColor: x.color }} /> : null}
             {lockedNow > 0 ? lockedPart : null}

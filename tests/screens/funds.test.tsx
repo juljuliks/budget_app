@@ -1,7 +1,7 @@
 // 6.5 "Копилки": a category saved up for — made from the plan's sheet, its card, the stats, deleted. Today: 15 October
 // 2026; the seed's budget 3 000 ₾, Одежда planned 400 ₾ and ZARA 450 ₾ spent in it.
 import { fireEvent } from '@testing-library/react-native';
-import { backToTabs, openApp, screen, tap, texts } from './app';
+import { backToTabs, openApp, screen, tap, texts, openPlanPage } from './app';
 import { planned } from '../e2e/seeds';
 import { getDb } from '../../src/db';
 import { setFund } from '../../src/db/plans';
@@ -13,7 +13,7 @@ const fund = async () => (await getDb()).get<{ target_minor: number; due: string
 async function makeFund() {
   await openApp(planned);
   await tap('Статистика');
-  await tap('План');
+  await openPlanPage();
   await tap('Изменить: 👕 Одежда');
   await tap('Копилка');
   expect(await screen.findByText('Накопить')).toBeTruthy();
@@ -42,31 +42,32 @@ describe('6.5 funds', () => {
     // no column or section of its own: in "Сбережения"
     expect(screen.queryByText('Копилки')).toBeNull();
     expect(screen.getAllByText('Сбережения').length).toBeGreaterThanOrEqual(2);
-    // the share alone: the plan is the month's anyway; this month its contribution still goes
+    // the share alone: the plan is the month's anyway (the last: the stats under the page have it too)
     const t = texts();
-    const i = t.indexOf('👕 Одежда');
-    expect(t[i + 2]).toBe('✓ взнос выходит');
-    expect(t[i + 3]).toMatch(/^300\s₾$/);
-    expect(t[i + 4]).toBe('10%');
+    const i = t.lastIndexOf('👕 Одежда');
+    expect(t[i + 2]).toMatch(/^300\s₾$/);
+    expect(t[i + 3]).toBe('10%');
   });
 
   test('the screen in another currency: the contribution in the fund\'s own one before it, "(300 ₾)"', async () => {
     await makeFund();
     const db = await getDb();
     for (let d = 1; d <= 15; d++) await db.run("INSERT OR REPLACE INTO fx_rates (date, currency, gel_per_unit) VALUES (?, 'USD', 2.5)", [`2026-10-${String(d).padStart(2, '0')}`]);
+    backToTabs();
     await tap('Настройки');
     await tap('$ USD');
     backToTabs();
+    await openPlanPage();
     await screen.findAllByText('120 $');
     const t = texts();
-    const i = t.indexOf('👕 Одежда');
-    expect(t.slice(i + 1, i + 6)).toEqual(['150 из 1 500 ₾ · к 31 января 2027', '✓ взнос выходит', '(300 ₾)', '120 $', '10%']);
+    const i = t.lastIndexOf('👕 Одежда');
+    expect(t.slice(i + 1, i + 5)).toEqual(['150 из 1 500 ₾ · к 31 января 2027', '(300 ₾)', '120 $', '10%']);
   });
 
   test('a contribution past what is free, 🔒 has it: "Вычесть из сбережений?" — what is short taken from it', async () => {
     await openApp(planned);
     await tap('Статистика');
-    await tap('План');
+    await openPlanPage();
     await tap('Изменить: 👕 Одежда');
     await tap('Копилка');
     // 2 700 over 4 months: 675 a month, 640 free

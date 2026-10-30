@@ -4,7 +4,7 @@
 // a budget of 3 000 ₾, 1 850 ₾ spent.
 import { act, waitFor } from '@testing-library/react-native';
 import { getSetting } from '../../src/db/settings';
-import { openApp, screen, tap, texts } from './app';
+import { openApp, screen, tap, texts, openPlanPage, openHistoryPage } from './app';
 import { buy, category, on, planned } from '../e2e/seeds';
 import { getDb } from '../../src/db';
 import { answerClose, finishClose, setFund, setPlanBudget, setSplit } from '../../src/db/plans';
@@ -91,7 +91,7 @@ describe('6.6 month close', () => {
       await finishClose('2026-09');
     });
     await tap('Статистика');
-    await tap('План');
+    await openPlanPage();
     expect(await screen.findByText(m('4 150 ₾'))).toBeTruthy();
     expect(screen.getByText(m('3 000 ₾ + 1 150 ₾ из сентября'))).toBeTruthy();
     expect(screen.getByText('Перенос из сентября')).toBeTruthy();
@@ -116,7 +116,7 @@ describe('6.6 month close', () => {
       await finishClose('2026-09');
     });
     await tap('Статистика');
-    await tap('План');
+    await openPlanPage();
     expect(await screen.findByText('Перерасход сентября')).toBeTruthy();
     expect(screen.getByText('⚠️ Перерасход сентября')).toBeTruthy();
     expect(screen.getByText(/^вычтен из бюджета октября/)).toBeTruthy();
@@ -133,7 +133,7 @@ describe('6.6 month close', () => {
   test('«История»: "Итоги не подведены" — "Подвести итоги ›" opens them; closed — the leftover as answered, "Изменить итоги ›"', async () => {
     await openApp(planned);
     await tap('Статистика');
-    await tap('История');
+    await openHistoryPage();
     expect(await screen.findByText('Итоги не подведены: удалось ли отложить, взносы в копилки')).toBeTruthy();
     expect(screen.getByText(m('1 150 ₾ ?'))).toBeTruthy();
     await tap('Подвести итоги ›');
@@ -158,13 +158,14 @@ describe('6.6 month close', () => {
       await finishClose('2026-09');
     });
     await tap('Статистика');
-    await tap('История');
+    await openHistoryPage();
     await tap('Отчёт за месяц ›');
     expect(await screen.findByText('Отчёт · Сентябрь 2026')).toBeTruthy();
     // 3 000 − 1 850 spent: 1 150 — 850 left and the fund's 300, as planned; 500 put aside: the fund 200, 💰 300
     // the amounts here are shown masked-ready: compared with plain spaces
     const t = texts().map((x) => x.replace(/\s/g, ' '));
-    const after = (label: string, n: number) => t.slice(t.indexOf(label) + 1, t.indexOf(label) + 1 + n);
+    // the last: the stats under the history page have the same names
+    const after = (label: string, n: number) => t.slice(t.lastIndexOf(label) + 1, t.lastIndexOf(label) + 1 + n);
     expect(after('Отложено', 1)).toEqual(['500 ₾']);
     expect(after('💰 Сэкономлено', 2)).toEqual(['850 ₾', '300 ₾']);
     expect(after('🏖 Отпуск · взнос', 2)).toEqual(['300 ₾', '200 ₾']);
@@ -179,12 +180,10 @@ describe('6.6 month close', () => {
     const onDay = (day: number) => { spy = jest.spyOn(Real, 'now').mockImplementation(() => realNow.call(Real) + (day + 31 - 15) * 86400000); };
     afterEach(() => spy?.mockRestore());
 
-    test('2 November: "Сентябрь не закрыт" (the oldest) over every section; ✕ — till tomorrow; "Подвести итоги ›" opens them', async () => {
+    test('2 November: "Сентябрь не закрыт" (the oldest) over the stats; ✕ — till tomorrow; "Подвести итоги ›" opens them', async () => {
       onDay(2);
       await openApp(planned);
       await tap('Статистика');
-      expect(await screen.findByText('Сентябрь не закрыт')).toBeTruthy();
-      await tap('История');
       expect(await screen.findByText('Сентябрь не закрыт')).toBeTruthy();
       await tap('Подвести итоги ›');
       expect(await screen.findByText('Итоги · Сентябрь 2026')).toBeTruthy();
@@ -198,7 +197,7 @@ describe('6.6 month close', () => {
       onDay(4);
       await openApp(planned);
       await tap('Статистика');
-      await tap('История');
+      await openHistoryPage();
       // (the seed's "this month" lands in November: September is the one over with a plan)
       expect(await screen.findAllByText('Итоги не подведены: удалось ли отложить, взносы в копилки')).toHaveLength(1);
       expect(screen.queryByText('Сентябрь не закрыт')).toBeNull();

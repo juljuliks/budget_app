@@ -21,6 +21,8 @@ import { useMonthData } from './model/useMonthData';
 import { lessTarget, useMonthSavings } from './model/useMonthSavings';
 import CategoryRow from './parts/CategoryRow';
 import MonthTotal from './parts/MonthTotal';
+import PlanLinks from './parts/PlanLinks';
+import ComingMonth from './parts/ComingMonth';
 import FundStatRow from './parts/FundStatRow';
 import { savingsSection } from './parts/savingsSection';
 import { fundsSection, spentFunds, typeSections, unplannedSection } from './parts/sections';
@@ -50,6 +52,8 @@ export default function StatsView({ year, month, currency }: { year: number; mon
   const savings = useMonthSavings(ymOf(year, month), currency, hidden);
   const [lessOpen, setLessOpen] = useState(false);
 
+  // the next month: nothing spent yet, its plan in advance
+  if (ymOf(year, month) > currentYm()) return <ComingMonth ym={ymOf(year, month)} />;
   if (!stats) return <Loading failed={failed} onRetry={load} />;
 
   // the categories without a plan and the uncategorized: one "Вне плана" section at the bottom, with the budget's share
@@ -82,6 +86,8 @@ export default function StatsView({ year, month, currency }: { year: number; mon
 
   return (
     <StickyScrollView style={styles.screen} contentContainerStyle={styles.content}>
+      {/* under the month, on the right: its plan */}
+      <PlanLinks ym={ym} />
       {/* a month that is over: its report on top */}
       {ym < currentYm() ? <View style={styles.report}><MonthReportRow ym={ym} /></View> : null}
       <View style={styles.donutWrap}>
@@ -90,7 +96,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
         </Donut>
       </View>
       {plannedAll > 0 ? <MonthTotal stats={stats} ym={ym} plannedAll={plannedAll} evenPace={evenPace} /> : (
-        <Text style={styles.hint}>Составьте план на месяц во вкладке «План», чтобы видеть, сколько осталось по категориям.</Text>
+        <Text style={styles.hint}>Составьте план на месяц, чтобы видеть, сколько осталось по категориям.</Text>
       )}
 
       {/* the funds' spending is from what they saved: said under the month's total */}
