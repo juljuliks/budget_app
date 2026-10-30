@@ -62,3 +62,16 @@ export function savingsLess({ items, spentBy, unplanned, unplannedSpent, free, l
     overs: overs.sort((a, b) => b.over - a.over),
   };
 }
+
+/** what the overspend takes beyond 💰: off 🔒, the funds' contributions and the savings from before */
+export const lessTaken = (l: SavingsLess) => l.locked.was - l.locked.now + l.funds.less + l.past;
+
+/** the sheet's lines, part by part: "🔒 отложено 0 ₾ из 500 ₾", "из прошлых сбережений уйдёт 150 ₾" */
+export function lessLines(l: SavingsLess, money: (minor: number) => string): string[] {
+  return [
+    l.free.was > 0 ? `💰 сэкономлено ${money(l.free.now)} из ${money(l.free.was)}` : null,
+    l.locked.was > 0 ? `🔒 отложено ${money(l.locked.now)} из ${money(l.locked.was)}` : null,
+    l.funds.less > 0 ? `в копилки — на ${money(l.funds.less)} меньше` : null,
+    l.past > 0 ? `из прошлых сбережений уйдёт ${money(l.past)}` : null,
+  ].filter((x): x is string => x !== null);
+}

@@ -54,7 +54,7 @@
 | 3 мерчанты | `merchants.test.tsx` |
 | 4.1–4.4 категории, разделы, объединение, удаление без операций | `categories.test.tsx` |
 | 4.5 удаление с операциями: всё в одну, разбор, прерывание | `categoryDelete.test.tsx`, `categories.test.tsx` |
-| 5 статистика | `stats.test.tsx`; строки без сумм при закрытом глазе — `logic/hiddenText.test.ts`; раздел «Сбережения» (5.7) и отметки плана (6.1.8) — `logic/planMarks.test.ts`, переход из плана — `plan.test.tsx` |
+| 5 статистика | `stats.test.tsx`; строки без сумм при закрытом глазе — `logic/hiddenText.test.ts`; раздел «Сбережения» (5.7) и отметки плана (6.1.8) — `logic/planMarks.test.ts`, переход из плана — `plan.test.tsx`; «Сбережения меньше на …» по частям (5.6.3) — `logic/savingsLess.test.ts` |
 | 6 план | `plan.test.tsx`; MAX пересчёт locked, перенос флага — `logic/plans.test.ts` |
 | 6.5 копилки: сделать, карточка, удалить, статистика | `funds.test.tsx`; взнос, месяцы, нехватка, история — `logic/funds.test.ts` |
 | 6.7 регулярные платежи: строка в плане, шит «Подписки», добавить (из мерчанта), удалить, вопрос из операции, карточка, откладывание, из шита суммы плана (6.7.9), выключить (6.7.10), свитч «Подписки» категории (6.7.13), каждую неделю и один раз (6.7.2), подписки месяца и предстоящие (6.7.11), операции подписки (6.7.12) | `recurringPayments.test.tsx`; даты списаний — `logic/paymentSchedule.test.ts`, сумма в плане (уже списанная подписка в другой валюте — по курсу дня операции), «Без даты списания» — `logic/recurringPayments.test.ts`, тексты — `logic/paymentTexts.test.ts`; свитч у «Подписок» (4.2.10) — `categories.test.tsx`, откладывание — `logic/paymentSaving.test.ts`; внутри месяца и дата окончания (6.3.6a) — `plan.test.tsx`, `logic/regularPayments.test.ts` |

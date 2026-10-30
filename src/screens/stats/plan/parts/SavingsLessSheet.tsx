@@ -4,7 +4,7 @@ import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
 import { SheetActions } from '@/shared/ui/Button';
 import Masked from '@/shared/ui/Masked';
 import { colors } from '@/shared/theme/theme';
-import type { Overspent, SavingsLess } from '../model/savingsLess';
+import { lessLines, Overspent, SavingsLess } from '../model/savingsLess';
 
 type Props = {
   less: SavingsLess | null;
@@ -32,8 +32,8 @@ function Row({ o, money, onOpen }: { o: Overspent; money: (minor: number) => str
 }
 
 /**
- * ⓘ of the savings the overspend took part of: by how much, what they'll be if the rest is spent by plan (the funds'
- * contributions less, the savings from before — what none of them covers), and every
+ * ⓘ of the savings the overspend took part of (and the warning over the stats): by how much, what each part will be if the
+ * rest is spent by plan (💰, 🔒, the funds' contributions, the savings from before — what none of them covers), and every
  * category past its plan (the spending outside the plan past its share too), the biggest first; a tap opens its plan.
  */
 export default function SavingsLessSheet({ less, visible, money, onClose, onOpen }: Props) {
@@ -41,11 +41,8 @@ export default function SavingsLessSheet({ less, visible, money, onClose, onOpen
     <BottomSheet visible={visible && !!less} onClose={onClose} title={less ? `Сбережения меньше на ${money(less.less)}` : ''}>
       {less ? (
         <SheetScrollView contentContainerStyle={styles.content}>
-          <Text style={styles.lead}>
-            {`Эти категории потратили больше плана. Если дальше тратить по плану, в сбережения пойдёт ${money(less.now)} (−${money(less.was - less.now)})`
-              + (less.funds.less > 0 ? `, в копилки — на ${money(less.funds.less)} меньше` : '')
-              + (less.past > 0 ? `, ещё ${money(less.past)} — из прошлых сбережений` : '')}
-          </Text>
+          <Text style={styles.lead}>Эти категории потратили больше плана. Если дальше тратить по плану:</Text>
+          {lessLines(less, money).map((l) => <Masked key={l} style={styles.part}>{l}</Masked>)}
           {less.overs.map((o) => (
             <Row key={o.key} o={o} money={money} onOpen={o.category_id === null ? undefined : () => { onClose(); onOpen(o.category_id!); }} />
           ))}
@@ -59,7 +56,8 @@ export default function SavingsLessSheet({ less, visible, money, onClose, onOpen
 
 const styles = StyleSheet.create({
   content: { paddingHorizontal: 20, paddingBottom: 16 },
-  lead: { fontSize: 14, color: colors.muted, marginBottom: 4 },
+  lead: { fontSize: 14, color: colors.muted, marginBottom: 6 },
+  part: { fontSize: 15, color: colors.text, paddingVertical: 2 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
   emoji: { fontSize: 20, width: 26 },
   text: { flex: 1 },

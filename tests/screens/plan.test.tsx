@@ -69,7 +69,9 @@ describe('6.1 the month\'s budget', () => {
     await tap('💰 Сэкономлено: что съело сбережения');
     // 3 000 − (620 + 310 + 800 + 450 + 30) − 380 outside the plan
     expect(await screen.findByText('Сбережения меньше на 130 ₾')).toBeTruthy();
-    expect(screen.getByText('Эти категории потратили больше плана. Если дальше тратить по плану, в сбережения пойдёт 410 ₾ (−130 ₾)')).toBeTruthy();
+    expect(screen.getByText('Эти категории потратили больше плана. Если дальше тратить по плану:')).toBeTruthy();
+    expect(screen.getByText('💰 сэкономлено 110 ₾ из 240 ₾')).toBeTruthy();
+    expect(screen.getByText('🔒 отложено 300 ₾ из 300 ₾')).toBeTruthy();
     expect(screen.getByText('доля 300 ₾ · потрачено 380 ₾')).toBeTruthy();
     expect(screen.getByText('план 400 ₾ · потрачено 450 ₾')).toBeTruthy();
     await tap('План: Одежда');

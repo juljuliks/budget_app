@@ -18,7 +18,7 @@ import DonutCenter from '../parts/DonutCenter';
 import RefundsRow from '../parts/RefundsRow';
 import SavingsLessSheet from '../plan/parts/SavingsLessSheet';
 import { useMonthData } from './model/useMonthData';
-import { useMonthSavings } from './model/useMonthSavings';
+import { lessTarget, useMonthSavings } from './model/useMonthSavings';
 import CategoryRow from './parts/CategoryRow';
 import MonthTotal from './parts/MonthTotal';
 import FundStatRow from './parts/FundStatRow';
@@ -112,10 +112,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
       <PlanAmountModal ym={ym} currency={currency} target={planTarget} onClose={() => setPlanTarget(null)} onSaved={load} />
       <SavingsLessSheet
         less={savings.view?.less ?? null} visible={lessOpen} money={(minor) => formatWithCurrency(minor, currency)} onClose={() => setLessOpen(false)}
-        onOpen={(id) => {
-          const item = savings.view?.groups.flatMap((g) => g.items).find((i) => i.category_id === id) ?? savings.view?.funds.find((i) => i.category_id === id);
-          if (item) setPlanTarget({ ...item, label: categoryLabel(item) });
-        }}
+        onOpen={(id) => setPlanTarget(lessTarget(savings.view, id))}
       />
     </StickyScrollView>
   );

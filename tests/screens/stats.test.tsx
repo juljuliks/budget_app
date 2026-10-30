@@ -247,22 +247,37 @@ describe('5.6 the warnings about the locked savings', () => {
     emitTransactionsChanged();
   });
 
-  test('near them: 10% of what may be spent left', async () => {
+  // 💰 has 110 left: the plan's categories and the share outside them are 130 past their plan; Продукты has 315 left
+  test('near them: 10% of what may be spent left, the overspend within 💰', async () => {
     expect(screen.queryByText(/До отложенного/)).toBeNull();
-    await spend(500);
-    expect(await screen.findByText(/До отложенного осталось 190 ₾ — дальше траты пойдут из сбережений/)).toBeTruthy();
+    await spend(420);
+    expect(await screen.findByText(/До отложенного осталось 270 ₾ — дальше траты пойдут из сбережений/)).toBeTruthy();
+    expect(screen.queryByText(/Перерасход зашёл/)).toBeNull();
   });
-  test('into them', async () => {
-    await spend(800);
-    expect(await screen.findByText(/Траты зашли в отложенное: из сбережений ушло 110 ₾/)).toBeTruthy();
+  test('into them: the overspend past 💰, part by part in the sheet', async () => {
+    await spend(500);
+    expect(await screen.findByText('⚠ Перерасход зашёл в сбережения: −75 ₾ · Подробнее ›')).toBeTruthy();
+    expect(screen.queryByText(/До отложенного/)).toBeNull();
+    await tap('Перерасход: подробнее');
+    expect(await screen.findByText('Сбережения меньше на 315 ₾')).toBeTruthy();
+    expect(screen.getByText('Эти категории потратили больше плана. Если дальше тратить по плану:')).toBeTruthy();
+    expect(screen.getByText('💰 сэкономлено 0 ₾ из 240 ₾')).toBeTruthy();
+    expect(screen.getByText('🔒 отложено 225 ₾ из 300 ₾')).toBeTruthy();
+    expect(screen.queryByText(/из прошлых сбережений/)).toBeNull();
+    await tap('Понятно');
+    await spend(400);
+    expect(await screen.findByText('⚠ Перерасход зашёл в сбережения: −475 ₾ · Подробнее ›')).toBeTruthy();
+    await tap('Перерасход: подробнее');
+    expect(await screen.findByText('🔒 отложено 0 ₾ из 300 ₾')).toBeTruthy();
+    expect(screen.getByText('из прошлых сбережений уйдёт 175 ₾')).toBeTruthy();
   });
   test('hidden with ✕ until something new', async () => {
-    await spend(500);
+    await spend(420);
     await screen.findByText(/До отложенного осталось/);
     await tap('Скрыть предупреждение');
     await waitFor(() => expect(screen.queryByText(/До отложенного/)).toBeNull());
-    await spend(300);
-    expect(await screen.findByText(/Траты зашли в отложенное/)).toBeTruthy();
+    await spend(80);
+    expect(await screen.findByText(/Перерасход зашёл в сбережения/)).toBeTruthy();
   });
 });
 
