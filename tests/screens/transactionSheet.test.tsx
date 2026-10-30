@@ -204,12 +204,15 @@ async function mixedGlovo() {
 const mixedOf = async (m: string) => (await (await getDb()).all<{ name: string }>(
   'SELECT c.name FROM merchant_categories mc JOIN categories c ON c.id = mc.category_id WHERE mc.merchant_key = ? ORDER BY c.name', [m])).map((r) => r.name);
 
-test('2.7.6: a merchant of different categories: its categories to tap, no question; another one joins its list', async () => {
+test('2.7.6: a merchant of different categories: the category as a link, its categories to tap under it, no question; another one stays this operation\'s', async () => {
   await mixedGlovo();
   await tap('GLOVO');
-  expect(await screen.findByText(/У «GLOVO» разные категории\. Основная — «.+»: новые операции получают её, если в уведомлении не выбрать другую\./)).toBeTruthy();
+  expect(await screen.findByText('Разные категории у «GLOVO»')).toBeTruthy();
+  expect(screen.getByText(/ Без категории$/)).toBeTruthy();
+  expect(await screen.findByText(/^Основная — «.+»: новые операции получают её, если в уведомлении не выбрать другую\.$/)).toBeTruthy();
   await tap('☕️ Кафе и рестораны');
   expect(await screen.findByText('Категория «☕️ Кафе и рестораны» назначена')).toBeTruthy();
+  expect(await screen.findByText('☕️ Кафе и рестораны ›')).toBeTruthy();
   expect((await opsOf('GLOVO')).map((o) => [o.c, o.s])).toEqual([['Кафе и рестораны', 'user']]);
   expect(await ruleOf('GLOVO')).toBeNull();
   // the page stays open; one chip does not add a button
@@ -219,10 +222,17 @@ test('2.7.6: a merchant of different categories: its categories to tap, no quest
   await tap('👕 Одежда');
   expect(await screen.findByText('Категория «👕 Одежда» назначена')).toBeTruthy();
   expect(screen.getByText('Удалить операцию')).toBeTruthy();
-  await waitFor(() => expect(rowOf('👕 Одежда').props.accessibilityState).toMatchObject({ selected: true }));
-  expect(rowOf('☕️ Кафе и рестораны').props.accessibilityState).toMatchObject({ selected: false });
+  // the link shows it; it is not the merchant's, so no chip of it and none highlighted
+  expect(await screen.findByText('👕 Одежда ›')).toBeTruthy();
+  await waitFor(() => expect(rowOf('☕️ Кафе и рестораны').props.accessibilityState).toMatchObject({ selected: false }));
+  expect(rowOf('🛒 Продукты').props.accessibilityState).toMatchObject({ selected: false });
+  expect(await mixedOf('GLOVO')).toEqual(['Кафе и рестораны', 'Продукты']);
+  // a chip now replaces it: one highlighted, saved, no split
+  await tap('🛒 Продукты');
+  expect(await screen.findByText('Категория «🛒 Продукты» назначена')).toBeTruthy();
+  expect(await screen.findByText('🛒 Продукты ›')).toBeTruthy();
   expect(screen.queryByText('Разделить')).toBeNull();
-  expect(await mixedOf('GLOVO')).toEqual(['Кафе и рестораны', 'Одежда', 'Продукты']);
+  expect(await mixedOf('GLOVO')).toEqual(['Кафе и рестораны', 'Продукты']);
 });
 
 test('2.7.6: a refund of such a merchant offers its categories; the pick stays this refund\'s', async () => {
@@ -231,7 +241,7 @@ test('2.7.6: a refund of such a merchant offers its categories; the pick stays t
   // the list was already open: search reloads it and brings the refund in
   fireEvent.changeText(screen.getByPlaceholderText('Поиск: мерчант, описание, сумма…'), 'GLOVO');
   await tap('Возврат · GLOVO');
-  expect(await screen.findByText(/У «GLOVO» разные категории\. Основная — «.+»: новые операции получают её, если в уведомлении не выбрать другую\./)).toBeTruthy();
+  expect(await screen.findByText(/^Основная — «.+»: новые операции получают её, если в уведомлении не выбрать другую\.$/)).toBeTruthy();
   expect(screen.getByText('☕️ Кафе и рестораны')).toBeTruthy();
   expect(screen.getByText('🛒 Продукты')).toBeTruthy();
   await tap('☕️ Кафе и рестораны');

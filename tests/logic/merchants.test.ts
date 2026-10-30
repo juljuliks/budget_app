@@ -218,8 +218,8 @@ describe('a merchant of different categories', () => {
 
     const list = await listMerchants();
     expect(list.find((m) => m.id === 'WOLT')).toEqual(expect.objectContaining({ mixed: true, category_id: null }));
-    // the order it was given: the most used first, a later pick appended
-    expect((await merchantCategories('WOLT')).map((c) => [c.id, c.n])).toEqual([[1, 2], [2, 1]]);
+    // the order it was given: the most used first; a pick stays that operation's, not on the list
+    expect((await merchantCategories('WOLT')).map((c) => [c.id, c.n])).toEqual([[1, 2]]);
   });
 
   test('picking one category for it ends the "different" mark', async () => {
@@ -230,7 +230,7 @@ describe('a merchant of different categories', () => {
     expect((await listMerchants())[0].mixed).toBe(false);
   });
 
-  test('its list: what its operations had when marked, added by hand or by a pick, removed by hand', async () => {
+  test('its list: what its operations had when marked, added and removed by hand; a pick is not added', async () => {
     const op = await sms('WOLT');
     await setMerchantMixed('WOLT', true);
     expect(await merchantCategories('WOLT')).toEqual([]);
@@ -244,7 +244,8 @@ describe('a merchant of different categories', () => {
     const another = await sms('WOLT');
     expect(await categoryOf(another)).toBe(2);
     await assignCategory(another, 3);
-    expect((await merchantCategories('WOLT')).map((c) => c.id)).toEqual([2, 3]);
+    expect(await categoryOf(another)).toBe(3);
+    expect((await merchantCategories('WOLT')).map((c) => c.id)).toEqual([2]);
   });
 
   test('the saved order is the order everywhere, and the first is what a new operation gets', async () => {

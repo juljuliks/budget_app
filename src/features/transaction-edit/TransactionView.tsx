@@ -33,7 +33,9 @@ export default function TransactionView({ txId, onClose }: Props) {
   const { saving, choose } = useCategoryChoice(txId, tx ?? null, true);
   const split = !!tx && splitParts(tx) !== null;
   const showChips = !!tx && tx.id === txId && !split && !!mixedCats?.length;
-  const currentId = showChips && tx ? tx.category_id : null;
+  // the chips are the merchant's list: a category picked elsewhere is not highlighted among them
+  const listed = (id: number | null) => (showChips && mixedCats!.some((c) => c.id === id) ? id : null);
+  const currentId = listed(tx?.category_id ?? null);
   const { picked, toggle, select } = useMixedPick(txId, currentId, showChips);
   const chooseRef = useRef(choose);
   chooseRef.current = choose;
@@ -75,13 +77,13 @@ export default function TransactionView({ txId, onClose }: Props) {
       <TransactionHeader tx={tx} onEditAmount={() => setAmountOpen(true)} onEditKind={() => setKindOpen(true)} merchantLinked={rememberable} />
       <TransactionCategory
         tx={tx} mixedCats={showChips ? mixedCats : null} picked={picked} saving={saving} onToggle={toggle}
-        choose={(id) => { choose(id, () => { savedChip.current = id; select(id); }); }}
+        choose={(id) => { choose(id, () => { savedChip.current = id; select(listed(id)); }); }}
         onSplit={(ids) => { setSplitSeed(ids ?? null); setSplitOpen(true); }}
       />
 
       {(rememberable || tx.kind === 'refund') && mixedCats?.length ? (
         <Text style={styles.merchantInfo}>
-          У «{merchantName}» разные категории. Основная — «{merchantCategory ?? mixedCats[0].label}»: новые операции получают её, если в уведомлении не выбрать другую.
+          Основная — «{merchantCategory ?? mixedCats[0].label}»: новые операции получают её, если в уведомлении не выбрать другую.
         </Text>
       ) : null}
       {rememberable && merchantCategory && !mixedCats ? (

@@ -24,16 +24,13 @@ export async function assignCategory(txId: number, categoryId: number | null, ch
   const tx = await db.get<{ kind: string; merchant_key: string | null }>(
     'SELECT kind, merchant_key FROM transactions WHERE id = ?', [txId]);
   // only purchases / payments are remembered: a transfer or deposit "merchant" is a person or the card
-  // a merchant of different categories keeps its primary one: a pick is always this operation's
+  // a merchant of different categories keeps its primary one and its list: a pick is always this operation's only
   const key = tx?.merchant_key && isRememberable(tx.kind) && !(await isMixedMerchant(tx.merchant_key)) ? tx.merchant_key : null;
   const forMerchant = categoryId !== null && key !== null
     && (choice === 'merchant' || (choice === undefined && !(await findCategoryForMerchant(key))));
 
   // the writes all or none: a rule without its operations moved (or the other way) would split the merchant
   await db.transaction(async (t) => {
-    // a merchant of different categories: a category picked for its operation joins its list
-    if (categoryId !== null && tx?.merchant_key && isRememberable(tx.kind) && key === null) await rememberForMixed([txId], categoryId, t);
-
     if (forMerchant) {
       await createRule('exact', key!, categoryId!, t);
       // this one follows the merchant from now on, like the ones the rule picked
@@ -181,20 +178,8 @@ export async function assignCategoryToMany(
           AND merchant_key IN (${placeholders(merchants.length)}) AND kind IN (${placeholders(REMEMBERABLE_KINDS.length)})`,
         [...txIds, ...merchants.map((m) => m.key), ...REMEMBERABLE_KINDS]);
     }
-    if (categoryId !== null) await rememberForMixed(txIds, categoryId, t);
     if (categoryId !== null) await incrementCategoryUsage(categoryId, 1, t);
   });
   emitTransactionsChanged();
   return merchants.length;
-}
-
-/** The category picked for these operations joins the lists of their merchants of different categories. */
-async function rememberForMixed(txIds: number[], categoryId: number, db: Db) {
-  await db.run(
-    `INSERT OR IGNORE INTO merchant_categories (merchant_key, category_id, position)
-      SELECT DISTINCT t.merchant_key, ?,
-        coalesce((SELECT max(mc.position) FROM merchant_categories mc WHERE mc.merchant_key = t.merchant_key), -1) + 1
-      FROM transactions t JOIN mixed_merchants m ON m.merchant_key = t.merchant_key
-        WHERE t.id IN (${placeholders(txIds.length)}) AND t.kind IN (${placeholders(REMEMBERABLE_KINDS.length)})`,
-    [categoryId, ...txIds, ...REMEMBERABLE_KINDS]);
 }

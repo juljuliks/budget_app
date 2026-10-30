@@ -176,12 +176,12 @@ async function mixedGlovo() {
 const mixedOf = async (m: string) => (await (await getDb()).all<{ name: string }>(
   'SELECT c.name FROM merchant_categories mc JOIN categories c ON c.id = mc.category_id WHERE mc.merchant_key = ? ORDER BY c.name', [m])).map((r) => r.name);
 
-test('2.5.12: a merchant of different categories among the selected: no question; the category joins its list', async () => {
+test('2.5.12: a merchant of different categories among the selected: no question; the category stays the operations\', not on its list', async () => {
   await mixedGlovo();
   await longPress('GLOVO');
   await tap('Категория (1)');
   await tap('👕 Одежда');
   expect(await screen.findByText('Категория «👕 Одежда» назначена: 1 операция')).toBeTruthy();
   expect(await ruleOf('GLOVO')).toBeNull();
-  expect(await mixedOf('GLOVO')).toContain('Одежда');
+  expect(await mixedOf('GLOVO')).toEqual(['Кафе и рестораны', 'Продукты']);
 });

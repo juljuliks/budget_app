@@ -3,7 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { txCategoryLabel } from '@/db/categories';
 import { EXPENSE_KINDS } from '@/db/spending';
 import { CategoryLink, CategoryPickerModal } from '@/entities/category';
-import { splitParts } from '@/entities/transaction';
+import { merchantLabel, splitParts } from '@/entities/transaction';
 import Chip from '@/shared/ui/Chip';
 import SectionHeading from '@/shared/ui/SectionHeading';
 import { PencilIcon } from '@/shared/ui/icons';
@@ -28,17 +28,12 @@ type Props = {
   onSplit: (ids?: number[]) => void;
 };
 
-/** The merchant's categories, plus the operation's own when it is not among them. */
-function chipList(mixed: Cat[], categoryId: number | null, category: string | null): Cat[] {
-  if (categoryId === null || !category || mixed.some((c) => c.id === categoryId)) return mixed;
-  return [...mixed, { id: categoryId, label: category }];
-}
-
 /**
  * The operation's category. "Сменить" (right of "Категория") opens the category list and saves the pick without
  * leaving the page; with none yet, the value is "Без категории". A long press there picks several and opens the split.
- * A merchant of different categories keeps its chips: a tap highlights one (saved at once; the back arrow leaves) or
- * several ("Разделить" opens the split).
+ * A merchant of different categories adds its chips under the value ("Разные категории у «…»"; a category picked
+ * elsewhere is not among them): a tap highlights one (saved at once; the back arrow leaves) or several ("Разделить"
+ * opens the split).
  * A refund keeps the chips. A split one shows its parts; a settled refund says so.
  */
 export default function TransactionCategory({ tx, mixedCats, picked, saving, choose, onToggle, onSplit }: Props) {
@@ -58,13 +53,21 @@ export default function TransactionCategory({ tx, mixedCats, picked, saving, cho
   return (
     <>
       <SectionHeading title="Категория" right={change} />
-      {mixedCats?.length ? (
-        <MixedChips tx={tx} mixed={mixedCats} category={category} picked={picked} saving={saving} onToggle={onToggle} />
-      ) : tx.category_id !== null && category ? (
+      {tx.category_id !== null && category ? (
         <CategoryLink categoryId={tx.category_id} label={category} style={styles.catName} containerStyle={styles.catLink} />
       ) : (
         <Text style={styles.none}>{NO_CATEGORY}</Text>
       )}
+      {mixedCats?.length ? (
+        <>
+          <SectionHeading title={`Разные категории у «${merchantLabel(tx)}»`} />
+          <View style={styles.chips}>
+            {mixedCats.map((c) => (
+              <Chip key={c.id} label={c.label} selected={picked.includes(c.id)} disabled={saving} onPress={() => onToggle(c.id)} />
+            ))}
+          </View>
+        </>
+      ) : null}
       {category || mixedCats?.length ? (
         <FundNote txId={tx.id} categoryId={tx.category_id} merchantKey={tx.merchant_key} occurredAt={tx.occurred_at} amount={tx.amount_minor} />
       ) : null}
@@ -83,22 +86,8 @@ export default function TransactionCategory({ tx, mixedCats, picked, saving, cho
   );
 }
 
-/** Chips of a merchant of different categories: a tap highlights, and does not leave the page. */
-function MixedChips({ tx, mixed, category, picked, saving, onToggle }: {
-  tx: Tx; mixed: Cat[]; category: string | null; picked: number[]; saving: boolean; onToggle: (id: number) => void;
-}) {
-  const chips = chipList(mixed, tx.category_id, category);
-  return (
-    <View style={styles.currentRow}>
-      {chips.map((c) => (
-        <Chip key={c.id} label={c.label} selected={picked.includes(c.id)} disabled={saving} onPress={() => onToggle(c.id)} />
-      ))}
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  currentRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
+  chips: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
   catLink: { flex: 1, minWidth: 0, paddingVertical: 8 },
   catName: { fontSize: 18 },
   none: { fontSize: 18, color: colors.text, paddingVertical: 8 },

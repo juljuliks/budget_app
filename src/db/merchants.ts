@@ -214,7 +214,7 @@ export async function replaceMerchantCategories(id: string, ids: number[]) {
   });
 }
 
-/** Adds a category at the end of a merchant's list (picked for one of its operations, or by hand in its card). */
+/** Adds a category at the end of a merchant's list (by hand in its card). */
 export async function addMerchantCategory(id: string, categoryId: number) {
   const db = await getDb();
   await db.run(
