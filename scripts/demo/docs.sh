@@ -16,6 +16,8 @@ if [ -z "$FLOWS" ]; then rm -rf "$OUT"; fi
 mkdir -p "$OUT"
 wants() { [ -z "$FLOWS" ] || [[ " $FLOWS " == *" $1 "* ]]; }
 
+# a fresh build: a stale file of an old layout (db/migrations.js) would shadow the new one
+rm -rf dist-demo
 npx tsc -p scripts/demo
 node dist-demo/scripts/demo/demoDb.js "$OUT/demo.db"
 
