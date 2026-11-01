@@ -5,7 +5,7 @@ import { openDatabase } from '../../src/db/driver';
 import { migrate, MIGRATIONS } from '../../src/db/migrations';
 import {
   addPlanItem, currentYm, ensureMonthPlan, getPlanBudget, listPlan, monthIncome, monthRange, monthStats, periodStats, planHistory,
-  removePlanItem, setPlanAmount, setPlanBudget, setPlanPinned, storedBudget, ymOf,
+  removePlanItem, restorePlanItem, setPlanAmount, setPlanBudget, setPlanPinned, storedBudget, ymOf,
 } from '../../src/db/plans';
 import { createCategory, deleteCategory, topUpCategoryId } from '../../src/db/categories';
 import { addManualTransaction } from '../../src/db/transactions';
@@ -63,21 +63,48 @@ describe('carry-over', () => {
     expect(await storedBudget(M2)).toMatchObject({ amount_minor: 300000, currency: 'USD' });
   });
 
-  test('a coming month changed by hand keeps its own items; one begun — what it had; the budget follows in both, each time', async () => {
-    await addPlanItem(M1, 1); await setPlanAmount(M1, 1, 100); await setPlanPinned(M1, 1, true);
-    await setPlanAmount(M2, 1, 500);
-    await listPlan(M3);
-    await ensureMonthPlan(M3, M3);
-    await setPlanAmount(M1, 1, 999);
+  test('a coming month changed by hand keeps its own amounts of the items not repeated; the budget follows, each time', async () => {
+    await addPlanItem(M1, 2); await setPlanAmount(M1, 2, 100);
+    await setPlanAmount(M2, 2, 500);
+    await setPlanAmount(M1, 2, 999);
     expect((await listPlan(M2))[0].limit_minor).toBe(500);
-    expect((await listPlan(M3))[0].limit_minor).toBe(500);
     await setPlanBudget(M1, 300000, 'USD');
     await setPlanBudget(M1, 200000, 'EUR');
     expect(await storedBudget(M2)).toMatchObject({ amount_minor: 200000, currency: 'EUR' });
-    expect(await storedBudget(M3)).toMatchObject({ amount_minor: 200000, currency: 'EUR' });
     // the budget of a past month stays its own
     await setPlanBudget('2000-01', 100, 'GEL');
     expect(await storedBudget(M2)).toMatchObject({ amount_minor: 200000 });
+  });
+
+  test('a repeating item: its amount, kind, «Как тратите» go on to the months planned already, each change; a one-off — gone from them', async () => {
+    await addPlanItem(M1, 1); await setPlanAmount(M1, 1, 100, 'limit', 'GEL', 'day');
+    await setPlanAmount(M2, 2, 500);
+    await setPlanAmount(M3, 2, 500);
+    await setPlanPinned(M1, 1, true);
+    const item = async (ym: string) => (await listPlan(ym)).find((i) => i.category_id === 1);
+    expect(await item(M2)).toMatchObject({ limit_minor: 100, pinned: true, kind: 'limit', norm_period: 'day' });
+    await setPlanAmount(M1, 1, 700, 'limit', 'GEL', 'week');
+    expect(await item(M3)).toMatchObject({ limit_minor: 700, norm_period: 'week' });
+    // stopped repeating: as to a new month — without an amount
+    await setPlanPinned(M1, 1, false);
+    expect(await item(M2)).toMatchObject({ limit_minor: 0, pinned: false });
+    await setPlanPinned(M1, 1, true);
+    await setPlanAmount(M1, 1, 700, 'fixed');
+    expect(await item(M2)).toBeUndefined();
+    expect(await item(M3)).toBeUndefined();
+    // the others there stay
+    expect(brief(await listPlan(M2))).toEqual([{ id: 2, limit: 500, pinned: false, prev: null }]);
+  });
+
+  test('a repeating item removed is gone from the months after; "Отменить" puts it back there too; a past month moves nothing', async () => {
+    await addPlanItem(M1, 1); await setPlanAmount(M1, 1, 100); await setPlanPinned(M1, 1, true);
+    await setPlanAmount(M2, 2, 500);
+    const removed = (await removePlanItem(M1, 1))!;
+    expect((await listPlan(M2)).map((i) => i.category_id)).toEqual([2]);
+    await restorePlanItem(removed);
+    expect((await listPlan(M2)).find((i) => i.category_id === 1)).toMatchObject({ limit_minor: 100 });
+    await setPlanAmount('2000-01', 1, 5); await setPlanPinned('2000-01', 1, true);
+    expect((await listPlan(M2)).find((i) => i.category_id === 1)).toMatchObject({ limit_minor: 100 });
   });
 
   test('editing the current month does not touch the previous one', async () => {

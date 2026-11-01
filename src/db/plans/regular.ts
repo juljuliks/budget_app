@@ -7,16 +7,20 @@ import type { Db } from '../types';
 import type { Currency } from '../fx';
 import { setPlanAmount } from './items';
 import { timesInMonth } from './regularTimes';
+import { followItem, itemShape } from './carry';
 import type { Every } from './regularTimes';
 
 export type RegularItem = { every: Every; weekdays: number; unit_minor: number; until: string | null };
 
 /** The category's item in `ym` a regular payment within the month; throws OverBudgetError past the budget, as setPlanAmount (`takeLocked` too). */
 export async function setRegularItem(ym: string, categoryId: number, r: RegularItem, currency: Currency, takeLocked: boolean | 'all' = false): Promise<void> {
+  const db = await getDb();
+  const before = await itemShape(ym, categoryId, db);
   await setPlanAmount(ym, categoryId, r.unit_minor * timesInMonth(ym, r.every, r.weekdays, r.until), 'fixed', currency, undefined, takeLocked);
-  await (await getDb()).run(
+  await db.run(
     'UPDATE plan_items SET every = ?, weekdays = ?, unit_minor = ?, until = ?, pinned = 1 WHERE ym = ? AND category_id = ?',
     [r.every, r.every === 'week' ? r.weekdays : null, r.unit_minor, r.until, ym, categoryId]);
+  await followItem(ym, categoryId, before, db);
 }
 
 /** A new month's regular items (carried over): their amount the times in it. */

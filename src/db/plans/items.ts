@@ -5,6 +5,7 @@ import type { SqlParam } from '../types';
 import { placeholders } from '../sql';
 import { Currency } from '../fx';
 import { asCurrency, currentYm } from './months';
+import { followItem, itemShape } from './carry';
 import { NormPeriod, PlanItem, PlanKind, asNorm } from './types';
 import { activeFunds, fundLedger } from './funds';
 import { monthPayments } from './recurringItems';
@@ -178,6 +179,7 @@ export async function setPlanAmount(
   const locked = over && takeLocked ? (await storedBudget(ym))?.locked_minor ?? 0 : 0;
   const short = over ? (takeLocked === 'all' ? Math.min(over.planned_minor - over.budget_minor, locked) : over.planned_minor - over.budget_minor) : 0;
   if (over && (!takeLocked || (takeLocked !== 'all' && short > locked))) throw over;
+  const before = await itemShape(ym, categoryId, db);
   // the checks above read the rates outside: the writes alone in the transaction
   await db.transaction(async (t) => {
     if (short > 0) await t.run('UPDATE plan_months SET locked_minor = locked_minor - ? WHERE ym = ?', [short, ym]);
@@ -187,6 +189,7 @@ export async function setPlanAmount(
           norm_period = coalesce(?, norm_period), every = NULL, weekdays = NULL, unit_minor = NULL`,
       [ym, categoryId, limitMinor, kind ?? null, cur, normPeriod ?? null, kind ?? null, normPeriod ?? null]);
     await ownMonth(ym, t);
+    await followItem(ym, categoryId, before, t);
   });
 }
 
@@ -194,8 +197,10 @@ export async function setPlanAmount(
 export async function setPlanPinned(ym: string, categoryId: number, pinned: boolean, until: string | null = null) {
   const db = await getDb();
   await db.transaction(async (t) => {
+    const before = await itemShape(ym, categoryId, t);
     await t.run('UPDATE plan_items SET pinned = ?, until = ? WHERE ym = ? AND category_id = ?', [pinned ? 1 : 0, pinned ? until : null, ym, categoryId]);
     await ownMonth(ym, t);
+    await followItem(ym, categoryId, before, t);
   });
 }
 
@@ -203,8 +208,10 @@ export async function removePlanItem(ym: string, categoryId: number): Promise<Re
   const db = await getDb();
   return db.transaction(async (t) => {
     const row = await t.get<RemovedPlanItem>('SELECT * FROM plan_items WHERE ym = ? AND category_id = ?', [ym, categoryId]);
+    const before = await itemShape(ym, categoryId, t);
     await t.run('DELETE FROM plan_items WHERE ym = ? AND category_id = ?', [ym, categoryId]);
     await ownMonth(ym, t);
+    await followItem(ym, categoryId, before, t);
     return row ?? null;
   });
 }
@@ -217,4 +224,6 @@ export async function restorePlanItem(row: RemovedPlanItem) {
   const cols = Object.keys(row);
   const db = await getDb();
   await db.run(`INSERT OR IGNORE INTO plan_items (${cols.join(', ')}) VALUES (${placeholders(cols.length)})`, cols.map((c) => row[c]));
+  // back in the months after it too, if it repeats
+  await followItem(String(row.ym), Number(row.category_id), null, db);
 }
