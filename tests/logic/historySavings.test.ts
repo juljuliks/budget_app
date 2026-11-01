@@ -36,7 +36,7 @@ test('the spending took part of 🔒, then went past the budget', () => {
     total: 60000, locked: { plan: 100000, kept: 60000 }, rest: { label: 'Сэкономлено', value: 0 },
   });
   expect(monthSavings(month({ spent_minor: 1073000 }), false)).toMatchObject({
-    label: 'Перерасход', total: -32000, locked: { kept: 0 }, rest: { label: 'Сверх бюджета', value: -32000 },
+    label: 'Перерасход бюджета', total: -32000, locked: { kept: 0 }, rest: { label: 'Сверх бюджета', value: -32000 },
   });
 });
 
@@ -50,4 +50,11 @@ test('the current month: "пока", the obligatory payments not paid yet are no
 
 test('no budget: nothing', () => {
   expect(monthSavings(month({ budget_minor: null }), false)).toBeNull();
+});
+
+test('"Сверх бюджета" has no plan; what the plan left under a unit (the rates\' dust) is none either', () => {
+  // the plan left 0.02: everything but it planned, 🔒 or the share
+  const dust = { planned_minor: 940998, locked_minor: 100000 };
+  expect(monthSavings(month({ ...dust, spent_minor: 1073000 }), false)!.rest).toMatchObject({ label: 'Сверх бюджета', plan: null });
+  expect(monthSavings(month(dust), false)!.rest).toMatchObject({ label: 'Сэкономлено', plan: null });
 });

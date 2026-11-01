@@ -18,11 +18,12 @@ const inReport = (label: string, n: number) => { const t = texts(); const i = t.
 describe('7.2 the history', () => {
   beforeEach(openHistory);
 
-  test('every month from the first: plan, spent, what\'s left or the overspend; with a budget, saved', async () => {
-    expect(after('Октябрь 2026', 6)).toEqual(['План', '2 160 ₾', 'Потрачено', '2 010 ₾', 'Осталось', '150 ₾']);
-    expect(after('Сентябрь 2026', 6)).toEqual(['План', '1 700 ₾', 'Потрачено', '1 850 ₾', 'Перерасход', '⚠ 150 ₾']);
+  test('every month from the first: plan (with the share outside it), spent, what\'s left or the overspend; with a budget, saved', async () => {
+    // 2 160 ₾ planned + 300 ₾ for spending outside the plan
+    expect(after('Октябрь 2026', 6)).toEqual(['План', '2 460 ₾', 'Потрачено', '2 010 ₾', 'Осталось', '450 ₾']);
+    expect(after('Сентябрь 2026', 6)).toEqual(['План', '1 700 ₾', 'Потрачено', '1 850 ₾', 'Перерасход плана', '⚠ 150 ₾']);
     // its "Итоги" not done: "?" and the way to them
-    expect(after('Перерасход', 7)).toEqual(['⚠ 150 ₾', 'Бюджет', '3 000 ₾', 'Свободно', '1 300 ₾', 'В сбережения', '1 150 ₾ ?']);
+    expect(after('Перерасход плана', 7)).toEqual(['⚠ 150 ₾', 'Бюджет', '3 000 ₾', 'Свободно', '1 300 ₾', 'В сбережения', '1 150 ₾ ?']);
     expect(after('Итоги не подведены: удалось ли отложить, взносы в копилки', 1)).toEqual(['Подвести итоги ›']);
     expect(after('Август 2026', 4)).toEqual(['План', '—', 'Потрачено', '400 ₾']);
   });
@@ -48,9 +49,10 @@ describe('7.2 the history', () => {
     expect(screen.getAllByText('Отчёт за месяц ›')).toHaveLength(1);
   });
 
-  test('a month opened: its categories, ⚠ on the overspent; a category opens its operations', async () => {
+  test('a month opened: grouped as the stats — the plan\'s by section, "Вне плана"; ⚠ on the overspent; a category opens its operations', async () => {
     await tap('Сентябрь 2026');
     expect(await screen.findByText('⚠ 350 ₾')).toBeTruthy();
+    expect(screen.getByText('Вне плана')).toBeTruthy();
     await tap('⚠ 350 ₾');
     expect(await screen.findByText('Категория · 1')).toBeTruthy();
     expect(screen.getByText('WOLT')).toBeTruthy();

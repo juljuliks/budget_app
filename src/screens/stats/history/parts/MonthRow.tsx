@@ -24,13 +24,15 @@ function Total({ label, value, danger, good, muted }: { label: string; value: st
 type Props = { month: HistoryMonth; expanded: boolean; onToggle: () => void; currency: Currency };
 
 /**
- * A month of the History: the plan against the spending, the budget, and what went to savings as its "Итоги месяца" said
+ * A month of the History: the plan (with the share outside it, as the stats) against the spending, the budget, and what went to savings as its "Итоги месяца" said
  * ("В сбережения", "Перенесено", "Сэкономлено"; the current month "пока", less the obligatory payments not paid yet).
  * Not closed yet: "Итоги не подведены" and "Подвести итоги ›"; closed — "Изменить итоги ›".
  */
 export default function MonthRow({ month, expanded, onToggle, currency }: Props) {
   const { year, month: m } = parseYm(month.ym);
-  const { planned_minor: planned, spent_minor: spent } = month;
+  const { spent_minor: spent } = month;
+  // as the month's stats: the plan's categories and the budget's share for spending outside them
+  const planned = month.planned_minor + month.unplanned_minor;
   const diff = planned - spent;
   const budget = month.budget_minor;
   const savings = monthSavings(month, month.ym === currentYm());
@@ -50,9 +52,10 @@ export default function MonthRow({ month, expanded, onToggle, currency }: Props)
           <Total label="План" value={planned ? money(planned) : '—'} />
           <Total label="Потрачено" value={money(spent)} />
           <Total
-            label={planned ? (diff >= 0 ? 'Осталось' : 'Перерасход') : ''}
+            label={planned ? (diff >= 0 ? 'Осталось' : 'Перерасход плана') : ''}
             value={planned ? `${diff < 0 ? '⚠ ' : ''}${money(Math.abs(diff))}` : ''}
             danger={planned > 0 && diff < 0}
+            good={planned > 0 && diff >= 0}
           />
         </View>
         {planned ? <Meter ratio={spent / planned} /> : null}
@@ -60,7 +63,7 @@ export default function MonthRow({ month, expanded, onToggle, currency }: Props)
           // the amount to distribute: what was left unplanned, and what went to savings (or was not spent)
           <View style={styles.totals}>
             <Total label="Бюджет" value={money(budget)} />
-            <Total label="Свободно" value={money(Math.max(budget - planned, 0))} />
+            <Total label="Свободно" value={money(Math.max(budget - month.planned_minor, 0))} />
             <Total
               label={savings.label}
               value={`${savings.total < 0 ? '⚠ ' : ''}${savings.pending ? 'пока ' : ''}${money(Math.abs(savings.value))}${savings.open ? ' ?' : ''}`}

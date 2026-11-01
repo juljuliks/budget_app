@@ -63,7 +63,7 @@ export default function SavingsSection({ s, money }: Props) {
       ))}
       <View style={[styles.detailRow, styles.totalRow]}>
         <Text style={[styles.detailName, styles.strong]}>
-          {s.pending ? 'Пока в сбережения' : s.label === 'Перерасход' ? 'Перерасход бюджета' : s.label === 'В сбережения' ? 'Всего в сбережения'
+          {s.pending ? 'Пока в сбережения' : s.label === 'Перерасход бюджета' ? s.label : s.label === 'В сбережения' ? 'Всего в сбережения'
             : s.label === 'Перенесено' ? 'Не потрачено' : 'Сэкономлено'}
         </Text>
         <Text style={styles.detailNum} />
