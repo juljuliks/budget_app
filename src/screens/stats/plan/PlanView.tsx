@@ -39,7 +39,7 @@ const editTarget = (item: PlanItem): PlanAmountTarget => ({
 export default function PlanView({ ym, currency }: { ym: string; currency: Currency }) {
   const hidden = useHideAmounts();
   const data = usePlanData(ym, currency);
-  const { items, budget, toShown, load } = data;
+  const { items, budget, toShown, load, storedCurrency } = data;
   const actions = usePlanActions(ym, load);
   const [budgetOpen, setBudgetOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<PlanAmountTarget | null>(null);
@@ -80,7 +80,8 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
       </TouchableOpacity>
 
       <BudgetSheet
-        visible={budgetOpen} budget={budget} currency={currency} planned={p.claimed} hint={p.budgetHint} toShown={toShown}
+        visible={budgetOpen} budget={budget} currency={currency} defaultCurrency={storedCurrency}
+        planned={p.claimed} hint={p.budgetHint} toShown={toShown}
         onSubmit={actions.saveBudget} onClose={() => setBudgetOpen(false)}
       />
       <PlanAmountModal

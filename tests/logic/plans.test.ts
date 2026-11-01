@@ -200,6 +200,11 @@ describe('amount to distribute', () => {
     expect(await getPlanBudget(M2)).toMatchObject({ amount_minor: 300000, currency: 'GEL' });
   });
 
+  test('carries over to the next month in the same non-GEL currency', async () => {
+    await setPlanBudget(M1, 300000, 'USD');
+    expect(await getPlanBudget(M2)).toMatchObject({ amount_minor: 300000, currency: 'USD' });
+  });
+
   test('month income = the deposits of the month in "Пополнение счёта" (GEL; no rate: not counted)', async () => {
     const topUp = (await topUpCategoryId())!;
     await spend(250000, topUp, 2099, 0, 'deposit');

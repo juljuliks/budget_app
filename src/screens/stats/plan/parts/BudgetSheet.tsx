@@ -14,6 +14,8 @@ type Props = {
   visible: boolean;
   budget: PlanBudget | null;
   currency: Currency;
+  /** the currency stored for this month (carried from the previous month); used as initial currency when budget is null */
+  defaultCurrency: Currency;
   /** what is planned (the funds, the month before's carry too), in the screen's currency */
   planned: number;
   hint: string;
@@ -23,10 +25,10 @@ type Props = {
 };
 
 /** The month's budget: the amount and its currency, "Отложить сразу", the share outside the plan (the rest: "Итоги месяца"). */
-export default function BudgetSheet({ visible, budget, currency, planned, hint, toShown, onSubmit, onClose }: Props) {
+export default function BudgetSheet({ visible, budget, currency, defaultCurrency, planned, hint, toShown, onSubmit, onClose }: Props) {
   // the amount and the currency it was entered in
   const form = useLoadedForm<BudgetForm>(visible ? {
-    value: toInputValue(budget?.amount_minor), currency: budget?.currency ?? currency,
+    value: toInputValue(budget?.amount_minor), currency: budget?.currency ?? defaultCurrency,
     unplanned: budget && unplannedOf(budget) ? toInputValue(unplannedOf(budget)) : '',
     locked: budget?.locked_minor ? toInputValue(budget.locked_minor) : '',
     lockedIsMax: budget?.locked_is_max ?? false,
