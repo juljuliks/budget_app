@@ -75,16 +75,20 @@ export type NormRhythm = 'day' | 'week' | '2weeks' | 'month';
  * The window a category's norm is checked over when looking at `viewed`: the viewed period itself if it is at
  * least as long as the rhythm; otherwise the calendar week / the two weeks ending with that week / the month so
  * far that contain the viewed period's last day.
+ *
+ * `clipFrom` clips the window to not start before this date (e.g. the month start in monthly stats: the window
+ * should not reach into the previous month when the viewer's context is the current month).
  */
-export function normWindow(rhythm: NormRhythm, viewed: DayRange): DayRange {
+export function normWindow(rhythm: NormRhythm, viewed: DayRange, clipFrom?: DayKey): DayRange {
+  const clip = (from: DayKey): DayKey => (clipFrom && from < clipFrom ? clipFrom : from);
   const days = rangeDays(viewed);
   const end = parseDayKey(viewed.to);
   if (rhythm === 'day' || (rhythm === 'week' && days >= 7) || (rhythm === '2weeks' && days >= 14)) return viewed;
   if (rhythm === 'month') return { from: `${viewed.to.slice(0, 7)}-01`, to: viewed.to };
   const week = periodRange('week', end);
-  if (rhythm === 'week') return week;
+  if (rhythm === 'week') return { from: clip(week.from), to: week.to };
   const start = parseDayKey(week.from);
-  return { from: dayKeyOf(new Date(start.getFullYear(), start.getMonth(), start.getDate() - 7)), to: week.to };
+  return { from: clip(dayKeyOf(new Date(start.getFullYear(), start.getMonth(), start.getDate() - 7))), to: week.to };
 }
 
 /** "28 сен – 4 окт", "4 окт" (no year: windows are always near). */

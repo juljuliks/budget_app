@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import type { Currency } from '@/db/fx';
-import { getPlanBudget, listPlan, monthIncome, monthStats, parseYm, PlanBudget, planConverter, PlanItem, unplannedSpent } from '@/db/plans';
+import { ensureMonthPlan, getPlanBudget, listPlan, monthIncome, monthStats, parseYm, PlanBudget, planConverter, planCurrency, PlanItem, unplannedSpent } from '@/db/plans';
 import { onTransactionsChanged } from '@/domain/events';
 import { useLatestRequest } from '@/shared/lib/useLatestRequest';
 import { useLoadFailed } from '@/shared/lib/useLoadFailed';
@@ -22,6 +22,8 @@ export function usePlanData(ym: string, currency: Currency) {
   const [unplannedSpentMinor, setUnplannedSpent] = useState(0);
   // the month's spending by category (the savings forecast) and in all, in the screen's currency
   const [spentBy, setSpentBy] = useState<SpentBy>({ byCategory: new Map(), total: 0 });
+  // the currency stored for the month in plan_months (carried from the previous month when new)
+  const [storedCurrency, setStoredCurrency] = useState<Currency>(currency);
 
   const latest = useLatestRequest();
   const { failed, started, fail } = useLoadFailed('load plan');
@@ -30,8 +32,8 @@ export function usePlanData(ym: string, currency: Currency) {
     const keep = latest();
     started();
     const { year, month } = parseYm(ym);
-    Promise.all([listPlan(ym, currency), getPlanBudget(ym), monthIncome(ym, currency), planConverter(ym), monthStats(year, month, currency)])
-      .then(keep(([plan, b, inc, conv, stats]: [Awaited<ReturnType<typeof listPlan>>, Awaited<ReturnType<typeof getPlanBudget>>, number, Awaited<ReturnType<typeof planConverter>>, Awaited<ReturnType<typeof monthStats>>]) => {
+    Promise.all([listPlan(ym, currency), getPlanBudget(ym), monthIncome(ym, currency), planConverter(ym), monthStats(year, month, currency), ensureMonthPlan(ym).then(() => planCurrency(ym))])
+      .then(keep(([plan, b, inc, conv, stats, pc]) => {
         setItems(plan); setBudget(b); setIncome(inc); setUnplannedSpent(unplannedSpent(stats));
         // a fund takes its contribution, and what was spent past what it saved
         const funds = stats.funds.map((f): [number, number] => [f.category_id, f.contribution_minor + f.shortage_minor]);
@@ -39,6 +41,7 @@ export function usePlanData(ym: string, currency: Currency) {
           total: stats.spent_minor + stats.funds.reduce((a, f) => a + f.contribution_minor, 0) });
         setToShown(() => (minor: number, from: Currency) => conv(minor, from, currency));
         setFromShown(() => (minor: number, to: Currency) => conv(minor, currency, to));
+        setStoredCurrency(pc);
       }))
       .catch(keep(fail));
   }, [ym, currency, latest, started, fail]);
@@ -48,5 +51,5 @@ export function usePlanData(ym: string, currency: Currency) {
   // a sheet over it changed the month (the month before's "Итоги": what it sends here)
   useEffect(() => onTransactionsChanged(load), [load]);
 
-  return { items, budget, toShown, fromShown, income, unplannedSpentMinor, spentBy, load, failed };
+  return { items, budget, toShown, fromShown, income, unplannedSpentMinor, spentBy, load, failed, storedCurrency };
 }

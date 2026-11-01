@@ -58,6 +58,8 @@
   («Отменить» возвращает). Остальные категории там не меняются; правка закончившегося месяца следующие не меняет.
   Проверяется: `logic/plans.test.ts` → describe `carry-over`, `logic/funds.test.ts`; уже созданные месяцы чинит миграция
   63 (`logic/migrations.test.ts`).
+- Шит бюджета нового месяца (сумма не задана) открывается в перенесённой валюте прошлого, а не в валюте отображения.
+  Проверяется: `screens/plan.test.tsx` → «budget sheet opens in the currency carried from the previous month»; логика — `logic/plans.test.ts` → «carries over to the next month in the same non-GEL currency».
 
 ### 6.2 Отложить сразу и траты вне плана (в листе бюджета)
 

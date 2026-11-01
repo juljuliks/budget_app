@@ -413,4 +413,15 @@ describe('6.1.11 the next month', () => {
     const nov = await (await getDb()).get<{ b: number; l: number; p: number }>("SELECT budget_minor AS b, locked_minor AS l, unplanned_pct AS p FROM plan_months WHERE ym = '2026-11'");
     expect(nov).toMatchObject({ b: 300000, l: 30000, p: 10 });
   });
+
+  test('budget sheet opens in the currency carried from the previous month', async () => {
+    await openApp(planned);
+    const db = await getDb();
+    await db.run("UPDATE plan_months SET budget_currency = 'USD' WHERE ym = '2026-10'");
+    await tap('Статистика');
+    await openNextPlan();
+    // November: no budget amount; the sheet's initial currency comes from planCurrency('2026-11'), carried from October
+    await tap('Изменить бюджет месяца');
+    expect(await screen.findByLabelText('Валюта: Доллар США')).toBeTruthy();
+  });
 });
