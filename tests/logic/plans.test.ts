@@ -54,11 +54,30 @@ describe('carry-over', () => {
     expect(brief(await listPlan(M3))).toEqual([{ id: 1, limit: 100, pinned: true, prev: 100 }]);
   });
 
-  test('a month is initialized once: later edits of the previous month do not leak in', async () => {
+  test('a coming month looked at follows the months before it: their later budget, currency, items come in', async () => {
     await addPlanItem(M1, 1); await setPlanAmount(M1, 1, 100); await setPlanPinned(M1, 1, true);
     await listPlan(M2);
+    await setPlanBudget(M1, 300000, 'USD');
     await setPlanAmount(M1, 1, 999);
-    expect((await listPlan(M2))[0].limit_minor).toBe(100);
+    expect((await listPlan(M2))[0].limit_minor).toBe(999);
+    expect(await storedBudget(M2)).toMatchObject({ amount_minor: 300000, currency: 'USD' });
+  });
+
+  test('a coming month changed by hand keeps its own items; one begun — what it had; the budget follows in both, each time', async () => {
+    await addPlanItem(M1, 1); await setPlanAmount(M1, 1, 100); await setPlanPinned(M1, 1, true);
+    await setPlanAmount(M2, 1, 500);
+    await listPlan(M3);
+    await ensureMonthPlan(M3, M3);
+    await setPlanAmount(M1, 1, 999);
+    expect((await listPlan(M2))[0].limit_minor).toBe(500);
+    expect((await listPlan(M3))[0].limit_minor).toBe(500);
+    await setPlanBudget(M1, 300000, 'USD');
+    await setPlanBudget(M1, 200000, 'EUR');
+    expect(await storedBudget(M2)).toMatchObject({ amount_minor: 200000, currency: 'EUR' });
+    expect(await storedBudget(M3)).toMatchObject({ amount_minor: 200000, currency: 'EUR' });
+    // the budget of a past month stays its own
+    await setPlanBudget('2000-01', 100, 'GEL');
+    expect(await storedBudget(M2)).toMatchObject({ amount_minor: 200000 });
   });
 
   test('editing the current month does not touch the previous one', async () => {

@@ -1,7 +1,7 @@
 // A repeating payment's charges past what is free in the plan: what is short, taken from "🔒 Отложить сразу" if asked.
 import { getDb } from '../index';
 import { Currency } from '../fx';
-import { planConverter, plannedTotal, storedBudget } from './budget';
+import { ownMonth, planConverter, plannedTotal, storedBudget } from './budget';
 
 type Short = { short: number; locked: number; currency: Currency };
 
@@ -38,5 +38,9 @@ export async function paymentShort(
 
 /** "Вычесть из сбережений": `short` less locked for savings in `ym`. */
 export async function takeLocked(ym: string, short: number): Promise<void> {
-  await (await getDb()).run('UPDATE plan_months SET locked_minor = max(0, locked_minor - ?) WHERE ym = ?', [short, ym]);
+  const db = await getDb();
+  await db.transaction(async (t) => {
+    await t.run('UPDATE plan_months SET locked_minor = max(0, locked_minor - ?) WHERE ym = ?', [short, ym]);
+    await ownMonth(ym, t);
+  });
 }

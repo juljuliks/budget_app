@@ -1,7 +1,7 @@
 // The plan's items: listed, added, their amount, pinned, removed; within the budget.
 import { getDb } from '../index';
 import { systemCurrency } from '../settings';
-import type { Db, SqlParam } from '../types';
+import type { SqlParam } from '../types';
 import { placeholders } from '../sql';
 import { Currency } from '../fx';
 import { asCurrency, currentYm } from './months';
@@ -9,7 +9,7 @@ import { NormPeriod, PlanItem, PlanKind, asNorm } from './types';
 import { activeFunds, fundLedger } from './funds';
 import { monthPayments } from './recurringItems';
 import type { RecurringPayment } from '../recurring/reads';
-import { OverBudgetError, ensureMonthPlan, planConverter, planCurrency, plannedTotal, storedBudget } from './budget';
+import { OverBudgetError, ensureMonthPlan, ownMonth, planConverter, planCurrency, plannedTotal, storedBudget } from './budget';
 
 /** The month's plan items; `converted_minor` in `to` (default: the amount to distribute's currency). */
 export async function listPlan(ym: string, to?: Currency): Promise<PlanItem[]> {
@@ -110,11 +110,6 @@ async function fundsOf(ym: string, ids: number[]): Promise<Map<number, NonNullab
   return out;
 }
 
-async function markPlanned(ym: string, db: Db) {
-  // editing a month (also a past one) makes it a planned month that later months carry over from
-  await db.run('INSERT OR IGNORE INTO plan_months (ym) VALUES (?)', [ym]);
-}
-
 /** The category's amount, currency and kind in the latest earlier month that planned it with an amount. */
 export async function lastPlanItem(ym: string, categoryId: number): Promise<{ ym: string; limit_minor: number; currency: Currency; kind: PlanKind; norm_period: NormPeriod } | null> {
   const db = await getDb();
@@ -160,7 +155,7 @@ export async function addPlanItem(ym: string, categoryId: number, limitMinor?: n
   await db.transaction(async (t) => {
     await t.run('INSERT OR IGNORE INTO plan_items (ym, category_id, limit_minor, kind, currency, norm_period) VALUES (?, ?, ?, ?, ?, ?)',
       [ym, categoryId, amount, kind, cur, norm]);
-    await markPlanned(ym, t);
+    await ownMonth(ym, t);
   });
 }
 
@@ -191,14 +186,17 @@ export async function setPlanAmount(
         ON CONFLICT(ym, category_id) DO UPDATE SET limit_minor = excluded.limit_minor, kind = coalesce(?, kind), currency = excluded.currency,
           norm_period = coalesce(?, norm_period), every = NULL, weekdays = NULL, unit_minor = NULL`,
       [ym, categoryId, limitMinor, kind ?? null, cur, normPeriod ?? null, kind ?? null, normPeriod ?? null]);
-    await markPlanned(ym, t);
+    await ownMonth(ym, t);
   });
 }
 
 /** Pinned items move to the next month together with their amount, till `until` ("Дата окончания"; null — always). */
 export async function setPlanPinned(ym: string, categoryId: number, pinned: boolean, until: string | null = null) {
   const db = await getDb();
-  await db.run('UPDATE plan_items SET pinned = ?, until = ? WHERE ym = ? AND category_id = ?', [pinned ? 1 : 0, pinned ? until : null, ym, categoryId]);
+  await db.transaction(async (t) => {
+    await t.run('UPDATE plan_items SET pinned = ?, until = ? WHERE ym = ? AND category_id = ?', [pinned ? 1 : 0, pinned ? until : null, ym, categoryId]);
+    await ownMonth(ym, t);
+  });
 }
 
 export async function removePlanItem(ym: string, categoryId: number): Promise<RemovedPlanItem | null> {
@@ -206,7 +204,7 @@ export async function removePlanItem(ym: string, categoryId: number): Promise<Re
   return db.transaction(async (t) => {
     const row = await t.get<RemovedPlanItem>('SELECT * FROM plan_items WHERE ym = ? AND category_id = ?', [ym, categoryId]);
     await t.run('DELETE FROM plan_items WHERE ym = ? AND category_id = ?', [ym, categoryId]);
-    await markPlanned(ym, t);
+    await ownMonth(ym, t);
     return row ?? null;
   });
 }

@@ -443,4 +443,18 @@ describe('migrations', () => {
     expect(await db.all('SELECT ym, locked_minor AS l, locked_is_max AS m FROM plan_months ORDER BY ym')).toEqual([
       { ym: '2026-09', l: 77550, m: 0 }, { ym: '2026-10', l: 0, m: 1 }, { ym: '2026-11', l: 30000, m: 0 }]);
   });
+  test('migration 63: a month made before it began gets the budget of the month before (none, or the currency); its own amount, a past one — kept', async () => {
+    jest.useFakeTimers({ now: new Date('2026-11-01T10:00:00'), advanceTimers: true });
+    const db = openDatabase(':memory:');
+    await migrate(db, MIGRATIONS.slice(0, 62));
+    // November made in October before its budget went to dollars; December without a budget; January its own
+    await db.run(`INSERT INTO plan_months (ym, budget_minor, budget_currency) VALUES
+      ('2026-09', 500000, 'GEL'), ('2026-10', 500000, 'USD'), ('2026-11', 500000, 'GEL'), ('2026-12', NULL, 'GEL'), ('2027-01', 700000, 'GEL')`);
+    await migrate(db);
+    jest.useRealTimers();
+    expect(await db.all('SELECT ym, budget_minor AS b, budget_currency AS c, follows FROM plan_months ORDER BY ym')).toEqual([
+      { ym: '2026-09', b: 500000, c: 'GEL', follows: 0 }, { ym: '2026-10', b: 500000, c: 'USD', follows: 0 },
+      { ym: '2026-11', b: 500000, c: 'USD', follows: 0 }, { ym: '2026-12', b: 500000, c: 'USD', follows: 0 },
+      { ym: '2027-01', b: 700000, c: 'GEL', follows: 0 }]);
+  });
 });

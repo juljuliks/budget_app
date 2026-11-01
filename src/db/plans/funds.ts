@@ -121,13 +121,19 @@ export const ymBefore = (ym: string) => { const { year, month } = parseYm(ym); r
 
 /**
  * The current and the coming months' contributions as the ledger counts them now (the spending changed what is left to
- * save): written to their plan items. Past months are left as they were.
+ * save): written to their plan items. A fund is in each of them, as a repeating payment (also one made after the month
+ * was planned). Past months are left as they were.
  */
 export async function refreshFundItems(ym: string, nowYm = currentYm()): Promise<void> {
   if (ym < nowYm) return;
   const db = await getDb();
-  if (!(await db.get("SELECT 1 FROM plan_items WHERE ym = ? AND kind = 'fund'", [ym]))) return;
-  for (const fund of await activeFunds(ym)) {
+  const funds = await activeFunds(ym, db);
+  for (const fund of funds) {
+    await db.run(
+      `INSERT OR IGNORE INTO plan_items (ym, category_id, limit_minor, kind, currency)
+        SELECT ?, id, 0, 'fund', ? FROM categories WHERE id = ? AND deleted_at IS NULL`, [ym, fund.currency, fund.category_id]);
+  }
+  for (const fund of funds) {
     const { months } = await fundLedger(fund, ym, nowYm);
     for (const m of months) {
       if (m.ym < nowYm) continue;

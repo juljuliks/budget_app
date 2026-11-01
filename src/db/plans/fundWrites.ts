@@ -2,7 +2,7 @@
 import { getDb } from '../index';
 import { Currency } from '../fx';
 import { currentYm } from './months';
-import { OverBudgetError, planConverter, plannedTotal, storedBudget } from './budget';
+import { OverBudgetError, ownMonth, planConverter, plannedTotal, storedBudget } from './budget';
 import { contributionOf, Fund, fundLedger, getFund, refreshFundItems, ymBefore } from './funds';
 
 export type FundInput = { target_minor: number; currency: Currency; due: string; start_minor: number };
@@ -44,7 +44,7 @@ export async function setFund(ym: string, categoryId: number, input: FundInput, 
         ON CONFLICT(category_id) DO UPDATE SET target_minor = excluded.target_minor, currency = excluded.currency, due = excluded.due,
           start_minor = excluded.start_minor, since_ym = excluded.since_ym, closed_ym = NULL, released_minor = NULL`,
       [categoryId, input.target_minor, input.currency, input.due, input.start_minor, fund.since_ym]);
-    await t.run('INSERT OR IGNORE INTO plan_months (ym) VALUES (?)', [ym]);
+    await ownMonth(ym, t);
     if (short > 0) await t.run('UPDATE plan_months SET locked_minor = locked_minor - ? WHERE ym = ?', [short, ym]);
     await t.run(
       `INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency) VALUES (?, ?, ?, 'fund', ?)

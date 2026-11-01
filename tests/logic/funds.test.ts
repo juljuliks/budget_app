@@ -119,3 +119,11 @@ test('deleted this month: the history gives what it saved to this month\'s savin
   const [oct] = await planHistory();
   expect(oct).toMatchObject({ ym: '2026-10', released: [{ name: 'Ноутбук', emoji: '💻', minor: 45000 }] });
 });
+
+test('a fund is in each coming month\'s plan: one made after the next month was planned, by hand too', async () => {
+  await setPlanBudget('2026-10', 500000);
+  await setPlanBudget('2026-11', 500000);
+  const id = await createCategory('Отпуск', '🏖');
+  await setFund('2026-10', id, HOLIDAY);
+  expect((await listPlan('2026-11')).find((i) => i.category_id === id)).toMatchObject({ kind: 'fund', limit_minor: 30000 });
+});

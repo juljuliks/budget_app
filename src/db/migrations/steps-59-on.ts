@@ -135,6 +135,34 @@ async function lockedMaxAgain(db: Db) {
   }
 }
 
+/**
+ * 63: a coming month made before it began kept what the month before had then (a budget's currency changed later). Such a
+ * month follows the one before now (plan_months.follows), its budget always. Those made already, this month on: the
+ * budget of the month before when it had none or the same amount in another currency (a funds' items come in each look).
+ */
+async function followingMonths(db: Db) {
+  const now = new Date();
+  const nowYm = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  type Month = { ym: string; budget_minor: number | null; budget_currency: string; unplanned_pct: number; to_savings: number; locked_minor: number;
+    unplanned_minor: number | null; locked_is_max: number };
+  const all = await db.all<Month>('SELECT * FROM plan_months ORDER BY ym');
+  for (let i = 1; i < all.length; i++) {
+    const [before, m] = [all[i - 1], all[i]];
+    if (m.ym < nowYm) continue;
+    if (before.budget_minor === null) continue;
+    if (m.budget_minor === null) {
+      Object.assign(m, { ...before, ym: m.ym });
+      await db.run(
+        `UPDATE plan_months SET budget_minor = ?, budget_currency = ?, unplanned_pct = ?, to_savings = ?, locked_minor = ?, unplanned_minor = ?,
+          locked_is_max = ? WHERE ym = ?`,
+        [m.budget_minor, m.budget_currency, m.unplanned_pct, m.to_savings, m.locked_minor, m.unplanned_minor, m.locked_is_max, m.ym]);
+    } else if (m.budget_minor === before.budget_minor && m.budget_currency !== before.budget_currency) {
+      m.budget_currency = before.budget_currency;
+      await db.run('UPDATE plan_months SET budget_currency = ? WHERE ym = ?', [m.budget_currency, m.ym]);
+    }
+  }
+}
+
 /** Migrations 59 and on. */
 export const STEPS_59_ON: MigrationStep[][] = [
   [glueSecondMerchants],
@@ -148,4 +176,6 @@ export const STEPS_59_ON: MigrationStep[][] = [
   ],
   // 62: a 🔒 that is all that is free (the rate moved it off a little) is "MAX" again: it follows the plan and the rate
   [lockedMaxAgain],
+  // 63: a coming month made before it began follows the months before it till changed by hand or begun
+  ['ALTER TABLE plan_months ADD COLUMN follows INTEGER NOT NULL DEFAULT 0', followingMonths],
 ];

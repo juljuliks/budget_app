@@ -1,5 +1,6 @@
 // The month's budget (the amount, the share outside the plan, the locked savings), its income, the plan's creation.
 import { getDb } from '../index';
+import type { Db } from '../types';
 import { Currency, dateKey, ensureRatesLater, makeConverter } from '../fx';
 import { BUDGET_CURRENCY, asCurrency, currentYm, monthRange, parseYm, planRateDate } from './months';
 import { convertSpending, spendRows, sumBy } from './spend';
@@ -19,19 +20,28 @@ export const unplannedOf = (b: Pick<PlanBudget, 'amount_minor' | 'unplanned_pct'
  */
 export async function ensureMonthPlan(ym: string, nowYm = currentYm()): Promise<void> {
   if (ym < nowYm) return;
-  const created = await createMonthPlan(ym);
+  const created = await createMonthPlan(ym, nowYm);
   // the funds' contributions as what is saved now asks (the spending since changed it)
   await refreshFundItems(ym, nowYm);
   // "Подписки": a new month's charges (later — counted again by each change of a repeating payment)
   if (created) await refreshRecurringItem(ym, nowYm);
 }
 
-/** Made now: true; already there: false. */
-async function createMonthPlan(ym: string): Promise<boolean> {
+/**
+ * Made now: true; already there: false. A coming month made before it began follows the months before it (`follows`)
+ * till it is changed by hand (ownMonth) or begins: a change of an earlier one drops it, made again on the next look.
+ */
+async function createMonthPlan(ym: string, nowYm: string): Promise<boolean> {
   const db = await getDb();
-  if (await db.get('SELECT 1 FROM plan_months WHERE ym = ?', [ym])) return false;
+  const made = await db.get<{ follows: number }>('SELECT follows FROM plan_months WHERE ym = ?', [ym]);
+  if (made) {
+    // begun: it keeps what it has, as a month made on its first day
+    if (made.follows && ym <= nowYm) await db.run('UPDATE plan_months SET follows = 0 WHERE ym = ?', [ym]);
+    return false;
+  }
   await db.transaction(async (tx) => {
-    const source = await tx.get<{ ym: string }>('SELECT ym FROM plan_months WHERE ym < ? ORDER BY ym DESC LIMIT 1', [ym]);
+    // a month following the ones before is no source: it may be behind them
+    const source = await tx.get<{ ym: string }>('SELECT ym FROM plan_months WHERE ym < ? AND follows = 0 ORDER BY ym DESC LIMIT 1', [ym]);
     if (source) {
       // "Дата окончания" before this month: not repeated any more
       const ended = `p.until IS NOT NULL AND p.until < '${ym}-01'`;
@@ -52,7 +62,7 @@ async function createMonthPlan(ym: string): Promise<boolean> {
     // the amount to distribute (usually the salary) carries over as well, with its currency, unplanned share, savings choice
     // and what is locked for savings
     await tx.run(
-      `INSERT OR IGNORE INTO plan_months (ym, budget_minor, budget_currency, unplanned_pct, to_savings, locked_minor, unplanned_minor, locked_is_max) VALUES (?,
+      `INSERT OR IGNORE INTO plan_months (ym, follows, budget_minor, budget_currency, unplanned_pct, to_savings, locked_minor, unplanned_minor, locked_is_max) VALUES (?, ?,
         (SELECT budget_minor FROM plan_months WHERE ym = ?),
         coalesce((SELECT budget_currency FROM plan_months WHERE ym = ?), ?),
         coalesce((SELECT unplanned_pct FROM plan_months WHERE ym = ?), 0),
@@ -60,9 +70,20 @@ async function createMonthPlan(ym: string): Promise<boolean> {
         coalesce((SELECT locked_minor FROM plan_months WHERE ym = ?), 0),
         (SELECT unplanned_minor FROM plan_months WHERE ym = ?),
         coalesce((SELECT locked_is_max FROM plan_months WHERE ym = ?), 0))`,
-      [ym, source?.ym ?? '', source?.ym ?? '', BUDGET_CURRENCY, source?.ym ?? '', source?.ym ?? '', source?.ym ?? '', source?.ym ?? '', source?.ym ?? '']);
+      [ym, ym > nowYm ? 1 : 0, source?.ym ?? '', source?.ym ?? '', BUDGET_CURRENCY, source?.ym ?? '', source?.ym ?? '', source?.ym ?? '', source?.ym ?? '', source?.ym ?? '']);
   });
   return true;
+}
+
+/**
+ * The month changed by hand: planned (also a past one — later months carry over from it), its own plan from now on;
+ * the coming months that only followed it are dropped, to be made again from it.
+ */
+export async function ownMonth(ym: string, db: Db): Promise<void> {
+  await db.run('INSERT OR IGNORE INTO plan_months (ym) VALUES (?)', [ym]);
+  await db.run('UPDATE plan_months SET follows = 0 WHERE ym = ?', [ym]);
+  await db.run('DELETE FROM plan_items WHERE ym IN (SELECT ym FROM plan_months WHERE ym > ? AND follows = 1)', [ym]);
+  await db.run('DELETE FROM plan_months WHERE ym > ? AND follows = 1', [ym]);
 }
 
 /**
@@ -178,6 +199,7 @@ export class OverBudgetError extends Error {
  * goes to "Сбережения"; `lockedMinor`: locked for savings right away, in `currency`; `unplannedMinor`: the share as an amount
  * instead of the % (null = by the %). All kept when omitted.
  * Refused (OverBudgetError, its budget_minor = what the plan can take) if what is already planned (converted) doesn't fit.
+ * The coming months already planned get the same budget.
  */
 export async function setPlanBudget(
   ym: string, budgetMinor: number | null, currency: Currency = BUDGET_CURRENCY, unplannedPct?: number, toSavings?: boolean, lockedMinor?: number,
@@ -201,8 +223,13 @@ export async function setPlanBudget(
     if (plannable < planned) throw new OverBudgetError(plannable, planned, currency);
   }
   await db.transaction(async (t) => {
-    await t.run('INSERT OR IGNORE INTO plan_months (ym) VALUES (?)', [ym]);
-    await t.run('UPDATE plan_months SET budget_minor = ?, budget_currency = ?, unplanned_pct = ?, to_savings = ?, locked_minor = ?, unplanned_minor = ?, locked_is_max = ? WHERE ym = ?',
-      [budgetMinor, currency, pct, savings ? 1 : 0, budgetMinor === null ? 0 : locked, budgetMinor === null ? null : own, budgetMinor === null ? 0 : (isMax ? 1 : 0), ym]);
+    await ownMonth(ym, t);
+    // the months after it planned already (changed by hand too) follow it: the budget goes on as set last; a past month's
+    // is history, it doesn't move the others
+    await t.run(
+      `UPDATE plan_months SET budget_minor = ?, budget_currency = ?, unplanned_pct = ?, to_savings = ?, locked_minor = ?, unplanned_minor = ?, locked_is_max = ?
+        WHERE ym = ? OR (ym > ? AND ? >= ?)`,
+      [budgetMinor, currency, pct, savings ? 1 : 0, budgetMinor === null ? 0 : locked, budgetMinor === null ? null : own, budgetMinor === null ? 0 : (isMax ? 1 : 0),
+        ym, ym, ym, currentYm()]);
   });
 }
