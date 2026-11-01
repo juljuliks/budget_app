@@ -168,6 +168,25 @@ test('the limit for the viewed days: a share of a weekly limit, the days of a da
   expect(across.byCategory.get(food)!.periodNorm).toBeCloseTo(5000);
 });
 
+test('clipFrom: on the first day of a new month the weekly window does not reach into the previous month', async () => {
+  const bars = await createCategory('Бары');
+  await setPlanAmount('2026-10', bars, 70000, 'limit', 'GEL', 'week');
+  await setPlanAmount('2026-11', bars, 50000, 'limit', 'GEL', 'week');
+  // Oct 27 is within the natural week Oct 26 – Nov 1 but in the previous month
+  await spend(28606, bars, '2026-10-27');
+  await spend(500, bars, '2026-11-01');
+
+  const nov1 = { from: '2026-11-01', to: '2026-11-01' };
+  // without clipFrom: window spans Oct 26 – Nov 1, includes October spending
+  const noClip = (await loadNorms(nov1, 'GEL')).byCategory.get(bars)!;
+  expect(noClip.window).toEqual({ from: '2026-10-26', to: '2026-11-01' });
+  expect(noClip.windowSpent).toBe(28606 + 500);
+  // with clipFrom = month start: window is only Nov 1, October spending excluded
+  const clipped = (await loadNorms(nov1, 'GEL', '2026-11-01')).byCategory.get(bars)!;
+  expect(clipped.window).toEqual({ from: '2026-11-01', to: '2026-11-01' });
+  expect(clipped.windowSpent).toBe(500);
+});
+
 test('a regular payment within the month: a limit of its rhythm in the period\'s stats, not a one-off payment of the whole month', async () => {
   const { setRegularItem } = require('../../src/db/plans');
   const lunch = await createCategory('Обеды');

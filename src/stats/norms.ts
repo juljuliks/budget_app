@@ -91,7 +91,8 @@ function spentIn(data: NormsData, r: DayRange): Map<number | null, number> {
   return new Map([...netIn(data, r)].filter(([k, v]) => v > 0 || (v < 0 && k !== null && data.transfer.has(k))));
 }
 
-export async function loadNorms(range: DayRange, currency: Currency): Promise<Norms> {
+/** `clipFrom` clips each category's rhythm window to not start before this date (pass the month start in monthly stats). */
+export async function loadNorms(range: DayRange, currency: Currency, clipFrom?: DayKey): Promise<Norms> {
   const ym = range.to.slice(0, 7);
   const monthStart = `${ym}-01`;
   const data = await normsData(monthsAround(range), currency);
@@ -154,7 +155,7 @@ export async function loadNorms(range: DayRange, currency: Currency): Promise<No
       norms.flexSpent += spent;
     }
     const monthLimit = lastPlan.get(id)?.limit ?? 0;
-    const win = normWindow(rhythm, range);
+    const win = normWindow(rhythm, range, clipFrom);
     const windowParts = rhythm === 'month' ? [] : partsOf(id, win);
     // the limit per rhythm at the period's start and after it: what's left of the plan / days left × rhythm days
     const dim = daysInMonth(ym);
