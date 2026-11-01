@@ -66,9 +66,10 @@ export function trendLists(data: TrendsData, mode: TrendMode, today: DayKey, max
   };
 }
 
-/** "+62% к обычному", "−100% к обычному"; nothing usually — "раньше не было". */
+/** "+62% к обычному", "−40% к обычному"; nothing usually — "раньше не было"; nothing yet — "трат пока нет", not "−100%". */
 export function pctText(t: Trend): string {
   if (t.pct === null) return 'раньше не было';
+  if (t.cur === 0) return 'трат пока нет';
   return `${t.pct > 0 ? '+' : '−'}${Math.abs(t.pct)}% к обычному`;
 }
 

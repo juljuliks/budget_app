@@ -14,7 +14,7 @@ export function useMonthUsual(ym: string, currency: Currency): Map<number, strin
   return useMemo(() => {
     if (!data) return new Map();
     const lists = trendLists(data, 'month', dayKeyOf(new Date()), Infinity);
-    // nothing usually: no % to say under the row
-    return new Map([...lists.more, ...lists.less].filter((r) => r.trend.pct !== null).map((r) => [r.category.id, pctText(r.trend)]));
+    // nothing usually, or nothing spent yet: no % to say under the row
+    return new Map([...lists.more, ...lists.less].filter((r) => r.trend.pct !== null && r.trend.cur > 0).map((r) => [r.category.id, pctText(r.trend)]));
   }, [data]);
 }

@@ -67,6 +67,12 @@ describe('trendOf', () => {
     expect(t.notable).toBe(true);
   });
 
+  test('nothing spent yet: "трат пока нет", not "−100%"', () => {
+    const t = trendOf([spend('2026-09-05', 10000), spend('2026-08-05', 10000), spend('2026-07-05', 10000)], 'month', TODAY, '2026-06-01')!;
+    expect(t.pct).toBe(-100);
+    expect(pctText(t)).toBe('трат пока нет');
+  });
+
   test('tracked for less than the usual takes: none', () => {
     expect(trendOf(cafe, 'month', TODAY, '2026-07-15')).toBeNull();
     expect(trendOf(cafe, 'week', TODAY, '2026-09-10')).toBeNull();
