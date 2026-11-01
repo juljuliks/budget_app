@@ -10,6 +10,8 @@ export const styles = StyleSheet.create({
   content: { paddingHorizontal: 20, paddingBottom: 24, gap: 12 },
   hero: { alignItems: 'center', paddingVertical: 8, gap: 2 },
   heroValue: { fontSize: 30, fontWeight: '700', color: SAVINGS, fontVariant: ['tabular-nums'] },
+  // the overspend in the budget's currency, after the amount
+  heroAside: { fontSize: 18, fontWeight: '600' },
   caption: { fontSize: 13, color: colors.muted, textAlign: 'center' },
   blockCaption: { fontSize: 13, color: colors.muted },
   hint: { fontSize: 14, color: colors.muted },

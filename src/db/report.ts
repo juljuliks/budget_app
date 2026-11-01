@@ -34,6 +34,8 @@ export type MonthReport = {
   spent: number;
   /** budget − spending; null without a budget */
   saved: number | null;
+  /** the budget's overspend (−saved) in the budget's currency, when it isn't `currency`; null otherwise */
+  overInBudget: { minor: number; currency: Currency } | null;
   /** the previous month's, to compare; null without one (no budget, or too few operations to compare) */
   previousSaved: number | null;
   /** put aside on average over the latest months with data (this one included, up to AVERAGE_MONTHS): the year's estimate */
@@ -162,6 +164,8 @@ export async function monthReport(ym: string, currency: Currency): Promise<Month
 
   return {
     ym, currency, hasPlan, budget, spent: stats.spent_minor, saved,
+    overInBudget: saved === null || saved >= 0 || !planBudget || planBudget.currency === currency ? null
+      : ((minor) => (minor === null ? null : { minor, currency: planBudget.currency }))(conv(-saved, currency, planBudget.currency)),
     previousSaved: hasData && previousHasData ? previous.saved : null,
     average: months.length ? { saved: months.reduce((a, m) => a + m.saved, 0) / months.length, months } : null,
     hasData,
