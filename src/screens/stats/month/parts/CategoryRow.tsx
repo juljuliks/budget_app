@@ -22,7 +22,7 @@ function planShare(spent: number, limit: number): string {
 
 const RHYTHM_NOW = { day: 'Сегодня', week: 'На этой неделе', '2weeks': 'За эти 2 недели' } as const;
 
-export default function CategoryRow({ stat, total, currency, evenPace, dim, ym, openTransactions, now, monthToDate, onAddToPlan, withType, usual }: {
+export default function CategoryRow({ stat, total, currency, evenPace, dim, ym, openTransactions, now, monthToDate, onAddToPlan, onLongPress, withType, usual }: {
   stat: CategoryStat;
   /** the month's spending: a row's share of it when the amounts are hidden */
   total: number;
@@ -33,6 +33,8 @@ export default function CategoryRow({ stat, total, currency, evenPace, dim, ym, 
   /** the current month only: the norm window around today */
   now?: CategoryNorm; monthToDate: number;
   onAddToPlan?: () => void;
+  /** long press: opens the category's plan edit sheet */
+  onLongPress?: () => void;
   /** "Жизнь: Покупки": outside the plan, where the rows aren't under their type's section */
   withType?: boolean;
   /** the current month, well off its usual by the same days: "+44% к обычному" (Динамика трат) */
@@ -50,7 +52,7 @@ export default function CategoryRow({ stat, total, currency, evenPace, dim, ym, 
   const rhythm = !fixed && stat.plan_norm && stat.plan_norm !== 'month' ? stat.plan_norm : null;
 
   return (
-    <TouchableOpacity style={styles.row} onPress={() => openTransactions(stat.category_id, monthDays(ym))} accessibilityHint="Показать операции категории">
+    <TouchableOpacity style={styles.row} onPress={() => openTransactions(stat.category_id, monthDays(ym))} onLongPress={onLongPress} accessibilityHint="Показать операции категории">
       <View style={styles.rowTop}>
         <View style={[styles.dot, { backgroundColor: stat.color }]} />
         <Text style={styles.rowName} numberOfLines={1}>{withType ? categoryLabel(stat) : `${stat.emoji || ''} ${stat.name}`.trim()}</Text>

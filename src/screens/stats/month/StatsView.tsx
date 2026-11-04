@@ -17,6 +17,7 @@ import StickyScrollView from '@/shared/ui/StickyScrollView';
 import DonutCenter from '../parts/DonutCenter';
 import RefundsRow from '../parts/RefundsRow';
 import SavingsLessSheet from '../plan/parts/SavingsLessSheet';
+import { getPlanItemBasics } from '@/db/plans';
 import { useMonthData } from './model/useMonthData';
 import { useMonthUsual } from './model/useMonthUsual';
 import { lessTarget, useMonthSavings } from './model/useMonthSavings';
@@ -55,6 +56,21 @@ export default function StatsView({ year, month, currency }: { year: number; mon
   const usual = useMonthUsual(ymOf(year, month), currency);
   const [lessOpen, setLessOpen] = useState(false);
 
+  async function openPlanEdit(c: CategoryStat) {
+    if (!c.category_id || c.deleted) return;
+    try {
+      if (c.limit_minor !== null) {
+        const item = await getPlanItemBasics(ym, c.category_id);
+        if (!item) return;
+        setPlanTarget({ category_id: c.category_id, label: categoryLabel(c), ...item });
+      } else {
+        setPlanTarget({ category_id: c.category_id, label: categoryLabel(c), limit_minor: 0, currency: stats.currency, suggested_minor: spentOf(c) || undefined });
+      }
+    } catch (e) {
+      console.error('open plan edit', e);
+    }
+  }
+
   // the next month: nothing spent yet, its plan in advance
   if (ymOf(year, month) > currentYm()) return <ComingMonth ym={ymOf(year, month)} />;
   if (!stats) return <Loading failed={failed} onRetry={load} />;
@@ -85,6 +101,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
       onAddToPlan={c.category_id !== null && (unplanned || c.limit_minor === null) && !c.deleted && spentOf(c) > 0
         ? () => setPlanTarget({ category_id: c.category_id!, label: categoryLabel(c), limit_minor: 0, currency: stats.currency, suggested_minor: c.spent_minor })
         : undefined}
+      onLongPress={c.category_id !== null && !c.deleted ? () => openPlanEdit(c) : undefined}
     />
   );
 

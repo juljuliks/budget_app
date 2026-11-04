@@ -120,6 +120,15 @@ export async function lastPlanItem(ym: string, categoryId: number): Promise<{ ym
   return row ? { ...row, currency: asCurrency(row.currency), norm_period: asNorm(row.norm_period) } : null;
 }
 
+/** The category's current plan item for this month: the fields needed to open its edit sheet. */
+export async function getPlanItemBasics(ym: string, categoryId: number) {
+  type R = { limit_minor: number; currency: string; kind: string; norm_period: string; pinned: number; until: string | null; recurring: number; by_merchant: number; every: string | null; weekdays: number | null; unit_minor: number | null };
+  const db = await getDb();
+  const r = await db.get<R>(`SELECT p.limit_minor, p.currency, p.kind, p.norm_period, p.pinned, p.until, c.recurring, c.by_merchant, CASE WHEN p.kind = 'fixed' THEN p.every END AS every, p.weekdays, p.unit_minor FROM plan_items p JOIN categories c ON c.id = p.category_id WHERE p.ym = ? AND p.category_id = ?`, [ym, categoryId]);
+  if (!r) return null;
+  return { limit_minor: r.limit_minor, currency: asCurrency(r.currency), kind: r.kind as PlanKind, norm_period: asNorm(r.norm_period), pinned: r.pinned === 1, until: r.until, recurring: !!r.recurring, by_merchant: !!r.by_merchant, every: r.every as Every | null, weekdays: r.weekdays, unit_minor: r.unit_minor };
+}
+
 /** Would `minor` in `currency` for this category still fit the month's amount to distribute? */
 async function fits(ym: string, categoryId: number, minor: number, currency: Currency): Promise<OverBudgetError | null> {
   const budget = await storedBudget(ym);
