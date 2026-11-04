@@ -7,6 +7,7 @@ import { Currency } from '../fx';
 import { asCurrency, currentYm } from './months';
 import { followItem, itemShape } from './carry';
 import { NormPeriod, PlanItem, PlanKind, asNorm } from './types';
+import type { Every } from './regularTimes';
 import { activeFunds, fundLedger } from './funds';
 import { monthPayments } from './recurringItems';
 import type { RecurringPayment } from '../recurring/reads';
