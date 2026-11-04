@@ -57,10 +57,10 @@ export default function StatsView({ year, month, currency }: { year: number; mon
   const [lessOpen, setLessOpen] = useState(false);
 
   async function openPlanEdit(c: CategoryStat) {
-    if (!c.category_id || c.deleted) return;
+    if (!c.category_id || c.deleted || !stats) return;
     try {
       if (c.limit_minor !== null) {
-        const item = await getPlanItemBasics(ym, c.category_id);
+        const item = await getPlanItemBasics(ymOf(year, month), c.category_id);
         if (!item) return;
         setPlanTarget({ category_id: c.category_id, label: categoryLabel(c), ...item });
       } else {
