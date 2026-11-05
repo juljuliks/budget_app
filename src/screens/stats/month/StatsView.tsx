@@ -12,7 +12,7 @@ import { RecurringPaymentsSheet } from '@/features/recurring-payments';
 import { daysInMonth, monthDays } from '@/shared/lib/dateRange';
 import { formatMoneyWithCurrency, formatWithCurrency } from '@/shared/lib/money';
 import { NO_RATE } from '@/shared/lib/strings';
-import { useOpenCategoryTransactions } from '@/shared/navigation/navigation';
+import { openPlan, useOpenCategoryTransactions } from '@/shared/navigation/navigation';
 import { openMonthClose } from '@/shared/navigation/sheets';
 import Donut, { DonutSegment } from '@/shared/ui/Donut';
 import StickyScrollView from '@/shared/ui/StickyScrollView';
@@ -27,6 +27,7 @@ import CategoryRow from './parts/CategoryRow';
 import MonthTotal from './parts/MonthTotal';
 import PlanLinks from './parts/PlanLinks';
 import ComingMonth from './parts/ComingMonth';
+import BudgetEditSheet from './parts/BudgetEditSheet';
 import FundStatRow from './parts/FundStatRow';
 import { savingsSection } from './parts/savingsSection';
 import { fundsSection, spentFunds, typeSections, unplannedSection } from './parts/sections';
@@ -59,6 +60,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
   const [lessOpen, setLessOpen] = useState(false);
   const [subsOpen, setSubsOpen] = useState<{ id: number; name: string; emoji: string | null } | null>(null);
   const [fundSheet, setFundSheet] = useState<{ id: number; label: string } | null>(null);
+  const [budgetOpen, setBudgetOpen] = useState(false);
 
   async function openPlanEdit(c: CategoryStat) {
     if (!c.category_id || c.deleted || !stats) return;
@@ -110,7 +112,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
       monthToDate={unplanned || c.category_id === null ? 0 : today?.monthToDate.get(c.category_id) ?? 0}
       withType={unplanned}
       usual={c.category_id === null ? undefined : usual.get(c.category_id)}
-      onAddToPlan={c.category_id !== null && (unplanned || c.limit_minor === null) && !c.deleted && spentOf(c) > 0
+      onAddToPlan={c.category_id !== null && !unplanned && c.limit_minor === null && !c.deleted && spentOf(c) > 0
         ? () => setPlanTarget({ category_id: c.category_id!, label: categoryLabel(c), limit_minor: 0, currency: stats.currency, suggested_minor: c.spent_minor })
         : undefined}
       onLongPress={c.category_id !== null && !c.deleted ? () => openPlanEdit(c) : undefined}
@@ -128,7 +130,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
           <DonutCenter total={stats.spent_minor} picked={picked} currency={stats.currency} />
         </Donut>
       </View>
-      {plannedAll > 0 ? <MonthTotal stats={stats} ym={ym} plannedAll={plannedAll} evenPace={evenPace} /> : (
+      {plannedAll > 0 ? <MonthTotal stats={stats} ym={ym} plannedAll={plannedAll} evenPace={evenPace} onEditPlan={() => openPlan(ym)} /> : (
         <Text style={styles.hint}>Составьте план на месяц, чтобы видеть, сколько осталось по категориям.</Text>
       )}
 
@@ -138,10 +140,12 @@ export default function StatsView({ year, month, currency }: { year: number; mon
         less: () => setLessOpen(true),
         close: openMonthClose,
         longPressCategory: (id, name, kind) => kind === 'fund' ? openFund(id, name) : setSubsOpen({ id, name, emoji: null }),
+        onLongPressHeader: () => setBudgetOpen(true),
       })}
       {fundsSection(stats, (f) => (
         <FundStatRow key={f.category_id} f={f} ym={ym} currency={stats.currency} hidden={hidden} openTransactions={openTransactions} onLongPress={() => openFund(f.category_id, `${f.emoji || ''} ${f.name}`.trim())} />
       ))}
+      {stats.categories.length > 0 || spentFunds(stats).length ? <Text style={styles.longPressHint}>Удерживайте категорию, чтобы изменить в плане</Text> : null}
       {stats.categories.length === 0 && !spentFunds(stats).length ? <Text style={styles.hint}>В этом месяце трат нет.</Text> : typeSections(stats, split.groups, rowOf)}
       {unplannedSection(stats, split, share, rowOf, hidden)}
 
@@ -170,6 +174,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
         onClose={() => setFundSheet(null)}
         onEdit={() => fundSheet && openSheetAmount(fundSheet.id, fundSheet.label, () => setFundSheet(null))}
       />
+      <BudgetEditSheet ym={ym} currency={currency} visible={budgetOpen} onClose={() => setBudgetOpen(false)} />
     </StickyScrollView>
   );
 }
