@@ -20,6 +20,8 @@ type Open = {
   close: (ym: string) => void;
   /** fund or saving-subscription part: long press opens its edit sheet */
   longPressCategory?: (id: number, name: string, kind: 'fund' | 'saving') => void;
+  /** long press on the section header: opens the month's budget sheet */
+  onLongPressHeader?: () => void;
 };
 
 /** "now / plan ₾ (%)"; not known yet — "? / plan ₾". "Скрыть суммы": the % alone. */
@@ -67,7 +69,7 @@ export function savingsSection(s: SavingsSection | null, currency: string, open:
   const money = (minor: number) => formatWithCurrency(minor, currency);
   return (
     <>
-      {header('Сбережения', nowOfPlan(s.now, s.plan, currency))}
+      {header('Сбережения', nowOfPlan(s.now, s.plan, currency), open.onLongPressHeader)}
       <View>
         {s.caption ? <Text style={styles.savingsCaption}>{s.caption}</Text> : null}
         {s.parts.map((x) => {
