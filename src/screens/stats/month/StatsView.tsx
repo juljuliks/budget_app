@@ -141,7 +141,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
         less: () => setLessOpen(true),
         close: openMonthClose,
         longPressCategory: (id, name, kind) => kind === 'fund' ? openFund(id, name) : setSubsOpen({ id, name, emoji: null }),
-        onLongPressHeader: () => setBudgetOpen(true),
+        onLongPressLocked: () => setBudgetOpen(true),
       })}
       {fundsSection(stats, (f) => (
         <FundStatRow key={f.category_id} f={f} ym={ym} currency={stats.currency} hidden={hidden} openTransactions={openTransactions} onLongPress={() => openFund(f.category_id, `${f.emoji || ''} ${f.name}`.trim())} />
