@@ -127,3 +127,20 @@ test('a fund is in each coming month\'s plan: one made after the next month was 
   await setFund('2026-10', id, HOLIDAY);
   expect((await listPlan('2026-11')).find((i) => i.category_id === id)).toMatchObject({ kind: 'fund', limit_minor: 30000 });
 });
+
+test('deleting from a past month removes that month\'s plan item and closes the fund from it', async () => {
+  const id = await createCategory('Отпуск', '🏖');
+  const db = await getDb();
+  // fund since September (past), with plan items in Sep (past) and Oct (current)
+  await db.run("INSERT INTO funds (category_id, target_minor, currency, due, start_minor, since_ym) VALUES (?, 300000, 'GEL', '2027-07-31', 0, '2026-09')", [id]);
+  await db.run("INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency) VALUES ('2026-09', ?, 30000, 'fund', 'GEL')", [id]);
+  await db.run("INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency) VALUES ('2026-10', ?, 30000, 'fund', 'GEL')", [id]);
+
+  await deleteFund(id, '2026-09');
+
+  // fund is closed from September: no longer active in it
+  expect((await getFund(id))?.closed_ym).toBe('2026-09');
+  // both plan items gone (September and later)
+  const items = await db.all<{ ym: string }>("SELECT ym FROM plan_items WHERE category_id = ? AND kind = 'fund'", [id]);
+  expect(items).toEqual([]);
+});
