@@ -10,17 +10,18 @@ import { styles } from './styles';
 type Props = {
   f: FundStat; ym: string; currency: string; hidden: boolean;
   openTransactions: (categoryId: number | null, days: ReturnType<typeof monthDays>) => void;
+  onLongPress?: () => void;
 };
 
 /**
  * A fund spent from this month: how much ("1 200 ₾ из копилки"); spent past what it had — "Не хватило 50 ₾ — взяты из
  * бюджета октября". What it has is the plan's and its card's. A tap shows its operations of the month.
  */
-export default function FundStatRow({ f, ym, currency, hidden, openTransactions }: Props) {
+export default function FundStatRow({ f, ym, currency, hidden, openTransactions, onLongPress }: Props) {
   const money = (minor: number) => formatWithCurrency(minor, currency);
   const month = MONTHS_GEN[Number(ym.slice(5)) - 1];
   return (
-    <TouchableOpacity style={styles.row} onPress={() => openTransactions(f.category_id, monthDays(ym))} accessibilityHint="Показать операции категории">
+    <TouchableOpacity style={styles.row} onPress={() => openTransactions(f.category_id, monthDays(ym))} onLongPress={onLongPress} accessibilityHint="Показать операции категории">
       <View style={styles.rowTop}>
         <View style={[styles.dot, { backgroundColor: f.color }]} />
         <Text style={styles.rowName} numberOfLines={1}>{`${f.emoji || ''} ${f.name}`.trim()}</Text>
