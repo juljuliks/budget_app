@@ -1,7 +1,7 @@
 // 5: the stats — a month against its plan, a day / week against the limits, a long period, hidden amounts, the
 // currency, the warning over them. Today: Thursday 15 October 2026 (setup.ts).
 import { act, waitFor, within } from '@testing-library/react-native';
-import { openApp, rowOf, screen, tap, texts, backToTabs } from './app';
+import { longPress, openApp, rowOf, screen, tap, texts, backToTabs } from './app';
 import { buy, ops, planned, on } from '../e2e/seeds';
 import { emitTransactionsChanged } from '../../src/domain/events';
 import { getDb } from '../../src/db';
@@ -41,9 +41,9 @@ describe('5.1 a month', () => {
     expect(block('📺 Подписки').slice(1, 3)).toEqual(['○', '0 / 30 ₾']);
   });
 
-  test('outside the plan: the categories without one and the uncategorized, against the share', async () => {
+  test('outside the plan: the categories without one and the uncategorized, against the share; no «＋ В план» buttons there', async () => {
     expect(block('Вне плана').slice(1, 3)).toEqual(['380 / 300 ₾ (127%)', 'Перерасход 80 ₾']);
-    expect(within(rowOf('🎮 Развлечения')).getByText('＋ В план')).toBeTruthy();
+    expect(within(rowOf('🎮 Развлечения')).queryByText('＋ В план')).toBeNull();
     expect(within(rowOf('🎮 Развлечения')).getByText('300 ₾')).toBeTruthy();
     expect(within(rowOf('⚪️ Без категории')).queryByText('＋ В план')).toBeNull();
     expect(screen.getByText('+15 ₾')).toBeTruthy();
@@ -64,8 +64,9 @@ describe('5.1 a month', () => {
     expect(screen.queryByText('Перевод · NINO B')).toBeNull();
   });
 
-  test('"＋ В план" offers what it spent; saved, it is in the plan', async () => {
-    await tap(within(rowOf('🚕 Такси')).getByText('＋ В план'));
+  test('a long press on an unplanned category offers what it spent; the hint is shown; saved, it is in the plan', async () => {
+    expect(screen.getByText('Удерживайте категорию, чтобы изменить в плане')).toBeTruthy();
+    await longPress('🚕 Такси');
     expect(await screen.findByDisplayValue('60')).toBeTruthy();
     await tap('Сохранить');
     expect(await screen.findByText('План «🚕 Такси» сохранён')).toBeTruthy();
@@ -96,6 +97,12 @@ describe('5.1 a month', () => {
     expect(await screen.findByText('Составьте план на месяц, чтобы видеть, сколько осталось по категориям.')).toBeTruthy();
     expect(await screen.findByText('Составить план ›')).toBeTruthy();
     expect(screen.queryByText(/^Отложено |^Потрачено \d/)).toBeNull();
+  });
+
+  test('«Изменить план ›» is next to «Потрачено»; long press on «Сбережения» opens the budget sheet', async () => {
+    expect(screen.getByText('Изменить план ›')).toBeTruthy();
+    await longPress('Сбережения');
+    expect(await screen.findByText('Бюджет месяца')).toBeTruthy();
   });
 });
 
