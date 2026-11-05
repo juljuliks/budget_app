@@ -97,6 +97,7 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
       <FundSheet
         categoryId={fundOpen?.category_id ?? null}
         label={fundOpen ? `${fundOpen.emoji || ''} ${fundOpen.name}`.trim() : ''}
+        ym={ym}
         onClose={() => setFundOpen(null)}
         onEdit={() => { const f = fundOpen; setFundOpen(null); if (f) setEditingItem(editTarget(f)); }}
       />
