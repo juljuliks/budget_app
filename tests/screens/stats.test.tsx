@@ -99,9 +99,9 @@ describe('5.1 a month', () => {
     expect(screen.queryByText(/^Отложено |^Потрачено \d/)).toBeNull();
   });
 
-  test('«Изменить план ›» is next to «Потрачено»; long press on «Сбережения» opens the budget sheet', async () => {
+  test('«Изменить план ›» is next to «Потрачено»; long press on «Отложить сразу» opens the budget sheet', async () => {
     expect(screen.getByText('Изменить план ›')).toBeTruthy();
-    await longPress('Сбережения');
+    await longPress('🔒 Отложено сразу');
     expect(await screen.findByText('Бюджет месяца')).toBeTruthy();
   });
 });
