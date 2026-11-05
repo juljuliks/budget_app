@@ -18,6 +18,8 @@ type Open = {
   less: () => void;
   /** "Подвести итоги ›" */
   close: (ym: string) => void;
+  /** fund or saving-subscription part: long press opens its edit sheet */
+  longPressCategory?: (id: number, name: string, kind: 'fund' | 'saving') => void;
 };
 
 /** "now / plan ₾ (%)"; not known yet — "? / plan ₾". "Скрыть суммы": the % alone. */
@@ -32,14 +34,14 @@ function nowOfPlan(now: number | null, plan: number, currency: string) {
   );
 }
 
-function Part({ x, currency, onLess }: { x: SavingsPart; currency: string; onLess: () => void }) {
+function Part({ x, currency, onLess, onLongPress }: { x: SavingsPart; currency: string; onLess: () => void; onLongPress?: () => void }) {
   const status = (
     <Text style={[styles.rowStatus, x.status.tone === 'warn' && styles.overLine, x.status.tone === 'ok' && styles.paceOk]}>
       {x.status.text}{x.fund ? ` · ${fundProgress(x.fund.saved, x.fund.target, x.fund.due, x.fund.currency)}` : ''}{x.status.info ? ' ' : ''}
     </Text>
   );
   return (
-    <View style={styles.row}>
+    <TouchableOpacity style={styles.row} onLongPress={onLongPress} disabled={!onLongPress} accessibilityLabel={x.name}>
       <View style={styles.rowTop}>
         <View style={[styles.dot, { backgroundColor: x.color }]} />
         <Text style={styles.rowName} numberOfLines={1}>{x.name}</Text>
@@ -51,7 +53,7 @@ function Part({ x, currency, onLess }: { x: SavingsPart; currency: string; onLes
           {status}<InfoIcon color={colors.accent} size={13} />
         </TouchableOpacity>
       ) : status}
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -68,7 +70,11 @@ export function savingsSection(s: SavingsSection | null, currency: string, open:
       {header('Сбережения', nowOfPlan(s.now, s.plan, currency))}
       <View>
         {s.caption ? <Text style={styles.savingsCaption}>{s.caption}</Text> : null}
-        {s.parts.map((x) => <Part key={x.key} x={x} currency={currency} onLess={open.less} />)}
+        {s.parts.map((x) => {
+          const kind = x.key.startsWith('fund-') ? 'fund' : x.key.startsWith('saving-') ? 'saving' : null;
+          const lp = kind && x.categoryId !== undefined && open.longPressCategory ? () => open.longPressCategory!(x.categoryId!, x.name, kind) : undefined;
+          return <Part key={x.key} x={x} currency={currency} onLess={open.less} onLongPress={lp} />;
+        })}
         {s.past > 0 ? (
           <TouchableOpacity style={styles.row} onPress={open.less} accessibilityRole="button" accessibilityLabel="Из прошлых сбережений: что съело сбережения">
             <View style={styles.rowTop}>

@@ -6,7 +6,9 @@ import { categoryLabel } from '@/db/categories';
 import type { Currency } from '@/db/fx';
 import { CategoryStat, currentYm, spentOf, StatGroup, ymOf } from '@/db/plans';
 import { PlanAmountModal, PlanAmountTarget, splitUnplanned } from '@/entities/plan';
+import { FundSheet } from '@/features/fund';
 import { MonthReportRow } from '@/features/month-report';
+import { RecurringPaymentsSheet } from '@/features/recurring-payments';
 import { daysInMonth, monthDays } from '@/shared/lib/dateRange';
 import { formatMoneyWithCurrency, formatWithCurrency } from '@/shared/lib/money';
 import { NO_RATE } from '@/shared/lib/strings';
@@ -55,6 +57,8 @@ export default function StatsView({ year, month, currency }: { year: number; mon
   // the current month: "+44% к обычному" under a category spent well off its usual
   const usual = useMonthUsual(ymOf(year, month), currency);
   const [lessOpen, setLessOpen] = useState(false);
+  const [subsOpen, setSubsOpen] = useState<{ id: number; name: string; emoji: string | null } | null>(null);
+  const [fundSheet, setFundSheet] = useState<{ id: number; label: string } | null>(null);
 
   async function openPlanEdit(c: CategoryStat) {
     if (!c.category_id || c.deleted || !stats) return;
@@ -62,6 +66,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
       if (c.limit_minor !== null) {
         const item = await getPlanItemBasics(ymOf(year, month), c.category_id);
         if (!item) return;
+        if (item.by_merchant) { setSubsOpen({ id: c.category_id, name: c.name, emoji: c.emoji }); return; }
         setPlanTarget({ category_id: c.category_id, label: categoryLabel(c), ...item });
       } else {
         setPlanTarget({ category_id: c.category_id, label: categoryLabel(c), limit_minor: 0, currency: stats.currency, suggested_minor: spentOf(c) || undefined });
@@ -69,6 +74,24 @@ export default function StatsView({ year, month, currency }: { year: number; mon
     } catch (e) {
       console.error('open plan edit', e);
     }
+  }
+
+  function openFund(id: number, label: string) { setFundSheet({ id, label }); }
+
+  async function openSubsAmount() {
+    if (!subsOpen) return;
+    const item = await getPlanItemBasics(ymOf(year, month), subsOpen.id);
+    if (!item) return;
+    setSubsOpen(null);
+    setPlanTarget({ category_id: subsOpen.id, label: categoryLabel(subsOpen), ...item });
+  }
+
+  async function openFundAmount() {
+    if (!fundSheet) return;
+    const item = await getPlanItemBasics(ymOf(year, month), fundSheet.id);
+    if (!item) return;
+    setFundSheet(null);
+    setPlanTarget({ category_id: fundSheet.id, label: fundSheet.label, ...item });
   }
 
   // the next month: nothing spent yet, its plan in advance
@@ -122,9 +145,13 @@ export default function StatsView({ year, month, currency }: { year: number; mon
 
       {/* the funds' spending is from what they saved: said under the month's total */}
       {fromFunds > 0 && !hidden ? <Text style={styles.fundsLine}>{`Из копилок ${formatWithCurrency(fromFunds, stats.currency)} — не из бюджета месяца`}</Text> : null}
-      {savingsSection(savings.section, currency, { less: () => setLessOpen(true), close: openMonthClose })}
+      {savingsSection(savings.section, currency, {
+        less: () => setLessOpen(true),
+        close: openMonthClose,
+        longPressCategory: (id, name, kind) => kind === 'fund' ? openFund(id, name) : setSubsOpen({ id, name, emoji: null }),
+      })}
       {fundsSection(stats, (f) => (
-        <FundStatRow key={f.category_id} f={f} ym={ym} currency={stats.currency} hidden={hidden} openTransactions={openTransactions} />
+        <FundStatRow key={f.category_id} f={f} ym={ym} currency={stats.currency} hidden={hidden} openTransactions={openTransactions} onLongPress={() => openFund(f.category_id, `${f.emoji || ''} ${f.name}`.trim())} />
       ))}
       {stats.categories.length === 0 && !spentFunds(stats).length ? <Text style={styles.hint}>В этом месяце трат нет.</Text> : typeSections(stats, split.groups, rowOf)}
       {unplannedSection(stats, split, share, rowOf, hidden)}
@@ -140,6 +167,19 @@ export default function StatsView({ year, month, currency }: { year: number; mon
       <SavingsLessSheet
         less={savings.view?.less ?? null} visible={lessOpen} money={(minor) => formatWithCurrency(minor, currency)} onClose={() => setLessOpen(false)}
         onOpen={(id) => setPlanTarget(lessTarget(savings.view, id))}
+      />
+      <RecurringPaymentsSheet
+        ym={subsOpen !== null ? ymOf(year, month) : null}
+        category={subsOpen ?? { id: 0, name: '', emoji: null }}
+        currency={currency}
+        onClose={() => setSubsOpen(null)}
+        onEditAmount={openSubsAmount}
+      />
+      <FundSheet
+        categoryId={fundSheet?.id ?? null}
+        label={fundSheet?.label ?? ''}
+        onClose={() => setFundSheet(null)}
+        onEdit={openFundAmount}
       />
     </StickyScrollView>
   );

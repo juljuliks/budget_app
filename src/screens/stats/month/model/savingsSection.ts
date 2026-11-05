@@ -14,6 +14,8 @@ export type SavingsStatus = { text: string; tone: 'ok' | 'warn' | 'muted'; info?
 export type SavingsPart = {
   key: string; name: string; color: string; plan: number; now: number | null; status: SavingsStatus;
   fund?: { saved: number; target: number; due: string; currency: string };
+  /** fund or saving-subscription category: its id for a long press to open the edit sheet */
+  categoryId?: number;
 };
 export type SavingsSection = {
   parts: SavingsPart[];
@@ -48,14 +50,14 @@ export function currentSavings(p: PlanView, money: Money, hidden: boolean): Savi
     if (plan <= 0) continue;
     const cut = less?.funds.cut.get(f.category_id) ?? 0;
     parts.push({
-      key: `fund-${f.category_id}`, name: `${f.emoji || ''} ${f.name}`.trim(), color: RING_FUNDS, plan, now: plan - cut,
+      key: `fund-${f.category_id}`, categoryId: f.category_id, name: `${f.emoji || ''} ${f.name}`.trim(), color: RING_FUNDS, plan, now: plan - cut,
       status: cut > 0 ? took(cut, money, hidden, ' — следующие взносы станут больше') : { text: 'взнос в копилку', tone: 'muted' },
       ...(f.fund && !cut && !hidden ? { fund: { saved: f.fund.saved_minor, target: f.fund.target_minor, due: f.fund.due, currency: f.currency } } : {}),
     });
   }
   for (const s of p.saving) {
     const plan = s.subs?.saving_minor ?? 0;
-    parts.push({ key: `saving-${s.category_id}`, name: `${s.emoji || ''} ${s.name}`.trim(), color: RING_FUNDS, plan, now: plan, status: { text: 'копим на платежи', tone: 'muted' } });
+    parts.push({ key: `saving-${s.category_id}`, categoryId: s.category_id, name: `${s.emoji || ''} ${s.name}`.trim(), color: RING_FUNDS, plan, now: plan, status: { text: 'копим на платежи', tone: 'muted' } });
   }
   const free = Math.max(0, p.free ?? 0);
   if (free > 0) {
@@ -82,7 +84,7 @@ export function pastSavings(f: SavingsPlanFact | null, ym: string, money: Money,
   const parts: SavingsPart[] = [];
   if (f.locked) parts.push({ key: 'locked', name: '🔒 Отложено сразу', color: RING_LOCKED, plan: f.locked.plan, now: f.locked.fact, status: status(f.locked.plan, f.locked.fact) });
   for (const x of f.funds) {
-    parts.push({ key: `fund-${x.category_id}`, name: `${x.emoji || ''} ${x.name}`.trim(), color: RING_FUNDS, plan: x.plan, now: x.fact, status: status(x.plan, x.fact) });
+    parts.push({ key: `fund-${x.category_id}`, categoryId: x.category_id, name: `${x.emoji || ''} ${x.name}`.trim(), color: RING_FUNDS, plan: x.plan, now: x.fact, status: status(x.plan, x.fact) });
   }
   // the leftover moved to the next month (or kept as is) isn't savings
   if (f.rest && (f.rest.choice === null || f.rest.choice === 'savings')) {
