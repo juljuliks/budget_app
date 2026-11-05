@@ -12,6 +12,7 @@ import { formStyles } from '@/shared/theme/formStyles';
 import { colors } from '@/shared/theme/theme';
 import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
 import { SheetActions } from '@/shared/ui/Button';
+import SearchBar from '@/shared/ui/SearchBar';
 import StepsNav from '@/shared/ui/StepsNav';
 import { toastFailure } from '@/shared/ui/toast';
 
@@ -33,9 +34,10 @@ export default function PlanAddModal({ ym, currency, visible, onClose, onPick }:
   const [rows, setRows] = useState<AddableCategory[] | null>(null);
   const [colorOf, setColorOf] = useState<Map<number, string>>(new Map());
   const [free, setFree] = useState<{ minor: number; currency: Currency } | null>(null);
+  const [query, setQuery] = useState('');
 
   useEffect(() => {
-    if (!visible) return;
+    if (!visible) { setQuery(''); return; }
     (async () => {
       const [list, colorMap, budget] = await Promise.all([addableCategories(ym, currency), categoryColors(), getPlanBudget(ym)]);
       setRows(list);
@@ -54,16 +56,22 @@ export default function PlanAddModal({ ym, currency, visible, onClose, onPick }:
     : c.spent_minor > 0 ? `потрачено ${money(c.spent_minor)}` : null);
   const pick = (c: AddableCategory) => onPick({ category_id: c.id, label: categoryLabel(c), limit_minor: 0, currency: c.last?.currency ?? currency });
 
+  const q = query.toLowerCase();
+  const filtered = q ? (rows ?? []).filter((c) => categoryLabel(c).toLowerCase().includes(q)) : (rows ?? []);
+
   return (
     <BottomSheet visible={visible} onClose={onClose} title="Добавить в план" style={styles.sheet}>
       <StepsNav at={0} count={2} name="Категория" style={styles.inset} />
       <Text style={styles.caption}>
         {`${free ? `Свободно: ${money(free.minor, free.currency)}` : 'Бюджет месяца не задан'} · траты — за ${MONTHS_NOM[month]}${year !== new Date().getFullYear() ? ` ${year}` : ''}`}
       </Text>
-      <SheetScrollView>
-        {(rows ?? []).map((c, i, all) => (
+      <View style={styles.searchWrap}>
+        <SearchBar value={query} onChange={setQuery} placeholder="Найти категорию" />
+      </View>
+      <SheetScrollView keyboardShouldPersistTaps="handled">
+        {filtered.map((c, i, all) => (
           <View key={c.id}>
-            {i === 0 || all[i - 1].group !== c.group ? <Text style={formStyles.sectionHeader}>{titles[c.group]}</Text> : null}
+            {!q && (i === 0 || all[i - 1].group !== c.group) ? <Text style={formStyles.sectionHeader}>{titles[c.group]}</Text> : null}
             <TouchableOpacity style={styles.row} onPress={() => pick(c)} accessibilityRole="button" accessibilityLabel={`Добавить в план: ${categoryLabel(c)}`}>
               <View style={[styles.dot, { backgroundColor: colorOf.get(c.id) ?? colors.border }]} />
               <View style={styles.text}>
@@ -75,6 +83,7 @@ export default function PlanAddModal({ ym, currency, visible, onClose, onPick }:
           </View>
         ))}
         {rows?.length === 0 ? <Text style={styles.empty}>Все категории уже в плане.</Text> : null}
+        {rows !== null && rows.length > 0 && q && filtered.length === 0 ? <Text style={styles.empty}>Не найдено.</Text> : null}
       </SheetScrollView>
       <SheetActions submit={null} onCancel={onClose} style={styles.actions} />
     </BottomSheet>
@@ -85,6 +94,7 @@ const styles = StyleSheet.create({
   sheet: { maxHeight: '88%' },
   inset: { paddingHorizontal: 20 },
   caption: { fontSize: 13, color: colors.muted, paddingHorizontal: 20, paddingBottom: 8 },
+  searchWrap: { paddingHorizontal: 16, paddingBottom: 8 },
   // as in "Настройки → Категории"
   row: {
     flexDirection: 'row', alignItems: 'center', paddingLeft: 16, paddingRight: 8, paddingVertical: 10,
