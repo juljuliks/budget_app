@@ -20,8 +20,8 @@ const UNPLANNED = 'Вне плана';
 type RowOf = (c: CategoryStat, unplanned: boolean) => React.ReactElement;
 
 /** A section's sticky grey band: its title, its total at the right. */
-export const header = (title: string, total: React.ReactNode) => (
-  <SectionHeader style={[formStyles.sectionHeader, styles.groupHeader, styles.group]}>
+export const header = (title: string, total: React.ReactNode, onLongPress?: () => void) => (
+  <SectionHeader style={[formStyles.sectionHeader, styles.groupHeader, styles.group]} onLongPress={onLongPress}>
     <Text style={styles.groupTitle}>{title}</Text>
     {total}
   </SectionHeader>
