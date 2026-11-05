@@ -78,20 +78,9 @@ export default function StatsView({ year, month, currency }: { year: number; mon
 
   function openFund(id: number, label: string) { setFundSheet({ id, label }); }
 
-  async function openSubsAmount() {
-    if (!subsOpen) return;
-    const item = await getPlanItemBasics(ymOf(year, month), subsOpen.id);
-    if (!item) return;
-    setSubsOpen(null);
-    setPlanTarget({ category_id: subsOpen.id, label: categoryLabel(subsOpen), ...item });
-  }
-
-  async function openFundAmount() {
-    if (!fundSheet) return;
-    const item = await getPlanItemBasics(ymOf(year, month), fundSheet.id);
-    if (!item) return;
-    setFundSheet(null);
-    setPlanTarget({ category_id: fundSheet.id, label: fundSheet.label, ...item });
+  async function openSheetAmount(id: number, label: string, close: () => void) {
+    const item = await getPlanItemBasics(ymOf(year, month), id);
+    if (item) { close(); setPlanTarget({ category_id: id, label, ...item }); }
   }
 
   // the next month: nothing spent yet, its plan in advance
@@ -173,13 +162,13 @@ export default function StatsView({ year, month, currency }: { year: number; mon
         category={subsOpen ?? { id: 0, name: '', emoji: null }}
         currency={currency}
         onClose={() => setSubsOpen(null)}
-        onEditAmount={openSubsAmount}
+        onEditAmount={() => subsOpen && openSheetAmount(subsOpen.id, categoryLabel(subsOpen), () => setSubsOpen(null))}
       />
       <FundSheet
         categoryId={fundSheet?.id ?? null}
         label={fundSheet?.label ?? ''}
         onClose={() => setFundSheet(null)}
-        onEdit={openFundAmount}
+        onEdit={() => fundSheet && openSheetAmount(fundSheet.id, fundSheet.label, () => setFundSheet(null))}
       />
     </StickyScrollView>
   );
