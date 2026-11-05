@@ -136,6 +136,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
 
       {/* the funds' spending is from what they saved: said under the month's total */}
       {fromFunds > 0 && !hidden ? <Text style={styles.fundsLine}>{`Из копилок ${formatWithCurrency(fromFunds, stats.currency)} — не из бюджета месяца`}</Text> : null}
+      {stats.categories.length > 0 || spentFunds(stats).length ? <Text style={styles.longPressHint}>Удерживайте категорию, чтобы изменить в плане</Text> : null}
       {savingsSection(savings.section, currency, {
         less: () => setLessOpen(true),
         close: openMonthClose,
@@ -145,7 +146,6 @@ export default function StatsView({ year, month, currency }: { year: number; mon
       {fundsSection(stats, (f) => (
         <FundStatRow key={f.category_id} f={f} ym={ym} currency={stats.currency} hidden={hidden} openTransactions={openTransactions} onLongPress={() => openFund(f.category_id, `${f.emoji || ''} ${f.name}`.trim())} />
       ))}
-      {stats.categories.length > 0 || spentFunds(stats).length ? <Text style={styles.longPressHint}>Удерживайте категорию, чтобы изменить в плане</Text> : null}
       {stats.categories.length === 0 && !spentFunds(stats).length ? <Text style={styles.hint}>В этом месяце трат нет.</Text> : typeSections(stats, split.groups, rowOf)}
       {unplannedSection(stats, split, share, rowOf, hidden)}
 
