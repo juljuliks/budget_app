@@ -398,6 +398,28 @@ describe('6.3.2 adding to the plan, step by step', () => {
   });
 });
 
+describe('6.3.2a search in «Добавить в план»', () => {
+  beforeEach(async () => {
+    await openPlan();
+    await tap('Добавить в план');
+    await screen.findByText('Шаг 1 из 2 · Категория');
+  });
+
+  test('typing filters categories; group headers hidden; clear (×) restores full list', async () => {
+    expect(screen.getByText('С тратами в октябре')).toBeTruthy();
+    fireEvent.changeText(screen.getByPlaceholderText('Найти категорию'), 'такс');
+    expect(screen.queryByText('С тратами в октябре')).toBeNull();
+    expect(screen.getByLabelText('Добавить в план: 🚕 Такси')).toBeTruthy();
+    await tap('Очистить поиск');
+    expect(await screen.findByText('С тратами в октябре')).toBeTruthy();
+  });
+
+  test('no match shows «Не найдено.»', async () => {
+    fireEvent.changeText(screen.getByPlaceholderText('Найти категорию'), 'zzz');
+    expect(await screen.findByText('Не найдено.')).toBeTruthy();
+  });
+});
+
 describe('6.1.11 the next month', () => {
   test('carried over: the budget and its settings; amounts to fill in, last month\'s as a hint', async () => {
     await openApp(planned);

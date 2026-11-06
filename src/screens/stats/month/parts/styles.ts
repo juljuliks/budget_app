@@ -11,7 +11,7 @@ export const styles = StyleSheet.create({
   monthBox: { marginBottom: 16 },
   monthTopRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 4 },
   monthLine: { fontSize: 13, color: colors.muted, flexShrink: 1 },
-  longPressHint: { fontSize: 12, color: colors.muted, textAlign: 'center', marginBottom: 4 },
+  longPressHint: { fontSize: 12, color: colors.muted, marginTop: 8, marginBottom: -10 },
   dangerText: { color: colors.danger },
   hint: { color: colors.muted, fontSize: 14, textAlign: 'center', marginVertical: 12 },
   fundsLine: { fontSize: 13, color: colors.fundText, marginTop: 4 },
