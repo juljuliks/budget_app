@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { categoryLabel, categorySummary, getCategory } from '@/db/categories';
-import { CategoryView } from '@/entities/category';
+import { CategoryView, ImpulseSwitch } from '@/entities/category';
 import { RecentOperations, useRecentOperations } from '@/entities/transaction';
 import { startCategoryDelete } from '@/features/category-delete';
 import { SubscriptionsSwitch } from '@/features/recurring-payments';
@@ -36,7 +36,7 @@ export default function CategoryScreen({ route, navigation }: Props) {
       onShowOperations={showAll}
       links={<LinkCard icon={<TrendsIcon color={colors.accent} />} label="Динамика трат" onPress={() => openCategoryTrend(id)} style={styles.trends} />}
       onDelete={() => startCategoryDelete(id, { close: back, onDeleted: () => {} })}
-      extra={<SubscriptionsSwitch categoryId={id} />}
+      extra={<><SubscriptionsSwitch categoryId={id} /><ImpulseSwitch categoryId={id} /></>}
       recent={<RecentOperations rows={rows} count={count} of="category" onShowAll={showAll} />}
     />
   );

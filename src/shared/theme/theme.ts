@@ -7,6 +7,8 @@ export const colors = {
   faint: '#9CA3AF',
   border: '#E5E7EB',
   accent: '#2563EB',
+  /** a light ground of the accent: a chip chosen softly (the moods) */
+  accentBg: '#EFF6FF',
   /** text and icons on the accent color */
   onAccent: '#FFFFFF',
   income: '#15803D',

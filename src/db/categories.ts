@@ -24,6 +24,8 @@ export type Category = {
   recurring: number;
   /** 1 — "Подписки" (on its page): a subscription of each merchant, made from an operation and followed by its charges */
   by_merchant: number;
+  /** 1 — "Импульсивные покупки" (on its page): its operations ask whether the purchase was impulsive (db/impulse.ts) */
+  impulse: number;
 };
 
 /**
@@ -68,7 +70,7 @@ export async function setByMerchant(id: number, on: boolean, db?: Db): Promise<v
   await db.run('UPDATE categories SET by_merchant = ? WHERE id = ?', [on ? 1 : 0, id]);
 }
 
-const COLUMNS = `c.id, c.name, c.emoji, c.sort_order, c.type_id, c.deleted_at, c.color, c.system, c.recurring, c.by_merchant,
+const COLUMNS = `c.id, c.name, c.emoji, c.sort_order, c.type_id, c.deleted_at, c.color, c.system, c.recurring, c.by_merchant, c.impulse,
     t.name AS type_name, coalesce(t.is_transfer, 0) AS type_is_transfer`;
 const FROM = 'FROM categories c LEFT JOIN category_types t ON t.id = c.type_id';
 const SELECT = `SELECT ${COLUMNS} ${FROM}`;

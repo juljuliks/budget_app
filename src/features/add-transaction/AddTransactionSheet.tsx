@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Controller } from 'react-hook-form';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { categoryLabel, getCategory } from '@/db/categories';
 import { CategoryPickerModal } from '@/entities/category';
 import { parseAmountInput } from '@/shared/lib/money';
@@ -10,8 +10,8 @@ import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
 import { SheetActions } from '@/shared/ui/Button';
 import CurrencyButton from '@/shared/ui/CurrencyButton';
 import DateField from '@/shared/ui/DateField';
-import { PencilIcon } from '@/shared/ui/icons';
 import SectionHeading from '@/shared/ui/SectionHeading';
+import SelectField from '@/shared/ui/SelectField';
 import Segmented from '@/shared/ui/Segmented';
 import { formStyles } from '@/shared/theme/formStyles';
 import { colors } from '@/shared/theme/theme';
@@ -88,16 +88,9 @@ const styles = StyleSheet.create({
   // stretch: the currency button as tall as the amount field
   amountRow: { flexDirection: 'row', alignItems: 'stretch', gap: 8 },
   amount: { flex: 1, fontSize: 24, fontWeight: '600' },
-  none: { fontSize: 18, color: colors.text, paddingVertical: 8 },
-  change: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16,
-    borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed',
-  },
-  changeText: { fontSize: 15, color: colors.accent },
 });
 
-/** The new operation's category: the current one, "Сменить" opens the shared list. */
+/** The new operation's category: a field, a tap opens the shared list. */
 function CategoryField({ value, onChange, deposit, disabled }: {
   value: number | null;
   onChange: (id: number | null) => void;
@@ -112,16 +105,8 @@ function CategoryField({ value, onChange, deposit, disabled }: {
   }, [value]);
   return (
     <>
-      <SectionHeading
-        title="Категория"
-        right={(
-          <TouchableOpacity style={styles.change} disabled={disabled} onPress={() => setOpen(true)} accessibilityLabel="Сменить категорию">
-            <PencilIcon color={colors.accent} size={16} />
-            <Text style={styles.changeText}>Сменить</Text>
-          </TouchableOpacity>
-        )}
-      />
-      <Text style={styles.none}>{label}</Text>
+      <SectionHeading title="Категория" />
+      <SelectField value={label} onPress={() => setOpen(true)} accessibilityLabel="Сменить категорию" disabled={disabled} testID="add-category" />
       <CategoryPickerModal
         visible={open}
         title="Категория"

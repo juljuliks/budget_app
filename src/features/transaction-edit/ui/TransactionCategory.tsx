@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { txCategoryLabel } from '@/db/categories';
 import { EXPENSE_KINDS } from '@/db/spending';
-import { CategoryLink, CategoryPickerModal } from '@/entities/category';
+import { CategoryPickerModal } from '@/entities/category';
 import { merchantLabel, splitParts } from '@/entities/transaction';
 import Chip from '@/shared/ui/Chip';
 import SectionHeading from '@/shared/ui/SectionHeading';
-import { PencilIcon } from '@/shared/ui/icons';
+import SelectField from '@/shared/ui/SelectField';
+import { openCategory } from '@/shared/navigation/navigation';
 import { NO_CATEGORY } from '@/shared/lib/strings';
 import { colors } from '@/shared/theme/theme';
 import type { Tx } from '../model/useTransaction';
@@ -29,8 +30,9 @@ type Props = {
 };
 
 /**
- * The operation's category. "Сменить" (right of "Категория") opens the category list and saves the pick without
- * leaving the page; with none yet, the value is "Без категории". A long press there picks several and opens the split.
+ * The operation's category: a field (a tap opens "Сменить категорию", the pick saved without leaving the page; none
+ * yet — "Без категории") and a "›" beside it to the category's page. A long press in the list picks several and opens
+ * the split.
  * A merchant of different categories adds its chips under the value ("Разные категории у «…»"; a category picked
  * elsewhere is not among them): a tap highlights one (saved at once; the back arrow leaves) or several ("Разделить"
  * opens the split).
@@ -41,23 +43,20 @@ export default function TransactionCategory({ tx, mixedCats, picked, saving, cho
   const category = txCategoryLabel(tx);
   const parts = splitParts(tx);
   const canSplit = [...EXPENSE_KINDS, 'refund'].includes(tx.kind);
-  const change = (
-    <TouchableOpacity style={styles.changeButton} disabled={saving} onPress={() => setPickerOpen(true)} accessibilityLabel="Сменить категорию">
-      <PencilIcon color={colors.accent} size={16} />
-      <Text style={styles.changeText}>Сменить</Text>
-    </TouchableOpacity>
-  );
 
   if (tx.refund_settled_at) return <Text style={styles.refundDone}>✓ Возврат учтён в покупке</Text>;
   if (parts) return <SplitView parts={parts} total={tx.amount_minor} currency={tx.currency} onEdit={() => onSplit()} />;
   return (
     <>
-      <SectionHeading title="Категория" right={change} />
-      {tx.category_id !== null && category ? (
-        <CategoryLink categoryId={tx.category_id} label={category} style={styles.catName} containerStyle={styles.catLink} />
-      ) : (
-        <Text style={styles.none}>{NO_CATEGORY}</Text>
-      )}
+      <SectionHeading title="Категория" />
+      <SelectField
+        value={tx.category_id !== null && category ? category : NO_CATEGORY}
+        onPress={() => setPickerOpen(true)}
+        accessibilityLabel="Сменить категорию"
+        testID="tx-category"
+        disabled={saving}
+        open={tx.category_id !== null && category ? { onPress: () => openCategory(tx.category_id!), accessibilityLabel: 'Открыть категорию' } : undefined}
+      />
       {mixedCats?.length ? (
         <>
           <SectionHeading title={`Разные категории у «${merchantLabel(tx)}»`} />
@@ -88,14 +87,5 @@ export default function TransactionCategory({ tx, mixedCats, picked, saving, cho
 
 const styles = StyleSheet.create({
   chips: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
-  catLink: { flex: 1, minWidth: 0, paddingVertical: 8 },
-  catName: { fontSize: 18 },
-  none: { fontSize: 18, color: colors.text, paddingVertical: 8 },
-  changeButton: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16,
-    borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed',
-  },
-  changeText: { fontSize: 15, color: colors.accent },
   refundDone: { fontSize: 15, color: colors.income, fontWeight: '600' },
 });

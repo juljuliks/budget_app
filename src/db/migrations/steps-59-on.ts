@@ -178,4 +178,11 @@ export const STEPS_59_ON: MigrationStep[][] = [
   [lockedMaxAgain],
   // 63: a coming month made before it began follows the months before it till changed by hand or begun
   ['ALTER TABLE plan_months ADD COLUMN follows INTEGER NOT NULL DEFAULT 0', followingMonths],
+  // 64: "Импульсивные покупки" on a category's page: its operations ask "Обдуманная" / "Импульсивная" (transactions.impulse:
+  // 1 — yes, 0 — no, null — not answered) and "Настроение" (transactions.mood: an id of domain/moods.ts, null — none)
+  [
+    'ALTER TABLE categories ADD COLUMN impulse INTEGER NOT NULL DEFAULT 0',
+    'ALTER TABLE transactions ADD COLUMN impulse INTEGER',
+    'ALTER TABLE transactions ADD COLUMN mood TEXT',
+  ],
 ];

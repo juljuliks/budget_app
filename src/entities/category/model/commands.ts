@@ -1,6 +1,7 @@
 // The category's writes: each one tells the screens the data changed.
 import { createCategory, updateCategory } from '@/db/categories';
 import { createCategoryType, renameCategoryType, setCategoryTypePalette } from '@/db/categoryTypes';
+import { setCategoryImpulse } from '@/db/impulse';
 import { emitTransactionsChanged } from '@/domain/events';
 
 export type CategoryFields = { name: string; emoji: string; typeId: number | null; color: string | null };
@@ -23,4 +24,10 @@ export async function saveCategoryType(id: number | undefined, name: string, pal
   await setCategoryTypePalette(saved, palette);
   emitTransactionsChanged();
   return saved;
+}
+
+/** "Импульсивные покупки": its operations ask "Обдуманная" / "Импульсивная" (the answers given stay). */
+export async function switchImpulse(id: number, on: boolean) {
+  await setCategoryImpulse(id, on);
+  emitTransactionsChanged();
 }

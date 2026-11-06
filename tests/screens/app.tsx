@@ -124,11 +124,15 @@ export async function openNextPlan() {
 }
 
 /** The switch on the screen (the last one: a sheet's), toggled. */
-/** The last switch of the topmost open sheet (a closed one keeps its content drawn), else of the page. */
-export function toggleSwitch(on: boolean) {
+/**
+ * The last switch of the topmost open sheet (a closed one keeps its content drawn), else of the page; with `label` —
+ * the SwitchRow of that label ("Подписки" and "Импульсивные покупки" on a category's page).
+ */
+export function toggleSwitch(on: boolean, label?: string) {
   const sheets = screen.UNSAFE_root.findAll((n: { type: { name?: string }; props: { visible?: unknown } }) =>
     n.type?.name === 'BottomSheet' && n.props.visible === true);
-  const root = sheets.length ? sheets[sheets.length - 1] : screen.UNSAFE_root;
+  let root = sheets.length ? sheets[sheets.length - 1] : screen.UNSAFE_root;
+  if (label) root = root.find((n: { type: { name?: string }; props: { label?: unknown } }) => n.type?.name === 'SwitchRow' && n.props.label === label);
   const all = root.findAll((n: { props: { onValueChange?: unknown } }) => typeof n.props.onValueChange === 'function');
   fireEvent(all[all.length - 1], 'valueChange', on);
 }

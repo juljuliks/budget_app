@@ -38,3 +38,8 @@ export const FIND_CATEGORY = 'Найти категорию';
 
 /** Under the search, until a long press starts picking several. */
 export const SEVERAL_HINT = 'Несколько категорий можно выбрать зажатием.';
+
+/** "Импульсивные покупки" on a category's page. */
+export const IMPULSE_SWITCH = 'Импульсивные покупки';
+export const IMPULSE_HINT_OFF = 'Спрашивать в операциях категории, была ли покупка импульсивной.';
+export const IMPULSE_HINT_ON = 'В операциях категории — «Обдуманная» или «Импульсивная» и «Настроение». Ответы копятся, позже по ним будет статистика.';

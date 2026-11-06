@@ -3,6 +3,7 @@ import { freshDb } from '../helpers';
 import { getDb } from '../../src/db';
 import { createCategory, deleteCategory, moveTransactionsOutOfCategory, categorySummary } from '../../src/db/categories';
 import { mergeCategories } from '../../src/db/mergeCategories';
+import { setCategoryImpulse, setTransactionImpulse } from '../../src/db/impulse';
 import { csvOperations } from '../../src/backup';
 import { countSplit, getParts, splitTransaction, unsplitTransactions } from '../../src/db/parts';
 import { spendRows, spendingEntries } from '../../src/db/plans/spend';
@@ -133,4 +134,17 @@ test('CSV: a split operation a row per part, its own category first', async () =
   const id = await purchase(food, 8640);
   await splitTransaction(id, food, [{ category_id: home, amount_minor: 2200 }]);
   expect((await csvOperations()).map((o) => [o.category, o.amount_minor])).toEqual([['Еда', 6440], ['Хозтовары', 2200]]);
+});
+
+test('«Обдуманная» / «Импульсивная» asked when the own category or a part\'s has «Импульсивные покупки» on', async () => {
+  const id = Number(await purchase(food, 3000));
+  await splitTransaction(id, food, [{ category_id: home, amount_minor: 1000 }]);
+  expect((await getTransaction(id))).toMatchObject({ impulse: null, impulse_asked: 0 });
+  await setCategoryImpulse(home, true);
+  expect((await getTransaction(id))?.impulse_asked).toBe(1);
+  await setTransactionImpulse(id, true);
+  expect((await getTransaction(id))?.impulse).toBe(1);
+  await setCategoryImpulse(home, false);
+  await setCategoryImpulse(food, true);
+  expect((await getTransaction(id))?.impulse_asked).toBe(1);
 });
