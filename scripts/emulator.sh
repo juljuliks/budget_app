@@ -35,13 +35,13 @@ until [ "$("${ADB_EMU[@]}" shell getprop sys.boot_completed 2>/dev/null | tr -d 
 echo "Emulator $SERIAL booted."
 
 cd "$ROOT_DIR/android"
+# -PemulatorSms: SMS from "TBC" are read too (the console can't send from "TBC SMS"), so not the phone's APK
 if [ "$VARIANT" = "release" ]; then
-  # SKIP_BUILD=1: the release APK was just built (scripts/release.sh), install it as is
   # needs the release key in ~/.gradle/gradle.properties; without it: ./gradlew assembleRelease -PallowDebugSigning
-  [ "${SKIP_BUILD:-}" = "1" ] || ./gradlew assembleRelease -q
+  ./gradlew assembleRelease -q -PemulatorSms
   APK=app/build/outputs/apk/release/app-release.apk
 else
-  ./gradlew assembleDebug -q -PreactNativeArchitectures=arm64-v8a
+  ./gradlew assembleDebug -q -PreactNativeArchitectures=arm64-v8a -PemulatorSms
   APK=app/build/outputs/apk/debug/app-debug.apk
   "${ADB_EMU[@]}" reverse tcp:8081 tcp:8081
 fi

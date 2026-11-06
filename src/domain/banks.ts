@@ -24,7 +24,8 @@ export type Bank = {
 export const BANKS: Bank[] = [
   {
     id: 'tbc', name: 'TBC', short: 'TBC', color: '#00A3E0', smsLabel: '«TBC SMS»', builtIn: true,
-    sms: /^TBC ?(SMS|BANK)?$/i,
+    // only "TBC SMS" reaches JS (the emulator's build lets "TBC" through too: the fallback below makes it TBC's)
+    sms: /^TBC SMS$/i,
     // "ge.tbcbank…", "com.tbc…": matched loosely until the exact package is confirmed (IMPROVEMENTS)
     app: (pkg) => pkg.toLowerCase().includes('tbc'),
   },

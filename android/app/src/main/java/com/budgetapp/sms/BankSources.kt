@@ -1,6 +1,7 @@
 package com.budgetapp.sms
 
 import android.content.Context
+import com.budgetapp.BuildConfig
 import com.facebook.react.ReactPackage
 import com.facebook.react.bridge.NativeModule
 import com.facebook.react.bridge.ReactApplicationContext
@@ -18,8 +19,10 @@ object BankSources {
     private class Bank(val id: String, val sms: Regex, val app: (String) -> Boolean)
 
     private val BANKS = listOf(
-        // "TBC SMS" in real SMS; deliberately no phone-number patterns
-        Bank("tbc", Regex("""^TBC ?(SMS|BANK)?$""", RegexOption.IGNORE_CASE)) { it.lowercase().contains("tbc") },
+        // "TBC SMS" only, as in real SMS (no phone numbers, no look-alikes); "TBC" too in the emulator's build
+        Bank("tbc", Regex(if (BuildConfig.EMULATOR_SMS) """^TBC( SMS)?$""" else """^TBC SMS$""", RegexOption.IGNORE_CASE)) {
+            it.lowercase().contains("tbc")
+        },
         // not confirmed against a real SMS yet
         Bank("bog", Regex("""^(BOG|BANK ?OF ?GEORGIA)$""", RegexOption.IGNORE_CASE)) { it.lowercase().startsWith("ge.bog") },
     )

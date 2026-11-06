@@ -5,7 +5,7 @@
 #   ./scripts/send_test_sms.sh transfer         # a money transfer
 #   ./scripts/send_test_sms.sh custom "line1\nline2"
 # The emulator console only accepts a sender without spaces, so "TBC" is used instead of "TBC SMS";
-# both pass SmsReceiver's filter. Lines are separated with a literal \n.
+# only the emulator's build (scripts/emulator.sh, -PemulatorSms) reads it, the phone's reads "TBC SMS" alone. Lines are separated with a literal \n.
 set -euo pipefail
 
 ADB="${ANDROID_HOME:-$HOME/Library/Android/sdk}/platform-tools/adb"
