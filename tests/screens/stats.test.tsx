@@ -32,9 +32,10 @@ describe('5.1 a month', () => {
     expect(screen.getByText('1 645 / 2 160 ₾ · 76%')).toBeTruthy();
   });
 
-  test('5.7.1 «Сбережения» header: plan · % of budget (no overspend)', async () => {
-    // planned seed: budget 3000, locked 300, free 240 → plan 540 = 18% of budget
-    expect(screen.getByText('540 ₾ · 18%')).toBeTruthy();
+  test('5.7.2 «Сбережения» header with overspend: fact / plan (−%) · % of budget', async () => {
+    // planned seed: overspend 130 (Одежда 50 + Вне плана 80) reduces free savings 240→110;
+    // section now = 410 (300 locked + 110 free), plan = 540; budget = 3000 → 18%
+    expect(screen.getByText('410 / 540 ₾ (−24%) · 18%')).toBeTruthy();
   });
 
   test('the rows: limits with what\'s left and the limit per rhythm, overspends, obligatory payments', async () => {
