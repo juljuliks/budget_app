@@ -136,7 +136,7 @@ describe('bars', () => {
 });
 
 describe('the lists and a category page', () => {
-  const category = (id: number, compared = true) => ({ id, name: `К${id}`, emoji: null, type_name: null, color: '#000000', compared });
+  const category = (id: number, compared = true) => ({ id, name: `К${id}`, emoji: null, type_name: null, color: '#000000', compared, transfer: false, fund: false, subs: false });
   const usual = (id: number, v: number) => ['2026-07-05', '2026-08-05', '2026-09-05'].map((d) => spend(d, v, null, id));
   const data: TrendsData = {
     since: '2026-01-01',

@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useCallback, useRef } from 'react';
 import { ScrollView, ScrollViewProps, StyleProp, StyleSheet, TouchableOpacity, View, ViewStyle } from 'react-native';
+import { ScrollLockContext } from './scrollLock';
 
 /**
  * A section's header that stays on top while its section scrolls under it (in a StickyScrollView): the title left,
@@ -35,7 +36,14 @@ function flatten(children: React.ReactNode, prefix = ''): React.ReactElement[] {
 export default function StickyScrollView({ children, ...props }: ScrollViewProps) {
   const items = flatten(children);
   const sticky = items.flatMap((c, i) => (c.type === SectionHeader ? [i] : []));
-  return <ScrollView {...props} stickyHeaderIndices={sticky}>{items}</ScrollView>;
+  const ref = useRef<ScrollView>(null);
+  // a row's long press holds the finger (PressMenu): no scrolling meanwhile, without re-rendering the rows
+  const lock = useCallback((on: boolean) => ref.current?.setNativeProps({ scrollEnabled: !on && props.scrollEnabled !== false }), [props.scrollEnabled]);
+  return (
+    <ScrollLockContext.Provider value={lock}>
+      <ScrollView ref={ref} {...props} stickyHeaderIndices={sticky}>{items}</ScrollView>
+    </ScrollLockContext.Provider>
+  );
 }
 
 const styles = StyleSheet.create({

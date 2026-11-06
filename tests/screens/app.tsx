@@ -32,6 +32,12 @@ export async function longPress(what: string | RegExp) {
   fireEvent(await find(what), 'longPress');
 }
 
+/** A long press's button over the finger (PressMenu): a category's «Операции» / «План» / «Динамика» in the stats. */
+export async function pressAction(what: string | RegExp, action: string) {
+  fireEvent(await find(what), 'longPress', { nativeEvent: { pageX: 200, pageY: 500 } });
+  fireEvent.press(await screen.findByLabelText(action));
+}
+
 type Element = ReturnType<typeof screen.getByText>;
 
 /**

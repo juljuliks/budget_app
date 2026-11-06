@@ -11,6 +11,7 @@ import { formatShort, formatWithCurrency } from '@/shared/lib/money';
 import { PER_PERIOD } from '@/shared/lib/strings';
 import type { useOpenCategoryTransactions } from '@/shared/navigation/navigation';
 import Meter from '@/shared/ui/Meter';
+import PressMenu, { PressAction } from '@/shared/ui/PressMenu';
 import { CategoryNorm, flatOf, limitChange, Pace, paceOf } from '@/stats/norms';
 import { hiddenLeft, limitMove } from '../../model/hiddenText';
 import { overStyle, styles } from './styles';
@@ -22,7 +23,7 @@ function planShare(spent: number, limit: number): string {
 
 const RHYTHM_NOW = { day: 'Сегодня', week: 'На этой неделе', '2weeks': 'За эти 2 недели' } as const;
 
-export default function CategoryRow({ stat: shownStat, total, currency: shown, evenPace, dim, ym, openTransactions, now, monthToDate, onAddToPlan, onLongPress, withType, usual }: {
+export default function CategoryRow({ stat: shownStat, total, currency: shown, evenPace, dim, ym, openTransactions, now, monthToDate, onAddToPlan, actions, withType, usual }: {
   stat: CategoryStat;
   /** the month's spending: a row's share of it when the amounts are hidden */
   total: number;
@@ -33,8 +34,8 @@ export default function CategoryRow({ stat: shownStat, total, currency: shown, e
   /** the current month only: the norm window around today */
   now?: CategoryNorm; monthToDate: number;
   onAddToPlan?: () => void;
-  /** long press: opens the category's plan edit sheet */
-  onLongPress?: () => void;
+  /** long press: these as buttons over the finger (its operations, its plan, its dynamics); none — the tap only */
+  actions?: PressAction[];
   /** "Жизнь: Покупки": outside the plan, where the rows aren't under their type's section */
   withType?: boolean;
   /** the current month, well off its usual by the same days: "+44% к обычному" (Динамика трат) */
@@ -57,7 +58,7 @@ export default function CategoryRow({ stat: shownStat, total, currency: shown, e
   const rhythm = !fixed && stat.plan_norm && stat.plan_norm !== 'month' ? stat.plan_norm : null;
 
   return (
-    <TouchableOpacity style={styles.row} onPress={() => openTransactions(stat.category_id, monthDays(ym))} onLongPress={onLongPress} accessibilityHint="Показать операции категории">
+    <PressMenu style={styles.row} actions={actions ?? []} accessibilityHint="Удерживайте: операции, план, динамика">
       <View style={styles.rowTop}>
         <View style={[styles.dot, { backgroundColor: stat.color }]} />
         <Text style={styles.rowName} numberOfLines={1}>{withType ? categoryLabel(stat) : `${stat.emoji || ''} ${stat.name}`.trim()}</Text>
@@ -142,6 +143,6 @@ export default function CategoryRow({ stat: shownStat, total, currency: shown, e
         </>
       ) : null}
       {usual ? <Text style={styles.rowStatus}>{usual}</Text> : null}
-    </TouchableOpacity>
+    </PressMenu>
   );
 }

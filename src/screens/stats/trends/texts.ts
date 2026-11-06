@@ -20,6 +20,8 @@ export const TOO_EARLY: Record<TrendMode, string> = {
   week: 'Обычная неделя появится, когда наберётся 8 недель трат.',
   month: 'Обычный месяц появится, когда наберётся 3 месяца трат.',
 };
+/** a category spent in fewer than 2 full months: its page isn't picked by how often yet (stats/trendKind.ts) */
+export const FEW_DATA = 'Мало данных: нужно 2 полных месяца с тратами, чтобы понять, частые это траты или редкие (как аренда). Пока — как у частых.';
 export const NOT_COMPARED = 'Платёж раз в период — по дням с обычным не сравнивается';
 export const WHY = 'Почему';
 export const BY_WEEKDAY = 'По дням недели · последние 3 месяца';
