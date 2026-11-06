@@ -26,6 +26,9 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode commitCount()
         versionName(project.findProperty('BUDGETAPP_VERSION_NAME') ?: "1.0-dev")
+        // -PemulatorSms (scripts/emulator.sh): TBC's SMS also from "TBC" — the emulator console can't send from
+        // "TBC SMS" (a space). Never in the phone's APK
+        buildConfigField "boolean", "EMULATOR_SMS", project.hasProperty('emulatorSms') ? "true" : "false"
     }
 
     compileOptions {
