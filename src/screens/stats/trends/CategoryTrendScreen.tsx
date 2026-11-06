@@ -19,10 +19,12 @@ import { useTrendsData } from './model/useTrendsData';
 import { useCategoryImpulse } from './model/useCategoryImpulse';
 import CategoryTrendDetails from './parts/CategoryTrendDetails';
 import ImpulseTrend from './parts/ImpulseTrend';
+import KindTrend from './parts/KindTrend';
+import { useKindTrend } from './model/useKindTrend';
 import { detailStyles as s } from './parts/detailStyles';
 import { styles } from './parts/styles';
 import TrendBars from './parts/TrendBars';
-import { MODES, NOT_COMPARED, SPENT_WHEN, TAP_BAR, TOO_EARLY } from './texts';
+import { FEW_DATA, MODES, NOT_COMPARED, SPENT_WHEN, TAP_BAR, TOO_EARLY } from './texts';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CategoryTrend'>;
 
@@ -43,10 +45,19 @@ export default function CategoryTrendScreen({ route, navigation }: Props) {
   const today = dayKeyOf(new Date());
   const v = useMemo(() => (data ? categoryTrendView(data, id, mode, today) : null), [data, id, mode, today]);
   const impulse = useCategoryImpulse(id, currency, today);
+  const kindData = useKindTrend(id, v?.kind ?? null);
   useEffect(() => { if (v) navigation.setOptions({ title: `Динамика · ${v.label}` }); }, [navigation, v]);
   if (!v) return <Loading failed={failed || (data !== null && !v)} onRetry={load} />;
 
   const money = (minor: number) => formatWithCurrency(Math.round(Math.abs(minor)), currency);
+  // rare, subscriptions, a fund: their own page (no weeks, weekdays, «Почему»)
+  if (v.kind === 'rare' || v.kind === 'subs' || v.kind === 'fund') {
+    return (
+      <ScrollView style={styles.screen} contentContainerStyle={[styles.content, styles.pad]}>
+        <KindTrend v={v} data={kindData} today={today} money={money} />
+      </ScrollView>
+    );
+  }
   const t = v.trend;
   const line = !v.category.compared ? NOT_COMPARED : !t ? TOO_EARLY[mode]
     : hidden ? pctText(t) : `обычно ${money(t.usual)} · ${pctText(t)}`;
@@ -56,6 +67,7 @@ export default function CategoryTrendScreen({ route, navigation }: Props) {
   const pick = (m: TrendMode) => { setMode(m); setPicked(null); };
   return (
     <ScrollView style={styles.screen} contentContainerStyle={[styles.content, styles.pad]}>
+      {v.kind === 'few' ? <Text style={s.few}>{FEW_DATA}</Text> : null}
       <Segmented options={MODES} value={mode} onChange={pick} style={styles.modes} />
       <View style={s.head}>
         <Text><Masked style={s.spent}>{money(t?.cur ?? 0)}</Masked><Text style={s.spentWhen}>{` ${SPENT_WHEN[mode]}`}</Text></Text>

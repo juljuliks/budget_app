@@ -200,3 +200,15 @@ export const TrendsIcon = ({ color, size = 22 }: P) => (
     <Rect x={15.5} y={9} width={3} height={8} rx={1} />
   </Svg>
 );
+
+export const ListIcon = ({ color, size = 22 }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01" />
+  </Svg>
+);
+
+export const PlusIcon = ({ color, size = 22 }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round">
+    <Path d="M12 5v14M5 12h14" />
+  </Svg>
+);

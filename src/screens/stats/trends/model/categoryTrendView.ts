@@ -4,6 +4,7 @@ import type { TrendsData } from '@/db/plans';
 import { MONTHS_NOM } from '@/shared/lib/dates';
 import type { DayKey } from '@/shared/lib/dateRange';
 import { monthBars, monthsSummary, topMerchants, TrendMode, trendOf, trendWindows, weekdayHabits } from '@/stats/trends';
+import { trendKind } from '@/stats/trendKind';
 import { Bar, barsOf, MONDAY_FIRST, spendsByCategory } from './trendsView';
 
 /** The weekdays spent on most, highlighted. */
@@ -27,6 +28,11 @@ export function categoryTrendView(data: TrendsData, id: number, mode: TrendMode,
   const monthName = (ym: string) => MONTHS_NOM[Number(ym.slice(5)) - 1].slice(0, 3);
   return {
     category,
+    /** which page: frequent — this one; rare, subs, fund — their own (parts/KindTrend) */
+    kind: trendKind(category, spends, today),
+    spends,
+    /** the 12 months, the current one marked: the rare, subscriptions' pages */
+    months: barsOf(spends, 'month', today).map((b): Bar => ({ ...b, tone: b.tone === 'now' ? 'now' : 'other' })),
     label: categoryLabel(category),
     trend,
     bars: barsOf(spends, mode, today),

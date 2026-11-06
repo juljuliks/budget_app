@@ -1,6 +1,6 @@
 // 2.1: the operations by day.
 import { waitFor, within } from '@testing-library/react-native';
-import { backToTabs, openApp, rowOf, screen, tap } from './app';
+import { backToTabs, openApp, rowOf, screen, tap, pressAction } from './app';
 import { buy, daysAgo, ops } from '../e2e/seeds';
 import { getDb } from '../../src/db';
 import { splitTransaction } from '../../src/db/parts';
@@ -75,7 +75,7 @@ test('2.1.10: a split operation — its categories in the row; from the stats\' 
   expect(await screen.findByText('🛒 Продукты + 👕 Одежда')).toBeTruthy();
   expect(within(rowOf('SPAR')).getByText('−30.00\u00a0₾')).toBeTruthy();
   await tap('Статистика');
-  await tap('👕 Одежда');
+  await pressAction('👕 Одежда', 'Операции');
   expect(await screen.findByText('Категория · 1')).toBeTruthy();
   expect(await screen.findByText('👕 Одежда + 🛒 Продукты')).toBeTruthy();
   expect(within(rowOf('SPAR')).getByText('−12.00\u00a0₾')).toBeTruthy();

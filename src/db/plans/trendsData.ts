@@ -13,10 +13,12 @@ export type TrendCategory = {
    * (this month's plan) — paid on a day, they'd be "+100%" before it and "−100%" after — and not a transfer
    */
   compared: boolean;
+  /** what its «Динамика» is (stats/trendKind.ts): a transfer one has none; one with a fund, with «Подписки» on have their own */
+  transfer: boolean; fund: boolean; subs: boolean;
 };
 
 /** One operation's spending (a refund or money back: negative), converted. */
-export type TrendSpend = { category: number; day: string; value: number; merchantKey: string | null; merchant: string | null };
+export type TrendSpend = { category: number; day: string; value: number; merchantKey: string | null; merchant: string | null; tx?: number };
 
 export type TrendsData = {
   categories: TrendCategory[];
@@ -35,11 +37,12 @@ export async function trendsData(currency: Currency, months = 12, now = new Date
   const spends: TrendSpend[] = [];
   for (const { row, value } of items) {
     if (row.category_id === null) continue;
-    spends.push({ category: row.category_id, day: dateKey(row.occurred_at), value, merchantKey: row.merchant_key ?? null, merchant: row.raw_merchant ?? null });
+    spends.push({ category: row.category_id, day: dateKey(row.occurred_at), value, merchantKey: row.merchant_key ?? null, merchant: row.raw_merchant ?? null, tx: row.id });
   }
 
-  const rows = await db.all<{ id: number; name: string; emoji: string | null; type_name: string | null; transfer: number; recurring: number }>(
-    `SELECT c.id, c.name, c.emoji, t.name AS type_name, coalesce(t.is_transfer, 0) AS transfer, c.recurring
+  const rows = await db.all<{ id: number; name: string; emoji: string | null; type_name: string | null; transfer: number; recurring: number; subs: number; fund: number }>(
+    `SELECT c.id, c.name, c.emoji, t.name AS type_name, coalesce(t.is_transfer, 0) AS transfer, c.recurring, c.by_merchant AS subs,
+        EXISTS (SELECT 1 FROM funds f WHERE f.category_id = c.id AND f.closed_ym IS NULL) AS fund
       FROM categories c LEFT JOIN category_types t ON t.id = c.type_id
       WHERE c.deleted_at IS NULL ORDER BY t.id IS NULL, t.sort_order, t.name, c.sort_order, c.name`);
   // paid once in a while: compared by whole months only, not by the days so far
@@ -50,6 +53,7 @@ export async function trendsData(currency: Currency, months = 12, now = new Date
   const categories = rows.map((c) => ({
     id: c.id, name: c.name, emoji: c.emoji, type_name: c.type_name, color: colorOf.get(c.id) ?? NEUTRAL_COLOR,
     compared: !c.transfer && !c.recurring && !once.has(c.id),
+    transfer: !!c.transfer, fund: !!c.fund, subs: !!c.subs,
   }));
   const first = await db.get<{ at: number | null }>('SELECT min(occurred_at) AS at FROM transactions');
   return { categories, spends, since: first?.at == null ? null : dateKey(first.at) };

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { categoryLabel, categorySummary, getCategory } from '@/db/categories';
+import { categoryLabel, categorySummary, getCategory, isTransferCategory } from '@/db/categories';
 import { CategoryView, ImpulseSwitch } from '@/entities/category';
 import { RecentOperations, useRecentOperations } from '@/entities/transaction';
 import { startCategoryDelete } from '@/features/category-delete';
@@ -19,10 +19,13 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Category'>;
 export default function CategoryScreen({ route, navigation }: Props) {
   const id = route.params.id;
   const [count, setCount] = useState(0);
+  // a transfer category: not spending, no «Динамика трат» (null — not known yet: none shown meanwhile)
+  const [transfer, setTransfer] = useState<boolean | null>(null);
   const rows = useRecentOperations({ category: id });
   useEffect(() => {
     Promise.all([getCategory(id), categorySummary(id)]).then(([c, s]) => {
       setCount(s.count);
+      setTransfer(!!c && (isTransferCategory(c) || c.system === 'own'));
       if (c) navigation.setOptions({ title: categoryLabel(c) });
     }).catch(toastFailure('load category', LOAD_FAILED));
   }, [id, navigation, rows]);
@@ -34,7 +37,7 @@ export default function CategoryScreen({ route, navigation }: Props) {
       categoryId={id}
       onClose={back}
       onShowOperations={showAll}
-      links={<LinkCard icon={<TrendsIcon color={colors.accent} />} label="Динамика трат" onPress={() => openCategoryTrend(id)} style={styles.trends} />}
+      links={transfer !== false ? null : <LinkCard icon={<TrendsIcon color={colors.accent} />} label="Динамика трат" onPress={() => openCategoryTrend(id)} style={styles.trends} />}
       onDelete={() => startCategoryDelete(id, { close: back, onDeleted: () => {} })}
       extra={<><SubscriptionsSwitch categoryId={id} /><ImpulseSwitch categoryId={id} /></>}
       recent={<RecentOperations rows={rows} count={count} of="category" onShowAll={showAll} />}

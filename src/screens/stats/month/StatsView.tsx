@@ -12,7 +12,7 @@ import { RecurringPaymentsSheet } from '@/features/recurring-payments';
 import { daysInMonth, monthDays } from '@/shared/lib/dateRange';
 import { formatMoneyWithCurrency, formatWithCurrency } from '@/shared/lib/money';
 import { NO_RATE } from '@/shared/lib/strings';
-import { openPlan, useOpenCategoryTransactions } from '@/shared/navigation/navigation';
+import { openCategoryTrend, openPlan, useOpenCategoryTransactions } from '@/shared/navigation/navigation';
 import { openMonthClose } from '@/shared/navigation/sheets';
 import Donut, { DonutSegment } from '@/shared/ui/Donut';
 import StickyScrollView from '@/shared/ui/StickyScrollView';
@@ -30,6 +30,7 @@ import ComingMonth from './parts/ComingMonth';
 import BudgetEditSheet from './parts/BudgetEditSheet';
 import FundStatRow, { fundSpentOf } from './parts/FundStatRow';
 import { savingsSection } from './parts/savingsSection';
+import { categoryActions, LONG_PRESS_HINT } from './parts/rowActions';
 import { fundsSection, spentFunds, typeSections, unplannedSection } from './parts/sections';
 import { styles } from './parts/styles';
 
@@ -115,7 +116,11 @@ export default function StatsView({ year, month, currency }: { year: number; mon
       onAddToPlan={c.category_id !== null && !unplanned && c.limit_minor === null && !c.deleted && spentOf(c) > 0
         ? () => setPlanTarget({ category_id: c.category_id!, label: categoryLabel(c), limit_minor: 0, currency: stats.currency, suggested_minor: c.spent_minor })
         : undefined}
-      onLongPress={c.category_id !== null && !c.deleted ? () => openPlanEdit(c) : undefined}
+      actions={categoryActions(c, {
+        spending: () => openTransactions(c.category_id, monthDays(ym)),
+        plan: () => { openPlanEdit(c).catch((e) => console.error('open plan edit failed', e)); },
+        trend: () => openCategoryTrend(c.category_id!),
+      })}
     />
   );
 
@@ -134,7 +139,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
         <Text style={styles.hint}>Составьте план на месяц, чтобы видеть, сколько осталось по категориям.</Text>
       )}
 
-      {stats.categories.length > 0 || spentFunds(stats).length ? <Text style={styles.longPressHint}>Удерживайте категорию, чтобы изменить в плане</Text> : null}
+      {stats.categories.length > 0 || spentFunds(stats).length ? <Text style={styles.longPressHint}>{LONG_PRESS_HINT}</Text> : null}
       {savingsSection(savings.section, savings.currency, {
         less: () => setLessOpen(true),
         close: openMonthClose,

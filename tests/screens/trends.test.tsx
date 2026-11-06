@@ -5,7 +5,7 @@ import { back, openApp, openSettings, rowOf, screen, tap } from './app';
 import { buy, on, planned } from '../e2e/seeds';
 import { findCategoryByName } from '../../src/db/categories';
 
-/** `planned`, and the 3 months before this one: Кафе 60 ₾ by the 15th of July and August (350 in September), Продукты 300 */
+/** `planned`, and the 3 months before this one: Кафе 60 ₾ by the 15th of July and August (350 in September; after the 15th two more each), Продукты 300 */
 async function withHistory() {
   await planned();
   const id = async (name: string) => (await findCategoryByName(name, null))!.id;
@@ -13,6 +13,8 @@ async function withHistory() {
   const food = await id('Продукты');
   await buy('WOLT', 60, on(6, 13, 2), cafe);
   await buy('WOLT', 60, on(6, 13, 3), cafe);
+  // after the 15th (not in «по те же дни»): 3 a month — frequent spending, not rare (stats/trendKind.ts)
+  for (const m of [2, 3]) for (const d of [20, 25]) await buy('LUCA', 5, on(d, 13, m), cafe);
   await buy('SPAR', 300, on(5, 10, 3), food);
   // tracked since June
   await buy('SPAR', 10, on(20, 10, 4), food);
@@ -81,6 +83,8 @@ describe('5.8 Динамика трат', () => {
     await tap('☕️ Кафе и рестораны');
     await tap('Динамика трат');
     expect(await screen.findByText('Нажмите на день — сумма и сколько обычно')).toBeTruthy();
+    // `planned`: Кафе spent in one full month only — too few to tell frequent from rare (5.8.8)
+    expect(screen.getByText(/^Мало данных: нужно 2 полных месяца с тратами/)).toBeTruthy();
   });
 
   test('5.8.6 the month\'s stats: «+N% к обычному» under a category well off its usual', async () => {

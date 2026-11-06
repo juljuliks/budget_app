@@ -1,7 +1,7 @@
 // 5: the stats — a month against its plan, a day / week against the limits, a long period, hidden amounts, the
 // currency, the warning over them. Today: Thursday 15 October 2026 (setup.ts).
-import { act, waitFor, within } from '@testing-library/react-native';
-import { longPress, openApp, rowOf, screen, tap, texts, backToTabs } from './app';
+import { act, fireEvent, waitFor, within } from '@testing-library/react-native';
+import { back, longPress, openApp, rowOf, screen, tap, texts, backToTabs } from './app';
 import { buy, ops, planned, on } from '../e2e/seeds';
 import { emitTransactionsChanged } from '../../src/domain/events';
 import { getDb } from '../../src/db';
@@ -55,8 +55,11 @@ describe('5.1 a month', () => {
     expect(screen.getByText('+15 ₾')).toBeTruthy();
   });
 
-  test('a category opens its operations of the month; back returns', async () => {
+  test('a tap on a category does nothing; its «Операции» (long press) — its operations of the month; back returns', async () => {
     await tap('👕 Одежда');
+    expect(screen.queryByText('Категория · 1')).toBeNull();
+    fireEvent(screen.getByText('👕 Одежда'), 'longPress', { nativeEvent: { pageX: 200, pageY: 500 } });
+    fireEvent.press(await screen.findByLabelText('Операции'));
     expect(await screen.findByText('Категория · 1')).toBeTruthy();
     expect(screen.getByText('ZARA')).toBeTruthy();
     expect(screen.queryByText('SPAR')).toBeNull();
@@ -70,13 +73,35 @@ describe('5.1 a month', () => {
     expect(screen.queryByText('Перевод · NINO B')).toBeNull();
   });
 
-  test('a long press on an unplanned category offers what it spent; the hint is shown; saved, it is in the plan', async () => {
-    expect(screen.getByText('Удерживайте категорию, чтобы изменить в плане')).toBeTruthy();
-    await longPress('🚕 Такси');
+  test('5.1.20 a long press: «Операции», «В план» (an unplanned one), «Динамика» over the finger; «В план» offers what it spent', async () => {
+    expect(screen.getByText('Удерживайте категорию — операции, план, динамика')).toBeTruthy();
+    fireEvent(await screen.findByText('🚕 Такси'), 'longPress', { nativeEvent: { pageX: 200, pageY: 500 } });
+    expect(await screen.findByLabelText('Операции')).toBeTruthy();
+    expect(screen.getByLabelText('Динамика')).toBeTruthy();
+    // released in place: the buttons stay for a tap
+    fireEvent(screen.getByText('🚕 Такси'), 'touchEnd');
+    fireEvent.press(screen.getByLabelText('В план'));
     expect(await screen.findByDisplayValue('60')).toBeTruthy();
     await tap('Сохранить');
     expect(await screen.findByText('План «🚕 Такси» сохранён')).toBeTruthy();
     expect(await screen.findByText('60 / 60 ₾ · 100%')).toBeTruthy();
+  });
+
+  test('5.1.20 the finger moved onto «Динамика» and released: its dynamics; moved away — nothing; TalkBack — the row\'s actions', async () => {
+    const row = await screen.findByText('🚕 Такси');
+    // away from the buttons: closed, nothing opened
+    fireEvent(row, 'longPress', { nativeEvent: { pageX: 200, pageY: 500 } });
+    fireEvent(row, 'touchMove', { nativeEvent: { pageX: 200, pageY: 700 } });
+    fireEvent(row, 'touchEnd');
+    await waitFor(() => expect(screen.queryByLabelText('Динамика')).toBeNull());
+    // the arc over the finger: «Операции», «В план» straight up, «Динамика» on the right (50°, 104 away)
+    fireEvent(row, 'longPress', { nativeEvent: { pageX: 200, pageY: 500 } });
+    fireEvent(row, 'touchMove', { nativeEvent: { pageX: 280, pageY: 433 } });
+    fireEvent(row, 'touchEnd');
+    expect(await screen.findByText('Нажмите на день — сумма и сколько обычно')).toBeTruthy();
+    back();
+    fireEvent(await screen.findByText('🚕 Такси'), 'accessibilityAction', { nativeEvent: { actionName: 'spending' } });
+    expect(await screen.findByText('Категория · 1')).toBeTruthy();
   });
 
   test('the next month: not begun, «Составить план» — its plan\'s page; no further', async () => {
