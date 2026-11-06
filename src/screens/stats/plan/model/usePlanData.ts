@@ -24,6 +24,8 @@ export function usePlanData(ym: string, currency: Currency) {
   const [spentBy, setSpentBy] = useState<SpentBy>({ byCategory: new Map(), total: 0 });
   // the currency stored for the month in plan_months (carried from the previous month when new)
   const [storedCurrency, setStoredCurrency] = useState<Currency>(currency);
+  // the currency the data above came in: switched to another one, they are stale until it loads
+  const [loadedCurrency, setLoadedCurrency] = useState<Currency | null>(null);
 
   const latest = useLatestRequest();
   const { failed, started, fail } = useLoadFailed('load plan');
@@ -42,6 +44,7 @@ export function usePlanData(ym: string, currency: Currency) {
         setToShown(() => (minor: number, from: Currency) => conv(minor, from, currency));
         setFromShown(() => (minor: number, to: Currency) => conv(minor, currency, to));
         setStoredCurrency(pc);
+        setLoadedCurrency(currency);
       }))
       .catch(keep(fail));
   }, [ym, currency, latest, started, fail]);
@@ -51,5 +54,5 @@ export function usePlanData(ym: string, currency: Currency) {
   // a sheet over it changed the month (the month before's "Итоги": what it sends here)
   useEffect(() => onTransactionsChanged(load), [load]);
 
-  return { items, budget, toShown, fromShown, income, unplannedSpentMinor, spentBy, load, failed, storedCurrency };
+  return { items, budget, toShown, fromShown, income, unplannedSpentMinor, spentBy, load, failed, storedCurrency, loadedCurrency };
 }

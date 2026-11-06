@@ -8,7 +8,7 @@ import { getDb } from '../../src/db';
 import { getSetting } from '../../src/db/settings';
 import { createCategory } from '../../src/db/categories';
 import { getTransferTypeId } from '../../src/db/categoryTypes';
-import { currentYm, setPlanAmount } from '../../src/db/plans';
+import { currentYm, setFund, setPlanAmount } from '../../src/db/plans';
 
 async function openStats() {
   await openApp(planned);
@@ -256,6 +256,51 @@ describe('5.4–5.6 hidden amounts, the currency, the warning', () => {
     expect(screen.getByText('⚠ Вне плана потрачено 380 ₾ — на 80 ₾ больше, чем выделено на траты вне плана')).toBeTruthy();
     await tap('Скрыть предупреждение');
     await waitFor(() => expect(screen.queryByText(/^⚠ Вне плана/)).toBeNull());
+  });
+});
+
+describe('5.5.4 a plan in another currency: in it, whatever the stats\' currency', () => {
+  /** USD 2.7 ₾ on 1–10 October, 2.5 ₾ after (the plan's rate: today's) */
+  async function rates() {
+    const db = await getDb();
+    for (let d = 1; d <= 15; d++) {
+      await db.run("INSERT OR REPLACE INTO fx_rates (date, currency, gel_per_unit) VALUES (?, 'USD', ?)", [`2026-10-${String(d).padStart(2, '0')}`, d <= 10 ? 2.7 : 2.5]);
+    }
+  }
+  const id = async (name: string) => (await (await getDb()).get<{ id: number }>('SELECT id FROM categories WHERE name = ?', [name]))!.id;
+
+  test('a category planned in $: spent / plan in $, each spending on its day\'s rate — paid exactly, no overspend', async () => {
+    await openApp(async () => {
+      await planned();
+      await rates();
+      // 60 ₾ on the 11th (24 $) and 6 $ on the 1st: 30 $ of 30 $; in ₾ it'd be 76.20 of 75
+      const taxi = await id('Такси');
+      await setPlanAmount(currentYm(), taxi, 3000, 'limit', 'USD', 'month');
+      await buy('UBER', 6, on(1, 12), taxi, { currency: 'USD' });
+    });
+    await tap('Статистика');
+    await screen.findByText('🚕 Такси');
+    expect(block('🚕 Такси').slice(0, 3)).toEqual(['🚕 Такси', '30 / 30 $ · 100%', 'осталось 0 $']);
+  });
+
+  test('a fund in $: spent from it in $', async () => {
+    await openApp(async () => {
+      await planned();
+      await rates();
+      await setFund(currentYm(), await id('Развлечения'), { target_minor: 100000, currency: 'USD', due: '2027-06-30', start_minor: 50000 });
+    });
+    await tap('Статистика');
+    // CINEMA 300 ₾ on the 12th: 120 $, under its part of «Сбережения»
+    expect(await screen.findByText('потрачено 120\u00a0$ из копилки')).toBeTruthy();
+  });
+
+  test('«Сбережения» in the budget\'s currency (₾) with the stats in $', async () => {
+    await openApp(async () => { await planned(); await rates(); });
+    await tap('Настройки');
+    await tap('$ USD');
+    backToTabs();
+    await tap('Статистика');
+    expect(await screen.findByText('410 / 540\u00a0₾ (−24%) · 18%')).toBeTruthy();
   });
 });
 

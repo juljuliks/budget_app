@@ -22,7 +22,7 @@ function planShare(spent: number, limit: number): string {
 
 const RHYTHM_NOW = { day: 'Сегодня', week: 'На этой неделе', '2weeks': 'За эти 2 недели' } as const;
 
-export default function CategoryRow({ stat, total, currency, evenPace, dim, ym, openTransactions, now, monthToDate, onAddToPlan, onLongPress, withType, usual }: {
+export default function CategoryRow({ stat: shownStat, total, currency: shown, evenPace, dim, ym, openTransactions, now, monthToDate, onAddToPlan, onLongPress, withType, usual }: {
   stat: CategoryStat;
   /** the month's spending: a row's share of it when the amounts are hidden */
   total: number;
@@ -40,6 +40,11 @@ export default function CategoryRow({ stat, total, currency, evenPace, dim, ym, 
   /** the current month, well off its usual by the same days: "+44% к обычному" (Динамика трат) */
   usual?: string;
 }) {
+  // planned in another currency: the row in it; the norms (counted in the stats' currency) scaled by the plan's rate
+  const own = shownStat.own;
+  const stat = own ? { ...shownStat, spent_minor: own.spent_minor, limit_minor: own.limit_minor } : shownStat;
+  const currency = own ? own.currency : shown;
+  const scale = own && shownStat.limit_minor ? own.limit_minor / shownStat.limit_minor : 1;
   const { limit_minor: limit } = stat;
   // a transfer category: sent minus what came back; more came back = "+", and nothing spent for its plan
   const spent = spentOf(stat);
@@ -101,8 +106,8 @@ export default function CategoryRow({ stat, total, currency, evenPace, dim, ym, 
             {/* the month's plan overspent: no limits any more, just the overspend */}
             {rhythm && ratio <= 1 ? (() => {
               const current = now && now.rhythm === rhythm ? now : undefined;
-              const flat = current ? flatOf(current.windowParts) : (limit / dim) * RHYTHM_DAYS[rhythm];
-              const value = current ? current.windowNorm : flat;
+              const flat = current ? flatOf(current.windowParts) * scale : (limit / dim) * RHYTHM_DAYS[rhythm];
+              const value = current ? current.windowNorm * scale : flat;
               // more than 5% off the plan's share: "лимит 113 ₾ (crossed out) → 95 ₾"
               const change = limitChange(value, flat);
               // "Скрыть суммы": just how much it moved, "лимит ↓ 16%"; unmoved — nothing
@@ -124,11 +129,11 @@ export default function CategoryRow({ stat, total, currency, evenPace, dim, ym, 
           </Text>
           {rhythm && ratio <= 1 && now && now.rhythm === rhythm ? (() => {
             // the current month: what's left in today's / this week's window, colored by pace
-            const left = Math.round(now.windowNorm) - now.windowSpent;
+            const left = Math.round((now.windowNorm - now.windowSpent) * scale);
             const p: Pace = paceOf(now.windowSpent, now.windowNorm, monthToDate, now.monthLimit);
             return (
               <Text style={[styles.rowStatus, styles.paceLine, p === 'ok' ? styles.paceOk : p === 'ahead' ? styles.paceAhead : styles.dangerText]}>
-                {RHYTHM_NOW[rhythm]} {hidden ? hiddenLeft(left, now.windowNorm)
+                {RHYTHM_NOW[rhythm]} {hidden ? hiddenLeft(left, now.windowNorm * scale)
                   : left < 0 ? `перерасход ${formatWithCurrency(-left, currency)}` : `осталось ${formatWithCurrency(left, currency)}`}
                 {left >= 0 && rhythm !== 'day' ? <Text style={styles.rowStatusMuted}> · до {WEEKDAYS[new Date(`${now.window.to}T12:00:00`).getDay()]}</Text> : null}
               </Text>

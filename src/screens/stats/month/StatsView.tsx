@@ -28,7 +28,7 @@ import MonthTotal from './parts/MonthTotal';
 import PlanLinks from './parts/PlanLinks';
 import ComingMonth from './parts/ComingMonth';
 import BudgetEditSheet from './parts/BudgetEditSheet';
-import FundStatRow from './parts/FundStatRow';
+import FundStatRow, { fundSpentOf } from './parts/FundStatRow';
 import { savingsSection } from './parts/savingsSection';
 import { fundsSection, spentFunds, typeSections, unplannedSection } from './parts/sections';
 import { styles } from './parts/styles';
@@ -54,6 +54,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
   const segments = useMemo(() => (stats ? donutSegments(stats.groups) : []), [stats]);
   const openTransactions = useOpenCategoryTransactions();
   // «Сбережения»: what goes to savings against the plan; ⓘ — what the overspend took
+  // in the currency of the month's budget, as its "Итоги" (the funds' progress — in their own)
   const savings = useMonthSavings(ymOf(year, month), currency, hidden);
   // the current month: "+44% к обычному" under a category spent well off its usual
   const usual = useMonthUsual(ymOf(year, month), currency);
@@ -96,7 +97,6 @@ export default function StatsView({ year, month, currency }: { year: number; mon
   // the current month: a tick on each flexible category's bar where an even pace would be today
   const ym = ymOf(year, month);
   const evenPace = ym === currentYm() ? new Date().getDate() / daysInMonth(ym) : undefined;
-  const fromFunds = stats.funds.reduce((a, f) => a + f.spent_minor, 0);
   const picked = selected === null ? undefined : stats.categories.find((c) => String(c.category_id) === selected);
   const rowOf = (c: CategoryStat, unplanned: boolean) => (
     <CategoryRow
@@ -134,18 +134,19 @@ export default function StatsView({ year, month, currency }: { year: number; mon
         <Text style={styles.hint}>Составьте план на месяц, чтобы видеть, сколько осталось по категориям.</Text>
       )}
 
-      {/* the funds' spending is from what they saved: said under the month's total */}
-      {fromFunds > 0 && !hidden ? <Text style={styles.fundsLine}>{`Из копилок ${formatWithCurrency(fromFunds, stats.currency)} — не из бюджета месяца`}</Text> : null}
       {stats.categories.length > 0 || spentFunds(stats).length ? <Text style={styles.longPressHint}>Удерживайте категорию, чтобы изменить в плане</Text> : null}
-      {savingsSection(savings.section, currency, {
+      {savingsSection(savings.section, savings.currency, {
         less: () => setLessOpen(true),
         close: openMonthClose,
         longPressCategory: (id, name, kind) => kind === 'fund' ? openFund(id, name) : setSubsOpen({ id, name, emoji: null }),
         onLongPressLocked: () => setBudgetOpen(true),
+        // a fund spent from: said under its part; without one there — in "Копилки"
+        fundSpent: fundSpentOf(stats, ym, hidden),
+        openFundOperations: (id) => openTransactions(id, monthDays(ym)),
       })}
       {fundsSection(stats, (f) => (
         <FundStatRow key={f.category_id} f={f} ym={ym} currency={stats.currency} hidden={hidden} openTransactions={openTransactions} onLongPress={() => openFund(f.category_id, `${f.emoji || ''} ${f.name}`.trim())} />
-      ))}
+      ), savings.section)}
       {stats.categories.length === 0 && !spentFunds(stats).length ? <Text style={styles.hint}>В этом месяце трат нет.</Text> : typeSections(stats, split.groups, rowOf)}
       {unplannedSection(stats, split, share, rowOf, hidden)}
 
@@ -158,7 +159,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
 
       <PlanAmountModal ym={ym} currency={currency} target={planTarget} onClose={() => setPlanTarget(null)} onSaved={load} />
       <SavingsLessSheet
-        less={savings.view?.less ?? null} visible={lessOpen} money={(minor) => formatWithCurrency(minor, currency)} onClose={() => setLessOpen(false)}
+        less={savings.view?.less ?? null} visible={lessOpen} money={(minor) => formatWithCurrency(minor, savings.currency)} onClose={() => setLessOpen(false)}
         onOpen={(id) => setPlanTarget(lessTarget(savings.view, id))}
       />
       <RecurringPaymentsSheet

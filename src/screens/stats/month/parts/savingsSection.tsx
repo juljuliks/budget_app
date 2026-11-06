@@ -22,6 +22,9 @@ type Open = {
   longPressCategory?: (id: number, name: string, kind: 'fund' | 'saving') => void;
   /** long press on the 🔒 «Отложить сразу» row: opens the month's budget sheet */
   onLongPressLocked?: () => void;
+  /** a fund spent from this month: what is shown under its part (FundSpent); a tap on the part — its operations */
+  fundSpent?: (id: number) => React.ReactNode;
+  openFundOperations?: (id: number) => void;
 };
 
 /** "now / plan ₾ (%)"; not known yet — "? / plan ₾". "Скрыть суммы": the % alone. */
@@ -62,14 +65,16 @@ function savingsHeaderTotal(now: number | null, plan: number, budget: number | n
   );
 }
 
-function Part({ x, currency, onLess, onLongPress }: { x: SavingsPart; currency: string; onLess: () => void; onLongPress?: () => void }) {
+function Part({ x, currency, onLess, onLongPress, onPress, spent }: {
+  x: SavingsPart; currency: string; onLess: () => void; onLongPress?: () => void; onPress?: () => void; spent?: React.ReactNode;
+}) {
   const status = (
     <Text style={[styles.rowStatus, x.status.tone === 'warn' && styles.overLine, x.status.tone === 'ok' && styles.paceOk]}>
       {x.status.text}{x.fund ? ` · ${fundProgress(x.fund.saved, x.fund.target, x.fund.due, x.fund.currency)}` : ''}{x.status.info ? ' ' : ''}
     </Text>
   );
   return (
-    <TouchableOpacity style={styles.row} onLongPress={onLongPress} disabled={!onLongPress} accessibilityLabel={x.name}>
+    <TouchableOpacity style={styles.row} onPress={onPress} onLongPress={onLongPress} disabled={!onLongPress && !onPress} accessibilityLabel={x.name}>
       <View style={styles.rowTop}>
         <View style={[styles.dot, { backgroundColor: x.color }]} />
         <Text style={styles.rowName} numberOfLines={1}>{x.name}</Text>
@@ -81,13 +86,14 @@ function Part({ x, currency, onLess, onLongPress }: { x: SavingsPart; currency: 
           {status}<InfoIcon color={colors.accent} size={13} />
         </TouchableOpacity>
       ) : status}
+      {spent}
     </TouchableOpacity>
   );
 }
 
 /**
- * The parts — 🔒 "Отложено сразу", the funds' contributions, 💰 "Сэкономлено" — each "сейчас / план" with its bar and
- * how it goes ("Перерасход взял 5.28 ₾ ⓘ"); what none covers — "Из прошлых сбережений −N ⓘ"; "Итоги" not done —
+ * The parts — 🔒 "Отложено сразу", the funds' contributions (and what was spent from them), 💰 "Сэкономлено" — each
+ * "сейчас / план" with its bar and how it goes ("Перерасход взял 5.28 ₾ ⓘ"); what none covers — "Из прошлых сбережений −N ⓘ"; "Итоги" not done —
  * "Подвести итоги ›".
  */
 export function savingsSection(s: SavingsSection | null, currency: string, open: Open) {
@@ -103,7 +109,9 @@ export function savingsSection(s: SavingsSection | null, currency: string, open:
           const lp = x.key === 'locked' && open.onLongPressLocked
             ? open.onLongPressLocked
             : (kind && x.categoryId !== undefined && open.longPressCategory ? () => open.longPressCategory!(x.categoryId!, x.name, kind) : undefined);
-          return <Part key={x.key} x={x} currency={currency} onLess={open.less} onLongPress={lp} />;
+          const spent = kind === 'fund' && x.categoryId !== undefined ? open.fundSpent?.(x.categoryId) : undefined;
+          const press = spent && open.openFundOperations ? () => open.openFundOperations!(x.categoryId!) : undefined;
+          return <Part key={x.key} x={x} currency={currency} onLess={open.less} onLongPress={lp} onPress={press} spent={spent} />;
         })}
         {s.past > 0 ? (
           <TouchableOpacity style={styles.row} onPress={open.less} accessibilityRole="button" accessibilityLabel="Из прошлых сбережений: что съело сбережения">
