@@ -17,7 +17,7 @@ import { overStyle, styles } from './styles';
 
 /** " (50%)" after "spent / limit" of a flexible category; nothing while nothing is spent. */
 function planShare(spent: number, limit: number): string {
-  return spent > 0 && limit > 0 ? ` (${formatPercent(spent, limit)})` : '';
+  return spent > 0 && limit > 0 ? ` · ${formatPercent(spent, limit)}` : '';
 }
 
 const RHYTHM_NOW = { day: 'Сегодня', week: 'На этой неделе', '2weeks': 'За эти 2 недели' } as const;

@@ -46,7 +46,7 @@ export function limitSections(v: PeriodView, h: Handlers) {
           <MaskedTotal style={styles.groupTotal} hiddenText={vsLimit ? v.headerPct(g!.spent, g!.limit) : v.headerPct(total, 0)}>
             {vsLimit ? <Text style={overStyle(g!.spent, g!.limit)}>{formatShort(Math.round(g!.spent))}</Text> : v.money(total)}
             {vsLimit ? <Text style={styles.groupPlan}> / {v.m(g!.limit)}</Text> : null}
-            {vsLimit ? <Text style={[styles.groupPlan, overStyle(g!.spent, g!.limit)]}> ({formatPercent(g!.spent, Math.round(g!.limit))})</Text> : null}
+            {vsLimit ? <Text style={[styles.groupPlan, overStyle(g!.spent, g!.limit)]}>{` · ${formatPercent(g!.spent, Math.round(g!.limit))}`}</Text> : null}
           </MaskedTotal>
         ) : null)}
         <View>

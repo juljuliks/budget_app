@@ -30,14 +30,14 @@ test('9.10.1: the stats failed to load: said, and "Повторить" loads the
   expect(console.error).toHaveBeenCalledWith('load stats failed', expect.anything());
   await fix();
   await tap('Повторить');
-  expect(await screen.findByText('Потрачено 2 010 / 2 460 ₾ (82%)')).toBeTruthy();
+  expect(await screen.findByText('Потрачено 2 010 / 2 460 ₾ · 82%')).toBeTruthy();
   expect(screen.queryByText('Не удалось загрузить')).toBeNull();
 });
 
 test('9.10.2: the history failed to load: the same', async () => {
   await openApp(planned);
   await tap('Статистика');
-  await screen.findByText('Потрачено 2 010 / 2 460 ₾ (82%)');
+  await screen.findByText('Потрачено 2 010 / 2 460 ₾ · 82%');
   const fix = await breakOperations();
   await openHistoryPage();
   expect(await screen.findByText('Не удалось загрузить')).toBeTruthy();

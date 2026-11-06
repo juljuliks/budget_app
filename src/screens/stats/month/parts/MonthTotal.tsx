@@ -31,7 +31,7 @@ export default function MonthTotal({ stats, ym, plannedAll, evenPace, onEditPlan
           <MaskedTotal style={styles.groupTotal} hiddenText={formatPercent(stats.spent_minor, plannedAll)}>
             <Text style={overStyle(stats.spent_minor, plannedAll)}>{formatShort(stats.spent_minor)}</Text>
             <Text style={styles.rowLimit}> / {money(Math.round(plannedAll))}</Text>
-            {stats.spent_minor > 0 ? <Text style={[styles.rowLimit, overStyle(stats.spent_minor, plannedAll)]}>{` (${formatPercent(stats.spent_minor, plannedAll)})`}</Text> : null}
+            {stats.spent_minor > 0 ? <Text style={[styles.rowLimit, overStyle(stats.spent_minor, plannedAll)]}>{` · ${formatPercent(stats.spent_minor, plannedAll)}`}</Text> : null}
           </MaskedTotal>
         </Text>
         {onEditPlan ? <TouchableOpacity onPress={onEditPlan} hitSlop={8} accessibilityRole="button"><Text style={styles.planLink}>Изменить план ›</Text></TouchableOpacity> : null}
