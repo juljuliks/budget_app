@@ -85,6 +85,21 @@ export default function StatsView({ year, month, currency }: { year: number; mon
     if (item) { close(); setPlanTarget({ category_id: id, label, ...item }); }
   }
 
+  async function openPlanEdit(c: CategoryStat) {
+    if (!c.category_id || c.deleted || !stats) return;
+    try {
+      if (c.limit_minor !== null) {
+        const item = await getPlanItemBasics(ymOf(year, month), c.category_id);
+        if (!item) return;
+        setPlanTarget({ category_id: c.category_id, label: categoryLabel(c), ...item });
+      } else {
+        setPlanTarget({ category_id: c.category_id, label: categoryLabel(c), limit_minor: 0, currency: stats.currency, suggested_minor: spentOf(c) || undefined });
+      }
+    } catch (e) {
+      console.error('open plan edit', e);
+    }
+  }
+
   // the next month: nothing spent yet, its plan in advance
   if (ymOf(year, month) > currentYm()) return <ComingMonth ym={ymOf(year, month)} />;
   if (!stats) return <Loading failed={failed} onRetry={load} />;
