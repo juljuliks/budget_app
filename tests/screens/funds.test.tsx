@@ -4,7 +4,7 @@ import { fireEvent } from '@testing-library/react-native';
 import { backToTabs, openApp, screen, tap, texts, openPlanPage } from './app';
 import { planned } from '../e2e/seeds';
 import { getDb } from '../../src/db';
-import { setFund } from '../../src/db/plans';
+import { setFund, setPlanBudget } from '../../src/db/plans';
 
 const N = ' ';
 const fund = async () => (await getDb()).get<{ target_minor: number; due: string; start_minor: number; closed_ym: string | null }>(
@@ -104,7 +104,7 @@ describe('6.5 funds', () => {
     expect(await fund()).toMatchObject({ closed_ym: null });
   });
 
-  test('the stats: a fund spent from — its spending apart, "Из копилок … — не из бюджета месяца"; one not spent from — not there', async () => {
+  test('the stats: a fund spent from — under its part of «Сбережения», not in "Потрачено"', async () => {
     await openApp(async () => {
       await planned();
       const db = await getDb();
@@ -114,11 +114,31 @@ describe('6.5 funds', () => {
       await setFund('2026-10', subs, { target_minor: 12000, currency: 'GEL', due: '2027-03-31', start_minor: 0 });
     });
     await tap('Статистика');
-    expect(await screen.findByText(`Из копилок 450${N}₾ — не из бюджета месяца`)).toBeTruthy();
-    // in «Сбережения» (its contribution) and in "Копилки" (spent from it)
-    expect(screen.getAllByText('👕 Одежда')).toHaveLength(2);
+    // ZARA 450 ₾ is the fund's: not in the month's spending (2 010 ₾ without the fund)
+    expect(await screen.findByText(`потрачено 450${N}₾ из копилки`)).toBeTruthy();
+    expect(screen.getByText(/^Потрачено 1 560 \//)).toBeTruthy();
+    // one row, in «Сбережения»: its contribution, and under it what was spent from it; no "Копилки" section
+    expect(screen.getAllByText('👕 Одежда')).toHaveLength(1);
+    expect(screen.queryByText('Копилки')).toBeNull();
     expect(screen.queryByText(/^в копилке/)).toBeNull();
-    // what is put in a fund is saving: a fund nothing was spent from is in «Сбережения» only
+    // a fund nothing was spent from: its contribution only
     expect(screen.getAllByText('📺 Подписки')).toHaveLength(1);
+    expect(screen.getAllByText(/из копилки$/)).toHaveLength(1);
+    // a tap on it: its operations of the month
+    await tap('👕 Одежда');
+    expect(await screen.findByText('ZARA')).toBeTruthy();
+  });
+
+  test('the stats without a budget (no «Сбережения»): a fund spent from — in "Копилки"', async () => {
+    await openApp(async () => {
+      await planned();
+      const db = await getDb();
+      const { id } = (await db.get<{ id: number }>("SELECT id FROM categories WHERE name = 'Одежда'"))!;
+      await setFund('2026-10', id, { target_minor: 150000, currency: 'GEL', due: '2027-01-31', start_minor: 30000 });
+      await setPlanBudget('2026-10', null);
+    });
+    await tap('Статистика');
+    expect(await screen.findByText('Копилки')).toBeTruthy();
+    expect(screen.getByText(`450${N}₾ из копилки`)).toBeTruthy();
   });
 });

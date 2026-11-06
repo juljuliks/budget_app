@@ -7,6 +7,7 @@ import { formatPercent } from '@/shared/lib/format';
 import { formatShort, formatWithCurrency } from '@/shared/lib/money';
 import { MaskedTotal } from '@/shared/ui/Masked';
 import { hiddenLeft } from '../../model/hiddenText';
+import type { SavingsSection } from '../model/savingsSection';
 import Meter from '@/shared/ui/Meter';
 import { SectionHeader } from '@/shared/ui/StickyScrollView';
 import { formStyles } from '@/shared/theme/formStyles';
@@ -85,10 +86,12 @@ export const spentFunds = (stats: MonthStats) => stats.funds.filter((f) => f.spe
 
 /**
  * "Копилки": what was spent from each fund this month (only those spent from); not in the month's totals, but what it
- * lacked.
+ * lacked. Only the funds without a part in «Сбережения» (a month without a budget or a contribution): the others say it
+ * under their part.
  */
-export function fundsSection(stats: MonthStats, rowOf: (f: FundStat) => React.ReactElement) {
-  const funds = spentFunds(stats);
+export function fundsSection(stats: MonthStats, rowOf: (f: FundStat) => React.ReactElement, savings: SavingsSection | null) {
+  const inSavings = new Set((savings?.parts ?? []).filter((x) => x.key.startsWith('fund-')).map((x) => x.categoryId));
+  const funds = spentFunds(stats).filter((f) => !inSavings.has(f.category_id));
   if (!funds.length) return null;
   const spent = funds.reduce((a, f) => a + f.spent_minor, 0);
   return (

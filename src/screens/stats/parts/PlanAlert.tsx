@@ -58,7 +58,8 @@ async function spentItems(currency: Currency): Promise<Item[]> {
 export default function PlanAlert({ currency }: { currency: Currency }) {
   const hidden = useHideAmounts();
   const ym = currentYm();
-  const { view } = useMonthSavings(ym, currency, hidden);
+  // what the overspend took from savings: in the budget's currency, as «Сбережения»
+  const { view, currency: savingsCurrency } = useMonthSavings(ym, currency, hidden);
   const [spent, setSpent] = useState<Item[]>([]);
   const [dismissed, setDismissed] = useState<string | null | undefined>(undefined);
   const [sheet, setSheet] = useState(false);
@@ -71,7 +72,7 @@ export default function PlanAlert({ currency }: { currency: Currency }) {
   useFocusEffect(load);
   useEffect(() => onTransactionsChanged(load), [load]);
 
-  const money = (minor: number) => formatWithCurrency(minor, currency);
+  const money = (minor: number) => formatWithCurrency(minor, savingsCurrency);
   const less = view?.less ?? null;
   const taken = less ? lessTaken(less) : 0;
   const lockIn: Item | null = taken > 0

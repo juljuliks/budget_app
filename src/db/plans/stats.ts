@@ -8,8 +8,8 @@ import { REFUND_KEY, categoryKey, convertSpending, spendRows, sumBy } from './sp
 import { NormPeriod, PlanKind, asNorm } from './types';
 import { ensureMonthPlan } from './budget';
 import { placeholders } from '../sql';
-import { activeFunds, fundLedger } from './funds';
 import { savingSpend } from '../recurring/saving';
+import { monthFunds, spentIn } from './statsOwn';
 import { monthPayments } from './recurringItems';
 
 export type CategoryStat = {
@@ -34,6 +34,11 @@ export type CategoryStat = {
    * (shown "+", counted as nothing spent: it goes to the month's income, see monthIncome)
    */
   transfer: boolean;
+  /**
+   * planned in another currency than the stats' (month stats only): its spending (on each day's rate) and plan in
+   * that currency, shown in the row instead
+   */
+  own?: { currency: Currency; spent_minor: number; limit_minor: number };
 };
 
 /** What a category adds to the spending totals: a transfer one that brought in more than went out adds nothing. */
@@ -100,6 +105,8 @@ export type FundStat = {
   target_minor: number;
   /** by when, 'YYYY-MM-DD' */
   due: string;
+  /** a fund in another currency than the stats': what was spent from it and its shortage in its own, shown in the row */
+  own: { currency: Currency; spent_minor: number; shortage_minor: number } | null;
 };
 
 /** Spending outside the plan: categories without a plan amount, and spending without a category (transfers too). */
@@ -136,7 +143,8 @@ export async function monthStats(year: number, month: number, currency: Currency
   const db = await getDb();
   const [from, to] = monthRange(year, month);
   const planDate = planRateDate(ym);
-  const { items, missing, conv } = await convertSpending(await spendRows(from, to), currency, [planDate]);
+  const rows = await spendRows(from, to);
+  const { items, missing, conv } = await convertSpending(rows, currency, [planDate]);
   const spentBy = sumBy(items, categoryKey);
   const refundsUnassigned = refundsUnassignedOf(spentBy);
   // the payments saved up for: their categories spent the contributions, not what was paid from them
@@ -152,6 +160,9 @@ export async function monthStats(year: number, month: number, currency: Currency
       FROM categories c
       LEFT JOIN category_types ct ON ct.id = c.type_id
       LEFT JOIN plan_items p ON p.category_id = c.id AND p.ym = ?`, [ym]);
+  // the categories planned in another currency: their spending in it as well
+  const foreign = cats.filter((c) => c.limit_minor && asCurrency(c.plan_currency) !== currency);
+  const ownSpent = await spentIn(ym, rows, foreign.map((c) => asCurrency(c.plan_currency)));
 
   const categories: CategoryStat[] = [];
   for (const c of cats) {
@@ -164,6 +175,11 @@ export async function monthStats(year: number, month: number, currency: Currency
     const limit = live ?? (c.limit_minor ? conv(c.limit_minor, asCurrency(c.plan_currency), currency, planDate) : null);
     if (s === 0 && limit === null) continue;
     const stat = categoryStat(c, s, colorOf, limit === null ? undefined : { limit, kind: c.plan_kind, norm: c.plan_norm });
+    const pc = asCurrency(c.plan_currency);
+    if (limit !== null && c.limit_minor && pc !== currency) {
+      const ownLimit = live === null ? c.limit_minor : (await monthPayments(ym, pc, undefined, c.id)).total_minor;
+      stat.own = { currency: pc, spent_minor: ownSpent.get(pc)?.get(c.id) ?? 0, limit_minor: ownLimit };
+    }
     categories.push(stat);
   }
   const uncategorized = spentBy.get(null) ?? 0;
@@ -171,7 +187,7 @@ export async function monthStats(year: number, month: number, currency: Currency
   categories.sort((a, b) => b.spent_minor - a.spent_minor || (b.limit_minor ?? 0) - (a.limit_minor ?? 0));
 
   // the funds apart: their spending is from what they saved, only a shortage is the month's
-  const funds = await monthFunds(ym, (minor, from) => conv(minor, from, currency, planDate) ?? 0, cats, colorOf);
+  const funds = await monthFunds(ym, currency, (minor, from) => conv(minor, from, currency, planDate) ?? 0, cats, colorOf);
   const own = categories.filter((c) => !funds.some((f) => f.category_id === c.category_id));
   const types = await listTypes();
 
@@ -186,23 +202,6 @@ export async function monthStats(year: number, month: number, currency: Currency
     categories: own,
     other_currencies: missing,
   };
-}
-
-/** The month's funds as stats: each one's month of its ledger, converted. */
-async function monthFunds(ym: string, toShown: (minor: number, from: string) => number, cats: CategoryRow[], colorOf: Map<number, string>): Promise<FundStat[]> {
-  const out: FundStat[] = [];
-  for (const fund of await activeFunds(ym)) {
-    const c = cats.find((r) => r.id === fund.category_id);
-    const m = (await fundLedger(fund, ym)).months.find((x) => x.ym === ym);
-    if (!c || !m) continue;
-    const v = (minor: number) => toShown(minor, fund.currency);
-    out.push({
-      category_id: c.id, name: c.name, emoji: c.emoji, color: colorOf.get(c.id) ?? NEUTRAL_COLOR, spent_minor: v(m.spent),
-      available_minor: v(m.start + m.contribution), shortage_minor: v(m.shortage), left_minor: v(m.end), contribution_minor: v(m.contribution),
-      target_minor: v(fund.target_minor), due: fund.due,
-    });
-  }
-  return out;
 }
 
 export type PeriodStats = {

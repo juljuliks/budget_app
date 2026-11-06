@@ -14,7 +14,6 @@ export const styles = StyleSheet.create({
   longPressHint: { fontSize: 12, color: colors.muted, marginTop: 8, marginBottom: -10 },
   dangerText: { color: colors.danger },
   hint: { color: colors.muted, fontSize: 14, textAlign: 'center', marginVertical: 12 },
-  fundsLine: { fontSize: 13, color: colors.fundText, marginTop: 4 },
   group: { marginTop: 16 },
   // a grey band across the screen, sticking on top as the days on the operations do
   groupHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: -16 },
