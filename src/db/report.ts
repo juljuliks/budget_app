@@ -3,6 +3,7 @@ import { Currency } from './fx';
 import { getPlanBudget, monthRange, monthStats, parseYm, planConverter, unplannedOf, unplannedSpent, ymOf } from './plans';
 import { EXPENSE_KINDS } from './spending';
 import { SavingsPlanFact, savingsPlanFact } from './reportSavings';
+import { MonthImpulse, monthImpulse } from './reportImpulse';
 import { sqlList } from './sql';
 
 // The month's report (the notification on the 1st, «История», the stats of a past month): what was put aside and what
@@ -80,6 +81,8 @@ export type MonthReport = {
   locked: number;
   /** spending went into the locked savings by this much (spent more than budget − locked); 0 when untouched */
   lockedTouched: number;
+  /** "Импульсивные покупки"; null — nothing answered this month */
+  impulse: MonthImpulse | null;
 };
 
 /** "≈ 14 400 ₾ за год" in this pace */
@@ -159,6 +162,8 @@ export async function monthReport(ym: string, currency: Currency): Promise<Month
     .map(cat).sort((a, b) => (b.limit - b.spent) - (a.limit - a.spent));
 
   const planFact = await savingsPlanFact(ym, currency);
+  const isOver = (c: typeof stats.categories[number]) => c.limit_minor !== null && c.spent_minor > c.limit_minor * (1 + OVER_TOLERANCE);
+  const impulse = await monthImpulse(ym, currency, stats.categories, (c) => (isOver(c) ? c.spent_minor - c.limit_minor! : 0));
   // the funds' contributions: part of what is put aside, not of what the plan left
   const funds = planFact ? planFact.fundsPlanned : stats.funds.reduce((a, f) => a + f.contribution_minor, 0);
 
@@ -193,5 +198,6 @@ export async function monthReport(ym: string, currency: Currency): Promise<Month
       funds,
     },
     planFact,
+    impulse,
   };
 }

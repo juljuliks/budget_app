@@ -46,7 +46,7 @@ export async function saveImpulse(id: number, impulse: boolean | null) {
   emitTransactionsChanged();
 }
 
-/** "Настроение": one of the moods, null — taken back. */
+/** "Что подтолкнуло?" (an impulsive one's): one of the moods, null — taken back. */
 export async function saveMood(id: number, mood: Mood | null) {
   await setTransactionMood(id, mood);
   emitTransactionsChanged();

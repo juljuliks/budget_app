@@ -7,6 +7,7 @@ import { bankById } from '@/domain/banks';
 import { DayRange, formatRange } from '@/shared/lib/dateRange';
 import { KIND_LABELS } from '@/shared/lib/format';
 import { NO_CATEGORY } from '@/shared/lib/strings';
+import { UNANSWERED_CHIP } from '@/domain/moods';
 import { toast } from '@/shared/ui/toast';
 import type { ActiveFilter } from '../FilterSheets';
 import type { Filter } from './filter';
@@ -22,11 +23,12 @@ export function useTransactionFilters(lockedRef: MutableRefObject<DayRange | nul
   const [kinds, setKinds] = useState<string[]>([]);
   const [banks, setBanks] = useState<string[]>([]);
   const [range, setRange] = useState<DayRange | null>(null);
+  const [unanswered, setUnanswered] = useState(false);
   const [categoryOptions, setCategoryOptions] = useState<CategoryWithCount[]>([]);
   const [merchantOptions, setMerchantOptions] = useState<MerchantWithCount[]>([]);
   const [kindOptions, setKindOptions] = useState<Array<{ kind: string; count: number }>>([]);
   const [bankOptions, setBankOptions] = useState<Array<{ bank: string; count: number }>>([]);
-  const filter: Filter = { query, categories, merchants, kinds, banks, range };
+  const filter: Filter = { query, categories, merchants, kinds, banks, range, unanswered };
   // read by the list's reload without making it change (and re-run focus effects) on every keystroke
   const filterRef = useRef(filter);
   filterRef.current = filter;
@@ -41,7 +43,7 @@ export function useTransactionFilters(lockedRef: MutableRefObject<DayRange | nul
   /** Only these set, the rest cleared. */
   const setOnly = useCallback((f: Partial<Filter>) => {
     setQuery(f.query ?? ''); setCategories(f.categories ?? []); setMerchants(f.merchants ?? []);
-    setKinds(f.kinds ?? []); setBanks(f.banks ?? []); setRange(f.range ?? null);
+    setKinds(f.kinds ?? []); setBanks(f.banks ?? []); setRange(f.range ?? null); setUnanswered(f.unanswered ?? false);
   }, []);
   const reset = useCallback(() => setOnly({}), [setOnly]);
 
@@ -49,7 +51,7 @@ export function useTransactionFilters(lockedRef: MutableRefObject<DayRange | nul
   function resetExtra() {
     const m = lockedRef.current;
     if (!m) { reset(); return; }
-    setQuery(''); setMerchants([]); setKinds([]); setBanks([]); setRange(m);
+    setQuery(''); setMerchants([]); setKinds([]); setBanks([]); setRange(m); setUnanswered(false);
   }
 
   // the dates of a sort-out: this month or a part of it
@@ -83,6 +85,7 @@ export function useTransactionFilters(lockedRef: MutableRefObject<DayRange | nul
       active.push({ key: 'date', label: formatRange(range), clear: () => changeRange(null) });
     }
     if (query.trim()) active.push({ key: 'text', label: `«${query.trim()}»`, clear: () => setQuery('') });
+    if (unanswered) active.push({ key: 'unanswered', label: UNANSWERED_CHIP, clear: () => setUnanswered(false) });
     return active;
   };
 

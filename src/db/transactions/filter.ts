@@ -4,6 +4,7 @@ import { getDb } from '../index';
 import type { TransactionRow } from './rows';
 import { NEWEST_FIRST, SELECT_TX } from './sql';
 import { placeholders } from '../sql';
+import { UNANSWERED_SQL } from '../impulse';
 
 /** Lowercase + ё→е. Done in JS: SQLite LIKE / lower() only fold ASCII, so search_text is stored folded (searchTextOf). */
 export function normalizeForSearch(s: string): string {
@@ -35,6 +36,8 @@ export type TxFilter = {
   to?: number;
   /** only these (what a text search found) */
   ids?: number[];
+  /** purchases asked "Обдуманная" / "Импульсивная" with no answer ("Покупка: без ответа") */
+  unanswered?: boolean;
 };
 
 const FILTER_LIMIT = 2000;
@@ -92,6 +95,7 @@ export function filterCondition(f: TxFilter, parts = false): { sql: string; para
     where.push(f.ids.length ? `t.id IN (${placeholders(f.ids.length)})` : '0');
     params.push(...f.ids);
   }
+  if (f.unanswered) where.push(`t.id IN (${UNANSWERED_SQL})`);
   return { sql: where.length ? where.join(' AND ') : '1', params };
 }
 

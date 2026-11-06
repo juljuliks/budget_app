@@ -3,6 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useBanks } from '@/features/banks';
 import { FilterButton } from '@/features/operations-filters';
 import { colors } from '@/shared/theme/theme';
+import { UNANSWERED_CHIP } from '@/domain/moods';
 import { GROUP_BY, GroupBy } from '../model/listData';
 
 export type FilterSheet = 'category' | 'kind' | 'bank' | 'date' | 'all' | 'group';
@@ -13,6 +14,8 @@ type Props = {
   /** how many banks picked (the "Банк" button: when several are read) */
   banks: number;
   dated: boolean;
+  /** "Покупка: без ответа" set */
+  unanswered: boolean;
   groupBy: GroupBy;
   /** a sort-out: the category is set by it */
   categoryLocked: boolean;
@@ -28,7 +31,7 @@ type Props = {
  * Each button opens its picker in a sheet; all the filters set apply together. Merchants are found by the text search
  * (it matches the merchant name); a merchant card still opens the list filtered by its merchant, shown as a chip.
  */
-export default function FiltersBar({ categories, kinds, banks, dated, groupBy, categoryLocked, applied, onOpen, onReset, children }: Props) {
+export default function FiltersBar({ categories, kinds, banks, dated, unanswered, groupBy, categoryLocked, applied, onOpen, onReset, children }: Props) {
   const { several } = useBanks();
   return (
     <>
@@ -38,6 +41,8 @@ export default function FiltersBar({ categories, kinds, banks, dated, groupBy, c
  {several || banks > 0 ? <FilterButton label="Банк" count={banks} active={banks > 0} onPress={() => onOpen('bank')} testID="filter-bank" /> : null}
         <FilterButton label="Дата" active={dated} onPress={() => onOpen('date')} testID="filter-date" />
         <FilterButton label={GROUP_BY.find(([k]) => k === groupBy)![1]} active={groupBy !== 'day'} onPress={() => onOpen('group')} testID="filter-group" />
+        {/* set only from a link ("Отметить N покупок ›"): shown so the short list is explained; tap — the list with ✕ */}
+        {unanswered ? <FilterButton label={UNANSWERED_CHIP} active onPress={() => onOpen('all')} testID="filter-unanswered" /> : null}
       </View>
       {children}
       {applied > 0 ? (

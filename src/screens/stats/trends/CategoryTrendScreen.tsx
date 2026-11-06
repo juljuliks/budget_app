@@ -16,7 +16,9 @@ import type { TrendMode } from '@/stats/trends';
 import { categoryTrendView } from './model/categoryTrendView';
 import { Bar, pctText, whyText } from './model/trendsView';
 import { useTrendsData } from './model/useTrendsData';
+import { useCategoryImpulse } from './model/useCategoryImpulse';
 import CategoryTrendDetails from './parts/CategoryTrendDetails';
+import ImpulseTrend from './parts/ImpulseTrend';
 import { detailStyles as s } from './parts/detailStyles';
 import { styles } from './parts/styles';
 import TrendBars from './parts/TrendBars';
@@ -40,6 +42,7 @@ export default function CategoryTrendScreen({ route, navigation }: Props) {
   const { data, failed, load } = useTrendsData(currency);
   const today = dayKeyOf(new Date());
   const v = useMemo(() => (data ? categoryTrendView(data, id, mode, today) : null), [data, id, mode, today]);
+  const impulse = useCategoryImpulse(id, currency, today);
   useEffect(() => { if (v) navigation.setOptions({ title: `Динамика · ${v.label}` }); }, [navigation, v]);
   if (!v) return <Loading failed={failed || (data !== null && !v)} onRetry={load} />;
 
@@ -64,6 +67,7 @@ export default function CategoryTrendScreen({ route, navigation }: Props) {
       </View>
       <Text style={s.point}>{hidden && bar ? barName(bar) : point}</Text>
       <CategoryTrendDetails v={v} mode={mode} why={t && v.category.compared && !hidden ? whyText(t, money) : null} money={money} />
+      {impulse ? <ImpulseTrend v={impulse} categoryId={id} money={money} /> : null}
       <View style={s.operations}>
         <TextLink
           label={`${v.count} ${plural(v.count, ['операция', 'операции', 'операций'])} ${SPENT_WHEN[mode]}`}

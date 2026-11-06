@@ -18,6 +18,8 @@ export type TabParamList = {
     nonce?: number;
     /** a category being deleted: its operations of this month to sort out to other categories, then it goes */
     sortOut?: number;
+    /** only purchases with no answer to "Обдуманная" / "Импульсивная" ("Отметить N покупок ›") */
+    unanswered?: boolean;
     /** where back returns: a tab, or a page over them (the merchants, the categories) */
     from?: BackTarget;
   } | undefined;
@@ -113,7 +115,7 @@ const left: NavigationState[] = [];
  * "Показать все ›" / "N операций ›" of a merchant's or a category's page: the operations tab with its filter; back
  * from there (backToPages) puts the pages back as they were (the operation it was opened from under it too).
  */
-export function showOperationsFrom(filter: { category?: number; query?: string; range?: DayRange }) {
+export function showOperationsFrom(filter: { category?: number; query?: string; range?: DayRange; unanswered?: boolean }) {
   left.push(navigationRef.getRootState());
   // `as never`: a nested navigate the root types don't describe
   navigationRef.navigate('Main', { screen: 'Transactions', params: { ...filter, nonce: Date.now(), from: 'pages' } } as never);
