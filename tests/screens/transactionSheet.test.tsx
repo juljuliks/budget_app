@@ -350,7 +350,7 @@ describe('2.7.17 the type of money that came in', () => {
   });
 });
 
-test('2.7.18: «Покупка» — «Обдуманная» / «Импульсивная» and «Настроение» — asked once its category has «Импульсивные покупки» on; tapped again — no answer', async () => {
+test('2.7.18: «Покупка» — «Обдуманная» / «Импульсивная», an impulsive one «Что подтолкнуло?» — asked once its category has «Импульсивные покупки» on; tapped again — no answer', async () => {
   const impulseOf = async () => (await (await getDb()).get<{ i: number | null }>("SELECT impulse AS i FROM transactions WHERE raw_merchant = 'SPAR'"))!.i;
   await tap('SPAR');
   await screen.findByTestId('tx-category');
@@ -358,22 +358,26 @@ test('2.7.18: «Покупка» — «Обдуманная» / «Импульс
   await tap('#tx-category-open');
   expect(await screen.findByText('Спрашивать в операциях категории, была ли покупка импульсивной.')).toBeTruthy();
   toggleSwitch(true, 'Импульсивные покупки');
-  expect(await screen.findByText('В операциях категории — «Обдуманная» или «Импульсивная» и «Настроение». Ответы копятся, позже по ним будет статистика.')).toBeTruthy();
+  expect(await screen.findByText('В операциях категории — «Обдуманная» или «Импульсивная», у импульсивной — «Что подтолкнуло?». Итоги — в отчёте за месяц и в «Динамике трат».')).toBeTruthy();
   back();
   expect(await screen.findByText('Импульсивная')).toBeTruthy();
+  expect(screen.queryByText('Что подтолкнуло?')).toBeNull();
   await tap('Импульсивная');
   await waitFor(async () => expect(await impulseOf()).toBe(1));
   await tap('Импульсивная');
   await waitFor(async () => expect(await impulseOf()).toBeNull());
   await tap('Обдуманная');
   await waitFor(async () => expect(await impulseOf()).toBe(0));
-  // «Настроение»: one mood, tapped again — none
+  expect(screen.queryByText('Что подтолкнуло?')).toBeNull();
+  await tap('Импульсивная');
+  await waitFor(async () => expect(await impulseOf()).toBe(1));
+  // «Что подтолкнуло?»: one mood, tapped again — none
   const moodOf = async () => (await (await getDb()).get<{ m: string | null }>("SELECT mood AS m FROM transactions WHERE raw_merchant = 'SPAR'"))!.m;
-  expect(screen.getByText('Настроение')).toBeTruthy();
+  expect(await screen.findByText('Что подтолкнуло?')).toBeTruthy();
   // each emoji with its name under it
   const all = texts();
   expect(all.slice(all.indexOf('Покупка'), all.indexOf('Покупка') + 14)).toEqual([
-    'Покупка', 'Обдуманная', 'Импульсивная', 'Настроение',
+    'Покупка', 'Обдуманная', 'Импульсивная', 'Что подтолкнуло?',
     '😄', 'Радость', '😔', 'Грусть', '😰', 'Тревога', '🥱', 'Скука', '😐', 'Нейтрально',
   ]);
   const chosen = (name: string) => screen.getByLabelText(name).props.accessibilityState?.selected;
@@ -386,6 +390,12 @@ test('2.7.18: «Покупка» — «Обдуманная» / «Импульс
   await tap('😔');
   await waitFor(async () => expect(await moodOf()).toBeNull());
   await waitFor(() => expect(chosen('Грусть')).toBe(false));
+  // «Обдуманная» takes the mood away: its row is gone
+  await tap('🥱');
+  await waitFor(async () => expect(await moodOf()).toBe('bored'));
+  await tap('Обдуманная');
+  await waitFor(async () => expect(await moodOf()).toBeNull());
+  expect(screen.queryByText('Что подтолкнуло?')).toBeNull();
   // off: the answer given stays, with its question
   await tap('#tx-category-open');
   await screen.findByText('Импульсивные покупки');

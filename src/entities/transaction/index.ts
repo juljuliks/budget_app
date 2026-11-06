@@ -8,4 +8,5 @@ export {
 export { partsLabel, splitParts, type PartView } from './model/parts';
 export { SPLIT_COLORS } from './model/splitColors';
 export { default as RecentOperations } from './ui/RecentOperations';
+export { default as ImpulseShare } from './ui/ImpulseShare';
 export { useRecentOperations } from './model/useRecentOperations';

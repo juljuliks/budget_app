@@ -75,12 +75,12 @@ export default function OperationsScreen() {
     alsoRefresh: [filters.loadOptions, so.refreshRemaining],
     clearSelection: sel.clear,
     query,
-    view: [categories, merchants, kinds, banks, range, groupBy],
+    view: [categories, merchants, kinds, banks, range, filters.filter.unanswered, groupBy],
   });
 
   const rows = list.rows;
   const active = filters.activeFilters(sortOut?.month ?? null);
-  const listKey = JSON.stringify([query.trim(), categories, merchants, kinds, banks, range, groupBy, list.remount]);
+  const listKey = JSON.stringify([query.trim(), categories, merchants, kinds, banks, range, filters.filter.unanswered, groupBy, list.remount]);
   // "Отметить просмотренными (N)": the unread ones among the selected
   const unreadSelected = useMemo(() => rows.filter((r) => selected.has(r.id) && isUnread(r)).map((r) => r.id), [rows, selected]);
   const selectedRows = rows.filter((r) => selected.has(r.id));
@@ -106,7 +106,7 @@ export default function OperationsScreen() {
         <FiltersBar
           categories={categories.length}
           kinds={kinds.length} banks={banks.length}
-          dated={range !== null}
+          dated={range !== null} unanswered={filters.filter.unanswered}
           groupBy={groupBy}
           categoryLocked={!!sortOut}
           applied={active.length}

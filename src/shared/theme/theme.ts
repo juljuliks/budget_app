@@ -26,6 +26,9 @@ export const colors = {
   fundBg: '#F5F3FF',
   fundTrack: '#EDE9FE',
   fundText: '#6D28D9',
+  /** impulsive purchases: their share (orange; the considered ones — chart.meterFill), their amounts as text */
+  impulse: '#F97316',
+  impulseText: '#C2410C',
 };
 
 // Chart colors. Category colors (palettes per type) live in src/domain/colors.ts.

@@ -12,6 +12,7 @@ import { reportTitle, reportView } from './model/reportView';
 import { useMonthReport } from './model/useMonthReport';
 import GoodBlock from './ui/GoodBlock';
 import ImproveBlock from './ui/ImproveBlock';
+import ImpulseBlock from './ui/ImpulseBlock';
 import ReportHero from './ui/ReportHero';
 import { styles } from './ui/styles';
 
@@ -36,6 +37,13 @@ export default function MonthReportSheet({ ym, onClose }: { ym: string | null; o
     navigateWhenReady({ name: 'Main', params: { screen: 'Transactions', params: { category: 'none', range: monthDays(ym), nonce: Date.now(), from: 'Stats' } } } as never);
   }
 
+  // the month's purchases with no answer to "Обдуманная" / "Импульсивная", on the operations page
+  function markImpulse() {
+    if (!ym) return;
+    onClose();
+    navigateWhenReady({ name: 'Main', params: { screen: 'Transactions', params: { unanswered: true, range: monthDays(ym), nonce: Date.now(), from: 'Stats' } } } as never);
+  }
+
   return (
     <BottomSheet visible={ym !== null} onClose={onClose} title={ym ? `Отчёт · ${reportTitle(ym)}` : ''}>
       {!r || !v ? <Loading inline style={styles.loading} failed={failed} onRetry={load} /> : !r.hasPlan ? (
@@ -46,6 +54,7 @@ export default function MonthReportSheet({ ym, onClose }: { ym: string | null; o
           <ReportHero v={v} onCloseMonth={closeMonth} />
           {v.improve ? <ImproveBlock v={v} currency={currency} onPlan={setPlanTarget} onSortOut={sortOut} /> : null}
           {v.good ? <GoodBlock v={v} /> : null}
+          {r.impulse ? <ImpulseBlock m={r.impulse} money={v.money} onMark={markImpulse} /> : null}
         </SheetScrollView>
       )}
       {/* planned into the report's own month */}
