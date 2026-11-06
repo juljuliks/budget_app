@@ -32,7 +32,7 @@ const factOfPlan = (stats: MonthStats, spent: number, planned: number) => (
   <MaskedTotal style={styles.groupTotal} hiddenText={planned ? formatPercent(spent, planned) : formatPercent(spent, stats.spent_minor)}>
     {planned ? <Text style={overStyle(spent, planned)}>{formatShort(spent)}</Text> : formatWithCurrency(spent, stats.currency)}
     {planned ? <Text style={styles.rowLimit}> / {formatWithCurrency(planned, stats.currency)}</Text> : null}
-    {planned ? <Text style={[styles.rowLimit, overStyle(spent, planned)]}> ({formatPercent(spent, planned)})</Text> : null}
+    {planned ? <Text style={[styles.rowLimit, overStyle(spent, planned)]}>{` · ${formatPercent(spent, planned)}`}</Text> : null}
   </MaskedTotal>
 );
 

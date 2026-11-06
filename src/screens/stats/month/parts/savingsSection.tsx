@@ -36,6 +36,32 @@ function nowOfPlan(now: number | null, plan: number, currency: string) {
   );
 }
 
+/**
+ * Section header total for «Сбережения»:
+ * no overspend — "plan ₾ · X% бюджета"; overspend — "fact / plan ₾ (−Y%) · X%".
+ */
+function savingsHeaderTotal(now: number | null, plan: number, budget: number | null, currency: string) {
+  const isOver = now !== null && now < plan;
+  const budgetPct = budget ? formatPercent(plan, budget) : null;
+  if (!isOver) {
+    return (
+      <MaskedTotal style={styles.groupTotal} hiddenText={budgetPct ?? ''}>
+        {formatWithCurrency(plan, currency)}
+        {budgetPct ? <Text style={styles.rowLimit}>{` · ${budgetPct}`}</Text> : null}
+      </MaskedTotal>
+    );
+  }
+  const deficitPct = formatPercent(plan - Math.max(0, now!), plan);
+  return (
+    <MaskedTotal style={styles.groupTotal} hiddenText={budgetPct ?? deficitPct}>
+      <Text style={styles.overNum}>{formatShort(Math.max(0, now!))}</Text>
+      <Text style={styles.rowLimit}>{` / ${formatWithCurrency(plan, currency)}`}</Text>
+      <Text style={[styles.rowLimit, styles.overNum]}>{` (−${deficitPct})`}</Text>
+      {budgetPct ? <Text style={styles.rowLimit}>{` · ${budgetPct}`}</Text> : null}
+    </MaskedTotal>
+  );
+}
+
 function Part({ x, currency, onLess, onLongPress }: { x: SavingsPart; currency: string; onLess: () => void; onLongPress?: () => void }) {
   const status = (
     <Text style={[styles.rowStatus, x.status.tone === 'warn' && styles.overLine, x.status.tone === 'ok' && styles.paceOk]}>
@@ -69,7 +95,7 @@ export function savingsSection(s: SavingsSection | null, currency: string, open:
   const money = (minor: number) => formatWithCurrency(minor, currency);
   return (
     <>
-      {header('Сбережения', nowOfPlan(s.now, s.plan, currency))}
+      {header('Сбережения', savingsHeaderTotal(s.now, s.plan, s.budget, currency))}
       <View>
         {s.caption ? <Text style={styles.savingsCaption}>{s.caption}</Text> : null}
         {s.parts.map((x) => {

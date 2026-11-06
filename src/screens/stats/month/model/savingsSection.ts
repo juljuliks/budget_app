@@ -21,6 +21,8 @@ export type SavingsSection = {
   parts: SavingsPart[];
   plan: number;
   now: number | null;
+  /** the month's total budget (in the stats' currency): for showing savings as a share of budget */
+  budget: number | null;
   /** what none of them covers: off the savings from before (ⓘ) */
   past: number;
   caption: string | null;
@@ -70,6 +72,7 @@ export function currentSavings(p: PlanView, money: Money, hidden: boolean): Savi
   const plan = parts.reduce((a, x) => a + x.plan, 0);
   return {
     parts, plan, now: parts.reduce((a, x) => a + (x.now ?? 0), 0), past: less?.past ?? 0,
+    budget: p.shownBudget,
     caption: 'К концу месяца, если дальше тратить по плану', closeYm: null,
   };
 }
@@ -90,5 +93,5 @@ export function pastSavings(f: SavingsPlanFact | null, ym: string, money: Money,
   if (f.rest && (f.rest.choice === null || f.rest.choice === 'savings')) {
     parts.push({ key: 'floating', name: '💰 Сэкономлено', color: RING_SAVINGS, plan: f.rest.plan, now: f.rest.fact, status: status(f.rest.plan, f.rest.fact) });
   }
-  return { parts, plan: f.plan, now: f.fact, past: 0, caption: null, closeYm: f.closed ? null : ym };
+  return { parts, plan: f.plan, now: f.fact, past: 0, budget: null, caption: null, closeYm: f.closed ? null : ym };
 }

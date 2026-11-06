@@ -13,7 +13,7 @@ export default function SectionTotal({ v, spent, planned }: { v: PeriodView; spe
       {/* the fact black without ₾, the rest muted */}
       {planned > 0 ? <Text style={overStyle(spent, planned)}>{formatShort(spent)}</Text> : v.money(spent)}
       {planned > 0 ? <Text style={styles.groupPlan}> / {v.money(planned)}</Text> : null}
-      {planned > 0 ? <Text style={[styles.groupPlan, overStyle(spent, planned)]}> ({formatPercent(spent, Math.round(planned))})</Text> : null}
+      {planned > 0 ? <Text style={[styles.groupPlan, overStyle(spent, planned)]}>{` · ${formatPercent(spent, Math.round(planned))}`}</Text> : null}
     </MaskedTotal>
   );
 }
