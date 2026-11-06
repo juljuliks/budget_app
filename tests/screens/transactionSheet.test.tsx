@@ -1,6 +1,6 @@
 // 2.7: an operation's card — what it shows, its category (this one or the merchant's), the amount, the note, deleting.
-import { fireEvent, waitFor } from '@testing-library/react-native';
-import { openApp, screen, tap, texts, back, longPress, rowOf } from './app';
+import { fireEvent, waitFor, within } from '@testing-library/react-native';
+import { openApp, screen, tap, texts, back, longPress, rowOf, toggleSwitch } from './app';
 import { at, buy, ops } from '../e2e/seeds';
 import { getDb } from '../../src/db';
 import { createCategory } from '../../src/db/categories';
@@ -21,7 +21,7 @@ test('2.7.1: the card — the amount, the merchant as a link, the date, the cate
   expect(screen.getByText('−30.00 ₾')).toBeTruthy();
   expect(screen.getByText('SPAR ›')).toBeTruthy();
   expect(screen.getByText(/^Сегодня, \d\d:\d\d$/)).toBeTruthy();
-  expect(screen.getByText('Сменить')).toBeTruthy();
+  expect(screen.getByTestId('tx-category')).toBeTruthy();
   expect(screen.getByText('Категория мерчанта «SPAR»: 🛒 Продукты. Новые операции мерчанта получают её автоматически.')).toBeTruthy();
   expect(screen.getByText('SMS')).toBeTruthy();
   expect(screen.getByText('SPAR 30')).toBeTruthy();
@@ -32,7 +32,7 @@ test('2.7.1: the card — the amount, the merchant as a link, the date, the cate
 test('2.7.2–2.7.3: without a category — "Сменить", search, the merchant without one gets it, no question', async () => {
   await tap('GLOVO');
   expect(await screen.findByText('⚪️ Без категории')).toBeTruthy();
-  await tap('Сменить');
+  await tap('#tx-category');
   fireEvent.changeText(await screen.findByPlaceholderText('Найти категорию'), 'кафе');
   await tap('☕️ Кафе и рестораны');
   expect(await screen.findByText('Категория «☕️ Кафе и рестораны» назначена')).toBeTruthy();
@@ -41,15 +41,15 @@ test('2.7.2–2.7.3: without a category — "Сменить", search, the mercha
   expect(await ruleOf('GLOVO')).toBe('Кафе и рестораны');
 });
 
-test('2.7.3a: the category\'s name a link (as the merchant\'s) opens its sheet over the card, "Сменить" on the right picks another', async () => {
+test('2.7.3a: the category a field (a tap — "Сменить категорию"), its "›" opens its page over the card', async () => {
   await openApp(ops);
   await tap('SPAR');
-  // "Сменить" right of the "Категория" title
-  await screen.findByText('Сменить');
+  // the field under the "Категория" title
+  await screen.findByTestId('tx-category');
   const all = texts();
-  expect(all.slice(all.lastIndexOf('Категория'), all.lastIndexOf('Категория') + 2)).toEqual(['Категория', 'Сменить']);
+  expect(all.slice(all.lastIndexOf('Категория'), all.lastIndexOf('Категория') + 2)).toEqual(['Категория', '🛒 Продукты']);
   expect(screen.queryByText('Разделить по категориям')).toBeNull();
-  await tap('🛒 Продукты ›');
+  await tap('#tx-category-open');
   expect(await screen.findByDisplayValue('Продукты')).toBeTruthy();
   expect(screen.queryByText('Регулярные платежи')).toBeNull();
 });
@@ -58,7 +58,7 @@ describe('2.7.4: the merchant has another category', () => {
   async function pick() {
     // a purchase (a refund just takes its merchant's category): the older one of ZARA
     await tap('ZARA');
-    await tap('Сменить');
+    await tap('#tx-category');
     expect(await screen.findByText('Сменить категорию')).toBeTruthy();
     await tap('🛒 Продукты');
     expect(await screen.findByText('Категория «🛒 Продукты» — для этой операции или для мерчанта «ZARA»?')).toBeTruthy();
@@ -83,7 +83,7 @@ describe('2.7.4: the merchant has another category', () => {
   });
   test('the same category as the merchant\'s: no question', async () => {
     await tap('ZARA');
-    await tap('Сменить');
+    await tap('#tx-category');
     await tap('👕 Одежда');
     await waitFor(() => expect(screen.queryByText(/для этой операции или для мерчанта/)).toBeNull());
   });
@@ -91,7 +91,7 @@ describe('2.7.4: the merchant has another category', () => {
 
 test('2.7.7: "Без категории" stays: the merchant\'s category won\'t fill it in later', async () => {
   await tap('SPAR');
-  await tap('Сменить');
+  await tap('#tx-category');
   await tap('⚪️ Без категории');
   expect(await screen.findByText('Категория убрана')).toBeTruthy();
   expect(screen.getByText('Удалить операцию')).toBeTruthy();
@@ -102,7 +102,7 @@ test('2.7.8: a transfer: the transfer categories first, no merchant category', a
   await createCategory('Маме', '👩', await getTransferTypeId());
   await tap('Перевод · NINO B');
   expect(await screen.findByText('⚪️ Без категории')).toBeTruthy();
-  await tap('Сменить');
+  await tap('#tx-category');
   expect(await screen.findByText('👩 Маме')).toBeTruthy();
   const all = texts();
   // the transfer section first; "Пополнение счёта" is for deposits only
@@ -116,9 +116,9 @@ test('2.7.8: a transfer: the transfer categories first, no merchant category', a
 test('2.7.8: a deposit: in "Пополнение счёта", first; then the transfer categories (a person paying back)', async () => {
   await createCategory('Маме', '👩', await getTransferTypeId());
   await tap('Пополнение · SALARY');
-  expect(await screen.findByText('Сменить')).toBeTruthy();
-  expect(screen.getByText('💳 Пополнение счёта ›')).toBeTruthy();
-  await tap('Сменить');
+  expect(await screen.findByTestId('tx-category')).toBeTruthy();
+  expect(screen.getByText('💳 Пополнение счёта')).toBeTruthy();
+  await tap('#tx-category');
   expect(await screen.findByText('💳 Пополнение счёта')).toBeTruthy();
   const all = texts();
   expect(all.indexOf('💳 Пополнение счёта')).toBeLessThan(all.indexOf('👩 Маме'));
@@ -212,25 +212,25 @@ test('2.7.6: a merchant of different categories: the category as a link, its cat
   expect(await screen.findByText(/^Основная — «.+»: новые операции получают её, если в уведомлении не выбрать другую\.$/)).toBeTruthy();
   await tap('☕️ Кафе и рестораны');
   expect(await screen.findByText('Категория «☕️ Кафе и рестораны» назначена')).toBeTruthy();
-  expect(await screen.findByText('☕️ Кафе и рестораны ›')).toBeTruthy();
+  await waitFor(() => expect(within(screen.getByTestId('tx-category')).getByText('☕️ Кафе и рестораны')).toBeTruthy());
   expect((await opsOf('GLOVO')).map((o) => [o.c, o.s])).toEqual([['Кафе и рестораны', 'user']]);
   expect(await ruleOf('GLOVO')).toBeNull();
   // the page stays open; one chip does not add a button
   expect(screen.queryByText('Готово')).toBeNull();
   expect(screen.queryByText('Разделить')).toBeNull();
-  await tap('Сменить');
+  await tap('#tx-category');
   await tap('👕 Одежда');
   expect(await screen.findByText('Категория «👕 Одежда» назначена')).toBeTruthy();
   expect(screen.getByText('Удалить операцию')).toBeTruthy();
   // the link shows it; it is not the merchant's, so no chip of it and none highlighted
-  expect(await screen.findByText('👕 Одежда ›')).toBeTruthy();
+  await waitFor(() => expect(within(screen.getByTestId('tx-category')).getByText('👕 Одежда')).toBeTruthy());
   await waitFor(() => expect(rowOf('☕️ Кафе и рестораны').props.accessibilityState).toMatchObject({ selected: false }));
   expect(rowOf('🛒 Продукты').props.accessibilityState).toMatchObject({ selected: false });
   expect(await mixedOf('GLOVO')).toEqual(['Кафе и рестораны', 'Продукты']);
   // a chip now replaces it: one highlighted, saved, no split
   await tap('🛒 Продукты');
   expect(await screen.findByText('Категория «🛒 Продукты» назначена')).toBeTruthy();
-  expect(await screen.findByText('🛒 Продукты ›')).toBeTruthy();
+  await waitFor(() => expect(within(screen.getByTestId('tx-category')).getByText('🛒 Продукты')).toBeTruthy());
   expect(screen.queryByText('Разделить')).toBeNull();
   expect(await mixedOf('GLOVO')).toEqual(['Кафе и рестораны', 'Продукты']);
 });
@@ -277,7 +277,7 @@ test('2.7.6: two chips add "Разделить"; one does not', async () => {
 describe('2.7.16 split between categories', () => {
   test('"Разделить по категориям": a long press picks several; the own category gets the rest; saved — the card shows the parts; "Убрать разделение" asks, "Отменить" puts them back', async () => {
     await tap('SPAR');
-    await tap('Сменить');
+    await tap('#tx-category');
     await longPress('👕 Одежда');
     await tap('Отмена');
     expect(await screen.findByText('Несколько категорий можно выбрать зажатием.')).toBeTruthy();
@@ -302,7 +302,7 @@ describe('2.7.16 split between categories', () => {
     expect(screen.getByText('Вся сумма вернётся в «🛒 Продукты».')).toBeTruthy();
     await tap('Убрать');
     await waitFor(async () => expect(await parts()).toEqual([]));
-    expect(await screen.findByText('Сменить')).toBeTruthy();
+    expect(await screen.findByTestId('tx-category')).toBeTruthy();
     expect(screen.getByText('Разделение убрано')).toBeTruthy();
     await tap('Отменить');
     await waitFor(async () => expect(await parts()).toEqual([{ amount_minor: 1200 }]));
@@ -323,13 +323,13 @@ describe('2.7.17 the type of money that came in', () => {
     expect(await screen.findByText('Теперь это возврат')).toBeTruthy();
     expect(await kindOf('SALARY')).toEqual({ kind: 'refund', c: null });
     expect(await screen.findByText('⚪️ Без категории')).toBeTruthy();
-    expect(screen.getByText('Сменить')).toBeTruthy();
+    expect(screen.getByTestId('tx-category')).toBeTruthy();
     expect(screen.queryByText('Разделить по категориям')).toBeNull();
   });
 
   test('a refund is split; made a deposit — whole, in "Пополнение счёта"', async () => {
     await tap('Возврат · ZARA');
-    await tap('Сменить');
+    await tap('#tx-category');
     await longPress('🛒 Продукты');
     await tap('👕 Одежда');
     await tap('Готово');
@@ -345,7 +345,52 @@ describe('2.7.17 the type of money that came in', () => {
 
   test('a purchase has no "Сменить тип"', async () => {
     await tap('SPAR');
-    await screen.findByText('Сменить');
+    await screen.findByTestId('tx-category');
     expect(screen.queryByLabelText('Сменить тип')).toBeNull();
   });
+});
+
+test('2.7.18: «Покупка» — «Обдуманная» / «Импульсивная» and «Настроение» — asked once its category has «Импульсивные покупки» on; tapped again — no answer', async () => {
+  const impulseOf = async () => (await (await getDb()).get<{ i: number | null }>("SELECT impulse AS i FROM transactions WHERE raw_merchant = 'SPAR'"))!.i;
+  await tap('SPAR');
+  await screen.findByTestId('tx-category');
+  expect(screen.queryByText('Импульсивная')).toBeNull();
+  await tap('#tx-category-open');
+  expect(await screen.findByText('Спрашивать в операциях категории, была ли покупка импульсивной.')).toBeTruthy();
+  toggleSwitch(true, 'Импульсивные покупки');
+  expect(await screen.findByText('В операциях категории — «Обдуманная» или «Импульсивная» и «Настроение». Ответы копятся, позже по ним будет статистика.')).toBeTruthy();
+  back();
+  expect(await screen.findByText('Импульсивная')).toBeTruthy();
+  await tap('Импульсивная');
+  await waitFor(async () => expect(await impulseOf()).toBe(1));
+  await tap('Импульсивная');
+  await waitFor(async () => expect(await impulseOf()).toBeNull());
+  await tap('Обдуманная');
+  await waitFor(async () => expect(await impulseOf()).toBe(0));
+  // «Настроение»: one mood, tapped again — none
+  const moodOf = async () => (await (await getDb()).get<{ m: string | null }>("SELECT mood AS m FROM transactions WHERE raw_merchant = 'SPAR'"))!.m;
+  expect(screen.getByText('Настроение')).toBeTruthy();
+  // each emoji with its name under it
+  const all = texts();
+  expect(all.slice(all.indexOf('Покупка'), all.indexOf('Покупка') + 14)).toEqual([
+    'Покупка', 'Обдуманная', 'Импульсивная', 'Настроение',
+    '😄', 'Радость', '😔', 'Грусть', '😰', 'Тревога', '🥱', 'Скука', '😐', 'Нейтрально',
+  ]);
+  const chosen = (name: string) => screen.getByLabelText(name).props.accessibilityState?.selected;
+  await tap('🥱');
+  await waitFor(async () => expect(await moodOf()).toBe('bored'));
+  await waitFor(() => expect(chosen('Скука')).toBe(true));
+  await tap('Грусть');
+  await waitFor(async () => expect(await moodOf()).toBe('sad'));
+  await waitFor(() => expect(chosen('Скука')).toBe(false));
+  await tap('😔');
+  await waitFor(async () => expect(await moodOf()).toBeNull());
+  await waitFor(() => expect(chosen('Грусть')).toBe(false));
+  // off: the answer given stays, with its question
+  await tap('#tx-category-open');
+  await screen.findByText('Импульсивные покупки');
+  toggleSwitch(false, 'Импульсивные покупки');
+  expect(await screen.findByText('Спрашивать в операциях категории, была ли покупка импульсивной.')).toBeTruthy();
+  back();
+  expect(await screen.findByText('Импульсивная')).toBeTruthy();
 });

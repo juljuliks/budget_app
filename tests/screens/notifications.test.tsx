@@ -70,7 +70,7 @@ describe('8.1 the buttons', () => {
     await sms(`12.00GEL\n(*1234)\nNEWSHOP\n${today}`);
     const [n] = display.mock.calls[0];
     await act(() => handleNotificationAction({ id: 'all_categories', notification: { id: n.id, data: n.data } }));
-    expect(await screen.findByText('Сменить')).toBeTruthy();
+    expect(await screen.findByTestId('tx-category')).toBeTruthy();
     expect(screen.getByText('⚪️ Без категории')).toBeTruthy();
     expect(screen.getByText('NEWSHOP ›')).toBeTruthy();
     expect(notifee.cancelNotification).not.toHaveBeenCalled();

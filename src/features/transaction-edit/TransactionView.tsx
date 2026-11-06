@@ -10,6 +10,7 @@ import { useCategoryChoice } from './model/useCategoryChoice';
 import { useMixedPick } from './model/useMixedPick';
 import { useTransaction } from './model/useTransaction';
 import AmountModal from './ui/AmountModal';
+import ImpulseQuestion from './ui/ImpulseQuestion';
 import KindSheet from './ui/KindSheet';
 import NoteSection from './ui/NoteSection';
 import SplitSheet from './ui/SplitSheet';
@@ -93,6 +94,7 @@ export default function TransactionView({ txId, onClose }: Props) {
       ) : null}
 
       <PaymentNote tx={tx} />
+      <ImpulseQuestion tx={tx} />
 
       {tx.raw_sms ? (
         <>

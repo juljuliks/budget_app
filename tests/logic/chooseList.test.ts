@@ -4,7 +4,7 @@ import { matchesQuery, orderedSections, showNone } from '../../src/entities/cate
 
 const cat = (p: Partial<Category> & Pick<Category, 'id' | 'name'>): Category => ({
   emoji: null, sort_order: 0, type_id: null, type_name: null, type_is_transfer: 0,
-  deleted_at: null, color: null, system: null, recurring: 0, by_merchant: 0, ...p,
+  deleted_at: null, color: null, system: null, recurring: 0, by_merchant: 0, impulse: 0, ...p,
 });
 
 const food = cat({ id: 1, name: 'Продукты', emoji: '🛒', type_name: 'Жизнь' });

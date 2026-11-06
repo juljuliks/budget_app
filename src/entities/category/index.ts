@@ -3,6 +3,7 @@ export { default as CategorySheet } from './ui/CategorySheet';
 export { default as CategoryLink } from './ui/CategoryLink';
 export { default as CategorySummaryRow } from './ui/CategorySummaryRow';
 export { default as CategoryView } from './ui/CategoryView';
+export { default as ImpulseSwitch } from './ui/ImpulseSwitch';
 export { default as TypeEditModal } from './ui/TypeEditModal';
 export type { CategoryInfo } from './model/types';
 export { paymentWords, SUBSCRIPTION_WORDS, FIND_CATEGORY } from './texts';

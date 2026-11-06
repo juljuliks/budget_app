@@ -567,7 +567,7 @@ describe('6.7.13 "Подписки" on a category\'s page', () => {
       await savePayment({ category_id: id, merchant_key: null, name: 'Дом и коммуналка', amount_minor: 80000, currency: 'GEL', period: 1, due: '2026-10-25' });
     });
     expect(screen.getByText('Следить за списаниями мерчантов, как у Netflix или страховки: подписка делается из мерчанта категории.')).toBeTruthy();
-    toggleSwitch(true);
+    toggleSwitch(true, 'Подписки');
     expect(await screen.findByText('Включить подписки?')).toBeTruthy();
     expect(screen.getByText('Регулярный платёж «Дом и коммуналка» удалится; сумма в плане останется, пока у подписок нет даты.')).toBeTruthy();
     await tap('Включить');
@@ -580,7 +580,7 @@ describe('6.7.13 "Подписки" on a category\'s page', () => {
     expect(await screen.findByText('Каждый мерчант категории — отдельная подписка: сумма, как часто, следующее списание. План категории считается из них.')).toBeTruthy();
     // a subscription made, then off: asked
     await savePayment({ category_id: (await db.get<{ id: number }>("SELECT id FROM categories WHERE name = 'Дом и коммуналка'"))!.id, merchant_key: 'RENT', name: 'RENT', amount_minor: 80000, currency: 'GEL', period: 1, due: '2026-11-03' });
-    toggleSwitch(false);
+    toggleSwitch(false, 'Подписки');
     expect(await screen.findByText('Выключить подписки?')).toBeTruthy();
     expect(screen.getByText('1 подписка удалится; сумма в плане останется, операции — тоже.')).toBeTruthy();
     await tap('Выключить');
@@ -615,7 +615,7 @@ describe('6.7.13 "Подписки" on a category\'s page', () => {
 
   test('nothing to delete: at once', async () => {
     await openHome(seed);
-    toggleSwitch(true);
+    toggleSwitch(true, 'Подписки');
     expect(await screen.findByText('Подписки включены')).toBeTruthy();
     expect(await (await getDb()).get("SELECT by_merchant FROM categories WHERE name = 'Дом и коммуналка'")).toEqual({ by_merchant: 1 });
   });
@@ -743,7 +743,7 @@ describe('6.6 subscriptions on the operations', () => {
   test('"Подписки" set on an operation of a merchant with none: how often, the next charge — from it', async () => {
     await openApp(seedOps);
     await tap('SPOTIFY');
-    await tap('Сменить');
+    await tap('#tx-category');
     await tap('📺 Подписки');
     expect(await screen.findByText('📺 Подписка «SPOTIFY»')).toBeTruthy();
     expect(screen.getByText(/^12 ноября 2026/)).toBeTruthy();
@@ -760,7 +760,7 @@ describe('6.6 subscriptions on the operations', () => {
   test('"Пропустить": kept without a day, not asked again', async () => {
     await openApp(seedOps);
     await tap('SPOTIFY');
-    await tap('Сменить');
+    await tap('#tx-category');
     await tap('📺 Подписки');
     await tap('Пропустить');
     expect(await screen.findByText('SPOTIFY — без даты списания')).toBeTruthy();

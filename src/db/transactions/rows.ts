@@ -1,5 +1,6 @@
 // An operation's row, the list's pages (a keyset cursor by day), one operation, the unread ones.
 import { getDb } from '../index';
+import { IMPULSE_ASKED_COLUMN } from '../impulse';
 import { TxFilter, filterWhere } from './filter';
 import { CATEGORY_COLUMNS, FROM_TX, NEWEST_FIRST, PARTS_COLUMN, SELECT_TX } from './sql';
 
@@ -56,10 +57,11 @@ export async function listTransactionsPage(cursor: PageCursor | null, limit = 50
   };
 }
 
+/** One operation, with its SMS and "Обдуманная" / "Импульсивная" (the answer, the mood, and whether its categories ask it). */
 export async function getTransaction(id: number) {
   const db = await getDb();
-  return db.get<TransactionRow & { raw_sms: string }>(
-    `SELECT t.*, ${CATEGORY_COLUMNS}, ${PARTS_COLUMN} ${FROM_TX} WHERE t.id = ?`, [id]);
+  return db.get<TransactionRow & { raw_sms: string; impulse: number | null; mood: string | null; impulse_asked: number }>(
+    `SELECT t.*, ${CATEGORY_COLUMNS}, ${PARTS_COLUMN}, ${IMPULSE_ASKED_COLUMN} ${FROM_TX} WHERE t.id = ?`, [id]);
 }
 
 /**

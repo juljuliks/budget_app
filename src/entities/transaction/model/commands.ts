@@ -4,6 +4,8 @@ import {
   addManualTransaction, DeletedTransaction, deleteTransactions, IncomeKind, markTransactionSeen, markTransactionsSeen, restoreTransactions, setTransactionAmount,
   setTransactionKind, setTransactionNote,
 } from '@/db/transactions';
+import { setTransactionImpulse, setTransactionMood } from '@/db/impulse';
+import type { Mood } from '@/domain/moods';
 import { getParts, splitTransaction, TxPart, unsplitTransactions } from '@/db/parts';
 import { emitTransactionsChanged } from '@/domain/events';
 
@@ -35,6 +37,18 @@ export async function unsplitOperation(id: number): Promise<TxPart[]> {
 /** An empty note removes it. */
 export async function saveTransactionNote(id: number, note: string) {
   await setTransactionNote(id, note);
+  emitTransactionsChanged();
+}
+
+/** "Обдуманная" / "Импульсивная": "Да" / "Нет", null — the answer taken back. */
+export async function saveImpulse(id: number, impulse: boolean | null) {
+  await setTransactionImpulse(id, impulse);
+  emitTransactionsChanged();
+}
+
+/** "Настроение": one of the moods, null — taken back. */
+export async function saveMood(id: number, mood: Mood | null) {
+  await setTransactionMood(id, mood);
   emitTransactionsChanged();
 }
 
