@@ -1,7 +1,8 @@
-// A month's funds' contributions fitted to its budget, without asking: what is free in the plan first, then
-// "🔒 Отложить сразу" (part of it too), what still doesn't fit is 0 this month — the next ones ask more (left to save
-// over the months left). No budget — all of it. Written to the funds' plan items: limit_minor (what goes in),
-// cap_minor (what fitted, when less than it asks), taken_minor (of it from 🔒, in the budget's currency).
+// A month's funds' contributions fitted to its budget, without asking — they come before "🔒 Отложить сразу": what is
+// free in the plan first, then 🔒 set as an amount gives way (part of it too; "MAX" is what is left after them anyway),
+// what still doesn't fit is 0 this month — the next ones ask more (left to save over the months left). No budget — all
+// of it. Written to the funds' plan items: limit_minor (what goes in), cap_minor (what fitted, when less than it asks),
+// taken_minor (of it from 🔒, in the budget's currency).
 import { getDb } from '../index';
 import { activeFunds, contributionOf, fundLedger } from './funds';
 import { planConverter, storedBudget } from './budget';
@@ -28,10 +29,10 @@ export async function fitFunds(ym: string, nowYm: string): Promise<void> {
     const others = (await db.all<{ limit_minor: number; currency: string }>(
       "SELECT limit_minor, currency FROM plan_items WHERE ym = ? AND kind != 'fund'", [ym]))
       .reduce((a, r) => a + (conv(r.limit_minor, r.currency, budget.currency) ?? 0), 0);
-    // what the last fit took is 🔒's again (and not the plan's)
-    const room = Math.max(0, budget.plannable_minor - before - others);
-    free = max ? 0 : room;
-    locked = max ? Math.max(0, budget.plannable_minor - others) : budget.locked_minor + before;
+    // what the last fit took is 🔒's again (and not the plan's); "MAX": the whole budget less the plan is room — 🔒 is
+    // what the funds leave
+    free = Math.max(0, budget.plannable_minor - before - others);
+    locked = max ? 0 : budget.locked_minor + before;
   }
   // the older first: a new fund doesn't take an older one's place
   const funds = (await activeFunds(ym, db)).filter((f) => items.some((i) => i.category_id === f.category_id))

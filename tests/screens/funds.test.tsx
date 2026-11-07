@@ -86,7 +86,7 @@ describe('6.5 funds', () => {
     expect(t.slice(i + 1, i + 5)).toEqual(['150 из 1 500 ₾ · к 31 января 2027', '(300 ₾)', '120 $', '10%']);
   });
 
-  test('past what is free, 🔒 has it: taken from it without asking, said in the plan', async () => {
+  test('past what is free, 🔒 set as an amount gives way without asking — said on its row in the plan', async () => {
     await openApp(planned);
     // 2 700 over 4 months: 675 a month, 640 free — 35 from 🔒
     await fillFund('2700');
@@ -97,7 +97,9 @@ describe('6.5 funds', () => {
     backToTabs();
     await tap('Статистика');
     await openPlanPage();
-    expect((await screen.findAllByText(/640.₾ из плана, 35.₾ из «Отложить сразу»/)).length).toBeGreaterThanOrEqual(1);
+    // the funds come before 🔒: it gave way by 35 ₾ — said on its row, not the fund's
+    expect(await screen.findByText(/^заблокировано в начале месяца · копилкам −35.₾$/)).toBeTruthy();
+    expect(screen.queryByText(/из «Отложить сразу»/)).toBeNull();
   });
 
   test('nothing free, 🔒 empty: 0 this month, the next ones more — nothing asked', async () => {

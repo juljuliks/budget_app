@@ -39,21 +39,17 @@ const took = (n: number, money: Money, hidden: boolean, then = ''): SavingsStatu
   ({ text: `${hidden ? 'Перерасход взял часть' : `Перерасход взял ${money(n)}`}${then}`, tone: 'warn', info: true });
 
 /**
- * A fund's contribution as the budget fitted it (fundFit.ts): nothing — "В ноябре без взноса: бюджет расписан · с
- * декабря 375 ₾"; part — "30 $ из плана, 50 $ из «Отложить сразу» · с декабря 128 $"; all, part of it from 🔒 —
- * "50 $ из «Отложить сразу»". null — all of it, from the plan.
+ * A fund's contribution as the budget fitted it (fundFit.ts; it comes before 🔒, so nothing of it is "from" 🔒):
+ * nothing — "В ноябре без взноса: бюджет расписан · с декабря 375 ₾"; part — "взнос меньше · с декабря 128 $".
+ * null — all of it.
  */
 export function fundFitStatus(f: PlanItem, ym: string, hidden: boolean): SavingsStatus | null {
   const fit = f.fund?.fit;
   if (!fit) return null;
   const m = (minor: number, cur: string) => (hidden ? '' : formatWithCurrency(minor, cur));
   const next = `с ${MONTHS_GEN[(Number(ym.slice(5)) % 12)]} ${m(fit.next, f.currency)}`.trim();
-  const taken = fit.taken > 0 ? `${m(fit.taken, fit.taken_currency ?? f.currency)} из «Отложить сразу»`.trim() : null;
   if (f.limit_minor === 0) return { text: `В ${MONTHS_PREP[Number(ym.slice(5)) - 1]} без взноса: бюджет расписан · ${next}`, tone: 'warn' };
-  const short = f.limit_minor < fit.asked;
-  const fromPlan = fit.taken_currency === f.currency ? f.limit_minor - fit.taken : null;
-  const parts = [fromPlan !== null && fromPlan > 0 && taken ? `${m(fromPlan, f.currency)} из плана`.trim() : null, taken].filter(Boolean).join(', ');
-  return { text: short ? `${parts || 'взнос меньше'} · ${next}` : parts, tone: 'muted' };
+  return f.limit_minor < fit.asked ? { text: `взнос меньше · ${next}`, tone: 'muted' } : null;
 }
 
 /** This month, from the plan's view. null — no budget, or nothing goes to savings. */
