@@ -9,6 +9,7 @@ import StepsNav from '@/shared/ui/StepsNav';
 import { currentStep, monthWords, STEP_NAMES, stepAnswered } from './model/closeTexts';
 import { useMonthClose } from './model/useMonthClose';
 import StepOver from './ui/StepOver';
+import StepPayments from './ui/StepPayments';
 import SplitSheet from './ui/SplitSheet';
 import StepSavings from './ui/StepSavings';
 import { styles } from './ui/styles';
@@ -17,12 +18,12 @@ import { styles } from './ui/styles';
 const NEXT_SHEET_MS = 250;
 
 /**
- * "Итоги месяца" (sheets.ts → openMonthClose): a month over, step by step — Перерасход → Сбережения ("Сколько удалось
+ * "Итоги месяца" (sheets.ts → openMonthClose): a month over, step by step — Платежи → Перерасход → Сбережения ("Сколько удалось
  * отложить?" and how it is laid out over the funds and the savings), each one only if it has a question. "Далее" once the step is answered, "‹ Назад", "Подвести позже" (the answers are kept). The
  * last step: "Отчёт за сентябрь" once everything is answered — the month is closed and its report opens.
  */
 export default function MonthCloseSheet({ ym, onClose }: { ym: string | null; onClose: () => void }) {
-  const { close: c, failed, load, split, answer, finish } = useMonthClose(ym);
+  const { close: c, failed, load, split, answer, pay, finish } = useMonthClose(ym);
   const [wanted, setWanted] = useState<CloseStep | null>(null);
   const [splitOpen, setSplitOpen] = useState(false);
   useEffect(() => { setWanted(null); setSplitOpen(false); }, [ym]);
@@ -47,6 +48,7 @@ export default function MonthCloseSheet({ ym, onClose }: { ym: string | null; on
               onBack={at > 0 ? () => setWanted(c.steps[at - 1]) : undefined} />
           ) : null}
           <SheetScrollView contentContainerStyle={styles.content}>
+            {step === 'payments' ? <StepPayments c={c} onAnswer={(id, v) => { pay(id, v); }} /> : null}
             {step === 'over' ? <StepOver c={c} onAnswer={answer} /> : null}
             {step === 'savings' ? <StepSavings c={c} onAnswer={answer} onSplit={() => setSplitOpen(true)} /> : null}
             {!step ? <Text style={styles.empty}>{`Вопросов о ${words.prep} нет`}</Text> : null}

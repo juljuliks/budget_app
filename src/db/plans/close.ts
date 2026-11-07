@@ -11,6 +11,7 @@ import { monthStats } from './stats';
 import { activeFunds, fundLedger } from './funds';
 import { coverOver, savingsOf, splitKept, splitSaved } from './closeSplit';
 import { SavingsBalance, savingsBalance } from './closeBalance';
+import { ClosePayment, closePayments, movedMinor } from './closePayments';
 
 export type { SavingsBalance };
 
@@ -19,7 +20,7 @@ export type OverRestCover = 'next' | 'covered';
 export type RestChoice = 'savings' | 'next' | 'keep';
 /** "Сколько удалось отложить?": "Да, <сумма>" / "Другая сумма" / "Нет" */
 export type SavedAnswer = 'yes' | 'other' | 'no';
-export type CloseStep = 'over' | 'savings';
+export type CloseStep = 'payments' | 'over' | 'savings';
 
 export type CloseAnswers = {
   over_cover: OverCover | null;
@@ -111,6 +112,9 @@ export type MonthClose = {
   complete: boolean;
   /** what goes to the next month, in the budget's currency */
   carry: { debt_minor: number; plus_minor: number };
+  /** the one-off payments not paid (only while the next month isn't over), what of them moves on with its money */
+  payments: ClosePayment[];
+  moved_minor: number;
 };
 
 type CloseRow = CloseAnswers & { closed_at: number | null; locked_cover: number };
@@ -167,6 +171,8 @@ export async function monthClose(ym: string, nowYm = currentYm()): Promise<Month
   };
   let budget: CloseBudget | null = null;
   const carry = { debt_minor: 0, plus_minor: 0 };
+  let payments: ClosePayment[] = [];
+  let moved = 0;
   const currency = stored?.currency ?? funds[0]?.currency ?? 'GEL';
   const conv = await planConverter(ym);
   const inCur = (minor: number, from: Currency) => conv(minor, from, currency) ?? 0;
@@ -182,7 +188,10 @@ export async function monthClose(ym: string, nowYm = currentYm()): Promise<Month
     const amount = stored.amount_minor;
     const locked = stored.locked_minor;
     const over = Math.max(0, spent - (amount - locked));
-    const rest = Math.max(0, amount - locked - spent);
+    // the payments moved on take their money out of the leftover (as much as there is)
+    payments = can_carry ? await closePayments(ym, stats, conv, currency) : [];
+    moved = Math.min(movedMinor(payments), Math.max(0, amount - locked - spent));
+    const rest = Math.max(0, amount - locked - spent) - moved;
     answers.over_cover ??= locked > 0 || fundsPlanned > 0 ? 'savings' : can_carry ? null : 'covered';
     const cover = coverOver(over, locked, amounts);
     const taken = over > 0 && answers.over_cover === 'savings';
@@ -201,7 +210,7 @@ export async function monthClose(ym: string, nowYm = currentYm()): Promise<Month
     if (over > 0) {
       carry.debt_minor = answers.over_cover === 'next' ? over : answers.over_rest_cover === 'next' ? budget.over_rest_minor : 0;
     }
-    if (answers.rest_choice === 'next') carry.plus_minor = rest;
+    carry.plus_minor = (answers.rest_choice === 'next' ? rest : 0) + moved;
   }
   const kept = budget?.kept_locked_minor ?? 0;
   const restPlanned = budget && answers.rest_choice === 'savings' ? budget.rest_minor : 0;
@@ -228,15 +237,17 @@ export async function monthClose(ym: string, nowYm = currentYm()): Promise<Month
     }
   }
   const steps: CloseStep[] = [];
+  if (payments.length) steps.push('payments');
   if (budget && budget.over_minor > 0) steps.push('over');
   if (ask > 0 || funds.length) steps.push('savings');
   const saved_minor = ask <= 0 || !split ? null : split.locked + split.rest;
   const overAnswered = !budget || budget.over_minor === 0
     || (answers.over_cover !== null && (budget.over_rest_minor === 0 || answers.over_rest_cover !== null));
-  const complete = overAnswered && (ask <= 0 || put !== null);
+  const complete = overAnswered && (ask <= 0 || put !== null) && payments.every((p) => p.choice !== null);
   return {
     ym, next_ym, can_carry, closed: row?.closed_at != null, steps, funds, budget, answers, ask_minor: ask, currency, put_minor: put,
-    balance: bal.balance, account_minor: ask - past, split, auto, planned: autoOf(ask), saved_minor, complete, carry,
+    balance: bal.balance, account_minor: ask - past, split, auto, planned: autoOf(ask), saved_minor, complete, carry, payments,
+    moved_minor: moved,
   };
 }
 

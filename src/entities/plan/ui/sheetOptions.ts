@@ -1,16 +1,21 @@
 // The plan sheet's choices and texts: the kinds, the spending patterns, the toast after saving.
 import type { Currency } from '@/db/fx';
-import type { PlanKind } from '@/db/plans';
+import type { CategoryPlanKind, PlanKind } from '@/db/plans';
 import { RHYTHM_DAYS } from '@/shared/lib/dates';
 import { daysInMonth } from '@/shared/lib/dateRange';
 import { formatWithCurrency } from '@/shared/lib/money';
 import { PER_PERIOD, SPENDING_PATTERN } from '@/shared/lib/strings';
 
-export const KINDS = [
-  ['limit', 'Траты с лимитом', 'Еда, кафе, одежда — сумма меняется, следим, сколько осталось'],
-  ['subs', 'Регулярный платёж', 'Обеды, аренда, страховка — каждый день, неделю, месяц или реже'],
-  ['fixed', 'Разовый платёж', 'Подарок, ремонт, взнос — известная сумма в этом месяце'],
-] as const;
+/** What a plan item is, by its category's kind (set on the category's page, «В плане»). */
+export const KIND_NAMES: Record<PlanKind, string> = {
+  limit: 'Траты с лимитом', subs: 'Регулярный платёж', fixed: 'Разовый платёж', fund: 'Копилка',
+};
+
+/** A category added to the plan: its item as its kind says; none set — a one-off payment. */
+export const itemKindOf = (k: CategoryPlanKind | null): PlanKind => (k === 'limit' ? 'limit' : k === 'regular' ? 'subs' : 'fixed');
+
+/** A regular payment in the plan: its amount is its category's. */
+export const REGULAR_HINT = 'Сумма и расписание — на странице категории, меняются во всех месяцах с этого.';
 
 export const BY_HAND_HINT = 'Сумма считается из списаний подписок категории; пока ни у одной нет даты — она вводится здесь.';
 

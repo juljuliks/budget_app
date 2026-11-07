@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Controller, UseFormReturn, useWatch } from 'react-hook-form';
 import { Currency } from '@/db/fx';
-import { categoryMonthlyAverage, categoryMonthSpent, currentYm, Every, getPlanBudget, lastPlanItem, NormPeriod, PlanKind, planConverter, plannedTotal } from '@/db/plans';
+import { categoryMonthlyAverage, categoryMonthSpent, categoryPlanKind, currentYm, Every, getPlanBudget, getPlanItemBasics, lastPlanItem, NormPeriod, PlanKind, planConverter, plannedTotal } from '@/db/plans';
 import { StyleSheet, Text, View } from 'react-native';
 import { colors } from '@/shared/theme/theme';
 import { LOAD_FAILED } from '@/shared/lib/strings';
 import { formStyles } from '@/shared/theme/formStyles';
 import CurrencyButton from '@/shared/ui/CurrencyButton';
-import { parseAmountOrZero, toInputValue } from '@/shared/lib/money';
+import { formatWithCurrency, parseAmountOrZero, toInputValue } from '@/shared/lib/money';
 import RadioGroup from '@/shared/ui/RadioGroup';
 import StepsNav from '@/shared/ui/StepsNav';
 import TextInputModal from '@/shared/ui/TextInputModal';
@@ -19,8 +19,8 @@ import { toast } from '@/shared/ui/toast';
 import { resumeSubscriptions } from '../model/commands';
 import PlanFacts from './PlanFacts';
 import RegularFields, { RegularEvery, RegularForm } from './RegularFields';
-import RepeatField, { RepeatForm } from './RepeatField';
-import { BY_HAND_HINT, COUNTED_HINT, KINDS, patterns, PICK_HINT, RESUME_HINT } from './sheetOptions';
+import KindPlate from './KindPlate';
+import { BY_HAND_HINT, COUNTED_HINT, itemKindOf, patterns, PICK_HINT, REGULAR_HINT, RESUME_HINT } from './sheetOptions';
 import { PlanSheetValues, submitPlanSheet } from './submitPlanSheet';
 
 export type PlanAmountTarget = {
@@ -43,7 +43,7 @@ export type PlanAmountTarget = {
    */
   recurring?: boolean;
   by_merchant?: boolean;
-  /** "Повторять каждый месяц": the next month has it with the same amount (till `until`, "Дата окончания") */
+  /** an item repeated before the category's kind ruled it (kept as it is); `until` — a regular payment's end */
   pinned?: boolean;
   until?: string | null;
   /** a regular payment within the month (a one-off payment's item): every day or on the weekdays, `unit_minor` each time */
@@ -67,6 +67,11 @@ type Props = {
   adding?: { onBack: () => void };
   /** before going to the operations ("Выбрать операцию"): closes this sheet and the ones under it (by default — this one) */
   onLeave?: () => void;
+  /**
+   * «Настроить» of a regular payment from its category's page: only the payment (its amount, how often, its end) —
+   * no kind to pick, nothing of the plan (what is free, spent, last month's)
+   */
+  setup?: boolean;
 };
 
 /**
@@ -102,7 +107,7 @@ async function goSubscriptions(target: PlanAmountTarget, has: boolean, leave: ()
  * stats screen ("＋ В план"). The amount is entered in any currency (the one it was entered in comes back when
  * editing); what is still free is shown in the amount to distribute's currency, and going over it is refused.
  */
-export default function PlanAmountModal({ ym, currency: shown, target, onClose, onSaved, onDelete, adding, onLeave }: Props) {
+export default function PlanAmountModal({ ym, currency: shown, target, onClose, onSaved, onDelete, adding, onLeave, setup }: Props) {
   // the most this category can get = amount to distribute − the other categories (null = no amount set), in the app's currency
   const [free, setFree] = useState<{ minor: number; currency: Currency } | null>(null);
   // "🔒 Отложить сразу", in the budget's currency: what is short of free can be taken from it
@@ -110,7 +115,8 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
   // the saved item; a category not in the plan yet starts as a day-to-day limit in the screen's currency
   const form = useLoadedForm<RegularForm & { value: string; currency: Currency; kind: PlanKind; norm: NormPeriod }>(target ? {
     value: toInputValue(target.every ? target.unit_minor ?? 0 : target.limit_minor), currency: target.currency,
-    kind: target.recurring || target.every ? 'subs' : target.kind ?? 'limit', pinned: !!target.pinned, until: target.until ?? null,
+    // «📺 Подписки»: always its subscriptions (picked, counted or by hand till one has a day)
+    kind: target.by_merchant || target.recurring || target.every ? 'subs' : target.kind ?? 'limit', pinned: !!target.pinned, until: target.until ?? null,
     every: target.every ?? 'month', weekdays: target.weekdays ?? 0, period: 1, next: null,
     norm: target.norm_period ?? 'day',
   } : null, target !== null);
@@ -122,6 +128,10 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
   const [average, setAverage] = useState<{ minor: number; months: number; from: string; to: string } | null>(null);
   // what the category spent in the month so far (not in a coming one), in the app's currency
   const [spent, setSpent] = useState<{ minor: number; ym: string } | null>(null);
+  // the item in the month's plan already (a regular payment there: its amount is its category's, not edited here)
+  const [inPlan, setInPlan] = useState(true);
+  // a regular payment in the plan: its amount and schedule are its category's («Настроить» on its page), shown only
+  const fixedRegular = !setup && inPlan && kind === 'subs' && !!target && !target.by_merchant;
   // a category with "Подписки": has it subscriptions (off in the plan — they count again)
   const [hasSubs, setHasSubs] = useState(false);
   useEffect(() => {
@@ -132,9 +142,11 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
   useEffect(() => {
     if (!target) return;
     (async () => {
-      const [budget, last, conv, avg, spentMinor] = await Promise.all([
+      const [budget, last, conv, avg, spentMinor, own, item] = await Promise.all([
         getPlanBudget(ym), lastPlanItem(ym, target.category_id), planConverter(ym), categoryMonthlyAverage(target.category_id, ym, shown),
-        ym > currentYm() ? null : categoryMonthSpent(target.category_id, ym, shown)]);
+        ym > currentYm() ? null : categoryMonthSpent(target.category_id, ym, shown), categoryPlanKind(target.category_id),
+        getPlanItemBasics(ym, target.category_id)]);
+      setInPlan(!!item);
       const others = budget ? await plannedTotal(ym, target.category_id, budget.currency) : 0;
       // in the app's currency; the original one when there is no rate
       const inShown = (minor: number, from: Currency) => {
@@ -147,6 +159,7 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
       setPrevious(last ? { ...inShown(last.limit_minor, last.currency), ym: last.ym } : null);
       setAverage(avg && avg.average_minor > 0 ? { minor: avg.average_minor, months: avg.months, from: avg.from, to: avg.to } : null);
       setSpent(spentMinor === null ? null : { minor: spentMinor, ym });
+      if (setup) return;
       // not in the plan yet: the amount it was opened with (what the category spent), else last month's item —
       // ready to save as is (so it counts as a change); the kind and pattern from last month either way
       const dirty = { shouldDirty: true };
@@ -157,17 +170,16 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
         form.setValue('value', toInputValue(last.limit_minor), dirty);
         form.setValue('currency', last.currency, dirty);
       }
-      if (!target.limit_minor && last) {
-        if (!target.kind) form.setValue('kind', last.kind, dirty);
-        if (!target.norm_period) form.setValue('norm', last.norm_period, dirty);
-      }
+      // not in the plan: the item as its category's kind says (none set — a one-off payment)
+      if (!item && !target.by_merchant) form.setValue('kind', itemKindOf(own), dirty);
+      if (!target.limit_minor && last && !target.norm_period) form.setValue('norm', last.norm_period, dirty);
     })().catch(toastFailure('load plan budget', LOAD_FAILED));
-  }, [ym, target, form, shown]);
+  }, [ym, target, form, shown, setup]);
 
   async function save(text: string): Promise<string | null | false> {
     if (!target) return null;
     if (s.pick) return goSubscriptions(target, hasSubs, onLeave ?? onClose, onSaved);
-    if (s.counted) return null;
+    if (s.counted || fixedRegular) return null;
     return submitPlanSheet({ ym, target, text, v: form.getValues() as PlanSheetValues, adding: !!adding, locked, free, onSaved, onClose });
   }
 
@@ -183,11 +195,12 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
   return (
     <TextInputModal
       visible={target !== null}
-      title={adding ? 'Добавить в план' : target?.label ?? ''}
+      title={setup ? 'Регулярный платёж' : adding ? 'Добавить в план' : target?.label ?? ''}
       // the category's name a link to its page (the sheet closes: a page goes under the sheets)
-      onTitlePress={!adding && target ? () => { onClose(); openCategory(target.category_id); } : undefined}
-      submitLabel={s.pick && !hasSubs ? 'Выбрать мерчанта' : adding ? 'Добавить в план' : undefined} noInput={s.pick || s.counted}
-      hint={hint} form={form} placeholder="0" keyboardType="decimal-pad"
+      onTitlePress={!adding && !setup && target ? () => { onClose(); openCategory(target.category_id); } : undefined}
+      submitLabel={s.pick && !hasSubs ? 'Выбрать мерчанта' : adding ? 'Добавить в план' : undefined} noInput={s.pick || s.counted || fixedRegular}
+      alwaysSubmit={s.pick || setup}
+      hint={setup ? null : hint} form={form} placeholder="0" keyboardType="decimal-pad"
       maxLength={12}
       allowEmpty
       onSubmit={save}
@@ -195,9 +208,10 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
       // an item in the plan: removing it is a button under "Сохранить", as on the other sheets
       remove={onDelete ? { title: 'Удалить из плана', onPress: () => { onClose(); onDelete(); } } : undefined}
       inputAccessory={<Controller control={form.control} name="currency" render={({ field }) => <CurrencyButton value={field.value} onChange={field.onChange} />} />}
-      label={s.regular ? 'Сумма за раз' : s.own ? 'Сумма платежа' : undefined}
-      // the kind first: the field under it is a month's amount
-      above={<Controller control={form.control} name="kind" render={({ field }) => <RadioGroup options={KINDS} value={field.value} onChange={field.onChange} />} />}
+      label={fixedRegular ? undefined : s.regular ? 'Сумма за раз' : s.own ? 'Сумма платежа' : undefined}
+      // what it is (its category's kind) first: the field under it is a month's amount
+      above={setup || !target || target.by_merchant ? undefined
+        : <KindPlate kind={kind} onOpen={() => { (onLeave ?? onClose)(); openCategory(target.category_id); }} />}
     >
       {kind === 'limit' ? (
         <>
@@ -206,8 +220,13 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
           <Text style={formStyles.hint}>По этому в статистике считается лимит на день или неделю.</Text>
         </>
       ) : null}
-      {kind === 'limit' && target ? <RepeatField ym={ym} form={form as unknown as UseFormReturn<RepeatForm>} entered={entered ?? ''} currency={enteredCurrency} /> : null}
-      {kind === 'subs' && target && !target.by_merchant ? <RegularFields ym={ym} categoryId={target.category_id} form={form as unknown as Parameters<typeof RegularFields>[0]['form']} /> : null}
+      {fixedRegular && target ? (
+        <>
+          <Text style={styles.amount}>{`В плане — ${formatWithCurrency(target.limit_minor, target.currency)}`}</Text>
+          <Text style={formStyles.hint}>{REGULAR_HINT}</Text>
+        </>
+      ) : null}
+      {kind === 'subs' && target && !target.by_merchant && !fixedRegular ? <RegularFields ym={ym} categoryId={target.category_id} form={form as unknown as Parameters<typeof RegularFields>[0]['form']} /> : null}
       {kind === 'subs' && target?.by_merchant ? <Text style={formStyles.hint}>{s.pick ? (hasSubs ? RESUME_HINT : PICK_HINT) : s.counted ? COUNTED_HINT : BY_HAND_HINT}</Text> : null}
     </TextInputModal>
   );
@@ -215,4 +234,5 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
 
 const styles = StyleSheet.create({
   category: { fontSize: 18, fontWeight: '600', color: colors.text, marginBottom: 12 },
+  amount: { fontSize: 18, fontWeight: '600', color: colors.text },
 });

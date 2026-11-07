@@ -7,7 +7,7 @@ import { getSetting } from '../../src/db/settings';
 import { openApp, screen, tap, texts, openPlanPage, openHistoryPage } from './app';
 import { buy, category, on, planned } from '../e2e/seeds';
 import { getDb } from '../../src/db';
-import { answerClose, finishClose, setFund, setPlanBudget, setSplit } from '../../src/db/plans';
+import { answerClose, finishClose, setFund, setPlanAmount, setPlanBudget, setSplit } from '../../src/db/plans';
 import { openMonthClose } from '../../src/shared/navigation/sheets';
 
 const m = (s: string) => s.replace(/ /g, ' ');
@@ -20,6 +20,28 @@ async function open() {
 }
 
 describe('6.6 month close', () => {
+  test('6.6.10 a one-off payment not paid: «Платежи» first — «Перенести на октябрь» puts it in October\'s plan with its money', async () => {
+    await openApp(async () => {
+      await planned();
+      const repair = await category('Ремонт', '🔧');
+      await setPlanAmount('2026-09', repair, 30000, 'fixed');
+    });
+    await open();
+    expect(screen.getByText('Шаг 1 из 2 · Платежи')).toBeTruthy();
+    expect(screen.getByText('Не оплачено в сентябре')).toBeTruthy();
+    expect(screen.getByText(m('в плане октября — 300 ₾, в «Остатке сентября» +300 ₾'))).toBeTruthy();
+    expect(disabled('Далее')).toBe(true);
+    await tap('Перенести на октябрь');
+    await waitFor(() => expect(disabled('Далее')).toBe(false));
+    await tap('Далее');
+    expect(await screen.findByText('Шаг 2 из 2 · Сбережения')).toBeTruthy();
+    await tap(m('Да, 850 ₾'));
+    await tap('Отчёт за сентябрь');
+    expect(await screen.findByText('Отчёт · Сентябрь 2026')).toBeTruthy();
+    expect(await (await getDb()).get("SELECT p.limit_minor AS l, p.kind FROM plan_items p JOIN categories c ON c.id = p.category_id WHERE p.ym = '2026-10' AND c.name = 'Ремонт'"))
+      .toEqual({ l: 30000, kind: 'fixed' });
+  });
+
   test('no overspend: what the budget left, "Сколько удалось отложить?", how it is laid out; "Отчёт за сентябрь" closes it', async () => {
     await openApp(planned);
     await open();

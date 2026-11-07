@@ -8,7 +8,7 @@ import { periodText } from '@/shared/lib/format';
 import { parseAmountOrZero, toInputValue } from '@/shared/lib/money';
 import DateField from '@/shared/ui/DateField';
 import { formStyles } from '@/shared/theme/formStyles';
-import { UntilField, RepeatForm } from './RepeatField';
+import { UntilField, RepeatForm } from './UntilField';
 import SavingFields from './SavingFields';
 import { SavingChoice, usePaymentSaving } from '../model/usePaymentSaving';
 

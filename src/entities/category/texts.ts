@@ -45,6 +45,5 @@ export const SEVERAL_HINT = 'Несколько категорий можно в
 /** "Импульсивные покупки" on a category's page. */
 export const IMPULSE_SWITCH = 'Импульсивные покупки';
 /** a category with a fund (its purchases are planned) */
-export const IMPULSE_NO_FUND = 'Недоступно: траты из копилки запланированы заранее.';
 export const IMPULSE_HINT_OFF = 'Спрашивать в операциях категории, была ли покупка импульсивной.';
 export const IMPULSE_HINT_ON = 'В операциях категории — «Обдуманная» или «Импульсивная», у импульсивной — «Что подтолкнуло?». Итоги — в отчёте за месяц и в «Динамике трат».';

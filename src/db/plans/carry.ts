@@ -5,24 +5,29 @@ import { currentYm } from './months';
 import { countRegularItems } from './regular';
 
 /**
- * `from`'s items into `to` (those already there are left): pinned ones and the categories with regular payments with
- * their amount, the others empty; a regular payment within the month — only repeated, till its end. One category only:
- * `categoryId`.
+ * `from`'s items into `to` (those already there are left), by the category's kind: a limit and a regular payment with
+ * their amount (and «Как тратите», the payment's times), till "Дата окончания"; a one-off payment — not at all; a fund —
+ * while it is open. A category with no kind yet: pinned ones and those with regular payments with their amount, the
+ * others empty; a regular payment within the month — only repeated, till its end. One category only: `categoryId`.
  */
 export async function carryItems(db: Db, from: string, to: string, categoryId?: number): Promise<void> {
   // "Дата окончания" before this month: not repeated any more
-  const ended = `p.until IS NOT NULL AND p.until < '${to}-01'`;
+  const ended = `(p.until IS NOT NULL AND p.until < '${to}-01')`;
+  const repeats = "coalesce(c.plan_kind IN ('limit', 'regular'), 0)";
   await db.run(
     `INSERT OR IGNORE INTO plan_items (ym, category_id, limit_minor, pinned, kind, currency, norm_period, until, every, weekdays, unit_minor)
       -- a category with regular payments always goes on with its amount (a dated one is counted again right after)
-      SELECT ?, p.category_id, CASE WHEN (p.pinned = 1 AND NOT (${ended})) OR c.recurring = 1 THEN p.limit_minor ELSE 0 END,
+      SELECT ?, p.category_id, CASE WHEN (p.pinned = 1 AND NOT (${ended})) OR c.recurring = 1 OR ${repeats} THEN p.limit_minor ELSE 0 END,
         CASE WHEN ${ended} THEN 0 ELSE p.pinned END, p.kind, p.currency, p.norm_period,
         CASE WHEN ${ended} THEN NULL ELSE p.until END, p.every, p.weekdays, p.unit_minor
       FROM plan_items p JOIN categories c ON c.id = p.category_id
       WHERE p.ym = ? AND c.deleted_at IS NULL AND p.category_id IS coalesce(?, p.category_id)
         AND (p.kind != 'fund' OR EXISTS (SELECT 1 FROM funds f WHERE f.category_id = p.category_id AND f.closed_ym IS NULL))
-        -- a regular payment within the month goes on only repeated each month, till its end
-        AND NOT (p.kind = 'fixed' AND p.every IS NOT NULL AND (p.pinned = 0 OR ${ended}))`,
+        AND c.plan_kind IS NOT 'oneoff'
+        -- a limit or a regular payment by the category's kind: till its end
+        AND NOT (${repeats} AND ${ended})
+        -- a regular payment within the month goes on only repeated each month (or by the kind), till its end
+        AND NOT (p.kind = 'fixed' AND p.every IS NOT NULL AND ((p.pinned = 0 AND NOT ${repeats}) OR ${ended}))`,
     [to, from, categoryId ?? null]);
   await countRegularItems(to, db);
 }
@@ -33,12 +38,18 @@ export type ItemShape = { repeats: boolean; oneOff: boolean; fund: boolean } | n
 /** The item's shape in `ym` (null — none). */
 export async function itemShape(ym: string, categoryId: number, db?: Db): Promise<ItemShape> {
   db ??= await getDb();
-  const r = await db.get<{ pinned: number; kind: string; every: string | null; recurring: number }>(
-    `SELECT p.pinned, p.kind, p.every, c.recurring FROM plan_items p JOIN categories c ON c.id = p.category_id
+  const r = await db.get<{ pinned: number; kind: string; every: string | null; recurring: number; plan_kind: string | null }>(
+    `SELECT p.pinned, p.kind, p.every, c.recurring, c.plan_kind FROM plan_items p JOIN categories c ON c.id = p.category_id
       WHERE p.ym = ? AND p.category_id = ?`, [ym, categoryId]);
   if (!r) return null;
+  const fund = r.kind === 'fund';
+  // by the category's kind; none yet — by the item
+  if (r.plan_kind && !fund) {
+    const oneOff = r.plan_kind === 'oneoff';
+    return { repeats: r.plan_kind === 'limit' || r.plan_kind === 'regular', oneOff, fund };
+  }
   const oneOff = r.kind === 'fixed' && r.every === null && r.recurring !== 1;
-  return { repeats: !oneOff && (r.pinned === 1 || r.recurring === 1), oneOff, fund: r.kind === 'fund' };
+  return { repeats: !oneOff && (r.pinned === 1 || r.recurring === 1), oneOff, fund };
 }
 
 /**

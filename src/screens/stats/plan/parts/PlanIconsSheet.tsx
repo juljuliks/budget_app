@@ -5,16 +5,11 @@ import { SheetActions } from '@/shared/ui/Button';
 import { LimitIcon, LockIcon, OneOffIcon, RepeatIcon } from '@/shared/ui/icons';
 import ProgressRing from '@/shared/ui/ProgressRing';
 import { colors } from '@/shared/theme/theme';
-import { PinBadge } from './PlanIcon';
 
 const ROWS: Array<{ icon: React.ReactNode; title: string; note: string }> = [
-  { icon: <LimitIcon color={colors.muted} />, title: 'Траты с лимитом', note: 'Сумма меняется — следим, сколько осталось' },
-  { icon: <OneOffIcon color={colors.muted} />, title: 'Разовый платёж', note: 'Известная сумма в этом месяце' },
+  { icon: <LimitIcon color={colors.muted} />, title: 'Траты с лимитом', note: 'Сумма меняется — следим, сколько осталось. Переходит в следующий месяц с той же суммой' },
+  { icon: <OneOffIcon color={colors.muted} />, title: 'Разовый платёж', note: 'Известная сумма в этом месяце, в следующий не переходит' },
   { icon: <RepeatIcon color={colors.accent} size={22} />, title: 'Регулярный платёж', note: 'Переходит в следующий месяц всегда, сумма — по датам списаний' },
-  {
-    icon: <PinBadge />, title: 'Повторять каждый месяц',
-    note: 'В углу значка: в следующем месяце будет в плане с той же суммой. Включается в шите категории',
-  },
   { icon: <ProgressRing ratio={0.4} color={colors.fund} track={colors.fundTrack} size={22} />, title: 'Копилка', note: 'Кольцо — сколько накоплено из цели' },
   { icon: <LockIcon color={colors.muted} size={20} />, title: 'Часть бюджета', note: 'Отложено сразу и траты вне плана — задаются в бюджете месяца' },
 ];

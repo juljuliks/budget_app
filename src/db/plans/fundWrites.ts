@@ -36,7 +36,7 @@ export async function setFund(ym: string, categoryId: number, input: FundInput, 
         ON CONFLICT(category_id) DO UPDATE SET target_minor = excluded.target_minor, currency = excluded.currency, due = excluded.due,
           start_minor = excluded.start_minor, since_ym = excluded.since_ym, closed_ym = NULL, released_minor = NULL`,
       [categoryId, input.target_minor, input.currency, input.due, input.start_minor, fund.since_ym]);
-    await t.run('UPDATE categories SET impulse = 0 WHERE id = ?', [categoryId]);
+    await t.run("UPDATE categories SET impulse = 0, plan_kind = 'fund' WHERE id = ?", [categoryId]);
     await ownMonth(ym, t);
     await t.run(
       `INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency) VALUES (?, ?, 0, 'fund', ?)
@@ -69,6 +69,8 @@ export async function deleteFund(categoryId: number, nowYm = currentYm()): Promi
     }
     await t.run('DELETE FROM plan_items WHERE category_id = ? AND ym >= ?', [categoryId, nowYm]);
     await t.run('UPDATE funds SET closed_ym = ?, released_minor = ? WHERE category_id = ?', [nowYm, balance, categoryId]);
+    // no kind of its own any more: added to a plan again — a one-off payment
+    await t.run("UPDATE categories SET plan_kind = NULL WHERE id = ? AND plan_kind = 'fund'", [categoryId]);
     return { fund, items, released: balance };
   });
 }
@@ -78,6 +80,7 @@ export async function restoreFund(d: DeletedFund): Promise<void> {
   const db = await getDb();
   await db.transaction(async (t) => {
     await t.run('UPDATE funds SET closed_ym = NULL, released_minor = NULL WHERE category_id = ?', [d.fund.category_id]);
+    await t.run("UPDATE categories SET plan_kind = 'fund' WHERE id = ?", [d.fund.category_id]);
     for (const i of d.items) {
       await t.run("INSERT OR REPLACE INTO plan_items (ym, category_id, limit_minor, kind, currency) VALUES (?, ?, ?, 'fund', ?)",
         [i.ym, d.fund.category_id, i.limit_minor, i.currency]);

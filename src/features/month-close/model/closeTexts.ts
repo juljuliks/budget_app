@@ -2,7 +2,7 @@
 import type { CloseStep, MonthClose } from '@/db/plans';
 import { MONTHS, MONTHS_GEN, MONTHS_NOM, MONTHS_PREP } from '@/shared/lib/dates';
 
-export const STEP_NAMES: Record<CloseStep, string> = { over: 'Перерасход', savings: 'Сбережения' };
+export const STEP_NAMES: Record<CloseStep, string> = { payments: 'Платежи', over: 'Перерасход', savings: 'Сбережения' };
 
 /** "августе" of the month before `ym`: "В августе было". */
 export function monthBeforePrep(ym: string): string {
@@ -18,6 +18,7 @@ export function monthWords(ym: string) {
 /** Every question of the step has an answer. */
 export function stepAnswered(c: MonthClose, step: CloseStep): boolean {
   const b = c.budget;
+  if (step === 'payments') return c.payments.every((p) => p.choice !== null);
   if (step === 'over') return !b || (c.answers.over_cover !== null && (b.over_rest_minor === 0 || c.answers.over_rest_cover !== null));
   return c.ask_minor <= 0 || c.put_minor !== null;
 }
@@ -26,7 +27,7 @@ export function stepAnswered(c: MonthClose, step: CloseStep): boolean {
 export function currentStep(steps: CloseStep[], wanted: CloseStep | null): CloseStep | null {
   if (!steps.length) return null;
   if (wanted && steps.includes(wanted)) return wanted;
-  const order: CloseStep[] = ['over', 'savings'];
+  const order: CloseStep[] = ['payments', 'over', 'savings'];
   const from = wanted ? order.indexOf(wanted) : 0;
   return steps.find((s) => order.indexOf(s) >= from) ?? steps[steps.length - 1];
 }

@@ -37,3 +37,6 @@ export function planRateDate(ym: string): string {
 }
 
 export const asCurrency = (v: string | null | undefined): Currency => (isCurrency(v) ? v : BUDGET_CURRENCY);
+
+/** How many months ahead a plan can be made (the stats go that far: nothing spent yet, the plan made in advance). */
+export const PLAN_MONTHS_AHEAD = 6;

@@ -26,9 +26,8 @@ export function Share({ p, value, before }: { p: PlanView; value: number | null;
 }
 
 /**
- * A plan item: its kind's icon (a limit, a one-off payment; pinned — the badge on it), its note, the amount and its
- * share under it; the whole row opens its sheet (amount, kind,
- * "Повторять каждый месяц"; delete is in its title).
+ * A plan item: its kind's icon (a limit, a one-off payment), its note, the amount and its share under it; the whole
+ * row opens its sheet (the amount, «Как тратите»; delete is in it).
  */
 export function PlanItemRow({ p, item, ym, currency, hidden, toShown, onOpen }: Props) {
   // an amount in the screen's currency (its own one if there's no rate)

@@ -58,8 +58,8 @@ describe('the contribution fits the month\'s budget, nothing asked', () => {
     await setFund('2026-10', id, { ...HOLIDAY, target_minor: 150000, due: '2027-01-31' });
     expect(await item(id)).toEqual({ limit_minor: 20000, cap_minor: 20000, taken_minor: 10000 });
     expect(await locked()).toBe(0);
-    // the next month asks more: 1 300 over 3 months
-    expect((await listPlan('2026-11')).find((i) => i.category_id === id)).toMatchObject({ limit_minor: 43400 });
+    // the next month asks more (1 300 over 3 months), but Еда goes on with its 800 too: 100 free + 100 of 🔒
+    expect((await listPlan('2026-11')).find((i) => i.category_id === id)).toMatchObject({ limit_minor: 20000 });
     // looked at again: the same, 🔒 not taken again
     await listPlan('2026-10');
     expect(await item(id)).toEqual({ limit_minor: 20000, cap_minor: 20000, taken_minor: 10000 });
