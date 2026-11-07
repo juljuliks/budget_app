@@ -17,7 +17,6 @@ import { openCategory } from '@/shared/navigation/navigation';
 import { paymentsOfCategory } from '@/db/recurring';
 import { toast } from '@/shared/ui/toast';
 import { resumeSubscriptions } from '../model/commands';
-import FundFields, { FundForm } from './FundFields';
 import PlanFacts from './PlanFacts';
 import RegularFields, { RegularEvery, RegularForm } from './RegularFields';
 import RepeatField, { RepeatForm } from './RepeatField';
@@ -37,8 +36,6 @@ export type PlanAmountTarget = {
   norm_period?: NormPeriod;
   /** not in the plan yet: the amount offered (what the category spent), in `currency`; over last month's plan */
   suggested_minor?: number;
-  /** a fund: its target (in `currency`, the sheet's amount), date and what was saved before */
-  fund?: { target_minor: number; due: string; start_minor: number };
   /**
    * "Регулярные платежи" on: its kind is "Регулярный платёж"; another kind turns them off. A category with "Подписки"
    * (`by_merchant`, on its page): its subscriptions are in their own sheet (made from operations; the amount here by
@@ -111,13 +108,13 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
   // "🔒 Отложить сразу", in the budget's currency: what is short of free can be taken from it
   const [locked, setLocked] = useState(0);
   // the saved item; a category not in the plan yet starts as a day-to-day limit in the screen's currency
-  const form = useLoadedForm<FundForm & RegularForm & { kind: PlanKind; norm: NormPeriod }>(target ? {
-    value: toInputValue(target.fund ? target.fund.target_minor : target.every ? target.unit_minor ?? 0 : target.limit_minor), currency: target.currency,
+  const form = useLoadedForm<RegularForm & { value: string; currency: Currency; kind: PlanKind; norm: NormPeriod }>(target ? {
+    value: toInputValue(target.every ? target.unit_minor ?? 0 : target.limit_minor), currency: target.currency,
     kind: target.recurring || target.every ? 'subs' : target.kind ?? 'limit', pinned: !!target.pinned, until: target.until ?? null,
     every: target.every ?? 'month', weekdays: target.weekdays ?? 0, period: 1, next: null,
-    norm: target.norm_period ?? 'day', due: target.fund?.due ?? null, start: target.fund?.start_minor ? toInputValue(target.fund.start_minor) : '',
+    norm: target.norm_period ?? 'day',
   } : null, target !== null);
-  const [kind, due, every] = useWatch({ control: form.control, name: ['kind', 'due', 'every'] });
+  const [kind, every] = useWatch({ control: form.control, name: ['kind', 'every'] });
   const s = sheetMode(target, kind, every);
   const [entered, enteredCurrency] = useWatch({ control: form.control, name: ['value', 'currency'] });
   const [previous, setPrevious] = useState<{ minor: number; currency: Currency; ym: string } | null>(null);
@@ -125,11 +122,6 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
   const [average, setAverage] = useState<{ minor: number; months: number; from: string; to: string } | null>(null);
   // what the category spent in the month so far (not in a coming one), in the app's currency
   const [spent, setSpent] = useState<{ minor: number; ym: string } | null>(null);
-  // the month's budget currency: a fund (as the savings) is in it
-  const [budgetCurrency, setBudgetCurrency] = useState<Currency | null>(null);
-  useEffect(() => {
-    if (kind === 'fund' && !target?.fund && budgetCurrency) form.setValue('currency', budgetCurrency, { shouldDirty: true });
-  }, [kind, budgetCurrency, target, form]);
   // a category with "Подписки": has it subscriptions (off in the plan — they count again)
   const [hasSubs, setHasSubs] = useState(false);
   useEffect(() => {
@@ -152,15 +144,12 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
       // the unplanned share is not for the plan
       setFree(budget ? inShown(Math.max(budget.plannable_minor - others, 0), budget.currency) : null);
       setLocked(budget?.locked_minor ?? 0);
-      setBudgetCurrency(budget?.currency ?? null);
       setPrevious(last ? { ...inShown(last.limit_minor, last.currency), ym: last.ym } : null);
       setAverage(avg && avg.average_minor > 0 ? { minor: avg.average_minor, months: avg.months, from: avg.from, to: avg.to } : null);
       setSpent(spentMinor === null ? null : { minor: spentMinor, ym });
       // not in the plan yet: the amount it was opened with (what the category spent), else last month's item —
       // ready to save as is (so it counts as a change); the kind and pattern from last month either way
       const dirty = { shouldDirty: true };
-      // a fund's amount is its target, not a month's
-      if (target.fund) return;
       if (!target.limit_minor && target.suggested_minor) {
         form.setValue('value', toInputValue(target.suggested_minor), dirty);
         form.setValue('currency', target.currency, dirty);
@@ -206,9 +195,8 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
       // an item in the plan: removing it is a button under "Сохранить", as on the other sheets
       remove={onDelete ? { title: 'Удалить из плана', onPress: () => { onClose(); onDelete(); } } : undefined}
       inputAccessory={<Controller control={form.control} name="currency" render={({ field }) => <CurrencyButton value={field.value} onChange={field.onChange} />} />}
-      label={kind === 'fund' ? 'Накопить' : s.regular ? 'Сумма за раз' : s.own ? 'Сумма платежа' : undefined}
-      submitDisabled={kind === 'fund' && !due}
-      // the kind first: the field under it is a month's amount or a fund's target
+      label={s.regular ? 'Сумма за раз' : s.own ? 'Сумма платежа' : undefined}
+      // the kind first: the field under it is a month's amount
       above={<Controller control={form.control} name="kind" render={({ field }) => <RadioGroup options={KINDS} value={field.value} onChange={field.onChange} />} />}
     >
       {kind === 'limit' ? (
@@ -221,7 +209,6 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
       {kind === 'limit' && target ? <RepeatField ym={ym} form={form as unknown as UseFormReturn<RepeatForm>} entered={entered ?? ''} currency={enteredCurrency} /> : null}
       {kind === 'subs' && target && !target.by_merchant ? <RegularFields ym={ym} categoryId={target.category_id} form={form as unknown as Parameters<typeof RegularFields>[0]['form']} /> : null}
       {kind === 'subs' && target?.by_merchant ? <Text style={formStyles.hint}>{s.pick ? (hasSubs ? RESUME_HINT : PICK_HINT) : s.counted ? COUNTED_HINT : BY_HAND_HINT}</Text> : null}
-      {kind === 'fund' && target ? <FundFields ym={ym} categoryId={target.category_id} form={form as unknown as UseFormReturn<FundForm>} /> : null}
     </TextInputModal>
   );
 }

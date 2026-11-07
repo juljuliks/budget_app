@@ -258,3 +258,40 @@ describe('a merchant of different categories', () => {
     expect(await categoryOf(await sms('WOLT'))).toBe(1);
   });
 });
+
+describe('a merchant with a subscription (Wolt+ among its deliveries)', () => {
+  async function woltPlus() {
+    const { savePayment } = await import('../../src/db/recurring');
+    const { subscriptionsCategoryId } = await import('../../src/db/categories');
+    const first = await sms('WOLT', '12.00');
+    await assignCategory(first, 1);
+    await savePayment({ merchant_key: 'WOLT', name: 'Wolt+', amount_minor: 1499, currency: 'GEL', period: 1, due: '2026-11-03' });
+    return subscriptionsCategoryId();
+  }
+
+  test('an operation of its amount is "📺 Подписки" by itself; another — the merchant\'s category', async () => {
+    const subs = await woltPlus();
+    expect(await categoryOf(await sms('WOLT', '14.99'))).toBe(subs);
+    expect(await categoryOf(await sms('WOLT', '23.40'))).toBe(1);
+  });
+
+  test('only operations in "📺 Подписки" are its charges: a delivery isn\'t one', async () => {
+    const { chargeDays, lastCharge } = await import('../../src/db/recurring');
+    await woltPlus();
+    await sms('WOLT', '23.40');
+    expect((await chargeDays(['WOLT'])).get('WOLT') ?? []).toEqual([]);
+    expect(await lastCharge('WOLT')).toBeNull();
+    await sms('WOLT', '14.99');
+    expect((await chargeDays(['WOLT'])).get('WOLT')).toHaveLength(1);
+    expect((await lastCharge('WOLT'))?.amount_minor).toBe(1499);
+  });
+
+  test('in another currency: its amount at the day\'s rate, within 5%', async () => {
+    const { subscriptionCategoryOf } = await import('../../src/db/recurring');
+    const subs = await woltPlus();
+    await (await getDb()).run("INSERT OR REPLACE INTO fx_rates (date, currency, gel_per_unit) VALUES ('2026-10-03', 'USD', 2.7)");
+    // 14.99 ₾ ≈ 5.55 $
+    expect(await subscriptionCategoryOf('WOLT', 560, 'USD', '2026-10-03')).toBe(subs);
+    expect(await subscriptionCategoryOf('WOLT', 700, 'USD', '2026-10-03')).toBeNull();
+  });
+});

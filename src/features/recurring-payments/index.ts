@@ -4,4 +4,4 @@ export { default as PaymentSheet } from './ui/PaymentSheet';
 export type { PaymentTarget } from './model/usePaymentForm';
 export { inMonthYear, inTime, periodText, shortDay } from './texts';
 export { default as PaymentHost } from './ui/PaymentHost';
-export { default as SubscriptionsSwitch } from './ui/SubscriptionsSwitch';
+export { default as SubscriptionsSection } from './ui/SubscriptionsSection';

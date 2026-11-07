@@ -17,6 +17,7 @@ import { InfoIcon } from '@/shared/ui/icons';
 import { colors } from '@/shared/theme/theme';
 import { itemSections, systemSections } from './parts/sections';
 import { FundSheet } from '@/features/fund';
+import { openCategory } from '@/shared/navigation/navigation';
 import { PaymentsView, RecurringPaymentsSheet } from '@/features/recurring-payments';
 import { CarrySheet } from '@/features/month-close';
 import type { PlanItem } from '@/db/plans';
@@ -30,11 +31,8 @@ import PlanAddModal from './PlanAddModal';
  * Every amount has the currency it was entered in; the screen shows them in `currency` (the switch on top of
  * the tab), with the original in brackets when it differs.
  */
-/** The plan sheet of an item: a fund with its target, date and what was saved before. */
-const editTarget = (item: PlanItem): PlanAmountTarget => ({
-  ...item, label: categoryLabel(item),
-  fund: item.fund && { target_minor: item.fund.target_minor, due: item.fund.due, start_minor: item.fund.start_minor },
-});
+/** The plan sheet of an item (a fund's is its card: its category's page changes it). */
+const editTarget = (item: PlanItem): PlanAmountTarget => ({ ...item, label: categoryLabel(item) });
 
 export default function PlanView({ ym, currency }: { ym: string; currency: Currency }) {
   const hidden = useHideAmounts();
@@ -99,7 +97,7 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
         label={fundOpen ? `${fundOpen.emoji || ''} ${fundOpen.name}`.trim() : ''}
         ym={ym}
         onClose={() => setFundOpen(null)}
-        onEdit={() => { const f = fundOpen; setFundOpen(null); if (f) setEditingItem(editTarget(f)); }}
+        onEdit={() => { const f = fundOpen; setFundOpen(null); if (f) openCategory(f.category_id); }}
       />
       {subsOpen ? (
         <RecurringPaymentsSheet

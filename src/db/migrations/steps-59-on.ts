@@ -163,6 +163,36 @@ async function followingMonths(db: Db) {
   }
 }
 
+/**
+ * 65: "📺 Подписки" a system category again (system = 'subs'), the only one with subscriptions: the one with the most of
+ * them (by name "Подписки" next; else a new one). Another category with "Подписки" on: its subscriptions and their
+ * merchants' rules move to it (past operations stay where they are), its plan items of them from this month a one-off
+ * payment with the amount they had. "Подписки" has no fund (closed this month) and no "Импульсивные покупки".
+ */
+async function subscriptionsSystem(db: Db) {
+  const now = new Date();
+  const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const rows = await db.all<{ id: number; name: string; by_merchant: number; n: number }>(
+    `SELECT c.id, c.name, c.by_merchant, (SELECT count(*) FROM recurring_payments r
+        WHERE r.category_id = c.id AND r.merchant_key IS NOT NULL AND r.deleted_at IS NULL) AS n
+      FROM categories c WHERE c.deleted_at IS NULL AND (c.system IS NULL OR c.system = 'subs') ORDER BY c.id`);
+  // by name in JS: SQLite's lower() leaves Cyrillic as it is
+  const named = (r: { name: string }) => r.name.trim().toLowerCase() === 'подписки';
+  const on = rows.filter((r) => r.by_merchant);
+  const target = [...on].sort((a, b) => b.n - a.n || Number(named(b)) - Number(named(a)) || a.id - b.id)[0] ?? rows.find(named);
+  let id = target?.id;
+  if (id === undefined) id = (await db.run("INSERT INTO categories (name, emoji, system, sort_order, by_merchant) VALUES ('Подписки', '📺', 'subs', 7, 1)")).lastInsertRowid;
+  await db.run("UPDATE categories SET system = 'subs', by_merchant = 1, impulse = 0 WHERE id = ?", [id]);
+  for (const o of on.filter((r) => r.id !== id)) {
+    const keys = await db.all<{ k: string }>('SELECT merchant_key AS k FROM recurring_payments WHERE category_id = ? AND merchant_key IS NOT NULL AND deleted_at IS NULL', [o.id]);
+    await db.run('UPDATE recurring_payments SET category_id = ? WHERE category_id = ? AND merchant_key IS NOT NULL', [id, o.id]);
+    for (const { k } of keys) await db.run("UPDATE merchant_rules SET category_id = ? WHERE match_type = 'exact' AND pattern = ? AND category_id = ?", [id, k, o.id]);
+    await db.run("UPDATE plan_items SET kind = 'fixed' WHERE category_id = ? AND ym >= ? AND kind = 'subs'", [o.id, ym]);
+    await db.run('UPDATE categories SET by_merchant = 0 WHERE id = ?', [o.id]);
+  }
+  await db.run('UPDATE funds SET closed_ym = ? WHERE category_id = ? AND closed_ym IS NULL', [ym, id]);
+}
+
 /** Migrations 59 and on. */
 export const STEPS_59_ON: MigrationStep[][] = [
   [glueSecondMerchants],
@@ -184,5 +214,12 @@ export const STEPS_59_ON: MigrationStep[][] = [
     'ALTER TABLE categories ADD COLUMN impulse INTEGER NOT NULL DEFAULT 0',
     'ALTER TABLE transactions ADD COLUMN impulse INTEGER',
     'ALTER TABLE transactions ADD COLUMN mood TEXT',
+  ],
+  [subscriptionsSystem],
+  // 66: a fund's contribution fits the month's budget (funds.ts, refreshFundItems): cap_minor — what fitted when less
+  // than it asks (null — all of it), taken_minor — the part of it taken from "🔒 Отложить сразу" (in the budget's currency)
+  [
+    'ALTER TABLE plan_items ADD COLUMN cap_minor INTEGER',
+    'ALTER TABLE plan_items ADD COLUMN taken_minor INTEGER NOT NULL DEFAULT 0',
   ],
 ];

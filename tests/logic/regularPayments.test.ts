@@ -63,32 +63,6 @@ describe('a monthly regular payment saved without a day', () => {
   });
 });
 
-describe('"Подписки" of a category on its page', () => {
-  test('on: its own payment goes, the amount stays in the plan by hand; off: its subscriptions go', async () => {
-    const { getDb } = require('../../src/db');
-    const { createCategory, getCategory } = require('../../src/db/categories');
-    const { savePayment, setSubscriptions, paymentsOfCategory } = require('../../src/db/recurring');
-    const { currentYm } = require('../../src/db/plans');
-    const db = await getDb();
-    const ins = await createCategory('Страховки');
-    const ym = currentYm();
-    await addPlanItem(ym, ins);
-    await savePayment({ category_id: ins, merchant_key: null, name: 'Страховки', amount_minor: 5000, currency: 'GEL', period: 1, due: `${ym}-28` });
-    expect((await listPlan(ym)).find((i) => i.category_id === ins)).toMatchObject({ kind: 'subs', limit_minor: 5000 });
-    await setSubscriptions(ins, true);
-    expect(await getCategory(ins)).toMatchObject({ by_merchant: 1, recurring: 0 });
-    expect(await paymentsOfCategory(ins)).toEqual([]);
-    expect((await listPlan(ym)).find((i) => i.category_id === ins)).toMatchObject({ kind: 'fixed', limit_minor: 5000 });
-    // a subscription: its repeating payments on again
-    await savePayment({ category_id: ins, merchant_key: 'AIG', name: 'AIG', amount_minor: 7000, currency: 'GEL', period: 12, due: `${ym}-27` });
-    expect(await getCategory(ins)).toMatchObject({ by_merchant: 1, recurring: 1 });
-    await setSubscriptions(ins, false);
-    expect(await getCategory(ins)).toMatchObject({ by_merchant: 0, recurring: 0 });
-    expect(await paymentsOfCategory(ins)).toEqual([]);
-    expect((await db.get('SELECT kind FROM plan_items WHERE ym = ? AND category_id = ?', [ym, ins])).kind).toBe('fixed');
-  });
-});
-
 describe('carry-over', () => {
   // future months: ensureMonthPlan treats them as current or coming
   const M1 = '2099-01', M2 = '2099-02', M3 = '2099-03';

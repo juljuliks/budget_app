@@ -4,11 +4,11 @@ import { systemCurrency } from '../settings';
 import type { SqlParam } from '../types';
 import { placeholders } from '../sql';
 import { Currency } from '../fx';
-import { asCurrency, currentYm } from './months';
+import { asCurrency, currentYm, parseYm, ymOf } from './months';
 import { followItem, itemShape } from './carry';
 import { NormPeriod, PlanItem, PlanKind, asNorm } from './types';
 import type { Every } from './regularTimes';
-import { activeFunds, fundLedger } from './funds';
+import { activeFunds, contributionOf, fundLedger } from './funds';
 import { monthPayments } from './recurringItems';
 import type { RecurringPayment } from '../recurring/reads';
 import { OverBudgetError, ensureMonthPlan, ownMonth, planConverter, planCurrency, plannedTotal, storedBudget } from './budget';
@@ -19,7 +19,7 @@ export async function listPlan(ym: string, to?: Currency): Promise<PlanItem[]> {
   const db = await getDb();
   const prev = await db.get<{ ym: string }>('SELECT ym FROM plan_months WHERE ym < ? ORDER BY ym DESC LIMIT 1', [ym]);
   const rows = await db.all<Omit<PlanItem, 'pinned' | 'converted_minor' | 'currency'> & { pinned: number; currency: string }>(
-    `SELECT p.category_id, c.name, c.emoji, c.system, c.recurring = 1 AS recurring, c.by_merchant = 1 AS by_merchant, c.type_id, ct.name AS type_name, p.limit_minor, p.currency, p.kind, p.norm_period, p.pinned,
+    `SELECT p.category_id, c.name, c.emoji, c.system, c.recurring = 1 AS recurring, coalesce(c.system = 'subs', 0) AS by_merchant, c.type_id, ct.name AS type_name, p.limit_minor, p.currency, p.kind, p.norm_period, p.pinned,
         p.until, CASE WHEN p.kind = 'fixed' THEN p.every END AS every, p.weekdays, p.unit_minor,
         (SELECT q.limit_minor FROM plan_items q WHERE q.ym = ? AND q.category_id = p.category_id) AS previous_minor
       FROM plan_items p
@@ -101,13 +101,26 @@ function savingProgress(saving: Array<{ payment_id: number; end_minor: number }>
   return { saving_end_minor: end, saving_amount_minor: amount };
 }
 
+const ymAfter = (ym: string) => { const { year, month } = parseYm(ym); return ymOf(year, month + 1); };
+
 /** The funds among the month's items: how much by when, and what each has by the month's end. */
 async function fundsOf(ym: string, ids: number[]): Promise<Map<number, NonNullable<PlanItem['fund']>>> {
   const out = new Map<number, NonNullable<PlanItem['fund']>>();
+  if (!ids.length) return out;
+  const db = await getDb();
+  // what the budget fitted of each (fundFit.ts): none of the past months'
+  const fits = new Map((await db.all<{ id: number; cap: number | null; taken: number; c: string | null }>(
+    `SELECT p.category_id AS id, p.cap_minor AS cap, p.taken_minor AS taken, pm.budget_currency AS c
+      FROM plan_items p LEFT JOIN plan_months pm ON pm.ym = p.ym WHERE p.ym = ? AND p.kind = 'fund' AND p.ym >= ?`, [ym, currentYm()])).map((r) => [r.id, r]));
   for (const fund of await activeFunds(ym)) {
     if (!ids.includes(fund.category_id)) continue;
     const m = (await fundLedger(fund, ym)).months.find((x) => x.ym === ym);
-    out.set(fund.category_id, { target_minor: fund.target_minor, due: fund.due, saved_minor: m?.end ?? fund.start_minor, start_minor: fund.start_minor });
+    const f = fits.get(fund.category_id);
+    const asked = m ? contributionOf(fund, ym, m.start) : 0;
+    const next = ymAfter(ym);
+    const fit = f && m && (f.cap !== null || f.taken > 0)
+      ? { asked, taken: f.taken, taken_currency: f.c, next: contributionOf(fund, next, m.end) } : null;
+    out.set(fund.category_id, { target_minor: fund.target_minor, due: fund.due, saved_minor: m?.end ?? fund.start_minor, start_minor: fund.start_minor, fit });
   }
   return out;
 }
@@ -125,7 +138,7 @@ export async function lastPlanItem(ym: string, categoryId: number): Promise<{ ym
 export async function getPlanItemBasics(ym: string, categoryId: number) {
   type R = { limit_minor: number; currency: string; kind: string; norm_period: string; pinned: number; until: string | null; recurring: number; by_merchant: number; every: string | null; weekdays: number | null; unit_minor: number | null };
   const db = await getDb();
-  const r = await db.get<R>(`SELECT p.limit_minor, p.currency, p.kind, p.norm_period, p.pinned, p.until, c.recurring, c.by_merchant, CASE WHEN p.kind = 'fixed' THEN p.every END AS every, p.weekdays, p.unit_minor FROM plan_items p JOIN categories c ON c.id = p.category_id WHERE p.ym = ? AND p.category_id = ?`, [ym, categoryId]);
+  const r = await db.get<R>(`SELECT p.limit_minor, p.currency, p.kind, p.norm_period, p.pinned, p.until, c.recurring, coalesce(c.system = 'subs', 0) AS by_merchant, CASE WHEN p.kind = 'fixed' THEN p.every END AS every, p.weekdays, p.unit_minor FROM plan_items p JOIN categories c ON c.id = p.category_id WHERE p.ym = ? AND p.category_id = ?`, [ym, categoryId]);
   if (!r) return null;
   return { limit_minor: r.limit_minor, currency: asCurrency(r.currency), kind: r.kind as PlanKind, norm_period: asNorm(r.norm_period), pinned: r.pinned === 1, until: r.until, recurring: !!r.recurring, by_merchant: !!r.by_merchant, every: r.every as Every | null, weekdays: r.weekdays, unit_minor: r.unit_minor };
 }

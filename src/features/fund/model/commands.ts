@@ -1,5 +1,6 @@
-// A fund deleted: asked first; what it saved goes to this month's savings; "Отменить" in the toast puts it back.
-import { deleteFund, restoreFund } from '@/db/plans';
+// A fund made or changed on its category's page; turned off: asked first, what it saved goes to this month's savings,
+// "Отменить" in the toast puts it back.
+import { currentYm, deleteFund, FundInput, restoreFund, setFund } from '@/db/plans';
 import { emitTransactionsChanged } from '@/domain/events';
 import { formatWithCurrency } from '@/shared/lib/money';
 import { MONTHS_GEN } from '@/shared/lib/dates';
@@ -16,7 +17,7 @@ async function remove(categoryId: number, label: string, onDone: () => void, ym?
     const deleted = await deleteFund(categoryId, ym);
     emitTransactionsChanged();
     onDone();
-    toast(`Копилка «${label}» удалена`, deleted ? {
+    toast(`Копилка «${label}» выключена`, deleted ? {
       label: UNDO,
       onPress: () => {
         restoreFund(deleted).then(() => { emitTransactionsChanged(); toast(`Копилка «${label}» снова в плане`); })
@@ -29,17 +30,24 @@ async function remove(categoryId: number, label: string, onDone: () => void, ym?
   }
 }
 
+/** Saved from its category's page: from this month, its contribution fitted to the budget by itself. */
+export function saveCategoryFund(categoryId: number, label: string, input: FundInput) {
+  setFund(currentYm(), categoryId, input)
+    .then(() => { emitTransactionsChanged(); toast(`Копилка «${label}» сохранена`); })
+    .catch(toastFailure('save fund', SAVE_FAILED));
+}
+
 /**
- * "Удалить копилку «🏖 Отпуск»?": what it has goes to the savings of `ym` (or the current month).
+ * "Выключить копилку «🏖 Отпуск»?": what it has goes to the savings of `ym` (or the current month).
  * Pass `ym` when deleting from a past month's plan so the item is removed from that month too.
  */
 export function confirmDeleteFund(categoryId: number, label: string, saved: number, currency: string, onDone: () => void, ym?: string) {
   sheetAlert(
-    `Удалить копилку «${label}»?`,
-    `${saved > 0 ? `Накоплено ${formatWithCurrency(saved, currency)} — они перейдут в ${savingsOf(ym)}. ` : ''}`
-      + 'Категория останется, её траты пойдут вне плана, пока вы не добавите её в план снова.',
+    `Выключить копилку «${label}»?`,
+    `${saved > 0 ? `Накоплено ${formatWithCurrency(saved, currency)} — они уйдут в ${savingsOf(ym)}. ` : ''}`
+      + 'Траты категории снова будут из бюджета месяца, взноса в плане больше не будет.',
     [
       { text: 'Отмена', style: 'cancel' },
-      { text: 'Удалить', style: 'destructive', onPress: () => { remove(categoryId, label, onDone, ym); } },
+      { text: 'Выключить', style: 'destructive', onPress: () => { remove(categoryId, label, onDone, ym); } },
     ]);
 }

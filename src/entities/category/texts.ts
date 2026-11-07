@@ -1,8 +1,11 @@
 // The category sheet's longer texts.
-import { OWN_TRANSFER } from '@/db/categories';
+import { OWN_TRANSFER, SUBSCRIPTIONS } from '@/db/categories';
 
 /** Under the name of a system category: what goes there, why it can't be renamed or deleted. */
 export function systemCategoryHint(systemKind: string): string {
+  if (systemKind === SUBSCRIPTIONS) {
+    return 'Системная категория: подписки — Netflix, связь, страховка. Каждый мерчант здесь — отдельная подписка: сумма, как часто, следующее списание; план категории считается из них. Название не меняется, удалить её нельзя.';
+  }
   if (systemKind === OWN_TRANSFER) {
     return 'Системная категория: переводы со своей карты на свою карту или свой счёт в другом банке (накопительный тоже). Поставьте её и на перевод, и на пополнение: это не траты и не доход, в статистику и план они не попадают. Название не меняется, удалить её нельзя.';
   }
@@ -41,5 +44,7 @@ export const SEVERAL_HINT = 'Несколько категорий можно в
 
 /** "Импульсивные покупки" on a category's page. */
 export const IMPULSE_SWITCH = 'Импульсивные покупки';
+/** a category with a fund (its purchases are planned) */
+export const IMPULSE_NO_FUND = 'Недоступно: траты из копилки запланированы заранее.';
 export const IMPULSE_HINT_OFF = 'Спрашивать в операциях категории, была ли покупка импульсивной.';
 export const IMPULSE_HINT_ON = 'В операциях категории — «Обдуманная» или «Импульсивная», у импульсивной — «Что подтолкнуло?». Итоги — в отчёте за месяц и в «Динамике трат».';

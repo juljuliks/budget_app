@@ -10,13 +10,15 @@ type Props = {
   onChange: (on: boolean) => void;
   /** when on: a link under the hint ("Сменить папку") */
   change?: { title: string; onPress: () => void };
+  /** can't be turned now (the hint says why): pale, the switch doesn't move */
+  disabled?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
 /** A setting with its switch ("Автокопия", "Регулярные платежи"): its state in a line, a link to change it while on. */
-export default function SwitchRow({ label, hint, on, onChange, change, style }: Props) {
+export default function SwitchRow({ label, hint, on, onChange, change, disabled, style }: Props) {
   return (
-    <View style={[styles.row, style]}>
+    <View style={[styles.row, disabled && styles.disabled, style]}>
       <View style={styles.text}>
         <Text style={styles.label}>{label}</Text>
         <Text style={styles.hint}>{hint}</Text>
@@ -29,6 +31,7 @@ export default function SwitchRow({ label, hint, on, onChange, change, style }: 
       <Switch
         value={on}
         onValueChange={onChange}
+        disabled={disabled}
         trackColor={{ true: colors.accent, false: colors.border }}
         thumbColor="#FFFFFF"
         accessibilityLabel={label}
@@ -46,4 +49,5 @@ const styles = StyleSheet.create({
   label: { fontSize: 16, color: colors.text },
   hint: { fontSize: 13, color: colors.muted },
   link: { fontSize: 14, color: colors.accent, marginTop: 6 },
+  disabled: { opacity: 0.5 },
 });

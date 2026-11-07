@@ -95,12 +95,13 @@ describe('4.1–4.2 the list; creating and changing a category', () => {
     expect(await screen.findByText('Разделы')).toBeTruthy();
   });
 
-  test('"Подписки": a category of its own — renamed, deleted as any; its switch "Подписки" on', async () => {
+  test('"Подписки": a system one — what it is for, its name stays, can\'t be deleted; no switches (subscriptions only there)', async () => {
     await tap('📺 Подписки');
-    expect(await screen.findByDisplayValue('Подписки')).toBeTruthy();
-    expect(screen.getByDisplayValue('Подписки').props.editable).not.toBe(false);
-    expect(screen.getByText('Удалить категорию')).toBeTruthy();
-    expect((await screen.findByLabelText('Подписки')).props.value).toBe(true);
+    expect(await screen.findByText(/^Системная категория: подписки/)).toBeTruthy();
+    expect(screen.getByDisplayValue('Подписки').props.editable).toBe(false);
+    expect(screen.queryByText('Удалить категорию')).toBeNull();
+    expect(screen.queryByLabelText('Подписки')).toBeNull();
+    expect(screen.queryByText('Импульсивные покупки')).toBeNull();
   });
 
   test('"Пополнение счёта": a system one too — what it is for, can\'t be deleted', async () => {

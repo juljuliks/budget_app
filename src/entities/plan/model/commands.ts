@@ -1,39 +1,20 @@
 // The plan's writes from its sheets: each one tells the screens (the stats, the reports) the data changed.
-import { deleteFund, getFund, RegularItem, restoreFund, setFund, setPlanAmount, setRegularItem, setUndatedAhead } from '@/db/plans';
+import { RegularItem, setPlanAmount, setRegularItem, setUndatedAhead } from '@/db/plans';
 import type { Currency } from '@/db/fx';
 import { getCategory } from '@/db/categories';
 import { categoryPayment, savePayment, startSaving, stopSaving, turnRecurring } from '@/db/recurring';
 import type { SavingChoice } from './usePaymentSaving';
 import { emitTransactionsChanged } from '@/domain/events';
 
-/**
- * A category's amount in a month's plan (added to it if it wasn't there); throws OverBudgetError past the budget. A fund
- * made a limit or a payment stops being a fund (what it saved goes to this month's savings).
- */
+/** A category's amount in a month's plan (added to it if it wasn't there); throws OverBudgetError past the budget. */
 export async function savePlanAmount(...args: Parameters<typeof setPlanAmount>) {
-  const fund = await getFund(args[1]);
-  const deleted = fund && !fund.closed_ym ? await deleteFund(args[1]) : null;
-  try {
-    await setPlanAmount(...args);
-  } catch (e) {
-    // not saved (over the budget): the fund stays as it was
-    if (deleted) await restoreFund(deleted);
-    throw e;
-  }
+  await setPlanAmount(...args);
   emitTransactionsChanged();
 }
 
-/** A regular payment within the month (every day, on weekdays); throws OverBudgetError past the budget. A fund stops being one. */
+/** A regular payment within the month (every day, on weekdays); throws OverBudgetError past the budget. */
 export async function saveRegular(ym: string, categoryId: number, r: RegularItem, currency: Currency, takeLocked: boolean | 'all' = false) {
-  const fund = await getFund(categoryId);
-  if (fund && !fund.closed_ym) await deleteFund(categoryId);
   await setRegularItem(ym, categoryId, r, currency, takeLocked);
-  emitTransactionsChanged();
-}
-
-/** The category made a fund (or the fund changed) from the month; throws OverBudgetError if its contribution doesn't fit. */
-export async function saveFund(...args: Parameters<typeof setFund>) {
-  await setFund(...args);
   emitTransactionsChanged();
 }
 
@@ -51,8 +32,6 @@ export async function saveCategoryPayment(
     // the coming months' items counted from its charges (it had a day): by hand too, or they'd count none
     await setUndatedAhead(ym, categoryId, p.amount_minor, p.currency);
   }
-  const fund = await getFund(categoryId);
-  if (fund && !fund.closed_ym) await deleteFund(categoryId);
   const c = await getCategory(categoryId);
   const own = await categoryPayment(categoryId);
   const { saving, ...payment } = p;

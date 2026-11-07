@@ -37,7 +37,7 @@ export function useMonthSavings(ym: string, shown: Currency, hidden: boolean) {
   if (past) return { section: fact?.currency === currency ? pastSavings(fact.fact, ym, money, hidden) : null, view: null, currency };
   if (!data.items || data.loadedCurrency !== currency || ym > currentYm()) return { section: null, view: null, currency };
   const view = planView({ ...data, items: data.items, ym, currency, hidden });
-  return { section: currentSavings(view, money, hidden), view, currency };
+  return { section: currentSavings(view, money, hidden, ym), view, currency };
 }
 
 /** A category of «Сбережения меньше на …»: its plan amount to change. null — not in the plan. */

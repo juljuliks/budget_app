@@ -41,7 +41,7 @@ export async function trendsData(currency: Currency, months = 12, now = new Date
   }
 
   const rows = await db.all<{ id: number; name: string; emoji: string | null; type_name: string | null; transfer: number; recurring: number; subs: number; fund: number }>(
-    `SELECT c.id, c.name, c.emoji, t.name AS type_name, coalesce(t.is_transfer, 0) AS transfer, c.recurring, c.by_merchant AS subs,
+    `SELECT c.id, c.name, c.emoji, t.name AS type_name, coalesce(t.is_transfer, 0) AS transfer, c.recurring, coalesce(c.system = 'subs', 0) AS subs,
         EXISTS (SELECT 1 FROM funds f WHERE f.category_id = c.id AND f.closed_ym IS NULL) AS fund
       FROM categories c LEFT JOIN category_types t ON t.id = c.type_id
       WHERE c.deleted_at IS NULL ORDER BY t.id IS NULL, t.sort_order, t.name, c.sort_order, c.name`);

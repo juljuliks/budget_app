@@ -1,5 +1,5 @@
 // What "＋" on the plan offers: the categories not in the month's plan yet, in the order they are likely added.
-import { Category, isSystemCategory, listCategories } from '../categories';
+import { Category, isSubscriptions, isSystemCategory, listCategories } from '../categories';
 import { getDb } from '../index';
 import { Currency } from '../fx';
 import { asCurrency, monthRange, parseYm, ymOf } from './months';
@@ -35,7 +35,8 @@ export async function addableCategories(ym: string, currency: Currency): Promise
   const spent = sumBy((await convertSpending(rows, currency)).items, categoryKey);
   const order: AddableGroup[] = ['last', 'spent', 'other'];
   return cats
-    .filter((c) => !inPlan.has(c.id) && !isSystemCategory(c))
+    // the system ones aren't planned, but "Подписки"
+    .filter((c) => !inPlan.has(c.id) && (!isSystemCategory(c) || isSubscriptions(c)))
     .map((c): AddableCategory => {
       const spentMinor = Math.max(0, spent.get(c.id) ?? 0);
       const l = lastOf.get(c.id) ?? null;

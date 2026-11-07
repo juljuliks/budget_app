@@ -61,8 +61,15 @@ export type PlanItem = {
     /** the category's only payment: how often, its charge this month (done) or the next one; day null — none set */
     single?: { period: Period; day: string | null; done: boolean };
   };
-  /** a fund's item (kind 'fund'): how much by when, what it has by the month's end (now, for the current one); in `currency` */
-  fund?: { target_minor: number; due: string; saved_minor: number; start_minor: number };
+  /**
+   * a fund's item (kind 'fund'): how much by when, what it has by the month's end (now, for the current one); in
+   * `currency`. `fit` — the budget didn't take all it asks (`asked`; what goes in is `limit_minor`) or part of it came
+   * from 🔒 (`taken`, in the budget's currency), what the next month asks then; null — all of it, from the plan
+   */
+  fund?: {
+    target_minor: number; due: string; saved_minor: number; start_minor: number;
+    fit?: { asked: number; taken: number; taken_currency: string | null; next: number } | null;
+  };
 };
 
 /** The month's amount to distribute and its currency. */
