@@ -18,7 +18,11 @@ export type TrendCategory = {
 };
 
 /** One operation's spending (a refund or money back: negative), converted. */
-export type TrendSpend = { category: number; day: string; value: number; merchantKey: string | null; merchant: string | null; tx?: number };
+export type TrendSpend = {
+  category: number; day: string; value: number; merchantKey: string | null; merchant: string | null; tx?: number;
+  /** an operation in another currency: its own amount (signed as `value`) */
+  own?: { minor: number; currency: string };
+};
 
 export type TrendsData = {
   categories: TrendCategory[];
@@ -37,7 +41,10 @@ export async function trendsData(currency: Currency, months = 12, now = new Date
   const spends: TrendSpend[] = [];
   for (const { row, value } of items) {
     if (row.category_id === null) continue;
-    spends.push({ category: row.category_id, day: dateKey(row.occurred_at), value, merchantKey: row.merchant_key ?? null, merchant: row.raw_merchant ?? null, tx: row.id });
+    spends.push({
+      category: row.category_id, day: dateKey(row.occurred_at), value, merchantKey: row.merchant_key ?? null, merchant: row.raw_merchant ?? null, tx: row.id,
+      ...(row.currency !== currency ? { own: { minor: Math.sign(value) * row.amount_minor, currency: row.currency } } : {}),
+    });
   }
 
   const rows = await db.all<{ id: number; name: string; emoji: string | null; type_name: string | null; transfer: number; recurring: number; subs: number; fund: number }>(

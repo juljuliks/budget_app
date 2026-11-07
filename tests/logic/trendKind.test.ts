@@ -58,13 +58,28 @@ test('subscriptions: a month and a year each, a yearly one as a month, one gone,
     spend('2026-08-01', 160, 'ICLOUD'),
     spend('2026-03-12', 19, 'YOUTUBE'),
   ];
-  const s = subsTrend([sub(1, 'NETFLIX', 1, 45), sub(2, 'ICLOUD', 12, 160), sub(3, 'YOUTUBE', 1, 19)], spends, TODAY);
+  const s = subsTrend([sub(1, 'NETFLIX', 1, 45), sub(2, 'ICLOUD', 12, 160), sub(3, 'YOUTUBE', 1, 19)], spends, TODAY, 'GEL');
   expect(s.subs.map((x) => [x.name, x.perMonth, x.perYear, x.yearly, x.gone])).toEqual([
     ['NETFLIX', 4500, 54000, false, false],
     ['ICLOUD', 16000 / 12, 16000, true, false],
     ['YOUTUBE', 1900, 22800, false, true],
   ]);
   expect(s.subs[0].change).toEqual({ from: 3200, to: 4500, ym: '2026-05' });
+});
+
+test('a subscription in another currency: its own amount, the screen\'s beside it; a rate\'s move isn\'t «подорожал»', () => {
+  const icloud: RecurringPayment = {
+    id: 1, category_id: 1, merchant_key: 'ICLOUD', name: 'iCloud', amount_minor: 300, currency: 'USD', period: 1 as never, due: null, since_ym: '2026-01', until: null,
+  };
+  // 3 $ each month; in lari 7.50, then 8.10 (the rate moved 8%)
+  const usd = (day: string, lari: number): TrendSpend => ({ ...spend(day, lari, 'ICLOUD'), own: { minor: 300, currency: 'USD' } });
+  const [s] = subsTrend([icloud], [usd('2026-08-05', 7.5), usd('2026-09-05', 7.5), usd('2026-10-05', 8.1)], TODAY, 'GEL').subs;
+  expect(s.own).toEqual({ amount: 300, currency: 'USD' });
+  expect(s.amount).toBe(810);
+  expect(s.change).toBeNull();
+  // no charge yet: as set, nothing in the screen's currency to say
+  const [none] = subsTrend([icloud], [], TODAY, 'GEL').subs;
+  expect([none.own, none.amount, none.perMonth]).toEqual([{ amount: 300, currency: 'USD' }, null, null]);
 });
 
 test('a fund: put aside against spent by month, the pace to its date, the months without a contribution, the shortage', () => {

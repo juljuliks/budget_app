@@ -44,6 +44,10 @@ export const inMonth = (ym: string) => `в ${MONTHS_PREP[Number(ym.slice(5)) - 1
 export const inMonthYear = (ym: string, now = new Date()) =>
   `${inMonth(ym)}${Number(ym.slice(0, 4)) === now.getFullYear() ? '' : ` ${ym.slice(0, 4)}`}`;
 
+/** "Октябрь" of 'YYYY-MM'; another year — "Декабрь 2025": a picked month of a chart over the year's turn. */
+export const monthYear = (ym: string, now = new Date()) =>
+  `${MONTHS[Number(ym.slice(5)) - 1]}${Number(ym.slice(0, 4)) === now.getFullYear() ? '' : ` ${ym.slice(0, 4)}`}`;
+
 /** "октября" of 'YYYY-MM'. */
 export const monthGen = (ym: string) => MONTHS_GEN[Number(ym.slice(5)) - 1];
 

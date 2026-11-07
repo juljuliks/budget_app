@@ -54,7 +54,7 @@ export default function CategoryTrendScreen({ route, navigation }: Props) {
   if (v.kind === 'rare' || v.kind === 'subs' || v.kind === 'fund') {
     return (
       <ScrollView style={styles.screen} contentContainerStyle={[styles.content, styles.pad]}>
-        <KindTrend v={v} data={kindData} today={today} money={money} />
+        <KindTrend v={v} data={kindData} today={today} currency={currency} money={money} />
       </ScrollView>
     );
   }
