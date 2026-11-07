@@ -6,6 +6,8 @@ import { refundCategory } from '../db/refunds';
 import { sha256Hex } from './hash';
 import type { Db } from '../db';
 import { findCategoryForMerchant } from '../categorize/rules';
+import { subscriptionCategoryOf } from '../db/recurring';
+import { dateKey } from '../db/fx';
 import { isRememberable } from '../domain/types';
 import { incrementCategoryUsage, topUpCategoryId } from '../db/categories';
 
@@ -67,11 +69,14 @@ export async function store(sms: IncomingSms, parsed: ParsedTx, balance: { minor
   const source = sms.source ?? 'sms';
   const occurredAt = resolveOccurredAt(parsed, sms.timestamp);
   const rule = parsed.merchant_key && isRememberable(parsed.kind) ? await findCategoryForMerchant(parsed.merchant_key, db) : null;
+  // its merchant's subscription, of its amount: "📺 Подписки" (a merchant of several categories — its other amounts aren't)
+  const sub = parsed.merchant_key && isRememberable(parsed.kind)
+    ? await subscriptionCategoryOf(parsed.merchant_key, parsed.amount_minor, parsed.currency, dateKey(occurredAt), db) : null;
   // a refund is subtracted from its merchant's category right away (see refundCategory); settling it on the purchase is optional
   // a deposit: "Пополнение счёта" (money that came to the card); moved by hand when it was a person paying back
   const categoryId = parsed.kind === 'refund' ? await refundCategory(parsed.merchant_key, occurredAt, db)
     : parsed.kind === 'deposit' ? await topUpCategoryId(db)
-    : rule?.category_id ?? null;
+    : sub ?? rule?.category_id ?? null;
   // the bank may report one operation both by SMS and by push: keep the first
   const twin = await db.get<{ id: number; occurred_at: number }>(
     `SELECT id, occurred_at FROM transactions

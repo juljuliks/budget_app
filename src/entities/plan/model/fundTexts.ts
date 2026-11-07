@@ -15,8 +15,3 @@ export function fundProgress(saved: number, target: number, due: string, currenc
 export function contributionsLeft(left: number): string {
   return left > 0 ? `ещё ${left} ${plural(left, ['взнос', 'взноса', 'взносов'])}` : '';
 }
-
-/** "через 10 месяцев" from the current month to the due one, with both. */
-export function monthsTo(months: number): string {
-  return months > 0 ? `через ${months} ${plural(months, ['месяц', 'месяца', 'месяцев'])}` : '';
-}

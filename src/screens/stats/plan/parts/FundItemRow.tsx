@@ -9,6 +9,7 @@ import { colors } from '@/shared/theme/theme';
 import type { PlanView } from '../model/planView';
 import { Share } from './PlanItemRow';
 import { styles } from './styles';
+import { fundFitStatus } from '../../month/model/savingsSection';
 
 type Props = { p: PlanView; item: PlanItem; hidden: boolean; onOpen: () => void };
 
@@ -22,6 +23,8 @@ export function FundItemRow({ p, item, hidden, onOpen }: Props) {
   const saved = f ? isSaved(f.saved_minor, f.target_minor) : false;
   const value = item.converted_minor;
   const own = item.currency !== p.currency && item.limit_minor ? formatWithCurrency(item.limit_minor, item.currency) : null;
+  // what the budget fitted of its contribution (from 🔒, less, none)
+  const fit = fundFitStatus(item, p.ym, hidden);
   return (
     <TouchableOpacity style={styles.row} onPress={onOpen} accessibilityLabel={`Копилка: ${categoryLabel(item)}`}>
       <View style={styles.pin}>
@@ -34,6 +37,7 @@ export function FundItemRow({ p, item, hidden, onOpen }: Props) {
             {hidden ? (saved ? 'накоплено' : `${Math.floor((f.saved_minor / f.target_minor) * 100)}%`) : fundProgress(f.saved_minor, f.target_minor, f.due, item.currency)}
           </Text>
         ) : null}
+        {fit ? <Text style={[styles.percent, fit.tone === 'warn' && { color: colors.warn }]}>{fit.text}</Text> : null}
       </View>
       <View style={styles.amountBox}>
         {hidden ? null : (

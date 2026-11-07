@@ -25,10 +25,10 @@ beforeEach(async () => {
 });
 afterEach(() => jest.useRealTimers());
 
-test('"Подписки" is a category of its own with repeating payments on (not a system one)', async () => {
+test('"Подписки" is the system category of subscriptions, repeating payments on', async () => {
   const id = await subscriptionsCategoryId();
   const row = await (await getDb()).get<{ name: string; system: string | null; recurring: number }>('SELECT name, system, recurring FROM categories WHERE id = ?', [id]);
-  expect(row).toEqual({ name: 'Подписки', system: null, recurring: 1 });
+  expect(row).toEqual({ name: 'Подписки', system: 'subs', recurring: 1 });
 });
 
 test('any category can have repeating payments: its plan counted from them; off — the amount stays, by hand; "Отменить"', async () => {

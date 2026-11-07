@@ -1,5 +1,7 @@
-// "Копилки": a category saved up for — how much by when. Every month with a plan puts a contribution in it (its plan
-// item, kind 'fund'): what is left to save over the months left, in whole units. Its spending is taken from what is saved;
+// "Копилки": a category saved up for — how much by when (on its page). Every month with a plan puts a contribution in it
+// (its plan item, kind 'fund', added by itself): what is left to save over the months left, in whole units — as the
+// month's budget fits it: what is free in the plan first, then "🔒 Отложить сразу" (part of it too), what still doesn't
+// fit is put in the next months (cap_minor, taken_minor; no question asked). Its spending is taken from what is saved;
 // spending past it is the month's (a shortage, over the plan). A past month's contribution is what its close said went in
 // ("Итоги месяца", fund_confirms; no answer — nothing); the current one and the coming ones are counted again as the
 // spending changes. Deleted: what was saved goes to that month's savings.
@@ -8,6 +10,7 @@ import type { Db } from '../types';
 import { Currency } from '../fx';
 import { asCurrency, currentYm, monthRange, monthStart, parseYm, ymOf } from './months';
 import { convertSpending, spendRows } from './spend';
+import { fitFunds } from './fundFit';
 
 export type Fund = {
   category_id: number;
@@ -81,9 +84,10 @@ export async function allFunds(): Promise<Fund[]> {
 export async function fundLedger(fund: Fund, until = currentYm(), nowYm = currentYm()): Promise<FundLedger> {
   const db = await getDb();
   const last = fund.closed_ym && fund.closed_ym <= until ? ymBefore(fund.closed_ym) : until;
-  const items = new Map((await db.all<{ ym: string; limit_minor: number }>(
-    "SELECT ym, limit_minor FROM plan_items WHERE category_id = ? AND kind = 'fund' AND ym >= ? AND ym <= ?",
-    [fund.category_id, fund.since_ym, last])).map((r) => [r.ym, r.limit_minor]));
+  // a month's item: what of the contribution fitted its budget (null — all of it)
+  const items = new Map((await db.all<{ ym: string; cap_minor: number | null }>(
+    "SELECT ym, cap_minor FROM plan_items WHERE category_id = ? AND kind = 'fund' AND ym >= ? AND ym <= ?",
+    [fund.category_id, fund.since_ym, last])).map((r) => [r.ym, r.cap_minor]));
   const confirmed = new Map((await db.all<{ ym: string; saved_minor: number }>(
     'SELECT ym, saved_minor FROM fund_confirms WHERE category_id = ? AND ym >= ? AND ym <= ?',
     [fund.category_id, fund.since_ym, last])).map((r) => [r.ym, r.saved_minor]));
@@ -98,8 +102,9 @@ export async function fundLedger(fund: Fund, until = currentYm(), nowYm = curren
   let i = 0;
   for (let ym = fund.since_ym; ym <= last; ym = nextYm(ym)) {
     const start = balance;
-    const planned = items.get(ym);
-    const contribution = ym < nowYm ? confirmed.get(ym) ?? 0 : planned === undefined ? 0 : contributionOf(fund, ym, balance);
+    const cap = items.get(ym);
+    const asked = cap === undefined ? 0 : contributionOf(fund, ym, balance);
+    const contribution = ym < nowYm ? confirmed.get(ym) ?? 0 : cap === null || cap === undefined ? asked : Math.min(asked, cap);
     balance += contribution;
     const [, end] = monthRange(parseYm(ym).year, parseYm(ym).month);
     let out = 0;
@@ -121,26 +126,29 @@ export const ymBefore = (ym: string) => { const { year, month } = parseYm(ym); r
 
 /**
  * The current and the coming months' contributions as the ledger counts them now (the spending changed what is left to
- * save): written to their plan items. A fund is in each of them, as a repeating payment (also one made after the month
- * was planned). Past months are left as they were.
+ * save), each fitted to its month's budget (fundFit.ts). A fund is in each of them, as a repeating payment (also one
+ * made after the month was planned). Past months are left as they were.
  */
-export async function refreshFundItems(ym: string, nowYm = currentYm()): Promise<void> {
+export function refreshFundItems(ym: string, nowYm = currentYm()): Promise<void> {
+  // one at a time: the screens refresh together, and a fit gives 🔒 back before taking from it again
+  const run = refreshing.then(() => refreshNow(ym, nowYm));
+  refreshing = run.catch(() => {});
+  return run;
+}
+
+let refreshing: Promise<void> = Promise.resolve();
+
+async function refreshNow(ym: string, nowYm: string): Promise<void> {
   if (ym < nowYm) return;
   const db = await getDb();
   const funds = await activeFunds(ym, db);
+  if (!funds.length) return;
   for (const fund of funds) {
     await db.run(
       `INSERT OR IGNORE INTO plan_items (ym, category_id, limit_minor, kind, currency)
         SELECT ?, id, 0, 'fund', ? FROM categories WHERE id = ? AND deleted_at IS NULL`, [ym, fund.currency, fund.category_id]);
   }
-  for (const fund of funds) {
-    const { months } = await fundLedger(fund, ym, nowYm);
-    for (const m of months) {
-      if (m.ym < nowYm) continue;
-      await db.run("UPDATE plan_items SET limit_minor = ?, currency = ? WHERE ym = ? AND category_id = ? AND kind = 'fund' AND limit_minor != ?",
-        [m.contribution, fund.currency, m.ym, fund.category_id, m.contribution]);
-    }
-  }
+  for (let m = nowYm; m <= ym; m = nextYm(m)) await fitFunds(m, nowYm);
 }
 
 /** What the fund has now (up to the current month, its spending in it too). */

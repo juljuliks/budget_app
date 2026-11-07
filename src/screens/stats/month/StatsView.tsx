@@ -12,7 +12,7 @@ import { RecurringPaymentsSheet } from '@/features/recurring-payments';
 import { daysInMonth, monthDays } from '@/shared/lib/dateRange';
 import { formatMoneyWithCurrency, formatWithCurrency } from '@/shared/lib/money';
 import { NO_RATE } from '@/shared/lib/strings';
-import { openCategoryTrend, openPlan, useOpenCategoryTransactions } from '@/shared/navigation/navigation';
+import { openCategory, openCategoryTrend, openPlan, useOpenCategoryTransactions } from '@/shared/navigation/navigation';
 import { openMonthClose } from '@/shared/navigation/sheets';
 import Donut, { DonutSegment } from '@/shared/ui/Donut';
 import StickyScrollView from '@/shared/ui/StickyScrollView';
@@ -178,7 +178,8 @@ export default function StatsView({ year, month, currency }: { year: number; mon
         categoryId={fundSheet?.id ?? null}
         label={fundSheet?.label ?? ''}
         onClose={() => setFundSheet(null)}
-        onEdit={() => fundSheet && openSheetAmount(fundSheet.id, fundSheet.label, () => setFundSheet(null))}
+        // a fund is changed on its category's page
+        onEdit={() => { const f = fundSheet; setFundSheet(null); if (f) openCategory(f.id); }}
       />
       <BudgetEditSheet ym={ym} currency={currency} visible={budgetOpen} onClose={() => setBudgetOpen(false)} />
     </StickyScrollView>

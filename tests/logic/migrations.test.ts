@@ -203,10 +203,31 @@ describe('migrations', () => {
     await migrate(db, MIGRATIONS.slice(0, 41));
     const subs = (await db.get<{ id: number }>("SELECT id FROM categories WHERE system = 'subs'"))!.id;
     await db.run("INSERT INTO subscriptions (merchant_key, name, amount_minor, currency, since_ym, created_at) VALUES ('NETFLIX.COM', 'Netflix', 3000, 'GEL', '2026-10', 0)");
-    await migrate(db);
+    await migrate(db, MIGRATIONS.slice(0, 42));
     expect(await db.get('SELECT system, recurring FROM categories WHERE id = ?', [subs])).toEqual({ system: null, recurring: 1 });
+    await migrate(db);
     expect(await db.get('SELECT category_id FROM recurring_payments')).toEqual({ category_id: subs });
     expect(await db.get('SELECT count(*) AS n FROM categories WHERE recurring = 1')).toEqual({ n: 1 });
+  });
+
+  test('migration 65: "Подписки" a system category again — the one with the most subscriptions; another\'s move to it; no impulse, no fund', async () => {
+    const db = openDatabase(':memory:');
+    await migrate(db, MIGRATIONS.slice(0, 64));
+    const subs = (await db.get<{ id: number }>("SELECT id FROM categories WHERE name = 'Подписки'"))!.id;
+    const ins = (await db.run("INSERT INTO categories (name, by_merchant, impulse) VALUES ('Страховки', 1, 1)")).lastInsertRowid;
+    await db.run('UPDATE categories SET impulse = 1 WHERE id = ?', [subs]);
+    const pay = (merchant: string, c: number) => db.run(
+      "INSERT INTO recurring_payments (category_id, merchant_key, name, amount_minor, currency, period_months, period_unit, since_ym, created_at) VALUES (?, ?, ?, 100, 'GEL', 1, 'month', '2026-10', 0)",
+      [c, merchant, merchant]);
+    await pay('NETFLIX', subs); await pay('SPOTIFY', subs); await pay('AIG', ins);
+    await db.run("INSERT INTO merchant_rules (match_type, pattern, category_id, created_at) VALUES ('exact', 'AIG', ?, 0)", [ins]);
+    await db.run("INSERT INTO funds (category_id, target_minor, currency, due, start_minor, since_ym) VALUES (?, 1000, 'GEL', '2027-01-31', 0, '2026-01')", [subs]);
+    await migrate(db);
+    expect(await db.get('SELECT system, by_merchant, impulse FROM categories WHERE id = ?', [subs])).toEqual({ system: 'subs', by_merchant: 1, impulse: 0 });
+    expect(await db.get('SELECT system, by_merchant FROM categories WHERE id = ?', [ins])).toEqual({ system: null, by_merchant: 0 });
+    expect(await db.all('SELECT DISTINCT category_id FROM recurring_payments')).toEqual([{ category_id: subs }]);
+    expect(await db.get("SELECT category_id FROM merchant_rules WHERE pattern = 'AIG'")).toEqual({ category_id: subs });
+    expect((await db.get<{ c: string | null }>('SELECT closed_ym AS c FROM funds'))!.c).not.toBeNull();
   });
 
   test('migration 43: the tables renamed to repeating payments, a saving\'s sub_id → payment_id; one renamed before — left as it is', async () => {

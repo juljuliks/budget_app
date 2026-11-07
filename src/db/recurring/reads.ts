@@ -3,7 +3,7 @@
 // (a regular payment of the plan) isn't matched with operations: its charges are its calendar.
 import { getDb } from '../index';
 import type { Db } from '../types';
-import { Currency } from '../fx';
+import { Currency, makeConverter } from '../fx';
 import { placeholders, sqlList } from '../sql';
 import { asCurrency } from '../plans/months';
 import { REMEMBERABLE_KINDS } from '../../domain/types';
@@ -83,8 +83,15 @@ export async function paymentOfMerchant(merchantKey: string): Promise<RecurringP
   return r ? asSub(r) : null;
 }
 
-/** A subscription's charge: its merchant's purchases and payments (not a transfer) */
-const MERCHANT_CHARGE = `kind IN (${sqlList(REMEMBERABLE_KINDS)})`;
+/**
+ * A subscription's charge: its merchant's purchase or payment (not a transfer) in the subscription's category ("📺
+ * Подписки", or one with repeating payments); a merchant with none — in "📺 Подписки". The same merchant's operation in
+ * another category (a food order at a merchant of several) isn't one. `t` — the table's alias, or none.
+ */
+const charge = (t = '') => `${t}kind IN (${sqlList(REMEMBERABLE_KINDS)}) AND ${t}category_id = coalesce(
+  (SELECT r.category_id FROM recurring_payments r WHERE r.merchant_key = ${t}merchant_key AND r.deleted_at IS NULL LIMIT 1),
+  (SELECT id FROM categories WHERE system = 'subs'))`;
+const MERCHANT_CHARGE = charge();
 
 /** The days the merchants were charged on (their purchases and payments), each merchant's in order. */
 export async function chargeDays(keys: string[], db?: Db): Promise<Map<string, string[]>> {
@@ -122,10 +129,24 @@ export async function categoryPayment(categoryId: number, db?: Db): Promise<Recu
   return r ? asSub(r) : null;
 }
 
-/** Has the category a merchant's charge (a purchase or a payment with a merchant): "Подписки" are offered on its page. */
-export async function hasMerchantCharges(categoryId: number): Promise<boolean> {
-  return !!(await (await getDb()).get(
-    `SELECT 1 FROM transactions WHERE category_id = ? AND merchant_key IS NOT NULL AND ${MERCHANT_CHARGE} LIMIT 1`, [categoryId]));
+
+/** a charge in another currency than its subscription's: this close on the day's rate (the card converts) */
+const OTHER_CURRENCY_SPREAD = 0.05;
+
+/**
+ * A new operation of a merchant with a subscription, of its amount (the last charge's: the subscription keeps it) —
+ * the subscription's category ("📺 Подписки" or one with repeating payments), whatever the merchant's other ones are (a
+ * food order there is another amount); else null. Another currency — within OTHER_CURRENCY_SPREAD on the day's rate (a cached one: no network here).
+ */
+export async function subscriptionCategoryOf(merchantKey: string, amountMinor: number, currency: string, day: string, db?: Db): Promise<number | null> {
+  db ??= await getDb();
+  const sub = await db.get<{ amount_minor: number; currency: string; c: number }>(
+    `SELECT amount_minor, currency, category_id AS c FROM recurring_payments
+      WHERE merchant_key = ? AND deleted_at IS NULL AND category_id IS NOT NULL LIMIT 1`, [merchantKey]);
+  if (!sub) return null;
+  if (sub.currency === currency) return sub.amount_minor === amountMinor ? sub.c : null;
+  const expected = (await makeConverter())(sub.amount_minor, sub.currency, currency, day);
+  return expected !== null && Math.abs(amountMinor - expected) <= expected * OTHER_CURRENCY_SPREAD ? sub.c : null;
 }
 
 /** A merchant's last charge: its day, amount and currency, and the merchant's name as the SMS spells it. */
@@ -142,9 +163,9 @@ export async function lastCharge(merchantKey: string): Promise<LastCharge | null
 export async function merchantsWithoutPayment(categoryId: number): Promise<LastCharge[]> {
   const rows = await (await getDb()).all<{ k: string; name: string | null; at: number; amount_minor: number; currency: string }>(
     `SELECT t.merchant_key AS k, t.raw_merchant AS name, t.occurred_at AS at, t.amount_minor, t.currency FROM transactions t
-      WHERE t.category_id = ? AND t.merchant_key IS NOT NULL AND t.${MERCHANT_CHARGE}
+      WHERE t.category_id = ? AND t.merchant_key IS NOT NULL AND ${charge('t.')}
         AND NOT EXISTS (SELECT 1 FROM recurring_payments s WHERE s.merchant_key = t.merchant_key AND s.deleted_at IS NULL)
-        AND t.occurred_at = (SELECT max(x.occurred_at) FROM transactions x WHERE x.merchant_key = t.merchant_key AND x.category_id = t.category_id AND x.${MERCHANT_CHARGE})
+        AND t.occurred_at = (SELECT max(x.occurred_at) FROM transactions x WHERE x.merchant_key = t.merchant_key AND x.category_id = t.category_id AND ${charge('x.')})
       GROUP BY t.merchant_key ORDER BY t.occurred_at DESC`, [categoryId]);
   return rows.map((r) => ({ merchant_key: r.k, name: r.name ?? r.k, day: dayOfUnix(r.at), amount_minor: r.amount_minor, currency: asCurrency(r.currency) }));
 }

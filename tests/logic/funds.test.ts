@@ -30,7 +30,7 @@ test('the contribution: what is left over the months left with the due one, roun
 
 test('made: its plan item is the contribution, "Уже отложено" lowers it; the next month counts it again from what is saved', async () => {
   const id = await createCategory('Отпуск', '🏖');
-  expect(await setFund('2026-10', id, { ...HOLIDAY, start_minor: 102000 })).toBe(19800);
+  await setFund('2026-10', id, { ...HOLIDAY, start_minor: 102000 });
   const [item] = await listPlan('2026-10');
   expect(item).toMatchObject({ category_id: id, kind: 'fund', limit_minor: 19800 });
   // spent 420 in October: November's contribution covers it
@@ -38,6 +38,63 @@ test('made: its plan item is the contribution, "Уже отложено" lowers 
   const nov = (await listPlan('2026-11')).find((i) => i.category_id === id)!;
   // saved 1 020 + 198 − 420 = 798; 2 202 over 9 months = 244.67 → 245
   expect(nov).toMatchObject({ kind: 'fund', limit_minor: 24500 });
+});
+
+describe('the contribution fits the month\'s budget, nothing asked', () => {
+  // October: budget 1 000, 0% outside the plan, 🔒 100 — 900 to plan; Еда 800 planned — 100 free
+  async function month(locked = 10000) {
+    const { setPlanAmount } = require('../../src/db/plans');
+    const food = await createCategory('Еда', '🍎');
+    await setPlanBudget('2026-10', 100000, 'GEL', 0, true, locked);
+    await setPlanAmount('2026-10', food, 80000, 'limit');
+  }
+  const item = async (id: number) => (await getDb()).get('SELECT limit_minor, cap_minor, taken_minor FROM plan_items WHERE ym = ? AND category_id = ?', ['2026-10', id]);
+  const locked = async () => (await (await getDb()).get<{ l: number }>("SELECT locked_minor AS l FROM plan_months WHERE ym = '2026-10'"))!.l;
+
+  test('free first, then 🔒 — part of it too; refitted, 🔒 isn\'t taken twice; turned off — 🔒 gets it back', async () => {
+    await month();
+    const id = await createCategory('Отпуск', '🏖');
+    // 1 500 by January: 375 a month — 100 free, 100 of 🔒 (all it has), 175 not this month
+    await setFund('2026-10', id, { ...HOLIDAY, target_minor: 150000, due: '2027-01-31' });
+    expect(await item(id)).toEqual({ limit_minor: 20000, cap_minor: 20000, taken_minor: 10000 });
+    expect(await locked()).toBe(0);
+    // the next month asks more: 1 300 over 3 months
+    expect((await listPlan('2026-11')).find((i) => i.category_id === id)).toMatchObject({ limit_minor: 43400 });
+    // looked at again: the same, 🔒 not taken again
+    await listPlan('2026-10');
+    expect(await item(id)).toEqual({ limit_minor: 20000, cap_minor: 20000, taken_minor: 10000 });
+    expect(await locked()).toBe(0);
+    await deleteFund(id);
+    expect(await locked()).toBe(10000);
+  });
+
+  test('all of it fits: no cap; part from 🔒 — said (taken)', async () => {
+    await month();
+    const id = await createCategory('Отпуск', '🏖');
+    // 600 by January: 150 a month — 100 free, 50 of 🔒
+    await setFund('2026-10', id, { ...HOLIDAY, target_minor: 60000, due: '2027-01-31' });
+    expect(await item(id)).toEqual({ limit_minor: 15000, cap_minor: null, taken_minor: 5000 });
+    expect(await locked()).toBe(5000);
+  });
+
+  test('nothing free, 🔒 empty: 0 this month; no budget — all of it', async () => {
+    await month(0);
+    const { setPlanAmount } = require('../../src/db/plans');
+    await setPlanAmount('2026-10', await createCategory('Дом', '🏠'), 20000, 'limit');
+    const id = await createCategory('Отпуск', '🏖');
+    await setFund('2026-10', id, { ...HOLIDAY, target_minor: 60000, due: '2027-01-31' });
+    expect(await item(id)).toEqual({ limit_minor: 0, cap_minor: 0, taken_minor: 0 });
+    await setPlanBudget('2026-10', null);
+    await listPlan('2026-10');
+    expect(await item(id)).toEqual({ limit_minor: 15000, cap_minor: null, taken_minor: 0 });
+  });
+
+  test('a fund\'s purchases are planned: "Импульсивные покупки" off', async () => {
+    const id = await createCategory('Отпуск', '🏖');
+    await (await getDb()).run('UPDATE categories SET impulse = 1 WHERE id = ?', [id]);
+    await setFund('2026-10', id, HOLIDAY);
+    expect(await (await getDb()).get('SELECT impulse FROM categories WHERE id = ?', [id])).toEqual({ impulse: 0 });
+  });
 });
 
 test('the months: contributions in, spending out; past what is saved — a shortage, the month\'s', async () => {

@@ -5,7 +5,8 @@ import { categoryLabel, categorySummary, getCategory, isTransferCategory } from 
 import { CategoryView, ImpulseSwitch } from '@/entities/category';
 import { RecentOperations, useRecentOperations } from '@/entities/transaction';
 import { startCategoryDelete } from '@/features/category-delete';
-import { SubscriptionsSwitch } from '@/features/recurring-payments';
+import { SubscriptionsSection } from '@/features/recurring-payments';
+import { FundSection } from '@/features/fund';
 import { openCategoryTrend, RootStackParamList, showOperationsFrom } from '@/shared/navigation/navigation';
 import { colors } from '@/shared/theme/theme';
 import { TrendsIcon } from '@/shared/ui/icons';
@@ -39,7 +40,7 @@ export default function CategoryScreen({ route, navigation }: Props) {
       onShowOperations={showAll}
       links={transfer !== false ? null : <LinkCard icon={<TrendsIcon color={colors.accent} />} label="Динамика трат" onPress={() => openCategoryTrend(id)} style={styles.trends} />}
       onDelete={() => startCategoryDelete(id, { close: back, onDeleted: () => {} })}
-      extra={<><SubscriptionsSwitch categoryId={id} /><ImpulseSwitch categoryId={id} /></>}
+      extra={<><SubscriptionsSection categoryId={id} /><FundSection categoryId={id} /><ImpulseSwitch categoryId={id} /></>}
       recent={<RecentOperations rows={rows} count={count} of="category" onShowAll={showAll} />}
     />
   );

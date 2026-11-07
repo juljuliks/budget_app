@@ -13,3 +13,11 @@ export function merchantChoiceText(change: Change, fromLabel: string | null, toL
     message: `${now}Для мерчанта: категория изменится у ${change.count} ${plural(change.count, ['операции', 'операций', 'операций'])} на ${sum}, и новые операции мерчанта будут получать её автоматически. Выбранные вручную категории не изменятся.`,
   };
 }
+
+/** An operation put in "📺 Подписки" with another amount than its subscription's; `dearer` null — another currency. */
+export function subscriptionPriceText(name: string, was: string, now: string, dearer: boolean | null) {
+  return {
+    title: dearer === null ? 'Подписка изменилась?' : dearer ? 'Подписка подорожала?' : 'Подписка подешевела?',
+    message: `${name}: было ${was}, стало ${now}. Обновить подписку — следующие списания на эту сумму попадут в «📺 Подписки» сами.`,
+  };
+}

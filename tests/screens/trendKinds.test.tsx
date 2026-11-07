@@ -43,7 +43,7 @@ test('5.8.8 a fund: how much of its target by when, the pace, its card', async (
   expect(screen.getByText(/из 600 ₾ · к январю 2027/)).toBeTruthy();
   expect(screen.getByText('Потрачено из копилки')).toBeTruthy();
   await tap('Копилка: взносы и траты ›');
-  expect(await screen.findByText('Удалить копилку')).toBeTruthy();
+  expect(await screen.findByText('Выключить копилку')).toBeTruthy();
 });
 
 test('5.8.8 a transfer category has no «Динамика трат»', async () => {

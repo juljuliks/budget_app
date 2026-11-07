@@ -1,7 +1,7 @@
 // Picking the operation's category: for this operation only, or for its merchant too (asked when that changes others).
 import { useEffect, useState } from 'react';
 import { assignCategory, MerchantChoice, merchantChangePreview } from '@/categorize/assign';
-import { categoryLabel, getCategory } from '@/db/categories';
+import { categoryLabel, getCategory, isSubscriptions } from '@/db/categories';
 import { paymentCard } from '@/db/recurring';
 import { openPayment } from '@/shared/navigation/sheets';
 import { showLimitAlert } from '@/notifications/notifeeIntegration';
@@ -9,6 +9,7 @@ import { merchantLabel } from '@/entities/transaction';
 import { sheetAlert } from '@/shared/ui/sheetAlert';
 import { toast, toastError } from '@/shared/ui/toast';
 import { merchantChoiceText } from '../texts';
+import { askSubscriptionPrice } from './subscriptionPrice';
 import type { Tx } from './useTransaction';
 
 export function useCategoryChoice(txId: number, tx: Tx | null, visible: boolean) {
@@ -18,6 +19,7 @@ export function useCategoryChoice(txId: number, tx: Tx | null, visible: boolean)
   /** Saves and stays on the page. `onSaved` runs after a chip pick from "Сменить" (the chips follow it). */
   async function assign(categoryId: number | null, choice?: MerchantChoice, onSaved?: () => void) {
     setSaving(true);
+    const previous = tx?.category_id ?? null;
     try {
       await assignCategory(txId, categoryId, choice);
       showLimitAlert(categoryId);
@@ -27,6 +29,8 @@ export function useCategoryChoice(txId: number, tx: Tx | null, visible: boolean)
       else toast(`Категория «${categoryLabel(c)}» назначена`);
       setSaving(false);
       onSaved?.();
+      // "📺 Подписки" by hand, another amount than the merchant's subscription: its new price or a mistake
+      if (c && tx && isSubscriptions(c) && previous !== categoryId && await askSubscriptionPrice(tx, previous)) return;
       // a category with payments by merchant, for a merchant with none: how often, when next (over this page)
       if (c?.by_merchant && tx?.merchant_key && !(await paymentCard(tx.merchant_key))) setTimeout(() => openPayment({ txId }), 250);
     } catch (e) {

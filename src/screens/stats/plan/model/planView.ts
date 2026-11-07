@@ -199,7 +199,7 @@ export function planView({ ym, currency, items: all, budget, toShown, fromShown,
   const claimed = total + fundsTotal + debt - plus;
 
   return {
-    currency, money, hidden, budgetMoney, fundInBudget, savingInBudget, total, fundsTotal, funds, saving, recurring, shownBudget, budgetSub, claimed,
+    ym, currency, money, hidden, budgetMoney, fundInBudget, savingInBudget, total, fundsTotal, funds, saving, recurring, shownBudget, budgetSub, claimed,
     unplanned, locked, free, timing, parts, less, savingsPlanned, systemGroups, budgetHint, groups: groupByType(items),
   };
 }

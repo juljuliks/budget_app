@@ -20,7 +20,7 @@ type Props = {
   /** "🏖 Отпуск" */
   label: string;
   onClose: () => void;
-  /** "Изменить": the plan's sheet of the category, as a fund */
+  /** "Изменить": its category's page (the fund is set there) */
   onEdit: () => void;
   /** the month's plan this sheet was opened from; passed to deleteFund so past-month items are removed too */
   ym?: string;
@@ -37,7 +37,7 @@ function entryText(e: FundEntry): { month: string; what: string } {
 
 /**
  * A fund: what it has of the target, by when and the month's contribution; its contributions and spending, newest first.
- * "Изменить" opens the plan's sheet; "Удалить копилку" asks, what it has goes to this month's savings.
+ * "Изменить" opens its category's page; "Выключить копилку" asks, what it has goes to this month's savings.
  */
 export default function FundSheet({ categoryId, label, onClose, onEdit, ym }: Props) {
   const { card, failed, load } = useFund(categoryId);
@@ -74,7 +74,7 @@ export default function FundSheet({ categoryId, label, onClose, onEdit, ym }: Pr
             <Button title="Изменить" onPress={onEdit} />
             {/* what it had at the month's start goes to the savings, this month's contribution back to the budget and its
                 spending to the month's: the savings get what it has now */}
-            <Button title="Удалить копилку" danger outline onPress={() => confirmDeleteFund(card.fund.category_id, label, card.saved, card.fund.currency, onClose, ym)} />
+            <Button title="Выключить копилку" danger outline onPress={() => confirmDeleteFund(card.fund.category_id, label, card.saved, card.fund.currency, onClose, ym)} />
           </View>
         </SheetScrollView>
       )}

@@ -5,7 +5,7 @@ import { NormPeriod, OverBudgetError, PlanKind, setPlanPinned } from '@/db/plans
 import { AMOUNT_HINT, SAVE_FAILED } from '@/shared/lib/strings';
 import { formatWithCurrency, parseAmountOrZero } from '@/shared/lib/money';
 import { toast, toastFailure } from '@/shared/ui/toast';
-import { saveFund, savePlanAmount, saveRegular } from '../model/commands';
+import { savePlanAmount, saveRegular } from '../model/commands';
 import { turnOffRecurring } from './turnOffRecurring';
 import { askTakeLocked } from './askTakeLocked';
 import { savedText } from './sheetOptions';
@@ -16,7 +16,7 @@ import { dateNeeded, UNTIL_BEFORE } from './sheetOptions';
 import type { PlanAmountTarget } from './PlanAmountModal';
 
 export type PlanSheetValues = {
-  kind: PlanKind; currency: Currency; norm: NormPeriod; due: string | null; start: string;
+  kind: PlanKind; currency: Currency; norm: NormPeriod;
   pinned: boolean; until: string | null; every: RegularEvery; weekdays: number; period: number; next: string | null;
   /** "Откладывать каждый месяц?" of a regular payment rarer than monthly; `startBad` — "Уже отложено" not an amount */
   saving?: (SavingChoice & { startBad: boolean }) | null;
@@ -38,8 +38,6 @@ export async function submitPlanSheet({ ym, target, text, v, adding, locked, fre
   const byHand = k === 'subs' && !!target.by_merchant;
   const regular = k === 'subs' && !byHand && v.every !== 'month';
   const own = k === 'subs' && !byHand && v.every === 'month';
-  const startMinor = parseAmountOrZero(v.start ?? '');
-  if (k === 'fund' && (!minor || startMinor === null)) return minor ? AMOUNT_HINT : 'Введите, сколько накопить';
   if (regular && !minor) return 'Введите сумму за раз';
   if (regular && v.every === 'week' && !v.weekdays) return 'Выберите дни недели';
   if (own && !minor) return 'Введите сумму платежа';
@@ -55,7 +53,6 @@ export async function submitPlanSheet({ ym, target, text, v, adding, locked, fre
   const saved = (taken?: string) => { toast(savedText(k, target.label, adding, off, taken)); onSaved(); };
   if (own) return submitCategoryPayment(ym, target, { amount_minor: minor, currency: v.currency, period: v.period, due, until: v.until, saving: v.period > 1 ? v.saving : null }, adding, saved, onClose, free);
   const write = async (takeLocked: boolean | 'all') => {
-    if (k === 'fund' && v.due) return saveFund(ym, target.category_id, { target_minor: minor, currency: v.currency, due: v.due, start_minor: startMinor ?? 0 }, undefined, takeLocked === true);
     if (regular) {
       return saveRegular(ym, target.category_id, { every: v.every as 'day' | 'week', weekdays: v.weekdays, unit_minor: minor, until: v.until }, v.currency, takeLocked);
     }
@@ -82,7 +79,7 @@ export async function submitPlanSheet({ ym, target, text, v, adding, locked, fre
       return false;
     }
     const room = `можно запланировать до ${free ? formatWithCurrency(free.minor, free.currency) : '0'}`;
-    return k === 'fund' ? `Взнос больше бюджета месяца: ${room}. Выберите дату позже` : `Больше бюджета месяца: ${room}`;
+    return `Больше бюджета месяца: ${room}`;
   }
   saved();
   return null;

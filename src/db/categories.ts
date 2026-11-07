@@ -18,11 +18,11 @@ export type Category = {
   deleted_at: number | null;
   /** own color; null = from the type's palette (see src/domain/colors.ts) */
   color: string | null;
-  /** 'topup' for "Пополнение счёта", 'own' (system categories: can't be deleted or renamed), else null */
+  /** 'topup' for "Пополнение счёта", 'own', 'subs' for "Подписки" (system categories: can't be deleted or renamed), else null */
   system: string | null;
   /** 1 — "Регулярные платежи": its plan item counted from its payments (db/recurring) */
   recurring: number;
-  /** 1 — "Подписки" (on its page): a subscription of each merchant, made from an operation and followed by its charges */
+  /** 1 — "Подписки" (system = 'subs', read from it; the column itself is left over): a subscription of each merchant */
   by_merchant: number;
   /** 1 — "Импульсивные покупки" (on its page): its operations ask whether the purchase was impulsive (db/impulse.ts) */
   impulse: number;
@@ -42,8 +42,15 @@ export const OWN_TRANSFER = 'own';
  * "Подписки" on), else its own regular payment.
  */
 export const isRecurring = (c: { recurring?: number | boolean | null }) => !!c.recurring;
-/** A category of the system: "Пополнение счёта", "Между своими картами" (not deleted, merged, added to the plan by hand). */
+/** A category of the system: "Пополнение счёта", "Между своими картами", "Подписки" (not renamed, deleted or merged). */
 export const isSystemCategory = (c: { system?: string | null }) => !!c.system;
+
+/**
+ * "📺 Подписки": the one category of subscriptions (its merchants', each followed by its charges); no fund, no
+ * "Импульсивные покупки" — planned payments. Planned like any other.
+ */
+export const SUBSCRIPTIONS = 'subs';
+export const isSubscriptions = (c: { system?: string | null }) => c.system === SUBSCRIPTIONS;
 
 /** The id of "Пополнение счёта". */
 export async function topUpCategoryId(db?: Db): Promise<number | null> {
@@ -51,11 +58,10 @@ export async function topUpCategoryId(db?: Db): Promise<number | null> {
   return (await db.get<{ id: number }>("SELECT id FROM categories WHERE system = 'topup'"))?.id ?? null;
 }
 
-/** A category with "Подписки" on, the seeded one first: a subscription without a category goes there. */
+/** "📺 Подписки" (the system one): a subscription without a category goes there. */
 export async function subscriptionsCategoryId(db?: Db): Promise<number | null> {
   db ??= await getDb();
-  return (await db.get<{ id: number }>(
-    "SELECT id FROM categories WHERE by_merchant = 1 AND deleted_at IS NULL ORDER BY name = 'Подписки' DESC, id LIMIT 1"))?.id ?? null;
+  return (await db.get<{ id: number }>("SELECT id FROM categories WHERE system = 'subs' AND deleted_at IS NULL"))?.id ?? null;
 }
 
 /** "Регулярные платежи" on or off. */
@@ -64,13 +70,8 @@ export async function setRecurring(id: number, on: boolean, db?: Db): Promise<vo
   await db.run('UPDATE categories SET recurring = ? WHERE id = ?', [on ? 1 : 0, id]);
 }
 
-/** "Подписки" on or off (a subscription of each merchant, from an operation). */
-export async function setByMerchant(id: number, on: boolean, db?: Db): Promise<void> {
-  db ??= await getDb();
-  await db.run('UPDATE categories SET by_merchant = ? WHERE id = ?', [on ? 1 : 0, id]);
-}
 
-const COLUMNS = `c.id, c.name, c.emoji, c.sort_order, c.type_id, c.deleted_at, c.color, c.system, c.recurring, c.by_merchant, c.impulse,
+const COLUMNS = `c.id, c.name, c.emoji, c.sort_order, c.type_id, c.deleted_at, c.color, c.system, c.recurring, coalesce(c.system = 'subs', 0) AS by_merchant, c.impulse,
     t.name AS type_name, coalesce(t.is_transfer, 0) AS type_is_transfer`;
 const FROM = 'FROM categories c LEFT JOIN category_types t ON t.id = c.type_id';
 const SELECT = `SELECT ${COLUMNS} ${FROM}`;
