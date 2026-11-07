@@ -2,7 +2,7 @@
 import { freshDb } from '../helpers';
 import { getDb } from '../../src/db';
 import {
-  answerFund, contributionOf, deleteFund, fundLedger, getFund, listPlan, monthStats, monthsBetween, planHistory, restoreFund, setFund, setPlanBudget,
+  answerFund, contributionOf, deleteFund, fundLedger, getFund, listPlan, monthStats, monthsBetween, planHistory, restoreFund, setFund, setPlanBudget, storedBudget,
 } from '../../src/db/plans';
 import { createCategory } from '../../src/db/categories';
 import { addManualTransaction } from '../../src/db/transactions';
@@ -200,4 +200,19 @@ test('deleting from a past month removes that month\'s plan item and closes the 
   // both plan items gone (September and later)
   const items = await db.all<{ ym: string }>("SELECT ym FROM plan_items WHERE category_id = ? AND kind = 'fund'", [id]);
   expect(items).toEqual([]);
+});
+
+test('"Отложить сразу" MAX: the funds come first — nothing "taken" from it, it is what they and the plan leave', async () => {
+  const db = await getDb();
+  const food = await createCategory('Еда', '🍎');
+  await setPlanBudget('2026-10', 100000, 'GEL', 0, true, 0, null, true);
+  const { setPlanAmount } = require('../../src/db/plans');
+  await setPlanAmount('2026-10', food, 60000, 'limit');
+  const id = await createCategory('Отпуск', '🏖');
+  // 1 500 by January: 375 a month — all of it, before 🔒
+  await setFund('2026-10', id, { ...HOLIDAY, target_minor: 150000, due: '2027-01-31' });
+  expect(await db.get("SELECT limit_minor, cap_minor, taken_minor FROM plan_items WHERE ym = '2026-10' AND category_id = ?", [id]))
+    .toEqual({ limit_minor: 37500, cap_minor: null, taken_minor: 0 });
+  // 1 000 − 600 − 375
+  expect((await storedBudget('2026-10'))!.locked_minor).toBe(2500);
 });

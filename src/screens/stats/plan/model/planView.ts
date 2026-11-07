@@ -2,7 +2,7 @@
 // savings or free), the system sections, the items by type — the plan only, what is spent is the stats'. The stats'
 // «Сбережения» take what the overspend took of the savings from here too (`less`). No React.
 import type { Currency } from '@/db/fx';
-import { currentYm, PlanBudget, PlanItem, unplannedOf } from '@/db/plans';
+import { asCurrency, currentYm, PlanBudget, PlanItem, unplannedOf } from '@/db/plans';
 import { daysInMonth } from '@/shared/lib/dateRange';
 import { MONTHS_GEN, RHYTHM_DAYS } from '@/shared/lib/dates';
 import { formatPercent } from '@/shared/lib/format';
@@ -155,6 +155,9 @@ export function planView({ ym, currency, items: all, budget, toShown, fromShown,
       ...(plus > 0 ? [{ key: 'plus', name: `➕ Остаток ${from}`, note: `добавлен к бюджету ${genOf(ym)}`, value: plus, tone: 'free' as const, carry: 'plus' as const }] : []),
     ] });
   }
+  // what the funds' contributions took of 🔒 set as an amount, in the screen's currency
+  const lockedToFunds = !budget || budget.locked_is_max ? 0
+    : funds.reduce((a, i) => a + (i.fund?.fit?.taken ? toShown(i.fund.fit.taken, asCurrency(i.fund.fit.taken_currency ?? budget.currency)) ?? 0 : 0), 0);
   if (shownBudget) {
     // a savings amount in the budget's currency, if the screen shows another (none without a rate)
     const inBudget = (shown: number, own?: number) => {
@@ -165,7 +168,8 @@ export function planView({ ym, currency, items: all, budget, toShown, fromShown,
     const savingsRows: SystemRow[] = [
       ...(locked > 0 ? [{
         key: 'locked', name: '🔒 Отложено сразу', tone: 'locked' as const, value: locked, ...inBudget(locked, budget!.locked_minor),
-        note: 'заблокировано в начале месяца',
+        // an amount of its own gave way to the funds' contributions (they come first): by how much
+        note: lockedToFunds > 0 ? `заблокировано в начале месяца · копилкам −${money(lockedToFunds)}` : 'заблокировано в начале месяца',
       }] : []),
       // none — not shown
       ...((free ?? 0) > 0 ? [{
