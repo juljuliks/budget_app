@@ -14,12 +14,15 @@ const GONE_PERIODS = 2;
 
 export type SubTrend = {
   id: number; name: string; merchantKey: string | null;
-  /** one charge (the latest's, as spent; else as set) */
-  amount: number;
+  /** one charge (the latest's, as spent; else as set) in the screen's currency; null — set in another, no charge yet */
+  amount: number | null;
+  /** in its own currency, when not the screen's: one charge (the latest's in it; else as set) — "3 $ (7.79 ₾)" */
+  own: { amount: number; currency: string } | null;
   /** a month's share and a year's; null — once */
   perMonth: number | null; perYear: number | null;
   /** charged once a year or rarer: "≈ 13 ₾ в месяц" rather than the charge */
   yearly: boolean;
+  /** in its own currency (`own`'s, if any): a rate's move isn't «подорожал» */
   change: Change | null;
   lastDay: DayKey | null;
   gone: boolean;
@@ -27,20 +30,28 @@ export type SubTrend = {
 
 const daysBetween = (a: DayKey, b: DayKey) => Math.round((new Date(b).getTime() - new Date(a).getTime()) / 86400000);
 
-export function subsTrend(payments: RecurringPayment[], spends: TrendSpend[], today: DayKey) {
+/** `currency`: the screen's, `spends` are in it. */
+export function subsTrend(payments: RecurringPayment[], spends: TrendSpend[], today: DayKey, currency: string) {
   const subs: SubTrend[] = payments.map((p) => {
-    const charges = paymentsOf(spends.filter((s) => p.merchant_key !== null && s.merchantKey === p.merchant_key));
-    const amount = charges[0]?.value ?? p.amount_minor;
+    const mine = spends.filter((s) => p.merchant_key !== null && s.merchantKey === p.merchant_key);
+    const charges = paymentsOf(mine);
+    const foreign = p.currency !== currency;
+    // its charges in its own currency (the parts of one operation together; one in a third currency left out)
+    const ownCharges = !foreign ? [] : charges.map((c) => ({
+      day: c.day, value: mine.filter((s) => s.tx === c.tx && s.own?.currency === p.currency).reduce((a, s) => a + s.own!.minor, 0),
+    })).filter((c) => c.value > 0);
+    const amount = charges[0]?.value ?? (foreign ? null : p.amount_minor);
     const months = monthsOf(p.period);
     const lastDay = charges[0]?.day ?? null;
     const gone = (p.until !== null && p.until < today)
       || (months !== null && lastDay !== null && daysBetween(lastDay, today) > months * 30.5 * GONE_PERIODS);
     return {
       id: p.id, name: p.name, merchantKey: p.merchant_key, amount,
-      perMonth: months === null ? null : amount / months,
-      perYear: months === null ? null : (amount / months) * 12,
+      own: foreign ? { amount: ownCharges[0]?.value ?? p.amount_minor, currency: p.currency } : null,
+      perMonth: months === null || amount === null ? null : amount / months,
+      perYear: months === null || amount === null ? null : (amount / months) * 12,
       yearly: months !== null && months >= 12,
-      change: lastChange(charges), lastDay, gone,
+      change: lastChange(foreign ? ownCharges : charges), lastDay, gone,
     };
   });
   // the ones still charging first, the dearest a month first; the gone ones last

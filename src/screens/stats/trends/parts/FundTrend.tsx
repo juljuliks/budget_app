@@ -3,7 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { MerchantLink } from '@/entities/merchant';
 import { FundSheet } from '@/features/fund';
 import { currentYm } from '@/db/plans';
-import { MONTHS_DAT, MONTHS_NOM, MONTHS_PREP } from '@/shared/lib/dates';
+import { MONTHS_DAT, MONTHS_NOM, MONTHS_PREP, monthYear } from '@/shared/lib/dates';
 import { plural } from '@/shared/lib/format';
 import { openPlan } from '@/shared/navigation/navigation';
 import Masked from '@/shared/ui/Masked';
@@ -56,7 +56,7 @@ export default function FundTrend({ f, categoryId, label, money }: { f: Fund; ca
         ))}
       </View>
       <Text style={s.point}>
-        {bar ? `${MONTHS_NOM[Number(bar.ym.slice(5)) - 1].replace(/^./, (c) => c.toUpperCase())}: +${money(bar.saved)}${bar.spent ? ` · потрачено ${money(bar.spent)}` : ''}`
+        {bar ? `${monthYear(bar.ym)}: +${money(bar.saved)}${bar.spent ? ` · потрачено ${money(bar.spent)}` : ''}`
           : 'Вверх — отложено, вниз — потрачено из копилки'}
       </Text>
       {f.forecast && f.left > 0 ? (

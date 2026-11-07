@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Text, View } from 'react-native';
 import { MerchantLink } from '@/entities/merchant';
-import { MONTHS_GEN, MONTHS_PREP, SHORT_MONTHS } from '@/shared/lib/dates';
+import { MONTHS_GEN, MONTHS_PREP, monthYear, SHORT_MONTHS } from '@/shared/lib/dates';
 import { plural } from '@/shared/lib/format';
 import { showOperationsFrom } from '@/shared/navigation/navigation';
 import Masked from '@/shared/ui/Masked';
@@ -47,7 +47,7 @@ export default function RareTrend({ r, bars, color, categoryId, money }: {
       </View>
       {last ? <Text style={s.line}>{`последн${r.stable ? 'ий' : 'яя'} ${word} ${shortDay(last.day)} · `}<Masked style={s.line}>{money(last.value)}</Masked></Text> : null}
       <View style={s.chart}><TrendBars bars={bars} color={color} height={120} picked={picked} onPick={setPicked} /></View>
-      <Text style={s.point}>{bar ? `${monthGen(bar.ym).replace(/^./, (c) => c.toUpperCase())}: ${money(bar.value)}` : 'Нажмите на месяц, чтобы увидеть сумму'}</Text>
+      <Text style={s.point}>{bar ? `${monthYear(bar.ym)}: ${money(bar.value)}` : 'Нажмите на месяц, чтобы увидеть сумму'}</Text>
       {r.change ? (
         <View style={s.block}>
           <Text style={s.label}>{r.change.to > r.change.from ? 'Подорожал' : 'Подешевел'}</Text>

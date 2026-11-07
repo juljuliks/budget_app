@@ -4,6 +4,8 @@ import { openApp, openSettings, screen, tap, texts } from './app';
 import { buy, on, planned } from '../e2e/seeds';
 import { findCategoryByName } from '../../src/db/categories';
 import { setFund } from '../../src/db/plans';
+import { savePayment } from '../../src/db/recurring';
+import { getDb } from '../../src/db';
 
 const id = async (name: string) => (await findCategoryByName(name, null))!.id;
 const after = (label: string, n: number) => { const t = texts(); const i = t.lastIndexOf(label); return t.slice(i + 1, i + 1 + n); };
@@ -31,6 +33,24 @@ test('5.8.8 rare, the amount nearly the same: this month, «Подорожал»
   expect(after('Платежей', 1)).toEqual(['4 из 12 месяцев']);
   expect(after('Обычно списывается', 1)).toEqual(['3 числа']);
   expect(after('Платежи', 2)).toEqual(['3 окт · RENT', '800 ₾']);
+});
+
+test('5.8.8 subscriptions: one in $ — its own amount, lari in brackets; a month of last year picked — with its year', async () => {
+  await openApp(async () => {
+    await planned();
+    const subs = await id('Подписки');
+    await buy('ICLOUD', 3, on(5, 12, 1), subs, { currency: 'USD' });
+    await (await getDb()).run("INSERT OR REPLACE INTO fx_rates (date, currency, gel_per_unit) VALUES ('2026-09-05', 'USD', 2.5)");
+    await buy('NETFLIX.COM', 30, on(3, 12, 10), subs);
+    await savePayment({ merchant_key: 'ICLOUD', name: 'iCloud', amount_minor: 300, currency: 'USD', period: 1, due: '2026-11-05' });
+  });
+  await openTrendOf('📺 Подписки');
+  expect(await screen.findByText('3 $ (7.50 ₾)')).toBeTruthy();
+  await tap('сен');
+  expect(await screen.findByText('Сентябрь: 7.50 ₾')).toBeTruthy();
+  // December 2025: the 12 months go over the year's turn
+  await tap('дек');
+  expect(await screen.findByText('Декабрь 2025: 30 ₾')).toBeTruthy();
 });
 
 test('5.8.8 a fund: how much of its target by when, the pace, its card', async () => {
