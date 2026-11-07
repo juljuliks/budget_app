@@ -404,37 +404,17 @@ describe('6.7.9 "Регулярный платёж" from the plan', () => {
       .toEqual({ limit_minor: 0 });
   });
 
-  test('"Удалить из плана": asked; gone from this month and the next ones, its payments off; "Отменить" — all back', async () => {
+  test('the subscriptions\' category with subscriptions: always in the plan — no «Удалить из плана»', async () => {
     await openApp(withSubscriptions('Дом и коммуналка'));
     await tap('Статистика');
     await openPlanPage();
     await pickRent();
     await saveBack();
     expect(await screen.findByText('каждый месяц · следующее 3 ноя')).toBeTruthy();
-    // November's plan made: the subscription counted there too
-    backToTabs();
-    await openNextPlan();
-    expect(await screen.findByText('каждый месяц · 3 ноя')).toBeTruthy();
-    // back to October's stats, then its plan
-    backToTabs();
-    await tap('Предыдущий месяц');
-    await openPlanPage();
-    // the last: the stats under the page have it too
-    await tap((await screen.findAllByText('🏠 Дом и коммуналка')).slice(-1)[0]);
+    await tap('🏠 Дом и коммуналка');
     await tap('Изменить в плане ›');
-    await tap('Удалить из плана');
-    expect(await screen.findByText('Убрать «🏠 Дом и коммуналка» из плана?')).toBeTruthy();
-    expect(screen.getByText('У категории регулярные платежи — они выключатся, а категория пропадёт из плана с октября. Операции не изменятся.')).toBeTruthy();
-    await tap('Убрать из плана');
-    expect(await screen.findByText('«🏠 Дом и коммуналка» убрана из плана, регулярные платежи выключены')).toBeTruthy();
-    const db = await getDb();
-    const items = () => db.all(`SELECT ym FROM plan_items WHERE category_id = ${home} ORDER BY ym`);
-    await waitFor(async () => expect(await items()).toEqual([{ ym: '2026-09' }]));
-    expect(await db.get("SELECT recurring FROM categories WHERE name = 'Дом и коммуналка'")).toEqual({ recurring: 0 });
-    await tap('Отменить');
-    expect(await screen.findByText('«🏠 Дом и коммуналка» снова в плане')).toBeTruthy();
-    await waitFor(async () => expect(await items()).toEqual([{ ym: '2026-09' }, { ym: '2026-10' }, { ym: '2026-11' }]));
-    expect(await db.get("SELECT recurring FROM categories WHERE name = 'Дом и коммуналка'")).toEqual({ recurring: 1 });
+    expect(await screen.findByText(/^Сумма считается из списаний подписок категории/)).toBeTruthy();
+    expect(screen.queryByText('Удалить из плана')).toBeNull();
   });
 
   // the seed's budget: 2 400 ₾ to plan (3 000 less 10% outside and 🔒 300), 2 160 planned — 240 free; Одежда 400 ₾ by hand

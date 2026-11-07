@@ -33,6 +33,8 @@ import PlanAddModal from './PlanAddModal';
  */
 /** The plan sheet of an item (a fund's is its card: its category's page changes it). */
 const editTarget = (item: PlanItem): PlanAmountTarget => ({ ...item, label: categoryLabel(item) });
+/** «📺 Подписки» with subscriptions: always in the plan, not removed from it. */
+const fixedSubs = (items: PlanItem[], id?: number) => items.some((i) => i.category_id === id && !!i.by_merchant && !!i.subs && !i.subs.empty);
 
 export default function PlanView({ ym, currency }: { ym: string; currency: Currency }) {
   const hidden = useHideAmounts();
@@ -89,8 +91,9 @@ export default function PlanView({ ym, currency }: { ym: string; currency: Curre
         onClose={() => { setEditingItem(null); setAdding(false); }}
         onSaved={load}
         adding={adding ? { onBack: () => { setEditingItem(null); setAdding(false); setAddOpen(true); } } : undefined}
-        // a fund is deleted from its card
-        onDelete={adding || editingItem?.kind === 'fund' ? undefined : () => { const item = items.find((i) => i.category_id === editingItem?.category_id); if (item) actions.removeItem(item); }}
+        // a fund is deleted from its card; «📺 Подписки» with subscriptions is always in the plan
+        onDelete={adding || editingItem?.kind === 'fund' || fixedSubs(items, editingItem?.category_id) ? undefined
+          : () => { const item = items.find((i) => i.category_id === editingItem?.category_id); if (item) actions.removeItem(item); }}
       />
       <FundSheet
         categoryId={fundOpen?.category_id ?? null}

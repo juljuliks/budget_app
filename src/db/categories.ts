@@ -71,6 +71,8 @@ export async function setRecurring(id: number, on: boolean, db?: Db): Promise<vo
   db ??= await getDb();
   await db.run('UPDATE categories SET recurring = ? WHERE id = ?', [on ? 1 : 0, id]);
   if (on) await db.run("UPDATE categories SET plan_kind = 'regular' WHERE id = ? AND system IS NULL", [id]);
+  // its payments count its item now: a schedule within the month it had is gone
+  if (on) await db.run('DELETE FROM category_schedules WHERE category_id = ?', [id]);
   else await db.run("UPDATE categories SET plan_kind = NULL WHERE id = ? AND plan_kind = 'regular'", [id]);
 }
 

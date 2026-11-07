@@ -46,6 +46,8 @@ export async function setCategoryPlanKind(categoryId: number, kind: CategoryPlan
     const before = first ? await itemShape(first, categoryId, t) : null;
     await t.run('UPDATE categories SET plan_kind = ? WHERE id = ? AND system IS NULL', [kind, categoryId]);
     if (kind === 'regular' || kind === 'fund') await t.run('UPDATE categories SET impulse = 0 WHERE id = ?', [categoryId]);
+    // no longer a regular payment within the month: its schedule gone (the items become the kind asked below)
+    if (kind !== 'regular') await t.run('DELETE FROM category_schedules WHERE category_id = ?', [categoryId]);
     if ((kind !== 'limit' && kind !== 'oneoff') || !first) return;
     const item = kind === 'limit' ? "kind = 'limit'" : "kind = 'fixed'";
     await t.run(`UPDATE plan_items SET ${item}, every = NULL, weekdays = NULL, unit_minor = NULL WHERE category_id = ? AND ym >= ? AND kind IN ('limit', 'fixed')`,

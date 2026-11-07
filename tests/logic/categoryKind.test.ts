@@ -5,8 +5,9 @@ jest.mock('../../src/shared/navigation/navigation', () => ({ navigateWhenReady: 
 import { getDb } from '../../src/db';
 import { openDatabase } from '../../src/db/driver';
 import { migrate, MIGRATIONS } from '../../src/db/migrations';
-import { addPlanItem, categoryPlanKind, currentYm, listPlan, setCategoryPlanKind, setPlanAmount, ymOf } from '../../src/db/plans';
-import { setRegularItem } from '../../src/db/plans/regular';
+import {
+  addPlanItem, categoryPlanKind, categorySchedule, currentYm, listPlan, restoreSchedule, setCategoryPlanKind, setPlanAmount, setRegularItem, stopSchedule, ymOf,
+} from '../../src/db/plans';
 import { createCategory, setRecurring } from '../../src/db/categories';
 import { freshDb } from '../helpers';
 
@@ -82,4 +83,62 @@ test('a regular payment or a fund: "Импульсивные покупки" off
   await db.run('UPDATE categories SET impulse = 1 WHERE id = ?', [id]);
   await setCategoryPlanKind(id, 'regular', M1);
   expect(await db.get('SELECT impulse, plan_kind FROM categories WHERE id = ?', [id])).toEqual({ impulse: 0, plan_kind: 'regular' });
+});
+
+describe('a regular payment within the month is its category\'s schedule', () => {
+  const lunches = { every: 'week' as const, weekdays: 1 | 8, unit_minor: 2000, until: null };
+
+  test('set: the category has it; each new month gets it from there, counted by its days, whatever the month before had', async () => {
+    const id = await createCategory('Обеды', '🍲');
+    await setRegularItem(M1, id, lunches, 'GEL');
+    expect(await categorySchedule(id)).toMatchObject({ every: 'week', weekdays: 9, unit_minor: 2000, currency: 'GEL', until: null });
+    // the month before lost its item by hand: the schedule still brings it
+    await (await getDb()).run('DELETE FROM plan_items WHERE ym = ? AND category_id = ?', [M1, id]);
+    await setPlanAmount(M1, 1, 100, 'limit');
+    const feb = (await listPlan(M2)).find((i) => i.category_id === id);
+    expect(feb).toMatchObject({ kind: 'fixed', every: 'week', weekdays: 9, unit_minor: 2000 });
+    // February 2099: 4 Mondays, 4 Thursdays
+    expect(feb?.limit_minor).toBe(8 * 2000);
+  });
+
+  test('its end: no month after it gets it', async () => {
+    const id = await createCategory('Обеды', '🍲');
+    await setRegularItem(M1, id, { ...lunches, until: `${M1}-31` }, 'GEL');
+    expect((await listPlan(M2)).find((i) => i.category_id === id)).toBeUndefined();
+  });
+
+  test('another kind or a monthly payment of its own: the schedule is gone', async () => {
+    const id = await createCategory('Обеды', '🍲');
+    await setRegularItem(M1, id, lunches, 'GEL');
+    await setCategoryPlanKind(id, 'limit', M1);
+    expect(await categorySchedule(id)).toBeNull();
+    await setRegularItem(M1, id, lunches, 'GEL');
+    await setRecurring(id, true);
+    expect(await categorySchedule(id)).toBeNull();
+  });
+
+  test('removed from the plan: off, gone from this month on, no kind; "Отменить" — all back', async () => {
+    const id = await createCategory('Обеды', '🍲');
+    await setRegularItem(M1, id, lunches, 'GEL');
+    await listPlan(M2);
+    const stopped = await stopSchedule(M1, id);
+    expect(await categorySchedule(id)).toBeNull();
+    expect(await categoryPlanKind(id)).toBeNull();
+    expect(await (await getDb()).get('SELECT count(*) AS n FROM plan_items WHERE category_id = ?', [id])).toEqual({ n: 0 });
+    await restoreSchedule(stopped);
+    expect(await categorySchedule(id)).toMatchObject({ unit_minor: 2000 });
+    expect(await categoryPlanKind(id)).toBe('regular');
+    expect((await listPlan(M2)).find((i) => i.category_id === id)).toMatchObject({ every: 'week' });
+  });
+});
+
+test('migration 69: a regular payment within the month moves from its plan item onto its category', async () => {
+  const db = openDatabase(':memory:');
+  await migrate(db, MIGRATIONS.slice(0, 68));
+  const now = currentYm();
+  const id = (await db.run("INSERT INTO categories (name, plan_kind) VALUES ('Обеды', 'regular')")).lastInsertRowid;
+  await db.run("INSERT INTO plan_items (ym, category_id, limit_minor, kind, every, weekdays, unit_minor, currency, until) VALUES (?, ?, 18000, 'fixed', 'week', 9, 2000, 'USD', '2099-12-31')", [now, id]);
+  await migrate(db);
+  expect(await db.get('SELECT every, weekdays, unit_minor, currency, until FROM category_schedules WHERE category_id = ?', [id]))
+    .toEqual({ every: 'week', weekdays: 9, unit_minor: 2000, currency: 'USD', until: '2099-12-31' });
 });
