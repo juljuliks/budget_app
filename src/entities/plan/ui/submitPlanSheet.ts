@@ -27,10 +27,12 @@ type Args = {
   /** what 🔒 has, in the budget's currency; what is free (for the error) */
   locked: number; free: { minor: number; currency: Currency } | null;
   onSaved: () => void; onClose: () => void;
+  /** «Настроить» of a payment every day, week or month: no amount asked — the one it had, 0 is fine */
+  noAmount?: boolean;
 };
 
 /** An error to show, null — saved, false — asked over the sheet (it stays open). */
-export async function submitPlanSheet({ ym, target, text, v, adding, locked, free, onSaved, onClose }: Args): Promise<string | null | false> {
+export async function submitPlanSheet({ ym, target, text, v, adding, locked, free, onSaved, onClose, noAmount }: Args): Promise<string | null | false> {
   const minor = parseAmountOrZero(text);
   if (minor === null) return AMOUNT_HINT;
   const k = v.kind;
@@ -38,9 +40,9 @@ export async function submitPlanSheet({ ym, target, text, v, adding, locked, fre
   const byHand = k === 'subs' && !!target.by_merchant;
   const regular = k === 'subs' && !byHand && v.every !== 'month';
   const own = k === 'subs' && !byHand && v.every === 'month';
-  if (regular && !minor) return 'Введите сумму за раз';
+  if (regular && !minor && !noAmount) return 'Введите сумму за раз';
   if (regular && v.every === 'week' && !v.weekdays) return 'Выберите дни недели';
-  if (own && !minor) return 'Введите сумму платежа';
+  if (own && !minor && !noAmount) return 'Введите сумму платежа';
   // monthly: no day — the amount in each month's plan (a day it had is dropped)
   const due = own && v.period !== 1 ? v.next : null;
   if (own && !due && v.period !== 1) return dateNeeded();

@@ -2,8 +2,11 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CategoryPlanKind } from '@/db/plans';
 import { SETUP } from '../texts';
-import { leaveRegular, saveCategoryKind } from './commands';
+import { keepLastAmount, leaveRegular, saveCategoryKind } from './commands';
 import { useKindData } from './useKindData';
+import { amountTargetOf } from './amountTarget';
+import type { Currency } from '@/db/fx';
+import type { PlanAmountTarget } from '@/entities/plan';
 
 /** The kinds set up in a sheet: a regular payment (its amount, how often), a fund (how much by when). */
 export type KindSetup = 'regular' | 'fund';
@@ -12,12 +15,19 @@ const needsSetup = (k: CategoryPlanKind | null): k is KindSetup => k === 'regula
 type Deps = {
   /** a fund's category given another kind: "Выключить копилку?" — `done` once it is off */
   fundOff: (label: string, done: () => void) => void;
+  /** leaves the page for the categories (its fields unchanged) */
+  close: () => void;
+  /** the screen's currency: a category new in the plan starts in it */
+  shown: Currency;
 };
 
 /**
  * Another kind picked: a limit or a one-off payment — «Сохранить» saves it (and the page's fields); a regular payment
  * or a fund — «Настроить» opens its sheet, saved there (then the page's fields). What the kind left had is turned off
- * once the new one is saved: the fund (asked), the regular payments (asked if they saved something).
+ * once the new one is saved: the fund (asked), the regular payments (asked if they saved something). Then, where its amount
+ * is the plan's (a limit, a one-off payment, a regular payment every day, week or month) and there is none to keep (this
+ * month's or the latest month's: keepLastAmount), the plan's sheet of this month at once: saved or "‹ Назад" — the page's
+ * fields saved and it leaves for the categories.
  */
 export function useCategoryKind(categoryId: number, deps: Deps) {
   const data = useKindData(categoryId);
@@ -27,6 +37,16 @@ export function useCategoryKind(categoryId: number, deps: Deps) {
   const [setup, setSetup] = useState<KindSetup | null>(null);
   // the page's save (its fields changed) and the kind left, for after the setup
   const after = useRef<{ save: (() => void) | null; from: CategoryPlanKind | null }>({ save: null, from: null });
+  // the plan's sheet once the kind is saved
+  const [amount, setAmount] = useState<PlanAmountTarget | null>(null);
+  const finish = () => { const { save } = after.current; setAmount(null); if (save) save(); else deps.close(); };
+  const openAmount = (save: (() => void) | null) => {
+    after.current.save = save;
+    keepLastAmount(categoryId)
+      .then(async (kept) => (kept ? null : amountTargetOf(categoryId, data?.label ?? '', deps.shown)))
+      .then((t) => { if (t) setAmount(t); else save?.(); })
+      .catch((e) => { console.error('open plan amount failed', e); save?.(); });
+  };
 
   const leave = (from: CategoryPlanKind | null, to: CategoryPlanKind, next: () => void) => {
     if (!data || from === to) { next(); return; }
@@ -41,7 +61,7 @@ export function useCategoryKind(categoryId: number, deps: Deps) {
     : {
       title: 'Сохранить',
       onPress: (save: (() => void) | null) => leave(saved, picked, () => {
-        saveCategoryKind(categoryId, picked, data.label).then((ok) => { if (ok) save?.(); });
+        saveCategoryKind(categoryId, picked, data.label).then((ok) => { if (ok) openAmount(save); });
       }),
     };
 
@@ -59,8 +79,12 @@ export function useCategoryKind(categoryId: number, deps: Deps) {
       const { save, from } = after.current;
       const to = setup;
       setSetup(null);
-      if (to) leave(from, to, () => save?.());
+      if (to) leave(from, to, () => (to === 'regular' ? openAmount(save) : save?.()));
     },
+    amount,
+    /** the plan's sheet saved or "‹ Назад": the page's fields saved, it leaves */
+    amountDone: finish,
+    closeAmount: () => setAmount(null),
   };
 }
 

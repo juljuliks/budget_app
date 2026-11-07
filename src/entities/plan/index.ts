@@ -9,3 +9,4 @@ export { default as SavingFields } from './ui/SavingFields';
 export { usePaymentSaving } from './model/usePaymentSaving';
 export type { SavingChoice } from './model/usePaymentSaving';
 export { turnOffRecurring } from './ui/turnOffRecurring';
+export { everyText } from './ui/sheetOptions';

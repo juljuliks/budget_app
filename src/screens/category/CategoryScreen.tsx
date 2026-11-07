@@ -14,6 +14,7 @@ import { TrendsIcon } from '@/shared/ui/icons';
 import LinkCard from '@/shared/ui/LinkCard';
 import { toastFailure } from '@/shared/ui/toast';
 import { LOAD_FAILED } from '@/shared/lib/strings';
+import { useDisplayCurrency } from '@/shared/settings/displayCurrency';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Category'>;
 
@@ -33,7 +34,8 @@ export default function CategoryScreen({ route, navigation }: Props) {
   }, [id, navigation, rows]);
   const back = () => { if (navigation.canGoBack()) navigation.goBack(); };
   // «В плане»: the kind, its setup; a fund's left — asked off
-  const kind = useCategoryKind(id, { fundOff: (label, done) => { askFundOff(id, label, done).catch(toastFailure('fund off', LOAD_FAILED)); } });
+  const shown = useDisplayCurrency();
+  const kind = useCategoryKind(id, { fundOff: (label, done) => { askFundOff(id, label, done).catch(toastFailure('fund off', LOAD_FAILED)); }, close: back, shown });
   const fundSetup = (
     <FundSetupSheet categoryId={kind.setup === 'fund' ? id : null} label={kind.data?.label ?? ''} onClose={kind.closeSetup} onSaved={kind.setupSaved} />
   );

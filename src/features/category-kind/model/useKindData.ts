@@ -27,7 +27,7 @@ async function summaryOf(c: Category, schedule: CategorySchedule | null): Promis
   if (c.plan_kind !== 'regular') return null;
   const own = await categoryPayment(c.id);
   if (own) return paymentSummary(own);
-  return schedule ? withinMonthSummary(schedule.every, schedule.weekdays, schedule.unit_minor, schedule.currency) : null;
+  return schedule ? withinMonthSummary(schedule.every, schedule.weekdays, schedule.until) : null;
 }
 
 /** null while loading or for a category without a kind of its own (a system or a transfer one). */

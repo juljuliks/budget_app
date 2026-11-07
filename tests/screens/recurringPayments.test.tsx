@@ -358,16 +358,19 @@ describe('6.7.9 "Регулярный платёж" from the plan', () => {
     await tap('Настроить');
     expect(await screen.findByText('Сумма стоит в плане каждый месяц.')).toBeTruthy();
     expect(screen.queryByText(/^Дата списания/)).toBeNull();
-    expect(screen.getByDisplayValue('800')).toBeTruthy();
+    // on its page: how often only — a month's amount is the plan's
+    expect(screen.queryByDisplayValue('800')).toBeNull();
     await tap('Сохранить');
+    // this month's amount kept (800): no plan's sheet, the page stays
     expect(await screen.findByText('План «🏠 Дом и коммуналка» сохранён')).toBeTruthy();
-    expect(await screen.findByText('800\u00a0₾ · каждый месяц')).toBeTruthy();
+    expect(await screen.findByText('каждый месяц')).toBeTruthy();
+    expect(screen.queryByText('‹ Назад')).toBeNull();
     back();
     const db = await getDb();
     expect(await db.get('SELECT merchant_key, amount_minor, due FROM recurring_payments')).toEqual({ merchant_key: null, amount_minor: 80000, due: null });
     expect(await db.get(`SELECT kind, limit_minor FROM plan_items WHERE ym = '2026-10' AND category_id = ${home}`)).toEqual({ kind: 'fixed', limit_minor: 80000 });
     // its row: how often only, no "без даты"
-    expect(await screen.findByText('каждый месяц')).toBeTruthy();
+    await waitFor(() => expect(screen.getAllByText('каждый месяц')).toHaveLength(1));
     expect(screen.queryByText('каждый месяц · без даты')).toBeNull();
     // November: with the same amount
     backToTabs();
