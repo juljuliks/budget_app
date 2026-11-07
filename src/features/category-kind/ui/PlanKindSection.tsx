@@ -11,14 +11,16 @@ import type { CategoryKind } from '../model/useCategoryKind';
 import type { KindData } from '../model/useKindData';
 import { CHANGE, KIND_HINTS, KIND_OPTIONS, KIND_TITLE } from '../texts';
 
-/** The regular payment's sheet starts from this month's item of it (its payment comes back in the sheet itself). */
+/**
+ * The regular payment's sheet starts from its category's schedule within the month, if it has one; else from this
+ * month's amount of it, whatever it was (a monthly payment of its own comes back in the sheet itself).
+ */
 function regularTarget(d: KindData, shown: PlanAmountTarget['currency']): PlanAmountTarget {
-  const it = d.item;
+  const s = d.schedule;
   return {
     category_id: d.category.id, label: d.label, kind: 'subs', recurring: !!d.category.recurring, by_merchant: false,
-    // this month's amount of it, whatever it was (the payment's own comes back in the sheet)
-    limit_minor: it?.limit_minor ?? 0, currency: it?.currency ?? shown,
-    every: it?.every ?? null, weekdays: it?.weekdays ?? null, unit_minor: it?.unit_minor ?? null, until: it?.every ? it.until : null,
+    limit_minor: d.item?.limit_minor ?? 0, currency: s?.currency ?? d.item?.currency ?? shown,
+    every: s?.every ?? null, weekdays: s?.weekdays ?? null, unit_minor: s?.unit_minor ?? null, until: s?.until ?? null,
   };
 }
 

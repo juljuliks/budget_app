@@ -290,6 +290,16 @@ describe('6.3 the categories in the plan', () => {
     await tap('Изменить: 👕 Одежда');
     expect(await screen.findByText('В плане — 180\u00a0₾')).toBeTruthy();
     expect(screen.getByText('Сумма и расписание — на странице категории, меняются во всех месяцах с этого.')).toBeTruthy();
+    // removed: asked — the payment off, gone from this month on; "Отменить" — back
+    await tap('Удалить из плана');
+    expect(await screen.findByText('У категории регулярный платёж — он выключится, а категория пропадёт из плана с октября. Операции не изменятся.')).toBeTruthy();
+    await tap('Убрать из плана');
+    expect(await screen.findByText('«👕 Одежда» убрана из плана, регулярный платёж выключен')).toBeTruthy();
+    expect(await item('Одежда')).toBeUndefined();
+    expect(await (await getDb()).get("SELECT count(*) AS n FROM category_schedules")).toEqual({ n: 0 });
+    await tap('Отменить');
+    expect(await screen.findByText('«👕 Одежда» снова в плане')).toBeTruthy();
+    expect(await item('Одежда')).toMatchObject({ a: 18000 });
   });
 
   test('a regular payment within the month past what is free and 🔒: asked too — all of 🔒 taken, the plan over its budget', async () => {

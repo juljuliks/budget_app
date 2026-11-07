@@ -1,7 +1,7 @@
 // The plan's changes from its screen: the month's budget, an item removed.
 import type { UseFormReturn } from 'react-hook-form';
 import { categoryLabel } from '@/db/categories';
-import { OverBudgetError, PlanItem, removePlanItem, restorePlanItem, setPlanBudget } from '@/db/plans';
+import { OverBudgetError, PlanItem, removePlanItem, restorePlanItem, restoreSchedule, setPlanBudget, stopSchedule } from '@/db/plans';
 import { removeRecurringFrom, restoreRecurring, savedInCategory } from '@/db/recurring';
 import { emitTransactionsChanged } from '@/domain/events';
 import { MONTHS_GEN } from '@/shared/lib/dates';
@@ -85,6 +85,26 @@ export function usePlanActions(ym: string, load: () => void) {
     load();
   }
 
+  /** A regular payment within the month: its schedule off, gone from this month's plan and the next ones'. */
+  async function removeSchedule(item: PlanItem) {
+    const label = categoryLabel(item);
+    try {
+      const stopped = await stopSchedule(ym, item.category_id);
+      emitTransactionsChanged();
+      toast(`«${label}» убрана из плана, регулярный платёж выключен`, {
+        label: UNDO,
+        onPress: () => {
+          restoreSchedule(stopped).then(() => { emitTransactionsChanged(); toast(`«${label}» снова в плане`); })
+            .catch(toastFailure('restore schedule', 'Не удалось восстановить'));
+        },
+      });
+    } catch (e) {
+      console.error('stop schedule failed', e);
+      toastError(SAVE_FAILED);
+    }
+    load();
+  }
+
   // a category repeated every month is asked about: removing it also stops it carrying over; one with repeating
   // payments — they'd count it again next month: they are turned off, it is gone from the next months too
   async function removeItem(item: PlanItem) {
@@ -97,6 +117,16 @@ export function usePlanActions(ym: string, load: () => void) {
         [
           { text: 'Отмена', style: 'cancel' },
           { text: 'Убрать из плана', style: 'destructive', onPress: () => { removeRecurring(item); } },
+        ]);
+      return;
+    }
+    if (item.every) {
+      sheetAlert(
+        `Убрать «${categoryLabel(item)}» из плана?`,
+        `У категории регулярный платёж — он выключится, а категория пропадёт из плана с ${MONTHS_GEN[Number(ym.slice(5)) - 1]}. Операции не изменятся.`,
+        [
+          { text: 'Отмена', style: 'cancel' },
+          { text: 'Убрать из плана', style: 'destructive', onPress: () => { removeSchedule(item); } },
         ]);
       return;
     }

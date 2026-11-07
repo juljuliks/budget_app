@@ -1,7 +1,7 @@
 // «В плане» on a category's page: the category (its kind), what its regular payment or fund is set to, re-read on any change.
 import { useCallback, useEffect, useState } from 'react';
 import { Category, getCategory, isSystemCategory, isTransferCategory } from '@/db/categories';
-import { currentYm, getFund, getPlanItemBasics } from '@/db/plans';
+import { categorySchedule, CategorySchedule, currentYm, getFund, getPlanItemBasics } from '@/db/plans';
 import { categoryPayment } from '@/db/recurring';
 import { onTransactionsChanged } from '@/domain/events';
 import { useLatestRequest } from '@/shared/lib/useLatestRequest';
@@ -13,11 +13,13 @@ export type KindData = {
   label: string;
   /** what its set kind is set to ("650 $ · каждый месяц"); null — nothing yet */
   summary: string | null;
-  /** this month's item of it (a regular payment's sheet starts from it) */
+  /** this month's item of it (a regular payment's sheet starts from its amount) */
   item: Awaited<ReturnType<typeof getPlanItemBasics>>;
+  /** its regular payment within the month ("Каждый день" / "Каждую неделю"); null — none */
+  schedule: CategorySchedule | null;
 };
 
-async function summaryOf(c: Category, item: KindData['item']): Promise<string | null> {
+async function summaryOf(c: Category, schedule: CategorySchedule | null): Promise<string | null> {
   if (c.plan_kind === 'fund') {
     const f = await getFund(c.id);
     return f && !f.closed_ym ? fundSummary(f.target_minor, f.currency, f.due) : null;
@@ -25,7 +27,7 @@ async function summaryOf(c: Category, item: KindData['item']): Promise<string | 
   if (c.plan_kind !== 'regular') return null;
   const own = await categoryPayment(c.id);
   if (own) return paymentSummary(own);
-  return item?.every ? withinMonthSummary(item.every, item.weekdays ?? 0, item.unit_minor ?? 0, item.currency) : null;
+  return schedule ? withinMonthSummary(schedule.every, schedule.weekdays, schedule.unit_minor, schedule.currency) : null;
 }
 
 /** null while loading or for a category without a kind of its own (a system or a transfer one). */
@@ -37,8 +39,8 @@ export function useKindData(categoryId: number) {
     (async (): Promise<KindData | null> => {
       const c = await getCategory(categoryId);
       if (!c || isSystemCategory(c) || isTransferCategory(c)) return null;
-      const item = await getPlanItemBasics(currentYm(), categoryId);
-      return { category: c, label: `${c.emoji || ''} ${c.name}`.trim(), summary: await summaryOf(c, item), item };
+      const [item, schedule] = await Promise.all([getPlanItemBasics(currentYm(), categoryId), categorySchedule(categoryId)]);
+      return { category: c, label: `${c.emoji || ''} ${c.name}`.trim(), summary: await summaryOf(c, schedule), item, schedule };
     })().then(keep(setData)).catch(keep((e: unknown) => console.error('load category kind failed', e)));
   }, [categoryId, latest]);
   useEffect(() => { load(); return onTransactionsChanged(load); }, [load]);
