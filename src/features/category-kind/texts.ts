@@ -1,7 +1,8 @@
 // «В плане» on a category's page: the kinds, what each means for the next month, the summary of a set one.
 import type { CategoryPlanKind } from '@/db/plans';
 import type { RecurringPayment } from '@/db/recurring';
-import { dayTitle, WEEKDAYS } from '@/shared/lib/dates';
+import { dayTitle, longDay } from '@/shared/lib/dates';
+import { everyText } from '@/entities/plan';
 import { periodText } from '@/shared/lib/format';
 import { formatWithCurrency } from '@/shared/lib/money';
 
@@ -19,21 +20,19 @@ export const KIND_OPTIONS: ReadonlyArray<readonly [CategoryPlanKind, string, str
 /** Under the kinds: what a new month gets of it. */
 export const KIND_HINTS: Record<CategoryPlanKind, string> = {
   limit: 'Сумма и «Как тратите» — в плане месяца; дальше переходят в следующие.',
-  regular: 'Сумма стоит в плане каждого месяца по расписанию.',
+  regular: 'Как часто — здесь; сумма — в плане месяца, дальше переходит в следующие (реже раза в месяц — здесь).',
   oneoff: 'В следующий месяц не переходит.',
   fund: 'Траты категории берутся из копилки и не тратят бюджет месяца.',
 };
 
-/** "650 $ · каждый месяц" — the category's own payment. */
-export const paymentSummary = (p: Pick<RecurringPayment, 'amount_minor' | 'currency' | 'period'>) =>
-  `${formatWithCurrency(p.amount_minor, p.currency)} · ${periodText(p.period)}`;
+/** "1 200 ₾ · раз в год" — the category's own payment rarer than monthly; a monthly one's amount is the plan's: "каждый месяц". */
+export const paymentSummary = (p: Pick<RecurringPayment, 'amount_minor' | 'currency' | 'period' | 'until'>) =>
+  (p.period === 1 ? withEnd('каждый месяц', p.until) : `${formatWithCurrency(p.amount_minor, p.currency)} · ${periodText(p.period)}`);
 
-/** "пн, чт · 20 ₾ за раз", "каждый день · 5 ₾ за раз" — a payment within the month. */
-export function withinMonthSummary(every: 'day' | 'week', weekdays: number, unit: number, currency: string): string {
-  const days = every === 'day' ? 'каждый день'
-    : [0, 1, 2, 3, 4, 5, 6].filter((i) => (weekdays & (1 << i)) !== 0).map((i) => WEEKDAYS[(i + 1) % 7]).join(', ');
-  return `${days} · ${formatWithCurrency(unit, currency)} за раз`;
-}
+/** "пн, чт", "каждый день · до 15 окт" — a payment within the month: how often (its amount is the plan's). */
+export const withinMonthSummary = (every: 'day' | 'week', weekdays: number, until: string | null) => withEnd(everyText(every, weekdays), until);
+
+const withEnd = (text: string, until: string | null) => (until ? `${text} · до ${longDay(until)}` : text);
 
 /** "1 500 $ к 31 июля 2027" — a fund. */
 export const fundSummary = (target: number, currency: string, due: string) => `${formatWithCurrency(target, currency)} к ${dayTitle(due)}`;

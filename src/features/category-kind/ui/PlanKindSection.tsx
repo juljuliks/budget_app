@@ -51,6 +51,8 @@ export default function PlanKindSection({ k, fundSetup }: { k: CategoryKind; fun
         target={k.setup === 'regular' ? regularTarget(d, shown) : null}
         onClose={k.closeSetup} onSaved={k.setupSaved}
       />
+      {/* the kind saved: this month's amount of it at once */}
+      <PlanAmountModal ym={currentYm()} currency={shown} target={k.amount} onClose={k.closeAmount} onSaved={k.amountDone} onBack={k.amountDone} />
       {fundSetup}
     </View>
   );

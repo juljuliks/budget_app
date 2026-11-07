@@ -5,7 +5,6 @@ import type { Currency } from '@/db/fx';
 import { timesInMonth } from '@/db/plans';
 import { MONTHS_PREP, WEEKDAYS } from '@/shared/lib/dates';
 import { plural } from '@/shared/lib/format';
-import { formatWithCurrency, parseAmountOrZero } from '@/shared/lib/money';
 import Chip from '@/shared/ui/Chip';
 import { formStyles } from '@/shared/theme/formStyles';
 import CategoryPaymentFields, { CategoryPaymentForm } from './CategoryPaymentFields';
@@ -24,14 +23,12 @@ const DAYS = [0, 1, 2, 3, 4, 5, 6];
 type Props = { ym: string; categoryId: number; form: UseFormReturn<RegularForm & { value: string; currency: Currency }> };
 
 /**
- * "Регулярный платёж" (a category without "Подписки"): how often — within the month (the weekdays, the times and the
- * sum, its end; carried over each month) or monthly and rarer (the next charge, its end). Only the plan: nothing is matched with operations.
+ * «Настроить» of "Регулярный платёж" on its category's page: how often — within the month (the weekdays, the times, its
+ * end; carried over each month) or monthly and rarer (the next charge, its end). The amount every day, week or month is
+ * the plan's (RegularPlanFields); rarer — asked here. Only the plan: nothing is matched with operations.
  */
 export default function RegularFields({ ym, categoryId, form }: Props) {
-  const [every, period, weekdays, until, value, currency] = useWatch({
-    control: form.control, name: ['every', 'period', 'weekdays', 'until', 'value', 'currency'],
-  });
-  const unit = parseAmountOrZero(value ?? '') ?? 0;
+  const [every, period, weekdays, until] = useWatch({ control: form.control, name: ['every', 'period', 'weekdays', 'until'] });
   const times = every === 'month' ? 0 : timesInMonth(ym, every, weekdays, until);
   const pickEvery = (e: RegularEvery, p: number) => {
     form.setValue('every', e, { shouldDirty: true });
@@ -55,7 +52,7 @@ export default function RegularFields({ ym, categoryId, form }: Props) {
       {every !== 'month' ? (
         <>
           <Text style={formStyles.hint}>
-            {times ? `${times} ${plural(times, ['раз', 'раза', 'раз'])} в ${MONTHS_PREP[Number(ym.slice(5)) - 1]}${unit ? ` — ${formatWithCurrency(unit * times, currency)}` : ''}` : 'Выберите дни недели'}
+            {times ? `${times} ${plural(times, ['раз', 'раза', 'раз'])} в ${MONTHS_PREP[Number(ym.slice(5)) - 1]}` : 'Выберите дни недели'}
           </Text>
           {/* always carried over: its end — the times in this month are counted up to it too */}
           <UntilField ym={ym} form={form as unknown as UseFormReturn<RepeatForm>} />

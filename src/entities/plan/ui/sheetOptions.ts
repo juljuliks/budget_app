@@ -1,7 +1,7 @@
 // The plan sheet's choices and texts: the kinds, the spending patterns, the toast after saving.
 import type { Currency } from '@/db/fx';
 import type { CategoryPlanKind, PlanKind } from '@/db/plans';
-import { RHYTHM_DAYS } from '@/shared/lib/dates';
+import { RHYTHM_DAYS, WEEKDAYS } from '@/shared/lib/dates';
 import { daysInMonth } from '@/shared/lib/dateRange';
 import { formatWithCurrency } from '@/shared/lib/money';
 import { PER_PERIOD, SPENDING_PATTERN } from '@/shared/lib/strings';
@@ -15,7 +15,18 @@ export const KIND_NAMES: Record<PlanKind, string> = {
 export const itemKindOf = (k: CategoryPlanKind | null): PlanKind => (k === 'limit' ? 'limit' : k === 'regular' ? 'subs' : 'fixed');
 
 /** A regular payment in the plan: its amount is its category's. */
-export const REGULAR_HINT = 'Сумма и расписание — на странице категории, меняются во всех месяцах с этого.';
+/** A regular payment rarer than monthly in the plan: its amount is its category's (asked ahead, it may be saved up for). */
+export const REGULAR_HINT = 'Сумма и дата списания — на странице категории, меняются во всех месяцах с этого.';
+
+/** A regular payment every day, week or month in the plan: the amount here, how often — its category's. */
+export const SCHEDULE_HINT = 'Как часто и дата окончания — на странице категории. Сумма переходит в следующие месяцы.';
+
+/** "каждый день", "пн, чт", "каждый месяц" — how often a regular payment is, without its amount. */
+export function everyText(every: 'day' | 'week' | 'month', weekdays: number): string {
+  if (every === 'day') return 'каждый день';
+  if (every === 'month') return 'каждый месяц';
+  return [0, 1, 2, 3, 4, 5, 6].filter((i) => (weekdays & (1 << i)) !== 0).map((i) => WEEKDAYS[(i + 1) % 7]).join(', ');
+}
 
 export const BY_HAND_HINT = 'Сумма считается из списаний подписок категории; пока ни у одной нет даты — она вводится здесь.';
 

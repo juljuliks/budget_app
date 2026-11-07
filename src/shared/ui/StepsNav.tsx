@@ -1,6 +1,7 @@
 import React from 'react';
-import { StyleProp, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
+import { StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { colors } from '../theme/theme';
+import BackLink from './BackLink';
 
 type Props = {
   /** the step shown, from 0 */
@@ -18,11 +19,7 @@ export default function StepsNav({ at, count, name, onBack, style }: Props) {
   return (
     <View style={style}>
       <View style={styles.nav}>
-        {onBack ? (
-          <TouchableOpacity onPress={onBack} hitSlop={8} accessibilityRole="button">
-            <Text style={styles.back}>‹ Назад</Text>
-          </TouchableOpacity>
-        ) : <View />}
+        {onBack ? <BackLink onPress={onBack} /> : <View />}
         <Text style={styles.stepOf}>{`Шаг ${at + 1} из ${count} · ${name}`}</Text>
       </View>
       <View style={styles.progress}>
@@ -34,7 +31,6 @@ export default function StepsNav({ at, count, name, onBack, style }: Props) {
 
 const styles = StyleSheet.create({
   nav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 24 },
-  back: { fontSize: 15, color: colors.accent },
   stepOf: { fontSize: 13, color: colors.muted },
   progress: { flexDirection: 'row', gap: 6, paddingTop: 8, paddingBottom: 12 },
   dash: { flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.border },
