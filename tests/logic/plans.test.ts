@@ -38,15 +38,12 @@ describe('carry-over', () => {
   // future months so ensureMonthPlan always treats them as current/future
   const M1 = '2099-01', M2 = '2099-02', M3 = '2099-03';
 
-  test('new month: pinned items keep the amount, others come empty with last amount as a hint, removed ones stay out', async () => {
-    await addPlanItem(M1, 1); await setPlanAmount(M1, 1, 30000); await setPlanPinned(M1, 1, true);
-    await addPlanItem(M1, 2); await setPlanAmount(M1, 2, 5000);
+  test('new month: a limit keeps its amount, a one-off payment doesn\'t come, removed ones stay out', async () => {
+    await addPlanItem(M1, 1); await setPlanAmount(M1, 1, 30000);
+    await addPlanItem(M1, 2); await setPlanAmount(M1, 2, 5000, 'fixed');
     await addPlanItem(M1, 3); await setPlanAmount(M1, 3, 7000); await removePlanItem(M1, 3);
 
-    expect(brief(await listPlan(M2))).toEqual([
-      { id: 1, limit: 30000, pinned: true, prev: 30000 },
-      { id: 2, limit: 0, pinned: false, prev: 5000 },
-    ]);
+    expect(brief(await listPlan(M2))).toEqual([{ id: 1, limit: 30000, pinned: false, prev: 30000 }]);
   });
 
   test('carries over from the latest planned month even if months were skipped', async () => {
@@ -64,9 +61,9 @@ describe('carry-over', () => {
   });
 
   test('a coming month changed by hand keeps its own amounts of the items not repeated; the budget follows, each time', async () => {
-    await addPlanItem(M1, 2); await setPlanAmount(M1, 2, 100);
-    await setPlanAmount(M2, 2, 500);
-    await setPlanAmount(M1, 2, 999);
+    await addPlanItem(M1, 2); await setPlanAmount(M1, 2, 100, 'fixed');
+    await setPlanAmount(M2, 2, 500, 'fixed');
+    await setPlanAmount(M1, 2, 999, 'fixed');
     expect((await listPlan(M2))[0].limit_minor).toBe(500);
     await setPlanBudget(M1, 300000, 'USD');
     await setPlanBudget(M1, 200000, 'EUR');
@@ -78,17 +75,12 @@ describe('carry-over', () => {
 
   test('a repeating item: its amount, kind, «Как тратите» go on to the months planned already, each change; a one-off — gone from them', async () => {
     await addPlanItem(M1, 1); await setPlanAmount(M1, 1, 100, 'limit', 'GEL', 'day');
-    await setPlanAmount(M2, 2, 500);
-    await setPlanAmount(M3, 2, 500);
-    await setPlanPinned(M1, 1, true);
+    await setPlanAmount(M2, 2, 500, 'fixed');
+    await setPlanAmount(M3, 2, 500, 'fixed');
     const item = async (ym: string) => (await listPlan(ym)).find((i) => i.category_id === 1);
-    expect(await item(M2)).toMatchObject({ limit_minor: 100, pinned: true, kind: 'limit', norm_period: 'day' });
+    expect(await item(M2)).toMatchObject({ limit_minor: 100, kind: 'limit', norm_period: 'day' });
     await setPlanAmount(M1, 1, 700, 'limit', 'GEL', 'week');
     expect(await item(M3)).toMatchObject({ limit_minor: 700, norm_period: 'week' });
-    // stopped repeating: as to a new month — without an amount
-    await setPlanPinned(M1, 1, false);
-    expect(await item(M2)).toMatchObject({ limit_minor: 0, pinned: false });
-    await setPlanPinned(M1, 1, true);
     await setPlanAmount(M1, 1, 700, 'fixed');
     expect(await item(M2)).toBeUndefined();
     expect(await item(M3)).toBeUndefined();
@@ -97,8 +89,8 @@ describe('carry-over', () => {
   });
 
   test('a repeating item removed is gone from the months after; "Отменить" puts it back there too; a past month moves nothing', async () => {
-    await addPlanItem(M1, 1); await setPlanAmount(M1, 1, 100); await setPlanPinned(M1, 1, true);
-    await setPlanAmount(M2, 2, 500);
+    await addPlanItem(M1, 1); await setPlanAmount(M1, 1, 100);
+    await setPlanAmount(M2, 2, 500, 'fixed');
     const removed = (await removePlanItem(M1, 1))!;
     expect((await listPlan(M2)).map((i) => i.category_id)).toEqual([2]);
     await restorePlanItem(removed);
@@ -188,13 +180,13 @@ describe('adding a category takes its last planned amount', () => {
 describe('plan item kind (limit / fixed payment)', () => {
   const M1 = '2099-01', M2 = '2099-02';
 
-  test('new items are limits; kind is set with the amount, kept when omitted and carried over', async () => {
+  test('new items are limits; kind is set with the amount, kept when omitted; a one-off payment isn\'t carried over', async () => {
     await addPlanItem(M1, 1);
     expect((await listPlan(M1))[0].kind).toBe('limit');
-    await setPlanAmount(M1, 1, 50000, 'fixed'); await setPlanPinned(M1, 1, true);
+    await setPlanAmount(M1, 1, 50000, 'fixed');
     await setPlanAmount(M1, 1, 60000);
     expect((await listPlan(M1))[0]).toEqual(expect.objectContaining({ limit_minor: 60000, kind: 'fixed' }));
-    expect((await listPlan(M2))[0]).toEqual(expect.objectContaining({ limit_minor: 60000, kind: 'fixed' }));
+    expect(await listPlan(M2)).toEqual([]);
   });
 
   test('month stats carry the kind; no plan -> null', async () => {

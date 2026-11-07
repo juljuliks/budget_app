@@ -4,6 +4,7 @@ import { getDb } from '../index';
 import { currentYm } from './months';
 import { refreshFundItems, ymBefore } from './funds';
 import { CloseAnswers, monthClose } from './close';
+import { answerPayment, movePayments, PaymentChoice } from './closePayments';
 
 /**
  * A closed month's carry as its answers now make it (they were changed: "Изменить итоги", "Покрыть иначе?") — even
@@ -45,6 +46,12 @@ export async function setSplit(ym: string, parts: Array<{ category_id: number; m
   await keepCarry(ym, nowYm);
 }
 
+/** «Перенести на …» / «Не нужен» of a payment not paid in `ym`: what the leftover moves on changes with it. */
+export async function answerClosePayment(ym: string, categoryId: number, choice: PaymentChoice | null, nowYm = currentYm()): Promise<void> {
+  await answerPayment(ym, categoryId, choice);
+  await keepCarry(ym, nowYm);
+}
+
 const COLUMNS: Array<keyof CloseAnswers> = [
   'over_cover', 'over_rest_cover', 'rest_choice', 'saved', 'saved_minor', 'by_balance', 'balance_minor', 'balance_open_minor',
 ];
@@ -79,6 +86,8 @@ export async function finishClose(ym: string, nowYm = currentYm()): Promise<bool
         carry_plus_minor = excluded.carry_plus_minor, carry_currency = excluded.carry_currency`,
     [ym, a.over_cover, a.over_rest_cover, a.rest_choice, a.saved, a.saved_minor, c.saved_minor, Math.floor(Date.now() / 1000),
       c.carry.debt_minor, c.carry.plus_minor, c.budget?.currency ?? null]);
+  // «Перенести на …»: the payments in the next month's plan
+  await movePayments(ym, c.next_ym, c.payments);
   return true;
 }
 

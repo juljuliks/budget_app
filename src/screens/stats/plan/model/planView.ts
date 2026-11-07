@@ -132,6 +132,8 @@ export function planView({ ym, currency, items: all, budget, toShown, fromShown,
     // the locked part and the leftover together: one savings column, as planned; what it's made of (🔒 + 💰) is in the
     // section below
     { key: 'free', label: 'Сбережения', value: savingsPlanned, color: RING_SAVINGS, note: pct(savingsPlanned), tone: 'savings' },
+    // what came over to the month (the limits, the regular payments) is more than its budget: nothing cut, said — no part of the bar
+    ...(free !== null && free < 0 ? [{ key: 'over', label: 'Больше бюджета', value: free, color: RING_DEBT, note: '', tone: 'over' as const }] : []),
   ] : [];
 
   // the plan's system sections: savings (🔒 locked, the funds, 💰 floating: what the plan leaves) and the share outside it

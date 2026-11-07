@@ -1,4 +1,4 @@
-// The plan's changes from its screen: the month's budget, an item removed, an item pinned.
+// The plan's changes from its screen: the month's budget, an item removed.
 import type { UseFormReturn } from 'react-hook-form';
 import { categoryLabel } from '@/db/categories';
 import { OverBudgetError, PlanItem, removePlanItem, restorePlanItem, setPlanBudget } from '@/db/plans';
@@ -100,14 +100,7 @@ export function usePlanActions(ym: string, load: () => void) {
         ]);
       return;
     }
-    if (!item.pinned) { remove(item); return; }
-    sheetAlert(
-      `Убрать «${categoryLabel(item)}» из плана?`,
-      'Эта категория повторяется каждый месяц. Она пропадёт из плана этого месяца и не перейдёт в следующие. Операции не изменятся.',
-      [
-        { text: 'Отмена', style: 'cancel' },
-        { text: 'Убрать из плана', style: 'destructive', onPress: () => { remove(item); } },
-      ]);
+    remove(item);
   }
 
   return { saveBudget, removeItem };

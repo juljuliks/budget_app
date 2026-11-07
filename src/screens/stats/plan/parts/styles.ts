@@ -76,11 +76,6 @@ export const styles = StyleSheet.create({
   },
   // a row's icon in a column of one width
   pin: { width: 28, alignItems: 'center', marginRight: 10 },
-  pinBadge: {
-    width: 18, height: 18, borderRadius: 9, backgroundColor: colors.accent, borderWidth: 2, borderColor: colors.bg,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  pinBadgeCorner: { position: 'absolute', right: -8, bottom: -7 },
   nameBox: { flex: 1, marginRight: 8 },
   name: { fontSize: 15, color: colors.text },
   percent: { fontSize: 12, color: colors.muted, marginTop: 2, fontVariant: ['tabular-nums'] },

@@ -2,7 +2,7 @@ import React, { useEffect, useLayoutEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { openHistory, TabParamList } from '@/shared/navigation/navigation';
-import { ymOf } from '@/db/plans';
+import { PLAN_MONTHS_AHEAD, ymOf } from '@/db/plans';
 import { SheetActions } from '@/shared/ui/Button';
 import BottomSheet from '@/shared/ui/BottomSheet';
 import RangeCalendar from '@/shared/ui/RangeCalendar';
@@ -56,8 +56,8 @@ export default function StatsHome() {
   }, [day, nonce]);
 
   const ym = ymOf(period.year, period.month);
-  // the stats go a month ahead: nothing spent yet, its plan made in advance
-  const maxYm = ymOf(now.getFullYear(), now.getMonth() + 1);
+  // the stats go some months ahead: nothing spent yet, their plans made in advance
+  const maxYm = ymOf(now.getFullYear(), now.getMonth() + PLAN_MONTHS_AHEAD);
   const shownYm = ym > maxYm ? maxYm : ym;
   const shown = shownYm === ym ? period : { year: now.getFullYear(), month: now.getMonth() };
 

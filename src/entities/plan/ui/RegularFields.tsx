@@ -9,7 +9,7 @@ import { formatWithCurrency, parseAmountOrZero } from '@/shared/lib/money';
 import Chip from '@/shared/ui/Chip';
 import { formStyles } from '@/shared/theme/formStyles';
 import CategoryPaymentFields, { CategoryPaymentForm } from './CategoryPaymentFields';
-import { RepeatForm, UntilField } from './RepeatField';
+import { RepeatForm, UntilField } from './UntilField';
 
 /** How often: within the month (every day, on weekdays) or every month and rarer (`period` months). */
 export type RegularEvery = 'day' | 'week' | 'month';

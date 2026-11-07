@@ -181,16 +181,6 @@ export const OneOffIcon = ({ color, size = 22 }: P) => (
   </Svg>
 );
 
-/** "Повторять каждый месяц": a filled pin tilted 45° (in PlanBadge's circle, on a plan icon's corner). */
-export const TiltedPinIcon = ({ color, size = 11 }: P) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24">
-    <G rotation={45} origin="12, 12" fill={color} stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <Path d="M12 17v5M8 3h8" />
-      <Path d="M9 10.76V6h6v4.76l2 3.24H7z" />
-    </G>
-  </Svg>
-);
-
 /** «Динамика трат»: bars on a base line (by the eye in the stats, on a category's page). */
 export const TrendsIcon = ({ color, size = 22 }: P) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">

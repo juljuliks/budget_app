@@ -26,6 +26,8 @@ export type Category = {
   by_merchant: number;
   /** 1 — "Импульсивные покупки" (on its page): its operations ask whether the purchase was impulsive (db/impulse.ts) */
   impulse: number;
+  /** its kind in the plan ("В плане" on its page; db/plans/categoryKind.ts); null — not set */
+  plan_kind: 'limit' | 'regular' | 'oneoff' | 'fund' | null;
 };
 
 /**
@@ -64,14 +66,16 @@ export async function subscriptionsCategoryId(db?: Db): Promise<number | null> {
   return (await db.get<{ id: number }>("SELECT id FROM categories WHERE system = 'subs' AND deleted_at IS NULL"))?.id ?? null;
 }
 
-/** "Регулярные платежи" on or off. */
+/** "Регулярные платежи" on or off: the category's kind in the plan a regular payment, or none any more. */
 export async function setRecurring(id: number, on: boolean, db?: Db): Promise<void> {
   db ??= await getDb();
   await db.run('UPDATE categories SET recurring = ? WHERE id = ?', [on ? 1 : 0, id]);
+  if (on) await db.run("UPDATE categories SET plan_kind = 'regular' WHERE id = ? AND system IS NULL", [id]);
+  else await db.run("UPDATE categories SET plan_kind = NULL WHERE id = ? AND plan_kind = 'regular'", [id]);
 }
 
 
-const COLUMNS = `c.id, c.name, c.emoji, c.sort_order, c.type_id, c.deleted_at, c.color, c.system, c.recurring, coalesce(c.system = 'subs', 0) AS by_merchant, c.impulse,
+const COLUMNS = `c.id, c.name, c.emoji, c.sort_order, c.type_id, c.deleted_at, c.color, c.system, c.recurring, coalesce(c.system = 'subs', 0) AS by_merchant, c.impulse, c.plan_kind,
     t.name AS type_name, coalesce(t.is_transfer, 0) AS type_is_transfer`;
 const FROM = 'FROM categories c LEFT JOIN category_types t ON t.id = c.type_id';
 const SELECT = `SELECT ${COLUMNS} ${FROM}`;

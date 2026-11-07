@@ -8,6 +8,7 @@ import type { Currency } from '../fx';
 import { setPlanAmount } from './items';
 import { timesInMonth } from './regularTimes';
 import { followItem, itemShape } from './carry';
+import { kindFromItem } from './categoryKind';
 import type { Every } from './regularTimes';
 
 export type RegularItem = { every: Every; weekdays: number; unit_minor: number; until: string | null };
@@ -20,6 +21,7 @@ export async function setRegularItem(ym: string, categoryId: number, r: RegularI
   await db.run(
     'UPDATE plan_items SET every = ?, weekdays = ?, unit_minor = ?, until = ?, pinned = 1 WHERE ym = ? AND category_id = ?',
     [r.every, r.every === 'week' ? r.weekdays : null, r.unit_minor, r.until, ym, categoryId]);
+  await kindFromItem(ym, categoryId, db);
   await followItem(ym, categoryId, before, db);
 }
 

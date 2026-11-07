@@ -1,6 +1,6 @@
 // A fund made or changed on its category's page; turned off: asked first, what it saved goes to this month's savings,
 // "Отменить" in the toast puts it back.
-import { currentYm, deleteFund, FundInput, restoreFund, setFund } from '@/db/plans';
+import { currentYm, deleteFund, FundInput, fundThisMonth, restoreFund, setFund } from '@/db/plans';
 import { emitTransactionsChanged } from '@/domain/events';
 import { formatWithCurrency } from '@/shared/lib/money';
 import { MONTHS_GEN } from '@/shared/lib/dates';
@@ -30,11 +30,18 @@ async function remove(categoryId: number, label: string, onDone: () => void, ym?
   }
 }
 
-/** Saved from its category's page: from this month, its contribution fitted to the budget by itself. */
-export function saveCategoryFund(categoryId: number, label: string, input: FundInput) {
+/** Saved from its category's page («Настроить»): from this month, its contribution fitted to the budget by itself. */
+export function saveCategoryFund(categoryId: number, label: string, input: FundInput, onDone?: () => void) {
   setFund(currentYm(), categoryId, input)
-    .then(() => { emitTransactionsChanged(); toast(`Копилка «${label}» сохранена`); })
+    .then(() => { emitTransactionsChanged(); toast(`Копилка «${label}» сохранена`); onDone?.(); })
     .catch(toastFailure('save fund', SAVE_FAILED));
+}
+
+/** Another kind picked for a fund's category: "Выключить копилку?" (what it has goes to the month's savings); none open — `onDone` at once. */
+export async function askFundOff(categoryId: number, label: string, onDone: () => void) {
+  const m = await fundThisMonth(categoryId);
+  if (!m) { onDone(); return; }
+  confirmDeleteFund(categoryId, label, m.saved, m.fund.currency, onDone);
 }
 
 /**

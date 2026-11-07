@@ -6,6 +6,7 @@ import { placeholders } from '../sql';
 import { Currency } from '../fx';
 import { asCurrency, currentYm, parseYm, ymOf } from './months';
 import { followItem, itemShape } from './carry';
+import { categoryPlanKind, kindFromItem } from './categoryKind';
 import { NormPeriod, PlanItem, PlanKind, asNorm } from './types';
 import type { Every } from './regularTimes';
 import { activeFunds, contributionOf, fundLedger } from './funds';
@@ -176,10 +177,15 @@ export async function addPlanItem(ym: string, categoryId: number, limitMinor?: n
       if (!(await fits(ym, categoryId, last.limit_minor, last.currency))) amount = last.limit_minor;
     }
   }
+  // the category's kind, when set, says what its item is
+  const own = await categoryPlanKind(categoryId, db);
+  if (own === 'limit') kind = 'limit';
+  if (own === 'oneoff') kind = 'fixed';
   await db.transaction(async (t) => {
     await t.run('INSERT OR IGNORE INTO plan_items (ym, category_id, limit_minor, kind, currency, norm_period) VALUES (?, ?, ?, ?, ?, ?)',
       [ym, categoryId, amount, kind, cur, norm]);
     await ownMonth(ym, t);
+    await kindFromItem(ym, categoryId, t);
   });
 }
 
@@ -212,6 +218,7 @@ export async function setPlanAmount(
           norm_period = coalesce(?, norm_period), every = NULL, weekdays = NULL, unit_minor = NULL`,
       [ym, categoryId, limitMinor, kind ?? null, cur, normPeriod ?? null, kind ?? null, normPeriod ?? null]);
     await ownMonth(ym, t);
+    await kindFromItem(ym, categoryId, t);
     await followItem(ym, categoryId, before, t);
   });
 }

@@ -104,11 +104,13 @@ describe('5.1 a month', () => {
     expect(await screen.findByText('Категория · 1')).toBeTruthy();
   });
 
-  test('the next month: not begun, «Составить план» — its plan\'s page; no further', async () => {
+  test('the next month: not begun, «Составить план» — its plan\'s page; six months ahead, no further', async () => {
     await tap('Следующий месяц');
     expect(await screen.findByText('Ноябрь ещё не начался')).toBeTruthy();
     expect(screen.getByText('Составьте план заранее: бюджет, лимиты, что отложить сразу.')).toBeTruthy();
-    expect(screen.getByLabelText('Следующий месяц').props.accessibilityState?.disabled ?? true).toBeTruthy();
+    for (let i = 0; i < 5; i++) await tap('Следующий месяц');
+    expect(await screen.findByText('Апрель ещё не начался')).toBeTruthy();
+    expect(screen.getByLabelText('Следующий месяц').props.accessibilityState?.disabled).toBe(true);
     await tap('Составить план');
     expect(await screen.findByText('Бюджет месяца')).toBeTruthy();
   });

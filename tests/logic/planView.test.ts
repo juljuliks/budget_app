@@ -171,3 +171,9 @@ test('the overspend of a category saving up for its payments: its plan and spend
   });
   expect(v.less!.overs.map((o) => [o.name, o.plan, o.spent, o.over])).toEqual([['Подписки', 3000, 3500, 500]]);
 });
+
+test('what came over is more than the budget: nothing cut — «Больше бюджета» with the minus, no part of the bar', () => {
+  const v = view([item({ converted_minor: 80000 }), item({ category_id: 2, converted_minor: 40000 })], budget({}));
+  expect(v.parts.find((p) => p.key === 'over')).toMatchObject({ label: 'Больше бюджета', value: -20000, tone: 'over' });
+  expect(view([item({})], budget({})).parts.find((p) => p.key === 'over')).toBeUndefined();
+});

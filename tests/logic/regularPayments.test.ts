@@ -81,9 +81,9 @@ describe('carry-over', () => {
     await setRegularItem(M1, 1, { every: 'day', weekdays: 0, unit_minor: 500, until: `${M2}-10` }, 'GEL');
     await addPlanItem(M1, 2); await setPlanAmount(M1, 2, 30000); await setPlanPinned(M1, 2, true, `${M1}-31`);
     expect((await listPlan(M2)).map((i) => ({ id: i.category_id, limit: i.limit_minor, pinned: i.pinned, until: i.until }))).toEqual([
-      // February: up to the 10th; the limit — after its end: carried without its amount, not repeated
-      { id: 1, limit: 10 * 500, pinned: true, until: `${M2}-10` }, { id: 2, limit: 0, pinned: false, until: null }]);
-    expect((await listPlan(M3)).map((i) => i.category_id)).toEqual([2]);
+      // February: up to the 10th; the limit — after its end: not carried any more
+      { id: 1, limit: 10 * 500, pinned: true, until: `${M2}-10` }]);
+    expect((await listPlan(M3)).map((i) => i.category_id)).toEqual([]);
   });
 
   test('another kind saved: no longer a regular payment', async () => {

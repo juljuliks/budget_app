@@ -21,13 +21,18 @@ type Props = {
   extra?: React.ReactNode;
   /** its latest operations (the page passes them: an operations entity) */
   recent?: React.ReactNode;
+  /**
+   * What the bottom button is instead of "Сохранить" (the kind picked in «В плане» needs its setup first:
+   * «Настроить»; or saves it): `onPress` gets the page's save — call it when its fields changed (it leaves the page)
+   */
+  submit?: { title: string; onPress: (save: (() => void) | null) => void };
 };
 
 /**
  * A category's page: its operations (a link to them), its dynamics, section, emoji and name, color, "Подписки", its latest operations;
  * "Сохранить" and "Удалить категорию" pinned at the bottom.
  */
-export default function CategoryView({ categoryId, onClose, onShowOperations, onDelete, links, extra, recent }: Props) {
+export default function CategoryView({ categoryId, onClose, onShowOperations, onDelete, links, extra, recent, submit }: Props) {
   const f = useCategoryForm({ visible: true, categoryId, onClose });
   if (!f.summary) return <Loading />;
   const system = f.systemKind !== null;
@@ -35,7 +40,9 @@ export default function CategoryView({ categoryId, onClose, onShowOperations, on
     <Page contentStyle={styles.content} footer={(
       <SheetActions
         style={styles.actions}
-        submit={{ title: 'Сохранить', onPress: f.save, disabled: f.isSubmitting || !f.isDirty }}
+        submit={submit
+          ? { title: submit.title, onPress: () => submit.onPress(f.isDirty ? f.save : null), disabled: f.isSubmitting }
+          : { title: 'Сохранить', onPress: f.save, disabled: f.isSubmitting || !f.isDirty }}
         extra={system || !onDelete ? undefined : [{ title: 'Удалить категорию', onPress: onDelete, danger: true }]}
       />
     )}>

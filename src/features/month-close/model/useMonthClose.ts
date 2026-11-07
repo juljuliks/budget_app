@@ -1,7 +1,7 @@
 // "Итоги месяца" of `ym`: its steps, sums and answers, loaded when opened and again after each answer (an answer
 // changes the sums: the overspend's cover changes what 🔒 keeps, the leftover moved isn't asked about).
 import { useCallback, useEffect, useState } from 'react';
-import { answerClose, CloseAnswers, finishClose, MonthClose, monthClose, setSplit } from '@/db/plans';
+import { answerClose, answerClosePayment, CloseAnswers, finishClose, MonthClose, monthClose, PaymentChoice, setSplit } from '@/db/plans';
 import { emitTransactionsChanged, onTransactionsChanged } from '@/domain/events';
 import { SAVE_FAILED } from '@/shared/lib/strings';
 import { useLatestRequest } from '@/shared/lib/useLatestRequest';
@@ -28,6 +28,9 @@ export function useMonthClose(ym: string | null) {
     ? setSplit(ym, parts).then(saved).catch(toastFailure('set split', SAVE_FAILED)) : Promise.resolve());
   const answer = (patch: Partial<CloseAnswers>): Promise<void> => (ym
     ? answerClose(ym, patch).then(saved).catch(toastFailure('answer close', SAVE_FAILED)) : Promise.resolve());
+  /** «Перенести на …» / «Не нужен» of a payment not paid */
+  const pay = (categoryId: number, choice: PaymentChoice): Promise<void> => (ym
+    ? answerClosePayment(ym, categoryId, choice).then(saved).catch(toastFailure('answer close payment', SAVE_FAILED)) : Promise.resolve());
   /** closes the month; true — closed (every question answered) */
   const finish = async (): Promise<boolean> => {
     if (!ym) return false;
@@ -40,5 +43,5 @@ export function useMonthClose(ym: string | null) {
       return false;
     }
   };
-  return { close, failed, load, split, answer, finish };
+  return { close, failed, load, split, answer, pay, finish };
 }

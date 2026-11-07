@@ -26,7 +26,7 @@ import PlanAddModal from './PlanAddModal';
 
 /**
  * Plan for one month, the plan only (what is spent is the stats'). A new month starts from the previous month's items:
- * pinned ones keep their amount, the others need a new amount (last month's is shown as a hint).
+ * by each category's kind (a limit with its amount, a regular payment by its schedule, a one-off payment not at all).
  * With an amount to distribute set, the plan can't exceed it; the rest is shown as "Свободно".
  * Every amount has the currency it was entered in; the screen shows them in `currency` (the switch on top of
  * the tab), with the original in brackets when it differs.

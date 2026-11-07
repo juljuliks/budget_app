@@ -49,6 +49,8 @@ type Props<V extends TextFormValues & FieldValues> = {
   submitDisabled?: boolean;
   /** no field: the choice above is all (the plan's "Регулярный платёж" goes to pick an operation) */
   noInput?: boolean;
+  /** the submit button on with nothing changed: an action ("Выбрать мерчанта") or a save that sets something up */
+  alwaysSubmit?: boolean;
   /** returns an error message to show, null when saved, false to stay open without one (a question asked over it) */
   onSubmit: (value: string) => Promise<string | null | false>;
   onClose: () => void;
@@ -60,12 +62,13 @@ type Props<V extends TextFormValues & FieldValues> = {
  */
 export default function TextInputModal<V extends TextFormValues & FieldValues = TextFormValues>({
   visible, title, onTitlePress, initialValue = '', form: outer, placeholder, submitLabel = 'Сохранить', hint, keyboardType, maxLength = 30,
-  allowEmpty, multiline, onSubmit, onClose, children, inputAccessory, headerRight, remove, label, submitDisabled, above, noInput,
+  allowEmpty, multiline, onSubmit, onClose, children, inputAccessory, headerRight, remove, label, submitDisabled, above, noInput, alwaysSubmit,
 }: Props<V>) {
   // used only without a form of the caller's (a hook can't be skipped)
   const own = useLoadedForm<TextFormValues>(outer ? null : { value: initialValue }, visible);
   const form = (outer ?? own) as unknown as UseFormReturn<TextFormValues>;
-  const { isDirty, isSubmitting } = useFormState({ control: form.control });
+  const { isDirty: changed, isSubmitting } = useFormState({ control: form.control });
+  const isDirty = changed || !!alwaysSubmit;
 
   const submit = submitForm(form, async ({ value }) => {
     try {

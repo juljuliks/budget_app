@@ -1,7 +1,7 @@
-// The plan sheet's "Сохранить": a limit (repeated each month till its end), a one-off payment, a fund, a regular payment
+// The plan sheet's "Сохранить": a limit, a one-off payment, a fund, a regular payment
 // within the month, or the amount by hand of a category with regular payments; past what is free — 🔒 asked.
 import { Currency } from '@/db/fx';
-import { NormPeriod, OverBudgetError, PlanKind, setPlanPinned } from '@/db/plans';
+import { NormPeriod, OverBudgetError, PlanKind } from '@/db/plans';
 import { AMOUNT_HINT, SAVE_FAILED } from '@/shared/lib/strings';
 import { formatWithCurrency, parseAmountOrZero } from '@/shared/lib/money';
 import { toast, toastFailure } from '@/shared/ui/toast';
@@ -56,11 +56,8 @@ export async function submitPlanSheet({ ym, target, text, v, adding, locked, fre
     if (regular) {
       return saveRegular(ym, target.category_id, { every: v.every as 'day' | 'week', weekdays: v.weekdays, unit_minor: minor, until: v.until }, v.currency, takeLocked);
     }
+    // what a new month gets of it is its category's kind (a limit: this amount and «Как тратите»)
     await savePlanAmount(ym, target.category_id, minor, byHand ? 'fixed' : k, v.currency, v.norm, takeLocked === true);
-    // "Повторять каждый месяц" and its end: a limit's only (a one-off payment isn't carried over)
-    const pin = k === 'limit' && v.pinned;
-    const until = pin ? v.until : null;
-    if (!byHand && (pin !== !!target.pinned || until !== (target.until ?? null))) await setPlanPinned(ym, target.category_id, pin, until);
   };
   try {
     await write(false);
