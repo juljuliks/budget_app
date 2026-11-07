@@ -8,6 +8,7 @@ import { formatShort, formatWithCurrency } from '@/shared/lib/money';
 import { InfoIcon } from '@/shared/ui/icons';
 import { MaskedTotal } from '@/shared/ui/Masked';
 import Meter from '@/shared/ui/Meter';
+import PressMenu, { PressAction } from '@/shared/ui/PressMenu';
 import { colors } from '@/shared/theme/theme';
 import type { SavingsPart, SavingsSection } from '../model/savingsSection';
 import { header } from './sections';
@@ -18,8 +19,10 @@ type Open = {
   less: () => void;
   /** "Подвести итоги ›" */
   close: (ym: string) => void;
-  /** fund or saving-subscription part: long press opens its edit sheet */
-  longPressCategory?: (id: number, name: string, kind: 'fund' | 'saving') => void;
+  /** saving-subscription part: long press opens its sheet */
+  longPressCategory?: (id: number, name: string, kind: 'saving') => void;
+  /** a fund's part: long press — the menu over the finger (rowActions' fundActions) */
+  fundActions?: (id: number, name: string) => PressAction[];
   /** long press on the 🔒 «Отложить сразу» row: opens the month's budget sheet */
   onLongPressLocked?: () => void;
   /** a fund spent from this month: what is shown under its part (FundSpent); a tap on the part — its operations */
@@ -65,16 +68,18 @@ function savingsHeaderTotal(now: number | null, plan: number, budget: number | n
   );
 }
 
-function Part({ x, currency, onLess, onLongPress, onPress, spent }: {
+function Part({ x, currency, onLess, onLongPress, onPress, spent, actions }: {
   x: SavingsPart; currency: string; onLess: () => void; onLongPress?: () => void; onPress?: () => void; spent?: React.ReactNode;
+  /** a fund's: the long press's menu instead of onLongPress */
+  actions?: PressAction[];
 }) {
   const status = (
     <Text style={[styles.rowStatus, x.status.tone === 'warn' && styles.overLine, x.status.tone === 'ok' && styles.paceOk]}>
       {x.status.text}{x.fund ? ` · ${fundProgress(x.fund.saved, x.fund.target, x.fund.due, x.fund.currency)}` : ''}{x.status.info ? ' ' : ''}
     </Text>
   );
-  return (
-    <TouchableOpacity style={styles.row} onPress={onPress} onLongPress={onLongPress} disabled={!onLongPress && !onPress} accessibilityLabel={x.name}>
+  const body = (
+    <>
       <View style={styles.rowTop}>
         <View style={[styles.dot, { backgroundColor: x.color }]} />
         <Text style={styles.rowName} numberOfLines={1}>{x.name}</Text>
@@ -87,6 +92,13 @@ function Part({ x, currency, onLess, onLongPress, onPress, spent }: {
         </TouchableOpacity>
       ) : status}
       {spent}
+    </>
+  );
+  return actions ? (
+    <PressMenu style={styles.row} actions={actions} onPress={onPress} accessibilityHint="Удерживайте: операции, план, динамика">{body}</PressMenu>
+  ) : (
+    <TouchableOpacity style={styles.row} onPress={onPress} onLongPress={onLongPress} disabled={!onLongPress && !onPress} accessibilityLabel={x.name}>
+      {body}
     </TouchableOpacity>
   );
 }
@@ -108,10 +120,11 @@ export function savingsSection(s: SavingsSection | null, currency: string, open:
           const kind = x.key.startsWith('fund-') ? 'fund' : x.key.startsWith('saving-') ? 'saving' : null;
           const lp = x.key === 'locked' && open.onLongPressLocked
             ? open.onLongPressLocked
-            : (kind && x.categoryId !== undefined && open.longPressCategory ? () => open.longPressCategory!(x.categoryId!, x.name, kind) : undefined);
+            : (kind === 'saving' && x.categoryId !== undefined && open.longPressCategory ? () => open.longPressCategory!(x.categoryId!, x.name, kind) : undefined);
+          const actions = kind === 'fund' && x.categoryId !== undefined ? open.fundActions?.(x.categoryId, x.name) : undefined;
           const spent = kind === 'fund' && x.categoryId !== undefined ? open.fundSpent?.(x.categoryId) : undefined;
           const press = spent && open.openFundOperations ? () => open.openFundOperations!(x.categoryId!) : undefined;
-          return <Part key={x.key} x={x} currency={currency} onLess={open.less} onLongPress={lp} onPress={press} spent={spent} />;
+          return <Part key={x.key} x={x} currency={currency} onLess={open.less} onLongPress={lp} onPress={press} spent={spent} actions={actions} />;
         })}
         {s.past > 0 ? (
           <TouchableOpacity style={styles.row} onPress={open.less} accessibilityRole="button" accessibilityLabel="Из прошлых сбережений: что съело сбережения">

@@ -161,6 +161,21 @@ describe('6.5 funds', () => {
     expect(await screen.findByText('ZARA')).toBeTruthy();
   });
 
+  test('the stats: a long press on a fund — «Операции», «План» (its sheet), «Динамика», as a category\'s', async () => {
+    await openApp(async () => {
+      await planned();
+      const db = await getDb();
+      const { id } = (await db.get<{ id: number }>("SELECT id FROM categories WHERE name = 'Одежда'"))!;
+      await setFund('2026-10', id, { target_minor: 150000, currency: 'GEL', due: '2027-01-31', start_minor: 30000 });
+    });
+    await tap('Статистика');
+    fireEvent(await screen.findByText('👕 Одежда'), 'longPress', { nativeEvent: { pageX: 200, pageY: 500 } });
+    expect(await screen.findByLabelText('Операции')).toBeTruthy();
+    expect(screen.getByLabelText('Динамика')).toBeTruthy();
+    fireEvent.press(screen.getByLabelText('План'));
+    expect(await screen.findByText('Траты категории «👕 Одежда» берутся из копилки и не тратят бюджет месяца.')).toBeTruthy();
+  });
+
   test('the stats without a budget (no «Сбережения»): a fund spent from — in "Копилки"', async () => {
     await openApp(async () => {
       await planned();
@@ -172,5 +187,10 @@ describe('6.5 funds', () => {
     await tap('Статистика');
     expect(await screen.findByText('Копилки')).toBeTruthy();
     expect(screen.getByText(`450${N}₾ из копилки`)).toBeTruthy();
+    // its long press: the same menu — «Операции» are its operations of the month
+    fireEvent(screen.getByText('👕 Одежда'), 'longPress', { nativeEvent: { pageX: 200, pageY: 500 } });
+    expect(await screen.findByLabelText('Динамика')).toBeTruthy();
+    fireEvent.press(screen.getByLabelText('Операции'));
+    expect(await screen.findByText('ZARA')).toBeTruthy();
   });
 });
