@@ -80,6 +80,8 @@ export type PlanBudget = {
   unplanned_pct: number;
   /** that share as an amount of one's own, in the budget's currency (instead of the %); null = by the % */
   unplanned_minor: number | null;
+  /** added to that share this month only: its overspend covered by a cut of the plan ("Покрыть перерасход") */
+  unplanned_cover_minor: number;
   /** locked for savings right away (🔒), in the budget's currency */
   locked_minor: number;
   /** locked_minor follows the free budget remainder automatically (MAX mode) */

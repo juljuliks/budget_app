@@ -77,4 +77,7 @@ export const STEPS_67_ON: MigrationStep[][] = [
     )`,
     categorySchedules,
   ],
+  // 70: the spending outside the plan past its share covered by a cut of the plan ("Покрыть перерасход"): on top of the
+  // share, in the budget's currency, this month only (a new month doesn't carry it over)
+  ['ALTER TABLE plan_months ADD COLUMN unplanned_cover_minor INTEGER NOT NULL DEFAULT 0 CHECK (unplanned_cover_minor >= 0)'],
 ];

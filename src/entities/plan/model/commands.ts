@@ -1,5 +1,5 @@
 // The plan's writes from its sheets: each one tells the screens (the stats, the reports) the data changed.
-import { RegularItem, setPlanAmount, setRegularItem, setUndatedAhead } from '@/db/plans';
+import { addUnplannedCover, coverFromLimit, RegularItem, setPlanAmount, setRegularItem, setUndatedAhead } from '@/db/plans';
 import type { Currency } from '@/db/fx';
 import { getCategory } from '@/db/categories';
 import { categoryPayment, savePayment, startSaving, stopSaving, turnRecurring } from '@/db/recurring';
@@ -10,6 +10,24 @@ import { emitTransactionsChanged } from '@/domain/events';
 export async function savePlanAmount(...args: Parameters<typeof setPlanAmount>) {
   await setPlanAmount(...args);
   emitTransactionsChanged();
+}
+
+/**
+ * "Покрыть перерасход": `minor` (the budget's currency) added to this month's share outside the plan, `limit` — a
+ * limit's new amount it comes from (cut first); negative — "Отменить" (the share back first, then the limit).
+ */
+export async function coverUnplanned(ym: string, minor: number, limit?: { category_id: number; limit_minor: number }) {
+  if (minor < 0) await addUnplannedCover(ym, minor);
+  if (limit) await setPlanAmount(ym, limit.category_id, limit.limit_minor);
+  if (minor > 0) await addUnplannedCover(ym, minor);
+  emitTransactionsChanged();
+}
+
+/** "Покрыть из плана": up to `minor` off a limit onto the share (coverFromLimit); null — nothing left of it. */
+export async function coverFromPlan(ym: string, categoryId: number, minor: number) {
+  const r = await coverFromLimit(ym, categoryId, minor);
+  emitTransactionsChanged();
+  return r;
 }
 
 /** A regular payment within the month (every day, on weekdays); throws OverBudgetError past the budget. */

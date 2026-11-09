@@ -106,7 +106,7 @@ export default function PlanAlert({ currency }: { currency: Currency }) {
           </TouchableOpacity>
         </View>
       ) : null}
-      <SavingsLessSheet less={less} visible={sheet} money={money} onClose={() => setSheet(false)} onOpen={(id) => setPlanTarget(lessTarget(view, id))} />
+      <SavingsLessSheet ym={ym} currency={savingsCurrency} less={less} visible={sheet} money={money} onClose={() => setSheet(false)} onOpen={(id) => setPlanTarget(lessTarget(view, id))} />
       <PlanAmountModal ym={ym} currency={currency} target={planTarget} onClose={() => setPlanTarget(null)} onSaved={load} />
     </>
   );

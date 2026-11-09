@@ -365,6 +365,21 @@ describe('5.6 the warnings about the locked savings', () => {
     expect(await screen.findByText('🔒 отложено 0 ₾ из 300 ₾')).toBeTruthy();
     expect(screen.getByText('из прошлых сбережений уйдёт 175 ₾')).toBeTruthy();
   });
+  // 5.6.6: outside the plan 80 ₾ past the share; Продукты 315 ₾ left, Кафе 220 ₾
+  test('«Покрыть из плана ›»: a limit with something left gives what is past the share; «Отменить»', async () => {
+    await tap('💰 Сэкономлено: что съело сбережения');
+    expect(await screen.findByText('Сбережения меньше на 130 ₾')).toBeTruthy();
+    await tap('Покрыть из плана ›');
+    expect(await screen.findByText('Траты вне плана больше доли на 80 ₾. Из какой категории взять?')).toBeTruthy();
+    expect(screen.getByText('план 620 ₾ · осталось 315 ₾')).toBeTruthy();
+    expect(screen.getByText('план 310 ₾ · осталось 220 ₾')).toBeTruthy();
+    await tap('Взять из «Продукты»');
+    expect(await screen.findByText('Перерасход вне плана покрыт — из «Продукты»')).toBeTruthy();
+    // only Одежда is past its plan now
+    expect(await screen.findByText('Перерасход взял 50 ₾ ')).toBeTruthy();
+    await tap('Отменить');
+    expect(await screen.findByText('Перерасход взял 130 ₾ ')).toBeTruthy();
+  });
   test('hidden with ✕ until something new', async () => {
     await spend(420);
     await screen.findByText(/До отложенного осталось/);

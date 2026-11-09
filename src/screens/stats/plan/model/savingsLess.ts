@@ -6,6 +6,11 @@ import type { SpentBy } from './usePlanData';
 
 /** a category past its plan (or the spending outside the plan past its share: `category_id` null) */
 export type Overspent = { key: string; category_id: number | null; name: string; emoji: string | null; plan: number; spent: number; over: number };
+/**
+ * a limit with something left of it, for "Покрыть из плана": `left` of its `plan`; `take` — what covering the spending
+ * outside the plan takes of it (the cut itself is counted in its own currency: coverFromLimit)
+ */
+export type CoverRoom = { category_id: number; name: string; emoji: string | null; left: number; take: number; plan: number };
 
 export type SavingsLess = {
   /** savings as planned, and as they'll be if the rest is spent by plan */
@@ -21,6 +26,8 @@ export type SavingsLess = {
   past: number;
   /** the biggest first */
   overs: Overspent[];
+  /** the spending outside the plan past its share: what is left of the limits to cover it, the most left first */
+  rooms: CoverRoom[];
 };
 
 /** less than this (a unit): noise of rates, not worth a word */
@@ -60,7 +67,18 @@ export function savingsLess({ items, spentBy, unplanned, unplannedSpent, free, l
     free: { was: wasFree, now: wasFree - fromFree }, locked: { was: locked, now: locked - fromLocked },
     funds: { less: less - fromFree - fromLocked - left, cut }, past: left,
     overs: overs.sort((a, b) => b.over - a.over),
+    rooms: coverRooms(items, spentBy, Math.max(0, unplannedSpent - unplanned)),
   };
+}
+
+/** The limits with at least a unit left, the most left first. */
+export function coverRooms(items: PlanItem[], spentBy: SpentBy, over: number): CoverRoom[] {
+  if (over < NOISE) return [];
+  return items.filter((i) => i.kind === 'limit' && (i.converted_minor ?? 0) > 0).map((i) => {
+    const plan = i.converted_minor!;
+    const left = plan - Math.max(0, spentBy.byCategory.get(i.category_id) ?? 0);
+    return { category_id: i.category_id, name: i.name, emoji: i.emoji, left, take: Math.min(left, over), plan };
+  }).filter((r) => r.left >= NOISE).sort((a, b) => b.left - a.left);
 }
 
 /** what the overspend takes beyond 💰: off 🔒, the funds' contributions and the savings from before */

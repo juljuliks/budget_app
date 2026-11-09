@@ -29,7 +29,8 @@ export default function BudgetSheet({ visible, budget, currency, defaultCurrency
   // the amount and the currency it was entered in
   const form = useLoadedForm<BudgetForm>(visible ? {
     value: toInputValue(budget?.amount_minor), currency: budget?.currency ?? defaultCurrency,
-    unplanned: budget && unplannedOf(budget) ? toInputValue(unplannedOf(budget)) : '',
+    // the share of its own: what a cut of the plan covered this month stays on top of it
+    unplanned: budget && unplannedOf({ ...budget, unplanned_cover_minor: 0 }) ? toInputValue(unplannedOf({ ...budget, unplanned_cover_minor: 0 })) : '',
     locked: budget?.locked_minor ? toInputValue(budget.locked_minor) : '',
     lockedIsMax: budget?.locked_is_max ?? false,
   } : null, visible);

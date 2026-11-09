@@ -8,6 +8,7 @@ import { toast, toastFailure } from '@/shared/ui/toast';
 import { savePlanAmount, saveRegular } from '../model/commands';
 import { turnOffRecurring } from './turnOffRecurring';
 import { askTakeLocked } from './askTakeLocked';
+import { offerCover } from './coverUnplanned';
 import { savedText } from './sheetOptions';
 import type { RegularEvery } from './RegularFields';
 import type { SavingChoice } from '../model/usePaymentSaving';
@@ -81,5 +82,9 @@ export async function submitPlanSheet({ ym, target, text, v, adding, locked, fre
     return `Больше бюджета месяца: ${room}`;
   }
   saved();
+  // a limit cut: what it frees may go to the spending outside the plan past its share
+  if (k === 'limit' && !adding && v.currency === target.currency && minor < target.limit_minor) {
+    offerCover(ym, target.limit_minor - minor, target.currency).catch(toastFailure('offer unplanned cover', SAVE_FAILED));
+  }
   return null;
 }

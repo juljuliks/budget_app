@@ -163,7 +163,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
 
       <PlanAmountModal ym={ym} currency={currency} target={planTarget} onClose={() => setPlanTarget(null)} onSaved={load} />
       <SavingsLessSheet
-        less={savings.view?.less ?? null} visible={lessOpen} money={(minor) => formatWithCurrency(minor, savings.currency)} onClose={() => setLessOpen(false)}
+        ym={ym} currency={savings.currency} less={savings.view?.less ?? null} visible={lessOpen} money={(minor) => formatWithCurrency(minor, savings.currency)} onClose={() => setLessOpen(false)}
         onOpen={(id) => setPlanTarget(lessTarget(savings.view, id))}
       />
       <RecurringPaymentsSheet

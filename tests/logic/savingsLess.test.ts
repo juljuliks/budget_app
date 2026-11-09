@@ -1,4 +1,4 @@
-import { lessLines, lessTaken, savingsLess } from '../../src/screens/stats/plan/model/savingsLess';
+import { coverRooms, lessLines, lessTaken, savingsLess } from '../../src/screens/stats/plan/model/savingsLess';
 import type { PlanItem } from '../../src/db/plans';
 
 const money = (minor: number) => `${minor / 100} ₾`;
@@ -27,5 +27,25 @@ describe('«Сбережения меньше на …»: part by part', () => {
   test('without 🔒: straight off the savings from before', () => {
     const l = less(65000);
     expect(lessLines(l, money)).toEqual(['из прошлых сбережений уйдёт 150 ₾']);
+  });
+});
+
+describe('«Покрыть из плана»: the limits with something left', () => {
+  const limit = (category_id: number, plan: number) => ({ ...item(category_id, plan), kind: 'limit' } as PlanItem);
+  const spentBy = (m: Array<[number, number]>) => ({ byCategory: new Map(m), total: 0 });
+
+  test('the most left first, each takes what is past the share (or all it has left); a payment, a spent limit — none', () => {
+    const rooms = coverRooms([limit(1, 30000), limit(2, 60000), { ...limit(3, 50000), kind: 'fixed' } as PlanItem, limit(4, 10000)],
+      spentBy([[1, 25000], [2, 10000], [4, 9950]]), 8000);
+    expect(rooms.map((r) => [r.category_id, r.left, r.take])).toEqual([[2, 50000, 8000], [1, 5000, 5000]]);
+  });
+  test('not past the share: nothing to cover', () => {
+    expect(coverRooms([limit(1, 30000)], spentBy([]), 50)).toEqual([]);
+  });
+  test('in savingsLess: only when the spending outside the plan is past its share', () => {
+    const l = savingsLess({
+      items: [limit(1, 50000)], spentBy: spentBy([[1, 10000]]), unplanned: 30000, unplannedSpent: 38000, free: 0, locked: 30000, funds: [],
+    })!;
+    expect(l.rooms.map((r) => r.take)).toEqual([8000]);
   });
 });
