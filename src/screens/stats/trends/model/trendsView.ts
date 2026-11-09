@@ -4,7 +4,7 @@ import type { TrendCategory, TrendSpend, TrendsData } from '@/db/plans';
 import { MONTHS_NOM, WEEKDAYS } from '@/shared/lib/dates';
 import { plural } from '@/shared/lib/format';
 import type { DayKey } from '@/shared/lib/dateRange';
-import { monthBars, Trend, TrendMode, trendOf, USUAL_OF, weekBars } from '@/stats/trends';
+import { monthBars, Trend, trendOf, USUAL_MONTHS } from '@/stats/trends';
 
 /** A bar of a chart: `tone` — the period looked at, the usual it's put against, or the others. */
 export type Bar = {
@@ -29,17 +29,14 @@ export function spendsByCategory(spends: TrendSpend[]): Map<number, TrendSpend[]
 /** «пн» … «вс» */
 export const MONDAY_FIRST = [1, 2, 3, 4, 5, 6, 0].map((d) => WEEKDAYS[d]);
 
-/** The bars of a category: this week by day (with the usual of each weekday), or the last 12 months (the usual ones pale). */
-export function barsOf(spends: TrendSpend[], mode: TrendMode, today: DayKey): Bar[] {
-  if (mode === 'week') {
-    return weekBars(spends, today).map((b, i) => ({ key: b.day, label: MONDAY_FIRST[i], value: b.value, usual: b.usual, tone: 'now' }));
-  }
+/** The bars of a category: the last 12 months (the usual ones pale). */
+export function barsOf(spends: TrendSpend[], today: DayKey): Bar[] {
   const bars = monthBars(spends, today);
   return bars.map((b, i) => ({
     key: b.ym,
     label: MONTHS_NOM[Number(b.ym.slice(5)) - 1].slice(0, 3),
     value: b.value,
-    tone: i === bars.length - 1 ? 'now' : i >= bars.length - 1 - USUAL_OF.month ? 'base' : 'other',
+    tone: i === bars.length - 1 ? 'now' : i >= bars.length - 1 - USUAL_MONTHS ? 'base' : 'other',
   }));
 }
 
@@ -47,17 +44,17 @@ export function barsOf(spends: TrendSpend[], mode: TrendMode, today: DayKey): Ba
  * The compared categories that moved off their usual: the most up first, the most down first; `max` of each (all of
  * them: Infinity) — MORE_COUNT / LESS_COUNT.
  */
-export function trendLists(data: TrendsData, mode: TrendMode, today: DayKey, max?: number): { more: TrendRow[]; less: TrendRow[]; early: boolean } {
+export function trendLists(data: TrendsData, today: DayKey, max?: number): { more: TrendRow[]; less: TrendRow[]; early: boolean } {
   const by = spendsByCategory(data.spends);
   const rows: TrendRow[] = [];
   let early = true;
   for (const c of data.categories) {
     if (!c.compared) continue;
     const spends = by.get(c.id) ?? [];
-    const trend = trendOf(spends, mode, today, data.since);
+    const trend = trendOf(spends, today, data.since);
     if (trend) early = false;
     if (!trend?.notable) continue;
-    rows.push({ category: c, label: categoryLabel(c), trend, bars: barsOf(spends, mode, today) });
+    rows.push({ category: c, label: categoryLabel(c), trend, bars: barsOf(spends, today) });
   }
   return {
     more: rows.filter((r) => r.trend.delta > 0).sort((a, b) => b.trend.delta - a.trend.delta).slice(0, max ?? MORE_COUNT),

@@ -5,7 +5,6 @@ export const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { paddingBottom: 24 },
   pad: { paddingHorizontal: 16 },
-  modes: { marginTop: 16 },
   hint: { fontSize: 13, color: colors.muted, marginTop: 8, lineHeight: 18 },
   empty: { fontSize: 15, color: colors.muted, paddingHorizontal: 16, paddingVertical: 14 },
 
@@ -18,10 +17,6 @@ export const styles = StyleSheet.create({
   why: { fontSize: 14, color: colors.text, marginTop: 8 },
   chart: { marginTop: 10 },
 
-  legend: { flexDirection: 'row', gap: 16, paddingHorizontal: 16, marginTop: 10 },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  legendSwatch: { width: 10, height: 10, borderRadius: 2 },
-  legendText: { fontSize: 12, color: colors.muted },
   allLink: { paddingHorizontal: 16, paddingVertical: 12, marginTop: 8, alignSelf: 'flex-start' },
 
   bars: { flexDirection: 'row', alignItems: 'flex-end' },

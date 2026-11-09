@@ -1,15 +1,18 @@
-// The dynamics of a category's spending: this week / month so far against its usual one by the same days, the bars of
-// the charts, the habits by weekday, the merchants. Pure: counted from db/plans/trendsData.
+// The dynamics of a category's spending: this month so far against its usual one by the same days, the bars of the
+// charts, the habits by weekday, the merchants. Pure: counted from db/plans/trendsData.
 import type { TrendSpend } from '../db/plans';
 import { DayKey, dayKeyOf, daysInMonth, parseDayKey } from '@/shared/lib/dateRange';
 
-export type TrendMode = 'week' | 'month';
-/** How many past weeks / months the usual spending is the median of. */
-export const USUAL_OF = { week: 8, month: 3 } as const;
+/** How many past months the usual spending is the median of (those tracked)… */
+export const USUAL_MONTHS = 6;
+/** …at least this many: fewer — no usual yet */
+export const USUAL_MIN_MONTHS = 3;
 /** A change worth showing: at least this % of the usual… */
 export const NOTABLE_PCT = 30;
-/** …and at least this much (minor units of the currency shown). */
-export const NOTABLE_MIN = { week: 1500, month: 3000 } as const;
+/** …and at least this much (minor units of the currency shown)… */
+export const NOTABLE_MIN = 3000;
+// …and past each of the tracked months by the same days (more than the most or less than the least): early in a month
+// its few days swing from month to month, and one purchase isn't a change
 
 type Window = { from: DayKey; to: DayKey };
 
@@ -26,19 +29,10 @@ export function median(xs: number[]): number {
   return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
 }
 
-/** This week / month up to today, and the same days of each of the past USUAL_OF weeks / months (the 30th: the last day of a shorter one). */
-export function trendWindows(mode: TrendMode, today: DayKey): { cur: Window; past: Window[] } {
-  if (mode === 'week') {
-    const monday = weekStartOf(today);
-    const len = Math.round((parseDayKey(today).getTime() - parseDayKey(monday).getTime()) / 86400000);
-    const past = Array.from({ length: USUAL_OF.week }, (_, i) => {
-      const from = addDays(monday, -7 * (i + 1));
-      return { from, to: addDays(from, len) };
-    });
-    return { cur: { from: monday, to: today }, past };
-  }
+/** This month up to today, and the same days of each of the past USUAL_MONTHS months, the latest first (the 30th: the last day of a shorter one). */
+export function trendWindows(today: DayKey): { cur: Window; past: Window[] } {
   const d = parseDayKey(today);
-  const past = Array.from({ length: USUAL_OF.month }, (_, i) => {
+  const past = Array.from({ length: USUAL_MONTHS }, (_, i) => {
     const first = dayKeyOf(new Date(d.getFullYear(), d.getMonth() - (i + 1), 1));
     const last = Math.min(d.getDate(), daysInMonth(ymOfDay(first)));
     return { from: first, to: `${ymOfDay(first)}-${String(last).padStart(2, '0')}` };
@@ -47,7 +41,7 @@ export function trendWindows(mode: TrendMode, today: DayKey): { cur: Window; pas
 }
 
 export type Trend = {
-  /** spent this week / month so far */
+  /** spent this month so far */
   cur: number;
   /** usually by the same days */
   usual: number;
@@ -63,29 +57,25 @@ export type Trend = {
 const sumIn = (spends: TrendSpend[], w: Window) => spends.reduce((a, s) => (inWindow(s.day, w) ? a + s.value : a), 0);
 const countIn = (spends: TrendSpend[], w: Window) => spends.filter((s) => s.value > 0 && inWindow(s.day, w)).length;
 
-/** One category's spending (`spends` are its own) against its usual; null — not tracked long enough for a usual one (`since`). */
-export function trendOf(spends: TrendSpend[], mode: TrendMode, today: DayKey, since: DayKey | null): Trend | null {
-  const { cur, past } = trendWindows(mode, today);
-  if (!since || since > past[past.length - 1].from) return null;
+/**
+ * One category's spending (`spends` are its own) against its usual: the median of the tracked past months (`since`) by
+ * the same days; null — fewer than USUAL_MIN_MONTHS of them.
+ */
+export function trendOf(spends: TrendSpend[], today: DayKey, since: DayKey | null): Trend | null {
+  const { cur, past: all } = trendWindows(today);
+  const past = since ? all.filter((w) => w.from >= since) : [];
+  if (past.length < USUAL_MIN_MONTHS) return null;
   const c = sumIn(spends, cur);
-  const usual = median(past.map((w) => sumIn(spends, w)));
+  const sums = past.map((w) => sumIn(spends, w));
+  const usual = median(sums);
   const delta = c - usual;
   const pct = usual > 0 ? Math.round((delta / usual) * 100) : null;
+  const outside = c > Math.max(...sums) || c < Math.min(...sums);
   return {
     cur: c, usual, delta, pct,
     count: countIn(spends, cur), usualCount: Math.round(median(past.map((w) => countIn(spends, w)))),
-    notable: Math.abs(delta) >= NOTABLE_MIN[mode] && (pct === null || Math.abs(pct) >= NOTABLE_PCT),
+    notable: outside && Math.abs(delta) >= NOTABLE_MIN && (pct === null || Math.abs(pct) >= NOTABLE_PCT),
   };
-}
-
-/** This week by day, Monday first: spent each day (null — not yet), and usually on that weekday (median of the past weeks). */
-export function weekBars(spends: TrendSpend[], today: DayKey): Array<{ day: DayKey; value: number | null; usual: number }> {
-  const monday = weekStartOf(today);
-  return Array.from({ length: 7 }, (_, i) => {
-    const day = addDays(monday, i);
-    const usual = median(Array.from({ length: USUAL_OF.week }, (_, w) => sumIn(spends, { from: addDays(day, -7 * (w + 1)), to: addDays(day, -7 * (w + 1)) })));
-    return { day, value: day > today ? null : sumIn(spends, { from: day, to: day }), usual };
-  });
 }
 
 /** The last `count` months, oldest first ('YYYY-MM'), the current one so far. */
@@ -95,6 +85,15 @@ export function monthBars(spends: TrendSpend[], today: DayKey, count = 12): Arra
   const by = new Map(yms.map((ym) => [ym, 0]));
   for (const s of spends) { const ym = ymOfDay(s.day); if (by.has(ym)) by.set(ym, by.get(ym)! + s.value); }
   return yms.map((ym) => ({ ym, value: by.get(ym)! }));
+}
+
+/** This week by day, Monday first: spent each day so far (null — a day to come). */
+export function thisWeek(spends: TrendSpend[], today: DayKey): Array<number | null> {
+  const monday = weekStartOf(today);
+  return Array.from({ length: 7 }, (_, i) => {
+    const day = addDays(monday, i);
+    return day > today ? null : sumIn(spends, { from: day, to: day });
+  });
 }
 
 /** Spent on average each weekday, Monday first, over the `weeks` full weeks before this one (those since tracking began). */
@@ -108,9 +107,9 @@ export function weekdayHabits(spends: TrendSpend[], today: DayKey, since: DayKey
   return sums.map((v) => (n ? v / n : 0));
 }
 
-/** The merchants of this week / month so far by their spending, most first. */
-export function topMerchants(spends: TrendSpend[], mode: TrendMode, today: DayKey, count = 3): Array<{ key: string | null; name: string; value: number }> {
-  const { cur } = trendWindows(mode, today);
+/** The merchants of this month so far by their spending, most first. */
+export function topMerchants(spends: TrendSpend[], today: DayKey, count = 3): Array<{ key: string | null; name: string; value: number }> {
+  const { cur } = trendWindows(today);
   const by = new Map<string, { key: string | null; name: string; value: number }>();
   for (const s of spends) {
     if (!inWindow(s.day, cur) || !s.merchant) continue;

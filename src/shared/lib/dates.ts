@@ -16,6 +16,9 @@ export const SHORT_MONTHS = ['янв', 'фев', 'мар', 'апр', 'мая', '
 /** by `Date.getDay()`: «до пт» */
 export const WEEKDAYS = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
 
+/** "к четвергу": Sunday first, as WEEKDAYS. */
+export const WEEKDAYS_DAT = ['воскресенью', 'понедельнику', 'вторнику', 'среде', 'четвергу', 'пятнице', 'субботе'];
+
 /** a limit's rhythm in days (a month's is its own length) */
 export const RHYTHM_DAYS = { day: 1, week: 7, '2weeks': 14 } as const;
 
