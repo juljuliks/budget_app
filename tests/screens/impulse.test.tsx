@@ -92,7 +92,8 @@ describe('5.8.7 a category\'s «Динамика»: impulsive purchases of 3 mon
     expect(screen.getByText(/Импульсивные · 5/)).toBeTruthy();
     expect(screen.getByText('Доля импульсивных по месяцам')).toBeTruthy();
     expect(screen.getByText('Где чаще импульсивно')).toBeTruthy();
-    expect(screen.getByText('LUCA ›')).toBeTruthy();
+    // in «Мерчанты · этот месяц» too
+    expect(screen.getAllByText('LUCA ›')).toHaveLength(2);
     expect(after('🥱 Скука', 1)).toEqual(['4 · 40 ₾']);
   });
 });

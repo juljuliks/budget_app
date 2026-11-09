@@ -98,7 +98,7 @@ describe('5.1 a month', () => {
     fireEvent(row, 'longPress', { nativeEvent: { pageX: 200, pageY: 500 } });
     fireEvent(row, 'touchMove', { nativeEvent: { pageX: 280, pageY: 433 } });
     fireEvent(row, 'touchEnd');
-    expect(await screen.findByText('Нажмите на день — сумма и сколько обычно')).toBeTruthy();
+    expect(await screen.findByText('Нажмите на столбик — сумма месяца')).toBeTruthy();
     back();
     fireEvent(await screen.findByText('🚕 Такси'), 'accessibilityAction', { nativeEvent: { actionName: 'spending' } });
     expect(await screen.findByText('Категория · 1')).toBeTruthy();
