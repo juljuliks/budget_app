@@ -186,7 +186,10 @@ export function planView({ ym, currency, items: all, budget, toShown, fromShown,
     // the share set aside only: the spending against it is in the stats
     if (unplanned > 0) {
       systemGroups.push({ title: 'Вне плана', rows: [{
-        key: 'unplanned', name: '🎲 Траты вне плана', value: unplanned, note: 'категории без плана и без категории',
+        key: 'unplanned', name: '🎲 Траты вне плана', value: unplanned,
+        // what a cut of the plan covered this month ("Покрыть перерасход")
+        note: budget?.unplanned_cover_minor
+          ? `категории без плана и без категории · из плана +${money(inShown(budget.unplanned_cover_minor))}` : 'категории без плана и без категории',
       }] });
     }
   } else if (funds.length || saving.length) systemGroups.push({ title: 'Сбережения', rows: [], funds, saving });

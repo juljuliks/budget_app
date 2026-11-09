@@ -393,6 +393,40 @@ describe('the unplanned share of the budget', () => {
     await ensureMonthPlan('2026-11', '2026-10');
     expect(await getPlanBudget('2026-11')).toMatchObject({ amount_minor: 110000, unplanned_pct: 20 });
   });
+
+  test('«Покрыть перерасход»: on top of the share, this month only; what is past it, in the budget\'s currency', async () => {
+    const { addUnplannedCover, unplannedOver } = require('../../src/db/plans');
+    const food = await cat('Еда');
+    const [y, m] = NOW.split('-').map(Number);
+    await setPlanBudget(NOW, 100000, 'GEL', 10);
+    await setPlanAmount(NOW, food, 60000);
+    await spend(14000, null, y, m - 1);
+    expect(await unplannedOver(NOW)).toBe(4000);
+    await addUnplannedCover(NOW, 3000);
+    expect(await getPlanBudget(NOW)).toMatchObject({ unplanned_pct: 10, unplanned_minor: null, unplanned_cover_minor: 3000, plannable_minor: 87000 });
+    expect(await unplannedOver(NOW)).toBe(1000);
+    // "Отменить": never below 0
+    await addUnplannedCover(NOW, -5000);
+    expect((await getPlanBudget(NOW)).unplanned_cover_minor).toBe(0);
+    await addUnplannedCover(NOW, 3000);
+    const [ny, nm] = [m === 12 ? y + 1 : y, m === 12 ? 1 : m + 1];
+    const next = `${ny}-${String(nm).padStart(2, '0')}`;
+    expect(await getPlanBudget(next)).toMatchObject({ unplanned_pct: 10, unplanned_cover_minor: 0, plannable_minor: 90000 });
+  });
+
+  test('«Покрыть из плана»: off a limit, no more than is left of it by its own spending', async () => {
+    const { coverFromLimit } = require('../../src/db/plans');
+    const cafe = await cat('Кафе');
+    const [y, m] = NOW.split('-').map(Number);
+    await setPlanBudget(NOW, 100000, 'GEL', 10);
+    await setPlanAmount(NOW, cafe, 30000);
+    await spend(25000, cafe, y, m - 1);
+    expect(await coverFromLimit(NOW, cafe, 8000)).toEqual({ covered: 5000, was: 30000 });
+    expect(await getPlanBudget(NOW)).toMatchObject({ unplanned_cover_minor: 5000 });
+    expect((await (await getDb()).get('SELECT limit_minor AS l FROM plan_items WHERE ym = ? AND category_id = ?', [NOW, cafe])).l).toBe(25000);
+    // nothing left
+    expect(await coverFromLimit(NOW, cafe, 8000)).toBeNull();
+  });
 });
 
 describe('savings', () => {

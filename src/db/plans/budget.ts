@@ -9,9 +9,9 @@ import { refreshFundItems, ymBefore } from './funds';
 import { refreshRecurringItem } from './recurringItems';
 import { carryItems } from './carry';
 
-/** The unplanned share of a budget, in its currency. */
-export const unplannedOf = (b: Pick<PlanBudget, 'amount_minor' | 'unplanned_pct' | 'unplanned_minor'>) =>
-  b.unplanned_minor ?? b.amount_minor - plannableOf(b.amount_minor, b.unplanned_pct);
+/** The unplanned share of a budget, in its currency, with what this month covered on top of it from the plan. */
+export const unplannedOf = (b: Pick<PlanBudget, 'amount_minor' | 'unplanned_pct' | 'unplanned_minor'> & { unplanned_cover_minor?: number }) =>
+  (b.unplanned_minor ?? b.amount_minor - plannableOf(b.amount_minor, b.unplanned_pct)) + (b.unplanned_cover_minor ?? 0);
 
 /**
  * Creates the month's plan on first access by carrying items over from the latest earlier
@@ -88,10 +88,12 @@ export async function carryIn(ym: string, currency: Currency): Promise<PlanBudge
 
 export async function storedBudget(ym: string): Promise<PlanBudget | null> {
   const db = await getDb();
-  const row = await db.get<{ budget_minor: number | null; budget_currency: string | null; unplanned_pct: number; to_savings: number; locked_minor: number; unplanned_minor: number | null; locked_is_max: number }>(
-    'SELECT budget_minor, budget_currency, unplanned_pct, to_savings, locked_minor, unplanned_minor, locked_is_max FROM plan_months WHERE ym = ?', [ym]);
+  const row = await db.get<{
+    budget_minor: number | null; budget_currency: string | null; unplanned_pct: number; to_savings: number; locked_minor: number; unplanned_minor: number | null;
+    locked_is_max: number; unplanned_cover_minor: number;
+  }>('SELECT budget_minor, budget_currency, unplanned_pct, to_savings, locked_minor, unplanned_minor, locked_is_max, unplanned_cover_minor FROM plan_months WHERE ym = ?', [ym]);
   if (row?.budget_minor == null) return null;
-  const share = unplannedOf({ amount_minor: row.budget_minor, unplanned_pct: row.unplanned_pct, unplanned_minor: row.unplanned_minor });
+  const share = unplannedOf({ amount_minor: row.budget_minor, unplanned_pct: row.unplanned_pct, unplanned_minor: row.unplanned_minor, unplanned_cover_minor: row.unplanned_cover_minor });
   const currency = asCurrency(row.budget_currency);
   const carry = await carryIn(ym, currency);
   const lockedIsMax = row.locked_is_max === 1;
@@ -105,7 +107,7 @@ export async function storedBudget(ym: string): Promise<PlanBudget | null> {
     : row.budget_minor - share - locked_minor + carryDelta;
   return {
     amount_minor: row.budget_minor, currency, unplanned_pct: row.unplanned_pct,
-    unplanned_minor: row.unplanned_minor, locked_minor, locked_is_max: lockedIsMax,
+    unplanned_minor: row.unplanned_minor, unplanned_cover_minor: row.unplanned_cover_minor, locked_minor, locked_is_max: lockedIsMax,
     plannable_minor,
     to_savings: row.to_savings === 1, carry,
   };
@@ -191,8 +193,8 @@ export async function setPlanBudget(
 ) {
   await ensureMonthPlan(ym);
   const db = await getDb();
-  const stored = await db.get<{ p: number; s: number; l: number; u: number | null; m: number }>(
-    'SELECT unplanned_pct AS p, to_savings AS s, locked_minor AS l, unplanned_minor AS u, locked_is_max AS m FROM plan_months WHERE ym = ?', [ym]);
+  const stored = await db.get<{ p: number; s: number; l: number; u: number | null; m: number; c: number }>(
+    'SELECT unplanned_pct AS p, to_savings AS s, locked_minor AS l, unplanned_minor AS u, locked_is_max AS m, unplanned_cover_minor AS c FROM plan_months WHERE ym = ?', [ym]);
   const own = unplannedMinor === undefined ? stored?.u ?? null : unplannedMinor === null ? null : Math.max(0, unplannedMinor);
   const pct = unplannedPct ?? stored?.p ?? 0;
   const savings = toSavings ?? (stored ? stored.s === 1 : true);
@@ -202,7 +204,7 @@ export async function setPlanBudget(
   if (budgetMinor !== null && !isMax) {
     const planned = await plannedTotal(ym, undefined, currency);
     const carry = await carryIn(ym, currency);
-    const plannable = budgetMinor - unplannedOf({ amount_minor: budgetMinor, unplanned_pct: pct, unplanned_minor: own }) - locked
+    const plannable = budgetMinor - unplannedOf({ amount_minor: budgetMinor, unplanned_pct: pct, unplanned_minor: own, unplanned_cover_minor: stored?.c }) - locked
       + (carry?.plus_minor ?? 0) - (carry?.debt_minor ?? 0);
     if (plannable < planned) throw new OverBudgetError(plannable, planned, currency);
   }

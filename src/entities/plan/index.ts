@@ -5,6 +5,7 @@ export { default as PlanAmountModal } from './ui/PlanAmountModal';
 export type { PlanAmountTarget } from './ui/PlanAmountModal';
 export { contributionsLeft, fundProgress, isSaved } from './model/fundTexts';
 export { askTakeLocked } from './ui/askTakeLocked';
+export { coverWithUndo } from './ui/coverUnplanned';
 export { default as SavingFields } from './ui/SavingFields';
 export { usePaymentSaving } from './model/usePaymentSaving';
 export type { SavingChoice } from './model/usePaymentSaving';

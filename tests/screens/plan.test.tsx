@@ -395,6 +395,41 @@ describe('6.3 the categories in the plan', () => {
   });
 });
 
+describe('6.3.12 a limit cut while the spending outside the plan is past its share', () => {
+  // the share 300 ₾, outside the plan 380 ₾ spent (Такси, Развлечения, a transfer): 80 ₾ past it
+  beforeEach(() => openPlan());
+  const cut = async (to: string) => {
+    await tap('Изменить: ☕️ Кафе и рестораны');
+    fireEvent.changeText(await screen.findByDisplayValue('310'), to);
+    await tap('Сохранить');
+  };
+
+  test('«Покрыть»: as much as is past the share, this month; «Отменить» — as it was', async () => {
+    await cut('200');
+    expect(await screen.findByText('Покрыть перерасход вне плана?')).toBeTruthy();
+    expect(screen.getByText('Траты вне плана больше доли на 80 ₾. Из освободившихся 110 ₾ им можно отдать 80 ₾ — иначе всё уйдёт в сбережения.')).toBeTruthy();
+    await tap('Покрыть 80 ₾');
+    expect(await screen.findByText('Перерасход вне плана покрыт')).toBeTruthy();
+    expect(await screen.findByText('категории без плана и без категории · из плана +80 ₾')).toBeTruthy();
+    expect(after('🎲 Траты вне плана', 2)).toEqual(['категории без плана и без категории · из плана +80 ₾', '380 ₾']);
+    await tap('Отменить');
+    expect(await screen.findByText('Покрытие перерасхода отменено')).toBeTruthy();
+    expect(await screen.findByText('категории без плана и без категории')).toBeTruthy();
+    expect(await item('Кафе и рестораны')).toMatchObject({ a: 20000 });
+  });
+  test('«В сбережения»: the share as it was', async () => {
+    await cut('290');
+    expect(await screen.findByText('Траты вне плана больше доли на 80 ₾. Освободившиеся 20 ₾ можно отдать им — иначе всё уйдёт в сбережения.')).toBeTruthy();
+    await tap('В сбережения');
+    expect(after('🎲 Траты вне плана', 2)).toEqual(['категории без плана и без категории', '300 ₾']);
+  });
+  test('raised, or a payment: not asked', async () => {
+    await cut('400');
+    expect(await screen.findByText('План «☕️ Кафе и рестораны» сохранён')).toBeTruthy();
+    expect(screen.queryByText('Покрыть перерасход вне плана?')).toBeNull();
+  });
+});
+
 describe('6.3.2 adding to the plan, step by step', () => {
   beforeEach(() => openPlan());
 
