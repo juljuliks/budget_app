@@ -7,12 +7,12 @@ import type { PressAction } from '@/shared/ui/PressMenu';
 
 type OpenTransactions = ReturnType<typeof useOpenCategoryTransactions>;
 
-/** The texts of the long press's buttons and of the hint under the month's total. */
+/** The texts of a row's menu buttons and of the hint under the month's total. */
 export const ACTION_SPENDING = 'Операции';
 export const ACTION_PLAN = 'План';
 export const ACTION_TO_PLAN = 'В план';
 export const ACTION_TREND = 'Динамика';
-export const LONG_PRESS_HINT = 'Удерживайте категорию — операции, план, динамика';
+export const ROW_MENU_HINT = 'Нажмите на категорию — операции, план, динамика';
 
 /**
  * A category's row's long press (the only way in: a tap does nothing): its operations of the month, its amount in the

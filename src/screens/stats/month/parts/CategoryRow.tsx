@@ -34,7 +34,7 @@ export default function CategoryRow({ stat: shownStat, total, currency: shown, e
   /** the current month only: the norm window around today */
   now?: CategoryNorm; monthToDate: number;
   onAddToPlan?: () => void;
-  /** long press: these as buttons over the finger (its operations, its plan, its dynamics); none — the tap only */
+  /** a tap or a long press: these as buttons over the finger (its operations, its plan, its dynamics) */
   actions?: PressAction[];
   /** "Жизнь: Покупки": outside the plan, where the rows aren't under their type's section */
   withType?: boolean;
@@ -58,7 +58,7 @@ export default function CategoryRow({ stat: shownStat, total, currency: shown, e
   const rhythm = !fixed && stat.plan_norm && stat.plan_norm !== 'month' ? stat.plan_norm : null;
 
   return (
-    <PressMenu style={styles.row} actions={actions ?? []} accessibilityHint="Удерживайте: операции, план, динамика">
+    <PressMenu style={styles.row} actions={actions ?? []} accessibilityHint="Операции, план, динамика">
       <View style={styles.rowTop}>
         <View style={[styles.dot, { backgroundColor: stat.color }]} />
         <Text style={styles.rowName} numberOfLines={1}>{withType ? categoryLabel(stat) : `${stat.emoji || ''} ${stat.name}`.trim()}</Text>

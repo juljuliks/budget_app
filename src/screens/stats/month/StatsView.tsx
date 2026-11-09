@@ -30,7 +30,7 @@ import ComingMonth from './parts/ComingMonth';
 import BudgetEditSheet from './parts/BudgetEditSheet';
 import FundStatRow, { fundSpentOf } from './parts/FundStatRow';
 import { savingsSection } from './parts/savingsSection';
-import { categoryActions, fundActions, LONG_PRESS_HINT } from './parts/rowActions';
+import { categoryActions, fundActions, ROW_MENU_HINT } from './parts/rowActions';
 import { fundsSection, spentFunds, typeSections, unplannedSection } from './parts/sections';
 import { styles } from './parts/styles';
 
@@ -138,7 +138,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
         <Text style={styles.hint}>Составьте план на месяц, чтобы видеть, сколько осталось по категориям.</Text>
       )}
 
-      {stats.categories.length > 0 || spentFunds(stats).length ? <Text style={styles.longPressHint}>{LONG_PRESS_HINT}</Text> : null}
+      {stats.categories.length > 0 || spentFunds(stats).length ? <Text style={styles.longPressHint}>{ROW_MENU_HINT}</Text> : null}
       {savingsSection(savings.section, savings.currency, {
         less: () => setLessOpen(true),
         close: openMonthClose,
@@ -147,10 +147,9 @@ export default function StatsView({ year, month, currency }: { year: number; mon
         onLongPressLocked: () => setBudgetOpen(true),
         // a fund spent from: said under its part; without one there — in "Копилки"
         fundSpent: fundSpentOf(stats, ym, hidden),
-        openFundOperations: (id) => openTransactions(id, monthDays(ym)),
       })}
       {fundsSection(stats, (f) => (
-        <FundStatRow key={f.category_id} f={f} ym={ym} currency={stats.currency} hidden={hidden} openTransactions={openTransactions} actions={fundActions(f.category_id, ym, openTransactions, () => setFundSheet({ id: f.category_id, label: `${f.emoji || ''} ${f.name}`.trim() }))} />
+        <FundStatRow key={f.category_id} f={f} ym={ym} currency={stats.currency} hidden={hidden} actions={fundActions(f.category_id, ym, openTransactions, () => setFundSheet({ id: f.category_id, label: `${f.emoji || ''} ${f.name}`.trim() }))} />
       ), savings.section)}
       {stats.categories.length === 0 && !spentFunds(stats).length ? <Text style={styles.hint}>В этом месяце трат нет.</Text> : typeSections(stats, split.groups, rowOf)}
       {unplannedSection(stats, split, share, rowOf, hidden)}

@@ -21,13 +21,12 @@ type Open = {
   close: (ym: string) => void;
   /** saving-subscription part: long press opens its sheet */
   longPressCategory?: (id: number, name: string, kind: 'saving') => void;
-  /** a fund's part: long press — the menu over the finger (rowActions' fundActions) */
+  /** a fund's part: a tap or a long press — the menu over the finger (rowActions' fundActions) */
   fundActions?: (id: number, name: string) => PressAction[];
   /** long press on the 🔒 «Отложить сразу» row: opens the month's budget sheet */
   onLongPressLocked?: () => void;
-  /** a fund spent from this month: what is shown under its part (FundSpent); a tap on the part — its operations */
+  /** a fund spent from this month: what is shown under its part (FundSpent) */
   fundSpent?: (id: number) => React.ReactNode;
-  openFundOperations?: (id: number) => void;
 };
 
 /** "now / plan ₾ (%)"; not known yet — "? / plan ₾". "Скрыть суммы": the % alone. */
@@ -68,9 +67,9 @@ function savingsHeaderTotal(now: number | null, plan: number, budget: number | n
   );
 }
 
-function Part({ x, currency, onLess, onLongPress, onPress, spent, actions }: {
-  x: SavingsPart; currency: string; onLess: () => void; onLongPress?: () => void; onPress?: () => void; spent?: React.ReactNode;
-  /** a fund's: the long press's menu instead of onLongPress */
+function Part({ x, currency, onLess, onLongPress, spent, actions }: {
+  x: SavingsPart; currency: string; onLess: () => void; onLongPress?: () => void; spent?: React.ReactNode;
+  /** a fund's: the menu of a tap or a long press instead of onLongPress */
   actions?: PressAction[];
 }) {
   const status = (
@@ -95,9 +94,9 @@ function Part({ x, currency, onLess, onLongPress, onPress, spent, actions }: {
     </>
   );
   return actions ? (
-    <PressMenu style={styles.row} actions={actions} onPress={onPress} accessibilityHint="Удерживайте: операции, план, динамика">{body}</PressMenu>
+    <PressMenu style={styles.row} actions={actions} accessibilityHint="Операции, план, динамика">{body}</PressMenu>
   ) : (
-    <TouchableOpacity style={styles.row} onPress={onPress} onLongPress={onLongPress} disabled={!onLongPress && !onPress} accessibilityLabel={x.name}>
+    <TouchableOpacity style={styles.row} onLongPress={onLongPress} disabled={!onLongPress} accessibilityLabel={x.name}>
       {body}
     </TouchableOpacity>
   );
@@ -123,8 +122,7 @@ export function savingsSection(s: SavingsSection | null, currency: string, open:
             : (kind === 'saving' && x.categoryId !== undefined && open.longPressCategory ? () => open.longPressCategory!(x.categoryId!, x.name, kind) : undefined);
           const actions = kind === 'fund' && x.categoryId !== undefined ? open.fundActions?.(x.categoryId, x.name) : undefined;
           const spent = kind === 'fund' && x.categoryId !== undefined ? open.fundSpent?.(x.categoryId) : undefined;
-          const press = spent && open.openFundOperations ? () => open.openFundOperations!(x.categoryId!) : undefined;
-          return <Part key={x.key} x={x} currency={currency} onLess={open.less} onLongPress={lp} onPress={press} spent={spent} actions={actions} />;
+          return <Part key={x.key} x={x} currency={currency} onLess={open.less} onLongPress={lp} spent={spent} actions={actions} />;
         })}
         {s.past > 0 ? (
           <TouchableOpacity style={styles.row} onPress={open.less} accessibilityRole="button" accessibilityLabel="Из прошлых сбережений: что съело сбережения">
