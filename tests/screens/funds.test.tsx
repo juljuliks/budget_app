@@ -156,9 +156,11 @@ describe('6.5 funds', () => {
     // a fund nothing was spent from: its contribution only
     expect(screen.getAllByText('🔧 Ремонт')).toHaveLength(1);
     expect(screen.getAllByText(/из копилки$/)).toHaveLength(1);
-    // a tap on it: its operations of the month
+    // a tap on it: the buttons of its long press, «Операции» — its operations of the month
     await tap('👕 Одежда');
-    expect(await screen.findByText('ZARA')).toBeTruthy();
+    fireEvent.press(await screen.findByLabelText('Операции'));
+    expect(await screen.findByText('Категория · 1')).toBeTruthy();
+    expect(screen.getByText('ZARA')).toBeTruthy();
   });
 
   test('the stats: a long press on a fund — «Операции», «План» (its sheet), «Динамика», as a category\'s', async () => {

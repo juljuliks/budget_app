@@ -2,7 +2,6 @@ import React from 'react';
 import { Text, View } from 'react-native';
 import type { FundStat, MonthStats } from '@/db/plans';
 import { formatWithCurrency } from '@/shared/lib/money';
-import { monthDays } from '@/shared/lib/dateRange';
 import { MONTHS_GEN } from '@/shared/lib/dates';
 import { MaskedTotal } from '@/shared/ui/Masked';
 import PressMenu, { PressAction } from '@/shared/ui/PressMenu';
@@ -10,8 +9,7 @@ import { styles } from './styles';
 
 type Props = {
   f: FundStat; ym: string; currency: string; hidden: boolean;
-  openTransactions: (categoryId: number | null, days: ReturnType<typeof monthDays>) => void;
-  /** the long press's menu: «Операции», «План», «Динамика» */
+  /** a tap's or a long press's menu: «Операции», «План», «Динамика» */
   actions: PressAction[];
 };
 
@@ -44,17 +42,17 @@ export const fundSpentOf = (stats: MonthStats, ym: string, hidden: boolean) => (
 
 /**
  * A fund spent from this month, not in «Сбережения» (a month without a budget or a contribution): how much ("1 200 ₾ из копилки"); spent past what it had — "Не хватило 50 ₾ — взяты из
- * бюджета октября" (in its own currency). What it has is the plan's and its card's. A tap shows its operations of the month; a long press — the
+ * бюджета октября" (in its own currency). What it has is the plan's and its card's. A tap or a long press — the
  * menu over the finger.
  */
-export default function FundStatRow({ f, ym, currency, hidden, openTransactions, actions }: Props) {
+export default function FundStatRow({ f, ym, currency, hidden, actions }: Props) {
   const money = (minor: number) => formatWithCurrency(minor, f.own?.currency ?? currency);
   // a fund in another currency than the stats': in its own
   const spent = f.own?.spent_minor ?? f.spent_minor;
   const shortage = f.own?.shortage_minor ?? f.shortage_minor;
   const month = MONTHS_GEN[Number(ym.slice(5)) - 1];
   return (
-    <PressMenu style={styles.row} actions={actions} onPress={() => openTransactions(f.category_id, monthDays(ym))} accessibilityHint="Удерживайте: операции, план, динамика">
+    <PressMenu style={styles.row} actions={actions} accessibilityHint="Операции, план, динамика">
       <View style={styles.rowTop}>
         <View style={[styles.dot, { backgroundColor: f.color }]} />
         <Text style={styles.rowName} numberOfLines={1}>{`${f.emoji || ''} ${f.name}`.trim()}</Text>

@@ -55,11 +55,11 @@ describe('5.1 a month', () => {
     expect(screen.getByText('+15 ₾')).toBeTruthy();
   });
 
-  test('a tap on a category does nothing; its «Операции» (long press) — its operations of the month; back returns', async () => {
-    await tap('👕 Одежда');
+  test('5.1.12 a tap on a category: the buttons of its long press; «Операции» — its operations of the month; back returns', async () => {
+    fireEvent.press(await screen.findByText('👕 Одежда'), { nativeEvent: { pageX: 200, pageY: 500 } });
     expect(screen.queryByText('Категория · 1')).toBeNull();
-    fireEvent(screen.getByText('👕 Одежда'), 'longPress', { nativeEvent: { pageX: 200, pageY: 500 } });
-    fireEvent.press(await screen.findByLabelText('Операции'));
+    expect(await screen.findByLabelText('Динамика')).toBeTruthy();
+    fireEvent.press(screen.getByLabelText('Операции'));
     expect(await screen.findByText('Категория · 1')).toBeTruthy();
     expect(screen.getByText('ZARA')).toBeTruthy();
     expect(screen.queryByText('SPAR')).toBeNull();
@@ -74,7 +74,7 @@ describe('5.1 a month', () => {
   });
 
   test('5.1.20 a long press: «Операции», «В план» (an unplanned one), «Динамика» over the finger; «В план» offers what it spent', async () => {
-    expect(screen.getByText('Удерживайте категорию — операции, план, динамика')).toBeTruthy();
+    expect(screen.getByText('Нажмите на категорию — операции, план, динамика')).toBeTruthy();
     fireEvent(await screen.findByText('🚕 Такси'), 'longPress', { nativeEvent: { pageX: 200, pageY: 500 } });
     expect(await screen.findByLabelText('Операции')).toBeTruthy();
     expect(screen.getByLabelText('Динамика')).toBeTruthy();
