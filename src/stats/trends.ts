@@ -78,6 +78,9 @@ export function trendOf(spends: TrendSpend[], today: DayKey, since: DayKey | nul
   };
 }
 
+/** This month's spending so far: known whether or not there's a usual to put it against. */
+export const spentThisMonth = (spends: TrendSpend[], today: DayKey) => sumIn(spends, trendWindows(today).cur);
+
 /** The last `count` months, oldest first ('YYYY-MM'), the current one so far. */
 export function monthBars(spends: TrendSpend[], today: DayKey, count = 12): Array<{ ym: string; value: number }> {
   const d = parseDayKey(today);
@@ -105,20 +108,6 @@ export function weekdayHabits(spends: TrendSpend[], today: DayKey, since: DayKey
   const sums = Array(7).fill(0);
   for (const s of spends) if (s.day >= from && s.day < monday) sums[(parseDayKey(s.day).getDay() + 6) % 7] += s.value;
   return sums.map((v) => (n ? v / n : 0));
-}
-
-/** The merchants of this month so far by their spending, most first. */
-export function topMerchants(spends: TrendSpend[], today: DayKey, count = 3): Array<{ key: string | null; name: string; value: number }> {
-  const { cur } = trendWindows(today);
-  const by = new Map<string, { key: string | null; name: string; value: number }>();
-  for (const s of spends) {
-    if (!inWindow(s.day, cur) || !s.merchant) continue;
-    const id = s.merchantKey ?? s.merchant;
-    const m = by.get(id) ?? { key: s.merchantKey, name: s.merchant, value: 0 };
-    m.value += s.value;
-    by.set(id, m);
-  }
-  return [...by.values()].filter((m) => m.value > 0).sort((a, b) => b.value - a.value).slice(0, count);
 }
 
 /** Over the full months of `bars` (not the current one) since tracking began: the average, the least and the most. */

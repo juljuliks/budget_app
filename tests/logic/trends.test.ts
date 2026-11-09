@@ -1,5 +1,5 @@
 import type { TrendSpend, TrendsData } from '../../src/db/plans';
-import { monthBars, monthsSummary, thisWeek, topMerchants, trendOf, trendWindows, weekdayHabits, weekStartOf } from '../../src/stats/trends';
+import { monthBars, monthsSummary, spentThisMonth, thisWeek, trendOf, trendWindows, weekdayHabits, weekStartOf } from '../../src/stats/trends';
 import { pctText, trendLists, whyText } from '../../src/screens/stats/trends/model/trendsView';
 import { categoryTrendView } from '../../src/screens/stats/trends/model/categoryTrendView';
 
@@ -56,6 +56,12 @@ describe('trendOf', () => {
     const early = ['2026-09-02', '2026-07-01', '2026-04-02'].map((d) => spend(d, 6000));
     expect(trendOf([...early, spend('2026-10-02', 5000)], '2026-10-02', '2026-01-01')!.notable).toBe(false);
     expect(trendOf(cafe, TODAY, '2026-08-01')).toBeNull();
+  });
+
+  test('this month so far: known with no usual yet too (the page\'s head isn\'t 0)', () => {
+    const cafe = [spend('2026-09-20', 9000), spend('2026-10-03', 4000), spend('2026-10-29', 1500), spend('2026-10-29', -500)];
+    expect(trendOf(cafe, TODAY, '2026-09-01')).toBeNull();
+    expect(spentThisMonth(cafe, TODAY)).toBe(5000);
   });
 
   test('a small change, in % or in money, is not shown', () => {
@@ -128,11 +134,6 @@ describe('bars', () => {
     expect(h[2]).toBe(0);
   });
 
-  test('the merchants of the period, most first', () => {
-    // SPAR: last month
-    const m = topMerchants([spend('2026-10-27', 4000, 'BURGER HOUSE'), spend('2026-10-28', 3000, 'GLOVO'), spend('2026-10-29', 1500, 'GLOVO'), spend('2026-09-20', 9000, 'SPAR')], TODAY);
-    expect(m).toEqual([{ key: 'GLOVO', name: 'GLOVO', value: 4500 }, { key: 'BURGER HOUSE', name: 'BURGER HOUSE', value: 4000 }]);
-  });
 });
 
 describe('the lists and a category page', () => {

@@ -1,20 +1,22 @@
 import React, { useState } from 'react';
 import { Text, View } from 'react-native';
-import { MerchantLink } from '@/entities/merchant';
+import type { Currency } from '@/db/fx';
 import Masked from '@/shared/ui/Masked';
 import { useHideAmounts } from '@/shared/settings/hideAmounts';
 import type { CategoryTrendView } from '../model/categoryTrendView';
 import { WEEKDAYS_DAT } from '@/shared/lib/dates';
-import { AVERAGE, BY_WEEKDAY, LEAST, MERCHANTS, MOST, TOTAL, WEEK_LEGEND, WHY } from '../texts';
+import { AVERAGE, BY_WEEKDAY, LEAST, MOST, TOTAL, WEEK_LEGEND, WHY } from '../texts';
+import CategoryMerchants from './CategoryMerchants';
 import { detailStyles as s } from './detailStyles';
 import TrendBars from './TrendBars';
 
 /**
  * Under a category's chart: why it moved, its weekdays (this week so far against the usual by the same days, this
- * week's days over the usual ones — a tap says a day's), its months (average, total, least, most), its merchants.
+ * week's days over the usual ones — a tap says a day's), its months (average, total, least, most), its merchants (this
+ * month first).
  */
-export default function CategoryTrendDetails({ v, why, money }: {
-  v: NonNullable<CategoryTrendView>; why: string | null; money: (minor: number) => string;
+export default function CategoryTrendDetails({ v, why, currency, money }: {
+  v: NonNullable<CategoryTrendView>; why: string | null; currency: Currency; money: (minor: number) => string;
 }) {
   const [day, setDay] = useState<number | null>(null);
   const hidden = useHideAmounts();
@@ -50,17 +52,7 @@ export default function CategoryTrendDetails({ v, why, money }: {
           {cell(MOST, `${v.summary.most.name} · ${money(v.summary.most.value)}`)}
         </View>
       ) : null}
-      {v.merchants.length > 0 ? (
-        <View style={s.block}>
-          <Text style={s.label}>{MERCHANTS}</Text>
-          {v.merchants.map((m) => (
-            <View key={m.key ?? m.name} style={s.merchant}>
-              {m.key ? <MerchantLink merchantKey={m.key} label={m.name} containerStyle={s.merchantName} /> : <Text style={[s.value, s.merchantName]}>{m.name}</Text>}
-              <Masked style={s.value}>{money(m.value)}</Masked>
-            </View>
-          ))}
-        </View>
-      ) : null}
+      <CategoryMerchants categoryId={v.category.id} currency={currency} money={money} initial="month" />
     </>
   );
 }
