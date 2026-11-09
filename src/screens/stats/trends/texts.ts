@@ -20,6 +20,9 @@ export const AVERAGE = 'В среднем в месяц';
 export const TOTAL = 'За 12 месяцев';
 export const LEAST = 'Меньше всего';
 export const MOST = 'Больше всего';
-export const MERCHANTS = 'Мерчанты · этот месяц';
+export const MERCHANTS = 'Мерчанты';
+/** over a category's merchants: this month, this year (from January 1st), all the time */
+export const MERCHANT_PERIODS = [['month', 'Месяц'], ['year', 'Год'], ['all', 'Всё время']] as const;
+export const NO_MERCHANTS = 'Трат у мерчантов нет';
 export const TAP_BAR = 'Нажмите на столбик — сумма месяца';
 export const SPENT_WHEN = 'в этом месяце';

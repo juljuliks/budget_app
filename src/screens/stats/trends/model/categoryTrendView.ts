@@ -1,9 +1,10 @@
-// One category's page of «Динамика трат»: its spending against the usual, the chart, the weekdays, the months, the merchants.
+// One category's page of «Динамика трат»: its spending against the usual, the chart, the weekdays, the months (its
+// merchants are read apart: useCategoryMerchants).
 import { categoryLabel } from '@/db/categories';
 import type { TrendsData } from '@/db/plans';
 import { MONTHS_NOM } from '@/shared/lib/dates';
 import type { DayKey } from '@/shared/lib/dateRange';
-import { monthBars, monthsSummary, thisWeek, topMerchants, trendOf, trendWindows, weekdayHabits } from '@/stats/trends';
+import { monthBars, monthsSummary, spentThisMonth, thisWeek, trendOf, trendWindows, weekdayHabits } from '@/stats/trends';
 import { trendKind } from '@/stats/trendKind';
 import { Bar, barsOf, MONDAY_FIRST, spendsByCategory } from './trendsView';
 
@@ -41,6 +42,8 @@ export function categoryTrendView(data: TrendsData, id: number, today: DayKey) {
     months: barsOf(spends, today).map((b): Bar => ({ ...b, tone: b.tone === 'now' ? 'now' : 'other' })),
     label: categoryLabel(category),
     trend,
+    /** this month so far (the head): also with no usual yet (`trend` null) */
+    spent: spentThisMonth(spends, today),
     bars: barsOf(spends, today),
     window: trendWindows(today).cur,
     habits: week > 0 ? {
@@ -52,7 +55,6 @@ export function categoryTrendView(data: TrendsData, id: number, today: DayKey) {
       share: Math.round((top.reduce((a, i) => a + habits[i], 0) / week) * 100),
     } : null,
     summary: summary ? { ...summary, least: { ...summary.least, name: monthName(summary.least.ym) }, most: { ...summary.most, name: monthName(summary.most.ym) } } : null,
-    merchants: topMerchants(spends, today),
     /** operations of the period: its "N операций · X ₾ ›" */
     count: spends.filter((s) => s.value > 0 && s.day >= trendWindows(today).cur.from).length,
   };

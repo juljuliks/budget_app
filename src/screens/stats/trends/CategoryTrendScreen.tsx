@@ -65,7 +65,7 @@ export default function CategoryTrendScreen({ route, navigation }: Props) {
     <ScrollView style={styles.screen} contentContainerStyle={[styles.content, styles.pad]}>
       {v.kind === 'few' ? <Text style={s.few}>{FEW_DATA}</Text> : null}
       <View style={s.head}>
-        <Text><Masked style={s.spent}>{money(t?.cur ?? 0)}</Masked><Text style={s.spentWhen}>{` ${SPENT_WHEN}`}</Text></Text>
+        <Text><Masked style={s.spent}>{money(v.spent)}</Masked><Text style={s.spentWhen}>{` ${SPENT_WHEN}`}</Text></Text>
         {t && v.category.compared && !hidden ? <Text style={s.delta}>{`${t.delta >= 0 ? '+' : '−'}${money(t.delta)}`}</Text> : null}
       </View>
       <Text style={s.line}>{line}</Text>
@@ -73,7 +73,7 @@ export default function CategoryTrendScreen({ route, navigation }: Props) {
         <TrendBars bars={v.bars} color={v.category.color} height={140} picked={picked} onPick={setPicked} accessibilityLabelOf={barName} />
       </View>
       <Text style={s.point}>{hidden && bar ? barName(bar) : point}</Text>
-      <CategoryTrendDetails v={v} why={t && v.category.compared && !hidden ? whyText(t, money) : null} money={money} />
+      <CategoryTrendDetails v={v} why={t && v.category.compared && !hidden ? whyText(t, money) : null} currency={currency} money={money} />
       {impulse ? <ImpulseTrend v={impulse} categoryId={id} money={money} /> : null}
       <View style={s.operations}>
         <TextLink

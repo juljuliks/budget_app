@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Text, View } from 'react-native';
-import { MerchantLink } from '@/entities/merchant';
+import type { Currency } from '@/db/fx';
 import { MONTHS_GEN, MONTHS_PREP, monthYear, SHORT_MONTHS } from '@/shared/lib/dates';
 import { plural } from '@/shared/lib/format';
 import { showOperationsFrom } from '@/shared/navigation/navigation';
@@ -10,6 +10,7 @@ import { colors } from '@/shared/theme/theme';
 import type { RareTrend as Rare } from '@/stats/trendKind';
 import type { Bar } from '../model/trendsView';
 import { detailStyles as s } from './detailStyles';
+import CategoryMerchants from './CategoryMerchants';
 import TrendBars from './TrendBars';
 
 export const shortDay = (k: string) => `${Number(k.slice(8))} ${SHORT_MONTHS[Number(k.slice(5, 7)) - 1]}`;
@@ -20,10 +21,10 @@ const LIST = 5;
 /**
  * «Динамика» of a rare category (1–2 operations a month or fewer): this month, the 12 months, and — the amount nearly
  * the same (rent) — «Подорожал», when it's charged, each payment against the one before; amounts apart (a dentist) —
- * how often, its merchants. No weeks, no weekdays, no «Почему».
+ * how often, its merchants (this year first). No weeks, no weekdays, no «Почему».
  */
-export default function RareTrend({ r, bars, color, categoryId, money }: {
-  r: Rare; bars: Bar[]; color: string; categoryId: number; money: (minor: number) => string;
+export default function RareTrend({ r, bars, color, categoryId, currency, money }: {
+  r: Rare; bars: Bar[]; color: string; categoryId: number; currency: Currency; money: (minor: number) => string;
 }) {
   const [picked, setPicked] = useState<number | null>(null);
   const cur = r.bars[r.bars.length - 1];
@@ -32,13 +33,6 @@ export default function RareTrend({ r, bars, color, categoryId, money }: {
   const cell = (title: string, value: string) => (
     <View style={s.cell}><Text style={s.label}>{title}</Text><Masked style={s.value}>{value}</Masked></View>
   );
-  const merchants = new Map<string, { key: string | null; name: string; value: number }>();
-  for (const p of r.payments) {
-    if (!p.merchant) continue;
-    const m = merchants.get(p.merchantKey ?? p.merchant) ?? { key: p.merchantKey, name: p.merchant, value: 0 };
-    m.value += p.value;
-    merchants.set(p.merchantKey ?? p.merchant, m);
-  }
   const bar = picked === null ? null : r.bars[picked];
   return (
     <>
@@ -88,17 +82,7 @@ export default function RareTrend({ r, bars, color, categoryId, money }: {
           ) : null}
         </View>
       ) : null}
-      {!r.stable && merchants.size ? (
-        <View style={s.block}>
-          <Text style={s.label}>Мерчанты за 12 месяцев</Text>
-          {[...merchants.values()].sort((a, b) => b.value - a.value).slice(0, 3).map((m) => (
-            <View key={m.key ?? m.name} style={s.merchant}>
-              {m.key ? <MerchantLink merchantKey={m.key} label={m.name} containerStyle={s.merchantName} /> : <Text style={[s.value, s.merchantName]}>{m.name}</Text>}
-              <Masked style={s.value}>{money(m.value)}</Masked>
-            </View>
-          ))}
-        </View>
-      ) : null}
+      {!r.stable ? <CategoryMerchants categoryId={categoryId} currency={currency} money={money} initial="year" /> : null}
     </>
   );
 }

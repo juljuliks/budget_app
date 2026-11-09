@@ -1,7 +1,7 @@
 // 5.8: «Динамика трат» — this month against the usual by the same days, a category's page, «+N% к обычному»
 // under the month's rows. Today: Thursday 15 October 2026 (setup.ts).
 import { within } from '@testing-library/react-native';
-import { back, openApp, openSettings, rowOf, screen, tap } from './app';
+import { back, openApp, openSettings, rowOf, screen, tap, texts } from './app';
 import { buy, on, planned } from '../e2e/seeds';
 import { findCategoryByName } from '../../src/db/categories';
 
@@ -58,7 +58,7 @@ describe('5.8 Динамика трат', () => {
     expect(await screen.findByText('Нажмите на столбик — сумма месяца')).toBeTruthy();
     await tap('сентябрь 2026');
     expect(screen.getByText('сентябрь 2026: 350 ₾')).toBeTruthy();
-    expect(screen.getByText('Мерчанты · этот месяц')).toBeTruthy();
+    expect(screen.getByText('Мерчанты')).toBeTruthy();
     expect(screen.getByText('WOLT ›')).toBeTruthy();
     expect(screen.getByText('3 операции в этом месяце ›')).toBeTruthy();
     // its weekdays: this week (Кафе 50 ₾ on Tuesday) over the usual ones, the week so far against them; a tap — a day's
@@ -79,12 +79,39 @@ describe('5.8 Динамика трат', () => {
     expect(await screen.findByText('Нажмите на столбик — сумма месяца')).toBeTruthy();
   });
 
+  test('5.8.9 a category\'s merchants: this month, this year, all the time', async () => {
+    await openTrends(async () => {
+      await withHistory();
+      // August 2025: before this year
+      await buy('GLOVO', 900, on(10, 13, 14), (await findCategoryByName('Кафе и рестораны', null))!.id);
+    });
+    await tap('Все категории ›');
+    await tap('☕️ Кафе и рестораны');
+    expect(await screen.findByText('Мерчанты')).toBeTruthy();
+    const list = () => { const t = texts(); return t.slice(t.indexOf('Всё время') + 1, t.indexOf('Всё время') + 7); };
+    // this month (BARI on the 1st, WOLT 40 + 50)
+    expect(await screen.findByText('BARI ›')).toBeTruthy();
+    expect(list().slice(0, 4)).toEqual(['BARI ›', '300 ₾', 'WOLT ›', '90 ₾']);
+    await tap('Год');
+    // + WOLT 350 in September, 60 in July and August; LUCA 4 × 5
+    expect(await screen.findByText('560 ₾')).toBeTruthy();
+    expect(list().slice(0, 6)).toEqual(['WOLT ›', '560 ₾', 'BARI ›', '300 ₾', 'LUCA ›', '20 ₾']);
+    expect(screen.queryByText('GLOVO ›')).toBeNull();
+    await tap('Всё время');
+    expect(await screen.findByText('GLOVO ›')).toBeTruthy();
+    expect(list().slice(0, 2)).toEqual(['GLOVO ›', '900 ₾']);
+  });
+
   test('5.8.5 a category\'s page has «Динамика трат»', async () => {
     await openApp(planned);
     await openSettings('Категории');
     await tap('☕️ Кафе и рестораны');
     await tap('Динамика трат');
     expect(await screen.findByText('Нажмите на столбик — сумма месяца')).toBeTruthy();
+    // no usual yet: the head is this month's spending all the same (WOLT 40 + 50), not 0 — and WOLT in «Мерчанты»
+    expect(await screen.findByText('WOLT ›')).toBeTruthy();
+    expect(screen.getAllByText('90 ₾')).toHaveLength(2);
+    expect(screen.queryByText('0 ₾')).toBeNull();
     // `planned`: Кафе spent in one full month only — too few to tell frequent from rare (5.8.8)
     expect(screen.getByText(/^Мало данных: нужно 2 полных месяца с тратами/)).toBeTruthy();
   });
