@@ -95,7 +95,8 @@ export default function PressMenu({ actions, style, accessibilityHint, testID, c
     <Animated.View style={{ transform: [{ scale }] }} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onTouchCancel={onTouchEnd}>
       <TouchableOpacity
         style={style} activeOpacity={1} disabled={!actions.length} testID={testID}
-        onPress={(e) => show(e, false)} onLongPress={onLongPress} delayPressIn={PRESS_DELAY} delayLongPress={LONG_PRESS}
+        onPress={(e) => { if (actions.length === 1) { actions[0].onPress(); } else { show(e, false); } }}
+        onLongPress={onLongPress} delayPressIn={PRESS_DELAY} delayLongPress={LONG_PRESS}
         onPressIn={shrink} onPressOut={restore}
         accessibilityHint={accessibilityHint}
         accessibilityActions={actions.map((a) => ({ name: a.key, label: a.label }))}
