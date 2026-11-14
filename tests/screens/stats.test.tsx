@@ -55,6 +55,12 @@ describe('5.1 a month', () => {
     expect(screen.getByText('+15 ₾')).toBeTruthy();
   });
 
+  test('5.1.13b a tap on «Без категории» goes straight to its operations, no menu', async () => {
+    await tap('⚪️ Без категории');
+    // navigated to operations filtered by «Без категории» — the filter chip is active (1 category filter)
+    expect(await screen.findByText('Категория · 1')).toBeTruthy();
+  });
+
   test('5.1.12 a tap on a category: the buttons of its long press; «Операции» — its operations of the month; back returns', async () => {
     fireEvent.press(await screen.findByText('👕 Одежда'), { nativeEvent: { pageX: 200, pageY: 500 } });
     expect(screen.queryByText('Категория · 1')).toBeNull();
