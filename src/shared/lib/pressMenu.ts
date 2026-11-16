@@ -1,5 +1,5 @@
-// Where the buttons of a long press stand around the finger (an arc over it; under it near the top; pushed in at the
-// sides) and which one the finger is over.
+// Where the buttons of a long press stand around the finger (four: a diamond around it — left, top, right, bottom; two or
+// three: an arc over it, under it near the top; pushed in at the sides) and which one the finger is over.
 
 export type Point = { x: number; y: number };
 
@@ -7,6 +7,10 @@ export type Point = { x: number; y: number };
 export const BUTTON_RADIUS = 28;
 /** how far from the finger the arc is: clear of the finger, close enough to reach without lifting it */
 const REACH = 104;
+/** four buttons, a diamond: each this far from the finger, left / right / up / down */
+const DIAMOND = 100;
+/** under the diamond: the label and the tab bar kept clear */
+const BOTTOM = 96;
 /** the edges kept clear: the screen's sides, and over the arc its top (the header) */
 const SIDE = 12;
 const TOP = 96;
@@ -14,10 +18,12 @@ const TOP = 96;
 const HIT = 44;
 
 /**
- * The buttons' centers for `count` (2–3) actions, left to right: an arc over the finger, or under it when there is no
- * room above; shifted inwards so none crosses a side of a screen `width` wide.
+ * The buttons' centers for `count` (2–4) actions: four — a diamond around the finger, left, top, right, bottom (moved down
+ * under the header, up over the screen's bottom, `height` high); else left to right an arc over the finger, or under it
+ * when there is no room above; shifted inwards so none crosses a side of a screen `width` wide.
  */
-export function menuLayout(finger: Point, count: number, width: number): Point[] {
+export function menuLayout(finger: Point, count: number, width: number, height = Infinity): Point[] {
+  if (count === 4) return diamond(finger, width, height);
   const up = finger.y - REACH - BUTTON_RADIUS > TOP;
   const sign = up ? -1 : 1;
   // the arc's angles from straight up / down: the middle one there, the others at ±50°
@@ -30,6 +36,18 @@ export function menuLayout(finger: Point, count: number, width: number): Point[]
   const max = Math.max(...points.map((p) => p.x)) + BUTTON_RADIUS + SIDE;
   const shift = min < 0 ? -min : max > width ? width - max : 0;
   return points.map((p) => ({ x: p.x + shift, y: p.y }));
+}
+
+/** Four buttons around the finger: left, top, right, bottom; the whole diamond kept inside the screen. */
+function diamond(f: Point, width: number, height: number): Point[] {
+  const top = f.y - DIAMOND - BUTTON_RADIUS;
+  const bottom = f.y + DIAMOND + BUTTON_RADIUS;
+  const dy = top < TOP ? TOP - top : bottom > height - BOTTOM ? height - BOTTOM - bottom : 0;
+  const left = f.x - DIAMOND - BUTTON_RADIUS - SIDE;
+  const right = f.x + DIAMOND + BUTTON_RADIUS + SIDE;
+  const dx = left < 0 ? -left : right > width ? width - right : 0;
+  const c = { x: f.x + dx, y: f.y + dy };
+  return [{ x: c.x - DIAMOND, y: c.y }, { x: c.x, y: c.y - DIAMOND }, { x: c.x + DIAMOND, y: c.y }, { x: c.x, y: c.y + DIAMOND }];
 }
 
 /** The button the finger is over, null — none. */

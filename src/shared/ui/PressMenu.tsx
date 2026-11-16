@@ -34,7 +34,7 @@ const HELD_SCALE = 0.96;
  * towards the long press. TalkBack: the same actions as the row's actions.
  */
 export default function PressMenu({ actions, style, accessibilityHint, testID, children }: Props) {
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const lockScroll = useScrollLock();
   const [open, setOpen] = useState<Open | null>(null);
   const [hover, setHover] = useState<number | null>(null);
@@ -55,7 +55,7 @@ export default function PressMenu({ actions, style, accessibilityHint, testID, c
   function show(e: GestureResponderEvent, holding: boolean) {
     // no touch point (TalkBack's tap): the middle of the screen
     const start = e?.nativeEvent?.pageX !== undefined ? point(e) : { x: width / 2, y: 400 };
-    ref.current = { start, buttons: menuLayout(start, actions.length, width), holding, moved: false };
+    ref.current = { start, buttons: menuLayout(start, actions.length, width, height), holding, moved: false };
     setOpen(ref.current);
     restore();
   }

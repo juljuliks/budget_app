@@ -119,6 +119,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
         spending: () => openTransactions(c.category_id, monthDays(ym)),
         plan: () => { openPlanEdit(c).catch((e) => console.error('open plan edit failed', e)); },
         trend: () => openCategoryTrend(c.category_id!),
+        category: () => openCategory(c.category_id!),
       })}
     />
   );
