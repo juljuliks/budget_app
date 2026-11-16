@@ -341,10 +341,10 @@ describe('6.7.9 "Регулярный платёж" from the plan', () => {
     expect(await screen.findByText(/^3 октября 2026/)).toBeTruthy();
     expect(screen.getByText('Дата списания')).toBeTruthy();
     expect(screen.getByText('Следующие — раз в год от этой даты; списание встанет в план своего месяца.')).toBeTruthy();
-    // every month: the day optional (kept from the yearly one) — the amount in each month's plan, charged that day
+    // every month: its amount and its day (optional) in the plan's sheet; the yearly day not taken over
     await tap('Каждый месяц');
-    expect(await screen.findByText('Сумма стоит в плане каждый месяц, списание — в этот день месяца.')).toBeTruthy();
-    expect(screen.getByText('Дата списания (необязательно)')).toBeTruthy();
+    expect(await screen.findByText('Сумма и дата списания (необязательно) — в плане месяца.')).toBeTruthy();
+    expect(screen.queryByText(/^Дата списания/)).toBeNull();
     expect(screen.queryByText('Выбрать операцию')).toBeNull();
   });
 
@@ -356,8 +356,8 @@ describe('6.7.9 "Регулярный платёж" from the plan', () => {
     await tap('Изменить в категории ›');
     await tap(await screen.findByText('Регулярный платёж'));
     await tap('Настроить');
-    expect(await screen.findByText('Сумма стоит в плане каждый месяц. С датой платёж встанет на шкалу месяца в статистике.')).toBeTruthy();
-    expect(screen.getByText('Дата списания (необязательно)')).toBeTruthy();
+    expect(await screen.findByText('Сумма и дата списания (необязательно) — в плане месяца.')).toBeTruthy();
+    expect(screen.queryByText(/^Дата списания/)).toBeNull();
     // on its page: how often only — a month's amount is the plan's
     expect(screen.queryByDisplayValue('800')).toBeNull();
     await tap('Сохранить');
@@ -378,7 +378,7 @@ describe('6.7.9 "Регулярный платёж" from the plan', () => {
     await waitFor(async () => expect(await db.get(`SELECT limit_minor FROM plan_items WHERE ym = '2026-11' AND category_id = ${home}`)).toEqual({ limit_minor: 80000 }));
   });
 
-  test('every month with a day: on the stats\' bar on that day; its plan stays its amount', async () => {
+  test('every month with a day: set by its amount in the plan\'s sheet; on the stats\' bar on that day, its plan its amount', async () => {
     await openApp(seed);
     await tap('Статистика');
     await openPlanPage();
@@ -386,19 +386,25 @@ describe('6.7.9 "Регулярный платёж" from the plan', () => {
     await tap('Изменить в категории ›');
     await tap(await screen.findByText('Регулярный платёж'));
     await tap('Настроить');
-    // the first: "Дата списания" (then "Дата окончания")
-    await act(async () => { fireEvent.press((await screen.findAllByLabelText('Выбрать дату'))[0]); });
-    await tap('#day-2026-10-20');
-    await tap('Выбрать');
-    expect(await screen.findByText('Сумма стоит в плане каждый месяц, списание — в этот день месяца.')).toBeTruthy();
     await tap('Сохранить');
     expect(await screen.findByText('План «🏠 Дом и коммуналка» сохранён')).toBeTruthy();
     back();
+    // the plan's sheet (its row a regular payment's now): the amount, then its day
+    await tap('🏠 Дом и коммуналка');
+    expect(await screen.findByText('Дата списания (необязательно)')).toBeTruthy();
+    expect(screen.getByText('С датой платёж встанет на шкалу месяца в статистике, списание — в этот день каждого месяца.')).toBeTruthy();
+    await tap('Выбрать дату');
+    await tap('#day-2026-10-20');
+    await tap('Выбрать');
+    await tap('Сохранить');
     const db = await getDb();
-    expect(await db.get('SELECT amount_minor, due FROM recurring_payments')).toEqual({ amount_minor: 80000, due: '2026-10-20' });
+    await waitFor(async () => expect(await db.get('SELECT amount_minor, due FROM recurring_payments')).toEqual({ amount_minor: 80000, due: '2026-10-20' }));
     // the month's plan counted from its charge: the same amount
     expect(await db.get("SELECT p.kind, p.limit_minor FROM plan_items p JOIN categories c ON c.id = p.category_id WHERE p.ym = '2026-10' AND c.name = 'Дом и коммуналка'"))
       .toEqual({ kind: 'subs', limit_minor: 80000 });
+    // its sheet again: the day back
+    await tap('🏠 Дом и коммуналка');
+    expect(await screen.findByText(/^20 октября 2026/)).toBeTruthy();
     backToTabs();
     // on the stats' bar: its day; paid already (the rent of the 3rd covers it — paid early counts)
     expect(await screen.findByLabelText('Дом и коммуналка, 20 окт, оплачен')).toBeTruthy();

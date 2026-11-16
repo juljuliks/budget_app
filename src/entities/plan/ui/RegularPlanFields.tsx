@@ -1,9 +1,11 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { useWatch, UseFormReturn } from 'react-hook-form';
+import { Controller, useWatch, UseFormReturn } from 'react-hook-form';
 import type { Currency } from '@/db/fx';
 import { timesInMonth } from '@/db/plans';
-import { longDay, MONTHS_PREP } from '@/shared/lib/dates';
+import { monthDays } from '@/shared/lib/dateRange';
+import { dayTitle, longDay, MONTHS_PREP } from '@/shared/lib/dates';
+import DateField from '@/shared/ui/DateField';
 import { plural } from '@/shared/lib/format';
 import { formatWithCurrency, parseAmountOrZero } from '@/shared/lib/money';
 import { formStyles } from '@/shared/theme/formStyles';
@@ -15,7 +17,9 @@ type Props = { ym: string; form: UseFormReturn<RegularForm & { value: string; cu
 
 /**
  * A regular payment every day, week or month in the plan's sheet: how often it is (its category's, «пн, чт · до 15 окт»),
- * within the month the times and their sum («9 раз в октябре — 180 ₾»); the amount is typed above.
+ * within the month the times and their sum («9 раз в октябре — 180 ₾»); the amount is typed above. Every month: its
+ * «Дата списания (необязательно)» here, by the amount — with it the plan is counted from the charge, the payment on the
+ * stats' bar.
  */
 export default function RegularPlanFields({ ym, form }: Props) {
   const [every, weekdays, until, value, currency] = useWatch({ control: form.control, name: ['every', 'weekdays', 'until', 'value', 'currency'] });
@@ -28,6 +32,17 @@ export default function RegularPlanFields({ ym, form }: Props) {
         <Text style={formStyles.hint}>
           {`${times} ${plural(times, ['раз', 'раза', 'раз'])} в ${MONTHS_PREP[Number(ym.slice(5)) - 1]}${unit ? ` — ${formatWithCurrency(unit * times, currency)}` : ''}`}
         </Text>
+      ) : null}
+      {every === 'month' ? (
+        <>
+          <Controller control={form.control} name="next" render={({ field }) => (
+            <DateField
+              label="Дата списания (необязательно)" value={field.value} format={dayTitle} sheetTitle="Дата списания"
+              minDay={monthDays(ym).from} maxDay={monthDays(ym).to} onChange={field.onChange} onClear={() => field.onChange(null)}
+            />
+          )} />
+          <Text style={formStyles.hint}>С датой платёж встанет на шкалу месяца в статистике, списание — в этот день каждого месяца.</Text>
+        </>
       ) : null}
       <Text style={formStyles.hint}>{SCHEDULE_HINT}</Text>
     </View>

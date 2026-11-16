@@ -133,7 +133,7 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
       setInPlan(!!item);
       setOwnPeriod(payment?.period ?? null);
       // its own payment, how often and its end (the sheet saves them back as they are)
-      if (payment && !setup) { form.setValue('period', payment.period); form.setValue('until', payment.until); form.setValue('next', payment.due); }
+      if (payment && !setup) { form.setValue('period', payment.period); form.setValue('until', payment.until); form.resetField('next', { defaultValue: payment.due }); }
       const others = budget ? await plannedTotal(ym, target.category_id, budget.currency) : 0;
       // in the app's currency; the original one when there is no rate
       const inShown = (minor: number, from: Currency) => {

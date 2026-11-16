@@ -1,7 +1,8 @@
 // The plan sheet's "Сохранить": a limit, a one-off payment, a fund, a regular payment
 // within the month, or the amount by hand of a category with regular payments; past what is free — 🔒 asked.
 import { Currency } from '@/db/fx';
-import { NormPeriod, OverBudgetError, PlanKind } from '@/db/plans';
+import { currentYm, NormPeriod, OverBudgetError, PlanKind } from '@/db/plans';
+import { addMonths } from '@/db/recurring';
 import { AMOUNT_HINT, SAVE_FAILED } from '@/shared/lib/strings';
 import { formatWithCurrency, parseAmountOrZero } from '@/shared/lib/money';
 import { toast, toastFailure } from '@/shared/ui/toast';
@@ -46,8 +47,10 @@ export async function submitPlanSheet({ ym, target, text, v, adding, locked, fre
   if (regular && !minor && !noAmount) return 'Введите сумму за раз';
   if (regular && v.every === 'week' && !v.weekdays) return 'Выберите дни недели';
   if (own && !minor && !noAmount) return 'Введите сумму платежа';
-  // monthly: the day is optional (none — the amount in each month's plan)
-  const due = own ? v.next : null;
+  // monthly: the day is optional (none — the amount in each month's plan); picked in a coming month's plan — the same day
+  // of this month (it repeats each month: this month keeps its charge)
+  const months = (d: string) => (Number(d.slice(0, 4)) - Number(currentYm().slice(0, 4))) * 12 + Number(d.slice(5, 7)) - Number(currentYm().slice(5, 7));
+  const due = own ? (v.period === 1 && v.next && months(v.next) > 0 ? addMonths(v.next, -months(v.next)) : v.next) : null;
   if (own && !due && v.period !== 1) return dateNeeded();
   if (own && v.until && due && v.until < due) return UNTIL_BEFORE;
   if (own && v.saving?.startBad) return AMOUNT_HINT;
