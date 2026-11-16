@@ -328,7 +328,7 @@ describe('6.3 the categories in the plan', () => {
     expect(await screen.findByText('Сумма за раз')).toBeTruthy();
     expect(screen.getByText('‹ Назад')).toBeTruthy();
     expect(screen.getAllByText('пн, чт').length).toBeGreaterThan(0);
-    expect(screen.getByText('Как часто и дата окончания — на странице категории. Сумма переходит в следующие месяцы.')).toBeTruthy();
+    expect(screen.getByText('Как часто, дата списания и окончания — на странице категории. Сумма переходит в следующие месяцы.')).toBeTruthy();
     fireEvent.changeText(screen.getByPlaceholderText('0'), '20');
     expect(await screen.findByText('9 раз в октябре — 180\u00a0₾')).toBeTruthy();
     await tap('Сохранить');

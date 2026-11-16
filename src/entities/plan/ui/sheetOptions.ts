@@ -19,7 +19,7 @@ export const itemKindOf = (k: CategoryPlanKind | null): PlanKind => (k === 'limi
 export const REGULAR_HINT = 'Сумма и дата списания — на странице категории, меняются во всех месяцах с этого.';
 
 /** A regular payment every day, week or month in the plan: the amount here, how often — its category's. */
-export const SCHEDULE_HINT = 'Как часто и дата окончания — на странице категории. Сумма переходит в следующие месяцы.';
+export const SCHEDULE_HINT = 'Как часто, дата списания и окончания — на странице категории. Сумма переходит в следующие месяцы.';
 
 /** "каждый день", "пн, чт", "каждый месяц" — how often a regular payment is, without its amount. */
 export function everyText(every: 'day' | 'week' | 'month', weekdays: number): string {
