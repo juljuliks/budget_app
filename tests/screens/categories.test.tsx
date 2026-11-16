@@ -112,6 +112,22 @@ describe('4.1–4.2 the list; creating and changing a category', () => {
     expect(screen.getByDisplayValue('Пополнение счёта').props.editable).toBe(false);
     expect(screen.queryByText('Удалить категорию')).toBeNull();
   });
+
+  test('4.2.13: «В плане» in the creation sheet: the kind is saved right after', async () => {
+    await tap('Новая категория');
+    expect(await screen.findByText('В плане')).toBeTruthy();
+    expect(screen.getByText('Траты с лимитом')).toBeTruthy();
+    expect(screen.getByText('Копилка')).toBeTruthy();
+    await tap('Копилка');
+    fireEvent.changeText(screen.getByPlaceholderText('Например, Спорт'), 'Новые горы');
+    await tap('Создать');
+    expect(await screen.findByText(/^Категория «Новые горы» создана$/)).toBeTruthy();
+    await tap('Новые горы');
+    expect(await screen.findByText('Копилка')).toBeTruthy();
+    // plan_kind saved to DB: Копилка selected (no «Настроить» — it shows only on a kind change)
+    const row = await (await getDb()).get<{ plan_kind: string }>('SELECT plan_kind FROM categories WHERE name = ?', ['Новые горы']);
+    expect(row?.plan_kind).toBe('fund');
+  });
 });
 
 test('4.3: deleting a section: its categories stay without one', async () => {

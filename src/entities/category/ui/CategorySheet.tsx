@@ -17,6 +17,8 @@ type Props = {
   onClose: () => void;
   /** after creating it, with its id: it is then picked by the screen that opened the sheet */
   onSaved?: (id: number, created: boolean) => void;
+  /** extra content rendered after the fields, before the action buttons */
+  extra?: React.ReactNode;
 };
 
 /**
@@ -24,12 +26,13 @@ type Props = {
  * opened it does the rest with its id (assigns it, selects it, moves operations into it) exactly as when an existing
  * one is picked. An existing category is a page (CategoryView).
  */
-export default function CategorySheet({ visible, typeId: initialTypeId, quick, onClose, onSaved }: Props) {
+export default function CategorySheet({ visible, typeId: initialTypeId, quick, onClose, onSaved, extra }: Props) {
   const f = useCategoryForm({ visible, initialTypeId, onClose, onSaved });
   return (
     <BottomSheet visible={visible} onClose={onClose} title="Новая категория" style={styles.sheet}>
       <SheetScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <CategoryFields f={f} quick={quick} />
+        {extra}
         <SheetActions submit={{ title: 'Создать', onPress: f.save, disabled: f.isSubmitting }} onCancel={onClose} />
       </SheetScrollView>
     </BottomSheet>
