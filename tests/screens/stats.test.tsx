@@ -54,6 +54,22 @@ describe('5.1 a month', () => {
     expect(screen.queryByTestId('tile-payments')).toBeNull();
   });
 
+  test('5.1.3c a payment a little short of its plan (a rate\'s difference, within 2%) is paid; more short — not', async () => {
+    const db = await getDb();
+    const home = (await db.get<{ id: number }>('SELECT id FROM categories WHERE name = ?', ['Дом и коммуналка']))!.id;
+    // rent planned 810, 800 paid: 1.2% short — ✓, not «10 ₾» left
+    await act(async () => { await setPlanAmount(currentYm(), home, 81000, 'fixed'); emitTransactionsChanged(); });
+    expect(await screen.findByLabelText('Оплачено')).toBeTruthy();
+    await tap('#month-ahead');
+    const from = texts().indexOf('Платежи');
+    expect(texts().slice(from, from + 3)).toEqual(['Платежи', '30 ₾', '1 впереди']);
+    // planned 830: 3.6% short — not paid, 30 ₾ left of it
+    await act(async () => { await setPlanAmount(currentYm(), home, 83000, 'fixed'); emitTransactionsChanged(); });
+    await waitFor(() => expect(screen.queryByLabelText('Оплачено')).toBeNull());
+    const at = texts().indexOf('Платежи');
+    expect(texts().slice(at, at + 3)).toEqual(['Платежи', '60 ₾', '2 впереди']);
+  });
+
   test('5.1.3b payments with a day over the bar: ✓ paid, ✕ past and not paid, faded ahead; today\'s tick counts them', async () => {
     // no payment has a day: a paid one on its day of paying (the rent of the 3rd), the unpaid one — none
     expect(await screen.findByLabelText('Дом и коммуналка, 3 окт, оплачен')).toBeTruthy();

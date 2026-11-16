@@ -1,6 +1,6 @@
 // What is ahead in the current month, under its bar as three tiles: the obligatory payments still to pay, what is left
 // of the limits for the days left (each in its rhythm), and the overspends by category. No React.
-import { CategoryStat, MonthStats, NormPeriod, spentOf, unplannedSpent } from '@/db/plans';
+import { CategoryStat, isPaid, leftToPay, MonthStats, NormPeriod, spentOf, unplannedSpent } from '@/db/plans';
 
 /** A category in a tile's list: what it has (left to pay, left of its limit, past its plan). */
 export type AheadItem = { id: number; label: string; minor: number };
@@ -29,9 +29,10 @@ export function monthBreakdown(stats: MonthStats, share: number, today: { day: n
   const fixed = planned.filter((c) => c.plan_kind === 'fixed');
   const limits = planned.filter((c) => c.plan_kind !== 'fixed');
   const days = Math.max(1, today.days - today.day + 1);
-  const payments = most(fixed.filter((c) => spentOf(c) < c.limit_minor!)
-    .map((c) => ({ id: c.category_id!, label: labelOf(c), minor: c.limit_minor! - spentOf(c) })));
-  const paid = most(fixed.filter((c) => spentOf(c) >= c.limit_minor!)
+  // paid within a rate's difference (isPaid): not «3 ₾ left»
+  const payments = most(fixed.filter((c) => !isPaid(spentOf(c), c.limit_minor!))
+    .map((c) => ({ id: c.category_id!, label: labelOf(c), minor: leftToPay(spentOf(c), c.limit_minor!) })));
+  const paid = most(fixed.filter((c) => isPaid(spentOf(c), c.limit_minor!))
     .map((c) => ({ id: c.category_id!, label: labelOf(c), minor: spentOf(c) })));
   const left = most(limits.filter((c) => spentOf(c) < c.limit_minor!).map((c) => {
     const minor = c.limit_minor! - spentOf(c);

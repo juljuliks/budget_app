@@ -2,7 +2,7 @@ import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { categoryLabel } from '@/db/categories';
 import type { Currency } from '@/db/fx';
-import { CategoryStat, spentOf } from '@/db/plans';
+import { CategoryStat, isPaid, spentOf } from '@/db/plans';
 import { useHideAmounts } from '@/shared/settings/hideAmounts';
 import { monthDays } from '@/shared/lib/dateRange';
 import { RHYTHM_DAYS, WEEKDAYS } from '@/shared/lib/dates';
@@ -52,9 +52,10 @@ export default function CategoryRow({ stat: shownStat, total, currency: shown, e
   const cameIn = stat.transfer && stat.spent_minor < 0 ? -stat.spent_minor : 0;
   const hidden = useHideAmounts();
   const ratio = limit ? spent / limit : 0;
-  // fixed payment (rent, repeating payment): paid once this month's spending covers its plan (the share is by the amount)
+  // fixed payment (rent, repeating payment): paid once this month's spending covers its plan (isPaid: a rate's difference
+  // allowed; the share is by the amount)
   const fixed = stat.plan_kind === 'fixed';
-  const paid = !!limit && spent >= limit;
+  const paid = !!limit && isPaid(spent, limit);
   const rhythm = !fixed && stat.plan_norm && stat.plan_norm !== 'month' ? stat.plan_norm : null;
 
   return (

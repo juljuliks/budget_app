@@ -3,7 +3,7 @@
 // the month — so a payment's mark sits where its day is on the money bar, and today's tick counts the payments due by
 // today. Paid or not: a subscription by its merchant's operation, the others by the category's spending; a payment
 // without a day — on its category's last spending day, once paid (not paid: no mark, spread evenly). No React.
-import { CategoryStat, MonthStats, PaymentMark, spentOf } from '@/db/plans';
+import { CategoryStat, isPaid, MonthStats, PaymentMark, spentOf } from '@/db/plans';
 import { daysInMonth } from '@/shared/lib/dateRange';
 
 export type MarkStatus = 'paid' | 'missed' | 'ahead';
@@ -42,12 +42,12 @@ export function monthPace(stats: MonthStats, share: number, marks: PaymentMark[]
   // the plan by the start of day `d` (before) or its end (with its payments)
   const by = (d: number, withDay: boolean) => flexible * ((withDay ? d : d - 1) / dim)
     + dated.reduce((a, m) => a + (dayOf(m.day) < d || (withDay && dayOf(m.day) === d) ? m.minor : 0), 0);
-  // each category's payments in day order, paid while its spending covers them (1% for the rates)
+  // each category's payments in day order, paid while its spending covers them (isPaid: a rate's difference allowed)
   const covered = new Map<number, number>();
   const out: BarMark[] = dated.map((m, i) => {
     const cum = (covered.get(m.category_id) ?? 0) + m.minor;
     covered.set(m.category_id, cum);
-    const paid = m.done ?? cum <= spentOf(m.c) * 1.01 + 1;
+    const paid = m.done ?? isPaid(spentOf(m.c), cum);
     return {
       key: `${m.category_id}-${m.day}-${i}`, at: Math.min(1, by(dayOf(m.day), false) / plannedAll), category_id: m.category_id,
       emoji: labelOf(m.c), name: m.c.name, day: m.day, minor: m.minor,

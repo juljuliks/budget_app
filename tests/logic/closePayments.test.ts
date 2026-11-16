@@ -67,3 +67,12 @@ test('the next month has it already: the sums add up', async () => {
   await finishClose('2026-09');
   expect((await listPlan('2026-10')).find((i) => i.category_id === repair)).toMatchObject({ limit_minor: 40000 });
 });
+
+test('a payment a little short of its plan (a rate\'s difference, within 2%) is paid: not asked; more short — asked', async () => {
+  const { repair, gifts } = await september();
+  await spend(29500, repair);
+  await spend(4000, gifts);
+  const c = await monthClose('2026-09');
+  // Ремонт 295 of 300 (1.7% short) — paid; Подарки 190 of 200 (5%) — 10 left
+  expect(c.payments.map((p) => ({ id: p.category_id, unpaid: p.unpaid_minor }))).toEqual([{ id: gifts, unpaid: 1000 }]);
+});

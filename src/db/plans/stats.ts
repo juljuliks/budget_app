@@ -44,6 +44,18 @@ export type CategoryStat = {
 /** What a category adds to the spending totals: a transfer one that brought in more than went out adds nothing. */
 export const spentOf = (c: Pick<CategoryStat, 'spent_minor' | 'transfer'>) => (c.transfer ? Math.max(0, c.spent_minor) : c.spent_minor);
 
+/**
+ * How far short of its plan an obligatory payment still counts as paid: paid in another currency than planned (rent
+ * 500 $ sent in lari), the bank's rate and fee differ from the NBG's the plan is converted by.
+ */
+export const PAID_TOLERANCE = 0.02;
+
+/** An obligatory payment is paid: what was spent covers its plan, within PAID_TOLERANCE. One rule for every screen. */
+export const isPaid = (spent: number, plan: number) => plan > 0 && spent >= plan * (1 - PAID_TOLERANCE);
+
+/** What is left to pay of a payment: nothing once it is paid (isPaid), otherwise the plan less what was spent. */
+export const leftToPay = (spent: number, plan: number) => (isPaid(spent, plan) ? 0 : Math.max(0, plan - spent));
+
 export type StatGroup = {
   /** null: categories without a type, then "Без категории" */
   type_id: number | null;

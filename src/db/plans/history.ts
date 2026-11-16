@@ -4,7 +4,7 @@ import { Currency } from '../fx';
 import { BUDGET_CURRENCY, currentYm, monthRange, parseYm, planRateDate, ymOf } from './months';
 import { convertSpending, spendByDay, spendRows } from './spend';
 import { storedBudget, unplannedOf } from './budget';
-import { monthStats, spentOf } from './stats';
+import { leftToPay, monthStats, spentOf } from './stats';
 import { allFunds, fundLedger } from './funds';
 import { allSavings, savingLedger } from '../recurring/saving';
 import type { RestChoice } from './close';
@@ -153,7 +153,7 @@ export async function planHistory(nowYm = currentYm(), currency: Currency = BUDG
     const { year: ny, month: nm } = parseYm(nowYm);
     const stats = await monthStats(ny, nm, currency);
     unpaidFixed = stats.categories.filter((c) => c.plan_kind === 'fixed' && c.limit_minor)
-      .reduce((a, c) => a + Math.max(0, c.limit_minor! - spentOf(c)), 0);
+      .reduce((a, c) => a + leftToPay(spentOf(c), c.limit_minor!), 0);
   }
 
   // the funds: a month spent their contribution and their shortage, not what they spent; deleted ones gave what they had

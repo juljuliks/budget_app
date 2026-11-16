@@ -5,7 +5,7 @@ import { getDb } from '../index';
 import type { Currency } from '../fx';
 import { asCurrency } from './months';
 import { ensureMonthPlan, ownMonth } from './budget';
-import type { MonthStats } from './stats';
+import { leftToPay, type MonthStats } from './stats';
 
 export type PaymentChoice = 'next' | 'drop';
 
@@ -41,7 +41,8 @@ export async function closePayments(ym: string, stats: MonthStats, conv: Conv, c
     const cur = asCurrency(r.currency);
     const spent = Math.max(0, stats.categories.find((c) => c.category_id === r.category_id)?.spent_minor ?? 0);
     const paid = Math.min(r.limit_minor, conv(spent, currency, cur) ?? spent);
-    const unpaid = r.limit_minor - paid;
+    // paid within a rate's difference (isPaid): nothing to move on
+    const unpaid = leftToPay(paid, r.limit_minor);
     if (unpaid <= 0) continue;
     out.push({
       category_id: r.category_id, name: r.name, emoji: r.emoji, currency: cur, planned_minor: r.limit_minor, paid_minor: paid,
