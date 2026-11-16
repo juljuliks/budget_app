@@ -60,14 +60,12 @@ export const styles = StyleSheet.create({
   iconsLinkText: { fontSize: 14, color: colors.accent },
   caption: { fontSize: 13, color: colors.muted, textAlign: 'center' },
   hint: { color: colors.muted, fontSize: 14, textAlign: 'center', marginVertical: 12 },
-  group: { marginTop: 12 },
+  group: { marginTop: 16 },
   // a grey band across the screen, sticking on top as the days on the operations do
   groupHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: -16 },
   groupTitle: { fontSize: 13, fontWeight: '600', color: colors.muted },
   groupShare: { color: colors.muted, fontWeight: '400' },
-  // the total in the budget's currency before it: lighter and thin
-  groupForeign: { color: colors.faint, fontWeight: '400' },
-  groupTotal: { fontSize: 13, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
+  groupTotal: { fontSize: 13, fontWeight: '600', color: colors.muted, fontVariant: ['tabular-nums'] },
   // a row charged in a later month only: faded
   later: { opacity: 0.5 },
   row: {
