@@ -33,6 +33,7 @@ export default function CategorySubscriptions({ category }: { category: PaymentC
   if (!data) return null;
   return (
     <View>
+      {data.subs.length ? <SectionBand title="Активные" /> : null}
       {data.subs.length ? data.subs.map(({ sub, next }) => (
         <SubRow
           key={sub.id}
