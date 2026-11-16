@@ -1,7 +1,8 @@
 // The month's bar with its payments' days: where the plan expects the spending to be on each day — the payments with a
 // day whole on that day, all the rest (the limits, the share outside the plan, the payments without a day) evenly over
 // the month — so a payment's mark sits where its day is on the money bar, and today's tick counts the payments due by
-// today. Paid or not: a subscription by its merchant's operation, the others by the category's spending. No React.
+// today. Paid or not: a subscription by its merchant's operation, the others by the category's spending; a payment
+// without a day — on its category's last spending day, once paid (not paid: no mark, spread evenly). No React.
 import { CategoryStat, MonthStats, PaymentMark, spentOf } from '@/db/plans';
 import { daysInMonth } from '@/shared/lib/dateRange';
 
@@ -31,6 +32,8 @@ export function monthPace(stats: MonthStats, share: number, marks: PaymentMark[]
   const dated = marks.flatMap((m) => {
     const c = cats.get(m.category_id);
     const minor = m.minor ?? c?.limit_minor ?? 0;
+    // without a day: only when its spending covers it
+    if (m.undated && c && spentOf(c) < minor * 0.99) return [];
     return c && minor > 0 && m.day.startsWith(stats.ym) ? [{ ...m, c, minor }] : [];
   });
   if (!dated.length || plannedAll <= 0) return { marks: [], tick: null, expected: null };

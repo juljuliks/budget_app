@@ -1,9 +1,13 @@
 // The month's payments with a day, for the marks over the stats' bar: the charges of the regular payments (subscriptions
 // and a category's own, monthly or rarer, with "Дата списания") and the one-off payments given a day in their sheet
-// (plan_items.due). The marks' places and paid / not paid are worked out by the stats (with the spending).
+// (plan_items.due); and the obligatory payments without a day on the day of their category's last spending this month
+// (shown only when paid). The marks' places and paid / not paid are worked out by the stats (with the spending).
 import { getDb } from '../index';
 import type { Currency } from '../fx';
 import { monthPayments } from './recurringItems';
+import { monthStart } from './months';
+import { EXPENSE_KINDS } from '../spending';
+import { sqlList } from '../sql';
 
 /** A one-off payment's day in its month (null — none). */
 export async function itemDue(ym: string, categoryId: number): Promise<string | null> {
@@ -20,9 +24,10 @@ export async function setItemDue(ym: string, categoryId: number, due: string | n
 /**
  * One payment on its day. `minor` — its amount in the stats' currency (a one-off payment's: null, its item's whole plan);
  * `done` — a subscription matched with its merchant's operation (true / false); null — the category's own payment or a
- * one-off one, nothing matched: paid as far as the category's spending covers it.
+ * one-off one, nothing matched: paid as far as the category's spending covers it. `undated` — a payment without a day,
+ * on its category's last spending day: a mark only once paid.
  */
-export type PaymentMark = { category_id: number; day: string; minor: number | null; done: boolean | null };
+export type PaymentMark = { category_id: number; day: string; minor: number | null; done: boolean | null; undated?: boolean };
 
 export async function monthPaymentMarks(ym: string, currency: Currency, now = new Date()): Promise<PaymentMark[]> {
   const db = await getDb();
@@ -34,5 +39,15 @@ export async function monthPaymentMarks(ym: string, currency: Currency, now = ne
   const oneOff = await db.all<{ category_id: number; due: string }>(
     "SELECT category_id, due FROM plan_items WHERE ym = ? AND kind = 'fixed' AND every IS NULL AND due IS NOT NULL AND limit_minor > 0", [ym]);
   for (const r of oneOff) marks.push({ category_id: r.category_id, day: r.due, minor: null, done: null });
+  // the others without a day: their category's last spending this month (paid on it, if paid)
+  const dated = new Set(marks.map((m) => m.category_id));
+  const [y, mo] = ym.split('-').map(Number);
+  const undated = await db.all<{ category_id: number; day: string }>(
+    `SELECT p.category_id, strftime('%Y-%m-%d', max(t.occurred_at), 'unixepoch', 'localtime') AS day
+      FROM plan_items p JOIN spend_parts t ON t.category_id = p.category_id
+      WHERE p.ym = ? AND p.kind = 'fixed' AND p.due IS NULL AND p.limit_minor > 0
+        AND t.occurred_at >= ? AND t.occurred_at < ? AND t.kind IN (${sqlList([...EXPENSE_KINDS])})
+      GROUP BY p.category_id`, [ym, monthStart(ym), new Date(y, mo, 1).getTime() / 1000]);
+  for (const r of undated) if (!dated.has(r.category_id)) marks.push({ category_id: r.category_id, day: r.day, minor: null, done: null, undated: true });
   return marks.sort((a, b) => a.day.localeCompare(b.day));
 }
