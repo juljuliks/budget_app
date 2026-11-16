@@ -47,7 +47,7 @@ function donutSegments(groups: StatGroup[]): DonutSegment[] {
 /** A month's spending: the donut, the month against its plan, «Сбережения», the categories by section, "Вне плана". */
 export default function StatsView({ year, month, currency }: { year: number; month: number; currency: Currency }) {
   const hidden = useHideAmounts();
-  const { stats, share, today, load, failed } = useMonthData(year, month, currency);
+  const { stats, share, today, marks, load, failed } = useMonthData(year, month, currency);
   // "＋ В план" on a category without a plan amount
   const [planTarget, setPlanTarget] = useState<PlanAmountTarget | null>(null);
   // the donut segment tapped: its category's spending and share in the hole
@@ -134,7 +134,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
           <DonutCenter total={stats.spent_minor} picked={picked} currency={stats.currency} />
         </Donut>
       </View>
-      {plannedAll > 0 ? <MonthTotal stats={stats} ym={ym} plannedAll={plannedAll} evenPace={evenPace} onEditPlan={() => openPlan(ym)} /> : (
+      {plannedAll > 0 ? <MonthTotal stats={stats} ym={ym} plannedAll={plannedAll} evenPace={evenPace} marks={marks} onEditPlan={() => openPlan(ym)} /> : (
         <Text style={styles.hint}>Составьте план на месяц, чтобы видеть, сколько осталось по категориям.</Text>
       )}
 

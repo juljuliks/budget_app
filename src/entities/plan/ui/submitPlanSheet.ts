@@ -19,6 +19,8 @@ import type { PlanAmountTarget } from './PlanAmountModal';
 export type PlanSheetValues = {
   kind: PlanKind; currency: Currency; norm: NormPeriod;
   pinned: boolean; until: string | null; every: RegularEvery; weekdays: number; period: number; next: string | null;
+  /** a one-off payment's day in the month (optional) */
+  due?: string | null;
   /** "Откладывать каждый месяц?" of a regular payment rarer than monthly; `startBad` — "Уже отложено" not an amount */
   saving?: (SavingChoice & { startBad: boolean }) | null;
 };
@@ -44,8 +46,8 @@ export async function submitPlanSheet({ ym, target, text, v, adding, locked, fre
   if (regular && !minor && !noAmount) return 'Введите сумму за раз';
   if (regular && v.every === 'week' && !v.weekdays) return 'Выберите дни недели';
   if (own && !minor && !noAmount) return 'Введите сумму платежа';
-  // monthly: no day — the amount in each month's plan (a day it had is dropped)
-  const due = own && v.period !== 1 ? v.next : null;
+  // monthly: the day is optional (none — the amount in each month's plan)
+  const due = own ? v.next : null;
   if (own && !due && v.period !== 1) return dateNeeded();
   if (own && v.until && due && v.until < due) return UNTIL_BEFORE;
   if (own && v.saving?.startBad) return AMOUNT_HINT;
@@ -60,7 +62,7 @@ export async function submitPlanSheet({ ym, target, text, v, adding, locked, fre
       return saveRegular(ym, target.category_id, { every: v.every as 'day' | 'week', weekdays: v.weekdays, unit_minor: minor, until: v.until }, v.currency, takeLocked);
     }
     // what a new month gets of it is its category's kind (a limit: this amount and «Как тратите»)
-    await savePlanAmount(ym, target.category_id, minor, byHand ? 'fixed' : k, v.currency, v.norm, takeLocked === true);
+    await savePlanAmount(ym, target.category_id, minor, byHand ? 'fixed' : k, v.currency, v.norm, takeLocked === true, k === 'fixed' && !byHand ? v.due ?? null : undefined);
   };
   try {
     await write(false);

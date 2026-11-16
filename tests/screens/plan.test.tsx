@@ -41,9 +41,9 @@ describe('6.1 the month\'s budget', () => {
     expect(after('Вне плана', 2)).toEqual(['10%', '300 ₾']);
     // as planned only: the overspend took 130 of 💰, the stats tell it
     expect(after('Сбережения', 2)).toEqual(['18%', '540 ₾']);
-    expect(after('🔒 Отложено сразу', 3)).toEqual(['заблокировано в начале месяца', '300 ₾', '10%']);
-    expect(after('💰 Сэкономлено', 3)).toEqual(['не запланировано — решите в итогах месяца', '240 ₾', '8%']);
-    expect(after('🎲 Траты вне плана', 3)).toEqual(['категории без плана и без категории', '300 ₾', '10%']);
+    expect(after('🔒 Отложено сразу', 3)).toEqual(['заблокировано в начале месяца', '300 ₾', ' · 10%']);
+    expect(after('💰 Сэкономлено', 3)).toEqual(['не запланировано — решите в итогах месяца', '240 ₾', ' · 8%']);
+    expect(after('🎲 Траты вне плана', 3)).toEqual(['категории без плана и без категории', '300 ₾', ' · 10%']);
     expect(screen.queryByText(/перерасход|больше доли|✓ отложено|В сбережения идёт/)).toBeNull();
   });
 
@@ -57,13 +57,39 @@ describe('6.1 the month\'s budget', () => {
     backToTabs();
     await openPlanPage();
     expect(await screen.findByText('300 ₾')).toBeTruthy();
-    expect(after('🔒 Отложено сразу', 3)).toEqual(['заблокировано в начале месяца', '300 ₾', '10%']);
-    expect(after('💰 Сэкономлено', 3)).toEqual(['не запланировано — решите в итогах месяца', '240 ₾', '8%']);
+    expect(after('🔒 Отложено сразу', 3)).toEqual(['заблокировано в начале месяца', '300 ₾', ' · 10%']);
+    expect(after('💰 Сэкономлено', 3)).toEqual(['не запланировано — решите в итогах месяца', '240 ₾', ' · 8%']);
     // the section's header: only the budget's currency, no display-currency amount
-    expect(screen.queryByText('(540 ₾) ')).toBeNull();
     // "120 $" = unplanned share and budget-legend savings appear elsewhere; check the savings header directly
     const t2 = texts();
     expect(t2[t2.lastIndexOf('Сбережения') + 1]).toBe('540 ₾ · 18%');
+    // the legend: each part in the budget's currency too, before the shown one
+    const b = t2.lastIndexOf('Бюджет месяца');
+    expect(t2.slice(b, b + 15)).toEqual([
+      'Бюджет месяца', '1 200 $', '3 000 ₾',
+      'План', '72%', '(2 160 ₾)', '864 $', 'Вне плана', '10%', '(300 ₾)', '120 $', 'Сбережения', '18%', '(540 ₾)', '216 $',
+    ]);
+  });
+
+  test('6.3.5a a one-off payment\'s optional day in its sheet: saved on its item, «Убрать» takes it off', async () => {
+    await openApp(planned);
+    await tap('Статистика');
+    await openPlanPage();
+    await tap('Изменить: 🏠 Дом и коммуналка');
+    expect(await screen.findByText('Дата списания (необязательно)')).toBeTruthy();
+    expect(screen.getByText('С датой платёж встанет на шкалу месяца в статистике.')).toBeTruthy();
+    await tap('Выбрать дату');
+    await tap('#day-2026-10-01');
+    await tap('Выбрать');
+    await tap('Сохранить');
+    const db = await getDb();
+    const due = () => db.get("SELECT p.due FROM plan_items p JOIN categories c ON c.id = p.category_id WHERE p.ym = '2026-10' AND c.name = 'Дом и коммуналка'");
+    await waitFor(async () => expect(await due()).toEqual({ due: '2026-10-01' }));
+    await tap('Изменить: 🏠 Дом и коммуналка');
+    expect(await screen.findByText(/^1 октября 2026/)).toBeTruthy();
+    await tap('Убрать: Дата списания (необязательно)');
+    await tap('Сохранить');
+    await waitFor(async () => expect(await due()).toEqual({ due: null }));
   });
 
   test('the stats: «Изменить план ›» opens the month\'s plan', async () => {
@@ -204,10 +230,10 @@ describe('6.3 the categories in the plan', () => {
 
   test('a row: its limit per rhythm, how it goes, its share of the budget; the obligatory ones', async () => {
     // the plan only: what is spent is the stats'
-    expect(after('🛒 Продукты', 3)).toEqual(['лимит ≈ 20 ₾ в день', '620 ₾', '21%']);
-    expect(after('☕️ Кафе и рестораны', 3)).toEqual(['лимит ≈ 70 ₾ в неделю', '310 ₾', '10%']);
-    expect(after('🏠 Дом и коммуналка', 3)).toEqual(['разовый платёж', '800 ₾', '27%']);
-    expect(after('👕 Одежда', 3)).toEqual(['крупно, раз в месяц', '400 ₾', '13%']);
+    expect(after('🛒 Продукты', 3)).toEqual(['лимит ≈ 20 ₾ в день', '620 ₾', ' · 21%']);
+    expect(after('☕️ Кафе и рестораны', 3)).toEqual(['лимит ≈ 70 ₾ в неделю', '310 ₾', ' · 10%']);
+    expect(after('🏠 Дом и коммуналка', 3)).toEqual(['разовый платёж', '800 ₾', ' · 27%']);
+    expect(after('👕 Одежда', 3)).toEqual(['крупно, раз в месяц', '400 ₾', ' · 13%']);
   });
 
   test('an amount: what helps to pick it; more than is free refused; saved', async () => {

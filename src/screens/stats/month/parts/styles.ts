@@ -11,6 +11,17 @@ export const styles = StyleSheet.create({
   monthBox: { marginBottom: 16 },
   monthTopRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 4 },
   monthLine: { fontSize: 13, color: colors.muted, flexShrink: 1 },
+  // the bar's status line with its chevron at the right: the breakdown opens under it
+  monthStatusRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 4 },
+  statusInRow: { marginTop: 0, flexShrink: 1 },
+  chevronOpen: { transform: [{ rotate: '180deg' }] },
+  breakdown: { marginTop: 8, paddingTop: 4, gap: 4, borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
+  breakdownLine: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 },
+  breakdownLabel: { flexShrink: 1, fontSize: 13, color: colors.muted },
+  breakdownValue: { fontSize: 13, color: colors.text, fontVariant: ['tabular-nums'] },
+  // an unpaid payment under "Платежи": smaller, indented
+  breakdownSub: { fontSize: 12, color: colors.muted },
+  breakdownIndent: { paddingLeft: 12 },
   longPressHint: { fontSize: 12, color: colors.muted, marginTop: 8, marginBottom: -10 },
   dangerText: { color: colors.danger },
   hint: { color: colors.muted, fontSize: 14, textAlign: 'center', marginVertical: 12 },

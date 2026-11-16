@@ -8,7 +8,7 @@ import { getDb } from '../../src/db';
 import { getSetting } from '../../src/db/settings';
 import { createCategory } from '../../src/db/categories';
 import { getTransferTypeId } from '../../src/db/categoryTypes';
-import { currentYm, setFund, setPlanAmount } from '../../src/db/plans';
+import { currentYm, setFund, setItemDue, setPlanAmount } from '../../src/db/plans';
 
 async function openStats() {
   await openApp(planned);
@@ -26,6 +26,46 @@ describe('5.1 a month', () => {
     expect(screen.getByText('Потрачено')).toBeTruthy();
     expect(screen.getByText('2 010 ₾')).toBeTruthy();
     expect(screen.getByText('Осталось 450 ₾ · до 31 окт')).toBeTruthy();
+  });
+
+  test('5.1.3a the chevron by «Осталось»: what it is made of — the payments to pay, the limits, outside the plan, a day', async () => {
+    await tap('#month-breakdown');
+    const t = texts();
+    const from = t.indexOf('Осталось 450 ₾ · до 31 окт');
+    expect(t.slice(from, from + 11)).toEqual([
+      'Осталось 450 ₾ · до 31 окт',
+      'Платежи · 1 из 2 оплачены', 'осталось оплатить 30 ₾', '📺 Подписки', '30 ₾',
+      'Траты с лимитом', 'осталось 535 ₾ · перерасход 50 ₾',
+      // past its share: just the overspend
+      'Вне плана', 'перерасход 80 ₾',
+      // (450 − 30) / 17 days from today
+      'В день до 31 окт, без платежей', '≈ 24.71 ₾',
+    ]);
+    await tap('#month-breakdown');
+    expect(screen.queryByText('Траты с лимитом')).toBeNull();
+  });
+
+  test('5.1.3b payments with a day over the bar: ✓ paid, ✕ past and not paid, faded ahead; today\'s tick counts them', async () => {
+    // no payment has a day: no marks
+    expect(screen.queryByLabelText(/, (оплачен|не оплачен|впереди)$/)).toBeNull();
+    const db = await getDb();
+    const id = async (name: string) => (await db.get<{ id: number }>('SELECT id FROM categories WHERE name = ?', [name]))!.id;
+    await setItemDue('2026-10', await id('Дом и коммуналка'), '2026-10-01');
+    await setItemDue('2026-10', await id('Подписки'), '2026-10-10');
+    await act(async () => { emitTransactionsChanged(); });
+    expect(await screen.findByLabelText('Дом и коммуналка, 1 окт, оплачен')).toBeTruthy();
+    expect(screen.getByLabelText('Подписки, 10 окт, не оплачен')).toBeTruthy();
+    expect(screen.getByText('📺 Подписки 30 ₾ — 10 окт, не оплачен')).toBeTruthy();
+    // the rest of the plan (2 460 − 830) evenly: by the end of the 15th 15/31 of it, and both payments whole
+    const tick = Math.round(((1630 * 15) / 31 + 830) / 2460 * 100);
+    expect(screen.getByLabelText(`Отметка ровного темпа: ${tick}%`)).toBeTruthy();
+    // a day ahead: faded, no mark of its own
+    await setItemDue('2026-10', await id('Подписки'), '2026-10-20');
+    await act(async () => { emitTransactionsChanged(); });
+    expect(await screen.findByLabelText('Подписки, 20 окт, впереди')).toBeTruthy();
+    expect(screen.queryByText(/не оплачен$/)).toBeNull();
+    await tap('#month-breakdown');
+    expect(screen.getByText('📺 Подписки · 20 окт')).toBeTruthy();
   });
 
   test('a section\'s header: fact / plan · %', async () => {

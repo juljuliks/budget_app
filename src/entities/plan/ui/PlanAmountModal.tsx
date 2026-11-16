@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Controller, UseFormReturn, useWatch } from 'react-hook-form';
 import { Currency } from '@/db/fx';
-import { categoryMonthlyAverage, categoryMonthSpent, categoryPlanKind, currentYm, Every, getPlanBudget, getPlanItemBasics, lastPlanItem, NormPeriod, PlanKind, planConverter, plannedTotal } from '@/db/plans';
+import { categoryMonthlyAverage, categoryMonthSpent, categoryPlanKind, currentYm, Every, getPlanBudget, getPlanItemBasics, itemDue, lastPlanItem, NormPeriod, PlanKind, planConverter, plannedTotal } from '@/db/plans';
 import { StyleSheet, Text, View } from 'react-native';
 import { colors } from '@/shared/theme/theme';
 import { LOAD_FAILED } from '@/shared/lib/strings';
@@ -21,6 +21,7 @@ import RegularFields, { RegularForm } from './RegularFields';
 import RegularPlanFields from './RegularPlanFields';
 import BackLink from '@/shared/ui/BackLink';
 import KindPlate from './KindPlate';
+import { DueForm, OneOffDueField } from './OneOffDueField';
 import { BY_HAND_HINT, COUNTED_HINT, itemKindOf, patterns, PICK_HINT, REGULAR_HINT, RESUME_HINT } from './sheetOptions';
 import { PlanSheetValues, submitPlanSheet } from './submitPlanSheet';
 
@@ -88,11 +89,11 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
   // "🔒 Отложить сразу", in the budget's currency: what is short of free can be taken from it
   const [locked, setLocked] = useState(0);
   // the saved item; a category not in the plan yet starts as a day-to-day limit in the screen's currency
-  const form = useLoadedForm<RegularForm & { value: string; currency: Currency; kind: PlanKind; norm: NormPeriod }>(target ? {
+  const form = useLoadedForm<RegularForm & DueForm & { value: string; currency: Currency; kind: PlanKind; norm: NormPeriod }>(target ? {
     value: toInputValue(target.every ? target.unit_minor ?? 0 : target.limit_minor), currency: target.currency,
     // «📺 Подписки»: always its subscriptions (picked, counted or by hand till one has a day)
     kind: target.by_merchant || target.recurring || target.every ? 'subs' : target.kind ?? 'limit', pinned: !!target.pinned, until: target.until ?? null,
-    every: target.every ?? 'month', weekdays: target.weekdays ?? 0, period: 1, next: null,
+    every: target.every ?? 'month', weekdays: target.weekdays ?? 0, period: 1, next: null, due: null,
     norm: target.norm_period ?? 'day',
   } : null, target !== null);
   const [kind, every, period] = useWatch({ control: form.control, name: ['kind', 'every', 'period'] });
@@ -127,10 +128,12 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
         getPlanBudget(ym), lastPlanItem(ym, target.category_id), planConverter(ym), categoryMonthlyAverage(target.category_id, ym, shown),
         ym > currentYm() ? null : categoryMonthSpent(target.category_id, ym, shown), categoryPlanKind(target.category_id),
         getPlanItemBasics(ym, target.category_id), target.every || target.by_merchant ? null : categoryPayment(target.category_id)]);
+      // a one-off payment's day in the month
+      if (item?.kind === 'fixed' && !item.every) form.resetField('due', { defaultValue: await itemDue(ym, target.category_id) });
       setInPlan(!!item);
       setOwnPeriod(payment?.period ?? null);
       // its own payment, how often and its end (the sheet saves them back as they are)
-      if (payment && !setup) { form.setValue('period', payment.period); form.setValue('until', payment.until); }
+      if (payment && !setup) { form.setValue('period', payment.period); form.setValue('until', payment.until); form.setValue('next', payment.due); }
       const others = budget ? await plannedTotal(ym, target.category_id, budget.currency) : 0;
       // in the app's currency; the original one when there is no rate
       const inShown = (minor: number, from: Currency) => {
@@ -223,6 +226,7 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
       {kind === 'subs' && target && !target.by_merchant && !fixedRegular ? (setup
         ? <RegularFields ym={ym} categoryId={target.category_id} form={form as unknown as Parameters<typeof RegularFields>[0]['form']} />
         : <RegularPlanFields ym={ym} form={form as unknown as Parameters<typeof RegularPlanFields>[0]['form']} />) : null}
+      {kind === 'fixed' && target && !setup && !target.by_merchant ? <OneOffDueField ym={ym} form={form as unknown as UseFormReturn<DueForm>} /> : null}
       {kind === 'subs' && target?.by_merchant ? <Text style={formStyles.hint}>{s.pick ? (hasSubs ? RESUME_HINT : PICK_HINT) : s.counted ? COUNTED_HINT : BY_HAND_HINT}</Text> : null}
     </TextInputModal>
   );

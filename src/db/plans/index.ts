@@ -26,3 +26,4 @@ export * from './regular';
 export * from './regularTimes';
 export * from './carry';
 export * from './cover';
+export * from './paymentMarks';

@@ -80,4 +80,7 @@ export const STEPS_67_ON: MigrationStep[][] = [
   // 70: the spending outside the plan past its share covered by a cut of the plan ("Покрыть перерасход"): on top of the
   // share, in the budget's currency, this month only (a new month doesn't carry it over)
   ['ALTER TABLE plan_months ADD COLUMN unplanned_cover_minor INTEGER NOT NULL DEFAULT 0 CHECK (unplanned_cover_minor >= 0)'],
+  // 71: a one-off payment's day in its month ("Дата списания", optional; YYYY-MM-DD): its mark on the stats' bar, the
+  // month's pace counts it from that day (none — spread evenly over the month)
+  ['ALTER TABLE plan_items ADD COLUMN due TEXT'],
 ];

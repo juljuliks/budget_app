@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import type { Currency } from '@/db/fx';
-import { currentYm, monthStats, MonthStats, ymOf } from '@/db/plans';
+import { currentYm, monthPaymentMarks, monthStats, MonthStats, PaymentMark, ymOf } from '@/db/plans';
 import { onTransactionsChanged } from '@/domain/events';
 import { unplannedShare } from '@/entities/plan';
 import { dayKeyOf, DayKey } from '@/shared/lib/dateRange';
@@ -16,6 +16,8 @@ export function useMonthData(year: number, month: number, currency: Currency) {
   const [share, setShare] = useState(0);
   // the current month: each flexible category's norm window around today (today / this week / these 2 weeks)
   const [today, setToday] = useState<Norms | null>(null);
+  // the month's payments with a day: their marks over the month's bar
+  const [marks, setMarks] = useState<PaymentMark[]>([]);
 
   const latest = useLatestRequest();
   const { failed, started, fail } = useLoadFailed('load stats');
@@ -25,6 +27,8 @@ export function useMonthData(year: number, month: number, currency: Currency) {
     started();
     monthStats(year, month, currency).then(keep(setStats)).catch(keep(fail));
     unplannedShare(ymOf(year, month), currency).then(keep(setShare)).catch((e) => console.error('load unplanned share failed', e));
+    if (ymOf(year, month) <= currentYm()) monthPaymentMarks(ymOf(year, month), currency).then(keep(setMarks)).catch((e) => console.error('load payment marks failed', e));
+    else setMarks([]);
     if (ymOf(year, month) === currentYm()) {
       const d = dayKeyOf(new Date());
       const monthStart = `${ymOf(year, month)}-01` as DayKey;
@@ -36,5 +40,5 @@ export function useMonthData(year: number, month: number, currency: Currency) {
   useFocusEffect(load);
   useEffect(() => onTransactionsChanged(load), [load]);
 
-  return { stats, share, today, load, failed };
+  return { stats, share, today, marks, load, failed };
 }

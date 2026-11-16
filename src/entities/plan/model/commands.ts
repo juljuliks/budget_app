@@ -1,14 +1,22 @@
 // The plan's writes from its sheets: each one tells the screens (the stats, the reports) the data changed.
-import { addUnplannedCover, coverFromLimit, RegularItem, setPlanAmount, setRegularItem, setUndatedAhead } from '@/db/plans';
+import { addUnplannedCover, coverFromLimit, RegularItem, setItemDue, setPlanAmount, setRegularItem, setUndatedAhead } from '@/db/plans';
 import type { Currency } from '@/db/fx';
+import type { NormPeriod, PlanKind } from '@/db/plans';
 import { getCategory } from '@/db/categories';
 import { categoryPayment, savePayment, startSaving, stopSaving, turnRecurring } from '@/db/recurring';
 import type { SavingChoice } from './usePaymentSaving';
 import { emitTransactionsChanged } from '@/domain/events';
 
-/** A category's amount in a month's plan (added to it if it wasn't there); throws OverBudgetError past the budget. */
-export async function savePlanAmount(...args: Parameters<typeof setPlanAmount>) {
-  await setPlanAmount(...args);
+/**
+ * A category's amount in a month's plan (added to it if it wasn't there); throws OverBudgetError past the budget. A
+ * one-off payment's day in the month: `due` (null — none; undefined — left as it is).
+ */
+export async function savePlanAmount(
+  ym: string, categoryId: number, limitMinor: number, kind?: PlanKind, currency?: Currency, normPeriod?: NormPeriod, takeLocked: boolean | 'all' = false,
+  due?: string | null,
+) {
+  await setPlanAmount(ym, categoryId, limitMinor, kind, currency, normPeriod, takeLocked);
+  if (due !== undefined) await setItemDue(ym, categoryId, due);
   emitTransactionsChanged();
 }
 

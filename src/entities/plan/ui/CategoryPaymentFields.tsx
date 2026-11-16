@@ -14,7 +14,8 @@ import { SavingChoice, usePaymentSaving } from '../model/usePaymentSaving';
 
 /**
  * The category's own payment, monthly or rarer: its charge's day (`next`: the one the others are counted from, past this
- * month's too; a monthly one has none — the amount stands in each month's plan), its end.
+ * month's too; a monthly one's is optional — without it the amount stands in each month's plan, with it its charges are
+ * counted as a rarer one's and marked on the stats' bar), its end.
  */
 export type CategoryPaymentForm = RepeatForm & {
   period: number; next: string | null; value: string; currency: Currency;
@@ -25,7 +26,7 @@ export type CategoryPaymentForm = RepeatForm & {
 type Props = { ym: string; categoryId: number; form: UseFormReturn<CategoryPaymentForm> };
 
 /**
- * "Регулярный платёж", "Каждый месяц" … "Раз в год": "Дата списания" (rarer than monthly only) and "Дата окончания"; its saved payment comes back
+ * "Регулярный платёж", "Каждый месяц" … "Раз в год": "Дата списания" (monthly — "(необязательно)") and "Дата окончания"; its saved payment comes back
  * (amount, how often, the day as it was put in). Only the plan: each charge stands in its month (none before the month it
  * was made in), nothing is matched with operations.
  */
@@ -52,14 +53,15 @@ export default function CategoryPaymentFields({ ym, categoryId, form }: Props) {
   }, [choiceKey]);
   return (
     <View>
-      {/* monthly: the amount in each month's plan, a day changes nothing */}
-      {period === 1 ? null : (
-        <Controller control={form.control} name="next" render={({ field }) => (
-          <DateField label="Дата списания" value={field.value} format={dayTitle} sheetTitle="Дата списания" onChange={field.onChange} />
-        )} />
-      )}
+      {/* monthly: a day is optional — it puts the payment on the stats' bar, the month's pace counts it from that day */}
+      <Controller control={form.control} name="next" render={({ field }) => (
+        <DateField
+          label={period === 1 ? 'Дата списания (необязательно)' : 'Дата списания'} value={field.value} format={dayTitle} sheetTitle="Дата списания"
+          onChange={field.onChange} onClear={period === 1 ? () => field.onChange(null) : undefined}
+        />
+      )} />
       <Text style={formStyles.hint}>
-        {period === 1 ? 'Сумма стоит в плане каждый месяц.'
+        {period === 1 ? (next ? 'Сумма стоит в плане каждый месяц, списание — в этот день месяца.' : 'Сумма стоит в плане каждый месяц. С датой платёж встанет на шкалу месяца в статистике.')
           : next ? `Следующие — ${periodText(period)} от этой даты; списание встанет в план своего месяца.` : 'Выберите дату списания.'}
       </Text>
       <UntilField ym={ym} form={form as unknown as UseFormReturn<RepeatForm>} />
