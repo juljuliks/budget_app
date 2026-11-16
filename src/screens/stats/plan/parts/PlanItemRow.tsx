@@ -88,8 +88,9 @@ export function SystemRowView({ p, r, hidden, onOpen }: { p: PlanView; r: System
       <View style={styles.amountBox}>
         {hidden ? null : (
           <View style={styles.amountLine}>
-            {r.inBudget !== undefined && p.budgetMoney ? <Text style={[styles.amount, styles.amountForeign]}>{p.budgetMoney(r.inBudget)}</Text> : null}
-            <Text style={[styles.amount, toneStyle(r.tone)]}>{`${r.carry === 'plus' ? '+' : ''}${p.money(r.value)}`}</Text>
+            {r.inBudget !== undefined && p.budgetMoney
+              ? <Text style={styles.amount}>{p.budgetMoney(r.inBudget).slice(1, -1)}</Text>
+              : <Text style={[styles.amount, toneStyle(r.tone)]}>{`${r.carry === 'plus' ? '+' : ''}${p.money(r.value)}`}</Text>}
           </View>
         )}
         {/* the leftover moved in: on top of the budget, no share */}

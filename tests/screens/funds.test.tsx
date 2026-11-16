@@ -71,7 +71,7 @@ describe('6.5 funds', () => {
     expect(screen.queryByText('Импульсивные покупки')).toBeNull();
   });
 
-  test('the screen in another currency: the contribution in the fund\'s own one before it, "(300 ₾)"', async () => {
+  test('the screen in another currency: the contribution in the fund\'s own currency, the display one not shown', async () => {
     await makeFund();
     const db = await getDb();
     for (let d = 1; d <= 15; d++) await db.run("INSERT OR REPLACE INTO fx_rates (date, currency, gel_per_unit) VALUES (?, 'USD', 2.5)", [`2026-10-${String(d).padStart(2, '0')}`]);
@@ -80,10 +80,11 @@ describe('6.5 funds', () => {
     await tap('$ USD');
     backToTabs();
     await openPlanPage();
-    await screen.findAllByText('120 $');
+    // 🔒 and the fund row both show 300 ₾ — wait on the fund's progress text which is unique
+    await screen.findByText(/150 из 1/);
     const t = texts();
     const i = t.lastIndexOf('👕 Одежда');
-    expect(t.slice(i + 1, i + 5)).toEqual(['150 из 1 500 ₾ · к 31 января 2027', '(300 ₾)', '120 $', '10%']);
+    expect(t.slice(i + 1, i + 4)).toEqual(['150 из 1 500 ₾ · к 31 января 2027', '300 ₾', '10%']);
   });
 
   test('past what is free, 🔒 set as an amount gives way without asking — said on its row in the plan', async () => {

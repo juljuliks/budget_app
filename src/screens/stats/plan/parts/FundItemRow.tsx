@@ -42,9 +42,8 @@ export function FundItemRow({ p, item, hidden, onOpen }: Props) {
       <View style={styles.amountBox}>
         {hidden ? null : (
           <View style={styles.amountLine}>
-            {own && value !== null ? <Text style={[styles.amount, styles.amountForeign]}>{`(${own})`}</Text> : null}
             <Text style={styles.amount}>
-              {value !== null ? p.money(value) : formatWithCurrency(item.limit_minor, item.currency)}
+              {own ?? (value !== null ? p.money(value) : formatWithCurrency(item.limit_minor, item.currency))}
             </Text>
           </View>
         )}
