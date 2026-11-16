@@ -41,7 +41,7 @@ export async function coverWithUndo(ym: string, minor: number, over: number, cur
  * перерасход вне плана?" — what is freed goes to it (as much as it is past), or to the savings as before.
  */
 export async function offerCover(ym: string, freed: number, currency: string): Promise<void> {
-  if (ym !== currentYm() || freed < NOISE) return;
+  if (freed < NOISE) return;
   const [over, budget, conv] = await Promise.all([unplannedOver(ym), getPlanBudget(ym), planConverter(ym)]);
   if (!budget) return;
   const inBudget = conv(freed, currency, budget.currency) ?? 0;
