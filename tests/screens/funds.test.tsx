@@ -53,7 +53,7 @@ describe('6.5 funds', () => {
     const t = texts();
     const i = t.lastIndexOf('👕 Одежда');
     expect(t[i + 2]).toMatch(/^300\s₾$/);
-    expect(t[i + 3]).toBe('10%');
+    expect(t[i + 3]).toBe(' · 10%');
     // the plan's sheet picks no kind: it is the category's (none set — a one-off payment)
     await tap('Добавить в план');
     await tap(await screen.findByText('🚕 Такси'));
@@ -84,7 +84,7 @@ describe('6.5 funds', () => {
     await screen.findByText(/150 из 1/);
     const t = texts();
     const i = t.lastIndexOf('👕 Одежда');
-    expect(t.slice(i + 1, i + 4)).toEqual(['150 из 1 500 ₾ · к 31 января 2027', '300 ₾', '10%']);
+    expect(t.slice(i + 1, i + 4)).toEqual(['150 из 1 500 ₾ · к 31 января 2027', '300 ₾', ' · 10%']);
   });
 
   test('past what is free, 🔒 set as an amount gives way without asking — said on its row in the plan', async () => {

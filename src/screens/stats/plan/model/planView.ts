@@ -146,6 +146,12 @@ export function planView({ ym, currency, items: all, budget, toShown, fromShown,
     if (i.currency === budget.currency) return i.limit_minor;
     return i.converted_minor === null ? null : fromShown(i.converted_minor, budget.currency);
   };
+  // the legend's "(2 000 $)": an amount of the screen's currency in the budget's (null — the same one, or no rate)
+  const legendInBudget = (shown: number): string | null => {
+    if (!budgetMoney || !budget) return null;
+    const minor = fromShown(shown, budget.currency);
+    return minor === null ? null : budgetMoney(minor);
+  };
   // a category's contributions to its repeating payments in it
   const savingInBudget = (i: PlanItem): number | null => (!budgetMoney || !budget ? null : fromShown(i.subs?.saving_minor ?? 0, budget.currency));
   if (shownBudget && carry) {
@@ -208,7 +214,7 @@ export function planView({ ym, currency, items: all, budget, toShown, fromShown,
   const claimed = total + fundsTotal + debt - plus;
 
   return {
-    ym, currency, money, hidden, budgetMoney, fundInBudget, savingInBudget, total, fundsTotal, funds, saving, recurring, shownBudget, budgetSub, claimed,
+    ym, currency, money, hidden, budgetMoney, legendInBudget, fundInBudget, savingInBudget, total, fundsTotal, funds, saving, recurring, shownBudget, budgetSub, claimed,
     unplanned, locked, free, timing, parts, less, savingsPlanned, systemGroups, budgetHint, groups: groupByType(items),
   };
 }

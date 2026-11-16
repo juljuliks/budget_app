@@ -7,7 +7,8 @@ import { styles, toneStyle } from './styles';
 
 /**
  * The bar's parts as a legend, a line each: its dot, name, share — the shares in a column right by the names (as wide as
- * the longest one) — and the amount at the right edge.
+ * the longest one) — and the amount at the right edge ("(1 000 $)" before it: in the budget's currency, when the screen
+ * shows another).
  */
 export default function BudgetLegend({ p }: { p: PlanView }) {
   // the names' column: as wide as the widest name (measured in an invisible column of them all)
@@ -35,6 +36,8 @@ export default function BudgetLegend({ p }: { p: PlanView }) {
           </View>
           <Text style={[styles.partNote, toneStyle(x.noteTone)]} numberOfLines={1}>{x.note}</Text>
           <View style={styles.partValues}>
+            {/* the budget in another currency: the part in it too, "(1 000 $)" before, as in the plan's rows */}
+            {p.legendInBudget(x.value) ? <Masked style={styles.partForeign}>{p.legendInBudget(x.value)}</Masked> : null}
             <Masked style={[styles.partValue, toneStyle(x.tone)]}>{p.money(x.value)}</Masked>
           </View>
         </View>

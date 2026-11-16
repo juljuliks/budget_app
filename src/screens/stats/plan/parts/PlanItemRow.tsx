@@ -18,11 +18,14 @@ type Props = {
   onOpen: () => void;
 };
 
-/** Under a row's amount: its share of the budget, "10%" (after `before`, e.g. "можно тратить · 10%"); "Скрыть суммы" — it alone. */
+/**
+ * After a row's amount, as in the stats: its share of the budget, " · 10%" (after `before`, e.g. "можно тратить · 10%");
+ * "Скрыть суммы" — it alone, no dot.
+ */
 export function Share({ p, value, before }: { p: PlanView; value: number | null; before?: string }) {
   const share = p.shownBudget && value ? percentOf(value, p.shownBudget) || '0%' : '';
   const text = [before, share].filter(Boolean).join(' · ');
-  return text ? <Text style={styles.amountOriginal}>{text}</Text> : null;
+  return text ? <Text style={styles.amountOriginal}>{p.hidden ? text : ` · ${text}`}</Text> : null;
 }
 
 /**
@@ -94,7 +97,7 @@ export function SystemRowView({ p, r, hidden, onOpen }: { p: PlanView; r: System
           </View>
         )}
         {/* the leftover moved in: on top of the budget, no share */}
-        {r.carry === 'plus' || !p.shownBudget ? null : <Text style={styles.amountOriginal}>{percentOf(r.value, p.shownBudget) || '0%'}</Text>}
+        {r.carry === 'plus' || !p.shownBudget ? null : <Text style={styles.amountOriginal}>{hidden ? '' : ' · '}{percentOf(r.value, p.shownBudget) || '0%'}</Text>}
       </View>
     </TouchableOpacity>
   );

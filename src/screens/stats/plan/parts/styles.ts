@@ -12,7 +12,8 @@ export const styles = StyleSheet.create({
   lockRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 },
   lockOwn: { fontSize: 14, color: colors.muted },
   lockInput: { flex: 1, paddingVertical: 6 },
-  screen: { flex: 1 },
+  // white like the stats: the sections' grey bands stand out
+  screen: { flex: 1, backgroundColor: colors.bg },
   // room under the last row for the "+"
   content: { paddingHorizontal: 16, paddingBottom: 88 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
@@ -45,6 +46,7 @@ export const styles = StyleSheet.create({
   // center, not baseline: the overspend's ⓘ is a drawing, and baseline drops it under the amount
   partValues: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 6 },
   partValue: { textAlign: 'right', fontSize: 14, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
+  partForeign: { fontSize: 13, color: colors.faint, fontVariant: ['tabular-nums'] },
   // the legend's names laid out unseen: the widest sets the names' column
   measure: { position: 'absolute', opacity: 0, alignItems: 'flex-start' },
   // a share ("43%") or a word ("сэкономлено") right by the name
@@ -64,8 +66,9 @@ export const styles = StyleSheet.create({
   // a grey band across the screen, sticking on top as the days on the operations do
   groupHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: -16 },
   groupTitle: { fontSize: 13, fontWeight: '600', color: colors.muted },
-  groupShare: { color: colors.muted, fontWeight: '400' },
-  groupTotal: { fontSize: 13, fontWeight: '600', color: colors.muted, fontVariant: ['tabular-nums'] },
+  // as the stats' headers: the amount dark, " · 23%" muted
+  groupShare: { color: colors.muted },
+  groupTotal: { fontSize: 13, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
   // a row charged in a later month only: faded
   later: { opacity: 0.5 },
   row: {
@@ -77,14 +80,15 @@ export const styles = StyleSheet.create({
   nameBox: { flex: 1, marginRight: 8 },
   name: { fontSize: 15, color: colors.text },
   percent: { fontSize: 12, color: colors.muted, marginTop: 2, fontVariant: ['tabular-nums'] },
-  amount: { fontSize: 16, color: colors.text, fontVariant: ['tabular-nums'] },
-  amountBox: { alignItems: 'flex-end', paddingLeft: 8 },
-  amountOriginal: { fontSize: 12, color: colors.muted, fontVariant: ['tabular-nums'] },
+  // as the stats' rows: "1 200 ₾ · 10%" in one line on the name's, the share muted
+  amount: { fontSize: 13, color: colors.text, fontVariant: ['tabular-nums'] },
+  amountBox: { flexDirection: 'row', alignItems: 'baseline', alignSelf: 'flex-start', paddingTop: 2, paddingLeft: 8 },
+  amountOriginal: { fontSize: 13, color: colors.muted, fontVariant: ['tabular-nums'] },
   // another currency's amount before the one shown, as large, muted
-  amountLine: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
+  amountLine: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
   // the amount in another currency ("(300 $)") before the screen's one: smaller and lighter, in every row of the plan
   amountForeign: { fontSize: 13, color: colors.faint },
-  amountEmpty: { color: colors.muted, fontSize: 14 },
+  amountEmpty: { color: colors.muted },
 });
 
 /** A part's amount colored by its tone. */
