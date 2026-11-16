@@ -28,21 +28,23 @@ describe('5.1 a month', () => {
     expect(screen.getByText('Осталось 450 ₾ · до 31 окт')).toBeTruthy();
   });
 
-  test('5.1.3a the chevron by «Осталось»: what it is made of — the payments to pay, the limits, outside the plan, a day', async () => {
-    await tap('#month-breakdown');
-    const t = texts();
-    const from = t.indexOf('Осталось 450 ₾ · до 31 окт');
-    expect(t.slice(from, from + 11)).toEqual([
-      'Осталось 450 ₾ · до 31 окт',
-      'Платежи · 1 из 2 оплачены', 'осталось оплатить 30 ₾', '📺 Подписки', '30 ₾',
-      'Траты с лимитом', 'осталось 535 ₾ · перерасход 50 ₾',
-      // past its share: just the overspend
-      'Вне плана', 'перерасход 80 ₾',
-      // (450 − 30) / 17 days from today
-      'В день до 31 окт, без платежей', '≈ 24.71 ₾',
-    ]);
-    await tap('#month-breakdown');
-    expect(screen.queryByText('Траты с лимитом')).toBeNull();
+  test('5.1.3a tiles under the bar: the payments ahead, the limits left for the days left, the overspends; a tap — its list', async () => {
+    const from = texts().indexOf('Осталось 450 ₾ · до 31 окт');
+    // under the tiles: its list (an item's amount is in a text of its own and in the line with its note)
+    const list = () => texts().slice(from + 10, texts().indexOf('Нажмите на категорию — операции, план, динамика, категория'));
+    expect(texts().slice(from + 1, from + 10)).toEqual(['Платежи', '30 ₾', '1 впереди', 'Лимиты', '535 ₾', 'на 17 дней', 'Перерасход', '130 ₾', '2 категории']);
+    expect(list()).toEqual([]);
+    await tap('#tile-payments');
+    expect(list()).toEqual(['📺 Подписки', '30 ₾', '30 ₾']);
+    // each limit in its rhythm for the 17 days left: «Продукты» daily, «Кафе» weekly
+    await tap('#tile-limits');
+    expect(list()).toEqual(['🛒 Продукты', '≈ 18.53 ₾ в день · 315 ₾', '315 ₾', '☕️ Кафе и рестораны', '≈ 90.59 ₾ в неделю · 220 ₾', '220 ₾']);
+    // the overspends, the most first; outside the plan — past its share
+    await tap('#tile-over');
+    expect(list()).toEqual(['🎲 Вне плана', '80 ₾', '80 ₾', '👕 Одежда', '50 ₾', '50 ₾']);
+    // again — closed
+    await tap('#tile-over');
+    expect(list()).toEqual([]);
   });
 
   test('5.1.3b payments with a day over the bar: ✓ paid, ✕ past and not paid, faded ahead; today\'s tick counts them', async () => {
@@ -64,8 +66,8 @@ describe('5.1 a month', () => {
     await act(async () => { emitTransactionsChanged(); });
     expect(await screen.findByLabelText('Подписки, 20 окт, впереди')).toBeTruthy();
     expect(screen.queryByText(/не оплачен$/)).toBeNull();
-    await tap('#month-breakdown');
-    expect(screen.getByText('📺 Подписки · 20 окт')).toBeTruthy();
+    await tap('#tile-payments');
+    expect(screen.getByText('20 окт · ')).toBeTruthy();
   });
 
   test('a section\'s header: fact / plan · %', async () => {
@@ -120,12 +122,13 @@ describe('5.1 a month', () => {
   });
 
   test('5.1.20 a long press: «Операции», «В план» (an unplanned one), «Динамика» over the finger; «В план» offers what it spent', async () => {
-    expect(screen.getByText('Нажмите на категорию — операции, план, динамика')).toBeTruthy();
+    expect(screen.getByText('Нажмите на категорию — операции, план, динамика, категория')).toBeTruthy();
     fireEvent(await screen.findByText('🚕 Такси'), 'longPress', { nativeEvent: { pageX: 200, pageY: 500 } });
     expect(await screen.findByLabelText('Операции')).toBeTruthy();
     expect(screen.getByLabelText('Динамика')).toBeTruthy();
     // released in place: the buttons stay for a tap
     fireEvent(screen.getByText('🚕 Такси'), 'touchEnd');
+    expect(screen.getByLabelText('Категория')).toBeTruthy();
     fireEvent.press(screen.getByLabelText('В план'));
     expect(await screen.findByDisplayValue('60')).toBeTruthy();
     await tap('Сохранить');
@@ -133,16 +136,23 @@ describe('5.1 a month', () => {
     expect(await screen.findByText('60 / 60 ₾ · 100%')).toBeTruthy();
   });
 
+  test('5.1.20 «Категория»: its page', async () => {
+    fireEvent(await screen.findByText('🚕 Такси'), 'longPress', { nativeEvent: { pageX: 200, pageY: 500 } });
+    fireEvent(screen.getByText('🚕 Такси'), 'touchEnd');
+    fireEvent.press(await screen.findByLabelText('Категория'));
+    expect(await screen.findByText('В плане')).toBeTruthy();
+  });
+
   test('5.1.20 the finger moved onto «Динамика» and released: its dynamics; moved away — nothing; TalkBack — the row\'s actions', async () => {
     const row = await screen.findByText('🚕 Такси');
     // away from the buttons: closed, nothing opened
     fireEvent(row, 'longPress', { nativeEvent: { pageX: 200, pageY: 500 } });
-    fireEvent(row, 'touchMove', { nativeEvent: { pageX: 200, pageY: 700 } });
+    fireEvent(row, 'touchMove', { nativeEvent: { pageX: 330, pageY: 650 } });
     fireEvent(row, 'touchEnd');
     await waitFor(() => expect(screen.queryByLabelText('Динамика')).toBeNull());
-    // the arc over the finger: «Операции», «В план» straight up, «Динамика» on the right (50°, 104 away)
+    // a diamond around the finger: «Операции» left, «В план» up, «Категория» right, «Динамика» down
     fireEvent(row, 'longPress', { nativeEvent: { pageX: 200, pageY: 500 } });
-    fireEvent(row, 'touchMove', { nativeEvent: { pageX: 280, pageY: 433 } });
+    fireEvent(row, 'touchMove', { nativeEvent: { pageX: 200, pageY: 600 } });
     fireEvent(row, 'touchEnd');
     expect(await screen.findByText('Нажмите на столбик — сумма месяца')).toBeTruthy();
     back();
