@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { MerchantLink } from '@/entities/merchant';
+import { Text, View } from 'react-native';
 import { MONTHS_GEN, MONTHS_PREP, monthYear } from '@/shared/lib/dates';
 import { plural } from '@/shared/lib/format';
 import { formatWithCurrency } from '@/shared/lib/money';
 import Masked from '@/shared/ui/Masked';
-import { colors } from '@/shared/theme/theme';
+import { SubRow, type SubRowNote } from '@/features/recurring-payments';
 import type { SubsTrend as Subs, SubTrend } from '@/stats/subsFundTrend';
 import type { Bar } from '../model/trendsView';
 import { detailStyles as s } from './detailStyles';
@@ -13,7 +12,7 @@ import { shortDay } from './RareTrend';
 import TrendBars from './TrendBars';
 
 /** Under a subscription's name: it went up, it's gone, its next charge. */
-function note(x: SubTrend, next: string | null | undefined, screenMoney: (minor: number) => string): { text: string; warn?: boolean } | null {
+function note(x: SubTrend, next: string | null | undefined, screenMoney: (minor: number) => string): SubRowNote | null {
   // its change is in its own currency
   const money = x.own ? (minor: number) => formatWithCurrency(minor, x.own!.currency) : screenMoney;
   if (x.gone) return { text: x.lastDay ? `последний платёж ${shortDay(x.lastDay)} · больше не списывается` : 'больше не списывается' };
@@ -48,38 +47,22 @@ export default function SubsTrend({ t, next, bars, color, money }: {
       {t.subs.length ? (
         <View style={s.block}>
           <Text style={s.label}>Подписки</Text>
-          {t.subs.map((x) => {
-            const n = note(x, next.get(x.id), money);
-            return (
-              <View key={x.id} style={[styles.sub, x.gone && styles.gone]}>
-                <View style={s.merchantName}>
-                  {x.merchantKey && !x.gone ? <MerchantLink merchantKey={x.merchantKey} label={x.name} /> : <Text style={s.value}>{x.name}</Text>}
-                  {n ? <Text style={[styles.note, n.warn && styles.warn]}>{n.text}</Text> : null}
-                </View>
-                <View style={styles.right}>
-                  {/* in another currency: its own first, the screen's in brackets — "3 $ (7.79 ₾)" */}
-                  <Masked style={s.value}>
-                    {x.own ? formatWithCurrency(x.own.amount, x.own.currency) : money(x.amount ?? 0)}
-                    {x.own && x.amount !== null ? <Text style={styles.inShown}>{` (${money(x.amount)})`}</Text> : null}
-                  </Masked>
-                  {!x.gone && x.perMonth !== null ? (
-                    <Text style={styles.note}>{x.yearly ? `≈ ${money(x.perMonth)} в месяц` : `в месяц · ${money(x.perYear!)} в год`}</Text>
-                  ) : null}
-                </View>
-              </View>
-            );
-          })}
+          {t.subs.map((x) => (
+            <SubRow
+              key={x.id}
+              name={x.name}
+              merchantKey={x.merchantKey}
+              linked
+              gone={x.gone}
+              note={note(x, next.get(x.id), money)}
+              amount={x.own ? formatWithCurrency(x.own.amount, x.own.currency) : money(x.amount ?? 0)}
+              amountInShown={x.own && x.amount !== null ? ` (${money(x.amount)})` : undefined}
+              amountNote={x.perMonth !== null ? (x.yearly ? `≈ ${money(x.perMonth)} в месяц` : `в месяц · ${money(x.perYear!)} в год`) : undefined}
+            />
+          ))}
         </View>
       ) : null}
     </>
   );
 }
 
-const styles = StyleSheet.create({
-  sub: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 10 },
-  gone: { opacity: 0.6 },
-  right: { alignItems: 'flex-end' },
-  note: { fontSize: 13, color: colors.muted, marginTop: 2 },
-  inShown: { color: colors.muted },
-  warn: { color: colors.warn },
-});
