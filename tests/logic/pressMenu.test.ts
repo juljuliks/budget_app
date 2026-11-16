@@ -7,12 +7,16 @@ test('three buttons in an arc over the finger: left, straight up, right', () => 
   expect(round(menuLayout({ x: 200, y: 500 }, 3, 412))).toEqual([[120, 433], [200, 396], [280, 433]]);
 });
 
-test('four buttons: a diamond around the finger — left, top, right, bottom; kept inside the screen', () => {
-  expect(round(menuLayout({ x: 200, y: 500 }, 4, 412, 892))).toEqual([[100, 500], [200, 400], [300, 500], [200, 600]]);
-  // under the header: moved down; over the tab bar: up; at a side: in
-  expect(round(menuLayout({ x: 200, y: 150 }, 4, 412, 892))[1]).toEqual([200, 124]);
-  expect(round(menuLayout({ x: 200, y: 800 }, 4, 412, 892))[3]).toEqual([200, 768]);
-  expect(Math.round(menuLayout({ x: 20, y: 500 }, 4, 412, 892)[0].x) - 28).toBe(12);
+test('four buttons: a cross close around the finger — left, top, right, bottom; with its labels inside the screen', () => {
+  expect(round(menuLayout({ x: 200, y: 500 }, 4, 412, 892))).toEqual([[150, 500], [200, 450], [250, 500], [200, 550]]);
+  // under the header: moved down (the top label under it); over the tab bar: up; at a side: in, the label outside kept
+  expect(round(menuLayout({ x: 200, y: 150 }, 4, 412, 892))[1]).toEqual([200, 158]);
+  expect(round(menuLayout({ x: 200, y: 800 }, 4, 412, 892))[3]).toEqual([200, 734]);
+  expect(Math.round(menuLayout({ x: 20, y: 500 }, 4, 412, 892)[0].x) - 28 - 14 - 96).toBe(12);
+  // at its middle (the finger, not moved) no button is under it; towards one — that one
+  const arms = menuLayout({ x: 200, y: 500 }, 4, 412, 892);
+  expect(buttonAt(arms, { x: 200, y: 500 })).toBeNull();
+  expect(buttonAt(arms, { x: 175, y: 500 })).toBe(0);
 });
 
 test('no room over it (the header): under the finger', () => {

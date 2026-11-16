@@ -32,8 +32,8 @@ export function monthPace(stats: MonthStats, share: number, marks: PaymentMark[]
   const dated = marks.flatMap((m) => {
     const c = cats.get(m.category_id);
     const minor = m.minor ?? c?.limit_minor ?? 0;
-    // without a day: only when its spending covers it
-    if (m.undated && c && spentOf(c) < minor * 0.99) return [];
+    // without a day: only when it is paid (isPaid: a rate's difference allowed, as everywhere)
+    if (m.undated && c && !isPaid(spentOf(c), minor)) return [];
     return c && minor > 0 && m.day.startsWith(stats.ym) ? [{ ...m, c, minor }] : [];
   });
   if (!dated.length || plannedAll <= 0) return { marks: [], tick: null, expected: null };
@@ -59,16 +59,23 @@ export function monthPace(stats: MonthStats, share: number, marks: PaymentMark[]
   return { marks: out, tick: expected === null ? null : Math.min(1, expected / plannedAll), expected };
 }
 
-/** Marks nearer than `gap` (0…1) to the one before: one, with their count and the worst state (not paid, then ahead). */
-export function clusterMarks(marks: BarMark[], gap: number): Array<BarMark & { count: number }> {
+/** A mark as drawn: one payment, or those too near — one with their count, the worst state; `members` — its payments. */
+export type ShownMark = BarMark & { count: number; members: BarMark[] };
+
+/**
+ * Marks nearer than `gap` (0…1) to the one before: one, with their count and the worst state (not paid, then ahead).
+ * Drawn overlapping, each next icon `step` (0…1) further: the next mark is measured from the last icon of the group.
+ */
+export function clusterMarks(marks: BarMark[], gap: number, step = 0): ShownMark[] {
   const rank: Record<MarkStatus, number> = { missed: 2, ahead: 1, paid: 0 };
-  const out: Array<BarMark & { count: number }> = [];
+  const out: ShownMark[] = [];
   for (const m of [...marks].sort((a, b) => a.at - b.at)) {
     const last = out[out.length - 1];
-    if (last && m.at - last.at < gap) {
+    if (last && m.at - (last.at + (last.count - 1) * step) < gap) {
       last.count += 1;
+      last.members.push(m);
       if (rank[m.status] > rank[last.status]) last.status = m.status;
-    } else out.push({ ...m, count: 1 });
+    } else out.push({ ...m, count: 1, members: [m] });
   }
   return out;
 }

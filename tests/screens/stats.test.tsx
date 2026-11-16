@@ -60,6 +60,8 @@ describe('5.1 a month', () => {
     // rent planned 810, 800 paid: 1.2% short — ✓, not «10 ₾» left
     await act(async () => { await setPlanAmount(currentYm(), home, 81000, 'fixed'); emitTransactionsChanged(); });
     expect(await screen.findByLabelText('Оплачено')).toBeTruthy();
+    // and on the bar, on its day of paying
+    expect(await screen.findByLabelText('Дом и коммуналка, 3 окт, оплачен')).toBeTruthy();
     await tap('#month-ahead');
     const from = texts().indexOf('Платежи');
     expect(texts().slice(from, from + 3)).toEqual(['Платежи', '30 ₾', '1 впереди']);
@@ -68,6 +70,27 @@ describe('5.1 a month', () => {
     await waitFor(() => expect(screen.queryByLabelText('Оплачено')).toBeNull());
     const at = texts().indexOf('Платежи');
     expect(texts().slice(at, at + 3)).toEqual(['Платежи', '60 ₾', '2 впереди']);
+  });
+
+  test('5.1.3d a tap on a payment\'s mark: its category, amount, day and state instead of «Осталось»; a tap on it — back', async () => {
+    const db = await getDb();
+    const subs = (await db.get<{ id: number }>('SELECT id FROM categories WHERE name = ?', ['Подписки']))!.id;
+    await setItemDue('2026-10', subs, '2026-10-20');
+    await act(async () => { emitTransactionsChanged(); });
+    await tap(await screen.findByLabelText('Дом и коммуналка, 3 окт, оплачен'));
+    expect(screen.getByText('🏠 Дом и коммуналка · 800 ₾ · 3 окт · оплачен')).toBeTruthy();
+    expect(screen.queryByText('Осталось 450 ₾ · до 31 окт')).toBeNull();
+    // another mark: its payment instead
+    await tap(screen.getByLabelText('Подписки, 20 окт, впереди'));
+    expect(screen.getByText('📺 Подписки · 30 ₾ · 20 окт · впереди')).toBeTruthy();
+    expect(screen.queryByText(/Дом и коммуналка · 800/)).toBeNull();
+    // a tap on the line: «Осталось …» back
+    await tap('#mark-info');
+    expect(screen.getByText('Осталось 450 ₾ · до 31 окт')).toBeTruthy();
+    // the same mark twice: back too
+    await tap(screen.getByLabelText('Подписки, 20 окт, впереди'));
+    await tap(screen.getByLabelText('Подписки, 20 окт, впереди'));
+    expect(screen.getByText('Осталось 450 ₾ · до 31 окт')).toBeTruthy();
   });
 
   test('5.1.3b payments with a day over the bar: ✓ paid, ✕ past and not paid, faded ahead; today\'s tick counts them', async () => {
@@ -175,9 +198,9 @@ describe('5.1 a month', () => {
     fireEvent(row, 'touchMove', { nativeEvent: { pageX: 330, pageY: 650 } });
     fireEvent(row, 'touchEnd');
     await waitFor(() => expect(screen.queryByLabelText('Динамика')).toBeNull());
-    // a diamond around the finger: «Операции» left, «В план» up, «Категория» right, «Динамика» down
+    // a cross close around the finger: «Операции» left, «В план» up, «Категория» right, «Динамика» down
     fireEvent(row, 'longPress', { nativeEvent: { pageX: 200, pageY: 500 } });
-    fireEvent(row, 'touchMove', { nativeEvent: { pageX: 200, pageY: 600 } });
+    fireEvent(row, 'touchMove', { nativeEvent: { pageX: 200, pageY: 548 } });
     fireEvent(row, 'touchEnd');
     expect(await screen.findByText('Нажмите на столбик — сумма месяца')).toBeTruthy();
     back();

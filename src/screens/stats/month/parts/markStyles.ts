@@ -12,6 +12,9 @@ export const markStyles = StyleSheet.create({
     borderColor: colors.border, alignItems: 'center', justifyContent: 'center',
   },
   icon: { fontSize: 13 },
+  // payments drawn as one: their icons side by side, each over the one before, a ring of the page between them
+  stack: { height: 24 },
+  stacked: { position: 'absolute', top: 0, borderWidth: 1.5, borderColor: colors.bg },
   // its stem down to the bar
   stem: { width: 1, height: 6, backgroundColor: colors.faint },
   status: {
@@ -26,6 +29,13 @@ export const markStyles = StyleSheet.create({
     backgroundColor: colors.muted, alignItems: 'center', justifyContent: 'center',
   },
   countText: { fontSize: 9, lineHeight: 11, fontWeight: '700', color: colors.bg },
+  // the mark tapped: outlined
+  picked: { borderWidth: 1.5, borderColor: colors.accent },
+  // its payments under the bar, instead of «Осталось …»; their state's word coloured
+  infoLine: { fontSize: 13, color: colors.text, marginTop: 4 },
+  infoPaid: { color: colors.income, fontWeight: '600' },
+  infoMissed: { color: colors.warn, fontWeight: '600' },
+  infoAhead: { color: colors.muted },
   // a payment whose day is past and not paid, under the bar
   missedLine: { fontSize: 13, fontWeight: '600', color: colors.warn, marginTop: 2 },
 });

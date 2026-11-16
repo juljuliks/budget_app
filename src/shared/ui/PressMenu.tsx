@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { BUTTON_RADIUS, buttonAt, menuLayout, movedFrom, Point } from '../lib/pressMenu';
 import { colors } from '../theme/theme';
+import DPad from './DPad';
 import { useScrollLock } from './scrollLock';
 
 export type PressAction = { key: string; label: string; icon: (color: string) => React.ReactNode; onPress: () => void };
@@ -28,7 +29,7 @@ const PRESS_DELAY = 120;
 const HELD_SCALE = 0.96;
 
 /**
- * A row with a long press: its actions as round buttons in an arc over the finger. Moved onto one and released — it is
+ * A row with a long press: its actions as round buttons in an arc over the finger (four — a cross around it on a plate, labels outside, DPad). Moved onto one and released — it is
  * done (the one under the finger grows, a short vibration); released away from them — nothing; released in place —
  * they stay, a tap picks one, a tap outside closes them. A tap opens them too, where it was; held, the row shrinks
  * towards the long press. TalkBack: the same actions as the row's actions.
@@ -106,7 +107,10 @@ export default function PressMenu({ actions, style, accessibilityHint, testID, c
       </TouchableOpacity>
       <Modal visible={open !== null} transparent animationType="fade" onRequestClose={close} statusBarTranslucent>
         <Pressable style={styles.backdrop} onPress={close} accessibilityLabel="Закрыть" />
-        {open?.buttons.map((b, i) => {
+        {/* four: a cross close around the finger, on a plate of its shape; two or three: round buttons in an arc */}
+        {open?.buttons.length === 4 ? (
+          <DPad actions={actions} buttons={open.buttons} hover={hover} top={TOP_INSET} onPress={run} />
+        ) : open?.buttons.map((b, i) => {
           const on = hover === i;
           const r = on ? BUTTON_RADIUS * 1.3 : BUTTON_RADIUS;
           return (

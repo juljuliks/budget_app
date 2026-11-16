@@ -28,7 +28,7 @@ export function categoryActions(c: CategoryStat, open: { spending: () => void; p
       ? { key: 'plan', label: ACTION_TO_PLAN, icon: (color) => <PlusIcon color={color} />, onPress: open.plan }
       : { key: 'plan', label: ACTION_PLAN, icon: (color) => <PencilIcon color={color} size={22} />, onPress: open.plan },
     { key: 'category', label: ACTION_CATEGORY, icon: (color) => <GearIcon color={color} size={22} />, onPress: open.category },
-    // a transfer: not spending, no «Динамика»; four — a diamond: «Операции» left, «План» up, «Категория» right, «Динамика» down
+    // a transfer: not spending, no «Динамика»; four — a cross: «Операции» left, «План» up, «Категория» right, «Динамика» down
     ...(c.transfer ? [] : [{ key: 'trend', label: ACTION_TREND, icon: (color: string) => <TrendsIcon color={color} />, onPress: open.trend }]),
   ];
 }
