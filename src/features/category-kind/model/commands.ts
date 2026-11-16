@@ -22,6 +22,17 @@ export async function saveCategoryKind(categoryId: number, kind: CategoryPlanKin
 }
 
 /** Its regular payments off when another kind is saved: asked if they saved something; false — kept, nothing saved. */
+/** Save a kind when creating a new category: no toast (the creation toast already appeared). */
+export async function setNewCategoryKind(categoryId: number, kind: CategoryPlanKind): Promise<void> {
+  try {
+    await setCategoryPlanKind(categoryId, kind);
+    emitTransactionsChanged();
+  } catch (e) {
+    console.error('set new category kind failed', e);
+    toastError(SAVE_FAILED);
+  }
+}
+
 export async function leaveRegular(categoryId: number, recurring: boolean): Promise<boolean> {
   if (!recurring) return true;
   try {

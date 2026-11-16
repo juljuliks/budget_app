@@ -10,7 +10,8 @@ import type { RootStackParamList } from '@/shared/navigation/navigation';
 import { formStyles } from '@/shared/theme/formStyles';
 import { colors } from '@/shared/theme/theme';
 import { CreateButton } from '@/shared/ui/PlusButton';
-import { CategorySheet, FIND_CATEGORY, matchesQuery } from '@/entities/category';
+import { FIND_CATEGORY, matchesQuery } from '@/entities/category';
+import NewCategorySheet from './parts/NewCategorySheet';
 import { openCategoryTypes } from '@/shared/navigation/sheets';
 import { openCategory } from '@/shared/navigation/navigation';
 import { onTransactionsChanged } from '@/domain/events';
@@ -107,7 +108,7 @@ export default function CategoriesScreen({ navigation }: Props) {
       )}
       ListEmptyComponent={<Text style={styles.empty}>{cats.length === 0 ? 'Категорий нет. Нажмите «Создать».' : 'Не найдено.'}</Text>}
     />
-    <CategorySheet visible={creating} onClose={() => setCreating(false)} onSaved={load} />
+    <NewCategorySheet visible={creating} onClose={() => setCreating(false)} onSaved={load} />
     {picked.length > 1 ? (
       <View style={styles.bottomBar}>
         <Button title={`Объединить (${picked.length})`} onPress={() => setMerging(picked)} />

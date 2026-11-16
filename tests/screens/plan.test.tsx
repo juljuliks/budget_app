@@ -47,7 +47,7 @@ describe('6.1 the month\'s budget', () => {
     expect(screen.queryByText(/перерасход|больше доли|✓ отложено|В сбережения идёт/)).toBeNull();
   });
 
-  test('another currency: the savings in it, "(N ₾)" before them in the budget\'s one', async () => {
+  test('another currency: the savings in the plan\'s currency only, the display one not shown', async () => {
     await openApp(planned);
     const db = await getDb();
     for (let d = 1; d <= 15; d++) await db.run("INSERT OR REPLACE INTO fx_rates (date, currency, gel_per_unit) VALUES (?, 'USD', 2.5)", [`2026-10-${String(d).padStart(2, '0')}`]);
@@ -56,11 +56,14 @@ describe('6.1 the month\'s budget', () => {
     await tap('$ USD');
     backToTabs();
     await openPlanPage();
-    expect(await screen.findByText('(300 ₾)')).toBeTruthy();
-    expect(after('🔒 Отложено сразу', 4)).toEqual(['заблокировано в начале месяца', '(300 ₾)', '120 $', '10%']);
-    expect(after('💰 Сэкономлено', 4)).toEqual(['не запланировано — решите в итогах месяца', '(240 ₾)', '96 $', '8%']);
-    // the section's header: its total in the budget's currency first
-    expect(screen.getByText('(540 ₾) ')).toBeTruthy();
+    expect(await screen.findByText('300 ₾')).toBeTruthy();
+    expect(after('🔒 Отложено сразу', 3)).toEqual(['заблокировано в начале месяца', '300 ₾', '10%']);
+    expect(after('💰 Сэкономлено', 3)).toEqual(['не запланировано — решите в итогах месяца', '240 ₾', '8%']);
+    // the section's header: only the budget's currency, no display-currency amount
+    expect(screen.queryByText('(540 ₾) ')).toBeNull();
+    // "120 $" = unplanned share and budget-legend savings appear elsewhere; check the savings header directly
+    const t2 = texts();
+    expect(t2[t2.lastIndexOf('Сбережения') + 1]).toBe('540 ₾ · 18%');
   });
 
   test('the stats: «Изменить план ›» opens the month\'s plan', async () => {
@@ -427,6 +430,20 @@ describe('6.3.12 a limit cut while the spending outside the plan is past its sha
     await cut('400');
     expect(await screen.findByText('План «☕️ Кафе и рестораны» сохранён')).toBeTruthy();
     expect(screen.queryByText('Покрыть перерасход вне плана?')).toBeNull();
+  });
+  test('past month (currentYm is November, ym is October): still asked', async () => {
+    // Advance clock to November 1 so currentYm() = '2026-11' while the stats page still shows October.
+    const Real = Object.getPrototypeOf(Date) as DateConstructor;
+    const realNow = Real.now;
+    await tap('Изменить: ☕️ Кафе и рестораны');
+    fireEvent.changeText(await screen.findByDisplayValue('310'), '200');
+    const spy = jest.spyOn(Real, 'now').mockImplementation(() => realNow.call(Real) + 17 * 86400000);
+    try {
+      await tap('Сохранить');
+      expect(await screen.findByText('Покрыть перерасход вне плана?')).toBeTruthy();
+    } finally {
+      spy.mockRestore();
+    }
   });
 });
 
