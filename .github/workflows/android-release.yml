@@ -1,6 +1,8 @@
 # Builds the phone release APK (arm64-v8a), signed with the app's release key, on every push to main (or by hand
 # from the Actions tab), and publishes it as a GitHub release "1.0.N": budget-app-1.0.N-arm64-v8a.apk. The emulator
 # build is not attached. N counts the builds since 1.0.0; only the last KEEP_RELEASES releases are kept.
+# The tests and the build run side by side (jobs test, build); publish waits for both. Cached: node_modules (by the
+# lockfile), Gradle's dependencies and build cache (setup-gradle), the NDK and CMake.
 #
 # One-time setup (repo → Settings → Secrets and variables → Actions → New repository secret):
 #   BUDGETAPP_KEYSTORE_BASE64          the release keystore file as base64 (macOS: base64 -i release.keystore | pbcopy)
@@ -29,8 +31,36 @@ env:
   KEEP_RELEASES: 5
 
 jobs:
+  # the types, the architecture (ARCHITECTURE.md: layers' imports, file sizes; errors stop the release), the tests —
+  # side by side with the build: the release is published only when both pass
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      # node_modules itself, by the lockfile: npm ci only when it changed
+      - name: node_modules cache
+        id: node-modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-node18-${{ hashFiles('package-lock.json') }}
+
+      - name: Install JS dependencies
+        if: steps.node-modules.outputs.cache-hit != 'true'
+        run: npm ci
+
+      - name: Tests
+        run: npx tsc --noEmit && npm run lint && npx jest --silent
+
   build:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.name }}
     steps:
       # the whole history: the versionCode is the number of commits (android/app/build.gradle)
       - uses: actions/checkout@v4
@@ -56,20 +86,35 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 18
-          cache: npm
+
+      - name: node_modules cache
+        id: node-modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-node18-${{ hashFiles('package-lock.json') }}
+
+      - name: Install JS dependencies
+        if: steps.node-modules.outputs.cache-hit != 'true'
+        run: npm ci
 
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
-          cache: gradle
 
-      - name: Install JS dependencies
-        run: npm ci
+      # the dependencies and Gradle's build cache (the libraries' compiled modules come from it), saved by every build
+      # on main
+      - uses: gradle/actions/setup-gradle@v4
 
-      - name: Tests
-        # the types, the architecture (ARCHITECTURE.md: layers' imports, file sizes; errors stop the release), the tests
-        run: npx tsc --noEmit && npm run lint && npx jest --silent
+      # the NDK and CMake the native modules need: not on the runner, otherwise downloaded by every build
+      - name: NDK cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            /usr/local/lib/android/sdk/ndk/23.1.7779620
+            /usr/local/lib/android/sdk/cmake/3.22.1
+          key: android-ndk-23.1.7779620-cmake-3.22.1
 
       - name: Release keystore
         env:
@@ -88,27 +133,45 @@ jobs:
         run: |
           chmod +x ./gradlew
           # the phone only; the emulator APK is built by the screenshots workflow and is not published
-          ./gradlew assembleRelease --no-daemon -PabiSplits -PreactNativeArchitectures=arm64-v8a
+          ./gradlew assembleRelease --no-daemon --build-cache -PabiSplits -PreactNativeArchitectures=arm64-v8a
           VERSION="${{ steps.version.outputs.name }}"
           mkdir -p "$RUNNER_TEMP/apks"
           cp app/build/outputs/apk/release/app-arm64-v8a-release.apk "$RUNNER_TEMP/apks/budget-app-${VERSION}-arm64-v8a.apk"
           ls -lh "$RUNNER_TEMP/apks"
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apk
+          path: ${{ runner.temp }}/apks/
+          retention-days: 1
+
+  publish:
+    needs: [test, build]
+    runs-on: ubuntu-latest
+    env:
+      # no checkout here: gh is told the repository
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: apk
+          path: ${{ runner.temp }}/apks
+
       # a version published before under the same number (the numbering restarted): replaced, not mixed with it
       - name: Free the version's tag
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release delete "v${{ steps.version.outputs.name }}" --cleanup-tag -y || true
+        run: gh release delete "v${{ needs.build.outputs.version }}" --cleanup-tag -y || true
 
       - name: Publish as a release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.version.outputs.name }}
-          name: ${{ steps.version.outputs.name }}
+          tag_name: v${{ needs.build.outputs.version }}
+          name: ${{ needs.build.outputs.version }}
           body: |
             Коммит ${{ github.sha }}: ${{ github.event.head_commit.message }}
 
-            На телефон: `budget-app-${{ steps.version.outputs.name }}-arm64-v8a.apk` — скачайте и откройте, установится поверх, данные сохранятся.
+            На телефон: `budget-app-${{ needs.build.outputs.version }}-arm64-v8a.apk` — скачайте и откройте, установится поверх, данные сохранятся.
           files: ${{ runner.temp }}/apks/budget-app-*-arm64-v8a.apk
           make_latest: true
 
@@ -118,7 +181,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release list --limit 200 --json tagName,createdAt -q 'sort_by(.createdAt) | reverse | .[].tagName' > "$RUNNER_TEMP/releases"
-          CURRENT="${{ steps.version.outputs.name }}"
+          CURRENT="${{ needs.build.outputs.version }}"
           # versions numbered above this one are from before the numbering restarted
           NEWER=$(grep '^v1\.0\.' "$RUNNER_TEMP/releases" | while read -r tag; do [ "${tag#v1.0.}" -gt "${CURRENT#1.0.}" ] && echo "$tag"; done || true)
           { grep '^build-' "$RUNNER_TEMP/releases" || true; echo "$NEWER"; grep '^v' "$RUNNER_TEMP/releases" | tail -n +$(( KEEP_RELEASES + 1 )) || true; } \
