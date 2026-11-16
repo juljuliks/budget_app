@@ -13,6 +13,7 @@ import com.budgetapp.lock.AppLockPackage
 import com.budgetapp.push.NotificationAccessPackage
 import com.budgetapp.sms.BankSourcesPackage
 import com.budgetapp.sms.SmsInboxPackage
+import com.budgetapp.update.AppUpdatePackage
 
 class MainApplication : Application(), ReactApplication {
 
@@ -21,7 +22,7 @@ class MainApplication : Application(), ReactApplication {
 
         // Autolinked packages (Notifee, Picker, ...)
         override fun getPackages(): List<ReactPackage> =
-            PackageList(this).packages + NotificationAccessPackage() + SmsInboxPackage() + AppInfoPackage() + BackupPackage() + AppLockPackage() + BankSourcesPackage()
+            PackageList(this).packages + NotificationAccessPackage() + SmsInboxPackage() + AppInfoPackage() + BackupPackage() + AppLockPackage() + BankSourcesPackage() + AppUpdatePackage()
 
         override fun getJSMainModuleName(): String = "index"
 
