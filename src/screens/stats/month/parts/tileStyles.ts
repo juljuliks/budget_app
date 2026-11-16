@@ -23,4 +23,6 @@ export const tileStyles = StyleSheet.create({
   amount: { fontSize: 14, color: colors.text, fontVariant: ['tabular-nums'] },
   note: { fontSize: 12, color: colors.muted },
   over: { color: colors.warn, fontWeight: '600' },
+  // a payment paid: ✓ green, as on its row
+  paid: { fontSize: 12, color: colors.income, fontWeight: '600' },
 });

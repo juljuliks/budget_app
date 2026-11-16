@@ -8,8 +8,8 @@ export type AheadItem = { id: number; label: string; minor: number };
 export type LimitItem = AheadItem & { norm: NormPeriod; per: number | null };
 
 export type MonthBreakdown = {
-  /** obligatory payments not paid in full: what is left of each, the most first */
-  payments: { total: number; items: AheadItem[] };
+  /** obligatory payments not paid in full: what is left of each, the most first; `paid` — those paid, what each spent */
+  payments: { total: number; items: AheadItem[]; paid: AheadItem[] };
   /** each limit's own left (an overspend not taken off); `days` — left in the month, today too */
   limits: { total: number; days: number; items: LimitItem[] };
   /** past the plan: each category, and the spending outside the plan past its share ("Вне плана", id 0) */
@@ -31,6 +31,8 @@ export function monthBreakdown(stats: MonthStats, share: number, today: { day: n
   const days = Math.max(1, today.days - today.day + 1);
   const payments = most(fixed.filter((c) => spentOf(c) < c.limit_minor!)
     .map((c) => ({ id: c.category_id!, label: labelOf(c), minor: c.limit_minor! - spentOf(c) })));
+  const paid = most(fixed.filter((c) => spentOf(c) >= c.limit_minor!)
+    .map((c) => ({ id: c.category_id!, label: labelOf(c), minor: spentOf(c) })));
   const left = most(limits.filter((c) => spentOf(c) < c.limit_minor!).map((c) => {
     const minor = c.limit_minor! - spentOf(c);
     const norm = c.plan_norm ?? 'month';
@@ -43,7 +45,7 @@ export function monthBreakdown(stats: MonthStats, share: number, today: { day: n
   const outside = unplannedSpent(stats) - share;
   if (share > 0 && outside > 0) over.push({ id: 0, label: '🎲 Вне плана', minor: outside });
   return {
-    payments: { total: sum(payments), items: payments },
+    payments: { total: sum(payments), items: payments, paid },
     limits: { total: sum(left), days, items: left },
     over: { total: sum(over), items: most(over) },
   };

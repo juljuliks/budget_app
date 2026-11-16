@@ -19,7 +19,8 @@ type Props = {
 type Key = 'payments' | 'limits' | 'over';
 
 /**
- * Under the current month's bar, three tiles: «Платежи» (left to pay, «3 впереди»), «Лимиты» (left of them, for how
+ * Under the current month's bar (its chevron), three tiles: «Платежи» (left to pay, «3 впереди»; its list — then those paid,
+ * ✓ and what each spent), «Лимиты» (left of them, for how
  * many days), «Перерасход» (past the plan, in how many categories; orange). A tap on one lists its categories under them
  * (again — closes): a payment with its day, a limit with its share per its rhythm («≈ 93 ₾ в неделю»), an overspend.
  */
@@ -27,8 +28,8 @@ export default function MonthTiles({ b, currency, until, dueOf }: Props) {
   const [open, setOpen] = useState<Key | null>(null);
   const money = (minor: number) => formatWithCurrency(Math.round(minor), currency);
   const n = (count: number, words: [string, string, string]) => `${count} ${plural(count, words)}`;
-  const tiles: Array<{ key: Key; title: string; total: number; sub: string; items: AheadItem[]; warn?: boolean }> = [
-    { key: 'payments', title: 'Платежи', total: b.payments.total, items: b.payments.items,
+  const tiles: Array<{ key: Key; title: string; total: number; sub: string; items: AheadItem[]; warn?: boolean; done?: AheadItem[] }> = [
+    { key: 'payments', title: 'Платежи', total: b.payments.total, items: b.payments.items, done: b.payments.paid,
       sub: b.payments.items.length ? `${b.payments.items.length} впереди` : 'всё оплачено' },
     { key: 'limits', title: 'Лимиты', total: b.limits.total, items: b.limits.items, sub: `на ${n(b.limits.days, ['день', 'дня', 'дней'])}` },
     { key: 'over', title: 'Перерасход', total: b.over.total, items: b.over.items, warn: b.over.total > 0,
@@ -47,7 +48,7 @@ export default function MonthTiles({ b, currency, until, dueOf }: Props) {
       <View style={t.row}>
         {tiles.map((x) => (
           <TouchableOpacity
-            key={x.key} style={[t.tile, x.warn && t.warnTile, open === x.key && t.picked]} disabled={!x.items.length}
+            key={x.key} style={[t.tile, x.warn && t.warnTile, open === x.key && t.picked]} disabled={!x.items.length && !x.done?.length}
             onPress={() => setOpen(open === x.key ? null : x.key)} accessibilityRole="button" accessibilityState={{ expanded: open === x.key }}
             testID={`tile-${x.key}`}
           >
@@ -66,6 +67,16 @@ export default function MonthTiles({ b, currency, until, dueOf }: Props) {
           </Text>
         </View>
       )) : null}
+      {/* paid: ✓ and what each spent */}
+      {shown?.done?.map((i) => (
+        <View key={`paid-${i.id}`} style={t.item}>
+          <Text style={t.label} numberOfLines={1}>{i.label}</Text>
+          <Text style={t.amount}>
+            <Text style={t.paid}>{'✓ оплачено · '}</Text>
+            <Masked style={t.amount}>{money(i.minor)}</Masked>
+          </Text>
+        </View>
+      ))}
     </View>
   );
 }

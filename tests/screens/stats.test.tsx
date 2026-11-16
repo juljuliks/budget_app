@@ -28,14 +28,18 @@ describe('5.1 a month', () => {
     expect(screen.getByText('Осталось 450 ₾ · до 31 окт')).toBeTruthy();
   });
 
-  test('5.1.3a tiles under the bar: the payments ahead, the limits left for the days left, the overspends; a tap — its list', async () => {
+  test('5.1.3a the chevron by «Осталось» opens tiles: the payments ahead, the limits left for the days left, the overspends; a tap — its list', async () => {
+    // closed: the chevron by «Осталось» opens them
+    expect(screen.queryByTestId('tile-payments')).toBeNull();
+    await tap('#month-ahead');
     const from = texts().indexOf('Осталось 450 ₾ · до 31 окт');
     // under the tiles: its list (an item's amount is in a text of its own and in the line with its note)
     const list = () => texts().slice(from + 10, texts().indexOf('Нажмите на категорию — операции, план, динамика, категория'));
     expect(texts().slice(from + 1, from + 10)).toEqual(['Платежи', '30 ₾', '1 впереди', 'Лимиты', '535 ₾', 'на 17 дней', 'Перерасход', '130 ₾', '2 категории']);
     expect(list()).toEqual([]);
+    // unpaid first, then those paid: ✓ and what each spent
     await tap('#tile-payments');
-    expect(list()).toEqual(['📺 Подписки', '30 ₾', '30 ₾']);
+    expect(list()).toEqual(['📺 Подписки', '30 ₾', '30 ₾', '🏠 Дом и коммуналка', '✓ оплачено · 800 ₾', '800 ₾']);
     // each limit in its rhythm for the 17 days left: «Продукты» daily, «Кафе» weekly
     await tap('#tile-limits');
     expect(list()).toEqual(['🛒 Продукты', '≈ 18.53 ₾ в день · 315 ₾', '315 ₾', '☕️ Кафе и рестораны', '≈ 90.59 ₾ в неделю · 220 ₾', '220 ₾']);
@@ -45,11 +49,15 @@ describe('5.1 a month', () => {
     // again — closed
     await tap('#tile-over');
     expect(list()).toEqual([]);
+    // the chevron again: closed
+    await tap('#month-ahead');
+    expect(screen.queryByTestId('tile-payments')).toBeNull();
   });
 
   test('5.1.3b payments with a day over the bar: ✓ paid, ✕ past and not paid, faded ahead; today\'s tick counts them', async () => {
-    // no payment has a day: no marks
-    expect(screen.queryByLabelText(/, (оплачен|не оплачен|впереди)$/)).toBeNull();
+    // no payment has a day: a paid one on its day of paying (the rent of the 3rd), the unpaid one — none
+    expect(await screen.findByLabelText('Дом и коммуналка, 3 окт, оплачен')).toBeTruthy();
+    expect(screen.queryByLabelText(/^Подписки, /)).toBeNull();
     const db = await getDb();
     const id = async (name: string) => (await db.get<{ id: number }>('SELECT id FROM categories WHERE name = ?', [name]))!.id;
     await setItemDue('2026-10', await id('Дом и коммуналка'), '2026-10-01');
@@ -66,6 +74,7 @@ describe('5.1 a month', () => {
     await act(async () => { emitTransactionsChanged(); });
     expect(await screen.findByLabelText('Подписки, 20 окт, впереди')).toBeTruthy();
     expect(screen.queryByText(/не оплачен$/)).toBeNull();
+    await tap('#month-ahead');
     await tap('#tile-payments');
     expect(screen.getByText('20 окт · ')).toBeTruthy();
   });
