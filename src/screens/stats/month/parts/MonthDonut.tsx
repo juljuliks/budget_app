@@ -1,13 +1,15 @@
 import React, { useMemo, useState } from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import type { MonthStats, StatGroup } from '@/db/plans';
 import { formatPercent } from '@/shared/lib/format';
 import { chart } from '@/shared/theme/theme';
-import Chip from '@/shared/ui/Chip';
 import Donut, { DonutSegment } from '@/shared/ui/Donut';
 import Segmented from '@/shared/ui/Segmented';
+import TextLink from '@/shared/ui/TextLink';
 import DonutCenter from '../../parts/DonutCenter';
 import { DonutCut, DonutView, donutSlices, type Slice, type SliceInput } from '../model/donutSlices';
+import CutTabs from './CutTabs';
+import DistributionSheet from './DistributionSheet';
 import PlanCenter from './PlanCenter';
 import { styles } from './styles';
 
@@ -35,14 +37,18 @@ type Props = {
 };
 
 /**
- * The month's ring. «Траты» / «План» over it: what was spent, or how the budget is planned; under it the cut —
- * «Категории» / «Разделы» (by sections: their names with the share under it). In the hole the total spent of the plan
- * or the budget and what is free (a tap — its sheet); a segment tapped — its category or section.
+ * The month's ring. «Траты» / «План» over it. The ring is half the block wide; beside it the biggest slices,
+ * «Подробнее» — «Распределение бюджета», every piece of the plan — under the cut «Категории» / «Разделы». In the hole
+ * the total spent of the plan or the budget and what is free (a tap — its sheet); a segment tapped — its slice.
  */
 export default function MonthDonut({ stats, plannedAll, input, word, onBudget }: Props) {
   const [view, setView] = useState<DonutView>('spent');
   const [cut, setCut] = useState<DonutCut>('category');
   const [selected, setSelected] = useState<string | null>(null);
+  // «Подробнее»: the budget's every piece
+  const [more, setMore] = useState(false);
+  // the block: the screen less its sides
+  const blockWidth = useWindowDimensions().width - 32;
   const shown: DonutView = plannedAll > 0 ? view : 'spent';
   const slices = useMemo(() => donutSlices(shown, cut, input), [shown, cut, input]);
   const segments = useMemo(() => slices
@@ -56,39 +62,48 @@ export default function MonthDonut({ stats, plannedAll, input, word, onBudget }:
   const pick = (k: string | null) => setSelected(k);
   const change = <T,>(set: (v: T) => void) => (v: T) => { set(v); setSelected(null); };
 
+  // the ring half the block wide; the hole's text inside its ring
+  const ring = Math.floor((blockWidth - 16) / 2);
+  const thickness = Math.round(ring * 0.1);
+  const hole = ring - 2 * thickness - 24;
+
   return (
     <View style={styles.donutWrap}>
       {plannedAll > 0 ? <Segmented options={VIEWS} value={shown} onChange={change(setView)} style={styles.donutViews} /> : null}
-      <View style={styles.donutRow}>
-        <Donut
-          size={RING} thickness={16}
-          segments={segments} selectedKey={pickedSlice || pickedCategory ? selected : null} onSelect={pick}
-          onCenterPress={plannedAll > 0 ? onBudget : undefined} testID="month-budget"
-        >
-          {shown === 'plan'
-            ? <PlanCenter base={input.base} word={word} free={slices?.find((s) => s.key === 'free')?.value ?? 0} picked={pickedSlice} currency={stats.currency} />
-            : <DonutCenter small total={stats.spent_minor} currency={stats.currency} of={plannedAll}
-                picked={pickedCategory ?? (pickedSlice && { name: pickedSlice.title, emoji: null, spent_minor: pickedSlice.value })} />}
-        </Donut>
-        {/* at the right: the cut, then what the ring is made of */}
-        <View style={styles.donutSide}>
-          <View style={styles.donutCuts}>
-            <Chip small soft label="Категории" selected={cut === 'category'} onPress={() => change(setCut)('category')} />
-            <Chip small soft label="Разделы" selected={cut === 'section'} onPress={() => change(setCut)('section')} />
+      {ring ? (
+        <View style={styles.donutRow}>
+          <Donut
+            size={ring} thickness={thickness}
+            segments={segments} selectedKey={pickedSlice || pickedCategory ? selected : null} onSelect={pick}
+            onCenterPress={plannedAll > 0 ? onBudget : undefined} testID="month-budget"
+          >
+            {shown === 'plan'
+              ? <PlanCenter base={input.base} word={word} free={slices?.find((s) => s.key === 'free')?.value ?? 0} picked={pickedSlice} currency={stats.currency} hole={hole} />
+              : <DonutCenter hole={hole} total={stats.spent_minor} currency={stats.currency} of={plannedAll}
+                  picked={pickedCategory ?? (pickedSlice && { name: pickedSlice.title, emoji: null, spent_minor: pickedSlice.value })} />}
+          </Donut>
+          {/* at the right: the cut, what the ring is made of, «Подробнее» — the budget's every piece */}
+          <View style={styles.donutSide}>
+            <CutTabs value={cut} onChange={change(setCut)} style={styles.donutCuts} />
+            <Legend items={items} selected={selected} onPick={(k) => pick(selected === k ? null : k)} onMore={plannedAll > 0 ? () => setMore(true) : undefined} />
           </View>
-          <Legend items={items} selected={selected} onPick={(k) => pick(selected === k ? null : k)} />
         </View>
-      </View>
+      ) : null}
+      <DistributionSheet
+        visible={more} onClose={() => setMore(false)} cut={cut} onCut={change(setCut)}
+        items={more ? donutSlices('plan', cut, input) ?? [] : []} base={input.base} word={word} currency={stats.currency} onBudget={onBudget}
+      />
     </View>
   );
 }
 
 /** the legend's rows: the biggest; the rest — one line */
 const LEGEND = 5;
-const RING = 160;
+
+type LegendProps = { items: Slice[]; selected: string | null; onPick: (key: string) => void; onMore?: () => void };
 
 /** What the ring is made of, the biggest first (sections in their order), with its share; a tap picks one. */
-function Legend({ items, selected, onPick }: { items: Slice[]; selected: string | null; onPick: (key: string) => void }) {
+function Legend({ items, selected, onPick, onMore }: LegendProps) {
   const total = items.reduce((a, s) => a + s.value, 0);
   const byOrder = items.length > LEGEND ? [...items].sort((a, b) => b.value - a.value) : items;
   const shown = byOrder.slice(0, LEGEND);
@@ -102,10 +117,11 @@ function Legend({ items, selected, onPick }: { items: Slice[]; selected: string 
           <Text style={styles.donutNameShare}>{formatPercent(s.value, total)}</Text>
         </TouchableOpacity>
       ))}
-      {rest.length ? (
-        <Text style={[styles.donutNameText, styles.donutRest]}>
-          {`ещё ${rest.length} · ${formatPercent(rest.reduce((a, s) => a + s.value, 0), total)}`}
-        </Text>
+      {rest.length || onMore ? (
+        <View style={styles.donutRestRow}>
+          {rest.length ? <Text style={[styles.donutNameText, styles.donutRest]}>{`ещё ${rest.length} · ${formatPercent(rest.reduce((a, s) => a + s.value, 0), total)}`}</Text> : null}
+          {onMore ? <TextLink label="Подробнее" onPress={onMore} style={styles.donutMore} containerStyle={styles.donutMoreAt} /> : null}
+        </View>
       ) : null}
     </View>
   );

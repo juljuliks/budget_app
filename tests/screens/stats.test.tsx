@@ -244,6 +244,15 @@ describe('5.1 a month', () => {
     expect(legend()[0]).toBe('🏠 Дом и коммуналка');
   });
 
+  test('5.1.21a «Подробнее» under the legend: «Распределение бюджета» — every piece of the plan, by sections too', async () => {
+    await tap('Подробнее ›');
+    expect(await screen.findByText('Распределение бюджета')).toBeTruthy();
+    expect(screen.getByText('Свободно')).toBeTruthy();
+    await tap('Разделы');
+    expect(await screen.findByText(/^Вне плана · 10%$/)).toBeTruthy();
+    expect(screen.getByText(/^Сбережения · 18%$/)).toBeTruthy();
+  });
+
   test('5.1.22 «Зажмите категорию — …»: gone once a long press\'s button is used', async () => {
     expect(screen.getByText('Зажмите категорию — операции, план, динамика, категория')).toBeTruthy();
     await pressAction('🛒 Продукты', 'Операции');

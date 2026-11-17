@@ -5,6 +5,8 @@ import { budgetBySection, type BudgetInput } from './budgetBySection';
 
 export type DonutView = 'spent' | 'plan';
 export type DonutCut = 'category' | 'section';
+/** the cut's switch, beside the ring and in «Распределение бюджета» */
+export const CUTS = [['category', 'Категории'], ['section', 'Разделы']] as const;
 
 export type Slice = {
   /** a section's id (its header's), a category's id; 'free' — the budget not planned */
