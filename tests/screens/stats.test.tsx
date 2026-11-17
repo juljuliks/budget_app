@@ -100,16 +100,18 @@ describe('5.1 a month', () => {
 
   test('the rows: limits with what\'s left and the limit per rhythm, overspends, obligatory payments', async () => {
     // at the right what is left, under the bar what was spent of the plan (a nested text is listed again on its own)
-    expect(block('🛒 Продукты').slice(0, 4)).toEqual(['🛒 Продукты', '315 ₾', 'осталось', '305 из 620 ₾ · лимит ≈ 20 ₾ в день']);
+    expect(block('🛒 Продукты')).toEqual(['🛒 Продукты', '305 из 620 ₾ · лимит ≈ 20 ₾ в день', ' · лимит ≈ 20 ₾ в день', '315 ₾', 'осталось']);
     expect(within(rowOf('🛒 Продукты')).getByText('Сегодня перерасход 5 ₾')).toBeTruthy();
     // the week's limit rebalanced on what's left of the month: (310 − 40) / 20 days × 7
-    expect(block('☕️ Кафе и рестораны').slice(1, 4)).toEqual(['220 ₾', 'осталось', '90 из 310 ₾ · 70 ₾ → 94.50 ₾ в неделю']);
+    expect(block('☕️ Кафе и рестораны').slice(1, 2)).toEqual(['90 из 310 ₾ · 70 ₾ → 94.50 ₾ в неделю']);
+    expect(within(rowOf('☕️ Кафе и рестораны')).getByText('220 ₾')).toBeTruthy();
     expect(within(rowOf('☕️ Кафе и рестораны')).getByText('На этой неделе осталось 44.50 ₾ · до вс')).toBeTruthy();
     // an overspend: at the right, no line of its own
-    expect(block('👕 Одежда').slice(1, 4)).toEqual(['−50 ₾', 'перерасход', '450 из 400 ₾']);
+    expect(block('👕 Одежда').slice(1, 4)).toEqual(['450 из 400 ₾', '−50 ₾', 'перерасход']);
     // payments: paid — ✓, otherwise what is left to pay
-    expect(block('🏠 Дом и коммуналка').slice(1, 4)).toEqual(['✓', 'оплачено', '800 ₾']);
-    expect(block('📺 Подписки').slice(1, 3)).toEqual(['30 ₾', 'осталось оплатить']);
+    expect(block('🏠 Дом и коммуналка').slice(1, 4)).toEqual(['800 ₾', '✓', 'оплачено']);
+    expect(within(rowOf('📺 Подписки')).getByText('30 ₾')).toBeTruthy();
+    expect(within(rowOf('📺 Подписки')).getByText('осталось оплатить')).toBeTruthy();
   });
 
   test('outside the plan: the categories without one and the uncategorized, against the share; no «＋ В план» buttons there', async () => {
@@ -362,7 +364,7 @@ describe('5.4–5.6 hidden amounts, the currency, the warning', () => {
     expect(lines.filter((t) => /₾/.test(t))).toEqual([]);
     expect(lines.some((t) => /^Осталось \d+% · до /.test(t))).toBe(true);
     // a row's right: what is left of its plan as a share
-    expect(block('🛒 Продукты').slice(1, 4)).toEqual(['51%', 'осталось', '49% плана']);
+    expect(block('🛒 Продукты').slice(1, 4)).toEqual(['49% плана', '51%', 'осталось']);
     // the week too: the limits' lines and the sections' totals
     await period('За неделю');
     await screen.findAllByText(/^\d+% плана$/);
@@ -441,7 +443,7 @@ describe('5.5.4 a plan in another currency: in it, whatever the stats\' currency
     });
     await tap('Статистика');
     await screen.findByText('🚕 Такси');
-    expect(block('🚕 Такси').slice(0, 4)).toEqual(['🚕 Такси', '0 $', 'осталось', '30 из 30 $']);
+    expect(block('🚕 Такси').slice(0, 4)).toEqual(['🚕 Такси', '30 из 30 $', '0 $', 'осталось']);
   });
 
   test('a fund in $: spent from it in $', async () => {

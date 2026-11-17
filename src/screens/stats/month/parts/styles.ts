@@ -46,8 +46,12 @@ export const styles = StyleSheet.create({
   // «· 35%» after a section's title: its share of the budget, bold
   groupShare: { fontWeight: '700' },
   groupTotal: { fontSize: 13, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
-  row: { paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
+  row: { paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
   rowTop: { flexDirection: 'row', alignItems: 'center' },
+  // a category's row: the name over its amounts, what is left at the right on the same two lines
+  rowCols: { flexDirection: 'row', alignItems: 'flex-start' },
+  rowMain: { flex: 1, minWidth: 0 },
+  rowSub: { fontSize: 13, color: colors.muted, marginTop: 2, marginLeft: 18 },
   dot: { width: 10, height: 10, borderRadius: 5, marginRight: 8 },
   rowName: { flexShrink: 1, fontSize: 15, color: colors.text },
   addToPlan: {
@@ -60,8 +64,8 @@ export const styles = StyleSheet.create({
   leftBig: { fontSize: 15, fontWeight: '700', color: colors.text, fontVariant: ['tabular-nums'] },
   leftCaption: { fontSize: 12, color: colors.muted },
   // a payment charged several times a month: a piece per charge
-  payments: { flexDirection: 'row', gap: 3, marginTop: 8 },
-  paymentPiece: { flex: 1, height: 8, borderRadius: 4, backgroundColor: chart.meterTrack },
+  payments: { flexDirection: 'row', gap: 3, marginTop: 6 },
+  paymentPiece: { flex: 1, height: 6, borderRadius: 3, backgroundColor: chart.meterTrack },
   rowAmount: { marginLeft: 'auto', paddingLeft: 8, fontSize: 13, color: colors.text, fontVariant: ['tabular-nums'] },
   rowLimit: { color: colors.muted },
   rowStatus: { fontSize: 13, color: colors.muted, marginTop: 4 },

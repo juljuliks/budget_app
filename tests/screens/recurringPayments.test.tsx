@@ -542,7 +542,7 @@ describe('6.7.9 "Регулярный платёж" from the plan', () => {
       .toEqual({ limit_minor: 320000 });
     // 5.1.11 a bar of its charges, the paid one filled; what is left to pay at the right
     expect(await screen.findByLabelText('Оплачено 1 из 4')).toBeTruthy();
-    expect(screen.getByText('оплачено 1 из 4 · 800 из 3 200 ₾')).toBeTruthy();
+    expect(screen.getByText(/^оплачено 1 из 4 · 800 из 3 200 ₾ · /)).toBeTruthy();
     expect(within(rowOf('🏠 Дом и коммуналка')).getByText('2 400 ₾')).toBeTruthy();
   });
 

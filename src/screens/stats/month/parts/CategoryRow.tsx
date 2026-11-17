@@ -57,16 +57,26 @@ export default function CategoryRow(props: Props) {
   const hidden = useHideAmounts();
   const fixed = stat.plan_kind === 'fixed';
 
+  const lines = limit ? { ...props, spent, limit, currency, hidden, cameIn, scale } : null;
+  // under the name: what was spent of the plan (a payment's note and charges first; a rhythm's limit after)
+  const sub = lines ? (fixed ? paymentSub(lines, note) : <LimitSub {...lines} />) : null;
+
   return (
     <PressMenu style={styles.row} actions={actions ?? []} accessibilityHint="Операции, план, динамика">
-      <View style={styles.rowTop}>
-        <View style={[styles.dot, { backgroundColor: stat.color }]} />
-        <Text style={styles.rowName} numberOfLines={1}>{withType ? categoryLabel(stat) : `${stat.emoji || ''} ${stat.name}`.trim()}</Text>
-        {onAddToPlan ? (
-          <TouchableOpacity style={styles.addToPlan} onPress={onAddToPlan} hitSlop={8} accessibilityLabel={`Добавить в план: ${stat.name}`}>
-            <Text style={styles.addToPlanText}>＋ В план</Text>
-          </TouchableOpacity>
-        ) : null}
+      {/* two columns over the bar: the name over its amounts at the left, what is left over its word at the right */}
+      <View style={styles.rowCols}>
+        <View style={styles.rowMain}>
+          <View style={styles.rowTop}>
+            <View style={[styles.dot, { backgroundColor: stat.color }]} />
+            <Text style={styles.rowName} numberOfLines={1}>{withType ? categoryLabel(stat) : `${stat.emoji || ''} ${stat.name}`.trim()}</Text>
+            {onAddToPlan ? (
+              <TouchableOpacity style={styles.addToPlan} onPress={onAddToPlan} hitSlop={8} accessibilityLabel={`Добавить в план: ${stat.name}`}>
+                <Text style={styles.addToPlanText}>＋ В план</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+          {sub ? <Text style={styles.rowSub} numberOfLines={1}>{sub}</Text> : note ? <Text style={styles.rowSub} numberOfLines={1}>{note}</Text> : null}
+        </View>
         {limit ? <RowLeft spent={spent} limit={limit} currency={currency} fixed={fixed} hidden={hidden} /> : (
           <Text style={styles.rowAmount}>
             {/* "Скрыть суммы": its share of all spending */}
@@ -78,54 +88,64 @@ export default function CategoryRow(props: Props) {
           </Text>
         )}
       </View>
-      {note ? <Text style={styles.rowStatus} numberOfLines={1}>{note}</Text> : null}
-      {limit ? (fixed ? <PaymentLines {...props} spent={spent} limit={limit} currency={currency} hidden={hidden} />
-        : <LimitLines {...props} spent={spent} limit={limit} currency={currency} hidden={hidden} cameIn={cameIn} scale={scale} />) : null}
+      {lines ? (fixed ? <PaymentBar {...lines} /> : <LimitBar {...lines} />) : null}
       {usual ? <Text style={styles.rowStatus}>{usual}</Text> : null}
     </PressMenu>
   );
 }
 
-type Lines = Props & { spent: number; limit: number; currency: Currency; hidden: boolean };
+type Lines = Props & { spent: number; limit: number; currency: Currency; hidden: boolean; cameIn: number; scale: number };
+
+/** the category's bars: thin, as the rows are */
+const BAR = 6;
+const rhythmOf = (stat: CategoryStat) => (stat.plan_norm && stat.plan_norm !== 'month' ? stat.plan_norm : null);
 
 /** "665 из 900 ₾"; hidden — its share of the plan */
 function spentOfPlan(spent: number, limit: number, currency: Currency, hidden: boolean): string {
   return hidden ? `${formatPercent(spent, limit)} плана` : `${formatShort(spent)} из ${formatWithCurrency(limit, currency)}`;
 }
 
-/** A limit: the bar (over it — scaled to the spending, a tick at the plan), "665 из 900 ₾", a rhythm's limit and window. */
-function LimitLines({ stat, spent, limit, currency, hidden, cameIn, scale, evenPace, dim, now, monthToDate }: Lines & { cameIn: number; scale: number }) {
+/** A limit under its name: "665 из 900 ₾" (what came back: "+50 из 900 ₾"), a rhythm's limit after it. */
+function LimitSub({ stat, spent, limit, currency, hidden, cameIn, scale, dim, now }: Lines) {
+  const rhythm = rhythmOf(stat);
+  return (
+    <>
+      {cameIn && !hidden ? <Text style={styles.paceOk}>+{formatShort(cameIn)}</Text> : null}
+      {cameIn && !hidden ? ` из ${formatWithCurrency(limit, currency)}` : spentOfPlan(spent, limit, currency, hidden)}
+      {/* the month's plan overspent: no limits any more, just the overspend */}
+      {rhythm && spent <= limit ? <RhythmLimit rhythm={rhythm} limit={limit} dim={dim} currency={currency} hidden={hidden} now={now} scale={scale} /> : null}
+    </>
+  );
+}
+
+/** A limit's bar (over it — scaled to the spending, a tick at the plan) and its window's line. */
+function LimitBar({ stat, spent, limit, currency, hidden, scale, evenPace, now, monthToDate }: Lines) {
   const ratio = spent / limit;
-  const rhythm = stat.plan_norm && stat.plan_norm !== 'month' ? stat.plan_norm : null;
+  const rhythm = rhythmOf(stat);
   return (
     <>
       {/* the category's own color, as its dot and the ring (an overspend is orange anyway) */}
-      {ratio > 1 ? <Meter ratio={1} over={limit / spent} height={8} color={stat.color} />
-        : <Meter ratio={ratio} height={8} color={stat.color} marker={rhythm ? evenPace : undefined} />}
-      <Text style={styles.rowStatus}>
-        {cameIn && !hidden ? <Text style={styles.paceOk}>+{formatShort(cameIn)}</Text> : null}
-        {cameIn && !hidden ? ` из ${formatWithCurrency(limit, currency)}` : spentOfPlan(spent, limit, currency, hidden)}
-        {/* the month's plan overspent: no limits any more, just the overspend */}
-        {rhythm && ratio <= 1 ? <RhythmLimit rhythm={rhythm} limit={limit} dim={dim} currency={currency} hidden={hidden} now={now} scale={scale} /> : null}
-      </Text>
+      {ratio > 1 ? <Meter ratio={1} over={limit / spent} height={BAR} marginTop={6} color={stat.color} />
+        : <Meter ratio={ratio} height={BAR} marginTop={6} color={stat.color} marker={rhythm ? evenPace : undefined} />}
       {rhythm && ratio <= 1 && now && now.rhythm === rhythm
         ? <RhythmNow rhythm={rhythm} currency={currency} hidden={hidden} now={now} scale={scale} monthToDate={monthToDate} /> : null}
     </>
   );
 }
 
-/** A payment: charged several times this month — a bar of its charges and "оплачено 2 из 4"; paid over the plan — the overspend's bar. */
-function PaymentLines({ stat, spent, limit, currency, hidden, charges }: Lines) {
+/** A payment under its name: "оплачено 2 из 4" when charged several times, "88 из 106 ₾" (paid — its amount), its note. */
+function paymentSub({ spent, limit, currency, hidden, charges }: Lines, note?: string): React.ReactNode {
   const several = charges && charges.total > 1 ? charges : null;
   const over = spent > Math.round(limit);
   const amounts = isPaid(spent, limit) && !over ? (hidden ? '' : formatWithCurrency(limit, currency)) : spentOfPlan(spent, limit, currency, hidden);
-  return (
-    <>
-      {several ? <PaymentsBar total={several.total} done={several.done} color={stat.color} />
-        : over ? <Meter ratio={1} over={limit / spent} height={8} color={stat.color} /> : null}
-      {several || amounts ? (
-        <Text style={styles.rowStatus}>{[several ? `оплачено ${several.done} из ${several.total}` : '', amounts].filter(Boolean).join(' · ')}</Text>
-      ) : null}
-    </>
-  );
+  // the numbers first: a long note is what gets cut
+  const numbers = [several ? `оплачено ${several.done} из ${several.total}` : '', amounts].filter(Boolean).join(' · ');
+  return <>{numbers}{numbers && note ? ' · ' : ''}{note ? <Text>{note}</Text> : null}</>;
+}
+
+/** A payment's bar: charged several times — a piece per charge; paid over the plan — the overspend's. */
+function PaymentBar({ stat, spent, limit, charges }: Lines) {
+  const several = charges && charges.total > 1 ? charges : null;
+  if (several) return <PaymentsBar total={several.total} done={several.done} color={stat.color} />;
+  return spent > Math.round(limit) ? <Meter ratio={1} over={limit / spent} height={BAR} marginTop={6} color={stat.color} /> : null;
 }
