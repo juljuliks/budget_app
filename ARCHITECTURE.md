@@ -59,8 +59,9 @@ src/
   собирает `screens/merchant`; формы — шиты через `sheets.ts`, их рисует `ModalHost`.
 
 **Страницы и шиты.** Продуктовые сущности — страницы стека (`screens/operation`, `merchant`, `category`): открываются
-`openTransaction` / `openMerchant` / `openCategory` поверх текущей (`push`), «назад» идёт по цепочке. План месяца —
-тоже страница (`openPlan(ym)`, `screens/stats/plan/PlanScreen`): он в слайсе статистики, её модели считают из него. Тело страницы —
+`openTransaction` / `openMerchant` / `openCategory` поверх текущей (`push`), «назад» идёт по цепочке. План месяца
+своей страницы не имеет: он меняется в статистике месяца (`screens/stats/month/parts/usePlanSheets` — «＋», бюджет, суммы,
+перенос), его модели (`screens/stats/plan/model`) — в слайсе статистики. Тело страницы —
 `View` слайса (`TransactionView`, `MerchantView`, `CategoryView`) в `shared/ui/Page`: содержимое прокручивается, кнопки
 прижаты книзу. Формы и выборы (сумма, «Сменить категорию», разделение, описание, новая категория, подтверждения) —
 шиты. Имя мерчанта или категории — `MerchantLink` / `CategoryLink` (обе на `shared/ui/TextLink`: синий текст со
@@ -146,7 +147,7 @@ src/
   (`PlanAddModal`, `PlanAmountModal`, `PlanAlert`), `month-report` (`MonthReport`), `hide-amounts` (`HideAmountsButton`,
   `Masked`).
 - **screens/operations**: `TransactionsList` → `OperationsScreen`, `OperationsSectionHeader` → `parts/SectionHeader`, `transactionsListData` → `model/listData`, `transactionGroups` → `model/groups`.
-- **screens/stats** (шаг 6): `StatsHome`, `month/StatsView`, `period/PeriodStatsView`, `plan/PlanView` (+ `PlanAddModal`), `history/HistoryView`, `parts/PlanAlert`; `month-report`, `hide-amounts` — фичи; `PlanAmountModal` — `entities/plan`.
+- **screens/stats** (шаг 6): `StatsHome`, `month/StatsView`, `period/PeriodStatsView`, `plan/` (модели и шиты плана; страницы нет — `month/parts/usePlanSheets`, `PlanAddModal`), `history/HistoryView`, `parts/PlanAlert`; `month-report`, `hide-amounts` — фичи; `PlanAmountModal` — `entities/plan`.
 - **screens/merchants**: `MerchantsScreen`. **screens/categories**: `CategoriesScreen`.
 
 Переход закончен: `src/ui` нет, все файлы в своих слоях.

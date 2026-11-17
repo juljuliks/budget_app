@@ -1,7 +1,7 @@
 // 6.5 "Копилки": a category saved up for — made on its page, its card, the stats, turned off. Today: 15 October
 // 2026; the seed's budget 3 000 ₾, Одежда planned 400 ₾ and ZARA 450 ₾ spent in it.
 import { fireEvent } from '@testing-library/react-native';
-import { backToTabs, openApp, openSettings, screen, tap, texts, openPlanPage, pressAction } from './app';
+import { backToTabs, openApp, openSettings, screen, tap, texts, pressAction } from './app';
 import { planned } from '../e2e/seeds';
 import { getDb } from '../../src/db';
 import { setFund, setPlanBudget } from '../../src/db/plans';
@@ -37,7 +37,7 @@ async function makeFund() {
   expect(screen.getByText(`1 500${N}₾ к 31 января 2027`)).toBeTruthy();
   backToTabs();
   await tap('Статистика');
-  await openPlanPage();
+  await screen.findByLabelText('Добавить в план');
 }
 
 describe('6.5 funds', () => {
@@ -45,18 +45,15 @@ describe('6.5 funds', () => {
     await makeFund();
     expect(await fund()).toEqual({ target_minor: 150000, due: '2027-01-31', start_minor: 30000, closed_ym: null });
     // saved 300 + October's 300 − ZARA 450
-    expect(await screen.findByText(`150 из 1 500${N}₾ · к 31 января 2027`)).toBeTruthy();
-    // no column or section of its own: in "Сбережения"
+    expect(await screen.findByText(`взнос в копилку · 150 из 1 500${N}₾ · к 31 января 2027`)).toBeTruthy();
+    // no section of its own: in "Сбережения"
     expect(screen.queryByText('Копилки')).toBeNull();
-    expect(screen.getAllByText('Сбережения').length).toBeGreaterThanOrEqual(2);
-    // the share alone: the plan is the month's anyway (the last: the stats under the page have it too)
     const t = texts();
     const i = t.lastIndexOf('👕 Одежда');
-    expect(t[i + 2]).toMatch(/^300\s₾$/);
-    expect(t[i + 3]).toBe(' · 10%');
+    expect(t[i + 1]).toBe('300 / 300 ₾');
     // the plan's sheet picks no kind: it is the category's (none set — a one-off payment)
     await tap('Добавить в план');
-    await tap(await screen.findByText('🚕 Такси'));
+    await tap('Добавить в план: 🚕 Такси');
     expect(await screen.findByText('Изменить в категории ›')).toBeTruthy();
     expect(screen.getByText('Разовый платёж')).toBeTruthy();
     expect(screen.queryByRole('radio', { name: /Копилка/ })).toBeNull();
@@ -79,15 +76,14 @@ describe('6.5 funds', () => {
     await tap('Настройки');
     await tap('$ USD');
     backToTabs();
-    await openPlanPage();
     // 🔒 and the fund row both show 300 ₾ — wait on the fund's progress text which is unique
     await screen.findByText(/150 из 1/);
     const t = texts();
     const i = t.lastIndexOf('👕 Одежда');
-    expect(t.slice(i + 1, i + 4)).toEqual(['150 из 1 500 ₾ · к 31 января 2027', '300 ₾', ' · 10%']);
+    expect(t.slice(i + 1, i + 3)).toEqual(['300 / 300 ₾', 'взнос в копилку · 150 из 1 500 ₾ · к 31 января 2027']);
   });
 
-  test('past what is free, 🔒 set as an amount gives way without asking — said on its row in the plan', async () => {
+  test('past what is free, 🔒 set as an amount gives way without asking', async () => {
     await openApp(planned);
     // 2 700 over 4 months: 675 a month, 640 free — 35 from 🔒
     await fillFund('2700');
@@ -95,12 +91,6 @@ describe('6.5 funds', () => {
     expect(await screen.findByText('Копилка «👕 Одежда» сохранена')).toBeTruthy();
     expect(await fund()).toMatchObject({ target_minor: 270000 });
     expect(await (await getDb()).get("SELECT locked_minor AS l FROM plan_months WHERE ym = '2026-10'")).toEqual({ l: 26500 });
-    backToTabs();
-    await tap('Статистика');
-    await openPlanPage();
-    // the funds come before 🔒: it gave way by 35 ₾ — said on its row, not the fund's
-    expect(await screen.findByText(/^заблокировано в начале месяца · копилкам −35.₾$/)).toBeTruthy();
-    expect(screen.queryByText(/из «Отложить сразу»/)).toBeNull();
   });
 
   test('nothing free, 🔒 empty: 0 this month, the next ones more — nothing asked', async () => {
@@ -120,7 +110,7 @@ describe('6.5 funds', () => {
 
   test('its card: what it has, the contributions and the spending; turned off — asked, "Отменить" brings it back', async () => {
     await makeFund();
-    await tap('Копилка: 👕 Одежда');
+    await pressAction('👕 Одежда', 'План');
     expect(await screen.findByText(`из 1 500${N}₾`)).toBeTruthy();
     expect(screen.getByText('К 31 января 2027 · ещё 3 взноса')).toBeTruthy();
     expect(screen.getByText('Октябрь · ZARA')).toBeTruthy();

@@ -7,6 +7,7 @@ import { formatPercent } from '@/shared/lib/format';
 import { formatShort, formatWithCurrency } from '@/shared/lib/money';
 import { MaskedTotal } from '@/shared/ui/Masked';
 import { hiddenLeft } from '../../model/hiddenText';
+import { percentOf } from '../../plan/model/planView';
 import type { SavingsSection } from '../model/savingsSection';
 import Meter from '@/shared/ui/Meter';
 import { SectionHeader } from '@/shared/ui/StickyScrollView';
@@ -20,10 +21,10 @@ const UNPLANNED = 'Вне плана';
 /** A row of a category (made by the screen: it knows the month, the norms, "＋ В план"). */
 type RowOf = (c: CategoryStat, unplanned: boolean) => React.ReactElement;
 
-/** A section's sticky grey band: its title, its total at the right. */
-export const header = (title: string, total: React.ReactNode, onLongPress?: () => void) => (
+/** A section's sticky grey band: its title (with its share of the budget, «Жизнь · 35%»), its total at the right. */
+export const header = (title: string, total: React.ReactNode, onLongPress?: () => void, share?: string) => (
   <SectionHeader style={[formStyles.sectionHeader, styles.groupHeader, styles.group]} onLongPress={onLongPress}>
-    <Text style={styles.groupTitle}>{title}</Text>
+    <Text style={styles.groupTitle}>{title}{share ? <Text style={styles.groupShare}>{` · ${share}`}</Text> : null}</Text>
     {total}
   </SectionHeader>
 );
@@ -37,11 +38,14 @@ const factOfPlan = (stats: MonthStats, spent: number, planned: number) => (
   </MaskedTotal>
 );
 
-/** The planned categories by their sections (types); one category: its row says it all, the header only names it. */
-export function typeSections(stats: MonthStats, groups: StatGroup[], rowOf: RowOf) {
+/**
+ * The planned categories by their sections (types), each with its plan's share of `base` (the budget, else the whole
+ * plan); one category: its row says it all, the header only names it.
+ */
+export function typeSections(stats: MonthStats, groups: StatGroup[], rowOf: RowOf, base = 0) {
   return groups.map((g) => (
     <React.Fragment key={`${g.type_id}-${g.title}`}>
-      {header(g.title, g.categories.length > 1 ? factOfPlan(stats, g.spent_minor, g.planned_minor) : null)}
+      {header(g.title, g.categories.length > 1 ? factOfPlan(stats, g.spent_minor, g.planned_minor) : null, undefined, percentOf(g.planned_minor, base))}
       <View>{g.categories.map((c) => rowOf(c, false))}</View>
     </React.Fragment>
   ));
@@ -52,12 +56,14 @@ export function unplannedSection(
   stats: MonthStats, split: { unplanned: CategoryStat[]; spent: number }, share: number, rowOf: RowOf,
   /** "Скрыть суммы": the line under the header without amounts */
   hidden: boolean,
+  /** the budget (else the whole plan): the share's % by the title */
+  base = 0,
 ) {
   if (!split.unplanned.length && !(share > 0)) return null;
   const money = (minor: number) => formatWithCurrency(minor, stats.currency);
   return (
     <>
-      {header(UNPLANNED, factOfPlan(stats, split.spent, share))}
+      {header(UNPLANNED, factOfPlan(stats, split.spent, share), undefined, percentOf(share, base))}
       <View>
         {/* the share as a limit: an overspend scales the bar to the spending, a tick at the share; on the header's grey
             band, worded like a month limit's row. Nothing spent outside the plan yet: no empty bar, just the hint below */}

@@ -20,7 +20,7 @@ import { markStyles } from './markStyles';
 import { overStyle, styles } from './styles';
 
 type Props = {
-  stats: MonthStats; ym: string; plannedAll: number; evenPace?: number; onEditPlan?: () => void;
+  stats: MonthStats; ym: string; plannedAll: number; evenPace?: number;
   /** the month's payments with a day: their marks over the bar, today's tick counting them */
   marks?: PaymentMark[];
 };
@@ -32,7 +32,7 @@ type Props = {
  * month: a chevron by its "Осталось" opens three tiles — the payments, the limits left, the overspends (MonthTiles). A tap
  * on a mark names its payments instead of "Осталось" (MarkInfo).
  */
-export default function MonthTotal({ stats, ym, plannedAll, evenPace, onEditPlan, marks = [] }: Props) {
+export default function MonthTotal({ stats, ym, plannedAll, evenPace, marks = [] }: Props) {
   const left = Math.round(plannedAll) - stats.spent_minor;
   const hidden = useHideAmounts();
   const lastDay = `${ym}-${String(daysInMonth(ym)).padStart(2, '0')}`;
@@ -71,7 +71,6 @@ export default function MonthTotal({ stats, ym, plannedAll, evenPace, onEditPlan
             {stats.spent_minor > 0 ? <Text style={[styles.rowLimit, overStyle(stats.spent_minor, plannedAll)]}>{` · ${formatPercent(stats.spent_minor, plannedAll)}`}</Text> : null}
           </MaskedTotal>
         </Text>
-        {onEditPlan ? <TouchableOpacity onPress={onEditPlan} hitSlop={8} accessibilityRole="button"><Text style={styles.planLink}>Изменить план ›</Text></TouchableOpacity> : null}
       </View>
       {pace.marks.length ? <BarMarks marks={pace.marks.map((m) => ({ ...m, at: m.at * scale }))} picked={picked?.key} onPick={setPicked} /> : null}
       {left < 0

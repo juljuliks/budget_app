@@ -49,8 +49,6 @@ export type RootStackParamList = {
   Merchant: { key: string };
   /** a category: its operations, section, name, color */
   Category: { id: number };
-  /** a month's plan ('YYYY-MM'), from its stats */
-  Plan: { ym: string };
   /** plan and spending by months, from the stats */
   History: undefined;
   /** «Динамика трат»: the categories spent more / less than usual this week or month (the icon by the eye in the stats) */
@@ -102,7 +100,6 @@ export function flushPendingNavigation() {
 export const openTransaction = (id: number) => navigateWhenReady({ name: 'Operation', params: { id } }, true);
 export const openMerchant = (key: string) => navigateWhenReady({ name: 'Merchant', params: { key } }, true);
 export const openCategory = (id: number) => navigateWhenReady({ name: 'Category', params: { id } }, true);
-export const openPlan = (ym: string) => navigateWhenReady({ name: 'Plan', params: { ym } });
 export const openHistory = () => navigateWhenReady({ name: 'History', params: undefined });
 export const openTrends = () => navigateWhenReady({ name: 'Trends', params: undefined });
 export const openCategoryTrend = (id: number) => navigateWhenReady({ name: 'CategoryTrend', params: { id } }, true);

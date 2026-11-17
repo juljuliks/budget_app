@@ -1,7 +1,7 @@
 // 5: the stats — a month against its plan, a day / week against the limits, a long period, hidden amounts, the
 // currency, the warning over them. Today: Thursday 15 October 2026 (setup.ts).
 import { act, fireEvent, waitFor, within } from '@testing-library/react-native';
-import { back, longPress, openApp, pressAction, rowOf, screen, tap, texts, backToTabs } from './app';
+import { back, longPress, openApp, pressAction, rowOf, screen, tap, tapDonutCenter, texts, backToTabs } from './app';
 import { buy, ops, planned, on } from '../e2e/seeds';
 import { emitTransactionsChanged } from '../../src/domain/events';
 import { getDb } from '../../src/db';
@@ -125,7 +125,9 @@ describe('5.1 a month', () => {
   test('5.7.2 «Сбережения» header with overspend: fact / plan (−%) · % of budget', async () => {
     // planned seed: overspend 130 (Одежда 50 + Вне плана 80) reduces free savings 240→110;
     // section now = 410 (300 locked + 110 free), plan = 540; budget = 3000 → 18%
-    expect(screen.getByText('410 / 540 ₾ (−24%) · 18%')).toBeTruthy();
+    expect(screen.getByText('410 / 540 ₾ (−24%)')).toBeTruthy();
+    // its share of the budget by its title, as every section's
+    expect(screen.getByText('Сбережения · 18%')).toBeTruthy();
   });
 
   test('the rows: limits with what\'s left and the limit per rhythm, overspends, obligatory payments', async () => {
@@ -138,7 +140,8 @@ describe('5.1 a month', () => {
   });
 
   test('outside the plan: the categories without one and the uncategorized, against the share; no «＋ В план» buttons there', async () => {
-    expect(block('Вне плана').slice(1, 3)).toEqual(['380 / 300 ₾ · 127%', 'Перерасход 80 ₾']);
+    // its title: the share's part of the budget
+    expect(block('Вне плана · 10%').slice(1, 3)).toEqual(['380 / 300 ₾ · 127%', 'Перерасход 80 ₾']);
     expect(within(rowOf('🎮 Развлечения')).queryByText('＋ В план')).toBeNull();
     expect(within(rowOf('🎮 Развлечения')).getByText('300 ₾')).toBeTruthy();
     expect(within(rowOf('⚪️ Без категории')).queryByText('＋ В план')).toBeNull();
@@ -208,15 +211,14 @@ describe('5.1 a month', () => {
     expect(await screen.findByText('Категория · 1')).toBeTruthy();
   });
 
-  test('the next month: not begun, «Составить план» — its plan\'s page; six months ahead, no further', async () => {
+  test('the next month: its plan, nothing spent yet, «＋» to add to it; six months ahead, no further', async () => {
     await tap('Следующий месяц');
-    expect(await screen.findByText('Ноябрь ещё не начался')).toBeTruthy();
-    expect(screen.getByText('Составьте план заранее: бюджет, лимиты, что отложить сразу.')).toBeTruthy();
+    expect(await screen.findByText('Ноябрь 2026')).toBeTruthy();
+    expect(await screen.findByText('🛒 Продукты')).toBeTruthy();
+    expect(screen.getByLabelText('Добавить в план')).toBeTruthy();
     for (let i = 0; i < 5; i++) await tap('Следующий месяц');
-    expect(await screen.findByText('Апрель ещё не начался')).toBeTruthy();
+    expect(await screen.findByText('Апрель 2027')).toBeTruthy();
     expect(screen.getByLabelText('Следующий месяц').props.accessibilityState?.disabled).toBe(true);
-    await tap('Составить план');
-    expect(await screen.findByText('Бюджет месяца')).toBeTruthy();
   });
 
   test('the previous month: its numbers, its report row', async () => {
@@ -227,17 +229,22 @@ describe('5.1 a month', () => {
     expect(screen.getByText('Перерасход 150 ₾')).toBeTruthy();
   });
 
-  test('a month without a plan: no report, a hint about the plan, «Составить план ›»', async () => {
+  test('a month without a plan: no report, a hint about the plan, «Бюджет месяца ›»', async () => {
     await tap('Предыдущий месяц');
     await tap('Предыдущий месяц');
     expect(await screen.findByText('Август 2026')).toBeTruthy();
-    expect(await screen.findByText('Составьте план на месяц, чтобы видеть, сколько осталось по категориям.')).toBeTruthy();
-    expect(await screen.findByText('Составить план ›')).toBeTruthy();
+    expect(await screen.findByText('Составьте план на месяц, чтобы видеть, сколько осталось по категориям: ＋ — добавить категорию в план.')).toBeTruthy();
+    expect(await screen.findByText('Бюджет месяца ›')).toBeTruthy();
     expect(screen.queryByText(/^Отложено |^Потрачено \d/)).toBeNull();
   });
 
-  test('«Изменить план ›» is next to «Потрачено»; long press on «Отложить сразу» opens the budget sheet', async () => {
-    expect(screen.getByText('Изменить план ›')).toBeTruthy();
+  test('no «Изменить план ›»: the donut\'s «из … ₾» and a tap in its hole open the budget sheet, as a long press on «Отложить сразу» does', async () => {
+    expect(screen.queryByText('Изменить план ›')).toBeNull();
+    expect(await screen.findByText(/^из 2 460.₾$/)).toBeTruthy();
+    tapDonutCenter();
+    expect(await screen.findByText('Бюджет месяца')).toBeTruthy();
+    await tap('Отмена');
+    await waitFor(() => expect(screen.queryByText('Бюджет месяца')).toBeNull());
     await longPress('🔒 Отложено сразу');
     expect(await screen.findByText('Бюджет месяца')).toBeTruthy();
   });
@@ -273,7 +280,7 @@ describe('5.1 transfers and "Пополнение счёта"', () => {
     expect(within(rowOf('🤝 Переводы: Долги')).queryByText('＋ В план')).toBeNull();
     // outside the plan: the −100 and the 140 of «Маникюр» (140 + 82 − 82)
     expect(within(rowOf('💅 Маникюр')).getByText('140 ₾')).toBeTruthy();
-    expect(block('Вне плана').slice(1, 3)).toEqual(['620 / 300 ₾ · 207%', 'Перерасход 320 ₾']);
+    expect(block('Вне плана · 10%').slice(1, 3)).toEqual(['620 / 300 ₾ · 207%', 'Перерасход 320 ₾']);
     expect(texts()).not.toContain('💳 Пополнение счёта');
   });
 });
@@ -431,7 +438,7 @@ describe('5.5.4 a plan in another currency: in it, whatever the stats\' currency
     await tap('$ USD');
     backToTabs();
     await tap('Статистика');
-    expect(await screen.findByText('410 / 540\u00a0₾ (−24%) · 18%')).toBeTruthy();
+    expect(await screen.findByText('410 / 540\u00a0₾ (−24%)')).toBeTruthy();
   });
 });
 

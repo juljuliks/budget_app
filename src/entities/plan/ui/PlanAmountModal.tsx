@@ -83,6 +83,12 @@ type Props = {
  * stats screen ("＋ В план"). The amount is entered in any currency (the one it was entered in comes back when
  * editing); what is still free is shown in the amount to distribute's currency, and going over it is refused.
  */
+/** A one-off payment's day in the form: as its default (nothing changed) and as what it shows. */
+function setDue(form: UseFormReturn<DueForm>, due: string | null) {
+  form.resetField('due', { defaultValue: due });
+  form.setValue('due', due);
+}
+
 export default function PlanAmountModal({ ym, currency: shown, target, onClose, onSaved, onDelete, adding, onLeave, setup, onBack }: Props) {
   // the most this category can get = amount to distribute − the other categories (null = no amount set), in the app's currency
   const [free, setFree] = useState<{ minor: number; currency: Currency } | null>(null);
@@ -129,7 +135,8 @@ export default function PlanAmountModal({ ym, currency: shown, target, onClose, 
         ym > currentYm() ? null : categoryMonthSpent(target.category_id, ym, shown), categoryPlanKind(target.category_id),
         getPlanItemBasics(ym, target.category_id), target.every || target.by_merchant ? null : categoryPayment(target.category_id)]);
       // a one-off payment's day in the month
-      if (item?.kind === 'fixed' && !item.every) form.resetField('due', { defaultValue: await itemDue(ym, target.category_id) });
+      // its default and its value: reopened (the sheet kept mounted), the field shows it, not the reset's null
+      if (item?.kind === 'fixed' && !item.every) setDue(form as unknown as UseFormReturn<DueForm>, await itemDue(ym, target.category_id));
       setInPlan(!!item);
       setOwnPeriod(payment?.period ?? null);
       // its own payment, how often and its end (the sheet saves them back as they are)

@@ -15,12 +15,16 @@ type Props = {
   selectedKey?: string | null;
   /** tap on a segment selects it; a tap anywhere else (the hole) clears the selection */
   onSelect?: (key: string | null) => void;
+  /** a tap in the hole with nothing selected (the month's stats: its budget) */
+  onCenterPress?: () => void;
+  /** the tap layer's */
+  testID?: string;
 };
 
 const GAP = 2; // surface gap between segments, px along the ring
 
 /** Part-to-whole ring; segments with value <= 0 are skipped. Optionally a segment can be tapped to select it. */
-export default function Donut({ segments, size = 220, thickness = 22, children, selectedKey = null, onSelect }: Props) {
+export default function Donut({ segments, size = 220, thickness = 22, children, selectedKey = null, onSelect, onCenterPress, testID }: Props) {
   const r = (size - thickness) / 2;
   const c = 2 * Math.PI * r;
   const visible = segments.filter((s) => s.value > 0);
@@ -42,6 +46,8 @@ export default function Donut({ segments, size = 220, thickness = 22, children, 
     const dx = e.nativeEvent.locationX - size / 2;
     const dy = e.nativeEvent.locationY - size / 2;
     const dist = Math.hypot(dx, dy);
+    // in the hole, nothing selected: the hole's own action
+    if (onCenterPress && selectedKey === null && dist < r - thickness / 2 - 10) { onCenterPress(); return; }
     if (Math.abs(dist - r) > thickness / 2 + 10) { onSelect(null); return; }
     const angle = (Math.atan2(dx, -dy) + 2 * Math.PI) % (2 * Math.PI);
     const at = (angle / (2 * Math.PI)) * c;
@@ -76,6 +82,7 @@ export default function Donut({ segments, size = 220, thickness = 22, children, 
       {onSelect ? (
         <View
           style={StyleSheet.absoluteFill}
+          testID={testID}
           onStartShouldSetResponder={() => true}
           onResponderRelease={press}
           accessibilityLabel="Диаграмма: нажмите на часть, чтобы увидеть категорию"

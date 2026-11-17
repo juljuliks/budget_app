@@ -27,7 +27,7 @@ const PERIODS: Array<[PeriodKind, string, string]> = [
 ];
 
 /**
- * "Статистика" tab: stats for a period (a month by default; its plan — a page, «Изменить план ›»); plan-vs-actual by
+ * "Статистика" tab: stats for a period (a month by default, its plan changed right there); plan-vs-actual by
  * months — a page too, «История по месяцам ›» at the end of the period list.
  */
 export default function StatsHome() {

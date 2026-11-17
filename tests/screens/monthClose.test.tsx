@@ -4,7 +4,7 @@
 // a budget of 3 000 ₾, 1 850 ₾ spent.
 import { act, waitFor } from '@testing-library/react-native';
 import { getSetting } from '../../src/db/settings';
-import { openApp, screen, tap, texts, openPlanPage, openHistoryPage } from './app';
+import { openApp, screen, tap, texts, openHistoryPage } from './app';
 import { buy, category, on, planned } from '../e2e/seeds';
 import { getDb } from '../../src/db';
 import { answerClose, finishClose, setFund, setPlanAmount, setPlanBudget, setSplit } from '../../src/db/plans';
@@ -106,19 +106,15 @@ describe('6.6 month close', () => {
     expect(await (await getDb()).get("SELECT over_cover, saved, saved_minor FROM month_closes WHERE ym = '2026-09'"))
       .toEqual({ over_cover: 'next', saved: 'other', saved_minor: 40000 });
   });
-  test('October\'s plan: September\'s leftover moved in — a line under the budget, "Перенос из сентября"; a tap — "Куда остаток?"', async () => {
+  test('October\'s stats: September\'s leftover moved in — a line under the month\'s bar; a tap — "Куда остаток?"', async () => {
     await openApp(async () => {
       await planned();
       await answerClose('2026-09', { rest_choice: 'next' });
       await finishClose('2026-09');
     });
     await tap('Статистика');
-    await openPlanPage();
-    expect(await screen.findByText(m('4 150 ₾'))).toBeTruthy();
-    expect(screen.getByText(m('3 000 ₾ + 1 150 ₾ из сентября'))).toBeTruthy();
-    expect(screen.getByText('Перенос из сентября')).toBeTruthy();
-    expect(screen.getAllByText(m('+1 150 ₾')).length).toBeGreaterThan(0);
-    await tap('Изменить: ➕ Остаток сентября');
+    expect(await screen.findByText(m('➕ Остаток сентября +1 150 ₾ · добавлен к бюджету октября ›'))).toBeTruthy();
+    await tap(/^➕ Остаток сентября/);
     expect(await screen.findByText('Куда остаток?')).toBeTruthy();
     expect(screen.getByRole('radio', { name: 'Перенести на октябрь' }).props.accessibilityState).toMatchObject({ checked: true });
     await tap('В сбережения');
@@ -126,11 +122,10 @@ describe('6.6 month close', () => {
     // to savings: what was put aside is asked — September's "Итоги" open
     expect(await screen.findByText('Итоги · Сентябрь 2026')).toBeTruthy();
     await tap('Подвести позже');
-    expect(await screen.findByText(m('3 000 ₾'))).toBeTruthy();
-    expect(screen.queryByText('Перенос из сентября')).toBeNull();
+    await waitFor(() => expect(screen.queryByText(/^➕ Остаток сентября/)).toBeNull());
   });
 
-  test('October\'s plan: September\'s overspend owed — red first in the bar, its row; "Покрыть иначе?" → "Уже покрыт"', async () => {
+  test('October\'s stats: September\'s overspend owed — a line under the month\'s bar; "Покрыть иначе?" → "Уже покрыт"', async () => {
     await openApp(async () => {
       await planned();
       await buy('BOLT', 1500, on(20, 12, 1), await category('Такси', '🚕'));
@@ -138,11 +133,8 @@ describe('6.6 month close', () => {
       await finishClose('2026-09');
     });
     await tap('Статистика');
-    await openPlanPage();
-    expect(await screen.findByText('Перерасход сентября')).toBeTruthy();
-    expect(screen.getByText('⚠️ Перерасход сентября')).toBeTruthy();
-    expect(screen.getByText(/^вычтен из бюджета октября/)).toBeTruthy();
-    await tap('Изменить: ⚠️ Перерасход сентября');
+    expect(await screen.findByText(/^⚠️ Перерасход сентября −.* · вычтен из бюджета октября ›$/)).toBeTruthy();
+    await tap(/^⚠️ Перерасход сентября/);
     expect(await screen.findByText('Покрыть иначе?')).toBeTruthy();
     // no 🔒 in September: all of it off the savings from before
     expect(screen.getByText('Из сбережений сентября')).toBeTruthy();
@@ -150,7 +142,7 @@ describe('6.6 month close', () => {
     await tap('Уже покрыт');
     await tap('Сохранить');
     await act(async () => { await new Promise((r) => setTimeout(r, 300)); });
-    expect(screen.queryByText('⚠️ Перерасход сентября')).toBeNull();
+    expect(screen.queryByText(/^⚠️ Перерасход сентября/)).toBeNull();
   });
   test('«История»: "Итоги не подведены" — "Подвести итоги ›" opens them; closed — the leftover as answered, "Изменить итоги ›"', async () => {
     await openApp(planned);

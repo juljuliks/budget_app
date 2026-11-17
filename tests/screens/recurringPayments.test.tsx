@@ -2,7 +2,7 @@
 // a subscription made of an operation picked in the operations. Today: 15 October 2026; the seed `planned` (Подписки 30 ₾ by hand) and NETFLIX.COM
 // charged 30 ₾ on the 10th in "Подписки".
 import { act, fireEvent, waitFor } from '@testing-library/react-native';
-import { back, backToTabs, openApp, openSettings, screen, tap, texts, openPlanPage, openNextPlan } from './app';
+import { back, backToTabs, openApp, openSettings, screen, tap, texts, openBudget, openPlanOf, openNextMonth } from './app';
 import { buy, on, planned } from '../e2e/seeds';
 import { getDb } from '../../src/db';
 import { subscriptionsCategoryId } from '../../src/db/categories';
@@ -30,8 +30,7 @@ async function subscriptionsOn(name: string) {
 async function openSubscriptions() {
   await openApp(seed);
   await tap('Статистика');
-  await openPlanPage();
-  await tap('📺 Подписки');
+  await openPlanOf('📺 Подписки');
 }
 
 describe('6.6 subscriptions', () => {
@@ -91,8 +90,7 @@ describe('6.6 subscriptions', () => {
       await savePayment({ merchant_key: 'NETFLIX.COM', name: 'Netflix', amount_minor: 3000, currency: 'GEL', period: 1, due: '2026-07-10' });
     });
     await tap('Статистика');
-    await openPlanPage();
-    await tap('📺 Подписки');
+    await openPlanOf('📺 Подписки');
     await tap('Подписка: Netflix');
     expect(await screen.findByText(/^10 ноября 2026/)).toBeTruthy();
     await tap('Раз в год');
@@ -136,8 +134,7 @@ describe('6.6 subscriptions', () => {
       await savePayment({ merchant_key: 'SPOTIFY', name: 'Spotify', amount_minor: 1840, currency: 'GEL', period: 12, due: '2027-08-25' });
     });
     await tap('Статистика');
-    await openPlanPage();
-    await tap('📺 Подписки');
+    await openPlanOf('📺 Подписки');
     // the month's sheet: this month's charges only, a line to the coming ones
     expect(await screen.findByText('Списания в октябре')).toBeTruthy();
     expect(screen.queryByText('Spotify')).toBeNull();
@@ -155,8 +152,7 @@ describe('6.6 subscriptions', () => {
       await savePayment({ merchant_key: 'NETFLIX.COM', name: 'Netflix', amount_minor: 3000, currency: 'GEL', period: 12, due: '2026-10-10' });
     });
     await tap('Статистика');
-    await openPlanPage();
-    await tap('📺 Подписки');
+    await openPlanOf('📺 Подписки');
     expect(await screen.findByText('раз в год · ✓ списано 10 окт')).toBeTruthy();
     await tap('Перейти: Предстоящие подписки ›');
     expect(await screen.findByText('Без откладывания')).toBeTruthy();
@@ -172,8 +168,7 @@ describe('6.6 subscriptions', () => {
       await addManualTransaction({ amount_minor: 1200, category_id: id, description: 'Кино дома', occurred_at: on(13, 10) });
     });
     await tap('Статистика');
-    await openPlanPage();
-    await tap('📺 Подписки');
+    await openPlanOf('📺 Подписки');
     expect(await screen.findByText('Без даты списания')).toBeTruthy();
     expect(screen.getByLabelText('Подписка: NETFLIX.COM')).toBeTruthy();
     expect(screen.queryByLabelText('Подписка: APPLE')).toBeNull();
@@ -192,8 +187,7 @@ describe('6.6 subscriptions', () => {
         await (await getDb()).run("UPDATE transactions SET category_id = ? WHERE merchant_key = 'SPOTIFY'", [await subscriptionsCategoryId()]);
       });
       await tap('Статистика');
-      await openPlanPage();
-      await tap('📺 Подписки');
+      await openPlanOf('📺 Подписки');
       await tap('Подписка: SPOTIFY');
     };
 
@@ -246,7 +240,7 @@ describe('6.7.9 "Регулярный платёж" from the plan', () => {
   // the plan's sheet of "Дом и коммуналка" with "Подписки": "Регулярный платёж" — "Выбрать мерчанта": its page, RENT of
   // the 3rd made a subscription there
   async function pickRent() {
-    await tap('Изменить: 🏠 Дом и коммуналка');
+    await openPlanOf('🏠 Дом и коммуналка');
     await tap(await screen.findByText('Выбрать мерчанта'));
     expect(await screen.findByText('Мерчанты без подписки')).toBeTruthy();
     await tap('Подписка: RENT');
@@ -263,8 +257,7 @@ describe('6.7.9 "Регулярный платёж" from the plan', () => {
   test('a category with "Подписки": "Выбрать мерчанта" — its page; its merchant made a subscription, then it is counted', async () => {
     await openApp(withSubscriptions('Дом и коммуналка'));
     await tap('Статистика');
-    await openPlanPage();
-    await tap('Изменить: 🏠 Дом и коммуналка');
+    await openPlanOf('🏠 Дом и коммуналка');
     // «📺 Подписки»' own: no kind to pick; no amount, no "Как часто" — a subscription is made of a merchant on its page
     expect(await screen.findByText(/^Подписки делаются из мерчантов категории/)).toBeTruthy();
     expect(screen.queryByDisplayValue('800')).toBeNull();
@@ -279,7 +272,7 @@ describe('6.7.9 "Регулярный платёж" from the plan', () => {
       .toEqual({ name: 'RENT', merchant_key: 'RENT', amount_minor: 80000, period_months: 1, due: '2026-11-03' });
     expect(await (await getDb()).get("SELECT recurring FROM categories WHERE name = 'Дом и коммуналка'")).toEqual({ recurring: 1 });
     // its row opens its subscriptions; "Изменить в плане" — the plan's sheet, no amount (counted)
-    await tap('🏠 Дом и коммуналка');
+    await openPlanOf('🏠 Дом и коммуналка');
     expect(await screen.findByLabelText('Подписка: RENT')).toBeTruthy();
     await tap('Изменить в плане ›');
     expect(await screen.findByText(/^Сумма считается из списаний подписок категории/)).toBeTruthy();
@@ -327,11 +320,10 @@ describe('6.7.9 "Регулярный платёж" from the plan', () => {
     await backToTabs();
     await tap('Статистика');
     expect(screen.queryByText(/Оплачено \d+ из/)).toBeNull();
-    await openPlanPage();
     expect(await screen.findByText('раз в год · следующее 3 окт 2027')).toBeTruthy();
     expect(await (await getDb()).get(`SELECT kind, limit_minor FROM plan_items WHERE ym = '2026-10' AND category_id = ${home}`)).toEqual({ kind: 'subs', limit_minor: 80000 });
     // its row: the month's amount only; the payment — on its category's page
-    await tap('🏠 Дом и коммуналка');
+    await openPlanOf('🏠 Дом и коммуналка');
     expect(await screen.findByText('В плане — 800\u00a0₾')).toBeTruthy();
     await tap('Изменить в категории ›');
     await tap(await screen.findByText('Изменить ›'));
@@ -351,8 +343,7 @@ describe('6.7.9 "Регулярный платёж" from the plan', () => {
   test('without "Подписки", every month without a day: the amount stands in each month\'s plan (as a one-off payment repeated each month was)', async () => {
     await openApp(seed);
     await tap('Статистика');
-    await openPlanPage();
-    await tap('Изменить: 🏠 Дом и коммуналка');
+    await openPlanOf('🏠 Дом и коммуналка');
     await tap('Изменить в категории ›');
     await tap(await screen.findByText('Регулярный платёж'));
     await tap('Настроить');
@@ -374,15 +365,14 @@ describe('6.7.9 "Регулярный платёж" from the plan', () => {
     expect(screen.queryByText('каждый месяц · без даты')).toBeNull();
     // November: with the same amount
     backToTabs();
-    await openNextPlan();
+    await openNextMonth();
     await waitFor(async () => expect(await db.get(`SELECT limit_minor FROM plan_items WHERE ym = '2026-11' AND category_id = ${home}`)).toEqual({ limit_minor: 80000 }));
   });
 
   test('every month with a day: set on its category\'s page; in the plan\'s sheet «каждый месяц · 20-го»; on the stats\' bar on that day', async () => {
     await openApp(seed);
     await tap('Статистика');
-    await openPlanPage();
-    await tap('Изменить: 🏠 Дом и коммуналка');
+    await openPlanOf('🏠 Дом и коммуналка');
     await tap('Изменить в категории ›');
     await tap(await screen.findByText('Регулярный платёж'));
     await tap('Настроить');
@@ -400,7 +390,7 @@ describe('6.7.9 "Регулярный платёж" from the plan', () => {
     expect(await db.get("SELECT p.kind, p.limit_minor FROM plan_items p JOIN categories c ON c.id = p.category_id WHERE p.ym = '2026-10' AND c.name = 'Дом и коммуналка'"))
       .toEqual({ kind: 'subs', limit_minor: 80000 });
     // the plan's sheet: the amount; the day shown by how often, set on the page
-    await tap('🏠 Дом и коммуналка');
+    await openPlanOf('🏠 Дом и коммуналка');
     expect(await screen.findByText('каждый месяц · 20-го')).toBeTruthy();
     expect(screen.getByText('Как часто, дата списания и окончания — на странице категории. Сумма переходит в следующие месяцы.')).toBeTruthy();
     expect(screen.queryByText('Дата списания (необязательно)')).toBeNull();
@@ -415,12 +405,11 @@ describe('6.7.9 "Регулярный платёж" from the plan', () => {
   test('a coming month\'s plan says the day, not "через …" (counted from today, it read as the month after)', async () => {
     await openApp(withSubscriptions('Дом и коммуналка'));
     await tap('Статистика');
-    await openPlanPage();
     await pickRent();
     await saveBack();
     expect(await screen.findByText('каждый месяц · следующее 3 ноя')).toBeTruthy();
     backToTabs();
-    await openNextPlan();
+    await openNextMonth();
     expect(await screen.findByText('каждый месяц · 3 ноя')).toBeTruthy();
     // the subscription's sheet gone (it closes animated)
     await waitFor(() => expect(screen.queryByText(/через/)).toBeNull());
@@ -435,8 +424,8 @@ describe('6.7.9 "Регулярный платёж" from the plan', () => {
       await turnRecurring(sport, true);
     });
     await tap('Статистика');
-    await openPlanPage();
-    expect(await screen.findByText(`30${N}₾ в ноябре`)).toBeTruthy();
+    // nothing this month: not in the month's stats; its plan 0
+    await screen.findByLabelText('Добавить в план');
     expect(await (await getDb()).get("SELECT limit_minor FROM plan_items WHERE ym = '2026-10' AND category_id = (SELECT id FROM categories WHERE name = 'Спорт')"))
       .toEqual({ limit_minor: 0 });
   });
@@ -444,11 +433,10 @@ describe('6.7.9 "Регулярный платёж" from the plan', () => {
   test('the subscriptions\' category with subscriptions: always in the plan — no «Удалить из плана»', async () => {
     await openApp(withSubscriptions('Дом и коммуналка'));
     await tap('Статистика');
-    await openPlanPage();
     await pickRent();
     await saveBack();
     expect(await screen.findByText('каждый месяц · следующее 3 ноя')).toBeTruthy();
-    await tap('🏠 Дом и коммуналка');
+    await openPlanOf('🏠 Дом и коммуналка');
     await tap('Изменить в плане ›');
     expect(await screen.findByText(/^Сумма считается из списаний подписок категории/)).toBeTruthy();
     expect(screen.queryByText('Удалить из плана')).toBeNull();
@@ -456,7 +444,7 @@ describe('6.7.9 "Регулярный платёж" from the plan', () => {
 
   // the seed's budget: 2 400 ₾ to plan (3 000 less 10% outside and 🔒 300), 2 160 planned — 240 free; Одежда 400 ₾ by hand
   async function pickZara(amount: string) {
-    await tap('Изменить: 👕 Одежда');
+    await openPlanOf('👕 Одежда');
     await tap(await screen.findByText('Выбрать мерчанта'));
     await tap('Подписка: ZARA');
     expect(await screen.findByText('👕 Подписка «ZARA»')).toBeTruthy();
@@ -467,7 +455,6 @@ describe('6.7.9 "Регулярный платёж" from the plan', () => {
   test('this month\'s charge past what is free: "Вычесть из сбережений?" — the item by hand becomes the charge, what is short taken from 🔒', async () => {
     await openApp(withSubscriptions('Одежда'));
     await tap('Статистика');
-    await openPlanPage();
     await pickZara('700');
     // ZARA on the 10th: October's charge counted instead of the 400 by hand — 300 ₾ more, 60 ₾ short
     expect(await screen.findByText('Вычесть из сбережений?')).toBeTruthy();
@@ -480,7 +467,6 @@ describe('6.7.9 "Регулярный платёж" from the plan', () => {
   test('more than 🔒 has: asked too — all of it taken, the plan over its budget; "Отмена" — nothing saved', async () => {
     await openApp(withSubscriptions('Одежда'));
     await tap('Статистика');
-    await openPlanPage();
     await pickZara('1000');
     expect(await screen.findByText(`Свободного не хватает 360${N}₾, в сбережениях — 300${N}₾. План будет больше бюджета на 60${N}₾.`)).toBeTruthy();
     await tap('Отмена');
@@ -501,8 +487,7 @@ describe('6.7.9 "Регулярный платёж" from the plan', () => {
       await turnRecurring(id, false);
     });
     await tap('Статистика');
-    await openPlanPage();
-    await tap('Изменить: 🏠 Дом и коммуналка');
+    await openPlanOf('🏠 Дом и коммуналка');
     expect(await screen.findByText('Сумма будет считаться из списаний подписок категории.')).toBeTruthy();
     expect(screen.queryByText('Выбрать мерчанта')).toBeNull();
     await tap('Сохранить');
@@ -520,8 +505,7 @@ describe('6.7.9 "Регулярный платёж" from the plan', () => {
       await savePayment({ category_id: id, merchant_key: 'RENT', name: 'RENT', amount_minor: 80000, currency: 'GEL', period: 1, due: '2026-11-03' });
     });
     await tap('Статистика');
-    await openPlanPage();
-    await tap('🏠 Дом и коммуналка');
+    await openPlanOf('🏠 Дом и коммуналка');
     await tap('Подписка: RENT');
     await tap('Удалить подписку');
     await tap('Удалить');
@@ -535,14 +519,12 @@ describe('6.7.9 "Регулярный платёж" from the plan', () => {
   test('"Подписки" without subscriptions: "нет подписок" in its row', async () => {
     await openApp(seed);
     await tap('Статистика');
-    await openPlanPage();
     expect(await screen.findByText('нет подписок')).toBeTruthy();
   });
 
   test('every week: a subscription — the day a week after its operation; each week\'s charge in the month', async () => {
     await openApp(withSubscriptions('Дом и коммуналка'));
     await tap('Статистика');
-    await openPlanPage();
     await pickRent();
     await tap('Каждую неделю');
     // RENT on the 3rd: the 10th is past — the 17th
@@ -630,9 +612,9 @@ describe('6.7.8 saving up for a subscription', () => {
       await db.run("INSERT INTO payment_savings (id, payment_id, since_ym, start_minor) VALUES (5, ?, '2026-10', 0)", [id]);
     });
     await tap('Статистика');
-    await openPlanPage();
-    expect(await screen.findByText('(12 $)')).toBeTruthy();
-    expect(screen.getByText('(1 $)')).toBeTruthy();
+    // the month's charges under «📺 Подписки», the contribution in «Сбережения»
+    expect(await screen.findByText(/^\(12 \$\) · /)).toBeTruthy();
+    expect(screen.getByText(/копим: Spotify \(1 \$\)$/)).toBeTruthy();
   });
 
   test('"Предстоящие подписки" in the plan\'s "Сбережения" opens the coming ones; "Подписки" in its section — the month\'s', async () => {
@@ -642,7 +624,6 @@ describe('6.7.8 saving up for a subscription', () => {
       await (await getDb()).run("INSERT INTO payment_savings (id, payment_id, since_ym, start_minor) VALUES (5, ?, '2026-10', 1000)", [id]);
     });
     await tap('Статистика');
-    await openPlanPage();
     await tap('📺 Предстоящие подписки');
     expect(await screen.findByText(/^Копим в октябре/)).toBeTruthy();
     expect(screen.getByText(/из 30/)).toBeTruthy();
@@ -657,7 +638,6 @@ describe('6.7.8 saving up for a subscription', () => {
       await (await getDb()).run("INSERT INTO payment_savings (id, payment_id, since_ym, start_minor) VALUES (5, ?, '2026-09', 1000)", [id]);
     });
     await tap('Статистика');
-    await openPlanPage();
     await tap('📺 Предстоящие подписки');
     expect(await screen.findByText(/^раз в год · 10 окт 2027/)).toBeTruthy();
   });
@@ -672,8 +652,7 @@ describe('6.7.8 saving up for a subscription', () => {
       await db.run("INSERT INTO payment_contributions (saving_id, ym, minor) VALUES (5, '2026-09', 1000)");
     });
     await tap('Статистика');
-    await openPlanPage();
-    await tap('📺 Подписки');
+    await openPlanOf('📺 Подписки');
     await tap('Подписка: Netflix');
     expect(await screen.findByText(`Отложено 10${N}₾ из 30${N}₾.`)).toBeTruthy();
     await tap('Нет, весь платёж в октябре 2027');

@@ -34,6 +34,8 @@ export type SavingsSection = {
 };
 
 type Money = (minor: number) => string;
+/** the words of a category's payments (entities/category paymentWords): «Предстоящие подписки», «Подписки» */
+export type UpcomingWords = (byMerchant: boolean) => { upcoming: string; Many: string };
 
 const took = (n: number, money: Money, hidden: boolean, then = ''): SavingsStatus =>
   ({ text: `${hidden ? 'Перерасход взял часть' : `Перерасход взял ${money(n)}`}${then}`, tone: 'warn', info: true });
@@ -53,7 +55,7 @@ export function fundFitStatus(f: PlanItem, ym: string, hidden: boolean): Savings
 }
 
 /** This month, from the plan's view. null — no budget, or nothing goes to savings. */
-export function currentSavings(p: PlanView, money: Money, hidden: boolean, ym = ''): SavingsSection | null {
+export function currentSavings(p: PlanView, money: Money, hidden: boolean, ym = '', words?: UpcomingWords): SavingsSection | null {
   if (!p.shownBudget || p.savingsPlanned <= 0) return null;
   const less = p.less;
   const parts: SavingsPart[] = [];
@@ -78,7 +80,15 @@ export function currentSavings(p: PlanView, money: Money, hidden: boolean, ym = 
   }
   for (const s of p.saving) {
     const plan = s.subs?.saving_minor ?? 0;
-    parts.push({ key: `saving-${s.category_id}`, categoryId: s.category_id, name: `${s.emoji || ''} ${s.name}`.trim(), color: RING_FUNDS, plan, now: plan, status: { text: 'копим на платежи', tone: 'muted' } });
+    // "📺 Предстоящие подписки" ("… платежи"); another category than «Подписки» — its name before what is saved up for
+    const w = words?.(!!s.by_merchant) ?? { upcoming: s.name, Many: s.name };
+    const of = s.name === w.Many ? '' : `${s.name} · `;
+    const own = s.subs?.in_currency && s.subs.in_currency.currency !== p.currency && s.subs.in_currency.saving_minor > 0
+      ? ` (${formatWithCurrency(s.subs.in_currency.saving_minor, s.subs.in_currency.currency)})` : '';
+    parts.push({
+      key: `saving-${s.category_id}`, categoryId: s.category_id, name: `${s.emoji || ''} ${w.upcoming}`.trim(), color: RING_FUNDS, plan, now: plan,
+      status: { text: `${of}копим: ${s.subs?.saving_names.join(', ') ?? ''}${hidden ? '' : own}`, tone: 'muted' },
+    });
   }
   const free = Math.max(0, p.free ?? 0);
   if (free > 0) {

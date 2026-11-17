@@ -42,27 +42,18 @@ function nowOfPlan(now: number | null, plan: number, currency: string) {
 }
 
 /**
- * Section header total for «Сбережения»:
- * no overspend — "plan ₾ · X% бюджета"; overspend — "fact / plan ₾ (−Y%) · X%".
+ * Section header total for «Сбережения» (its share of the budget is by the title, as every section's):
+ * no overspend — "plan ₾"; overspend — "fact / plan ₾ (−Y%)".
  */
-function savingsHeaderTotal(now: number | null, plan: number, budget: number | null, currency: string) {
+function savingsHeaderTotal(now: number | null, plan: number, currency: string) {
   const isOver = now !== null && now < plan;
-  const budgetPct = budget ? formatPercent(plan, budget) : null;
-  if (!isOver) {
-    return (
-      <MaskedTotal style={styles.groupTotal} hiddenText={budgetPct ?? ''}>
-        {formatWithCurrency(plan, currency)}
-        {budgetPct ? <Text style={styles.rowLimit}>{` · ${budgetPct}`}</Text> : null}
-      </MaskedTotal>
-    );
-  }
+  if (!isOver) return <MaskedTotal style={styles.groupTotal} hiddenText="">{formatWithCurrency(plan, currency)}</MaskedTotal>;
   const deficitPct = formatPercent(plan - Math.max(0, now!), plan);
   return (
-    <MaskedTotal style={styles.groupTotal} hiddenText={budgetPct ?? deficitPct}>
+    <MaskedTotal style={styles.groupTotal} hiddenText={`−${deficitPct}`}>
       <Text style={styles.overNum}>{formatShort(Math.max(0, now!))}</Text>
       <Text style={styles.rowLimit}>{` / ${formatWithCurrency(plan, currency)}`}</Text>
       <Text style={[styles.rowLimit, styles.overNum]}>{` (−${deficitPct})`}</Text>
-      {budgetPct ? <Text style={styles.rowLimit}>{` · ${budgetPct}`}</Text> : null}
     </MaskedTotal>
   );
 }
@@ -96,7 +87,8 @@ function Part({ x, currency, onLess, onLongPress, spent, actions }: {
   return actions ? (
     <PressMenu style={styles.row} actions={actions} accessibilityHint="Операции, план, динамика">{body}</PressMenu>
   ) : (
-    <TouchableOpacity style={styles.row} onLongPress={onLongPress} disabled={!onLongPress} accessibilityLabel={x.name}>
+    // what is saved up for the payments: a tap opens them too (the coming ones)
+    <TouchableOpacity style={styles.row} onPress={x.key.startsWith('saving-') ? onLongPress : undefined} onLongPress={onLongPress} disabled={!onLongPress} accessibilityLabel={x.name}>
       {body}
     </TouchableOpacity>
   );
@@ -112,7 +104,7 @@ export function savingsSection(s: SavingsSection | null, currency: string, open:
   const money = (minor: number) => formatWithCurrency(minor, currency);
   return (
     <>
-      {header('Сбережения', savingsHeaderTotal(s.now, s.plan, s.budget, currency))}
+      {header('Сбережения', savingsHeaderTotal(s.now, s.plan, currency), undefined, s.budget ? formatPercent(s.plan, s.budget) : undefined)}
       <View>
         {s.caption ? <Text style={styles.savingsCaption}>{s.caption}</Text> : null}
         {s.parts.map((x) => {

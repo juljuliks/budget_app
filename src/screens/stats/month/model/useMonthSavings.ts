@@ -11,6 +11,7 @@ import { onTransactionsChanged } from '@/domain/events';
 import { formatWithCurrency } from '@/shared/lib/money';
 import { useLatestRequest } from '@/shared/lib/useLatestRequest';
 import type { PlanAmountTarget } from '@/entities/plan';
+import { paymentWords } from '@/entities/category';
 import { planView, PlanView } from '../../plan/model/planView';
 import { usePlanData } from '../../plan/model/usePlanData';
 import { currentSavings, pastSavings } from './savingsSection';
@@ -37,7 +38,7 @@ export function useMonthSavings(ym: string, shown: Currency, hidden: boolean) {
   if (past) return { section: fact?.currency === currency ? pastSavings(fact.fact, ym, money, hidden) : null, view: null, currency };
   if (!data.items || data.loadedCurrency !== currency || ym > currentYm()) return { section: null, view: null, currency };
   const view = planView({ ...data, items: data.items, ym, currency, hidden });
-  return { section: currentSavings(view, money, hidden, ym), view, currency };
+  return { section: currentSavings(view, money, hidden, ym, paymentWords), view, currency };
 }
 
 /** A category of «Сбережения меньше на …»: its plan amount to change. null — not in the plan. */

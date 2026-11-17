@@ -116,17 +116,32 @@ export function backToTabs() {
   act(() => { while (navigationRef.canGoBack() && navigationRef.getRootState().routes.length > 1) navigationRef.goBack(); });
 }
 
-/** From the month stats: its plan, a page («Изменить план ›» / «Составить план ›»). */
-export const openPlanPage = () => tap(/^(Изменить|Составить) план ›$/);
+/** A tap in the hole of the month's donut («из 3 666 ₾ ✏️»): its budget's sheet. */
+export function tapDonutCenter() {
+  fireEvent(screen.getByTestId('month-budget'), 'responderRelease', { nativeEvent: { locationX: 110, locationY: 110 } });
+}
+/** From the month stats: its budget's sheet — a tap in the donut's hole, without a plan «Бюджет месяца ›». */
+export async function openBudget() {
+  await waitFor(() => expect(screen.queryByText(/^из .* ₾$/) ?? screen.queryByText('Бюджет месяца ›')).toBeTruthy());
+  if (screen.queryByText(/^из .* ₾$/)) tapDonutCenter();
+  else await tap('Бюджет месяца ›');
+}
+/** From the month stats: a category's amount in the plan (its long press, «План» / «В план»). */
+export async function openPlanOf(category: string | RegExp) {
+  // the month's stats only (the operations under them have the same names)
+  const row = await waitFor(() => { const all = within(screen.getByTestId('month-stats')).getAllByText(category); return all[all.length - 1]; });
+  fireEvent(row, 'longPress', { nativeEvent: { pageX: 200, pageY: 500 } });
+  fireEvent.press(await screen.findByLabelText(/^(План|В план)$/));
+}
 /** From the stats: plan and spending by months, a page (the last item of the period list). */
 export async function openHistoryPage() {
   await tap('Выбрать период');
   await tap('История по месяцам ›');
 }
-/** From the current month's stats: the next month (its stats empty), then its plan. */
-export async function openNextPlan() {
+/** From the current month's stats: the next month's (its plan without spending). */
+export async function openNextMonth() {
   await tap('Следующий месяц');
-  await tap(/^(Изменить|Составить) план$/);
+  await screen.findByLabelText('Добавить в план');
 }
 
 /** The switch on the screen (the last one: a sheet's), toggled. */

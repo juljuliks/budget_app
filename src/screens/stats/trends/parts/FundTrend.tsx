@@ -2,10 +2,9 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { MerchantLink } from '@/entities/merchant';
 import { FundSheet } from '@/features/fund';
-import { currentYm } from '@/db/plans';
 import { MONTHS_DAT, MONTHS_NOM, MONTHS_PREP, monthYear } from '@/shared/lib/dates';
 import { plural } from '@/shared/lib/format';
-import { openPlan } from '@/shared/navigation/navigation';
+import { openCategory } from '@/shared/navigation/navigation';
 import Masked from '@/shared/ui/Masked';
 import TextLink from '@/shared/ui/TextLink';
 import { colors } from '@/shared/theme/theme';
@@ -88,7 +87,7 @@ export default function FundTrend({ f, categoryId, label, money }: { f: Fund; ca
       <View style={s.operations}>
         <TextLink label="Копилка: взносы и траты" onPress={() => setCard(true)} />
       </View>
-      <FundSheet categoryId={card ? categoryId : null} label={label} onClose={() => setCard(false)} onEdit={() => { setCard(false); openPlan(currentYm()); }} />
+      <FundSheet categoryId={card ? categoryId : null} label={label} onClose={() => setCard(false)} onEdit={() => { setCard(false); openCategory(categoryId); }} />
     </>
   );
 }

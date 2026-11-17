@@ -5,7 +5,6 @@ jest.mock('../../src/shared/navigation/navigation', () => ({ navigateWhenReady: 
 
 import { addPlanItem, listPlan, setPlanAmount, setPlanPinned, setRegularItem, timesInMonth } from '../../src/db/plans';
 import { monthCharges, nextCharge, paymentDays, savingFor } from '../../src/db/recurring';
-import { regularNote } from '../../src/screens/stats/plan/model/regularNote';
 import { freshDb } from '../helpers';
 
 beforeEach(() => freshDb());
@@ -24,15 +23,6 @@ describe('the times in a month', () => {
     expect(timesInMonth('2026-10', 'week', MON, '2026-10-15')).toBe(2);
     expect(timesInMonth('2026-10', 'day', 0, '2026-10-15')).toBe(15);
     expect(timesInMonth('2026-10', 'day', 0, '2026-09-30')).toBe(0);
-  });
-
-  test('the plan\'s note: how often, the times by the amount, the next day by the calendar (this month), the end', () => {
-    expect(regularNote({ every: 'day', weekdays: null, unit_minor: 500, until: null, currency: 'GEL' }, '2026-10', '2026-10-15')).toBe('каждый день · 31 × 5\u00a0₾');
-    // the 15th a Thursday: it is the next; in November's plan — no next
-    expect(regularNote({ every: 'week', weekdays: MON | THU, unit_minor: 3000, until: '2026-10-15', currency: 'GEL' }, '2026-10', '2026-10-15'))
-      .toBe('пн, чт · 5 × 30\u00a0₾ · 15 окт · до 15 окт');
-    expect(regularNote({ every: 'week', weekdays: MON, unit_minor: 3000, until: null, currency: 'GEL' }, '2026-11', '2026-10-15')).toBe('пн · 5 × 30\u00a0₾');
-    expect(regularNote({ every: null, weekdays: null, unit_minor: null, until: null, currency: 'GEL' }, '2026-10', '2026-10-15')).toBeNull();
   });
 });
 

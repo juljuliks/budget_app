@@ -5,11 +5,12 @@ import { colors } from '@/shared/theme/theme';
 export const styles = StyleSheet.create({
   report: { marginTop: 4 },
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { paddingHorizontal: 16, paddingBottom: 32 },
+  // room under the last row for «＋»
+  content: { paddingHorizontal: 16, paddingBottom: 88 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
   donutWrap: { alignItems: 'center', marginBottom: 16 },
   monthBox: { marginBottom: 16 },
-  monthTopRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 4 },
+  monthTopRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
   monthLine: { fontSize: 13, color: colors.muted, flexShrink: 1 },
   // the bar's status line with its chevron at the right: the tiles open under it
   monthStatusRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 4 },
@@ -22,6 +23,8 @@ export const styles = StyleSheet.create({
   // a grey band across the screen, sticking on top as the days on the operations do
   groupHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: -16 },
   groupTitle: { fontSize: 13, fontWeight: '600', color: colors.muted },
+  // «· 35%» after a section's title: its share of the budget, bold
+  groupShare: { fontWeight: '700' },
   groupTotal: { fontSize: 13, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
   row: { paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
   rowTop: { flexDirection: 'row', alignItems: 'center' },
@@ -46,12 +49,11 @@ export const styles = StyleSheet.create({
   savingsCaption: { fontSize: 12, color: colors.muted, marginTop: 8 },
   infoGap: { marginLeft: 4 },
   closeLink: { fontSize: 14, color: colors.accent, marginTop: 10 },
-  // «Изменить план ›» under the month, on the right
-  planLinks: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 4 },
+  // a month without a plan: the hint, «Бюджет месяца ›»
+  noPlan: { alignItems: 'center', marginBottom: 12 },
   planLink: { fontSize: 14, color: colors.accent },
-  // the next month: not begun, its plan in advance
-  coming: { flex: 1, justifyContent: 'center', paddingHorizontal: 16, paddingBottom: 48 },
-  comingTitle: { fontSize: 18, fontWeight: '600', color: colors.text, textAlign: 'center' },
+  // under the month's bar: what the month before sent
+  carryLine: { fontSize: 13, marginTop: 6 },
   paceAhead: { color: colors.warn },
   crossed: { textDecorationLine: 'line-through' },
   refundsAmount: { fontSize: 15, color: colors.income, fontVariant: ['tabular-nums'] },

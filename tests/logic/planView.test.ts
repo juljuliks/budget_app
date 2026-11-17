@@ -1,5 +1,5 @@
-// The plan screen's arithmetic (screens/stats/plan/model/planView): the budget's split, the sections, the norms.
-import { groupByType, normText, percentOf, planView } from '../../src/screens/stats/plan/model/planView';
+// The plan's arithmetic (the stats' «Сбережения», the budget sheet, the sections' shares) (screens/stats/plan/model/planView): the budget's split, the sections, the norms.
+import { groupByType, percentOf, planView } from '../../src/screens/stats/plan/model/planView';
 import { savingsLess } from '../../src/screens/stats/plan/model/savingsLess';
 import { currentYm } from '../../src/db/plans';
 import type { PlanBudget, PlanItem } from '../../src/db/plans';
@@ -14,13 +14,6 @@ const budget = (p: Partial<PlanBudget>): PlanBudget => ({
 const view = (items: PlanItem[], b: PlanBudget | null, ym = '2030-01') => planView({
   ym, currency: 'GEL', items, budget: b, toShown: (m) => m, fromShown: (m) => m, income: 0, unplannedSpentMinor: 0,
   spentBy: { byCategory: new Map(), total: 0 }, hidden: false,
-});
-
-test('a limit per its rhythm: the month\'s plan / days × days', () => {
-  // October: 310 ₾ / 31 × 7 = 70 ₾ a week
-  expect(normText(item({}), '2026-10', 'GEL')).toBe('лимит ≈ 70\u00a0₾ в неделю');
-  expect(normText(item({ norm_period: 'month' }), '2026-10', 'GEL')).toBe('крупно, раз в месяц');
-  expect(normText(item({ converted_minor: 0 }), '2026-10', 'GEL')).toBe('');
 });
 
 test('a share of the budget: none for nothing, "<1%" for a sliver', () => {

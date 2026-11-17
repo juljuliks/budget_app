@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import type { Currency } from '@/db/fx';
 import type { RecurringPayment } from '@/db/recurring';
@@ -44,6 +44,8 @@ export default function RecurringPaymentsSheet({ ym, category, currency, view: i
   const { data, failed, load } = useRecurringPayments(ym, currency, category.id);
   const targetOf = (s: RecurringPayment): PaymentTarget => ({ ...s, category });
   const [view, setView] = useState<PaymentsView>(initial);
+  // kept mounted (the stats): opened again — with the view asked for
+  useEffect(() => { if (ym) setView(initial); }, [ym, initial]);
   const [open, setOpen] = useState<PaymentTarget | null>(null);
   const money = (minor: number, cur: string = currency) => formatWithCurrency(minor, cur);
   const month = ym ? monthGen(ym) : '';

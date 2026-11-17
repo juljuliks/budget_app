@@ -5,16 +5,17 @@ import Loading from '@/shared/ui/Loading';
 import { categoryLabel } from '@/db/categories';
 import type { Currency } from '@/db/fx';
 import { CategoryStat, currentYm, spentOf, StatGroup, ymOf } from '@/db/plans';
-import { PlanAmountModal, PlanAmountTarget, splitUnplanned } from '@/entities/plan';
+import { splitUnplanned } from '@/entities/plan';
 import { FundSheet } from '@/features/fund';
 import { MonthReportRow } from '@/features/month-report';
-import { RecurringPaymentsSheet } from '@/features/recurring-payments';
+import { type PaymentsView, RecurringPaymentsSheet } from '@/features/recurring-payments';
 import { daysInMonth, monthDays } from '@/shared/lib/dateRange';
 import { formatMoneyWithCurrency, formatWithCurrency } from '@/shared/lib/money';
 import { NO_RATE } from '@/shared/lib/strings';
-import { openCategory, openCategoryTrend, openPlan, useOpenCategoryTransactions } from '@/shared/navigation/navigation';
+import { openCategory, openCategoryTrend, useOpenCategoryTransactions } from '@/shared/navigation/navigation';
 import { openMonthClose } from '@/shared/navigation/sheets';
 import Donut, { DonutSegment } from '@/shared/ui/Donut';
+import Fab from '@/shared/ui/Fab';
 import StickyScrollView from '@/shared/ui/StickyScrollView';
 import DonutCenter from '../parts/DonutCenter';
 import RefundsRow from '../parts/RefundsRow';
@@ -25,9 +26,9 @@ import { useMonthUsual } from './model/useMonthUsual';
 import { lessTarget, useMonthSavings } from './model/useMonthSavings';
 import CategoryRow from './parts/CategoryRow';
 import MonthTotal from './parts/MonthTotal';
-import PlanLinks from './parts/PlanLinks';
-import ComingMonth from './parts/ComingMonth';
-import BudgetEditSheet from './parts/BudgetEditSheet';
+import CarryLines from './parts/CarryLines';
+import NoPlan from './parts/NoPlan';
+import { usePlanSheets } from './parts/usePlanSheets';
 import FundStatRow, { fundSpentOf } from './parts/FundStatRow';
 import { savingsSection } from './parts/savingsSection';
 import { categoryActions, fundActions, ROW_MENU_HINT } from './parts/rowActions';
@@ -48,8 +49,6 @@ function donutSegments(groups: StatGroup[]): DonutSegment[] {
 export default function StatsView({ year, month, currency }: { year: number; month: number; currency: Currency }) {
   const hidden = useHideAmounts();
   const { stats, share, today, marks, load, failed } = useMonthData(year, month, currency);
-  // "＋ В план" on a category without a plan amount
-  const [planTarget, setPlanTarget] = useState<PlanAmountTarget | null>(null);
   // the donut segment tapped: its category's spending and share in the hole
   const [selected, setSelected] = useState<string | null>(null);
   const segments = useMemo(() => (stats ? donutSegments(stats.groups) : []), [stats]);
@@ -60,34 +59,26 @@ export default function StatsView({ year, month, currency }: { year: number; mon
   // the current month: "+44% к обычному" under a category spent well off its usual
   const usual = useMonthUsual(ymOf(year, month), currency);
   const [lessOpen, setLessOpen] = useState(false);
-  const [subsOpen, setSubsOpen] = useState<{ id: number; name: string; emoji: string | null } | null>(null);
+  const [subsOpen, setSubsOpen] = useState<{ id: number; name: string; emoji: string | null; view?: PaymentsView } | null>(null);
   const [fundSheet, setFundSheet] = useState<{ id: number; label: string } | null>(null);
-  const [budgetOpen, setBudgetOpen] = useState(false);
+  // the plan, changed here: its budget, «＋», an amount, the carry
+  const plan = usePlanSheets(ymOf(year, month), currency);
 
   async function openPlanEdit(c: CategoryStat) {
     if (!c.category_id || c.deleted || !stats) return;
     try {
-      if (c.limit_minor !== null) {
-        const item = await getPlanItemBasics(ymOf(year, month), c.category_id);
-        if (!item) return;
-        if (item.by_merchant) { setSubsOpen({ id: c.category_id, name: c.name, emoji: c.emoji }); return; }
-        setPlanTarget({ category_id: c.category_id, label: categoryLabel(c), ...item });
-      } else {
-        setPlanTarget({ category_id: c.category_id, label: categoryLabel(c), limit_minor: 0, currency: stats.currency, suggested_minor: spentOf(c) || undefined });
-      }
+      const item = await getPlanItemBasics(ymOf(year, month), c.category_id);
+      // the subscriptions' category with its payments on (0 this month too): their list, as the plan's row was
+      if (item?.by_merchant && item.recurring) { setSubsOpen({ id: c.category_id, name: c.name, emoji: c.emoji }); return; }
+      if (item && c.limit_minor !== null) plan.openAmount({ category_id: c.category_id, label: categoryLabel(c), ...item });
+      else plan.openAmount({ category_id: c.category_id, label: categoryLabel(c), limit_minor: 0, currency: stats.currency, suggested_minor: spentOf(c) || undefined });
     } catch (e) {
       console.error('open plan edit', e);
     }
   }
 
 
-  async function openSheetAmount(id: number, label: string, close: () => void) {
-    const item = await getPlanItemBasics(ymOf(year, month), id);
-    if (item) { close(); setPlanTarget({ category_id: id, label, ...item }); }
-  }
 
-  // the next month: nothing spent yet, its plan in advance
-  if (ymOf(year, month) > currentYm()) return <ComingMonth ym={ymOf(year, month)} />;
   if (!stats) return <Loading failed={failed} onRetry={load} />;
 
   // the categories without a plan and the uncategorized: one "Вне плана" section at the bottom, with the budget's share
@@ -111,9 +102,9 @@ export default function StatsView({ year, month, currency }: { year: number; mon
       now={unplanned || c.category_id === null ? undefined : today?.byCategory.get(c.category_id)}
       monthToDate={unplanned || c.category_id === null ? 0 : today?.monthToDate.get(c.category_id) ?? 0}
       withType={unplanned}
-      usual={c.category_id === null ? undefined : usual.get(c.category_id)}
+      usual={c.category_id === null ? undefined : usual.get(c.category_id)} note={c.category_id === null ? undefined : plan.notes.get(c.category_id)}
       onAddToPlan={c.category_id !== null && !unplanned && c.limit_minor === null && !c.deleted && spentOf(c) > 0
-        ? () => setPlanTarget({ category_id: c.category_id!, label: categoryLabel(c), limit_minor: 0, currency: stats.currency, suggested_minor: c.spent_minor })
+        ? () => plan.openAmount({ category_id: c.category_id!, label: categoryLabel(c), limit_minor: 0, currency: stats.currency, suggested_minor: c.spent_minor })
         : undefined}
       actions={categoryActions(c, {
         spending: () => openTransactions(c.category_id, monthDays(ym)),
@@ -125,35 +116,35 @@ export default function StatsView({ year, month, currency }: { year: number; mon
   );
 
   return (
-    <StickyScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      {/* under the month, on the right: its plan */}
-      <PlanLinks ym={ym} />
+    <View style={styles.screen}>
+    <StickyScrollView style={styles.screen} contentContainerStyle={styles.content} testID="month-stats">
       {/* a month that is over: its report on top */}
       {ym < currentYm() ? <View style={styles.report}><MonthReportRow ym={ym} /></View> : null}
       <View style={styles.donutWrap}>
-        <Donut segments={segments} selectedKey={picked ? selected : null} onSelect={setSelected}>
-          <DonutCenter total={stats.spent_minor} picked={picked} currency={stats.currency} />
+        <Donut segments={segments} selectedKey={picked ? selected : null} onSelect={setSelected} onCenterPress={plannedAll > 0 ? plan.openBudget : undefined} testID="month-budget">
+          <DonutCenter total={stats.spent_minor} picked={picked} currency={stats.currency} of={plannedAll} />
         </Donut>
       </View>
-      {plannedAll > 0 ? <MonthTotal stats={stats} ym={ym} plannedAll={plannedAll} evenPace={evenPace} marks={marks} onEditPlan={() => openPlan(ym)} /> : (
-        <Text style={styles.hint}>Составьте план на месяц, чтобы видеть, сколько осталось по категориям.</Text>
+      {plannedAll > 0 ? <MonthTotal stats={stats} ym={ym} plannedAll={plannedAll} evenPace={evenPace} marks={marks} /> : (
+        <NoPlan onBudget={plan.openBudget} />
       )}
+      <CarryLines p={plan.p} onOpen={plan.openCarry} />
 
       {stats.categories.length > 0 || spentFunds(stats).length ? <Text style={styles.longPressHint}>{ROW_MENU_HINT}</Text> : null}
       {savingsSection(savings.section, savings.currency, {
         less: () => setLessOpen(true),
         close: openMonthClose,
-        longPressCategory: (id, name) => setSubsOpen({ id, name, emoji: null }),
+        longPressCategory: (id) => { const c = stats.categories.find((x) => x.category_id === id); setSubsOpen({ id, name: c?.name ?? '', emoji: c?.emoji ?? null, view: 'upcoming' }); },
         fundActions: (id, name) => fundActions(id, ym, openTransactions, () => setFundSheet({ id, label: name })),
-        onLongPressLocked: () => setBudgetOpen(true),
+        onLongPressLocked: plan.openBudget,
         // a fund spent from: said under its part; without one there — in "Копилки"
         fundSpent: fundSpentOf(stats, ym, hidden),
       })}
       {fundsSection(stats, (f) => (
         <FundStatRow key={f.category_id} f={f} ym={ym} currency={stats.currency} hidden={hidden} actions={fundActions(f.category_id, ym, openTransactions, () => setFundSheet({ id: f.category_id, label: `${f.emoji || ''} ${f.name}`.trim() }))} />
       ), savings.section)}
-      {stats.categories.length === 0 && !spentFunds(stats).length ? <Text style={styles.hint}>В этом месяце трат нет.</Text> : typeSections(stats, split.groups, rowOf)}
-      {unplannedSection(stats, split, share, rowOf, hidden)}
+      {stats.categories.length === 0 && !spentFunds(stats).length ? <Text style={styles.hint}>В этом месяце трат нет.</Text> : typeSections(stats, split.groups, rowOf, plan.p?.shownBudget || plannedAll)}
+      {unplannedSection(stats, split, share, rowOf, hidden, plan.p?.shownBudget || plannedAll)}
 
       <RefundsRow amount={stats.refunds_unassigned_minor} currency={stats.currency} onPress={() => openTransactions(null, monthDays(ym), ['refund'])} />
       {stats.other_currencies.length > 0 ? (
@@ -162,17 +153,17 @@ export default function StatsView({ year, month, currency }: { year: number; mon
         </Text>
       ) : null}
 
-      <PlanAmountModal ym={ym} currency={currency} target={planTarget} onClose={() => setPlanTarget(null)} onSaved={load} />
       <SavingsLessSheet
         ym={ym} currency={savings.currency} less={savings.view?.less ?? null} visible={lessOpen} money={(minor) => formatWithCurrency(minor, savings.currency)} onClose={() => setLessOpen(false)}
-        onOpen={(id) => setPlanTarget(lessTarget(savings.view, id))}
+        onOpen={(id) => plan.openAmount(lessTarget(savings.view, id))}
       />
       <RecurringPaymentsSheet
         ym={subsOpen !== null ? ymOf(year, month) : null}
         category={subsOpen ?? { id: 0, name: '', emoji: null }}
         currency={currency}
+        view={subsOpen?.view}
         onClose={() => setSubsOpen(null)}
-        onEditAmount={() => subsOpen && openSheetAmount(subsOpen.id, categoryLabel(subsOpen), () => setSubsOpen(null))}
+        onEditAmount={() => subsOpen && plan.openItem(subsOpen.id, categoryLabel(subsOpen), () => setSubsOpen(null))}
       />
       <FundSheet
         categoryId={fundSheet?.id ?? null}
@@ -181,7 +172,11 @@ export default function StatsView({ year, month, currency }: { year: number; mon
         // a fund is changed on its category's page
         onEdit={() => { const f = fundSheet; setFundSheet(null); if (f) openCategory(f.id); }}
       />
-      <BudgetEditSheet ym={ym} currency={currency} visible={budgetOpen} onClose={() => setBudgetOpen(false)} />
     </StickyScrollView>
+    {/* out of the scroll's children: a section coming or going doesn't remount them */}
+    {plan.sheets}
+    {/* "Добавить в план": step 1 the category, step 2 its amount */}
+    <Fab onPress={plan.openAdd} accessibilityLabel="Добавить в план" />
+    </View>
   );
 }

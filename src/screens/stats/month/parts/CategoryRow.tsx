@@ -23,7 +23,7 @@ function planShare(spent: number, limit: number): string {
 
 const RHYTHM_NOW = { day: 'Сегодня', week: 'На этой неделе', '2weeks': 'За эти 2 недели' } as const;
 
-export default function CategoryRow({ stat: shownStat, total, currency: shown, evenPace, dim, ym, openTransactions, now, monthToDate, onAddToPlan, actions, withType, usual }: {
+export default function CategoryRow({ stat: shownStat, total, currency: shown, evenPace, dim, ym, openTransactions, now, monthToDate, onAddToPlan, actions, withType, usual, note }: {
   stat: CategoryStat;
   /** the month's spending: a row's share of it when the amounts are hidden */
   total: number;
@@ -40,6 +40,8 @@ export default function CategoryRow({ stat: shownStat, total, currency: shown, e
   withType?: boolean;
   /** the current month, well off its usual by the same days: "+44% к обычному" (Динамика трат) */
   usual?: string;
+  /** a category with repeating payments: what they are ("каждый месяц · следующее 3 ноя") */
+  note?: string;
 }) {
   // planned in another currency: the row in it; the norms (counted in the stats' currency) scaled by the plan's rate
   const own = shownStat.own;
@@ -84,6 +86,7 @@ export default function CategoryRow({ stat: shownStat, total, currency: shown, e
               : formatWithCurrency(spent, currency)}{limit ? <Text style={styles.rowLimit}> / {formatWithCurrency(limit, currency)}</Text> : null}{limit ? <Text style={[styles.rowLimit, overStyle(spent, limit)]}>{planShare(spent, limit)}</Text> : null}</>}
         </Text>
       </View>
+      {note ? <Text style={styles.rowStatus} numberOfLines={1}>{note}</Text> : null}
       {/* an obligatory payment paid more than planned: an overspend like a limit's */}
       {limit && fixed && spent > limit ? (
         <>
