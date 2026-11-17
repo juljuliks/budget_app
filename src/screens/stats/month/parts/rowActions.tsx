@@ -13,10 +13,10 @@ export const ACTION_PLAN = 'План';
 export const ACTION_TO_PLAN = 'В план';
 export const ACTION_TREND = 'Динамика';
 export const ACTION_CATEGORY = 'Категория';
-export const ROW_MENU_HINT = 'Нажмите на категорию — операции, план, динамика, категория';
+export const ROW_MENU_HINT = 'Зажмите категорию — операции, план, динамика, категория';
 
 /**
- * A category's row's tap or long press: its operations of the month, its amount in the plan ("В план" without one), its
+ * A category's row's long press: its operations of the month, its amount in the plan ("В план" without one), its
  * «Динамика», its page («Категория»). "Без категории" and a deleted one — the operations only.
  */
 export function categoryActions(c: CategoryStat, open: { spending: () => void; plan: () => void; trend: () => void; category: () => void }): PressAction[] {

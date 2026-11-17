@@ -1,7 +1,7 @@
 // 6.5 "Копилки": a category saved up for — made on its page, its card, the stats, turned off. Today: 15 October
 // 2026; the seed's budget 3 000 ₾, Одежда planned 400 ₾ and ZARA 450 ₾ spent in it.
 import { fireEvent } from '@testing-library/react-native';
-import { backToTabs, openApp, openSettings, screen, tap, texts, openPlanPage } from './app';
+import { backToTabs, openApp, openSettings, screen, tap, texts, openPlanPage, pressAction } from './app';
 import { planned } from '../e2e/seeds';
 import { getDb } from '../../src/db';
 import { setFund, setPlanBudget } from '../../src/db/plans';
@@ -157,9 +157,10 @@ describe('6.5 funds', () => {
     // a fund nothing was spent from: its contribution only
     expect(screen.getAllByText('🔧 Ремонт')).toHaveLength(1);
     expect(screen.getAllByText(/из копилки$/)).toHaveLength(1);
-    // a tap on it: the buttons of its long press, «Операции» — its operations of the month
+    // a tap on it: no buttons; its long press's «Операции» — its operations of the month
     await tap('👕 Одежда');
-    fireEvent.press(await screen.findByLabelText('Операции'));
+    expect(screen.queryByLabelText('Операции')).toBeNull();
+    await pressAction('👕 Одежда', 'Операции');
     expect(await screen.findByText('Категория · 1')).toBeTruthy();
     expect(screen.getByText('ZARA')).toBeTruthy();
   });

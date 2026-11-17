@@ -1,7 +1,7 @@
 // 5: the stats — a month against its plan, a day / week against the limits, a long period, hidden amounts, the
 // currency, the warning over them. Today: Thursday 15 October 2026 (setup.ts).
 import { act, fireEvent, waitFor, within } from '@testing-library/react-native';
-import { back, longPress, openApp, rowOf, screen, tap, texts, backToTabs } from './app';
+import { back, longPress, openApp, pressAction, rowOf, screen, tap, texts, backToTabs } from './app';
 import { buy, ops, planned, on } from '../e2e/seeds';
 import { emitTransactionsChanged } from '../../src/domain/events';
 import { getDb } from '../../src/db';
@@ -34,7 +34,7 @@ describe('5.1 a month', () => {
     await tap('#month-ahead');
     const from = texts().indexOf('Осталось 450 ₾ · до 31 окт');
     // under the tiles: its list (an item's amount is in a text of its own and in the line with its note)
-    const list = () => texts().slice(from + 10, texts().indexOf('Нажмите на категорию — операции, план, динамика, категория'));
+    const list = () => texts().slice(from + 10, texts().indexOf('Зажмите категорию — операции, план, динамика, категория'));
     expect(texts().slice(from + 1, from + 10)).toEqual(['Платежи', '30 ₾', '1 впереди', 'Лимиты', '535 ₾', 'на 17 дней', 'Перерасход', '130 ₾', '2 категории']);
     expect(list()).toEqual([]);
     // unpaid first, then those paid: ✓ and what each spent
@@ -151,11 +151,11 @@ describe('5.1 a month', () => {
     expect(await screen.findByText('Категория · 1')).toBeTruthy();
   });
 
-  test('5.1.12 a tap on a category: the buttons of its long press; «Операции» — its operations of the month; back returns', async () => {
+  test('5.1.12 a tap on a category: no buttons, nowhere to go; its long press\'s «Операции» — its operations of the month; back returns', async () => {
     fireEvent.press(await screen.findByText('👕 Одежда'), { nativeEvent: { pageX: 200, pageY: 500 } });
+    expect(screen.queryByLabelText('Динамика')).toBeNull();
     expect(screen.queryByText('Категория · 1')).toBeNull();
-    expect(await screen.findByLabelText('Динамика')).toBeTruthy();
-    fireEvent.press(screen.getByLabelText('Операции'));
+    await pressAction('👕 Одежда', 'Операции');
     expect(await screen.findByText('Категория · 1')).toBeTruthy();
     expect(screen.getByText('ZARA')).toBeTruthy();
     expect(screen.queryByText('SPAR')).toBeNull();
@@ -170,7 +170,7 @@ describe('5.1 a month', () => {
   });
 
   test('5.1.20 a long press: «Операции», «В план» (an unplanned one), «Динамика» over the finger; «В план» offers what it spent', async () => {
-    expect(screen.getByText('Нажмите на категорию — операции, план, динамика, категория')).toBeTruthy();
+    expect(screen.getByText('Зажмите категорию — операции, план, динамика, категория')).toBeTruthy();
     fireEvent(await screen.findByText('🚕 Такси'), 'longPress', { nativeEvent: { pageX: 200, pageY: 500 } });
     expect(await screen.findByLabelText('Операции')).toBeTruthy();
     expect(screen.getByLabelText('Динамика')).toBeTruthy();

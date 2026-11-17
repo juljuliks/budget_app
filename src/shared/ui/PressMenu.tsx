@@ -27,12 +27,14 @@ const LONG_PRESS = 350;
 const PRESS_DELAY = 120;
 // held, the row shrinks to this by the long press: holding it does something
 const HELD_SCALE = 0.96;
+// a tap: the same shrink, quicker, and back — only a long press opens the buttons
+const TAP_SHRINK = 90;
 
 /**
  * A row with a long press: its actions as round buttons in an arc over the finger (four — a cross around it on a plate, labels outside, DPad). Moved onto one and released — it is
  * done (the one under the finger grows, a short vibration); released away from them — nothing; released in place —
- * they stay, a tap picks one, a tap outside closes them. A tap opens them too, where it was; held, the row shrinks
- * towards the long press. TalkBack: the same actions as the row's actions.
+ * they stay, a tap picks one, a tap outside closes them. A tap only shrinks the row quickly and back (one action — it is
+ * done); held, the row shrinks towards the long press. TalkBack: the same actions as the row's actions.
  */
 export default function PressMenu({ actions, style, accessibilityHint, testID, children }: Props) {
   const { width, height } = useWindowDimensions();
@@ -47,21 +49,27 @@ export default function PressMenu({ actions, style, accessibilityHint, testID, c
   const shrink = () => Animated.timing(scale, {
     toValue: HELD_SCALE, duration: LONG_PRESS - PRESS_DELAY, easing: Easing.out(Easing.quad), useNativeDriver: true,
   }).start();
-  const restore = () => Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start();
+  // a tap's pulse isn't cut short by its own press-out
+  const pulsing = useRef(false);
+  const restore = () => { if (!pulsing.current) Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start(); };
+  const pulse = () => {
+    pulsing.current = true;
+    Animated.sequence([
+      Animated.timing(scale, { toValue: HELD_SCALE, duration: TAP_SHRINK, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+      Animated.spring(scale, { toValue: 1, useNativeDriver: true }),
+    ]).start(() => { pulsing.current = false; });
+  };
 
   const close = () => { ref.current = null; hoverRef.current = null; setOpen(null); setHover(null); lockScroll(false); };
   const run = (i: number) => { close(); actions[i].onPress(); };
   const point = (e: GestureResponderEvent): Point => ({ x: e.nativeEvent.pageX, y: e.nativeEvent.pageY });
 
-  function show(e: GestureResponderEvent, holding: boolean) {
-    // no touch point (TalkBack's tap): the middle of the screen
+  function onLongPress(e: GestureResponderEvent) {
+    // no touch point: the middle of the screen
     const start = e?.nativeEvent?.pageX !== undefined ? point(e) : { x: width / 2, y: 400 };
-    ref.current = { start, buttons: menuLayout(start, actions.length, width, height), holding, moved: false };
+    ref.current = { start, buttons: menuLayout(start, actions.length, width, height), holding: true, moved: false };
     setOpen(ref.current);
     restore();
-  }
-  function onLongPress(e: GestureResponderEvent) {
-    show(e, true);
     // the list must not take the drag towards the buttons
     lockScroll(true);
     Vibration.vibrate(15);
@@ -96,7 +104,7 @@ export default function PressMenu({ actions, style, accessibilityHint, testID, c
     <Animated.View style={{ transform: [{ scale }] }} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onTouchCancel={onTouchEnd}>
       <TouchableOpacity
         style={style} activeOpacity={1} disabled={!actions.length} testID={testID}
-        onPress={(e) => { if (actions.length === 1) { actions[0].onPress(); } else { show(e, false); } }}
+        onPress={() => { if (actions.length === 1) { actions[0].onPress(); } else { pulse(); } }}
         onLongPress={onLongPress} delayPressIn={PRESS_DELAY} delayLongPress={LONG_PRESS}
         onPressIn={shrink} onPressOut={restore}
         accessibilityHint={accessibilityHint}
