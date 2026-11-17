@@ -52,6 +52,8 @@ export const styles = StyleSheet.create({
   rowCols: { flexDirection: 'row', alignItems: 'flex-start' },
   rowMain: { flex: 1, minWidth: 0 },
   rowSub: { fontSize: 13, color: colors.muted, marginTop: 2, marginLeft: 18 },
+  rowSubLine: { flexDirection: 'row', alignItems: 'center', marginTop: 2, marginLeft: 18 },
+  rowSubText: { flexShrink: 1, fontSize: 13, color: colors.muted },
   dot: { width: 10, height: 10, borderRadius: 5, marginRight: 8 },
   rowName: { flexShrink: 1, fontSize: 15, color: colors.text },
   addToPlan: {
@@ -86,7 +88,6 @@ export const styles = StyleSheet.create({
   // under the month's bar: what the month before sent
   carryLine: { fontSize: 13, marginTop: 6 },
   paceAhead: { color: colors.warn },
-  crossed: { textDecorationLine: 'line-through' },
   refundsAmount: { fontSize: 15, color: colors.income, fontVariant: ['tabular-nums'] },
   // under the amount, on the right
   paidOn: { color: colors.income },

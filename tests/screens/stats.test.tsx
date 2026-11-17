@@ -103,7 +103,11 @@ describe('5.1 a month', () => {
     expect(block('🛒 Продукты')).toEqual(['🛒 Продукты', '305 из 620 ₾ · лимит ≈ 20 ₾ в день', ' · лимит ≈ 20 ₾ в день', '315 ₾', 'осталось']);
     expect(within(rowOf('🛒 Продукты')).getByText('Сегодня перерасход 5 ₾')).toBeTruthy();
     // the week's limit rebalanced on what's left of the month: (310 − 40) / 20 days × 7
-    expect(block('☕️ Кафе и рестораны').slice(1, 2)).toEqual(['90 из 310 ₾ · 70 ₾ → 94.50 ₾ в неделю']);
+    expect(block('☕️ Кафе и рестораны').slice(1, 2)).toEqual(['90 из 310 ₾ · лимит 94.50 ₾ в неделю']);
+    // ⓘ after it: why it moved
+    fireEvent.press(within(rowOf('☕️ Кафе и рестораны')).getByLabelText('Почему лимит изменился'));
+    expect(await screen.findByText('Почему лимит изменился')).toBeTruthy();
+    expect(screen.getByText(/^По плану — 70 ₾ в неделю: 310 ₾ на 31 день\./)).toBeTruthy();
     expect(within(rowOf('☕️ Кафе и рестораны')).getByText('220 ₾')).toBeTruthy();
     expect(within(rowOf('☕️ Кафе и рестораны')).getByText('На этой неделе осталось 44.50 ₾ · до вс')).toBeTruthy();
     // an overspend: at the right, no line of its own

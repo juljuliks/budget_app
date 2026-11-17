@@ -1,5 +1,5 @@
 // A limit spent daily / weekly / by 2 weeks, in the month's stats: its limit per that period after "665 из 900 ₾"
-// (" · лимит ≈ 113 ₾ в неделю", moved — " · ~~113 ₾~~ → 95 ₾ в неделю") and, in the current month, a line of what is
+// (" · лимит ≈ 113 ₾ в неделю", moved — " · лимит 95 ₾ в неделю ⓘ") and, in the current month, a line of what is
 // left in today's / this week's window, coloured by pace.
 import React from 'react';
 import { Text } from 'react-native';
@@ -22,13 +22,22 @@ type Props = {
   scale: number;
 };
 
-/** " · лимит ≈ 113 ₾ в неделю": the current month — this window's limit, rebalanced on what's left; a past one — the plan's share. */
-export function RhythmLimit({ rhythm, limit, dim, currency, hidden, now, scale }: Props) {
+/** A rhythm's limit now: the plan's even share, this window's (rebalanced on what's left), and whether it moved. */
+export function rhythmMove({ rhythm, limit, dim, now, scale }: Pick<Props, 'rhythm' | 'limit' | 'dim' | 'now' | 'scale'>) {
   const current = now && now.rhythm === rhythm ? now : undefined;
   const flat = current ? flatOf(current.windowParts) * scale : (limit / dim) * RHYTHM_DAYS[rhythm];
   const value = current ? current.windowNorm * scale : flat;
-  // more than 5% off the plan's share: "лимит 113 ₾ (crossed out) → 95 ₾"
-  const change = limitChange(value, flat);
+  // more than 5% off the plan's share
+  return { flat, value, change: limitChange(value, flat), current };
+}
+
+/**
+ * " · лимит ≈ 113 ₾ в неделю": the current month — this window's limit, rebalanced on what's left; a past one — the
+ * plan's share. Moved — just the new one, coloured (lower — orange, higher — green), ⓘ after the line says why.
+ */
+export function RhythmLimit(p: Props) {
+  const { rhythm, currency, hidden } = p;
+  const { flat, value, change } = rhythmMove(p);
   // "Скрыть суммы": just how much it moved, "лимит ↓ 16%"; unmoved — nothing
   if (hidden) {
     const move = change ? limitMove(flat, value) : '';
@@ -36,10 +45,7 @@ export function RhythmLimit({ rhythm, limit, dim, currency, hidden, now, scale }
   }
   return (
     <Text>
-      {/* "старый → новый": no "лимит" word, it's plain what it is */}
-      {change ? ' · ' : ' · лимит '}
-      {change ? <Text style={styles.crossed}>{formatWithCurrency(Math.round(flat), currency)}</Text> : '≈ '}
-      {change ? ' → ' : ''}
+      {change ? ' · лимит ' : ' · лимит ≈ '}
       <Text style={change === 'down' ? styles.paceAhead : change === 'up' ? styles.paceOk : undefined}>{formatWithCurrency(Math.round(value), currency)}</Text>
       {` ${PER_PERIOD[rhythm]}`}
     </Text>

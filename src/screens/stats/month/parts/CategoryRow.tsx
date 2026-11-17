@@ -11,7 +11,10 @@ import Meter from '@/shared/ui/Meter';
 import PressMenu, { PressAction } from '@/shared/ui/PressMenu';
 import type { CategoryNorm } from '@/stats/norms';
 import PaymentsBar from './PaymentsBar';
-import { RhythmLimit, RhythmNow } from './RhythmLimit';
+import { InfoIcon } from '@/shared/ui/icons';
+import { colors } from '@/shared/theme/theme';
+import { explainLimit } from './limitWhy';
+import { RhythmLimit, RhythmNow, rhythmMove } from './RhythmLimit';
 import RowLeft from './RowLeft';
 import { styles } from './styles';
 
@@ -75,7 +78,7 @@ export default function CategoryRow(props: Props) {
               </TouchableOpacity>
             ) : null}
           </View>
-          {sub ? <Text style={styles.rowSub} numberOfLines={1}>{sub}</Text> : note ? <Text style={styles.rowSub} numberOfLines={1}>{note}</Text> : null}
+          {sub ? <SubLine why={lines && !fixed ? limitWhy(lines) : undefined}>{sub}</SubLine> : note ? <Text style={styles.rowSub} numberOfLines={1}>{note}</Text> : null}
         </View>
         {limit ? <RowLeft spent={spent} limit={limit} currency={currency} fixed={fixed} hidden={hidden} /> : (
           <Text style={styles.rowAmount}>
@@ -99,6 +102,29 @@ type Lines = Props & { spent: number; limit: number; currency: Currency; hidden:
 /** the category's bars: thin, as the rows are */
 const BAR = 6;
 const rhythmOf = (stat: CategoryStat) => (stat.plan_norm && stat.plan_norm !== 'month' ? stat.plan_norm : null);
+
+/** Under the name, one line; a rebalanced limit — ⓘ after it, saying why. */
+function SubLine({ why, children }: { why?: () => void; children: React.ReactNode }) {
+  return (
+    <View style={styles.rowSubLine}>
+      <Text style={styles.rowSubText} numberOfLines={1}>{children}</Text>
+      {why ? (
+        <TouchableOpacity style={styles.infoGap} onPress={why} hitSlop={8} accessibilityRole="button" accessibilityLabel="Почему лимит изменился">
+          <InfoIcon color={colors.accent} size={13} />
+        </TouchableOpacity>
+      ) : null}
+    </View>
+  );
+}
+
+/** A rhythm's limit rebalanced this month (not overspent): ⓘ opens why. */
+function limitWhy({ stat, spent, limit, dim, now, scale, ym, currency }: Lines): (() => void) | undefined {
+  const rhythm = rhythmOf(stat);
+  if (!rhythm || spent > limit) return undefined;
+  const m = rhythmMove({ rhythm, limit, dim, now, scale });
+  const current = m.current;
+  return m.change && current ? () => explainLimit(rhythm, current, ym, m.flat, m.value, scale, currency) : undefined;
+}
 
 /** "665 из 900 ₾"; hidden — its share of the plan */
 function spentOfPlan(spent: number, limit: number, currency: Currency, hidden: boolean): string {
