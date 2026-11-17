@@ -9,16 +9,21 @@ import Masked from '@/shared/ui/Masked';
 import TextLink from '@/shared/ui/TextLink';
 import { colors } from '@/shared/theme/theme';
 import { MIN_ANSWERS } from '@/stats/impulse';
+import type { DayPurchase } from '../model/impulseCalendarView';
 import type { ImpulseTrendView } from '../model/impulseTrendView';
+import ImpulseCalendar from './ImpulseCalendar';
 import { detailStyles as s } from './detailStyles';
 
 const BAR_HEIGHT = 40;
 
 /**
  * Under a category's merchants in its «Динамика»: its impulsive purchases of the last 3 months — the share, by month,
- * where most often, what pushed to them; with fewer than MIN_ANSWERS answers, only how many are needed.
+ * where most often, what pushed to them; with fewer than MIN_ANSWERS answers, only how many are needed. Under the share —
+ * «Покупки по дням», a calendar of all its purchases.
  */
-export default function ImpulseTrend({ v, categoryId, money }: { v: NonNullable<ImpulseTrendView>; categoryId: number; money: (minor: number) => string }) {
+export default function ImpulseTrend({ v, days, today, categoryId, money }: {
+  v: NonNullable<ImpulseTrendView>; days: Map<string, DayPurchase[]>; today: string; categoryId: number; money: (minor: number) => string;
+}) {
   const mark = v.unanswered > 0 ? (
     <TextLink
       label={`Отметить ${v.unanswered} ${plural(v.unanswered, ['покупку', 'покупки', 'покупок'])}`}
@@ -32,13 +37,17 @@ export default function ImpulseTrend({ v, categoryId, money }: { v: NonNullable<
       {v.enough ? <Text style={s.label}>отмечено {v.summary.answered} из {v.summary.asked}</Text> : null}
     </View>
   );
+  const calendar = <ImpulseCalendar days={days} today={today} money={money} />;
   if (!v.enough) {
     return (
-      <View style={s.block}>
-        {head}
-        <Text style={s.value}>Для анализа нужно {MIN_ANSWERS} ответов, сейчас {v.summary.answered}</Text>
-        {mark}
-      </View>
+      <>
+        <View style={s.block}>
+          {head}
+          <Text style={s.value}>Для анализа нужно {MIN_ANSWERS} ответов, сейчас {v.summary.answered}</Text>
+          {mark}
+        </View>
+        {calendar}
+      </>
     );
   }
   return (
@@ -48,6 +57,7 @@ export default function ImpulseTrend({ v, categoryId, money }: { v: NonNullable<
         <ImpulseShare s={v.summary} money={money} big />
         {mark}
       </View>
+      {calendar}
       {v.months ? (
         <View style={s.block}>
           <Text style={s.label}>Доля импульсивных по месяцам</Text>

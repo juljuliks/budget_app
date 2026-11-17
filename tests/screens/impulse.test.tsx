@@ -96,4 +96,32 @@ describe('5.8.7 a category\'s «Динамика»: impulsive purchases of 3 mon
     expect(screen.getAllByText('LUCA ›')).toHaveLength(2);
     expect(after('🥱 Скука', 1)).toEqual(['4 · 40 ₾']);
   });
+
+  test('5.8.10 «Покупки по дням»: marks by day, back to the first month, a tapped day\'s purchases, its operation', async () => {
+    await openApp(impulsive);
+    await openCafeTrend();
+    expect(screen.getByText('Покупки по дням')).toBeTruthy();
+    // October: WOLT 40 on the 6th and 50 on the 13th, no answers
+    expect(screen.getByText('Октябрь 2026')).toBeTruthy();
+    expect(screen.getByText('2 покупки · 90 ₾')).toBeTruthy();
+    expect(screen.getByText('Нажмите на день с отметкой — покупки дня')).toBeTruthy();
+    await tap('#day-2026-10-13');
+    expect(await screen.findByText('вторник, 13 октября')).toBeTruthy();
+    expect(screen.getByText('Без ответа — ответить в операции')).toBeTruthy();
+    // a day with nothing isn't tapped; the next month isn't there yet
+    expect(screen.getByLabelText('Следующий месяц').props.accessibilityState?.disabled).toBe(true);
+    await tap('Прошлый месяц');
+    expect(await screen.findByText('Сентябрь 2026')).toBeTruthy();
+    expect(screen.getByText('3 покупки · 400 ₾')).toBeTruthy();
+    // August: no purchases before September's — the arrow back is off
+    expect(screen.getByLabelText('Прошлый месяц').props.accessibilityState?.disabled).toBe(true);
+    expect(screen.queryByText('вторник, 13 октября')).toBeNull();
+    await tap('#day-2026-09-06');
+    expect(await screen.findByText('воскресенье, 6 сентября')).toBeTruthy();
+    expect(screen.getByText('Импульсивная · 😰 Тревога')).toBeTruthy();
+    await tap('#day-2026-09-08');
+    expect(await screen.findByText('Обдуманная')).toBeTruthy();
+    await tap('LUCA');
+    expect(await screen.findByText('Покупка')).toBeTruthy();
+  });
 });

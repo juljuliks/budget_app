@@ -16,6 +16,9 @@ export const SHORT_MONTHS = ['янв', 'фев', 'мар', 'апр', 'мая', '
 /** by `Date.getDay()`: «до пт» */
 export const WEEKDAYS = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
 
+/** "понедельник, 16 ноября": Sunday first, as WEEKDAYS. */
+export const WEEKDAYS_FULL = ['воскресенье', 'понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота'];
+
 /** "к четвергу": Sunday first, as WEEKDAYS. */
 export const WEEKDAYS_DAT = ['воскресенью', 'понедельнику', 'вторнику', 'среде', 'четвергу', 'пятнице', 'субботе'];
 

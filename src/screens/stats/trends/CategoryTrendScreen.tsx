@@ -74,7 +74,7 @@ export default function CategoryTrendScreen({ route, navigation }: Props) {
       </View>
       <Text style={s.point}>{hidden && bar ? barName(bar) : point}</Text>
       <CategoryTrendDetails v={v} why={t && v.category.compared && !hidden ? whyText(t, money) : null} currency={currency} money={money} />
-      {impulse ? <ImpulseTrend v={impulse} categoryId={id} money={money} /> : null}
+      {impulse ? <ImpulseTrend v={impulse.trend} days={impulse.days} today={today} categoryId={id} money={money} /> : null}
       <View style={s.operations}>
         <TextLink
           label={`${v.count} ${plural(v.count, ['операция', 'операции', 'операций'])} ${SPENT_WHEN}`}
