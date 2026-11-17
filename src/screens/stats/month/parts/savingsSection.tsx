@@ -36,24 +36,25 @@ function nowOfPlan(now: number | null, plan: number, currency: string) {
     <MaskedTotal style={styles.rowAmount} hiddenText={pct}>
       <Text style={now !== null && now < plan ? styles.overNum : undefined}>{now === null ? '?' : formatShort(Math.max(0, now))}</Text>
       <Text style={styles.rowLimit}>{` / ${formatWithCurrency(plan, currency)}`}</Text>
-      {now !== null && now < plan ? <Text style={[styles.rowLimit, styles.overNum]}>{` (${pct})`}</Text> : null}
+      {/* "· 76%" as a category's: of its plan, orange while short of it */}
+      {now !== null && plan > 0 ? <Text style={[styles.rowLimit, now < plan && styles.overNum]}>{` · ${pct}`}</Text> : null}
     </MaskedTotal>
   );
 }
 
 /**
  * Section header total for «Сбережения» (its share of the budget is by the title, as every section's):
- * no overspend — "plan ₾"; overspend — "fact / plan ₾ (−Y%)".
+ * no overspend — "plan ₾"; overspend — "fact / plan ₾ · Y%" (of the plan, as a category's).
  */
 function savingsHeaderTotal(now: number | null, plan: number, currency: string) {
   const isOver = now !== null && now < plan;
   if (!isOver) return <MaskedTotal style={styles.groupTotal} hiddenText="">{formatWithCurrency(plan, currency)}</MaskedTotal>;
-  const deficitPct = formatPercent(plan - Math.max(0, now!), plan);
+  const pct = formatPercent(Math.max(0, now!), plan);
   return (
-    <MaskedTotal style={styles.groupTotal} hiddenText={`−${deficitPct}`}>
+    <MaskedTotal style={styles.groupTotal} hiddenText={pct}>
       <Text style={styles.overNum}>{formatShort(Math.max(0, now!))}</Text>
       <Text style={styles.rowLimit}>{` / ${formatWithCurrency(plan, currency)}`}</Text>
-      <Text style={[styles.rowLimit, styles.overNum]}>{` (−${deficitPct})`}</Text>
+      <Text style={[styles.rowLimit, styles.overNum]}>{` · ${pct}`}</Text>
     </MaskedTotal>
   );
 }
@@ -104,7 +105,7 @@ export function savingsSection(s: SavingsSection | null, currency: string, open:
   const money = (minor: number) => formatWithCurrency(minor, currency);
   return (
     <>
-      {header('Сбережения', savingsHeaderTotal(s.now, s.plan, currency), undefined, s.budget ? formatPercent(s.plan, s.budget) : undefined)}
+      {header('Сбережения', savingsHeaderTotal(s.now, s.plan, currency), undefined, s.budget ? `${formatPercent(s.plan, s.budget)} бюджета` : undefined)}
       <View>
         {s.caption ? <Text style={styles.savingsCaption}>{s.caption}</Text> : null}
         {s.parts.map((x) => {

@@ -15,6 +15,7 @@ import { usePlanData } from '../../plan/model/usePlanData';
 import BudgetSheet from '../../plan/parts/BudgetSheet';
 import { recurringNotes } from '../model/recurringNote';
 import PlanAddModal from './PlanAddModal';
+import type { ShareBase } from './sections';
 
 /** «📺 Подписки» with subscriptions: always in the plan, not removed from it. */
 const fixedSubs = (items: PlanItem[], id?: number) => items.some((i) => i.category_id === id && !!i.by_merchant && !!i.subs && !i.subs.empty);
@@ -67,7 +68,11 @@ export function usePlanSheets(ym: string, currency: Currency) {
     p,
     /** under a category with repeating payments: what they are */
     notes: p ? recurringNotes(p.recurring, currency, p.timing === 'current', { words: paymentWords, shortDay: (d) => shortDay(d), inTime }) : new Map<number, string>(),
+    /** a category's payments charged this month and how many are done */
+    charges: new Map((p?.recurring ?? []).filter((i) => i.subs?.charges).map((i) => [i.category_id, i.subs!.charges!])),
     sheets,
+    /** what a section's share is of: the budget («35% бюджета»), without one — the whole plan («· 45% плана») */
+    shareBase: (plannedAll: number): ShareBase => (p?.shownBudget ? { minor: p.shownBudget, word: 'бюджета' } : { minor: plannedAll, word: 'плана' }),
     openBudget: () => setBudgetOpen(true),
     openAdd: () => setAddOpen(true),
     openAmount: setTarget,

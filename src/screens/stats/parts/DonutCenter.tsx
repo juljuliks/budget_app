@@ -3,36 +3,44 @@ import { StyleSheet, Text, View } from 'react-native';
 import type { Currency } from '@/db/fx';
 import Masked from '@/shared/ui/Masked';
 import { formatWithCurrency } from '@/shared/lib/money';
+import { formatPercent } from '@/shared/lib/format';
 import { colors } from '@/shared/theme/theme';
 import { PencilIcon } from '@/shared/ui/icons';
 
-/** the hole's width the amount may take: the ring's inner diameter (220 − 2 × 22) minus some air */
+/** the hole's width the amount may take: the ring's inner diameter (220 − 2 × 22) minus some air; the small ring's (160 − 2 × 16) */
 const HOLE_TEXT_WIDTH = 150;
+export const SMALL_HOLE_WIDTH = 104;
 /** a bold digit is about this share of the font size wide */
 const CHAR_WIDTH = 0.6;
 
 /** The amount's font size so it fits the hole's width: `max` for a short one, smaller as it gets longer. */
-function fitSize(text: string, max: number): number {
-  return Math.min(max, Math.floor(HOLE_TEXT_WIDTH / (text.length * CHAR_WIDTH)));
+export function fitSize(text: string, max: number, width = HOLE_TEXT_WIDTH): number {
+  return Math.min(max, Math.floor(width / (text.length * CHAR_WIDTH)));
 }
 
 type Props = {
   total: number; picked?: { name: string; emoji: string | null; spent_minor: number }; currency: Currency;
-  /** the month's stats with a plan: "из 3 666 ₾ ✏️" under the total (a tap in the hole — its budget) */
+  /** the month's stats with a plan: "из 3 666 ₾ · 96% ✏️" under the total (a tap in the hole — its budget) */
   of?: number;
+  /** the month's small ring (beside its legend): smaller type, "из …" and its % on two lines */
+  small?: boolean;
 };
 
 /** The hole: the total spent, or the tapped category's spending and its share of the total. */
-export default function DonutCenter({ total, picked, currency, of }: Props) {
+export default function DonutCenter({ total, picked, currency, of, small }: Props) {
+  const w = small ? SMALL_HOLE_WIDTH : undefined;
+  const cap = [styles.caption, small && styles.captionSmall];
   if (!picked) {
     return (
       <>
-        <Text style={styles.caption}>Потрачено</Text>
+        <Text style={cap}>Потрачено</Text>
         {/* the currency on the amount's line, as for a tapped segment */}
-        <Masked style={[styles.hero, { fontSize: fitSize(formatWithCurrency(total, currency), 34) }]}>{formatWithCurrency(total, currency)}</Masked>
+        <Masked style={[styles.hero, { fontSize: fitSize(formatWithCurrency(total, currency), small ? 24 : 34, w) }]}>{formatWithCurrency(total, currency)}</Masked>
         {of ? (
-          <View style={styles.ofRow}>
-            <Masked style={styles.caption}>{`из ${formatWithCurrency(Math.round(of), currency)}`}</Masked>
+          <View style={[styles.ofRow, small && styles.ofRowSmall]}>
+            <Masked style={cap}>{`из ${formatWithCurrency(Math.round(of), currency)}`}</Masked>
+            {/* the share stays when the amounts are hidden; past the plan — orange */}
+            {total > 0 ? <Text style={[cap, total > Math.round(of) && styles.over]}>{`· ${formatPercent(total, of)}`}</Text> : null}
             <PencilIcon color={colors.accent} size={14} />
           </View>
         ) : null}
@@ -42,17 +50,24 @@ export default function DonutCenter({ total, picked, currency, of }: Props) {
   const share = total > 0 ? Math.round((picked.spent_minor / total) * 100) : 0;
   return (
     <>
-      <Text style={styles.pickedName} numberOfLines={2}>{`${picked.emoji || ''} ${picked.name}`.trim()}</Text>
-      <Masked style={[styles.pickedAmount, { fontSize: fitSize(formatWithCurrency(picked.spent_minor, currency), 24) }]}>{formatWithCurrency(picked.spent_minor, currency)}</Masked>
-      <Text style={styles.caption}>{share === 0 && picked.spent_minor > 0 ? '<1' : share}% всех трат</Text>
+      <Text style={[styles.pickedName, small && styles.pickedNameSmall]} numberOfLines={2}>{`${picked.emoji || ''} ${picked.name}`.trim()}</Text>
+      <Masked style={[styles.pickedAmount, { fontSize: fitSize(formatWithCurrency(picked.spent_minor, currency), small ? 18 : 24, w) }]}>{formatWithCurrency(picked.spent_minor, currency)}</Masked>
+      <Text style={cap}>{share === 0 && picked.spent_minor > 0 ? '<1' : share}% всех трат</Text>
     </>
   );
 }
 
-const styles = StyleSheet.create({
+/** the hole's look: the month's «План» view writes in it too */
+export const centerStyles = StyleSheet.create({
   caption: { fontSize: 13, color: colors.muted },
+  over: { color: colors.warn, fontWeight: '600' },
   ofRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   hero: { fontSize: 34, fontWeight: '700', color: colors.text },
   pickedName: { fontSize: 15, color: colors.text, textAlign: 'center', maxWidth: 150 },
+  // the small ring
+  captionSmall: { fontSize: 11 },
+  ofRowSmall: { flexWrap: 'wrap', justifyContent: 'center', maxWidth: SMALL_HOLE_WIDTH, columnGap: 3, rowGap: 0 },
+  pickedNameSmall: { fontSize: 12, maxWidth: SMALL_HOLE_WIDTH },
   pickedAmount: { fontSize: 24, fontWeight: '700', color: colors.text, marginVertical: 2 },
 });
+const styles = centerStyles;

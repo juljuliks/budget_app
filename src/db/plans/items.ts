@@ -60,6 +60,7 @@ export async function listPlan(ym: string, to?: Currency): Promise<PlanItem[]> {
       saving_minor: subs.saving.reduce((a, v) => a + (v.converted_minor ?? 0), 0),
       ...savingProgress(subs.saving, all, (minor, from) => conv(minor, from, target) ?? 0),
       empty: all.length === 0,
+      charges: { total: subs.charges.length, done: subs.charges.filter((c) => c.done).length },
       ...(one ? { in_currency: {
         currency: one,
         charges_minor: subs.charges.filter((c) => !c.saved).reduce((a, c) => a + c.sub.amount_minor, 0),

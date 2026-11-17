@@ -3,17 +3,17 @@ import { StyleSheet } from 'react-native';
 import { colors } from '@/shared/theme/theme';
 
 export const markStyles = StyleSheet.create({
-  row: { height: 32, marginTop: 8 },
-  mark: { position: 'absolute', bottom: 0, width: 26, alignItems: 'center' },
+  row: { height: 36, marginTop: 8 },
+  mark: { position: 'absolute', bottom: 0, width: 30, alignItems: 'center' },
   // still ahead: faded
-  ahead: { opacity: 0.4 },
+  ahead: { opacity: 0.55 },
   badge: {
-    width: 24, height: 24, borderRadius: 12, backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth,
+    width: 28, height: 28, borderRadius: 14, backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border, alignItems: 'center', justifyContent: 'center',
   },
-  icon: { fontSize: 13 },
+  icon: { fontSize: 15 },
   // payments drawn as one: their icons side by side, each over the one before, a ring of the page between them
-  stack: { height: 24 },
+  stack: { height: 28 },
   stacked: { position: 'absolute', top: 0, borderWidth: 1.5, borderColor: colors.bg },
   // its stem down to the bar
   stem: { width: 1, height: 6, backgroundColor: colors.faint },

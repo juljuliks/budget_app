@@ -20,8 +20,8 @@ const item = async (name: string, ym = '2026-10') => (await getDb()).get<{ a: nu
 const after = (label: string, n = 3) => { const t = texts(); const i = t.lastIndexOf(label); return t.slice(i + 1, i + 1 + n); };
 /** a section's band in the stats: its title with its share of the budget, «Жизнь · 35%» */
 // the seed's categories have no section: savings 540 ₾, the plan 2 160 ₾ and the share outside it 300 ₾ of 3 000 ₾
-const SECTIONS = ['Сбережения · 18%', 'Без раздела · 72%', 'Вне плана · 10%'];
-const sectionTitles = () => texts().filter((t) => / · (\d+|<1)%$/.test(t) && !/₾/.test(t));
+const SECTIONS = ['Без раздела · 72% бюджета', 'Вне плана · 10% бюджета', 'Сбережения · 18% бюджета'];
+const sectionTitles = () => texts().filter((t) => / · (\d+|<1)% (бюджета|плана)$/.test(t));
 
 describe('6.1 the month\'s budget', () => {
   test('none yet: a tap on «Потрачено … / …» — the budget\'s sheet, what is planned; set one', async () => {
@@ -247,7 +247,7 @@ describe('6.3 the categories in the plan', () => {
     expect(screen.getByDisplayValue('400')).toBeTruthy();
     await tap('‹ Назад');
     await waitFor(() => expect(screen.queryByText('В следующий месяц не переходит.')).toBeNull());
-    expect(await screen.findByText('👕 Одежда')).toBeTruthy();
+    expect(await screen.findAllByText('👕 Одежда')).toBeTruthy();
     expect(await item('Одежда')).toMatchObject({ a: 40000 });
     // a limit again: its amount there (400) — kept, no plan's sheet
     await openPlanOf('👕 Одежда');
@@ -335,7 +335,7 @@ describe('6.3 the categories in the plan', () => {
     await tap('Отменить');
     expect(await screen.findByText('«👕 Одежда» снова в плане')).toBeTruthy();
     expect(await item('Одежда')).toEqual(before);
-    expect(await screen.findByText('👕 Одежда')).toBeTruthy();
+    expect(await screen.findAllByText('👕 Одежда')).toBeTruthy();
   });
 
   test('more than is free, 🔒 has it: "Вычесть из сбережений?" — what is short taken from it', async () => {
@@ -496,7 +496,7 @@ describe('6.1.11 the next month', () => {
     expect(screen.queryByText(/ещё не начался/)).toBeNull();
     expect(await screen.findByText('🛒 Продукты')).toBeTruthy();
     // nothing spent: what is left — all of it; the sections with their shares of November's budget (Дом, one-off, stayed in October)
-    expect(texts()).toEqual(expect.arrayContaining(['Осталось 1 660 ₾ · до 30 ноя', 'Без раздела · 45%', '0 / 620 ₾']));
+    expect(texts()).toEqual(expect.arrayContaining(['Осталось 1 660 ₾ · до 30 ноя', 'Без раздела · 45% бюджета', '620 ₾', '0 из 620 ₾ · лимит ≈ 20.67 ₾ в день']));
     const nov = await (await getDb()).get<{ b: number; l: number; p: number }>("SELECT budget_minor AS b, locked_minor AS l, unplanned_pct AS p FROM plan_months WHERE ym = '2026-11'");
     expect(nov).toMatchObject({ b: 300000, l: 30000, p: 10 });
     expect(await item('Продукты', '2026-11')).toMatchObject({ a: 62000, kind: 'limit' });

@@ -7,6 +7,7 @@ import { BUTTON_RADIUS, buttonAt, menuLayout, movedFrom, Point } from '../lib/pr
 import { colors } from '../theme/theme';
 import DPad from './DPad';
 import { useScrollLock } from './scrollLock';
+import { setRowMenuUsed } from '../settings/rowMenuHint';
 
 export type PressAction = { key: string; label: string; icon: (color: string) => React.ReactNode; onPress: () => void };
 
@@ -61,7 +62,8 @@ export default function PressMenu({ actions, style, accessibilityHint, testID, c
   };
 
   const close = () => { ref.current = null; hoverRef.current = null; setOpen(null); setHover(null); lockScroll(false); };
-  const run = (i: number) => { close(); actions[i].onPress(); };
+  // used once: the stats' hint «Зажмите категорию — …» isn't needed any more
+  const run = (i: number) => { close(); setRowMenuUsed().catch((e) => console.error('save row menu used failed', e)); actions[i].onPress(); };
   const point = (e: GestureResponderEvent): Point => ({ x: e.nativeEvent.pageX, y: e.nativeEvent.pageY });
 
   function onLongPress(e: GestureResponderEvent) {

@@ -1,5 +1,5 @@
 import React from 'react';
-import Svg, { Circle, G, Path, Rect } from 'react-native-svg';
+import Svg, { Circle, G, Path } from 'react-native-svg';
 
 type P = { color: string; size?: number };
 
@@ -184,10 +184,9 @@ export const OneOffIcon = ({ color, size = 22 }: P) => (
 /** «Динамика трат»: bars on a base line (by the eye in the stats, on a category's page). */
 export const TrendsIcon = ({ color, size = 22 }: P) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M4 20h16" />
-    <Rect x={5.5} y={11} width={3} height={6} rx={1} />
-    <Rect x={10.5} y={6} width={3} height={11} rx={1} />
-    <Rect x={15.5} y={9} width={3} height={8} rx={1} />
+    {/* a line going up with its arrow: how the spending goes */}
+    <Path d="M3 17l6-6 4 4 8-8" />
+    <Path d="M15 7h6v6" />
   </Svg>
 );
 

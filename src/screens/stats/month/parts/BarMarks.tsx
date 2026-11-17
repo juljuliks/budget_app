@@ -5,9 +5,9 @@ import { BarMark, clusterMarks, ShownMark } from '../model/monthPace';
 import { markStyles as s } from './markStyles';
 
 /** a badge's width: the marks nearer than it are one */
-const BADGE = 26;
+const BADGE = 30;
 /** the icons of payments drawn as one: each next this much further, over the one before */
-const STEP = 14;
+const STEP = 18;
 /** more than this many in one: these icons and their count */
 const MAX_ICONS = 4;
 export const MARK_STATUS = { paid: 'оплачен', missed: 'не оплачен', ahead: 'впереди' } as const;
@@ -43,7 +43,7 @@ export default function BarMarks({ marks, picked, onPick }: Props) {
         return (
           <TouchableOpacity
             key={m.key} style={[s.mark, { left: `${Math.min(1, m.at) * 100}%`, width: w }, edge(m.at, width, w)]}
-            onPress={() => onPick?.(on ? null : m)} hitSlop={6} accessibilityRole="button"
+            onPress={() => onPick?.(on ? null : m)} hitSlop={10} accessibilityRole="button"
             accessibilityLabel={m.count > 1 ? `${m.count} платежа с ${day}` : `${m.name}, ${day}, ${MARK_STATUS[m.status]}`}
           >
             <View style={[s.stack, { width: w }]}>

@@ -16,6 +16,7 @@ import { guardLeave } from '@/shared/navigation/leaveGuard';
 import { openAddTransaction } from '@/shared/navigation/sheets';
 import { openTransaction } from '@/shared/navigation/navigation';
 import { useStableCallback } from '@/shared/lib/useStableCallback';
+import { useFabOnScroll } from '@/shared/lib/useFabOnScroll';
 import Fab from '@/shared/ui/Fab';
 import { colors } from '@/shared/theme/theme';
 import { GroupBy, useDaySpent } from './model/listData';
@@ -41,8 +42,7 @@ import { LOAD_FAILED, SAVE_FAILED } from '@/shared/lib/strings';
 export default function OperationsScreen() {
   // a view, not a filter: kept by "Сбросить все", back to by day when leaving the tab
   const [groupBy, setGroupBy] = useState<GroupBy>('day');
-  const groupByRef = useRef(groupBy);
-  groupByRef.current = groupBy;
+  const groupByRef = useRef(groupBy); groupByRef.current = groupBy;
   const [sheet, setSheet] = useState<FilterSheet | null>(null);
   const lockRef = useRef<DayRange | null>(null);
   const filters = useTransactionFilters(lockRef);
@@ -81,6 +81,7 @@ export default function OperationsScreen() {
   const rows = list.rows;
   const active = filters.activeFilters(sortOut?.month ?? null);
   const listKey = JSON.stringify([query.trim(), categories, merchants, kinds, banks, range, filters.filter.unanswered, groupBy, list.remount]);
+  const fab = useFabOnScroll(listKey); // «＋»: hidden while scrolling down, back with a new list
   // "Отметить просмотренными (N)": the unread ones among the selected
   const unreadSelected = useMemo(() => rows.filter((r) => selected.has(r.id) && isUnread(r)).map((r) => r.id), [rows, selected]);
   const selectedRows = rows.filter((r) => selected.has(r.id));
@@ -142,7 +143,7 @@ export default function OperationsScreen() {
         onRefresh={list.onRefresh}
         loadingMore={list.loadingMore}
         tallFooter={sel.editMode || selecting}
-        emptyText={isFilterActive(filters.filter) ? EMPTY_FILTERED : EMPTY}
+        emptyText={isFilterActive(filters.filter) ? EMPTY_FILTERED : EMPTY} onScroll={fab.onScroll}
       />
 
       {selecting && selected.size > 0 ? (
@@ -154,8 +155,8 @@ export default function OperationsScreen() {
           onDelete={sortOut ? undefined : () => confirmDeleteTransactions(selectedRows, sel.clear)}
         />
       ) : null}
-      {/* hidden in edit mode (it would cover the ✎ / 🗑 of the last row) and while selecting (the actions bar) */}
-      {sel.editMode || selecting ? null : <Fab onPress={openAddTransaction} accessibilityLabel="Добавить операцию" />}
+      {/* hidden in edit mode (it would cover the ✎ / 🗑 of the last row), while selecting (the actions bar), scrolling down */}
+      {sel.editMode || selecting || !fab.shown ? null : <Fab onPress={openAddTransaction} accessibilityLabel="Добавить операцию" />}
 
       <FilterSheets sheet={sheet} active={active} filters={filters} groupBy={groupBy} onGroupBy={setGroupBy} onClose={() => setSheet(null)} />
       <CategoryPickerModal

@@ -13,11 +13,12 @@ import { currentYm, setFund, setItemDue, setPlanAmount } from '../../src/db/plan
 async function openStats() {
   await openApp(planned);
   await tap('Статистика');
-  await screen.findByText('Потрачено 2 010 / 2 460 ₾ · 82%');
+  await screen.findByText(/^из 2.460.₾$/);
 }
 const period = async (name: string) => { await tap('Выбрать период'); await tap(name); };
 /** the block (row) of a category: its texts in order */
-const block = (name: string) => { const t = texts(); const i = t.indexOf(name); return t.slice(i, i + 5); };
+// the last: the hole may name it too
+const block = (name: string) => { const t = texts(); const i = t.lastIndexOf(name); return t.slice(i, i + 5); };
 
 describe('5.1 a month', () => {
   beforeEach(openStats);
@@ -25,33 +26,7 @@ describe('5.1 a month', () => {
   test('the donut\'s total; the month against its whole plan (the categories\' and the share outside it)', async () => {
     expect(screen.getByText('Потрачено')).toBeTruthy();
     expect(screen.getByText('2 010 ₾')).toBeTruthy();
-    expect(screen.getByText('Осталось 450 ₾ · до 31 окт')).toBeTruthy();
-  });
-
-  test('5.1.3a the chevron by «Осталось» opens tiles: the payments ahead, the limits left for the days left, the overspends; a tap — its list', async () => {
-    // closed: the chevron by «Осталось» opens them
-    expect(screen.queryByTestId('tile-payments')).toBeNull();
-    await tap('#month-ahead');
-    const from = texts().indexOf('Осталось 450 ₾ · до 31 окт');
-    // under the tiles: its list (an item's amount is in a text of its own and in the line with its note)
-    const list = () => texts().slice(from + 10, texts().indexOf('Зажмите категорию — операции, план, динамика, категория'));
-    expect(texts().slice(from + 1, from + 10)).toEqual(['Платежи', '30 ₾', '1 впереди', 'Лимиты', '535 ₾', 'на 17 дней', 'Перерасход', '130 ₾', '2 категории']);
-    expect(list()).toEqual([]);
-    // unpaid first, then those paid: ✓ and what each spent
-    await tap('#tile-payments');
-    expect(list()).toEqual(['📺 Подписки', '30 ₾', '30 ₾', '🏠 Дом и коммуналка', '✓ оплачено · 800 ₾', '800 ₾']);
-    // each limit in its rhythm for the 17 days left: «Продукты» daily, «Кафе» weekly
-    await tap('#tile-limits');
-    expect(list()).toEqual(['🛒 Продукты', '≈ 18.53 ₾ в день · 315 ₾', '315 ₾', '☕️ Кафе и рестораны', '≈ 90.59 ₾ в неделю · 220 ₾', '220 ₾']);
-    // the overspends, the most first; outside the plan — past its share
-    await tap('#tile-over');
-    expect(list()).toEqual(['🎲 Вне плана', '80 ₾', '80 ₾', '👕 Одежда', '50 ₾', '50 ₾']);
-    // again — closed
-    await tap('#tile-over');
-    expect(list()).toEqual([]);
-    // the chevron again: closed
-    await tap('#month-ahead');
-    expect(screen.queryByTestId('tile-payments')).toBeNull();
+    expect(screen.getByText('Осталось 450 ₾ · ≈ 26 ₾ в день до 31 окт')).toBeTruthy();
   });
 
   test('5.1.3c a payment a little short of its plan (a rate\'s difference, within 2%) is paid; more short — not', async () => {
@@ -59,17 +34,13 @@ describe('5.1 a month', () => {
     const home = (await db.get<{ id: number }>('SELECT id FROM categories WHERE name = ?', ['Дом и коммуналка']))!.id;
     // rent planned 810, 800 paid: 1.2% short — ✓, not «10 ₾» left
     await act(async () => { await setPlanAmount(currentYm(), home, 81000, 'fixed'); emitTransactionsChanged(); });
-    expect(await screen.findByLabelText('Оплачено')).toBeTruthy();
+    expect(await within(rowOf('🏠 Дом и коммуналка')).findByText('оплачено')).toBeTruthy();
     // and on the bar, on its day of paying
     expect(await screen.findByLabelText('Дом и коммуналка, 3 окт, оплачен')).toBeTruthy();
-    await tap('#month-ahead');
-    const from = texts().indexOf('Платежи');
-    expect(texts().slice(from, from + 3)).toEqual(['Платежи', '30 ₾', '1 впереди']);
     // planned 830: 3.6% short — not paid, 30 ₾ left of it
     await act(async () => { await setPlanAmount(currentYm(), home, 83000, 'fixed'); emitTransactionsChanged(); });
-    await waitFor(() => expect(screen.queryByLabelText('Оплачено')).toBeNull());
-    const at = texts().indexOf('Платежи');
-    expect(texts().slice(at, at + 3)).toEqual(['Платежи', '60 ₾', '2 впереди']);
+    expect(await within(rowOf('🏠 Дом и коммуналка')).findByText('осталось оплатить')).toBeTruthy();
+    expect(within(rowOf('🏠 Дом и коммуналка')).queryByText('оплачено')).toBeNull();
   });
 
   test('5.1.3d a tap on a payment\'s mark: its category, amount, day and state instead of «Осталось»; a tap on it — back', async () => {
@@ -79,18 +50,18 @@ describe('5.1 a month', () => {
     await act(async () => { emitTransactionsChanged(); });
     await tap(await screen.findByLabelText('Дом и коммуналка, 3 окт, оплачен'));
     expect(screen.getByText('🏠 Дом и коммуналка · 800 ₾ · 3 окт · оплачен')).toBeTruthy();
-    expect(screen.queryByText('Осталось 450 ₾ · до 31 окт')).toBeNull();
+    expect(screen.queryByText('Осталось 450 ₾ · ≈ 26 ₾ в день до 31 окт')).toBeNull();
     // another mark: its payment instead
     await tap(screen.getByLabelText('Подписки, 20 окт, впереди'));
     expect(screen.getByText('📺 Подписки · 30 ₾ · 20 окт · впереди')).toBeTruthy();
     expect(screen.queryByText(/Дом и коммуналка · 800/)).toBeNull();
     // a tap on the line: «Осталось …» back
     await tap('#mark-info');
-    expect(screen.getByText('Осталось 450 ₾ · до 31 окт')).toBeTruthy();
+    expect(screen.getByText('Осталось 450 ₾ · ≈ 26 ₾ в день до 31 окт')).toBeTruthy();
     // the same mark twice: back too
     await tap(screen.getByLabelText('Подписки, 20 окт, впереди'));
     await tap(screen.getByLabelText('Подписки, 20 окт, впереди'));
-    expect(screen.getByText('Осталось 450 ₾ · до 31 окт')).toBeTruthy();
+    expect(screen.getByText('Осталось 450 ₾ · ≈ 26 ₾ в день до 31 окт')).toBeTruthy();
   });
 
   test('5.1.3b payments with a day over the bar: ✓ paid, ✕ past and not paid, faded ahead; today\'s tick counts them', async () => {
@@ -113,9 +84,6 @@ describe('5.1 a month', () => {
     await act(async () => { emitTransactionsChanged(); });
     expect(await screen.findByLabelText('Подписки, 20 окт, впереди')).toBeTruthy();
     expect(screen.queryByText(/не оплачен$/)).toBeNull();
-    await tap('#month-ahead');
-    await tap('#tile-payments');
-    expect(screen.getByText('20 окт · ')).toBeTruthy();
   });
 
   test('a section\'s header: fact / plan · %', async () => {
@@ -125,23 +93,28 @@ describe('5.1 a month', () => {
   test('5.7.2 «Сбережения» header with overspend: fact / plan (−%) · % of budget', async () => {
     // planned seed: overspend 130 (Одежда 50 + Вне плана 80) reduces free savings 240→110;
     // section now = 410 (300 locked + 110 free), plan = 540; budget = 3000 → 18%
-    expect(screen.getByText('410 / 540 ₾ (−24%)')).toBeTruthy();
+    expect(screen.getByText('410 / 540 ₾ · 76%')).toBeTruthy();
     // its share of the budget by its title, as every section's
-    expect(screen.getByText('Сбережения · 18%')).toBeTruthy();
+    expect(screen.getByText('Сбережения · 18% бюджета')).toBeTruthy();
   });
 
   test('the rows: limits with what\'s left and the limit per rhythm, overspends, obligatory payments', async () => {
-    expect(block('🛒 Продукты')).toEqual(['🛒 Продукты', '305 / 620 ₾ · 49%', 'осталось 315 ₾ · лимит ≈ 20 ₾ в день', 'Сегодня перерасход 5 ₾', '☕️ Кафе и рестораны']);
+    // at the right what is left, under the bar what was spent of the plan (a nested text is listed again on its own)
+    expect(block('🛒 Продукты').slice(0, 4)).toEqual(['🛒 Продукты', '315 ₾', 'осталось', '305 из 620 ₾ · лимит ≈ 20 ₾ в день']);
+    expect(within(rowOf('🛒 Продукты')).getByText('Сегодня перерасход 5 ₾')).toBeTruthy();
     // the week's limit rebalanced on what's left of the month: (310 − 40) / 20 days × 7
-    expect(block('☕️ Кафе и рестораны').slice(1, 4)).toEqual(['90 / 310 ₾ · 29%', 'осталось 220 ₾ · 70 ₾ → 94.50 ₾ в неделю', 'На этой неделе осталось 44.50 ₾ · до вс']);
-    expect(block('👕 Одежда').slice(1, 3)).toEqual(['450 / 400 ₾ · 113%', 'Перерасход 50 ₾']);
-    expect(block('🏠 Дом и коммуналка').slice(1, 3)).toEqual(['✓', '800 / 800 ₾ · 100%']);
-    expect(block('📺 Подписки').slice(1, 3)).toEqual(['○', '0 / 30 ₾']);
+    expect(block('☕️ Кафе и рестораны').slice(1, 4)).toEqual(['220 ₾', 'осталось', '90 из 310 ₾ · 70 ₾ → 94.50 ₾ в неделю']);
+    expect(within(rowOf('☕️ Кафе и рестораны')).getByText('На этой неделе осталось 44.50 ₾ · до вс')).toBeTruthy();
+    // an overspend: at the right, no line of its own
+    expect(block('👕 Одежда').slice(1, 4)).toEqual(['−50 ₾', 'перерасход', '450 из 400 ₾']);
+    // payments: paid — ✓, otherwise what is left to pay
+    expect(block('🏠 Дом и коммуналка').slice(1, 4)).toEqual(['✓', 'оплачено', '800 ₾']);
+    expect(block('📺 Подписки').slice(1, 3)).toEqual(['30 ₾', 'осталось оплатить']);
   });
 
   test('outside the plan: the categories without one and the uncategorized, against the share; no «＋ В план» buttons there', async () => {
     // its title: the share's part of the budget
-    expect(block('Вне плана · 10%').slice(1, 3)).toEqual(['380 / 300 ₾ · 127%', 'Перерасход 80 ₾']);
+    expect(block('Вне плана · 10% бюджета').slice(1, 3)).toEqual(['380 / 300 ₾ · 127%', 'Перерасход 80 ₾']);
     expect(within(rowOf('🎮 Развлечения')).queryByText('＋ В план')).toBeNull();
     expect(within(rowOf('🎮 Развлечения')).getByText('300 ₾')).toBeTruthy();
     expect(within(rowOf('⚪️ Без категории')).queryByText('＋ В план')).toBeNull();
@@ -155,7 +128,7 @@ describe('5.1 a month', () => {
   });
 
   test('5.1.12 a tap on a category: no buttons, nowhere to go; its long press\'s «Операции» — its operations of the month; back returns', async () => {
-    fireEvent.press(await screen.findByText('👕 Одежда'), { nativeEvent: { pageX: 200, pageY: 500 } });
+    fireEvent.press((await screen.findAllByText('👕 Одежда')).slice(-1)[0], { nativeEvent: { pageX: 200, pageY: 500 } });
     expect(screen.queryByLabelText('Динамика')).toBeNull();
     expect(screen.queryByText('Категория · 1')).toBeNull();
     await pressAction('👕 Одежда', 'Операции');
@@ -163,7 +136,7 @@ describe('5.1 a month', () => {
     expect(screen.getByText('ZARA')).toBeTruthy();
     expect(screen.queryByText('SPAR')).toBeNull();
     await tap('Назад');
-    expect(await screen.findByText('Потрачено 2 010 / 2 460 ₾ · 82%')).toBeTruthy();
+    expect(await screen.findByText(/^из 2.460.₾$/)).toBeTruthy();
   });
 
   test('the refunds without a category open as such', async () => {
@@ -184,7 +157,8 @@ describe('5.1 a month', () => {
     expect(await screen.findByDisplayValue('60')).toBeTruthy();
     await tap('Сохранить');
     expect(await screen.findByText('План «🚕 Такси» сохранён')).toBeTruthy();
-    expect(await screen.findByText('60 / 60 ₾ · 100%')).toBeTruthy();
+    // a category without a kind goes in as a one-off payment: paid by what it spent
+    expect(await within(rowOf('🚕 Такси')).findByText('оплачено')).toBeTruthy();
   });
 
   test('5.1.20 «Категория»: its page', async () => {
@@ -225,7 +199,7 @@ describe('5.1 a month', () => {
     await tap('Предыдущий месяц');
     expect(await screen.findByText('Сентябрь 2026')).toBeTruthy();
     expect(await screen.findByText('Отложено 1 150 ₾ · могли ещё 250 ₾')).toBeTruthy();
-    expect(screen.getByText('Потрачено 1 850 / 1 700 ₾ · 109%')).toBeTruthy();
+    expect(screen.getByText(/^из 1.700.₾$/)).toBeTruthy();
     expect(screen.getByText('Перерасход 150 ₾')).toBeTruthy();
   });
 
@@ -247,6 +221,45 @@ describe('5.1 a month', () => {
     await waitFor(() => expect(screen.queryByText('Бюджет месяца')).toBeNull());
     await longPress('🔒 Отложено сразу');
     expect(await screen.findByText('Бюджет месяца')).toBeTruthy();
+  });
+
+  test('5.1.21 «Траты» / «План» over the ring, «Категории» / «Разделы» under it', async () => {
+    // «План»: the budget in the hole, the plan's categories, the share outside it, the savings
+    await tap('План');
+    expect(await screen.findByText('Бюджет')).toBeTruthy();
+    expect(screen.getByText('3 000 ₾')).toBeTruthy();
+    // by sections: their names with the share of the budget; a tap — its plan and how much of it is spent
+    await tap('Разделы');
+    const legend = () => { const t = texts(); const i = t.indexOf('Разделы'); return t.slice(i + 1, i + 7); };
+    expect(legend()).toEqual(['Без раздела', '72%', 'Вне плана', '10%', 'Сбережения', '18%']);
+    await tap('Вне плана');
+    expect(await screen.findByText('10% бюджета')).toBeTruthy();
+    expect(screen.getByText('потрачено 127%')).toBeTruthy();
+    // «Траты» by sections: the spending's shares
+    await tap('Траты');
+    await waitFor(() => expect(screen.queryByText('Бюджет')).toBeNull());
+    expect(legend().slice(0, 4)).toEqual(['Без раздела', '81%', 'Вне плана', '19%']);
+    // by categories: the biggest, the rest in one line
+    await tap('Категории');
+    expect(legend()[0]).toBe('🏠 Дом и коммуналка');
+  });
+
+  test('5.1.22 «Зажмите категорию — …»: gone once a long press\'s button is used', async () => {
+    expect(screen.getByText('Зажмите категорию — операции, план, динамика, категория')).toBeTruthy();
+    await pressAction('🛒 Продукты', 'Операции');
+    back();
+    await screen.findByText(/^из 2.460.₾$/);
+    expect(screen.queryByText('Зажмите категорию — операции, план, динамика, категория')).toBeNull();
+  });
+
+  test('5.1.23 «＋» hides while scrolling down, back on scrolling up', async () => {
+    const list = screen.getByTestId('month-stats');
+    const at = (y: number) => fireEvent.scroll(list, { nativeEvent: { contentOffset: { y }, contentSize: { height: 3000, width: 400 }, layoutMeasurement: { height: 800, width: 400 } } });
+    expect(screen.getByLabelText('Добавить в план')).toBeTruthy();
+    at(300);
+    expect(screen.queryByLabelText('Добавить в план')).toBeNull();
+    at(100);
+    expect(screen.getByLabelText('Добавить в план')).toBeTruthy();
   });
 });
 
@@ -271,7 +284,7 @@ describe('5.1 transfers and "Пополнение счёта"', () => {
       await buy('DEMID RIABOV', 82, on(8), nails, { kind: 'deposit' });
     });
     await tap('Статистика');
-    await screen.findByText('Потрачено 2 250 / 2 460 ₾ · 91%');
+    await screen.findByText(/^из 2.460.₾$/);
   });
 
   test('a transfer category carries its sign: sent more "−", more came back "+" (not spent, no "＋ В план"); a deposit put in any category is subtracted from it', async () => {
@@ -280,7 +293,7 @@ describe('5.1 transfers and "Пополнение счёта"', () => {
     expect(within(rowOf('🤝 Переводы: Долги')).queryByText('＋ В план')).toBeNull();
     // outside the plan: the −100 and the 140 of «Маникюр» (140 + 82 − 82)
     expect(within(rowOf('💅 Маникюр')).getByText('140 ₾')).toBeTruthy();
-    expect(block('Вне плана · 10%').slice(1, 3)).toEqual(['620 / 300 ₾ · 207%', 'Перерасход 320 ₾']);
+    expect(block('Вне плана · 10% бюджета').slice(1, 3)).toEqual(['620 / 300 ₾ · 207%', 'Перерасход 320 ₾']);
     expect(texts()).not.toContain('💳 Пополнение счёта');
   });
 });
@@ -339,7 +352,8 @@ describe('5.4–5.6 hidden amounts, the currency, the warning', () => {
     const lines = texts().filter((t) => /осталось|сэкономлено|перерасход|лимит/i.test(t));
     expect(lines.filter((t) => /₾/.test(t))).toEqual([]);
     expect(lines.some((t) => /^Осталось \d+% · до /.test(t))).toBe(true);
-    expect(lines.some((t) => /^осталось \d+%/.test(t))).toBe(true);
+    // a row's right: what is left of its plan as a share
+    expect(block('🛒 Продукты').slice(1, 4)).toEqual(['51%', 'осталось', '49% плана']);
     // the week too: the limits' lines and the sections' totals
     await period('За неделю');
     await screen.findAllByText(/^\d+% плана$/);
@@ -386,7 +400,7 @@ describe('5.4–5.6 hidden amounts, the currency, the warning', () => {
     await tap('$ USD');
     backToTabs();
     await act(() => new Promise((r) => setTimeout(r, 100)));
-    expect(await screen.findByText('Потрачено 804 / 984 $ · 82%')).toBeTruthy();
+    expect(await screen.findByText(/^из 984.\$$/)).toBeTruthy();
     expect(await getSetting('display_currency')).toBe('USD');
   });
 
@@ -418,7 +432,7 @@ describe('5.5.4 a plan in another currency: in it, whatever the stats\' currency
     });
     await tap('Статистика');
     await screen.findByText('🚕 Такси');
-    expect(block('🚕 Такси').slice(0, 3)).toEqual(['🚕 Такси', '30 / 30 $ · 100%', 'осталось 0 $']);
+    expect(block('🚕 Такси').slice(0, 4)).toEqual(['🚕 Такси', '0 $', 'осталось', '30 из 30 $']);
   });
 
   test('a fund in $: spent from it in $', async () => {
@@ -438,7 +452,7 @@ describe('5.5.4 a plan in another currency: in it, whatever the stats\' currency
     await tap('$ USD');
     backToTabs();
     await tap('Статистика');
-    expect(await screen.findByText('410 / 540\u00a0₾ (−24%)')).toBeTruthy();
+    expect(await screen.findByText('410 / 540\u00a0₾ · 76%')).toBeTruthy();
   });
 });
 

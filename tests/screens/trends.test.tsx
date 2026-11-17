@@ -119,7 +119,7 @@ describe('5.8 Динамика трат', () => {
   test('5.8.6 the month\'s stats: «+N% к обычному» under a category well off its usual', async () => {
     await openApp(withHistory);
     await tap('Статистика');
-    await screen.findByText('☕️ Кафе и рестораны');
+    await screen.findAllByText('☕️ Кафе и рестораны');
     expect(await within(rowOf('☕️ Кафе и рестораны')).findByText('+550% к обычному')).toBeTruthy();
     // −24%: not enough to say
     expect(within(rowOf('🛒 Продукты')).queryByText(/к обычному/)).toBeNull();

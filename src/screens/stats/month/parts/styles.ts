@@ -1,6 +1,6 @@
 // The month stats' look, one for all its parts.
 import { StyleSheet } from 'react-native';
-import { colors } from '@/shared/theme/theme';
+import { chart, colors } from '@/shared/theme/theme';
 
 export const styles = StyleSheet.create({
   report: { marginTop: 4 },
@@ -9,13 +9,20 @@ export const styles = StyleSheet.create({
   content: { paddingHorizontal: 16, paddingBottom: 88 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
   donutWrap: { alignItems: 'center', marginBottom: 16 },
-  monthBox: { marginBottom: 16 },
-  monthTopRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
-  monthLine: { fontSize: 13, color: colors.muted, flexShrink: 1 },
-  // the bar's status line with its chevron at the right: the tiles open under it
-  monthStatusRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 4 },
-  statusInRow: { marginTop: 0, flexShrink: 1 },
-  chevronOpen: { transform: [{ rotate: '180deg' }] },
+  // over the ring «Траты» / «План»; the ring small at the left, at its right the cut — «Категории» / «Разделы» (chips,
+  // not a second segmented) — and the legend
+  donutViews: { alignSelf: 'stretch', marginBottom: 14 },
+  donutRow: { flexDirection: 'row', alignItems: 'center', alignSelf: 'stretch', gap: 16 },
+  donutSide: { flex: 1, minWidth: 0 },
+  donutCuts: { flexDirection: 'row', gap: 6, marginBottom: 10 },
+  donutNames: { gap: 6 },
+  donutName: { flexDirection: 'row', alignItems: 'center' },
+  donutNameText: { flexShrink: 1, fontSize: 13, color: colors.text },
+  donutNameShare: { marginLeft: 'auto', paddingLeft: 6, fontSize: 13, fontWeight: '700', color: colors.text, fontVariant: ['tabular-nums'] },
+  donutRest: { color: colors.muted, marginLeft: 13 },
+  legendDim: { opacity: 0.4 },
+  legendDot: { width: 8, height: 8, borderRadius: 4, marginRight: 5 },
+  monthBox: { marginBottom: 0 },
   longPressHint: { fontSize: 12, color: colors.muted, marginTop: 8, marginBottom: -10 },
   dangerText: { color: colors.danger },
   hint: { color: colors.muted, fontSize: 14, textAlign: 'center', marginVertical: 12 },
@@ -35,6 +42,13 @@ export const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed',
   },
   addToPlanText: { fontSize: 12, color: colors.accent },
+  // a planned row's right: what is left, big, and what it is under it
+  rowLeft: { marginLeft: 'auto', paddingLeft: 8, alignItems: 'flex-end' },
+  leftBig: { fontSize: 15, fontWeight: '700', color: colors.text, fontVariant: ['tabular-nums'] },
+  leftCaption: { fontSize: 12, color: colors.muted },
+  // a payment charged several times a month: a piece per charge
+  payments: { flexDirection: 'row', gap: 3, marginTop: 8 },
+  paymentPiece: { flex: 1, height: 8, borderRadius: 4, backgroundColor: chart.meterTrack },
   rowAmount: { marginLeft: 'auto', paddingLeft: 8, fontSize: 13, color: colors.text, fontVariant: ['tabular-nums'] },
   rowLimit: { color: colors.muted },
   rowStatus: { fontSize: 13, color: colors.muted, marginTop: 4 },
@@ -58,9 +72,7 @@ export const styles = StyleSheet.create({
   crossed: { textDecorationLine: 'line-through' },
   refundsAmount: { fontSize: 15, color: colors.income, fontVariant: ['tabular-nums'] },
   // under the amount, on the right
-  paidMark: { fontSize: 16, fontWeight: '700', marginLeft: 6 },
   paidOn: { color: colors.income },
-  paidOff: { color: colors.muted },
 });
 
 /** "spent" and its "(%)" in a "spent / limit (%)" turn orange once over the limit (the limit itself stays muted) */

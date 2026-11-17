@@ -6,6 +6,7 @@ import { freshDb } from '../helpers';
 import { done } from '../e2e/seeds';
 import { setHideAmounts } from '../../src/shared/settings/hideAmounts';
 import { setDisplayCurrency } from '../../src/shared/settings/displayCurrency';
+import { setRowMenuUsed } from '../../src/shared/settings/rowMenuHint';
 import { navigationRef } from '../../src/shared/navigation/navigation';
 
 /** The app on a fresh database filled by `seed`, the operations shown. */
@@ -16,6 +17,7 @@ export async function openApp(seed?: () => Promise<void>) {
   // module-level settings carried over from a previous test of the file
   await setHideAmounts(false);
   await setDisplayCurrency('GEL');
+  await setRowMenuUsed(false);
   render(<App />);
   await screen.findByPlaceholderText('Поиск: мерчант, описание, сумма…');
 }

@@ -18,6 +18,18 @@ import { overStyle, styles } from './styles';
 /** the bottom section of the categories without a plan (as in the plan) */
 const UNPLANNED = 'Вне плана';
 
+/** What a section's share by its title is of: «Жизнь · 35% бюджета» (without a budget — «… плана»). */
+export type ShareBase = { minor: number; word: string };
+const shareOf = (part: number, base?: ShareBase) => {
+  const pct = base ? percentOf(part, base.minor) : '';
+  return pct ? `${pct} ${base!.word}` : undefined;
+};
+
+/** the sections' ids: the ring's slices by sections are keyed by them */
+export const groupId = (g: StatGroup) => `type-${g.type_id ?? 'none'}-${g.title}`;
+export const UNPLANNED_ID = 'unplanned';
+export const SAVINGS_ID = 'savings';
+
 /** A row of a category (made by the screen: it knows the month, the norms, "＋ В план"). */
 type RowOf = (c: CategoryStat, unplanned: boolean) => React.ReactElement;
 
@@ -42,10 +54,10 @@ const factOfPlan = (stats: MonthStats, spent: number, planned: number) => (
  * The planned categories by their sections (types), each with its plan's share of `base` (the budget, else the whole
  * plan); one category: its row says it all, the header only names it.
  */
-export function typeSections(stats: MonthStats, groups: StatGroup[], rowOf: RowOf, base = 0) {
+export function typeSections(stats: MonthStats, groups: StatGroup[], rowOf: RowOf, base?: ShareBase) {
   return groups.map((g) => (
     <React.Fragment key={`${g.type_id}-${g.title}`}>
-      {header(g.title, g.categories.length > 1 ? factOfPlan(stats, g.spent_minor, g.planned_minor) : null, undefined, percentOf(g.planned_minor, base))}
+      {header(g.title, g.categories.length > 1 ? factOfPlan(stats, g.spent_minor, g.planned_minor) : null, undefined, shareOf(g.planned_minor, base))}
       <View>{g.categories.map((c) => rowOf(c, false))}</View>
     </React.Fragment>
   ));
@@ -57,13 +69,13 @@ export function unplannedSection(
   /** "Скрыть суммы": the line under the header without amounts */
   hidden: boolean,
   /** the budget (else the whole plan): the share's % by the title */
-  base = 0,
+  base?: ShareBase,
 ) {
   if (!split.unplanned.length && !(share > 0)) return null;
   const money = (minor: number) => formatWithCurrency(minor, stats.currency);
   return (
     <>
-      {header(UNPLANNED, factOfPlan(stats, split.spent, share), undefined, percentOf(share, base))}
+      {header(UNPLANNED, factOfPlan(stats, split.spent, share), undefined, shareOf(share, base))}
       <View>
         {/* the share as a limit: an overspend scales the bar to the spending, a tick at the share; on the header's grey
             band, worded like a month limit's row. Nothing spent outside the plan yet: no empty bar, just the hint below */}

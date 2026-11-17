@@ -50,7 +50,7 @@ describe('6.5 funds', () => {
     expect(screen.queryByText('Копилки')).toBeNull();
     const t = texts();
     const i = t.lastIndexOf('👕 Одежда');
-    expect(t[i + 1]).toBe('300 / 300 ₾');
+    expect(t[i + 1]).toBe('300 / 300 ₾ · 100%');
     // the plan's sheet picks no kind: it is the category's (none set — a one-off payment)
     await tap('Добавить в план');
     await tap('Добавить в план: 🚕 Такси');
@@ -80,7 +80,7 @@ describe('6.5 funds', () => {
     await screen.findByText(/150 из 1/);
     const t = texts();
     const i = t.lastIndexOf('👕 Одежда');
-    expect(t.slice(i + 1, i + 3)).toEqual(['300 / 300 ₾', 'взнос в копилку · 150 из 1 500 ₾ · к 31 января 2027']);
+    expect(t.slice(i + 1, i + 3)).toEqual(['300 / 300 ₾ · 100%', 'взнос в копилку · 150 из 1 500 ₾ · к 31 января 2027']);
   });
 
   test('past what is free, 🔒 set as an amount gives way without asking', async () => {
@@ -139,7 +139,8 @@ describe('6.5 funds', () => {
     await tap('Статистика');
     // ZARA 450 ₾ is the fund's: not in the month's spending (2 010 ₾ without the fund)
     expect(await screen.findByText(`потрачено 450${N}₾ из копилки`)).toBeTruthy();
-    expect(screen.getByText(/^Потрачено 1 560 \//)).toBeTruthy();
+    // the donut's total
+    expect(screen.getByText(/^1.560.₾$/)).toBeTruthy();
     // one row, in «Сбережения»: its contribution, and under it what was spent from it; no "Копилки" section
     expect(screen.getAllByText('👕 Одежда')).toHaveLength(1);
     expect(screen.queryByText('Копилки')).toBeNull();

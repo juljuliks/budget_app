@@ -1,5 +1,5 @@
 // 2.1: the operations by day.
-import { waitFor, within } from '@testing-library/react-native';
+import { fireEvent, waitFor, within } from '@testing-library/react-native';
 import { backToTabs, openApp, rowOf, screen, tap, pressAction } from './app';
 import { buy, daysAgo, ops } from '../e2e/seeds';
 import { getDb } from '../../src/db';
@@ -100,4 +100,19 @@ test('2.1.10: grouped by category, a split operation is in each of its parts\' g
   expect(screen.getAllByText('−12.00\u00a0₾').length).toBeGreaterThan(0);
   expect(screen.getAllByText('−18.00\u00a0₾').length).toBeGreaterThan(0);
   expect(screen.getAllByText('из 30.00\u00a0₾')).toHaveLength(2);
+});
+
+test('2.1.11 «＋» hides while scrolling down, back on scrolling up and with a new filter', async () => {
+  await openApp(ops);
+  await screen.findByText('SPAR');
+  const at = (y: number) => fireEvent.scroll(screen.getByTestId('operations-list'), { nativeEvent: { contentOffset: { y }, contentSize: { height: 3000, width: 400 }, layoutMeasurement: { height: 800, width: 400 } } });
+  expect(screen.getByLabelText('Добавить операцию')).toBeTruthy();
+  at(300);
+  expect(screen.queryByLabelText('Добавить операцию')).toBeNull();
+  at(100);
+  expect(screen.getByLabelText('Добавить операцию')).toBeTruthy();
+  at(400);
+  expect(screen.queryByLabelText('Добавить операцию')).toBeNull();
+  fireEvent.changeText(screen.getByPlaceholderText(/./), 'spar');
+  expect(await screen.findByLabelText('Добавить операцию')).toBeTruthy();
 });

@@ -60,6 +60,8 @@ export type PlanItem = {
     upcoming?: { amount_minor: number; currency: Currency; ym: string };
     /** the category's only payment: how often, its charge this month (done) or the next one; day null — none set */
     single?: { period: Period; day: string | null; done: boolean };
+    /** the month's charges of all its payments and how many are done: the stats draw a bar of them when more than one */
+    charges?: { total: number; done: number };
   };
   /**
    * a fund's item (kind 'fund'): how much by when, what it has by the month's end (now, for the current one); in

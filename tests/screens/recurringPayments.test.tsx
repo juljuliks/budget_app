@@ -1,8 +1,8 @@
 // 6.6 "Подписки": its section in the plan, the sheet of the month's subscriptions, a day set for a merchant of "Подписки",
 // a subscription made of an operation picked in the operations. Today: 15 October 2026; the seed `planned` (Подписки 30 ₾ by hand) and NETFLIX.COM
 // charged 30 ₾ on the 10th in "Подписки".
-import { act, fireEvent, waitFor } from '@testing-library/react-native';
-import { back, backToTabs, openApp, openSettings, screen, tap, texts, openBudget, openPlanOf, openNextMonth } from './app';
+import { act, fireEvent, waitFor, within } from '@testing-library/react-native';
+import { back, backToTabs, openApp, openSettings, screen, tap, texts, openBudget, openPlanOf, openNextMonth, rowOf } from './app';
 import { buy, on, planned } from '../e2e/seeds';
 import { getDb } from '../../src/db';
 import { subscriptionsCategoryId } from '../../src/db/categories';
@@ -540,6 +540,10 @@ describe('6.7.9 "Регулярный платёж" from the plan', () => {
     // October: the 3rd (paid), the 17th, 24th, 31st — 4 × 800 ₾
     expect(await (await getDb()).get(`SELECT limit_minor FROM plan_items WHERE ym = '2026-10' AND category_id = ${home}`))
       .toEqual({ limit_minor: 320000 });
+    // 5.1.11 a bar of its charges, the paid one filled; what is left to pay at the right
+    expect(await screen.findByLabelText('Оплачено 1 из 4')).toBeTruthy();
+    expect(screen.getByText('оплачено 1 из 4 · 800 из 3 200 ₾')).toBeTruthy();
+    expect(within(rowOf('🏠 Дом и коммуналка')).getByText('2 400 ₾')).toBeTruthy();
   });
 
   test('"Подписки": no "Выключить регулярные платежи" in its sheet — the plan turns them off, a subscription is deleted', async () => {

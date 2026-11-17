@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { ActivityIndicator, SectionList, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, type NativeScrollEvent, type NativeSyntheticEvent, SectionList, StyleSheet, Text, View } from 'react-native';
 import type { Currency } from '@/db/fx';
 import type { TransactionRow } from '@/db/transactions';
 import { bankById } from '@/domain/banks';
@@ -34,6 +34,8 @@ type Props = {
   /** room for the bottom bar (edit mode, selecting) */
   tallFooter: boolean;
   emptyText: string;
+  /** «＋» hides while scrolling down */
+  onScroll?: (e: NativeSyntheticEvent<NativeScrollEvent>) => void;
 };
 
 /** The operations by sections (days or groups), a page at a time while scrolling, pull to refresh. */
@@ -78,6 +80,8 @@ export default function OperationsList(p: Props) {
         />
       )}
       renderItem={renderItem}
+      onScroll={p.onScroll}
+      scrollEventThrottle={100}
       onEndReached={() => { p.loadMore().catch(toastFailure('load more', LOAD_FAILED)); }}
       // the next page is read a screen before the end; rows are drawn a batch at a time, the ones far off-screen dropped
       onEndReachedThreshold={1}
