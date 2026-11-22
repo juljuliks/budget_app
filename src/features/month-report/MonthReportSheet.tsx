@@ -4,30 +4,19 @@ import { currentYm } from '@/db/plans';
 import { useDisplayCurrency } from '@/shared/settings/displayCurrency';
 import { PlanAmountModal, PlanAmountTarget } from '@/entities/plan';
 import { monthDays } from '@/shared/lib/dateRange';
-import { dayTitle } from '@/shared/lib/dates';
 import { navigateWhenReady, openCategory } from '@/shared/navigation/navigation';
 import { openMonthClose } from '@/shared/navigation/sheets';
 import Loading from '@/shared/ui/Loading';
 import StoryPager from '@/shared/ui/StoryPager';
-import TextLink from '@/shared/ui/TextLink';
 import { reportTitle, reportView } from './model/reportView';
-import { LateFund, useMonthReport } from './model/useMonthReport';
+import { useMonthReport } from './model/useMonthReport';
+import LateFunds from './ui/LateFunds';
 import GoodBlock from './ui/GoodBlock';
 import ImproveBlock from './ui/ImproveBlock';
 import ImpulseBlock from './ui/ImpulseBlock';
 import OutsideBlock from './ui/OutsideBlock';
 import ReportHero from './ui/ReportHero';
 import { styles } from './ui/styles';
-
-/** «⚠ 🏖 Отпуск не успевает к 31 июля 2027 ›»: the funds not making it, on «Отложено». */
-function LateFunds({ late, onOpen }: { late: LateFund[]; onOpen: (id: number) => void }) {
-  if (!late.length) return null;
-  return (
-    <View style={styles.block}>
-      {late.map((f) => <TextLink key={f.id} label={`⚠ ${f.label} не успевает к ${dayTitle(f.due)}`} onPress={() => onOpen(f.id)} style={styles.over} />)}
-    </View>
-  );
-}
 
 /**
  * The month's report as stories (sheets.ts → openMonthReport): from the notification, «История», the stats. «Отложено»,
@@ -57,7 +46,7 @@ export default function MonthReportSheet({ ym, onClose }: { ym: string | null; o
     ...(v.limits ? [<ImproveBlock key="improve" v={v} />] : []),
     ...(v.outside ? [<OutsideBlock key="outside" v={v} currency={currency} onPlan={setPlanTarget} onSortOut={toOperations({ category: 'none' })} />] : []),
     ...(v.good ? [<GoodBlock key="good" v={v} />] : []),
-    ...(r.impulse ? [<ImpulseBlock key="impulse" m={r.impulse} money={v.money} onMark={toOperations({ unanswered: true })} />] : []),
+    ...(r.impulse ? [<ImpulseBlock key="impulse" m={r.impulse} money={v.money} onMark={toOperations({ unanswered: true })} month={ym!} />] : []),
   ];
 
   return (

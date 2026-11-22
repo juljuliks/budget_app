@@ -1,7 +1,7 @@
 import React from 'react';
 import { Text, TouchableOpacity } from 'react-native';
 import { formatWithCurrency } from '@/shared/lib/money';
-import { openMonthReport } from '@/shared/navigation/sheets';
+import { openReport } from '@/shared/navigation/reports';
 import { ChevronRightIcon } from '@/shared/ui/icons';
 import Masked from '@/shared/ui/Masked';
 import { colors } from '@/shared/theme/theme';
@@ -20,7 +20,7 @@ export default function MonthReportRow({ ym }: { ym: string }) {
   // «Отложено» in the month's budget currency
   const saved = (v: number) => formatWithCurrency(Math.round(r.savedIn ? v * r.savedIn.rate : v), r.savedIn?.currency ?? r.currency);
   return (
-    <TouchableOpacity style={styles.row} onPress={() => openMonthReport(ym)} accessibilityHint="Открыть отчёт за месяц">
+    <TouchableOpacity style={styles.row} onPress={() => openReport(ym)} accessibilityHint="Открыть отчёт за месяц">
       <Text style={styles.rowText} numberOfLines={2}>
         {r.saved === null ? `Потрачено ${money(r.spent)}`
           : r.saved >= 0 ? <>Отложено <Masked style={styles.savedInline}>{saved(r.saved)}</Masked></>

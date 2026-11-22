@@ -73,7 +73,7 @@ const ofMonths = (n: number) => `${n} ${plural(n, ['месяца', 'месяце
  * «Траты по категориям»: under a category — «1 200 ₾ в месяц · перерасход в 3 из 8 месяцев» (none planned — «без
  * плана»), over the full months as the stats' «В среднем … в месяц»; a month's average in whole units.
  */
-export const topNote = (c: YearReport['top'][number], money: (v: number) => string) =>
+export const topNote = (c: Pick<YearReport['top'][number], 'perMonth' | 'overIn' | 'planned'>, money: (v: number) => string) =>
   [c.perMonth === null ? '' : `${money(Math.round(c.perMonth / 100) * 100)} в месяц`, c.planned ? `перерасход в ${c.overIn} из ${ofMonths(c.planned)}` : 'без плана']
     .filter(Boolean).join(' · ');
 

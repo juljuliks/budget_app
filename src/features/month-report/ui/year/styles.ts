@@ -36,6 +36,7 @@ export const y = StyleSheet.create({
   name: { fontSize: 15, color: colors.text },
   value: { fontSize: 15, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
   note: { marginTop: 8 },
+  bandRight: { fontSize: 13, fontWeight: '600', color: colors.text },
   fund: { gap: 4 },
   good: { color: colors.income },
   bad: { color: colors.warn },

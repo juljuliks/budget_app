@@ -9,9 +9,9 @@ import Masked from '@/shared/ui/Masked';
 import TextLink from '@/shared/ui/TextLink';
 import { colors } from '@/shared/theme/theme';
 import { MIN_ANSWERS } from '@/stats/impulse';
-import type { DayPurchase } from '../model/impulseCalendarView';
+import type { DayPurchase } from '@/entities/transaction';
 import type { ImpulseTrendView } from '../model/impulseTrendView';
-import ImpulseCalendar from './ImpulseCalendar';
+import { ImpulseCalendar } from '@/entities/transaction';
 import { detailStyles as s } from './detailStyles';
 
 const BAR_HEIGHT = 40;

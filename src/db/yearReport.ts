@@ -36,6 +36,8 @@ export type YearReport = {
   savings: { locked: YearPlanFact; rest: YearPlanFact; funds: YearPlanFact; total: YearPlanFact; months: number } | null;
   fundsNow: Array<{ id: number; label: string; saved: number; target: number; currency: string; due: string; ok: boolean | null; closed: boolean }>;
   top: Array<TopCategory & { label: string }>;
+  /** every category spent in (not the funds' or transfers'): its month on average and overspends (the stats' list) */
+  byCategory: Map<number, TopCategory>;
   impulse: ImpulseSummary | null;
   /** «Отложено» is said in the budget currency of the year's last month with a budget (yearCurrency): null — the same */
   savedIn: { currency: Currency; rate: number } | null;
@@ -124,6 +126,7 @@ export async function yearReport(year: number, currency: Currency, nowYm = curre
     savings: await yearSavings(data.filter((m) => m.ym < nowYm).map((m) => m.ym), currency, nowYm),
     fundsNow: await fundsOfYear(funds, year, nowYm, label),
     top: topCategories(rows, limits, full, new Set([...fundIds, ...transferIds])).map((c) => ({ ...c, label: label(c.id) })),
+    byCategory: new Map(topCategories(rows, limits, full, new Set([...fundIds, ...transferIds]), null).map((c) => [c.id, c])),
     impulse: ((s) => (s.answered ? s : null))(impulseSummary(await impulseRows(from, to, currency))),
     savedIn: await savedInOf(year, currency, nowYm, conv),
   };

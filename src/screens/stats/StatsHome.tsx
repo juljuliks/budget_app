@@ -11,6 +11,8 @@ import { useDisplayCurrency } from '@/shared/settings/displayCurrency';
 import { colors } from '@/shared/theme/theme';
 import { ChevronDownIcon } from '@/shared/ui/icons';
 import PeriodStatsView from './period/PeriodStatsView';
+import YearStatsView from './period/YearStatsView';
+import { ReportBanner } from '@/features/month-report';
 import { monthTitle } from '@/shared/lib/dates';
 import PeriodNav from './parts/PeriodNav';
 import CloseBanner from './parts/CloseBanner';
@@ -48,12 +50,18 @@ export default function StatsHome() {
 
   // from a day header in the transactions list: that day's stats
   const route = useRoute<RouteProp<TabParamList, 'Stats'>>();
-  const { day, nonce } = route.params ?? {};
+  const { day, year, nonce } = route.params ?? {};
   useEffect(() => {
     if (day === undefined) return;
     setKind('day');
     setAnchor(new Date(day * 1000));
   }, [day, nonce]);
+  // «Итоги 2026» past its stories: the year's stats
+  useEffect(() => {
+    if (year === undefined) return;
+    setKind('year');
+    setAnchor(new Date(year, 6, 1));
+  }, [year, nonce]);
 
   const ym = ymOf(period.year, period.month);
   // the stats go some months ahead: nothing spent yet, their plans made in advance
@@ -111,6 +119,8 @@ export default function StatsHome() {
       {/* the 1st to the 3rd: a month over to close */}
       <CloseBanner />
       <PlanAlert currency={currency} />
+      {/* a fresh report (the 24th to the 7th): its stories */}
+      <ReportBanner />
 
       {byPeriod && range ? (
         <PeriodNav
@@ -126,7 +136,9 @@ export default function StatsHome() {
       )}
 
       <View style={styles.body}>
-        {byPeriod && range ? (
+        {/* a year: its report on one page */}
+        {byPeriod && range && kind === 'year' ? <YearStatsView key={range.from} range={range} /> : null}
+        {byPeriod && range && kind !== 'year' ? (
           <PeriodStatsView
             key={`${range.from}-${range.to}`}
             range={range}

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import type { Currency } from '@/db/fx';
 import { MonthReport, monthReport } from '@/db/report';
 import { categoryLabel, listCategories } from '@/db/categories';
 import { currentYm, fundForecasts, ymBefore } from '@/db/plans';
@@ -22,9 +23,13 @@ async function lateFunds(ym: string): Promise<LateFund[]> {
   });
 }
 
-/** The report of `ym` (null = none yet), reloaded when operations or plans change; `failed` with `load` to try again. */
-export function useMonthReport(ym: string | null) {
-  const currency = useDisplayCurrency();
+/**
+ * The report of `ym` (null = none yet), reloaded when operations or plans change; `failed` with `load` to try again.
+ * In `shown` (a report's page: the currency picked), else the system one.
+ */
+export function useMonthReport(ym: string | null, shown?: Currency) {
+  const system = useDisplayCurrency();
+  const currency = shown ?? system;
   const [report, setReport] = useState<MonthReport | null>(null);
   const [late, setLate] = useState<LateFund[]>([]);
   const latest = useLatestRequest();

@@ -5,13 +5,18 @@ import { yearTable } from '../../model/yearView';
 import { y } from './styles';
 
 /** «Месяц за месяцем»: «Пришло / Потрачено / Отложено / %», «Итого», «Сред.», ▲▼; a tap on a month — its report. */
-export default function YearTable({ r, onMonth }: { r: YearReport; onMonth: (ym: string) => void }) {
+/** `page`: under the bars of «По месяцам» — no title of its own */
+export default function YearTable({ r, onMonth, page }: { r: YearReport; onMonth: (ym: string) => void; page?: boolean }) {
   const t = yearTable(r);
   const head = ['', 'Пришло', 'Потрачено', 'Отложено', '%'];
   return (
     <View>
-      <Text style={y.title}>Месяц за месяцем</Text>
-      <Text style={y.caption}>Нажмите на месяц — его отчёт</Text>
+      {page ? null : (
+        <>
+          <Text style={y.title}>Месяц за месяцем</Text>
+          <Text style={y.caption}>Нажмите на месяц — его отчёт</Text>
+        </>
+      )}
       <View style={y.tr}>
         {head.map((h, i) => <Text key={h || 'm'} style={[y.td, y.th, i === 0 && y.tdName, i === 4 && y.tdPct]}>{h}</Text>)}
       </View>

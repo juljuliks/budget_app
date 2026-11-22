@@ -136,7 +136,7 @@ describe('8.2 the month\'s report on the 1st', () => {
     expect(monthCalls()).toEqual([]);
     expect(notifee.cancelTriggerNotification).toHaveBeenCalledWith('report_2026-10');
   });
-  test('8.2.4 «Итоги 2026» at 10:00 on 1 January: what the year put aside; its tap — the year\'s stories', async () => {
+  test('8.2.4 «Итоги 2026» at 10:00 on 1 January: what the year put aside; its tap — the year\'s stats (past its stories)', async () => {
     await freshDb(); await planned(); await done();
     await scheduleMonthReports();
     const year = (notifee.createTriggerNotification as jest.Mock).mock.calls.filter(([n]) => n.id === 'year_2026');
@@ -147,12 +147,14 @@ describe('8.2 the month\'s report on the 1st', () => {
     expect(new Date(trigger.timestamp)).toEqual(new Date(2027, 0, 1, 10));
     await openApp(planned);
     await act(() => handleNotificationAction({ id: 'month_report', notification: { data: { kind: 'year', year: '2026' } } }));
-    expect(await screen.findByText('Ваш 2026 в цифрах')).toBeTruthy();
+    // past its stories (24 December — 7 January): the year's stats
+    expect(await screen.findByTestId('year-stats')).toBeTruthy();
   });
   test('its tap: the stats with the report', async () => {
     await openApp(planned);
     await act(() => handleNotificationAction({ id: 'month_report', notification: { data: { ym: '2026-09' } } }));
-    expect(await screen.findByText('Отчёт · Сентябрь 2026')).toBeTruthy();
+    // past its stories (the tests' 15 October): its page
+    expect(await screen.findByTestId('month-report')).toBeTruthy();
   });
   test('a limit\'s tap: the stats', async () => {
     await openApp(planned);

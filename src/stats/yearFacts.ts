@@ -19,7 +19,7 @@ export type TopCategory = { id: number; sum: number; perMonth: number | null; ov
  * The biggest categories of the year (`skip` — the funds', the transfers'): a month on average and how often it went past
  * its plan — over the `full` months (as the stats' «В среднем … в месяц»: over, with data from the 1st).
  */
-export function topCategories(rows: YearRow[], limits: MonthLimit[], full: string[], skip: Set<number>, n = 5): TopCategory[] {
+export function topCategories(rows: YearRow[], limits: MonthLimit[], full: string[], skip: Set<number>, n: number | null = 5): TopCategory[] {
   const sums = new Map<number, number>();
   const byMonth = new Map<string, number>();
   for (const r of rows) {
@@ -28,7 +28,7 @@ export function topCategories(rows: YearRow[], limits: MonthLimit[], full: strin
     const k = `${ymOfTs(r.occurred_at)}|${r.category_id}`;
     byMonth.set(k, (byMonth.get(k) ?? 0) + r.value);
   }
-  return [...sums].filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).slice(0, n).map(([id, sum]) => {
+  return [...sums].filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).slice(0, n ?? sums.size).map(([id, sum]) => {
     const own = limits.filter((l) => l.category_id === id && l.limit > 0 && full.includes(l.ym));
     const inFull = full.reduce((a, ym) => a + (byMonth.get(`${ym}|${id}`) ?? 0), 0);
     return {

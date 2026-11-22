@@ -4,7 +4,7 @@
 // a budget of 3 000 ₾, 1 850 ₾ spent.
 import { act, waitFor } from '@testing-library/react-native';
 import { getSetting } from '../../src/db/settings';
-import { openApp, screen, tap, texts, openHistoryPage } from './app';
+import { openApp, screen, tap, texts, openHistoryPage, back } from './app';
 import { buy, category, on, planned } from '../e2e/seeds';
 import { getDb } from '../../src/db';
 import { answerClose, finishClose, setFund, setPlanAmount, setPlanBudget, setSplit } from '../../src/db/plans';
@@ -37,7 +37,8 @@ describe('6.6 month close', () => {
     expect(await screen.findByText('Шаг 2 из 2 · Сбережения')).toBeTruthy();
     await tap(m('Да, 850 ₾'));
     await tap('Отчёт за сентябрь');
-    expect(await screen.findByText('Отчёт · Сентябрь 2026')).toBeTruthy();
+    // past its stories (the tests' 15 October): its page
+    expect(await screen.findByTestId('month-report')).toBeTruthy();
     expect(await (await getDb()).get("SELECT p.limit_minor AS l, p.kind FROM plan_items p JOIN categories c ON c.id = p.category_id WHERE p.ym = '2026-10' AND c.name = 'Ремонт'"))
       .toEqual({ l: 30000, kind: 'fixed' });
   });
@@ -59,7 +60,8 @@ describe('6.6 month close', () => {
     expect(screen.getByText('Разложили')).toBeTruthy();
     expect(disabled('Отчёт за сентябрь')).toBe(false);
     await tap('Отчёт за сентябрь');
-    expect(await screen.findByText('Отчёт · Сентябрь 2026')).toBeTruthy();
+    // past its stories (the tests' 15 October): its page
+    expect(await screen.findByTestId('month-report')).toBeTruthy();
     expect(await closedAt()).not.toBeNull();
   });
 
@@ -154,9 +156,11 @@ describe('6.6 month close', () => {
     expect(await screen.findByText('Итоги · Сентябрь 2026')).toBeTruthy();
     await tap(/Перенести на октябрь$/);
     await tap('Отчёт за сентябрь');
-    expect(await screen.findByText('Отчёт · Сентябрь 2026')).toBeTruthy();
+    // past its stories (the tests' 15 October): its page
+    expect(await screen.findByTestId('month-report')).toBeTruthy();
     expect(await closedAt()).not.toBeNull();
-    // the report over the History: closed under it
+    // the report's page over the History: back to it, closed there
+    back();
     expect(await screen.findByText('Изменить итоги ›')).toBeTruthy();
     expect(screen.queryByText('Итоги не подведены: удалось ли отложить, взносы в копилки')).toBeNull();
     expect(screen.getAllByText('Перенесено').length).toBeGreaterThan(0);
@@ -174,7 +178,8 @@ describe('6.6 month close', () => {
     await tap('Статистика');
     await openHistoryPage();
     await tap('Отчёт за месяц ›');
-    expect(await screen.findByText('Отчёт · Сентябрь 2026')).toBeTruthy();
+    // past its stories (the tests' 15 October): its page
+    expect(await screen.findByTestId('month-report')).toBeTruthy();
     // 3 000 − 1 850 spent: 1 150 — 850 left and the fund's 300, as planned; 500 put aside: the fund 200, 💰 300
     // the amounts here are shown masked-ready: compared with plain spaces
     const t = texts().map((x) => x.replace(/\s/g, ' '));

@@ -5,7 +5,8 @@ import type { DayRange } from '../lib/dateRange';
 
 export type TabParamList = {
   /** day: open the stats of that day (a day header in the transactions list), its local midnight in unix seconds */
-  Stats: { day?: number; nonce?: number } | undefined;
+  /** `day`: that day's stats (a day of the operations); `year`: that year's («Итоги 2026» past its stories) */
+  Stats: { day?: number; year?: number; nonce?: number } | undefined;
   /**
    * open filtered by a category ('none' = uncategorized), within a range (the stats month); nonce re-applies the same one.
    * from: the tab we came from (not via the tab bar) -> a back button in the header returns there.
@@ -51,6 +52,8 @@ export type RootStackParamList = {
   Category: { id: number };
   /** plan and spending by months, from the stats */
   History: undefined;
+  /** a month's report as a page («Отчёт за месяц ›»; its stories — only while it is fresh) */
+  MonthReport: { ym: string };
   /** «Динамика трат»: the categories spent more / less than usual this week or month (the icon by the eye in the stats) */
   Trends: undefined;
   /** one category's dynamics (a row of «Динамика трат», «Динамика трат» on the category's page) */
@@ -100,6 +103,7 @@ export function flushPendingNavigation() {
 export const openTransaction = (id: number) => navigateWhenReady({ name: 'Operation', params: { id } }, true);
 export const openMerchant = (key: string) => navigateWhenReady({ name: 'Merchant', params: { key } }, true);
 export const openCategory = (id: number) => navigateWhenReady({ name: 'Category', params: { id } }, true);
+export const openMonthReportPage = (ym: string) => navigateWhenReady({ name: 'MonthReport', params: { ym } }, true);
 export const openHistory = () => navigateWhenReady({ name: 'History', params: undefined });
 export const openTrends = () => navigateWhenReady({ name: 'Trends', params: undefined });
 export const openCategoryTrend = (id: number) => navigateWhenReady({ name: 'CategoryTrend', params: { id } }, true);

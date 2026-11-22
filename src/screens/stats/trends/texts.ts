@@ -26,10 +26,3 @@ export const MERCHANT_PERIODS = [['month', 'Месяц'], ['year', 'Год'], ['
 export const NO_MERCHANTS = 'Трат у мерчантов нет';
 export const TAP_BAR = 'Нажмите на столбик — сумма месяца';
 export const SPENT_WHEN = 'в этом месяце';
-/** a category's purchases on a month's calendar, under «Импульсивные покупки» */
-export const BY_DAY = 'Покупки по дням';
-export const BY_DAY_HINT = 'Нажмите на день с отметкой — покупки дня';
-export const NO_PURCHASES = 'Покупок не было';
-/** a purchase's answer in a tapped day's card */
-export const MARK_TEXTS = { impulsive: 'Импульсивная', intentional: 'Обдуманная', unanswered: 'Без ответа — ответить в операции' } as const;
-export const MARK_LEGEND = { impulsive: 'импульсивная', intentional: 'обдуманная', unanswered: 'без ответа' } as const;

@@ -55,5 +55,7 @@ export const styles = StyleSheet.create({
   numberCell: { flex: 1, gap: 2 },
   numberLabel: { fontSize: 13, color: colors.muted },
   numberValue: { fontSize: 15, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
+  // a block on a report's page: under its section, no card
+  pageBlock: { gap: 6, paddingTop: 6 },
   savedInline: { fontSize: 14, fontWeight: '600', color: SAVINGS },
 });

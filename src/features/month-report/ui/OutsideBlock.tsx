@@ -7,22 +7,25 @@ import { plural } from '@/shared/lib/format';
 import Masked from '@/shared/ui/Masked';
 import type { ReportView } from '../model/reportView';
 import { CategoryLine, Line } from './Lines';
+import ReportBlock from './ReportBlock';
 import { styles } from './styles';
 
-type Props = { v: ReportView; currency: Currency; onPlan: (t: PlanAmountTarget) => void; onSortOut: () => void };
+type Props = { v: ReportView; currency: Currency; onPlan: (t: PlanAmountTarget) => void; onSortOut: () => void; page?: boolean };
 
 /**
  * «Вне плана сверх доли» and what else kept money from being put aside: its biggest categories with «＋ В план», «🔒 Взято
  * из отложенного», payments not paid, operations without a category («Разметить»), less than the month before.
  */
-export default function OutsideBlock({ v, currency, onPlan, onSortOut }: Props) {
+export default function OutsideBlock({ v, currency, onPlan, onSortOut, page }: Props) {
   const { r, money, minus } = v;
+  const head = r.unplannedOver > 0 || r.review ? (r.unplannedOver > 0 ? 'Вне плана сверх доли' : 'Вне плана') : null;
+  const headValue = <Text style={[styles.blockValue, styles.bad]}>{minus(r.unplannedOver > 0 ? r.unplannedOver : r.unplannedSpent)}</Text>;
   return (
-    <View style={styles.block}>
+    <ReportBlock page={page} title={page ? head ?? 'Вне плана' : undefined} right={page && head ? headValue : null}>
       {/* spending outside the plan, one group: past its share (what it costs) and how much of all spending it is */}
       {r.unplannedOver > 0 || r.review ? (
         <>
-          {r.unplannedOver > 0 ? (
+          {page ? null : r.unplannedOver > 0 ? (
             <Line label="Вне плана сверх доли" value={minus(r.unplannedOver)} strong valueStyle={styles.bad} info={v.unplannedInfo} />
           ) : (
             <Line label="Вне плана" value={minus(r.unplannedSpent)} strong valueStyle={styles.bad} />
@@ -65,6 +68,6 @@ export default function OutsideBlock({ v, currency, onPlan, onSortOut }: Props) 
           Без перерасхода отложили бы <Masked style={styles.blockCaption}>{money(Math.max(0, r.saved) + r.couldSaveMore)}</Masked>
         </Text>
       ) : null}
-    </View>
+    </ReportBlock>
   );
 }

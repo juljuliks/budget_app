@@ -1,6 +1,7 @@
 import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
-import { openMonthClose, openMonthReport } from '@/shared/navigation/sheets';
+import { openMonthClose, } from '@/shared/navigation/sheets';
+import { openReport } from '@/shared/navigation/reports';
 import { Currency } from '@/db/fx';
 import { currentYm, HistoryMonth, parseYm } from '@/db/plans';
 import Meter from '@/shared/ui/Meter';
@@ -86,7 +87,7 @@ export default function MonthRow({ month, expanded, onToggle, currency }: Props)
       {/* a month that is over and had a plan (a budget or a category with an amount); its "Итоги" can be changed */}
       {month.ym < currentYm() && (month.budget_minor !== null || month.planned_minor > 0) ? (
         <View style={styles.links}>
-          <TouchableOpacity style={styles.reportLink} onPress={() => openMonthReport(month.ym)} hitSlop={6}>
+          <TouchableOpacity style={styles.reportLink} onPress={() => openReport(month.ym)} hitSlop={6}>
             <Text style={styles.reportText}>Отчёт за месяц ›</Text>
           </TouchableOpacity>
           {month.close?.closed ? (

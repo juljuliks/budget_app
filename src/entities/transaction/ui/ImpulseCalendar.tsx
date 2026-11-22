@@ -7,8 +7,7 @@ import { gridMonthKey, gridMonthOf, gridStyles, MonthHeader, monthWeeks, shiftGr
 import { chart, colors } from '@/shared/theme/theme';
 import { useHideAmounts } from '@/shared/settings/hideAmounts';
 import { DayPurchase, firstMonth, Mark, monthTally } from '../model/impulseCalendarView';
-import { BY_DAY, BY_DAY_HINT, MARK_LEGEND, NO_PURCHASES } from '../texts';
-import { detailStyles as s } from './detailStyles';
+import { BY_DAY, BY_DAY_HINT, MARK_LEGEND, NO_PURCHASES } from '../model/impulseTexts';
 import ImpulseDayCard from './ImpulseDayCard';
 
 const MAX_MARKS = 3;
@@ -18,15 +17,21 @@ function MarkDot({ mark }: { mark: Mark }) {
   return <View style={[styles.dot, mark === 'impulsive' ? styles.impulsive : mark === 'intentional' ? styles.intentional : styles.unanswered]} />;
 }
 
-type Props = { days: Map<DayKey, DayPurchase[]>; today: DayKey; money: (minor: number) => string };
+type Props = {
+  days: Map<DayKey, DayPurchase[]>; today: DayKey; money: (minor: number) => string;
+  /** one month only ('YYYY-MM': the month's report) — no arrows; none — the current one, back to the first purchase's */
+  month?: string;
+};
 
 /**
- * «Покупки по дням»: a month of the category's purchases, a mark under a day per purchase (impulsive, considered, no
- * answer); the arrows go back to the month of the first one. A tap on a marked day — its purchases under the calendar.
+ * «Покупки по дням»: a month of purchases (a category's «Динамика»; all the categories asked about — the month's report),
+ * a mark under a day per purchase (impulsive, considered, no answer); the arrows go back to the month of the first one
+ * (`month` given — that one only). A tap on a marked day — its purchases under the calendar.
  */
-export default function ImpulseCalendar({ days, today, money }: Props) {
+export default function ImpulseCalendar({ days, today, money, month: only }: Props) {
   const hidden = useHideAmounts();
-  const now = useMemo(() => gridMonthOf(new Date(Number(today.slice(0, 4)), Number(today.slice(5, 7)) - 1, 1)), [today]);
+  const start = only ?? today.slice(0, 7);
+  const now = useMemo(() => gridMonthOf(new Date(Number(start.slice(0, 4)), Number(start.slice(5, 7)) - 1, 1)), [start]);
   const [month, setMonth] = useState(now);
   const [picked, setPicked] = useState<DayKey | null>(null);
   const ym = gridMonthKey(month);
@@ -37,10 +42,10 @@ export default function ImpulseCalendar({ days, today, money }: Props) {
   const shift = (delta: number) => { setMonth((m) => shiftGridMonth(m, delta)); setPicked(null); };
   const pickedList = picked ? days.get(picked) : undefined;
   return (
-    <View style={s.block}>
-      <Text style={s.label}>{BY_DAY}</Text>
+    <View style={styles.block}>
+      <Text style={styles.label}>{BY_DAY}</Text>
       <View style={styles.calendar}>
-        <MonthHeader month={month} onShift={shift} canPrev={ym > firstMonth(days, today)} canNext={ym < gridMonthKey(now)} subtitle={subtitle} />
+        <MonthHeader month={month} onShift={shift} canPrev={!only && ym > firstMonth(days, today)} canNext={!only && ym < gridMonthKey(now)} subtitle={subtitle} />
         {weeks.map((week, r) => (
           <View key={r} style={gridStyles.row}>
             {week.map((day, i) => {
@@ -66,12 +71,15 @@ export default function ImpulseCalendar({ days, today, money }: Props) {
           {MARKS.map((m) => <View key={m} style={styles.legendItem}><MarkDot mark={m} /><Text style={styles.legendText}>{MARK_LEGEND[m]}</Text></View>)}
         </View>
       </View>
-      {picked && pickedList ? <ImpulseDayCard day={picked} purchases={pickedList} money={money} /> : <Text style={s.point}>{BY_DAY_HINT}</Text>}
+      {picked && pickedList ? <ImpulseDayCard day={picked} purchases={pickedList} money={money} /> : <Text style={styles.point}>{BY_DAY_HINT}</Text>}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  block: { paddingVertical: 12, borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
+  label: { fontSize: 13, color: colors.muted },
+  point: { fontSize: 14, color: colors.text, marginTop: 10, minHeight: 20 },
   calendar: { marginTop: 6 },
   cell: { height: 46, justifyContent: 'flex-start', paddingTop: 2 },
   num: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },

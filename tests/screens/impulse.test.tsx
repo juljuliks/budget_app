@@ -1,7 +1,7 @@
 // 7.1.6 and 5.8.7: impulsive purchases in the month's report and in a category's «Динамика»; «Покупка: без ответа» in
 // the operations. Today: Thursday 15 October 2026 (setup.ts).
 import { waitFor } from '@testing-library/react-native';
-import { openApp, openHistoryPage, screen, tap, texts, openMenu, toStory } from './app';
+import { openApp, openHistoryPage, screen, tap, texts, openMenu, toStory, openStories } from './app';
 import { buy, on, planned } from '../e2e/seeds';
 import { getDb } from '../../src/db';
 import { findCategoryByName } from '../../src/db/categories';
@@ -39,8 +39,7 @@ describe('7.1.6 the report: «Импульсивные покупки»', () => 
     await openApp(impulsive);
     await tap('Статистика');
     await openHistoryPage();
-    await tap('Отчёт за месяц ›');
-    await screen.findByText('Отчёт · Сентябрь 2026');
+    await openStories('2026-09');
     // the last story
     await toStory('Импульсивные покупки');
   });
@@ -55,6 +54,13 @@ describe('7.1.6 the report: «Импульсивные покупки»', () => 
     expect(after('☕️ Кафе и рестораны', 2)).toEqual(['1 из 2 импульсивные · перерасход 100 ₾, из них 100 ₾ — импульсивные', '350 ₾']);
     expect(after(/^👕 Одежда/, 2)).toEqual(['1 из 1 импульсивные', '100 ₾']);
     expect(texts()).toContain('👕 Одежда без плана ');
+  });
+
+  test('7.1.7 «Покупки по дням»: the month\'s purchases asked about on its calendar, a day\'s card', async () => {
+    expect(await screen.findByText('Покупки по дням')).toBeTruthy();
+    // WOLT (impulsive) is on the 6th of September in the seed
+    await tap('#day-2026-09-06');
+    expect(await screen.findByText('WOLT')).toBeTruthy();
   });
 
   test('«Отметить ещё 1 покупку ›»: the month\'s purchases with no answer, «Покупка: без ответа»', async () => {

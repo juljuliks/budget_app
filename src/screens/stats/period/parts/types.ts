@@ -8,4 +8,6 @@ export type Handlers = {
   hidden: boolean;
   openInfo: (i: Info) => void;
   openTransactions: (categoryId: number | null) => void;
+  /** under a category's line: more about it («533 ₾ в месяц · перерасход в 0 из 2 месяцев» — the year's stats) */
+  noteOf?: (categoryId: number | null) => string | null;
 };

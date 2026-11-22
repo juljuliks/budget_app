@@ -6,10 +6,12 @@ import Masked from '@/shared/ui/Masked';
 import Meter from '@/shared/ui/Meter';
 import { colors } from '@/shared/theme/theme';
 import { fundNote } from '../../model/yearView';
+import SectionBand from '@/shared/ui/SectionBand';
+import { PAGE_INSET } from '../ReportBlock';
 import { y } from './styles';
 
 /** «Сбережения: план и факт» of the closed months, and the funds with what each has. */
-export default function YearSavings({ r }: { r: YearReport }) {
+export default function YearSavings({ r, page }: { r: YearReport; page?: boolean }) {
   const money = (v: number) => formatWithCurrency(Math.round(v), r.currency);
   const s = r.savings;
   const rows: Array<[string, { plan: number; fact: number }]> = s ? [
@@ -17,10 +19,11 @@ export default function YearSavings({ r }: { r: YearReport }) {
   ] : [];
   return (
     <View style={y.gap}>
-      <Text style={y.title}>Сбережения: план и факт</Text>
+      {page ? <SectionBand inset={PAGE_INSET} title="Сбережения: план и факт" right={s ? <Text style={y.bandRight}>{`по итогам ${s.months} мес.`}</Text> : null} />
+        : <Text style={y.title}>Сбережения: план и факт</Text>}
       {s ? (
         <>
-          <Text style={y.caption}>{`По итогам ${s.months} мес.`}</Text>
+          {page ? null : <Text style={y.caption}>{`По итогам ${s.months} мес.`}</Text>}
           <View style={y.tr}><Text style={[y.td, y.th, y.tdName]} /><Text style={[y.td, y.th]}>План</Text><Text style={[y.td, y.th]}>Факт</Text></View>
           {rows.filter(([, v]) => v.plan > 0 || v.fact > 0).map(([name, v]) => (
             <View key={name} style={y.tr}>

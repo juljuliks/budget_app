@@ -5,7 +5,7 @@ import { openTransaction } from '@/shared/navigation/navigation';
 import Masked from '@/shared/ui/Masked';
 import { chart, colors } from '@/shared/theme/theme';
 import { dayCardTitle, DayPurchase, Mark } from '../model/impulseCalendarView';
-import { MARK_TEXTS } from '../texts';
+import { MARK_TEXTS } from '../model/impulseTexts';
 
 const KIND_COLOR: Record<Mark, string> = { impulsive: colors.impulseText, intentional: chart.meterFill, unanswered: colors.muted };
 

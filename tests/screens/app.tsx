@@ -181,3 +181,20 @@ export async function toStory(text: string | RegExp, pages = 7) {
   }
   expect(screen.queryAllByText(text).length).toBeGreaterThan(0);
 }
+
+/** A month's report as stories (fresh, as from its banner or notification): the tests' today is past the window. */
+export async function openStories(ym: string) {
+  const { openMonthReport } = require('../../src/shared/navigation/sheets');
+  act(() => openMonthReport(ym));
+  const [y, m] = ym.split('-').map(Number);
+  const { monthTitle } = require('../../src/shared/lib/dates');
+  await screen.findByText(`Отчёт · ${monthTitle(y, m - 1)}`);
+}
+
+/** «Итоги …» as stories (fresh: 24 December — 7 January; the tests' today is not). */
+export async function openYearStories(year: number) {
+  const { openYearReport } = require('../../src/shared/navigation/sheets');
+  act(() => openYearReport(year));
+  await screen.findByText(`Итоги ${year}`);
+}
+

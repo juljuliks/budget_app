@@ -9,6 +9,7 @@ import { SettingsScreen } from '@/screens/settings';
 import { OperationScreen } from '@/screens/operation';
 import { MerchantScreen } from '@/screens/merchant';
 import { CategoryScreen } from '@/screens/category';
+import { MonthReportScreen } from '@/screens/month-report';
 import { CategoryTrendScreen, HistoryScreen, TRENDS_TITLE, TrendsScreen } from '@/screens/stats';
 import MainTabs from './MainTabs';
 import { ModalHost } from './ModalHost';
@@ -39,6 +40,7 @@ export default function App() {
         <Stack.Screen name="Merchant" component={MerchantScreen} options={{ title: '' }} />
         <Stack.Screen name="Category" component={CategoryScreen} options={{ title: '' }} />
         <Stack.Screen name="History" component={HistoryScreen} options={{ title: 'История по месяцам' }} />
+        <Stack.Screen name="MonthReport" component={MonthReportScreen} options={{ title: 'Отчёт' }} />
         <Stack.Screen name="Trends" component={TrendsScreen} options={{ title: TRENDS_TITLE }} />
         <Stack.Screen name="CategoryTrend" component={CategoryTrendScreen} options={{ title: '' }} />
       </Stack.Navigator>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Text, View } from 'react-native';
 import { navigateWhenReady } from '@/shared/navigation/navigation';
-import { openMonthReport } from '@/shared/navigation/sheets';
+import { openReport } from '@/shared/navigation/reports';
 import Loading from '@/shared/ui/Loading';
 import StoryPager from '@/shared/ui/StoryPager';
 import { useYearReport } from './model/useYearReport';
@@ -30,8 +30,8 @@ export default function YearReportSheet({ year, onClose }: { year: number | null
   const money = (v: number) => formatWithCurrency(Math.round(v), r?.currency ?? 'GEL');
   const pages = !r ? [] : r.count === 0 ? [<Text key="none" style={styles.hint}>{`Данных за ${r.year} пока нет.`}</Text>] : [
     <YearNumbers key="numbers" r={r} />,
-    <YearBars key="bars" r={r} onMonth={openMonthReport} />,
-    <YearTable key="table" r={r} onMonth={openMonthReport} />,
+    <YearBars key="bars" r={r} onMonth={openReport} />,
+    <YearTable key="table" r={r} onMonth={openReport} />,
     ...(r.savings || r.fundsNow.length ? [<YearSavings key="savings" r={r} />] : []),
     ...(r.top.length ? [<YearWhere key="where" r={r} />] : []),
     ...(r.impulse ? [<View key="impulse"><ImpulseBlock m={{ ...r.impulse, categories: [] }} money={money} onMark={markImpulse} /></View>] : []),

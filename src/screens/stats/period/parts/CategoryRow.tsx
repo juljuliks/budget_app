@@ -54,6 +54,7 @@ export function CategoryRow({ v, h, c, noBar = false, withType = v.byLimits }: P
         : plan?.kind === 'limit' ? <MonthLine {...line} plan={plan} />
           : plan ? <FixedLine {...line} plan={plan} />
             : <Text style={styles.share}>{formatPercent(c.spent_minor, v.stats.spent_minor)} всех трат</Text>}
+      {h.noteOf?.(c.category_id) ? <Text style={styles.share}>{h.noteOf(c.category_id)}</Text> : null}
     </TouchableOpacity>
   );
 }

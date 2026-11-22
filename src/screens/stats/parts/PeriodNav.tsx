@@ -10,12 +10,14 @@ type Props = {
   onNext?: () => void;
   /** the arrow to the future: off once at today / the last month allowed */
   nextDisabled?: boolean;
-  /** "месяц" or "период", for the arrows' labels */
-  unit: 'месяц' | 'период';
+  /** the arrow to the past: off at the first one there is */
+  prevDisabled?: boolean;
+  /** "месяц", "год" or "период", for the arrows' labels */
+  unit: 'месяц' | 'год' | 'период';
 };
 
 /** "‹ Октябрь 2026 ›": the month or the period shown, with arrows to the previous / next one. */
-export default function PeriodNav({ label, onPick, onPrev, onNext, nextDisabled, unit }: Props) {
+export default function PeriodNav({ label, onPick, onPrev, onNext, nextDisabled, prevDisabled, unit }: Props) {
   if (onPick) {
     return (
       <View style={styles.row}>
@@ -25,11 +27,11 @@ export default function PeriodNav({ label, onPick, onPrev, onNext, nextDisabled,
       </View>
     );
   }
-  const prev = unit === 'месяц' ? 'Предыдущий месяц' : 'Предыдущий период';
-  const next = unit === 'месяц' ? 'Следующий месяц' : 'Следующий период';
+  const prev = unit === 'месяц' ? 'Предыдущий месяц' : unit === 'год' ? 'Предыдущий год' : 'Предыдущий период';
+  const next = unit === 'месяц' ? 'Следующий месяц' : unit === 'год' ? 'Следующий год' : 'Следующий период';
   return (
     <View style={styles.row}>
-      <TouchableOpacity onPress={onPrev} hitSlop={12} accessibilityLabel={prev}><Text style={styles.arrow}>‹</Text></TouchableOpacity>
+      <TouchableOpacity onPress={onPrev} hitSlop={12} disabled={prevDisabled} accessibilityLabel={prev}><Text style={[styles.arrow, prevDisabled && styles.arrowDisabled]}>‹</Text></TouchableOpacity>
       <Text style={styles.label}>{label}</Text>
       <TouchableOpacity onPress={onNext} hitSlop={12} disabled={nextDisabled} accessibilityLabel={next}>
         <Text style={[styles.arrow, nextDisabled && styles.arrowDisabled]}>›</Text>

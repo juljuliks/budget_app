@@ -12,6 +12,8 @@ export const styles = StyleSheet.create({
   content: { paddingHorizontal: 16, paddingBottom: 32 },
   hint: { color: colors.muted, fontSize: 14, textAlign: 'center', marginVertical: 12 },
   month: { paddingBottom: 14 },
+  // a month of the year with nothing to show
+  empty: { opacity: 0.45, paddingBottom: 4 },
   // a grey band across the screen, like the days on the operations
   monthTop: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',

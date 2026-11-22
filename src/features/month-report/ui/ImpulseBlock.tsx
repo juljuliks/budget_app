@@ -3,13 +3,16 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { categoryLabel } from '@/db/categories';
 import type { ImpulseCategory, MonthImpulse } from '@/db/reportImpulse';
 import { IMPULSE_TRIGGERS, MOODS } from '@/domain/moods';
-import { ImpulseShare } from '@/entities/transaction';
+import { ImpulseCalendar, ImpulseShare, purchasesByDay } from '@/entities/transaction';
+import { dayKeyOf } from '@/shared/lib/dateRange';
 import { plural } from '@/shared/lib/format';
 import Masked from '@/shared/ui/Masked';
 import { colors } from '@/shared/theme/theme';
+import ReportBlock from './ReportBlock';
 import { styles as report } from './styles';
 
-type Props = { m: MonthImpulse; money: (minor: number) => string; onMark: () => void };
+/** `month`: the month's report — its purchases on the calendar «Покупки по дням» (the year's — none) */
+type Props = { m: MonthImpulse; money: (minor: number) => string; onMark: () => void; page?: boolean; month?: string };
 
 const purchases = (n: number) => `${n} ${plural(n, ['покупку', 'покупки', 'покупок'])}`;
 
@@ -25,17 +28,13 @@ function categoryNote(c: ImpulseCategory, money: (minor: number) => string): str
  * The month's impulsive purchases: "отмечено N из M", the share, what pushed to them (the moods, the most often one
  * outlined), each category's (one not in the plan — «без плана»), "Отметить ещё N покупок ›".
  */
-export default function ImpulseBlock({ m, money, onMark }: Props) {
+export default function ImpulseBlock({ m, money, onMark, page, month }: Props) {
   const withMood = m.moods.reduce((a, x) => a + x.count, 0);
   const top = m.moods[0];
   const topLabel = top ? MOODS.find((x) => x.id === top.mood)?.label.toLowerCase() : null;
   const left = m.asked - m.answered;
   return (
-    <View style={report.block}>
-      <View style={report.blockHead}>
-        <Text style={report.blockTitle}>Импульсивные покупки</Text>
-        <Text style={report.blockCaption}>отмечено {m.answered} из {m.asked}</Text>
-      </View>
+    <ReportBlock page={page} title="Импульсивные покупки" right={<Text style={report.blockCaption}>отмечено {m.answered} из {m.asked}</Text>}>
       <ImpulseShare s={m} money={money} />
       {top ? (
         <>
@@ -54,6 +53,7 @@ export default function ImpulseBlock({ m, money, onMark }: Props) {
           <Text style={report.blockCaption}>Чаще всего — {topLabel}: {top.count} из {withMood} импульсивных покупок с ответом.</Text>
         </>
       ) : null}
+      {month && m.rows ? <ImpulseCalendar days={purchasesByDay(m.rows)} today={dayKeyOf(new Date())} money={money} month={month} /> : null}
       {m.categories.length ? (
         <>
           <Text style={styles.heading}>По категориям</Text>
@@ -75,7 +75,7 @@ export default function ImpulseBlock({ m, money, onMark }: Props) {
           <Text style={report.link}>Отметить ещё {purchases(left)} ›</Text>
         </TouchableOpacity>
       ) : null}
-    </View>
+    </ReportBlock>
   );
 }
 

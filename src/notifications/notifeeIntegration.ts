@@ -172,10 +172,12 @@ export async function handleNotificationAction(event: ActionEvent) {
     navigateWhenReady({ name: 'Main', params: { screen: 'Stats' } } as never);
     const sheets = require('@/shared/navigation/sheets') as typeof import('@/shared/navigation/sheets');
     // «Итоги года»
-    if (event.notification?.data?.kind === 'year') { sheets.openYearReport(Number(event.notification.data.year)); return; }
+    const reports = require('@/shared/navigation/reports') as typeof import('@/shared/navigation/reports');
+    // «Итоги года»: stories while fresh, else the year's stats
+    if (event.notification?.data?.kind === 'year') { reports.openYear(Number(event.notification.data.year)); return; }
     if (!ym) return;
     const open = event.notification?.data?.kind === 'close' && !(await monthClose(ym)).closed;
-    if (open) sheets.openMonthClose(ym); else sheets.openMonthReport(ym);
+    if (open) sheets.openMonthClose(ym); else reports.openReport(ym);
     return;
   }
   // a fund not making it by its date: its category's page

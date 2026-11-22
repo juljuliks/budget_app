@@ -6,14 +6,15 @@ import { yearLines } from '../../model/yearView';
 import { y } from './styles';
 
 /** «Ваш 2026 в цифрах»: put aside, its share of the budget against the goal, the pace; what came in, was spent, the funds, the plan. */
-export default function YearNumbers({ r }: { r: YearReport }) {
+export default function YearNumbers({ r, page }: { r: YearReport; page?: boolean }) {
   const l = yearLines(r);
   const cells: Array<[string, string]> = [
     ['Пришло', l.money(r.income)], ['Потрачено', l.money(r.spent)], ['В копилки', l.money(r.funds)], ['В плане', l.inPlan],
   ];
   return (
     <View style={y.gap}>
-      <Text style={[y.title, y.center]}>{`Ваш ${r.year} в цифрах`}</Text>
+      {/* the year's stats: on top of the page, the year by the arrows over it */}
+      {page ? null : <Text style={[y.title, y.center]}>{`Ваш ${r.year} в цифрах`}</Text>}
       <Text style={[y.caption, y.center]}>{l.savedCaption}</Text>
       <Masked style={y.big}>{l.saved(r.saved)}</Masked>
       {l.ofBudget ? <Text style={[y.caption, y.center]}>{l.ofBudget}</Text> : null}

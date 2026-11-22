@@ -1,6 +1,6 @@
 // 7: the month's report and the history. Today: 15 October 2026; September planned, August not.
 import { waitFor, within } from '@testing-library/react-native';
-import { openApp, screen, tap, texts, openHistoryPage, toStory, rowOf } from './app';
+import { openApp, screen, tap, texts, openHistoryPage, toStory, rowOf, openStories, openYearStories } from './app';
 import { buy, on, planned } from '../e2e/seeds';
 import { getDb } from '../../src/db';
 
@@ -62,8 +62,7 @@ describe('7.2 the history', () => {
 describe('7.1 the report — stories', () => {
   beforeEach(async () => {
     await openHistory();
-    await tap('Отчёт за месяц ›');
-    await screen.findByText('Отчёт · Сентябрь 2026');
+    await openStories('2026-09');
   });
 
   test('7.1.2 «Отложено»: what was put aside, a year of it, its share of the budget, the month in numbers, where it came from', async () => {
@@ -139,7 +138,7 @@ test('7.1.4a «Без категории: N операций» — «Разме�
   await tap('Статистика');
   await openHistoryPage();
   await screen.findByText('Сентябрь 2026');
-  await tap('Отчёт за месяц ›');
+  await openStories('2026-09');
   await toStory('Разметить');
   expect(screen.getByText('Без категории: 1 операция')).toBeTruthy();
   await tap('Разметить');
@@ -151,8 +150,7 @@ test('7.1.4a «Без категории: N операций» — «Разме�
 describe('7.3 «Итоги 2026» — stories', () => {
   beforeEach(async () => {
     await openHistory();
-    // a card with an arrow: «Итоги 2026 ›»
-    await tap('Итоги 2026');
+    await openYearStories(2026);
     await screen.findByText('Ваш 2026 в цифрах');
   });
 
@@ -174,8 +172,9 @@ describe('7.3 «Итоги 2026» — stories', () => {
     expect(rowOf('Декабрь').props.accessibilityState).toMatchObject({ disabled: true });
     // the current month: no report yet
     expect(rowOf(/Октябрь$/).props.accessibilityState).toMatchObject({ disabled: true });
+    // September is past its stories: its page
     await tap(/Сентябрь$/);
-    expect(await screen.findByText('Отчёт · Сентябрь 2026')).toBeTruthy();
+    expect(await screen.findByTestId('month-report')).toBeTruthy();
   });
 
   test('7.3.3 where it went, the last one; no «Запомнилось»; «Готово» closes', async () => {
@@ -187,5 +186,69 @@ describe('7.3 «Итоги 2026» — stories', () => {
     expect(screen.queryByText('Запомнилось')).toBeNull();
     await tap('Готово');
     await waitFor(() => expect(screen.queryByText('Ваш 2026 в цифрах')).toBeNull());
+  });
+});
+
+describe('7.2.6–7.3.7 the reports as pages', () => {
+  test('7.2.6 «История» by years: the year\'s 12 months — «впереди», «нет операций»; ‹ — no year before; the year\'s card', async () => {
+    await openHistory();
+    expect(screen.getByText('2026')).toBeTruthy();
+    expect(screen.getAllByText('впереди').length).toBe(2);
+    expect(screen.getAllByText('нет операций').length).toBeGreaterThan(0);
+    expect(screen.getByLabelText('Предыдущий год').props.accessibilityState).toMatchObject({ disabled: true });
+    expect(screen.getByText('Итоги 2026 — статистика за год')).toBeTruthy();
+  });
+
+  test('7.2.7 «Отчёт за месяц ›» past its stories: the page — the blocks under our sections; no currency to pick', async () => {
+    await openHistory();
+    await tap('Отчёт за месяц ›');
+    expect(await screen.findByTestId('month-report')).toBeTruthy();
+    expect(texts()).toEqual(expect.arrayContaining(['Что можно улучшить', 'Что уже хорошо', 'В сбережения']));
+    // the budget in lari, the system currency lari
+    expect(screen.queryByText(/· бюджет$/)).toBeNull();
+  });
+
+  test('7.2.7 a budget in dollars: «$ USD · бюджет | ₾ GEL · системная», opened in the budget\'s', async () => {
+    await openApp(async () => { await planned(); await (await getDb()).run("UPDATE plan_months SET budget_currency = 'USD' WHERE ym = '2026-09'"); });
+    await tap('Статистика');
+    await openHistoryPage();
+    await tap('Отчёт за месяц ›');
+    expect(await screen.findByText('$ USD · бюджет')).toBeTruthy();
+    expect(screen.getByRole('tab', { name: '$ USD · бюджет', selected: true })).toBeTruthy();
+    await tap('₾ GEL · системная');
+    expect(await screen.findByRole('tab', { name: '₾ GEL · системная', selected: true })).toBeTruthy();
+  });
+
+  test('7.3.7 «Итоги 2026 — статистика за год» past its stories: the year\'s stats — by months, the spending by categories', async () => {
+    await openHistory();
+    await tap('Итоги 2026 — статистика за год');
+    expect(await screen.findByTestId('year-stats')).toBeTruthy();
+    expect(texts()).toEqual(expect.arrayContaining(['По месяцам', 'Траты по категориям', 'Отложено за 3 месяца']));
+    expect(screen.queryByText('Ваш 2026 в цифрах')).toBeNull();
+    expect(screen.getAllByText(/^[\d ]+ ₾ в месяц · (перерасход в \d+ из \d+ месяц(а|ев)|без плана)$/).length).toBeGreaterThan(0);
+  });
+});
+
+describe('7.1.1a a fresh report: the banner over the stats and its stories', () => {
+  const spies: jest.SpyInstance[] = [];
+  afterEach(() => { spies.splice(0).forEach((x) => x.mockRestore()); });
+
+  test('the 24th to the 7th: «Отчёт за сентябрь · Отложено … · ещё 4 дня ›» — its stories; «Отчёт за месяц ›» too', async () => {
+    const w = require('../../src/stats/reportWindow');
+    spies.push(jest.spyOn(w, 'freshMonth').mockReturnValue({ ym: '2026-09', daysLeft: 4 }));
+    spies.push(jest.spyOn(w, 'isMonthFresh').mockImplementation((ym) => ym === '2026-09'));
+    await openApp(planned);
+    await tap('Статистика');
+    expect(await screen.findByText('Отчёт за сентябрь')).toBeTruthy();
+    expect(screen.getByText(/^Отложено [\d ]+ ₾ · ещё 4 дня$/)).toBeTruthy();
+    await tap('Отчёт за сентябрь');
+    expect(await screen.findByText('Отчёт · Сентябрь 2026')).toBeTruthy();
+  });
+
+  test('past it: no banner', async () => {
+    await openApp(planned);
+    await tap('Статистика');
+    await screen.findByLabelText('Добавить в план');
+    expect(screen.queryByText(/^Отчёт за /)).toBeNull();
   });
 });

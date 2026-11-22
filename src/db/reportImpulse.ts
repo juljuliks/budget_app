@@ -1,7 +1,7 @@
 // The month's report: its impulsive purchases ("Импульсивные покупки") — how many of the answered, what pushed to them,
 // each category's against its plan.
 import { Currency } from './fx';
-import { impulseRows } from './impulseStats';
+import { ImpulseRow, impulseRows } from './impulseStats';
 import { monthRange, parseYm } from './plans';
 import type { CategoryStat } from './plans/stats';
 import { impulseByCategory, impulseSummary, ImpulseSummary } from '../stats/impulse';
@@ -14,7 +14,8 @@ export type ImpulseCategory = {
   over: number | null;
 };
 
-export type MonthImpulse = ImpulseSummary & { categories: ImpulseCategory[] };
+/** `rows`: the month's purchases asked about (the calendar «Покупки по дням»; the year's report — none) */
+export type MonthImpulse = ImpulseSummary & { categories: ImpulseCategory[]; rows?: ImpulseRow[] };
 
 /**
  * null — nothing answered this month (no block). `categories`: the month's stats' (names, plan, spending); `overOf`: a
@@ -38,5 +39,5 @@ export async function monthImpulse(ym: string, currency: Currency, categories: C
     });
   }
   list.sort((a, b) => b.impulsiveSum - a.impulsiveSum);
-  return { ...summary, categories: list };
+  return { ...summary, categories: list, rows };
 }

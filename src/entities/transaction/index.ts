@@ -10,3 +10,6 @@ export { SPLIT_COLORS } from './model/splitColors';
 export { default as RecentOperations } from './ui/RecentOperations';
 export { default as ImpulseShare } from './ui/ImpulseShare';
 export { useRecentOperations } from './model/useRecentOperations';
+export { default as ImpulseCalendar } from './ui/ImpulseCalendar';
+export { purchasesByDay } from './model/impulseCalendarView';
+export type { DayPurchase } from './model/impulseCalendarView';

@@ -1,6 +1,6 @@
 // 5.8.10 «Покупки по дням»: a category's purchases by day for the calendar of its «Динамика».
 import type { ImpulseRow } from '../../src/db/impulseStats';
-import { dayCardTitle, firstMonth, monthTally, purchasesByDay } from '../../src/screens/stats/trends/model/impulseCalendarView';
+import { dayCardTitle, firstMonth, monthTally, purchasesByDay } from '../../src/entities/transaction/model/impulseCalendarView';
 
 const row = (tx: number, day: string, value: number, impulse: boolean | null, mood: string | null = null, merchant = 'ZARA'): ImpulseRow =>
   ({ tx, category: 1, day, value, impulse, mood, merchantKey: merchant, merchant });

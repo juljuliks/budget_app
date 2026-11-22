@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import type { CloseStep } from '@/db/plans';
-import { openMonthReport } from '@/shared/navigation/sheets';
+import { openReport } from '@/shared/navigation/reports';
 import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
 import { SheetActions } from '@/shared/ui/Button';
 import Loading from '@/shared/ui/Loading';
@@ -35,7 +35,7 @@ export default function MonthCloseSheet({ ym, onClose }: { ym: string | null; on
   async function report() {
     if (!ym || !(await finish())) return;
     onClose();
-    setTimeout(() => openMonthReport(ym), NEXT_SHEET_MS);
+    setTimeout(() => openReport(ym), NEXT_SHEET_MS);
   }
 
   return (

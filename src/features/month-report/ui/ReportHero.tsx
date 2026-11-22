@@ -1,5 +1,6 @@
 import React from 'react';
 import { Text, View } from 'react-native';
+import { currentYm } from '@/db/plans';
 import { formatWithCurrency } from '@/shared/lib/money';
 import Masked from '@/shared/ui/Masked';
 import type { ReportView } from '../model/reportView';
@@ -49,7 +50,7 @@ export default function ReportHero({ v, onCloseMonth }: { v: ReportView; onClose
   }
   return (
     <View style={styles.hero}>
-      <Text style={styles.caption}>{fact !== null || !r.toSavings ? 'Отложено' : 'В сбережения'}</Text>
+      <Text style={styles.caption}>{fact !== null || !r.toSavings ? 'Отложено' : r.ym >= currentYm() ? 'Пока в сбережения' : 'В сбережения'}</Text>
       <Masked style={styles.heroValue}>{v.savedMoney(fact ?? r.saved)}</Masked>
       {fact !== null ? (
         <Text style={styles.caption}>
