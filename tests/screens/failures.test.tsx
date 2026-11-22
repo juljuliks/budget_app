@@ -1,7 +1,7 @@
 // 9.10: a load that failed — "Не удалось загрузить" and "Повторить" instead of a spinner forever; an operation that's
 // gone. Today: Thursday 15 October 2026 (setup.ts).
 import { act, fireEvent } from '@testing-library/react-native';
-import { openApp, screen, tap, openHistoryPage } from './app';
+import { openApp, screen, tap, openHistoryPage, openMenu } from './app';
 import { ops, planned } from '../e2e/seeds';
 import { getDb } from '../../src/db';
 import { openTransaction } from '../../src/shared/navigation/navigation';
@@ -54,7 +54,7 @@ test('9.10.3: an operation that is gone (an old notification): "Операция
 
 test('9.10.4: a setting that didn\'t save: said in a red toast, the switch back as it was', async () => {
   await openApp(ops);
-  await tap('Настройки');
+  await openMenu('Настройки');
   await screen.findByText('Уведомлять о лимитах');
   jest.spyOn(console, 'error').mockImplementation(() => {});
   await (await getDb()).run('ALTER TABLE app_settings RENAME TO app_settings_off');

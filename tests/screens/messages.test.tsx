@@ -1,7 +1,7 @@
 // 1.7: bank messages no operation came from — "Не распознано", marking one, the template made of it ("Шаблоны
 // сообщений"), hiding such ones. Today: Thursday 15 October 2026 12:00 (setup.ts).
 import { act, waitFor } from '@testing-library/react-native';
-import { openApp, screen, tap, texts } from './app';
+import { openApp, screen, tap, texts, openMenu } from './app';
 import { getDb } from '../../src/db';
 import { ingestSms } from '../../src/ingest/ingest';
 import { listTemplates, listUnparsed } from '../../src/db/messages';
@@ -104,7 +104,7 @@ test('1.7.5: Настройки → «Шаблоны сообщений»: each 
   // back from "Не распознано" to the operations
   expect(await screen.findByText('Всё разобрано.')).toBeTruthy();
   act(() => navigationRef.goBack());
-  await tap('Настройки');
+  await openMenu('Настройки');
   await tap('Шаблоны сообщений');
   expect(await screen.findByText('Не операция · Уведомление TBC')).toBeTruthy();
   expect(screen.getByText('Скрыто: 1 · последнее — сегодня')).toBeTruthy();

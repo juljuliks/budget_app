@@ -98,7 +98,7 @@ export function useSortOut<V>({ incoming, nonce, current, start, restore, clear,
     askAbort(leave);
   }, [askAbort, leave]);
 
-  // any other way out during a sort-out (the tab bar, the gear, a day's stats) asks the same
+  // any other way out during a sort-out (the tab bar, the menu ⋮, a day's stats) asks the same
   useEffect(() => (sortOut ? setLeaveGuard((proceed) => askAbort(() => { abort(); proceed(); })) : undefined), [sortOut, askAbort, abort]);
 
   // nothing left: where they went, and the delete

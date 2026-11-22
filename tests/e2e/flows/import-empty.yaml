@@ -5,8 +5,9 @@ appId: com.budgetapp
     permissions:
       android.permission.READ_SMS: allow
 - extendedWaitUntil:
-    visible: "Настройки"
+    visible: "Меню"
     timeout: 60000
+- tapOn: "Меню"
 - tapOn: "Настройки"
 - tapOn: "Импорт SMS из телефона"
 - tapOn: "Всё время"

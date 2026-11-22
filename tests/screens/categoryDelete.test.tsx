@@ -1,7 +1,7 @@
 // 4.5: deleting a category with operations this month — all to one category, sorted out to several, left halfway.
 // The database checks: what moved, what the past keeps, where the merchants went.
 import { waitFor } from '@testing-library/react-native';
-import { openApp, openSettings, screen, tap } from './app';
+import { openApp, screen, tap, openMenu } from './app';
 import { base } from '../e2e/seeds';
 import { getDb } from '../../src/db';
 
@@ -17,7 +17,7 @@ const deleted = async (name: string) => !!(await q<{ d: number | null }>('SELECT
 
 beforeEach(async () => {
   await openApp(base);
-  await openSettings('Категории');
+  await openMenu('Категории');
   await tap('🛍️ Покупки');
   await tap('Удалить категорию');
   expect(await screen.findByText(/^В этом месяце в «🛍️ Покупки» 4 операции на 360\.00 ₾\. Перед удалением их нужно перенести — в одну категорию или разложить по нескольким\.$/)).toBeTruthy();

@@ -1,6 +1,6 @@
 // 3: the merchants — the list by category, a merchant's card (its category, "Разные категории", deleting), several at once.
 import { fireEvent, waitFor, within } from '@testing-library/react-native';
-import { longPress, openApp, openSettings, rowOf, screen, tap, back } from './app';
+import { longPress, openApp, rowOf, screen, tap, back, openMenu } from './app';
 import { ops } from '../e2e/seeds';
 import { getDb } from '../../src/db';
 
@@ -11,7 +11,7 @@ const opsOf = async (m: string) => (await q<{ c: string | null; s: string | null
 
 beforeEach(async () => {
   await openApp(ops);
-  await openSettings('Мерчанты');
+  await openMenu('Мерчанты');
   await screen.findByPlaceholderText('Найти мерчанта');
 });
 

@@ -201,3 +201,31 @@ export const PlusIcon = ({ color, size = 22 }: P) => (
     <Path d="M12 5v14M5 12h14" />
   </Svg>
 );
+
+/** ⋮ — the tab header's menu. */
+export const MoreIcon = ({ color, size = 22 }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
+    <Circle cx={12} cy={5} r={2} />
+    <Circle cx={12} cy={12} r={2} />
+    <Circle cx={12} cy={19} r={2} />
+  </Svg>
+);
+
+/** Four tiles — the categories. */
+export const GridIcon = ({ color, size = 22 }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M5 3.5h4a1.5 1.5 0 0 1 1.5 1.5v4A1.5 1.5 0 0 1 9 10.5H5A1.5 1.5 0 0 1 3.5 9V5A1.5 1.5 0 0 1 5 3.5z" />
+    <Path d="M15 3.5h4a1.5 1.5 0 0 1 1.5 1.5v4a1.5 1.5 0 0 1-1.5 1.5h-4A1.5 1.5 0 0 1 13.5 9V5A1.5 1.5 0 0 1 15 3.5z" />
+    <Path d="M5 13.5h4a1.5 1.5 0 0 1 1.5 1.5v4A1.5 1.5 0 0 1 9 20.5H5A1.5 1.5 0 0 1 3.5 19v-4A1.5 1.5 0 0 1 5 13.5z" />
+    <Path d="M15 13.5h4a1.5 1.5 0 0 1 1.5 1.5v4a1.5 1.5 0 0 1-1.5 1.5h-4a1.5 1.5 0 0 1-1.5-1.5v-4a1.5 1.5 0 0 1 1.5-1.5z" />
+  </Svg>
+);
+
+/** A shop front — the merchants. */
+export const StoreIcon = ({ color, size = 22 }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M3.5 9.5L5 4h14l1.5 5.5" />
+    <Path d="M3.5 9.5a2.8 2.8 0 0 0 5.6 0 2.9 2.9 0 0 0 5.8 0 2.8 2.8 0 0 0 5.6 0" />
+    <Path d="M5 12v8h14v-8M10 20v-5h4v5" />
+  </Svg>
+);

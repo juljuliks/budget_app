@@ -6,7 +6,7 @@ import { OperationsScreen } from '@/screens/operations';
 import { StatsHome, TrendsButton } from '@/screens/stats';
 import { HideAmountsButton } from '@/features/hide-amounts';
 import { confirmShowAmounts } from '@/features/app-lock';
-import { SettingsButton } from '@/features/settings';
+import { MenuButton } from '@/features/settings';
 import { HistoryIcon, StatsIcon } from '@/shared/ui/icons';
 import { colors } from '@/shared/theme/theme';
 import { countUnseenTransactions } from '@/db/transactions';
@@ -36,7 +36,7 @@ export default function MainTabs() {
   const unseen = useUnseenCount();
   return (
     <>
-    {/* the app always opens on the transactions; the settings gear sits in the tab headers */}
+    {/* the app always opens on the transactions; the menu ⋮ (Категории, Мерчанты, Настройки) sits in the tab headers */}
     <Tab.Navigator initialRouteName="Transactions" screenOptions={{
       tabBarActiveTintColor: colors.accent,
       tabBarInactiveTintColor: colors.muted,
@@ -60,7 +60,7 @@ export default function MainTabs() {
           title: 'Статистика',
           tabBarIcon: ({ color }) => <StatsIcon color={color} />,
           // «Динамика трат»; the eye blurs the budget and plan totals, e.g. to show the stats to someone
-          headerRight: () => <View style={[headerRightStyle, statsHeaderRight]}><TrendsButton /><HideAmountsButton confirmShow={confirmShowAmounts} /><SettingsButton /></View>,
+          headerRight: () => <View style={[headerRightStyle, statsHeaderRight]}><TrendsButton /><HideAmountsButton confirmShow={confirmShowAmounts} /><MenuButton /></View>,
         }}
       />
       <Tab.Screen

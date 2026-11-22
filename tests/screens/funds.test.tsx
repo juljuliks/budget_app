@@ -1,7 +1,7 @@
 // 6.5 "Копилки": a category saved up for — made on its page, its card, the stats, turned off. Today: 15 October
 // 2026; the seed's budget 3 000 ₾, Одежда planned 400 ₾ and ZARA 450 ₾ spent in it.
 import { fireEvent } from '@testing-library/react-native';
-import { backToTabs, openApp, openSettings, screen, tap, texts, pressAction } from './app';
+import { backToTabs, openApp, screen, tap, texts, pressAction, openMenu } from './app';
 import { planned } from '../e2e/seeds';
 import { getDb } from '../../src/db';
 import { setFund, setPlanBudget } from '../../src/db/plans';
@@ -12,7 +12,7 @@ const fund = async () => (await getDb()).get<{ target_minor: number; due: string
 
 /** The category's page: «В плане» — «Копилка», «Настроить»: how much and «Уже отложено», by 31 January 2027 (the calendar to its month). */
 async function fillFund(target: string, start = '') {
-  await openSettings('Категории');
+  await openMenu('Категории');
   await tap('👕 Одежда');
   await screen.findByText(/^Копить на нечастую трату/);
   await tap('Копилка');
@@ -62,7 +62,7 @@ describe('6.5 funds', () => {
   test('its page with the fund: no «Импульсивные покупки» at all', async () => {
     await makeFund();
     backToTabs();
-    await openSettings('Категории');
+    await openMenu('Категории');
     await tap('👕 Одежда');
     expect(await screen.findByText('Копилка: взносы и траты ›')).toBeTruthy();
     expect(screen.queryByText('Импульсивные покупки')).toBeNull();
@@ -73,7 +73,7 @@ describe('6.5 funds', () => {
     const db = await getDb();
     for (let d = 1; d <= 15; d++) await db.run("INSERT OR REPLACE INTO fx_rates (date, currency, gel_per_unit) VALUES (?, 'USD', 2.5)", [`2026-10-${String(d).padStart(2, '0')}`]);
     backToTabs();
-    await tap('Настройки');
+    await openMenu('Настройки');
     await tap('$ USD');
     backToTabs();
     // 🔒 and the fund row both show 300 ₾ — wait on the fund's progress text which is unique

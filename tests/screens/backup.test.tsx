@@ -4,7 +4,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { fireEvent } from '@testing-library/react-native';
-import { openApp, screen, tap, texts } from './app';
+import { openApp, screen, tap, texts, openMenu } from './app';
 import { ops } from '../e2e/seeds';
 import { markAutoBackupMade, setAutoBackupFolder } from '../../src/backup';
 import { runAutoBackupIfDue } from '../../src/features/backup';
@@ -60,7 +60,7 @@ const type = (placeholder: string, text: string) => fireEvent.changeText(screen.
 
 async function openBackup() {
   await openApp(ops);
-  await tap('Настройки');
+  await openMenu('Настройки');
   await tap('Резервная копия');
   await screen.findByText(/Все операции, категории, мерчанты и план — одним файлом/);
 }
@@ -241,7 +241,7 @@ test('9.9.13 "Сменить папку": another folder, the old one given back
   await openApp(ops);
   await setAutoBackupFolder('content://tree/Documents');
   await markAutoBackupMade(Math.floor(Date.now() / 1000));
-  await tap('Настройки');
+  await openMenu('Настройки');
   await tap('Резервная копия');
   await tap('Сменить папку');
   expect(await screen.findByText('Автокопия включена')).toBeTruthy();

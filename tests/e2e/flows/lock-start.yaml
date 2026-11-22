@@ -5,11 +5,11 @@ appId: com.budgetapp
 - extendedWaitUntil:
     visible: "Введите PIN-код"
     timeout: 60000
-- assertNotVisible: "Настройки"
+- assertNotVisible: "Меню"
 - tapOn: "1"
 - tapOn: "2"
 - tapOn: "3"
 - tapOn: "4"
 - extendedWaitUntil:
-    visible: "Настройки"
+    visible: "Меню"
     timeout: 15000

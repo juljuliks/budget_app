@@ -102,9 +102,15 @@ export function texts(): string[] {
     .map((n) => flat(n).replace(/\s/g, ' '));
 }
 
-/** Настройки → a screen of them ("Мерчанты", "Категории", "Банки"). */
-export async function openSettings(row: 'Мерчанты' | 'Категории' | 'Банки') {
-  await tap('Настройки');
+/** The tab header's menu ⋮ → one of its pages ("Категории", "Мерчанты", "Настройки"). */
+export async function openMenu(row: 'Категории' | 'Мерчанты' | 'Настройки') {
+  await tap('Меню');
+  await tap(row);
+}
+
+/** Настройки → a screen of them ("Банки"); the menu's pages ("Категории", "Мерчанты") — `openMenu`. */
+export async function openSettings(row: 'Банки') {
+  await openMenu('Настройки');
   await tap(row);
 }
 

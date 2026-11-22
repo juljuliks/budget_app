@@ -1,5 +1,5 @@
 // A screen in the middle of something (sorting out a category being deleted) asks before any way out of it: the
-// tab bar, the settings gear. It gets the step to take if the user agrees to leave.
+// tab bar, the menu ⋮. It gets the step to take if the user agrees to leave.
 type Guard = (proceed: () => void) => void;
 let guard: Guard | null = null;
 

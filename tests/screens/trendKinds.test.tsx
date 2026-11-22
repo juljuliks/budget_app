@@ -1,6 +1,6 @@
 // 5.8.8: a category's «Динамика» by how often it is spent on — a rare one (rent) its payments, a fund its contributions
 // and spending; a transfer one has none. Today: Thursday 15 October 2026 (setup.ts).
-import { openApp, openSettings, screen, tap, texts } from './app';
+import { openApp, screen, tap, texts, openMenu } from './app';
 import { buy, on, planned } from '../e2e/seeds';
 import { findCategoryByName } from '../../src/db/categories';
 import { setFund } from '../../src/db/plans';
@@ -11,7 +11,7 @@ const id = async (name: string) => (await findCategoryByName(name, null))!.id;
 const after = (label: string, n: number) => { const t = texts(); const i = t.lastIndexOf(label); return t.slice(i + 1, i + 1 + n); };
 
 async function openTrendOf(name: string) {
-  await openSettings('Категории');
+  await openMenu('Категории');
   await tap(name);
   await tap('Динамика трат');
 }
@@ -68,7 +68,7 @@ test('5.8.8 a fund: how much of its target by when, the pace, its card', async (
 
 test('5.8.8 a transfer category has no «Динамика трат»', async () => {
   await openApp(planned);
-  await openSettings('Категории');
+  await openMenu('Категории');
   await tap(/Между своими картами/);
   // its page loaded: a category with no transfer has the plaque by now (5.8.5)
   await screen.findByText(/^Системная категория: переводы/);

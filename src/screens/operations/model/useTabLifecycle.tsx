@@ -1,4 +1,4 @@
-// The tab's header (back arrow, "Редактировать", the gear), the hardware back, and a clean list on the next visit.
+// The tab's header (back arrow, "Редактировать", the menu ⋮), the hardware back, and a clean list on the next visit.
 import React, { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import { BackHandler } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';

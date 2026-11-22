@@ -23,15 +23,15 @@ function Row({ label, onPress }: { label: string; onPress: () => void }) {
 }
 
 /**
- * Настройки (the gear in the tab headers): a page (back — the arrow in its header) with Валюта — the currency the app converts amounts to, switched right
- * here — the limit notifications switch, «Блокировка», then Банки, Мерчанты, Категории, Шаблоны сообщений, Импорт SMS (past bank SMS from the phone) and
+ * Настройки (⋮ in the tab headers): a page (back — the arrow in its header) with Валюта — the currency the app converts amounts to, switched right
+ * here — the limit notifications switch, «Блокировка», then Банки, Шаблоны сообщений, Импорт SMS (past bank SMS from the phone) and
  * Резервная копия; the installed version at the bottom, with «Обновить до …» when a newer one is out. The pages open over it, the sheets (import, backup, the lock) — on it.
  */
 export default function SettingsScreen() {
   const navigation = useRootNavigation();
   const open = useIsFocused();
   const currency = useDisplayCurrency();
-  const go = (route: 'Merchants' | 'Categories' | 'MessageTemplates' | 'Banks') => navigation.navigate(route);
+  const go = (route: 'MessageTemplates' | 'Banks') => navigation.navigate(route);
   const [alerts, setAlerts] = useState(true);
   useEffect(() => {
     if (open) limitAlertsEnabled().then(setAlerts).catch(toastFailure('load limit alerts setting', LOAD_FAILED));
@@ -69,8 +69,6 @@ export default function SettingsScreen() {
         </View>
         <LockSettings open={open} onOptions={openLockOptions} />
         <Row label="Банки" onPress={() => go('Banks')} />
-        <Row label="Мерчанты" onPress={() => go('Merchants')} />
-        <Row label="Категории" onPress={() => go('Categories')} />
         <Row label="Шаблоны сообщений" onPress={() => go('MessageTemplates')} />
         <Row label="Импорт SMS из телефона" onPress={startSmsImport} />
         <Row label="Резервная копия" onPress={openBackup} />

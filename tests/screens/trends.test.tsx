@@ -1,7 +1,7 @@
 // 5.8: «Динамика трат» — this month against the usual by the same days, a category's page, «+N% к обычному»
 // under the month's rows. Today: Thursday 15 October 2026 (setup.ts).
 import { within } from '@testing-library/react-native';
-import { back, openApp, openSettings, rowOf, screen, tap, texts } from './app';
+import { back, openApp, rowOf, screen, tap, texts, openMenu } from './app';
 import { buy, on, planned } from '../e2e/seeds';
 import { findCategoryByName } from '../../src/db/categories';
 
@@ -104,7 +104,7 @@ describe('5.8 Динамика трат', () => {
 
   test('5.8.5 a category\'s page has «Динамика трат»', async () => {
     await openApp(planned);
-    await openSettings('Категории');
+    await openMenu('Категории');
     await tap('☕️ Кафе и рестораны');
     await tap('Динамика трат');
     expect(await screen.findByText('Нажмите на столбик — сумма месяца')).toBeTruthy();

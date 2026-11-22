@@ -1,6 +1,6 @@
 // 9.12: "Банки" — whose SMS and pushes are read; several banks: the balances apart, the "Банк" filter, a label on rows.
 import { act, fireEvent } from '@testing-library/react-native';
-import { openApp, openSettings, screen, tap, texts, backToTabs } from './app';
+import { openApp, openSettings, screen, tap, texts, backToTabs, openMenu } from './app';
 import { ops } from '../e2e/seeds';
 import { getDb } from '../../src/db';
 import { navigationRef } from '../../src/shared/navigation/navigation';
@@ -42,7 +42,7 @@ test('9.12.1: TBC read, Bank of Georgia off; turned on — "Балансы ка�
 
 test('9.12.2: "Импорт SMS из телефона" says from which banks; the link opens "Банки"', async () => {
   await openApp(ops);
-  await tap('Настройки');
+  await openMenu('Настройки');
   await tap('Импорт SMS из телефона');
   expect(await screen.findByText('Из банка: TBC')).toBeTruthy();
   await tap('Другие банки — в «Банках» ›');

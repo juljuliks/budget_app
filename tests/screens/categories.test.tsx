@@ -3,7 +3,7 @@ import { act, fireEvent, waitFor } from '@testing-library/react-native';
 import notifee from '@notifee/react-native';
 import SmsBackgroundTask from '../../src/native/SmsBackgroundTask';
 import { navigationRef } from '../../src/shared/navigation/navigation';
-import { longPress, openApp, openSettings, screen, tap, texts, toggleSwitch, backToTabs, back } from './app';
+import { longPress, openApp, screen, tap, texts, toggleSwitch, backToTabs, back, openMenu } from './app';
 import { base, category, ops } from '../e2e/seeds';
 import { setPlanAmount } from '../../src/db/plans';
 import { getDb } from '../../src/db';
@@ -14,7 +14,7 @@ const cat = async (name: string) => (await q<{ id: number; deleted_at: number | 
 
 async function openCategories(seed = ops) {
   await openApp(seed);
-  await openSettings('Категории');
+  await openMenu('Категории');
   await screen.findByText('Разделы');
 }
 
@@ -275,7 +275,7 @@ describe('4.5 deleting', () => {
       expect(await screen.findByText('Прервать удаление «🛍️ Покупки»?')).toBeTruthy();
       await tap('Продолжить');
       expect(screen.getByText(/^Удаление «🛍️ Покупки»/)).toBeTruthy();
-      await tap('Настройки');
+      await openMenu('Настройки');
       expect(await screen.findByText('Прервать удаление «🛍️ Покупки»?')).toBeTruthy();
       await tap('Прервать');
       expect(await screen.findByText('Валюта')).toBeTruthy();

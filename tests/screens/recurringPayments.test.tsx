@@ -2,7 +2,7 @@
 // a subscription made of an operation picked in the operations. Today: 15 October 2026; the seed `planned` (Подписки 30 ₾ by hand) and NETFLIX.COM
 // charged 30 ₾ on the 10th in "Подписки".
 import { act, fireEvent, waitFor, within } from '@testing-library/react-native';
-import { back, backToTabs, openApp, openSettings, screen, tap, texts, openBudget, openPlanOf, openNextMonth, rowOf } from './app';
+import { back, backToTabs, openApp, screen, tap, texts, openBudget, openPlanOf, openNextMonth, rowOf, openMenu } from './app';
 import { buy, on, planned } from '../e2e/seeds';
 import { getDb } from '../../src/db';
 import { subscriptionsCategoryId } from '../../src/db/categories';
@@ -286,7 +286,7 @@ describe('6.7.9 "Регулярный платёж" from the plan', () => {
       await savePayment({ category_id: id, merchant_key: null, name: 'Дом и коммуналка', amount_minor: 120000, currency: 'GEL', period: 12, due: '2027-09-15' });
     });
     // its page: «В плане» — «Регулярный платёж», what it is, «Изменить ›» — its sheet
-    await openSettings('Категории');
+    await openMenu('Категории');
     await tap('🏠 Дом и коммуналка');
     expect(await screen.findByText('1 200\u00a0₾ · раз в год')).toBeTruthy();
     expect(screen.getByRole('radio', { name: /Регулярный платёж/, checked: true })).toBeTruthy();
@@ -556,7 +556,7 @@ describe('6.7.9 "Регулярный платёж" from the plan', () => {
 describe('6.7.13 «📺 Подписки» a system category: its subscriptions on its page, no switch anywhere', () => {
   test('its page: the system hint, its subscriptions and its merchants without one — "Сделать подпиской" makes one in a tap', async () => {
     await openApp(seed);
-    await openSettings('Категории');
+    await openMenu('Категории');
     await tap('📺 Подписки');
     expect(await screen.findByText(/^Системная категория: подписки/)).toBeTruthy();
     expect(screen.queryByLabelText('Подписки')).toBeNull();
@@ -576,7 +576,7 @@ describe('6.7.13 «📺 Подписки» a system category: its subscriptions 
 
   test('another category with merchants\' charges: no «Подписки» switch', async () => {
     await openApp(seed);
-    await openSettings('Категории');
+    await openMenu('Категории');
     await tap('🏠 Дом и коммуналка');
     expect(await screen.findByDisplayValue('Дом и коммуналка')).toBeTruthy();
     expect(screen.queryByLabelText('Подписки')).toBeNull();
@@ -681,7 +681,7 @@ describe('6.7.8 saving up for a subscription', () => {
       await db.run("INSERT INTO payment_savings (id, payment_id, since_ym, start_minor) VALUES (5, ?, '2026-10', 1000)", [id]);
     });
     // its page: another kind saved — the payments off, asked first
-    await openSettings('Категории');
+    await openMenu('Категории');
     await tap('🏠 Дом и коммуналка');
     await tap(await screen.findByText('Разовый платёж'));
     await tap('Сохранить');

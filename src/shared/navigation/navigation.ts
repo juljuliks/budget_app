@@ -30,7 +30,7 @@ export type BackTarget = keyof TabParamList | 'Merchants' | 'Categories' | 'Sett
 /** Screens pushed over the tab bar. */
 export type RootStackParamList = {
   Main: undefined;
-  /** the settings (the gear in the tab headers) */
+  /** the settings (⋮ in the tab headers) */
   Settings: undefined;
   Categories: undefined;
   /** Merchants with their categories; merging into groups */

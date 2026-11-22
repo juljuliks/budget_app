@@ -14,8 +14,9 @@ appId: com.budgetapp
     text: "Don.t allow"
     optional: true
 - extendedWaitUntil:
-    visible: "Настройки"
+    visible: "Меню"
     timeout: 60000
+- tapOn: "Меню"
 - tapOn: "Настройки"
 - tapOn: "Импорт SMS из телефона"
 - tapOn: "Всё время"

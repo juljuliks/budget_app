@@ -1,7 +1,7 @@
 // 6: the plan, changed in the month's stats (no page of its own) — the month's budget (what's locked, the share outside
 // the plan, the leftover to savings), the categories in it, adding them («＋»), the next month. Today: 15 October 2026.
 import { act, fireEvent, waitFor } from '@testing-library/react-native';
-import { back, openApp, openSettings, screen, tap, texts, backToTabs, toggleSwitch, openBudget, openPlanOf, openNextMonth } from './app';
+import { back, openApp, screen, tap, texts, backToTabs, toggleSwitch, openBudget, openPlanOf, openNextMonth, openMenu } from './app';
 import { base, empty, planned } from '../e2e/seeds';
 import { getDb } from '../../src/db';
 import { emitTransactionsChanged } from '../../src/domain/events';
@@ -521,7 +521,7 @@ test('6.3.10 a limit given to a category planned last month only: last month\'s 
     const { id } = (await db.get<{ id: number }>("SELECT id FROM categories WHERE name = 'Такси'"))!;
     await db.run("INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency, norm_period) VALUES ('2026-09', ?, 15000, 'limit', 'GEL', 'week')", [id]);
   });
-  await openSettings('Категории');
+  await openMenu('Категории');
   await tap('🚕 Такси');
   await tap(await screen.findByText('Траты с лимитом'));
   await tap('Сохранить');

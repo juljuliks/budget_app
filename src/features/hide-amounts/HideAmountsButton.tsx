@@ -7,7 +7,7 @@ import { toastFailure } from '@/shared/ui/toast';
 import { SAVE_FAILED } from '@/shared/lib/strings';
 
 /**
- * The eye next to the gear in the stats header: blurs the budget and plan totals (see Masked). Hiding is at once;
+ * The eye next to the menu ⋮ in the stats header: blurs the budget and plan totals (see Masked). Hiding is at once;
  * showing — after `confirmShow` (the PIN or the fingerprint when the lock is on).
  */
 export default function HideAmountsButton({ confirmShow }: { confirmShow: () => Promise<boolean> }) {
