@@ -5,9 +5,9 @@ import { yearBars, yearLines, yearTable } from '../../src/features/month-report/
 const nb = (x: unknown) => JSON.parse(JSON.stringify(x).replace(/[  ]/g, ' '));
 const m = (ym: string, x: Partial<YearMonth>): YearMonth => ({ ym, state: 'data', income: 0, spent: 0, hasPlan: true, budget: null, saved: null, pct: null, ...x });
 const report = (x: Partial<YearReport> = {}): YearReport => ({
-  year: 2026, currency: 'GEL', count: 3, over: false, income: 900000, spent: 500000, saved: 70000, budget: 400000, funds: 0, planMonths: 2,
+  year: 2026, currency: 'GEL', count: 3, over: false, average: null, income: 900000, spent: 500000, saved: 70000, budget: 400000, funds: 0, planMonths: 2,
   pace: 200000, goalPct: 15, best: { ym: '2026-09', saved: 80000, pct: 40 }, worst: { ym: '2026-10', saved: -10000, reason: '💻 Техника вне плана' },
-  savings: null, fundsNow: [], top: [], biggest: null, subs: null, frequent: null, noSpend: null, impulse: null,
+  savings: null, fundsNow: [], top: [], impulse: null, savedIn: null,
   months: [
     ...Array.from({ length: 7 }, (_, i) => m(`2026-0${i + 1}`, { state: 'none', hasPlan: false })),
     m('2026-08', { income: 300000, spent: 100000, hasPlan: false }),
@@ -44,3 +44,9 @@ test('the lines: so far / the whole year, the goal reached, the pace, best and w
   });
   expect(yearLines(report({ over: true, pace: null, goalPct: 20 }))).toMatchObject({ savedCaption: 'Отложено за 2026', ofBudget: '18% бюджета · цель 20%', pace: null });
 });
+
+test('«Отложено» and its pace in the last budget\'s currency; the rest in the system one', () => {
+  const l = yearLines(report({ savedIn: { currency: 'USD', rate: 0.4 } }));
+  expect(nb([l.saved(70000), l.pace, l.money(500000)])).toEqual(['280 $', '≈ 800 $ за год в таком темпе', '5 000 ₾']);
+});
+

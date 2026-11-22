@@ -49,12 +49,14 @@ export function yearTable(r: YearReport): { rows: YearRow[]; total: string[]; av
 /** The first screen's lines: «Отложено за 10 месяцев», «38% бюджета · цель 15% ✓», «≈ … за год в таком темпе». */
 export function yearLines(r: YearReport) {
   const money = (v: number) => formatWithCurrency(Math.round(v), r.currency);
+  // «Отложено» in the budget currency of the year's last month with one
+  const saved = (v: number) => formatWithCurrency(Math.round(r.savedIn ? v * r.savedIn.rate : v), r.savedIn?.currency ?? r.currency);
   const pct = r.budget > 0 ? Math.round((r.saved / r.budget) * 100) : null;
   return {
-    money,
+    money, saved,
     savedCaption: r.over ? `Отложено за ${r.year}` : `Отложено за ${months(r.count)}`,
     ofBudget: pct === null ? null : `${pct}% бюджета${r.goalPct !== null ? ` · цель ${r.goalPct}%${pct >= r.goalPct ? ' ✓' : ''}` : ''}`,
-    pace: r.pace === null ? null : `≈ ${money(r.pace)} за год в таком темпе`,
+    pace: r.pace === null ? null : `≈ ${saved(r.pace)} за год в таком темпе`,
     inPlan: `${r.planMonths} из ${r.count} мес`,
     best: r.best ? { title: `${monthName(r.best.ym)}${r.best.pct !== null ? ` · ${r.best.pct}% бюджета` : ''}`, value: `+${money(r.best.saved)}` } : null,
     worst: r.worst ? {
@@ -64,9 +66,16 @@ export function yearLines(r: YearReport) {
   };
 }
 
-/** «Куда ушло»: under a category — «1 200 ₾ в месяц · перерасход в 3 из 8 месяцев» (none planned — «без плана»). */
+/** «из 1 месяца», «из 8 месяцев» */
+const ofMonths = (n: number) => `${n} ${plural(n, ['месяца', 'месяцев', 'месяцев'])}`;
+
+/**
+ * «Траты по категориям»: under a category — «1 200 ₾ в месяц · перерасход в 3 из 8 месяцев» (none planned — «без
+ * плана»), over the full months as the stats' «В среднем … в месяц»; a month's average in whole units.
+ */
 export const topNote = (c: YearReport['top'][number], money: (v: number) => string) =>
-  `${money(c.perMonth)} в месяц · ${c.planned ? `перерасход в ${c.overIn} из ${months(c.planned)}` : 'без плана'}`;
+  [c.perMonth === null ? '' : `${money(Math.round(c.perMonth / 100) * 100)} в месяц`, c.planned ? `перерасход в ${c.overIn} из ${ofMonths(c.planned)}` : 'без плана']
+    .filter(Boolean).join(' · ');
 
 /** A fund of the year: «к 31 июля 2027 · успеваете» / «· не успеваете»; deleted — «выключена». */
 export const fundNote = (f: YearReport['fundsNow'][number]) =>

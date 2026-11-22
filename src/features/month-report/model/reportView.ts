@@ -53,8 +53,13 @@ export function reportView(r: MonthReport, currency: Currency) {
   const put = r.planFact?.fact ?? r.saved;
   const ofBudget = put !== null && put > 0 && r.budget ? `${Math.round((put / r.budget) * 100)}% бюджета${r.goalPct !== null ? ` · цель ${r.goalPct}%` : ''}` : null;
   const ofIncome = put !== null && put > 0 && r.income > 0 ? `${Math.round((put / r.income) * 100)}% дохода` : null;
+  // «Отложено» in the month's budget currency (the report's otherwise)
+  const savedCurrency = r.savedIn?.currency ?? r.currency ?? currency;
+  const inBudget = (v: number) => (r.savedIn ? v * r.savedIn.rate : v);
+  const savedMoney = (v: number) => formatWithCurrency(Math.round(inBudget(v)), savedCurrency);
+  const savedPerYear = (v: number) => formatWithCurrency(Math.round(yearly(inBudget(v)) / 100) * 100, savedCurrency);
   return {
-    limits: r.overLimitsTotal > 0, outside, ofBudget, ofIncome,
+    limits: r.overLimitsTotal > 0, outside, ofBudget, ofIncome, savedMoney, savedPerYear,
     r, money, perYear, better, worse, badParts, goodParts, badMonth, goodMonth, yearInfo, improve, good, unplannedInfo, averageInfo,
     plus: (v: number) => `+${money(v)}`,
     minus: (v: number) => `−${money(v)}`,

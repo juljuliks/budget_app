@@ -1,5 +1,5 @@
 // «Итоги года»: a year month by month (what came in, was spent, put aside, its share of the budget) and in all (the
-// savings planned and put aside, the funds, where the money went, what is remembered, the impulsive purchases). The
+// savings planned and put aside, the funds, where the money went, the impulsive purchases). The
 // spending is read once for the year (not monthStats in a loop): tests/logic/statsQueries.test.ts.
 import { getDb } from './index';
 import { Currency, dateKey } from './fx';
@@ -9,7 +9,7 @@ import { convertSpending, spendRows } from './plans/spend';
 import { savingsPlanFact } from './reportSavings';
 import { impulseRows } from './impulseStats';
 import { impulseSummary, ImpulseSummary } from '../stats/impulse';
-import { biggestPurchase, frequentMerchant, Frequent, MonthLimit, noSpendDays, NoSpendDays, subscriptions, Subscriptions, TopCategory, topCategories, YearRow } from '../stats/yearFacts';
+import { fullMonths, monthAverage, MonthLimit, TopCategory, topCategories, YearRow } from '../stats/yearFacts';
 
 /** 'future' — not begun; 'none' — before the first operation or plan; 'data' — a month to show. */
 export type YearMonth = {
@@ -24,6 +24,8 @@ export type YearReport = {
   year: number; currency: Currency; months: YearMonth[];
   /** the months with data so far; `over` — the year is over */
   count: number; over: boolean;
+  /** a month's spending on average over the full ones (as the stats': over, data from the 1st); null — none yet */
+  average: { minor: number; months: number } | null;
   income: number; spent: number; saved: number; budget: number; funds: number; planMonths: number;
   /** what the year would put aside at this pace (null — over, or nothing to go on) */
   pace: number | null;
@@ -34,21 +36,30 @@ export type YearReport = {
   savings: { locked: YearPlanFact; rest: YearPlanFact; funds: YearPlanFact; total: YearPlanFact; months: number } | null;
   fundsNow: Array<{ id: number; label: string; saved: number; target: number; currency: string; due: string; ok: boolean | null; closed: boolean }>;
   top: Array<TopCategory & { label: string }>;
-  biggest: { label: string; merchant: string; day: string; value: number } | null;
-  subs: Subscriptions | null;
-  frequent: Frequent | null;
-  noSpend: NoSpendDays | null;
   impulse: ImpulseSummary | null;
+  /** «Отложено» is said in the budget currency of the year's last month with a budget (yearCurrency): null — the same */
+  savedIn: { currency: Currency; rate: number } | null;
 };
 
 const unix = (y: number, m: number) => new Date(y, m, 1).getTime() / 1000;
+
+/**
+ * What a year's report is in: the budget's currency of its last month with a budget (the budgets may have been in
+ * different ones); none — `fallback` (the app's).
+ */
+export async function yearCurrency(year: number, fallback: Currency, nowYm = currentYm()): Promise<Currency> {
+  const last = nowYm < `${year}-12` ? nowYm : `${year}-12`;
+  const c = (await (await getDb()).get<{ c: string }>(
+    'SELECT budget_currency AS c FROM plan_months WHERE ym >= ? AND ym <= ? AND budget_minor IS NOT NULL ORDER BY ym DESC LIMIT 1', [`${year}-01`, last]))?.c;
+  return c === 'GEL' || c === 'USD' || c === 'EUR' ? c : fallback;
+}
 
 export async function yearReport(year: number, currency: Currency, nowYm = currentYm()): Promise<YearReport> {
   const db = await getDb();
   const [from, to] = [unix(year, 0), unix(year + 1, 0)];
   const history = new Map((await planHistory(nowYm, currency)).map((m) => [m.ym, m]));
-  const cats = await db.all<{ id: number; name: string; emoji: string | null; type_name: string | null; transfer: number; system: string | null; plan_kind: string | null; recurring: number }>(
-    `SELECT c.id, c.name, c.emoji, ct.name AS type_name, coalesce(ct.is_transfer, 0) AS transfer, c.system, c.plan_kind, c.recurring
+  const cats = await db.all<{ id: number; name: string; emoji: string | null; type_name: string | null; transfer: number }>(
+    `SELECT c.id, c.name, c.emoji, ct.name AS type_name, coalesce(ct.is_transfer, 0) AS transfer
       FROM categories c LEFT JOIN category_types ct ON ct.id = c.type_id`);
   const label = (id: number | null) => { const c = cats.find((x) => x.id === id); return c ? categoryLabel(c) : 'Без категории'; };
   const funds = await allFunds();
@@ -92,6 +103,9 @@ export async function yearReport(year: number, currency: Currency, nowYm = curre
     });
   }
   const data = months.filter((m) => m.state === 'data');
+  const firstAt = (await db.get<{ at: number | null }>('SELECT min(occurred_at) AS at FROM transactions'))?.at ?? null;
+  const full = fullMonths(data.map((m) => m.ym), nowYm, firstAt === null ? null : dateKey(firstAt));
+  const avg = monthAverage(rows, full);
   const budgeted = data.filter((m) => m.saved !== null);
   const sum = (list: YearMonth[], f: (m: YearMonth) => number) => list.reduce((a, m) => a + f(m), 0);
   const saved = sum(budgeted, (m) => m.saved!);
@@ -100,7 +114,7 @@ export async function yearReport(year: number, currency: Currency, nowYm = curre
   const byBest = [...budgeted].sort((a, b) => b.saved! - a.saved!);
   const worst = budgeted.length > 1 ? byBest[byBest.length - 1] : null;
   return {
-    year, currency, months, count: data.length, over,
+    year, currency, months, count: data.length, over, average: avg === null ? null : { minor: avg, months: full.length },
     income: sum(data, (m) => m.income), spent: sum(data, (m) => m.spent), saved, budget: sum(budgeted, (m) => m.budget!),
     funds: data.reduce((a, m) => a + (history.get(m.ym)?.funds_minor ?? 0), 0), planMonths: data.filter((m) => m.hasPlan).length,
     pace: !over && budgeted.length ? Math.round(saved + (saved / budgeted.length) * left) : null,
@@ -109,9 +123,9 @@ export async function yearReport(year: number, currency: Currency, nowYm = curre
     worst: worst ? { ym: worst.ym, saved: worst.saved!, reason: reasonOf(worst.ym, rows, limits, fundIds, transferIds, label) } : null,
     savings: await yearSavings(data.filter((m) => m.ym < nowYm).map((m) => m.ym), currency, nowYm),
     fundsNow: await fundsOfYear(funds, year, nowYm, label),
-    top: topCategories(rows, limits, data.length, new Set([...fundIds, ...transferIds])).map((c) => ({ ...c, label: label(c.id) })),
-    ...rememberedOf(rows, cats, label, data, year, nowYm),
+    top: topCategories(rows, limits, full, new Set([...fundIds, ...transferIds])).map((c) => ({ ...c, label: label(c.id) })),
     impulse: ((s) => (s.answered ? s : null))(impulseSummary(await impulseRows(from, to, currency))),
+    savedIn: await savedInOf(year, currency, nowYm, conv),
   };
 }
 
@@ -160,19 +174,12 @@ async function fundsOfYear(funds: Awaited<ReturnType<typeof allFunds>>, year: nu
   return out;
 }
 
-/** «Запомнилось»: the biggest purchase, the subscriptions, the most frequent merchant, the days without spending. */
-function rememberedOf(rows: YearRow[], cats: Array<{ id: number; system: string | null; plan_kind: string | null; recurring: number }>,
-  label: (id: number | null) => string, data: YearMonth[], year: number, nowYm: string) {
-  const big = biggestPurchase(rows);
-  const subsId = cats.find((c) => c.system === 'subs')?.id ?? null;
-  const regular = new Set(cats.filter((c) => c.system === 'subs' || c.plan_kind === 'regular' || c.recurring).map((c) => c.id));
-  const first = data[0]?.ym;
-  const today = dateKey(Date.now() / 1000);
-  const last = nowYm > `${year}-12` ? `${year}-12-31` : today;
-  return {
-    biggest: big ? { label: label(big.category_id), merchant: big.raw_merchant ?? '', day: dateKey(big.occurred_at), value: big.value } : null,
-    subs: subscriptions(rows, subsId, data.length),
-    frequent: frequentMerchant(rows),
-    noSpend: first ? noSpendDays(rows, regular, `${first}-01`, last) : null,
-  };
+/** The currency «Отложено» is said in (the last budget's) and the rate to it on that month's plan date; null — the same. */
+async function savedInOf(year: number, currency: Currency, nowYm: string, conv: (v: number, from: string, to: string, date: string) => number | null) {
+  const target = await yearCurrency(year, currency, nowYm);
+  if (target === currency) return null;
+  const last = nowYm < `${year}-12` ? nowYm : `${year}-12`;
+  const rate = conv(1000000, currency, target, planRateDate(last));
+  return rate === null ? null : { currency: target, rate: rate / 1000000 };
 }
+

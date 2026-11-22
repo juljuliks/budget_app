@@ -73,10 +73,12 @@ export async function scheduleMonthReports(now = new Date()) {
       const r = await monthReport(ym, currency);
       // no plan that month (or it was removed since): no report
       if (!r.hasPlan) { await notifee.cancelTriggerNotification(`report_${ym}`); continue; }
-      const money = (v: number) => formatWithCurrency(Math.round(v), currency);
+      const money = (v: number) => formatWithCurrency(Math.round(v), r.currency);
+      // «Отложено» in the month's budget currency
+      const saved = (v: number) => formatWithCurrency(Math.round(r.savedIn ? v * r.savedIn.rate : v), r.savedIn?.currency ?? r.currency);
       const body = hide ? AMOUNTS_HIDDEN : r.saved === null ? `Потрачено ${money(r.spent)}`
         : r.saved < 0 ? `Бюджет превышен на ${money(-r.saved)}${r.overInBudget ? ` (${formatWithCurrency(Math.round(r.overInBudget.minor), r.overInBudget.currency)})` : ''}`
-          : `Отложено ${money(r.saved)} (≈ ${money(yearly(r.saved))} за год)${r.couldSaveMore > 0 ? `. Могли ещё ${money(r.couldSaveMore)}` : ''}`;
+          : `Отложено ${saved(r.saved)} (≈ ${saved(yearly(r.saved))} за год)${r.couldSaveMore > 0 ? `. Могли ещё ${money(r.couldSaveMore)}` : ''}`;
       await notifee.createTriggerNotification({
         // one per month: re-scheduling replaces it
         id: `report_${ym}`,

@@ -157,7 +157,7 @@ describe('7.3 «Итоги 2026» — stories', () => {
   });
 
   test('7.3.1 in numbers: put aside so far, its share of the budget against the goal, the pace; came in, spent, in the plan', async () => {
-    expect(screen.getByText('1 из 5')).toBeTruthy();
+    expect(screen.getByText('1 из 4')).toBeTruthy();
     expect(texts()).toEqual(expect.arrayContaining(['Отложено за 3 месяца', '2 140 ₾', '36% бюджета · цель 10% ✓',
       '≈ 4 280 ₾ за год в таком темпе', 'В плане', '2 из 3 мес']));
   });
@@ -178,11 +178,13 @@ describe('7.3 «Итоги 2026» — stories', () => {
     expect(await screen.findByText('Отчёт · Сентябрь 2026')).toBeTruthy();
   });
 
-  test('7.3.3 where it went, what is remembered; «Готово» on the last closes', async () => {
-    await toStory('Запомнилось');
-    expect(screen.getByText('5 из 5')).toBeTruthy();
-    expect(screen.getByText('Самая большая трата')).toBeTruthy();
-    expect(screen.getByText('Чаще всего')).toBeTruthy();
+  test('7.3.3 where it went, the last one; no «Запомнилось»; «Готово» closes', async () => {
+    await toStory('Траты по категориям');
+    // over the full months, as the stats' «В среднем … в месяц»
+    expect(screen.getByText(/^Потрачено 4 260 ₾ · в среднем [\d ]+ ₾ в месяц \(\d+ полн(ый|ых) месяц(а|ев)?\)$/)).toBeTruthy();
+    expect(screen.getAllByText(/^[\d ]+ ₾ в месяц · (перерасход в \d+ из \d+ месяц(а|ев)|без плана)$/).length).toBeGreaterThan(0);
+    expect(screen.getByText('4 из 4')).toBeTruthy();
+    expect(screen.queryByText('Запомнилось')).toBeNull();
     await tap('Готово');
     await waitFor(() => expect(screen.queryByText('Ваш 2026 в цифрах')).toBeNull());
   });

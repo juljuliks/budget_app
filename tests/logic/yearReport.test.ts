@@ -1,11 +1,10 @@
-// «Итоги года» (db/yearReport.ts, stats/yearFacts.ts): the months, the totals, best and worst, what is remembered.
+// «Итоги года» (db/yearReport.ts, stats/yearFacts.ts): the months, the totals, best and worst, where it went.
 import { freshDb } from '../helpers';
 import { getDb } from '../../src/db';
-import { yearReport } from '../../src/db/yearReport';
+import { yearCurrency, yearReport } from '../../src/db/yearReport';
 import { createCategory, topUpCategoryId } from '../../src/db/categories';
 import { setPlanAmount, setPlanBudget } from '../../src/db/plans';
 import { addManualTransaction } from '../../src/db/transactions';
-import { noSpendDays } from '../../src/stats/yearFacts';
 
 const at = (day: string) => Math.floor(new Date(`${day}T12:00:00`).getTime() / 1000);
 let food = 0;
@@ -50,9 +49,10 @@ test('best and worst with the main reason; the biggest categories, how often ove
   expect(r.best).toEqual({ ym: '2026-10', saved: 190000, pct: 95 });
   // Техника outside the plan (900) more than Еда past it (100)
   expect(r.worst).toEqual({ ym: '2026-09', saved: 40000, reason: '💻 Техника вне плана' });
-  expect(r.top.map((c) => [c.label, c.sum, c.perMonth, c.overIn])).toEqual([['🍎 Еда', 170000, 42500, 1], ['💻 Техника', 90000, 22500, 0]]);
-  expect(r.biggest).toMatchObject({ label: '💻 Техника', merchant: 'ZOOMMER', day: '2026-09-20', value: 90000 });
-  expect(r.frequent).toMatchObject({ merchant: 'SPAR', count: 3, total: 120000, average: 40000 });
+  // a month on average over the full months, as the stats: July (data from the 1st — a deposit), August, September; October is on
+  expect(r.average).toEqual({ minor: 83333, months: 3 });
+  // Еда's plan in the full months: August, September — over in September
+  expect(r.top.map((c) => [c.label, c.sum, c.perMonth, c.overIn, c.planned])).toEqual([['🍎 Еда', 170000, 53333, 1, 2], ['💻 Техника', 90000, 30000, 0, 0]]);
 });
 
 test('a year over: no pace, no future months', async () => {
@@ -61,8 +61,21 @@ test('a year over: no pace, no future months', async () => {
   expect(r.months.every((m) => m.state !== 'future')).toBe(true);
 });
 
-test('days without spending: the regular payments aside; the month with the most', () => {
-  const row = (day: string, category: number | null) => ({ value: 1, own: 1, currency: 'GEL', category_id: category, kind: 'purchase', occurred_at: at(day), merchant_key: null, raw_merchant: null });
-  expect(noSpendDays([row('2026-07-01', 1), row('2026-07-02', 9), row('2026-08-01', 1)], new Set([9]), '2026-07-01', '2026-08-03'))
-    .toEqual({ days: 32, of: 34, best: { ym: '2026-07', days: 30 } });
+test('the year\'s currency: the budget\'s of its last month with one (budgets in different ones); none — the app\'s', async () => {
+  // August and September in lari, October in dollars
+  await setPlanBudget('2026-10', 100000, 'USD', 0, true, 0);
+  expect(await yearCurrency(2026, 'EUR', '2026-10')).toBe('USD');
+  // looked at in September: October is ahead
+  expect(await yearCurrency(2026, 'EUR', '2026-09')).toBe('GEL');
+  expect(await yearCurrency(2025, 'EUR', '2026-10')).toBe('EUR');
 });
+
+test('«Отложено» of the year in the last budget\'s currency, the rest in the system one', async () => {
+  await (await getDb()).run("INSERT INTO fx_rates (date, currency, gel_per_unit) VALUES ('2026-10-01', 'USD', 2.5), ('2026-10-15', 'USD', 2.5)");
+  await setPlanBudget('2026-10', 80000, 'USD', 0, true, 0);
+  const r = await yearReport(2026, 'GEL', '2026-10');
+  expect(r.currency).toBe('GEL');
+  expect(r.savedIn).toEqual({ currency: 'USD', rate: 0.4 });
+  expect((await yearReport(2026, 'USD', '2026-10')).savedIn).toBeNull();
+});
+

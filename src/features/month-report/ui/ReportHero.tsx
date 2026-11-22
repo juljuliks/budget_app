@@ -28,7 +28,7 @@ function MonthNumbers({ v }: { v: ReportView }) {
  * over: its savings and funds, planned and put aside (PlanFact) — closed, the put-aside one on top.
  */
 export default function ReportHero({ v, onCloseMonth }: { v: ReportView; onCloseMonth: () => void }) {
-  const { r, money, perYear } = v;
+  const { r, money } = v;
   const pf = r.planFact;
   const fact = pf?.fact ?? null;
   if (r.saved === null) {
@@ -50,14 +50,14 @@ export default function ReportHero({ v, onCloseMonth }: { v: ReportView; onClose
   return (
     <View style={styles.hero}>
       <Text style={styles.caption}>{fact !== null || !r.toSavings ? 'Отложено' : 'В сбережения'}</Text>
-      <Masked style={styles.heroValue}>{money(fact ?? r.saved)}</Masked>
+      <Masked style={styles.heroValue}>{v.savedMoney(fact ?? r.saved)}</Masked>
       {fact !== null ? (
         <Text style={styles.caption}>
-          по плану <Masked style={styles.caption}>{money(pf!.plan)}</Masked> · ≈ <Masked style={styles.caption}>{perYear(fact)}</Masked> за год в таком темпе
+          по плану <Masked style={styles.caption}>{v.savedMoney(pf!.plan)}</Masked> · ≈ <Masked style={styles.caption}>{v.savedPerYear(fact)}</Masked> за год в таком темпе
         </Text>
       ) : r.average ? (
         <YearInfo info={v.averageInfo()}>
-          ≈ <Masked style={styles.caption}>{perYear(r.average.saved)}</Masked> за год
+          ≈ <Masked style={styles.caption}>{v.savedPerYear(r.average.saved)}</Masked> за год
           {r.average.months.length > 1 ? ` · в среднем за ${r.average.months.length} мес.` : ' в таком темпе'}
         </YearInfo>
       ) : null}
@@ -65,7 +65,7 @@ export default function ReportHero({ v, onCloseMonth }: { v: ReportView; onClose
       {v.ofIncome ? <Text style={styles.caption}>{v.ofIncome}</Text> : null}
       {r.previousSaved !== null && Math.round(r.saved) !== Math.round(r.previousSaved) ? (
         <Text style={[styles.caption, r.saved > r.previousSaved ? styles.good : styles.over]}>
-          На {money(Math.abs(r.saved - r.previousSaved))} {r.saved > r.previousSaved ? 'больше' : 'меньше'}, чем месяцем раньше
+          На {v.savedMoney(Math.abs(r.saved - r.previousSaved))} {r.saved > r.previousSaved ? 'больше' : 'меньше'}, чем месяцем раньше
         </Text>
       ) : null}
       <MonthNumbers v={v} />

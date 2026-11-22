@@ -1,4 +1,4 @@
-import { monthReport } from '../../src/db/report';
+import { monthReport, reportCurrency } from '../../src/db/report';
 import { setPlanAmount, setPlanBudget } from '../../src/db/plans';
 import { addManualTransaction } from '../../src/db/transactions';
 import { getDb } from '../../src/db';
@@ -123,4 +123,16 @@ test('the budget overspent: also in the budget\'s currency when it is another on
   expect(r.saved).toBe(-5000);
   expect(r.overInBudget).toEqual({ minor: 2000, currency: 'USD' });
   expect((await monthReport('2026-09', 'USD')).overInBudget).toBeNull();
+});
+
+test('«Отложено» in the budget\'s currency, the rest in the system one; the same — nothing to convert', async () => {
+  await (await getDb()).run("INSERT INTO fx_rates (date, currency, gel_per_unit) VALUES ('2026-09-01', 'USD', 2.5), ('2026-09-30', 'USD', 2.5)");
+  await setPlanBudget('2026-09', 100000, 'USD', 0, true, 0);
+  expect(await reportCurrency('2026-09', 'GEL')).toBe('USD');
+  expect(await reportCurrency('2026-08', 'EUR')).toBe('EUR');
+  const r = await monthReport('2026-09', 'GEL');
+  expect(r.currency).toBe('GEL');
+  // 1 ₾ = 0.4 $
+  expect(r.savedIn).toEqual({ currency: 'USD', rate: 0.4 });
+  expect((await monthReport('2026-09', 'USD')).savedIn).toBeNull();
 });

@@ -13,11 +13,13 @@ export const yearReportTime = (year: number) => new Date(year + 1, 0, 1, 10).get
 export async function yearNotice(year: number, currency: Currency, hide: boolean): Promise<{ title: string; body: string } | null> {
   const r = await yearReport(year, currency, `${year}-12`);
   if (!r.count) return null;
-  const money = (v: number) => formatWithCurrency(Math.round(v), currency);
+  const money = (v: number) => formatWithCurrency(Math.round(v), r.currency);
+  // «Отложено» in the budget currency of the year's last month with one
+  const saved = (v: number) => formatWithCurrency(Math.round(r.savedIn ? v * r.savedIn.rate : v), r.savedIn?.currency ?? r.currency);
   const share = r.budget > 0 ? ` · ${Math.round((r.saved / r.budget) * 100)}% бюджета` : '';
   return {
     title: `Итоги ${year}`,
-    body: hide ? AMOUNTS_HIDDEN : r.budget > 0 ? `Отложено ${money(r.saved)} за год${share}` : `Потрачено за год ${money(r.spent)}`,
+    body: hide ? AMOUNTS_HIDDEN : r.budget > 0 ? `Отложено ${saved(r.saved)} за год${share}` : `Потрачено за год ${money(r.spent)}`,
   };
 }
 

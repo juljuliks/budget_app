@@ -89,7 +89,18 @@ export type MonthReport = {
   lockedTouched: number;
   /** "Импульсивные покупки"; null — nothing answered this month */
   impulse: MonthImpulse | null;
+  /**
+   * «Отложено» is said in the month's budget currency: it and what one unit of `currency` is in it (the plan's rate);
+   * null — the same currency, or no budget
+   */
+  savedIn: { currency: Currency; rate: number } | null;
 };
+
+/** What a month's report is in: its budget's currency; no budget — `fallback` (the app's). */
+export async function reportCurrency(ym: string, fallback: Currency): Promise<Currency> {
+  const c = (await (await getDb()).get<{ c: string }>('SELECT budget_currency AS c FROM plan_months WHERE ym = ? AND budget_minor IS NOT NULL', [ym]))?.c;
+  return c === 'GEL' || c === 'USD' || c === 'EUR' ? c : fallback;
+}
 
 /** "≈ 14 400 ₾ за год" in this pace */
 export const yearly = (monthly: number) => monthly * 12;
@@ -206,5 +217,7 @@ export async function monthReport(ym: string, currency: Currency): Promise<Month
     },
     planFact,
     impulse,
+    savedIn: !planBudget || planBudget.currency === currency ? null
+      : ((rate) => (rate === null ? null : { currency: planBudget.currency, rate: rate / 1000000 }))(conv(1000000, currency, planBudget.currency)),
   };
 }

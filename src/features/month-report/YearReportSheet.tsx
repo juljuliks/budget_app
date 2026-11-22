@@ -9,7 +9,6 @@ import ImpulseBlock from './ui/ImpulseBlock';
 import { styles } from './ui/styles';
 import YearBars from './ui/year/YearBars';
 import YearNumbers from './ui/year/YearNumbers';
-import YearRemembered from './ui/year/YearRemembered';
 import YearSavings from './ui/year/YearSavings';
 import YearTable from './ui/year/YearTable';
 import YearWhere from './ui/year/YearWhere';
@@ -17,7 +16,7 @@ import { formatWithCurrency } from '@/shared/lib/money';
 
 /**
  * «Итоги 2026» as stories: in numbers, by months (the bars), month by month (the table), the savings, where it went,
- * what is remembered, the impulsive purchases — one without data left out. A month — its report over them.
+ * the impulsive purchases — one without data left out. A month — its report over them.
  */
 export default function YearReportSheet({ year, onClose }: { year: number | null; onClose: () => void }) {
   const { report: r, failed, load } = useYearReport(year);
@@ -35,7 +34,6 @@ export default function YearReportSheet({ year, onClose }: { year: number | null
     <YearTable key="table" r={r} onMonth={openMonthReport} />,
     ...(r.savings || r.fundsNow.length ? [<YearSavings key="savings" r={r} />] : []),
     ...(r.top.length ? [<YearWhere key="where" r={r} />] : []),
-    ...(r.biggest || r.subs || r.frequent || (r.noSpend?.days ?? 0) > 0 ? [<YearRemembered key="remembered" r={r} />] : []),
     ...(r.impulse ? [<View key="impulse"><ImpulseBlock m={{ ...r.impulse, categories: [] }} money={money} onMark={markImpulse} /></View>] : []),
   ];
   return (

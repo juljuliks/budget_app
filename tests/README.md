@@ -31,7 +31,7 @@
 | 5. Статистика | [screens/plan/5-stats.md](screens/plan/5-stats.md) | — |
 | 6. План | [screens/plan/6-plan.md](screens/plan/6-plan.md) | — |
 | 7. Отчёт и история | [screens/plan/7-report.md](screens/plan/7-report.md) | — |
-| 8. Уведомления | [screens/plan/8-notifications.md](screens/plan/8-notifications.md) | [e2e/plan/8-notifications.md](e2e/plan/8-notifications.md): кнопка в шторке, тап, холодный старт |
+| 8. Уведомления | [screens/plan/8-notifications.md](screens/plan/8-notifications.md) | [e2e/plan/8-notifications.md](e2e/plan/8-notifications.md): кнопка в шторке, тап, холодный старт, итоги года и копилка в шторке |
 | 9. Общее | [screens/plan/9-general.md](screens/plan/9-general.md) | [e2e/plan/9-general.md](e2e/plan/9-general.md): разрешения при первом запуске, «Назад» Android |
 
 ### Какой кейс где проверяется
@@ -125,6 +125,8 @@ tests/e2e/run.sh sms-receive    # один
 | `import-empty` | нет SMS банка — «SMS банка не найдены» |
 | `notification-buttons` | кнопка категории в развёрнутом уведомлении: категория у операции и мерчанта, уведомление ушло |
 | `notification-open` | тап по уведомлению при закрытом приложении открывает операцию |
+| `year-report` | «Итоги 2026» на 1 января: задание уведомления запущено сразу — в шторке, тап открывает итоги года |
+| `fund-late` | копилка не успевает: при запуске — уведомление в шторке, тап открывает страницу категории |
 
 Каждый сценарий: база из `e2e/seed.ts` подкладывается вместо приложения, `flows/<сценарий>.sh before` делает то, что
 Maestro не умеет (SMS через `adb emu sms send`, разрешения, очистка входящих), потом шаги Maestro, потом

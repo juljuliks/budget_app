@@ -15,7 +15,7 @@ export default function YearNumbers({ r }: { r: YearReport }) {
     <View style={y.gap}>
       <Text style={[y.title, y.center]}>{`Ваш ${r.year} в цифрах`}</Text>
       <Text style={[y.caption, y.center]}>{l.savedCaption}</Text>
-      <Masked style={y.big}>{l.money(r.saved)}</Masked>
+      <Masked style={y.big}>{l.saved(r.saved)}</Masked>
       {l.ofBudget ? <Text style={[y.caption, y.center]}>{l.ofBudget}</Text> : null}
       {l.pace ? <Text style={[y.caption, y.center]}>{l.pace}</Text> : null}
       <View style={y.cells}>
