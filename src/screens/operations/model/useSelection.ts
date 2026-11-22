@@ -1,6 +1,7 @@
-// Edit mode (🗑 on every row) and selecting several (a long press; checkboxes in front, a tap toggles).
+// Selecting several (a long press; checkboxes in front, a tap toggles).
 import { MutableRefObject, useCallback, useState } from 'react';
 import { GroupKind, transactionDayIds, transactionGroupIds } from '@/db/transactions';
+import { setSelectUsed } from '@/shared/settings/selectHint';
 import type { ListView, Row } from './listData';
 
 type List = {
@@ -12,7 +13,6 @@ type List = {
 
 /** `locked`: a sort-out — always selecting. */
 export function useSelection({ rows, viewRef, groupIds, setGroupIds }: List, locked: boolean) {
-  const [editMode, setEditMode] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const selecting = selectMode || locked;
@@ -23,12 +23,8 @@ export function useSelection({ rows, viewRef, groupIds, setGroupIds }: List, loc
   function start(id: number) {
     setSelectMode(true);
     setSelected(new Set([id]));
-  }
-
-  // "Готово" leaves edit mode together with any selection
-  function toggleEditMode() {
-    setEditMode((on) => !on);
-    clear();
+    // «Зажмите операцию — …» isn't needed any more
+    setSelectUsed().catch((e) => console.error('save select used failed', e));
   }
 
   function apply(next: Set<number>) {
@@ -72,5 +68,5 @@ export function useSelection({ rows, viewRef, groupIds, setGroupIds }: List, loc
     }
   }
 
-  return { editMode, setEditMode, selecting, selected, clear, start, toggleEditMode, toggle, toggleGroup, allSelected, toggleSelectAll };
+  return { selecting, selected, clear, start, toggle, toggleGroup, allSelected, toggleSelectAll };
 }

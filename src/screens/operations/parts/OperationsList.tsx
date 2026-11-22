@@ -25,13 +25,11 @@ type Props = {
   /** the row handlers: the same functions every render (useStableCallback), or every row redraws */
   onPressRow: (row: TransactionRow) => void;
   onLongPressRow?: (row: TransactionRow) => void;
-  /** edit mode: 🗑 on every row */
-  onDeleteRow?: (row: TransactionRow) => void;
   loadMore: () => Promise<void>;
   refreshing: boolean;
   onRefresh: () => void;
   loadingMore: boolean;
-  /** room for the bottom bar (edit mode, selecting) */
+  /** room for the bottom bar (selecting) */
   tallFooter: boolean;
   emptyText: string;
   /** «＋» hides while scrolling down */
@@ -40,7 +38,7 @@ type Props = {
 
 /** The operations by sections (days or groups), a page at a time while scrolling, pull to refresh. */
 export default function OperationsList(p: Props) {
-  const { onPressRow, onLongPressRow, onDeleteRow, selecting, selected } = p;
+  const { onPressRow, onLongPressRow, selecting, selected } = p;
   // several banks read: each row says whose it is
   const { several } = useBanks();
   // the rows are memoized: a selection or a page loaded redraws only the rows whose props changed
@@ -52,9 +50,8 @@ export default function OperationsList(p: Props) {
       onLongPress={onLongPressRow}
       selectable={selecting}
       selected={selected.has(item.id)}
-      onDelete={onDeleteRow}
     />
-  ), [onPressRow, onLongPressRow, onDeleteRow, selecting, selected, several]);
+  ), [onPressRow, onLongPressRow, selecting, selected, several]);
   return (
     <SectionList
       // a new filter remounts the list: Android sticky headers keep their old offsets when the sections

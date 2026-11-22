@@ -8,7 +8,6 @@ import { formatMoneyWithCurrency } from '@/shared/lib/money';
 import { rowTitle } from '../model/title';
 import { splitRow } from '../model/parts';
 import { RepeatIcon, SplitIcon } from '@/shared/ui/icons';
-import RowActions from '@/shared/ui/RowActions';
 import { colors } from '@/shared/theme/theme';
 import { NO_CATEGORY } from '@/shared/lib/strings';
 
@@ -22,8 +21,6 @@ type Props = {
   /** multi-select: checkbox in front */
   selectable?: boolean;
   selected?: boolean;
-  /** edit mode: 🗑 at the end */
-  onDelete?: (tx: TransactionRow) => void;
   /** several banks read: whose it is ("TBC", "BoG") before its category */
   bankLabel?: string;
 };
@@ -31,7 +28,7 @@ type Props = {
 /** One row of the transactions list: merchant (bold + blue dot when unread), category · time, amount. */
 export default React.memo(TransactionItem);
 
-function TransactionItem({ tx, onPress, onLongPress, selectable, selected, onDelete, bankLabel }: Props) {
+function TransactionItem({ tx, onPress, onLongPress, selectable, selected, bankLabel }: Props) {
   // Android delivers a press when the finger lifts after a long press too: that one would unselect the row
   const longPressed = useRef(false);
   const unread = isUnread(tx);
@@ -85,7 +82,6 @@ function TransactionItem({ tx, onPress, onLongPress, selectable, selected, onDel
           </View>
         ) : null}
       </View>
-      {onDelete ? <RowActions onDelete={() => onDelete(tx)} /> : null}
     </TouchableOpacity>
   );
 }

@@ -1,10 +1,11 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import Loading from '@/shared/ui/Loading';
 import { isUnread, TransactionRow } from '@/db/transactions';
 import { useDisplayCurrency } from '@/shared/settings/displayCurrency';
+import { useSelectUsed } from '@/shared/settings/selectHint';
 import { CategoryPickerModal } from '@/entities/category';
-import { confirmDeleteTransaction, confirmDeleteTransactions, markAllSeen } from '@/entities/transaction';
+import { confirmDeleteTransactions, markAllSeen } from '@/entities/transaction';
 import { CardBalance } from '@/features/card-balance';
 import { SortOutBanner, useSortOut } from '@/features/category-delete';
 import { isFilterActive, useTransactionFilters } from '@/features/operations-filters';
@@ -31,7 +32,7 @@ import FilterSheets from './parts/FilterSheets';
 import FiltersBar, { FilterSheet } from './parts/FiltersBar';
 import OperationsList from './parts/OperationsList';
 import SelectToolbar from './parts/SelectToolbar';
-import { EMPTY, EMPTY_FILTERED, SEARCH_PLACEHOLDER } from './texts';
+import { EMPTY, EMPTY_FILTERED, SEARCH_PLACEHOLDER, SELECT_HINT } from './texts';
 import { toastFailure } from '@/shared/ui/toast';
 import { LOAD_FAILED, SAVE_FAILED } from '@/shared/lib/strings';
 
@@ -66,8 +67,8 @@ export default function OperationsScreen() {
   const bulk = useBulkCategory({ selected, sortOut, onMovedOut: list.markMovedOut, onDone: sel.clear });
   useTabLifecycle({
     tabNavigation: route.tabNavigation, from: route.from, sortingOut: sortOut !== null, askLeave: so.askLeave,
-    editMode: sel.editMode, toggleEditMode: sel.toggleEditMode,
-    resetOnLeave: () => { sel.setEditMode(false); sel.clear(); filters.reset(); setGroupBy('day'); },
+    selecting: sel.selecting && sortOut === null, endSelecting: sel.clear,
+    resetOnLeave: () => { sel.clear(); filters.reset(); setGroupBy('day'); },
   });
 
   useListRefresh({
@@ -86,8 +87,8 @@ export default function OperationsScreen() {
   const unreadSelected = useMemo(() => rows.filter((r) => selected.has(r.id) && isUnread(r)).map((r) => r.id), [rows, selected]);
   const selectedRows = rows.filter((r) => selected.has(r.id));
   const currency = useDisplayCurrency();
+  const selectUsed = useSelectUsed();
   const daySpent = useDaySpent(list.sections, list.groups !== null, currency, list.viewRef.current.filter);
-  const showRowActions = sel.editMode && !selecting;
   // the rows' handlers, the same every render (the rows are memoized): a long press starts selecting (with this row),
   // while selecting a tap toggles, otherwise opens
   const onPressRow = useStableCallback((tx: TransactionRow) => (selecting ? sel.toggle(tx.id) : openTransaction(tx.id)));
@@ -114,7 +115,9 @@ export default function OperationsScreen() {
           onOpen={setSheet}
           onReset={filters.resetExtra}
         >
-          {sortOut ? <SortOutBanner label={sortOut.label} remaining={so.remaining} onCancel={so.askLeave} /> : null}
+          {sortOut ? <SortOutBanner label={sortOut.label} remaining={so.remaining} onCancel={so.askLeave} />
+            // until selecting by a long press is used once
+            : !selectUsed && !selecting && rows.length > 0 ? <Text style={styles.selectHint}>{SELECT_HINT}</Text> : null}
         </FiltersBar>
         {selecting ? (
           <SelectToolbar count={selected.size} allSelected={sel.allSelected} onToggleAll={sel.toggleSelectAll} onCancel={sortOut ? undefined : sel.clear} />
@@ -137,12 +140,11 @@ export default function OperationsScreen() {
         onOpenDay={(dayStart) => guardLeave(() => route.tabNavigation.navigate('Stats', { day: dayStart, nonce: Date.now() }))}
         onPressRow={onPressRow}
         onLongPressRow={selecting ? undefined : onLongPressRow}
-        onDeleteRow={showRowActions ? confirmDeleteTransaction : undefined}
         loadMore={list.loadMore}
         refreshing={list.refreshing}
         onRefresh={list.onRefresh}
         loadingMore={list.loadingMore}
-        tallFooter={sel.editMode || selecting}
+        tallFooter={selecting}
         emptyText={isFilterActive(filters.filter) ? EMPTY_FILTERED : EMPTY} onScroll={fab.onScroll}
       />
 
@@ -155,8 +157,8 @@ export default function OperationsScreen() {
           onDelete={sortOut ? undefined : () => confirmDeleteTransactions(selectedRows, sel.clear)}
         />
       ) : null}
-      {/* hidden in edit mode (it would cover the ✎ / 🗑 of the last row), while selecting (the actions bar), scrolling down */}
-      {sel.editMode || selecting || !fab.shown ? null : <Fab onPress={openAddTransaction} accessibilityLabel="Добавить операцию" />}
+      {/* hidden while selecting (the actions bar), scrolling down */}
+      {selecting || !fab.shown ? null : <Fab onPress={openAddTransaction} accessibilityLabel="Добавить операцию" />}
 
       <FilterSheets sheet={sheet} active={active} filters={filters} groupBy={groupBy} onGroupBy={setGroupBy} onClose={() => setSheet(null)} />
       <CategoryPickerModal
@@ -178,4 +180,5 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
   // close under the header title
   header: { paddingHorizontal: 16, paddingTop: 2, paddingBottom: 4, backgroundColor: colors.bg },
+  selectHint: { fontSize: 13, color: colors.muted, paddingBottom: 6 },
 });

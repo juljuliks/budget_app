@@ -1,5 +1,7 @@
-// 2.5–2.6: selecting several operations (and what is done to them), the edit mode.
-import { fireEvent, waitFor } from '@testing-library/react-native';
+// 2.5–2.6: selecting several operations (and what is done to them), the hint about the long press.
+import React from 'react';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import App from '../../src/app/App';
 import { longPress, openApp, screen, scrollTo, tap } from './app';
 import { ops } from '../e2e/seeds';
 import { getDb } from '../../src/db';
@@ -12,6 +14,8 @@ const opsOf = async (merchant: string) => (await (await db()).all<{ c: string | 
     WHERE t.raw_merchant = ? ORDER BY t.occurred_at DESC`, [merchant])).map((r) => [r.c, r.s]);
 const ruleOf = async (merchant: string) => (await (await db()).get<{ name: string }>(
   "SELECT c.name FROM merchant_rules r JOIN categories c ON c.id = r.category_id WHERE r.pattern = ?", [merchant]))?.name ?? null;
+
+const HINT = 'Зажмите операцию — выбрать несколько: категория, удаление, просмотрено';
 
 beforeEach(() => openApp(ops));
 
@@ -150,21 +154,26 @@ test('2.5.15: a new filter ends the selection', async () => {
   await waitFor(() => expect(screen.queryByText(/^Выбрано: /)).toBeNull());
 });
 
-test('2.6: the edit mode — a 🗑 on every row, no "+", "Готово" leaves it', async () => {
+test('2.6: «Зажмите операцию — …» until a long press selects once; «Готово» in the header leaves the selection', async () => {
   await screen.findByText('SPAR');
-  await tap('Редактировать');
-  expect(await screen.findByText('Готово')).toBeTruthy();
-  expect(screen.queryByLabelText('Добавить операцию')).toBeNull();
-  // the first row's 🗑: SPAR
-  fireEvent.press(screen.getAllByLabelText('Удалить')[0]);
-  expect(await screen.findByText('Удалить операцию?')).toBeTruthy();
-  expect(screen.getByText('SPAR, −30.00 ₾')).toBeTruthy();
-  await tap('Удалить');
-  expect(await screen.findByText('Операция удалена')).toBeTruthy();
-  expect(await opsOf('SPAR')).toEqual([]);
+  expect(screen.getByText(HINT)).toBeTruthy();
+  // no «Редактировать» any more, no 🗑 on the rows
+  expect(screen.queryByText('Редактировать')).toBeNull();
+  expect(screen.queryByLabelText('Удалить')).toBeNull();
+  expect(screen.queryByText('Готово')).toBeNull();
+  await longPress('SPAR');
+  expect(await screen.findByText('Выбрано: 1')).toBeTruthy();
+  expect(screen.queryByText(HINT)).toBeNull();
   await tap('Готово');
-  expect(await screen.findByText('Редактировать')).toBeTruthy();
+  await waitFor(() => expect(screen.queryByText(/^Выбрано: /)).toBeNull());
+  expect(screen.queryByText('Готово')).toBeNull();
   expect(screen.getByLabelText('Добавить операцию')).toBeTruthy();
+  // remembered: not back after the selection, nor after the app is opened again
+  expect(screen.queryByText(HINT)).toBeNull();
+  screen.unmount();
+  render(<App />);
+  expect(await screen.findByText('SPAR')).toBeTruthy();
+  expect(screen.queryByText(HINT)).toBeNull();
 });
 
 /** GLOVO of different categories: Кафе and Продукты on its list */

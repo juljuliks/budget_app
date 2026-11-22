@@ -50,7 +50,7 @@
 | 1.4.6–1.4.7 импорт после живых SMS, возврат раньше покупки | `logic/inboxImport.test.ts` |
 | 2.1 список | `operationsList.test.tsx` |
 | 2.2–2.4 поиск, фильтры, группировки | `operationsFind.test.tsx` |
-| 2.5–2.6 мультивыбор, «Редактировать» | `operationsSelect.test.tsx` |
+| 2.5–2.6 мультивыбор, подсказка «Зажмите операцию — …», «Готово» | `operationsSelect.test.tsx` |
 | 2.7 карточка операции | `transactionSheet.test.tsx`; разделение: что где считается (и «Обдуманная» / «Импульсивная» по частям, 2.7.18) — `logic/splitTransactions.test.ts`, редактор и строка — `logic/splitDraft.test.ts`; список выбора категории — `logic/chooseList.test.ts` |
 | 3 мерчанты | `merchants.test.tsx` |
 | 4.1–4.4 категории, разделы, объединение, удаление без операций | `categories.test.tsx` |

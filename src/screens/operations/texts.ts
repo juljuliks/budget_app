@@ -3,6 +3,9 @@ import type { merchantsChangePreview } from '@/categorize/assign';
 import { plural } from '@/shared/lib/format';
 import { formatMoneyWithCurrency } from '@/shared/lib/money';
 
+/** Under the filters until selecting by a long press is used once. */
+export const SELECT_HINT = 'Зажмите операцию — выбрать несколько: категория, удаление, просмотрено';
+
 type Change = NonNullable<Awaited<ReturnType<typeof merchantsChangePreview>>>;
 
 /** A category for the selected operations, some of whose merchants have another: for them only, or their merchants too. */

@@ -1,4 +1,4 @@
-// The tab's header (back arrow, "Редактировать", the menu ⋮), the hardware back, and a clean list on the next visit.
+// The tab's header (back arrow, «Готово» while selecting, the menu ⋮), the hardware back, and a clean list on the next visit.
 import React, { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import { BackHandler } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
@@ -15,16 +15,17 @@ type Options = {
   sortingOut: boolean;
   /** back: asks first during a sort-out */
   askLeave: () => void;
-  editMode: boolean;
-  toggleEditMode: () => void;
-  /** leaving for another tab: no filters, search, grouping or edit mode next time */
+  /** selecting several (not in a sort-out): «Готово» in the header leaves it */
+  selecting: boolean;
+  endSelecting: () => void;
+  /** leaving for another tab: no filters, search, grouping or selection next time */
   resetOnLeave: () => void;
 };
 
-export function useTabLifecycle({ tabNavigation, from, sortingOut, askLeave, editMode, toggleEditMode, resetOnLeave }: Options) {
+export function useTabLifecycle({ tabNavigation, from, sortingOut, askLeave, selecting, endSelecting, resetOnLeave }: Options) {
   // the latest callbacks for the listeners added once
-  const cb = useRef({ askLeave, toggleEditMode, resetOnLeave, sortingOut });
-  cb.current = { askLeave, toggleEditMode, resetOnLeave, sortingOut };
+  const cb = useRef({ askLeave, endSelecting, resetOnLeave, sortingOut });
+  cb.current = { askLeave, endSelecting, resetOnLeave, sortingOut };
 
   // Android hardware back does the same as the header arrow
   useFocusEffect(useCallback(() => {
@@ -52,7 +53,7 @@ export function useTabLifecycle({ tabNavigation, from, sortingOut, askLeave, edi
       headerLeft: from || sortingOut
         ? () => <HeaderBackButton onPress={() => cb.current.askLeave()} accessibilityLabel="Назад" />
         : undefined,
-      headerRight: () => <HeaderActions editMode={editMode} onToggle={() => cb.current.toggleEditMode()} />,
+      headerRight: () => <HeaderActions selecting={selecting} onDone={() => cb.current.endSelecting()} />,
     });
-  }, [tabNavigation, editMode, from, sortingOut]);
+  }, [tabNavigation, selecting, from, sortingOut]);
 }
