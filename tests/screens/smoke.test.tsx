@@ -26,10 +26,21 @@ test('9.5 the menu ⋮ in both tabs: Категории, Мерчанты, На�
   }
 });
 
-test('9.5.1 the settings: their rows and the installed version, no Категории / Мерчанты', async () => {
+test('9.5.1 the settings: three tabs, their rows, the installed version; no Категории / Мерчанты', async () => {
   await openApp();
   await openMenu('Настройки');
-  for (const t of ['Валюта', 'Уведомлять о лимитах', 'Банки', 'Блокировка', 'Шаблоны сообщений', 'Импорт SMS из телефона', 'Резервная копия']) expect(await screen.findByText(t)).toBeTruthy();
+  // on «Бюджет» when opened
+  expect(screen.getByRole('tab', { name: 'Бюджет', selected: true })).toBeTruthy();
+  for (const t of ['Валюта', 'Уведомлять о лимитах']) expect(await screen.findByText(t)).toBeTruthy();
+  expect(screen.queryByText('Шаблоны сообщений')).toBeNull();
+  expect(screen.queryByText('Блокировка')).toBeNull();
+  await tap('Банки');
+  for (const t of ['Шаблоны сообщений', 'Импорт SMS из телефона']) expect(await screen.findByText(t)).toBeTruthy();
+  // the tab and its row
+  expect(screen.getAllByText('Банки')).toHaveLength(2);
+  expect(screen.queryByText('Валюта')).toBeNull();
+  await tap('Приложение');
+  for (const t of ['Блокировка', 'Резервная копия']) expect(await screen.findByText(t)).toBeTruthy();
   expect(screen.queryByText('Категории')).toBeNull();
   expect(screen.queryByText('Мерчанты')).toBeNull();
   // no native module in tests: "dev"

@@ -3,7 +3,7 @@
 // the fingerprint window answers `memoryLock.nextBiometric`. Today: Thursday 15 October 2026 12:00 (setup.ts).
 import { act, fireEvent } from '@testing-library/react-native';
 import { AppState } from 'react-native';
-import { openApp, screen, tap, openMenu } from './app';
+import { openApp, screen, tap, openSettings } from './app';
 import { memoryLock } from '../../src/native/appLock';
 import { refreshLock } from '../../src/features/app-lock/model/lockStore';
 
@@ -39,7 +39,7 @@ beforeEach(async () => {
 async function lockOn(opts: { bio?: boolean } = {}) {
   memoryLock.biometricAvailable = !!opts.bio;
   await openApp();
-  await openMenu('Настройки');
+  await openSettings('Приложение');
   expect(await screen.findByText('Приложение открывается без входа')).toBeTruthy();
   await toggle('Блокировка', true);
 }
@@ -55,7 +55,7 @@ async function withLock(opts: { bio?: boolean } = {}) {
   Object.assign(memoryLock, { pin: '1234', biometric: !!opts.bio, biometricAvailable: !!opts.bio });
   await refreshLock();
   await openApp();
-  await openMenu('Настройки');
+  await openSettings('Приложение');
   await screen.findByText(opts.bio ? 'Вход по PIN-коду или отпечатку' : 'Вход по PIN-коду');
 }
 

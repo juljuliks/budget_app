@@ -18,6 +18,7 @@ appId: com.budgetapp
     timeout: 60000
 - tapOn: "Меню"
 - tapOn: "Настройки"
+- tapOn: "Банки"
 - tapOn: "Импорт SMS из телефона"
 - tapOn: "Всё время"
 # a second refusal may not be asked any more

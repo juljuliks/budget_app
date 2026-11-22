@@ -2,7 +2,7 @@
 // handed to the system installer. GitHub (fetch) and the native module are mocked; the system's "Обновить?" and the
 // permission screen — by hand on the phone.
 import { act } from '@testing-library/react-native';
-import { openApp, screen, tap, texts, openMenu } from './app';
+import { openApp, screen, tap, texts, openSettings } from './app';
 
 const mockNative = {
   canInstall: jest.fn(async () => true),
@@ -44,7 +44,7 @@ it('9.13.1 a newer release: the toast on start → «Обновить» → down
 
 it('9.13.2 «Настройки»: «Обновить до 1.0.162»', async () => {
   await openApp();
-  await openMenu('Настройки');
+  await openSettings('Приложение');
   await tap('Обновить до 1.0.162');
   await act(async () => {});
   expect(mockNative.install).toHaveBeenCalledWith('/cache/updates/update.apk');
@@ -54,7 +54,7 @@ it('9.13.2 «Настройки»: «Обновить до 1.0.162»', async () 
 it('9.13.3 no permission to install: asked first, «Открыть настройки» — the system\'s switch', async () => {
   mockNative.canInstall.mockResolvedValueOnce(false);
   await openApp();
-  await openMenu('Настройки');
+  await openSettings('Приложение');
   await tap('Обновить до 1.0.162');
   await screen.findByText('Разрешите установку');
   await tap('Открыть настройки');
@@ -65,7 +65,7 @@ it('9.13.3 no permission to install: asked first, «Открыть настро�
 it('9.13.4 the latest is installed: «Версия 1.0.161 · последняя», no button', async () => {
   latest = '1.0.161';
   await openApp();
-  await openMenu('Настройки');
+  await openSettings('Приложение');
   await screen.findByText('Версия 1.0.161 · последняя');
   expect(screen.queryByText(/^Обновить до/)).toBeNull();
 });
@@ -73,7 +73,7 @@ it('9.13.4 the latest is installed: «Версия 1.0.161 · последняя
 it('9.13.5 the download failed: a red toast', async () => {
   mockNative.download.mockRejectedValueOnce(new Error('offline'));
   await openApp();
-  await openMenu('Настройки');
+  await openSettings('Приложение');
   await tap('Обновить до 1.0.162');
   await screen.findByText('⚠️  Не удалось скачать обновление');
   expect(mockNative.install).not.toHaveBeenCalled();

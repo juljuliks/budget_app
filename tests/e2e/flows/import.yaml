@@ -20,6 +20,7 @@ appId: com.budgetapp
     timeout: 60000
 - tapOn: "Меню"
 - tapOn: "Настройки"
+- tapOn: "Банки"
 - tapOn: "Импорт SMS из телефона"
 - extendedWaitUntil:
     visible: "Операции из SMS банка, которые уже есть в телефоне\\. Уже добавленные не повторятся\\. Понадобится разрешение на чтение SMS — читаются только сообщения банка\\."
@@ -46,6 +47,7 @@ appId: com.budgetapp
 # again: nothing new
 - tapOn: "Меню"
 - tapOn: "Настройки"
+- tapOn: "Банки"
 - tapOn: "Импорт SMS из телефона"
 - tapOn: "1 месяц"
 - extendedWaitUntil:

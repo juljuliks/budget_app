@@ -110,10 +110,11 @@ export async function openMenu(row: 'Категории' | 'Мерчанты' | 
   await tap(row);
 }
 
-/** Настройки → a screen of them ("Банки"); the menu's pages ("Категории", "Мерчанты") — `openMenu`. */
-export async function openSettings(row: 'Банки') {
+/** Настройки on a tab (opens on «Бюджет»), then a row of it when given (e.g. «Банки» on «Банки»). */
+export async function openSettings(tab: 'Бюджет' | 'Банки' | 'Приложение' = 'Бюджет', row?: string) {
   await openMenu('Настройки');
-  await tap(row);
+  if (tab !== 'Бюджет') await tap(tab);
+  if (row) await tap(row);
 }
 
 /** Back one page (the stack's header is native, not drawn here). */
