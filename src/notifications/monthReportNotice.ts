@@ -77,7 +77,7 @@ export async function scheduleMonthReports(now = new Date()) {
       // «Отложено» in the month's budget currency
       const saved = (v: number) => formatWithCurrency(Math.round(r.savedIn ? v * r.savedIn.rate : v), r.savedIn?.currency ?? r.currency);
       const body = hide ? AMOUNTS_HIDDEN : r.saved === null ? `Потрачено ${money(r.spent)}`
-        : r.saved < 0 ? `Бюджет превышен на ${money(-r.saved)}${r.overInBudget ? ` (${formatWithCurrency(Math.round(r.overInBudget.minor), r.overInBudget.currency)})` : ''}`
+        : r.saved < 0 ? `Бюджет превышен на ${saved(-r.saved)}`
           : `Отложено ${saved(r.saved)} (≈ ${saved(yearly(r.saved))} за год)${r.couldSaveMore > 0 ? `. Могли ещё ${money(r.couldSaveMore)}` : ''}`;
       await notifee.createTriggerNotification({
         // one per month: re-scheduling replaces it

@@ -8,7 +8,8 @@ import { y } from './styles';
 /** `page`: under the bars of «По месяцам» — no title of its own */
 export default function YearTable({ r, onMonth, page }: { r: YearReport; onMonth: (ym: string) => void; page?: boolean }) {
   const t = yearTable(r);
-  const head = ['', 'Пришло', 'Потрачено', 'Отложено', '%'];
+  // the currency over the months' column: «$ | Пришло | Потрачено | Отложено | %»
+  const head = [t.unit, 'Пришло', 'Потрачено', 'Отложено', '%'];
   return (
     <View>
       {page ? null : (

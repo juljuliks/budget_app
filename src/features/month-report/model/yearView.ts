@@ -1,6 +1,7 @@
 // «Итоги года» as the stories show it: the year's lines, the bars by month, the table. No React.
 import type { YearMonth, YearReport } from '@/db/yearReport';
 import { currentYm } from '@/db/plans';
+import { CURRENCY_SYMBOLS } from '@/db/fx';
 import { dayTitle, MONTHS, SHORT_MONTHS } from '@/shared/lib/dates';
 import { plural } from '@/shared/lib/format';
 import { formatShort, formatWithCurrency } from '@/shared/lib/money';
@@ -29,8 +30,9 @@ export function yearBars(r: YearReport): { bars: YearBar[]; goalAt: number | nul
 /** A row of «Месяц за месяцем»: «—» where there is nothing (a future month; no budget — no «Отложено» and %). */
 export type YearRow = { ym: string; name: string; income: string; spent: string; saved: string; pct: string; mark: '▲' | '▼' | ''; grey: boolean; pressable: boolean };
 
-export function yearTable(r: YearReport): { rows: YearRow[]; total: string[]; average: string[] } {
-  const n = (v: number) => formatShort(Math.round(v));
+export function yearTable(r: YearReport): { rows: YearRow[]; total: string[]; average: string[]; unit: string } {
+  // whole units: the report's currency over the columns, not at each cell
+  const n = (v: number) => formatShort(Math.round(v / 100) * 100);
   const rows = r.months.map((m: YearMonth): YearRow => {
     const has = m.state === 'data';
     return {
@@ -43,7 +45,7 @@ export function yearTable(r: YearReport): { rows: YearRow[]; total: string[]; av
   const pct = r.budget > 0 ? `${Math.round((r.saved / r.budget) * 100)}` : '—';
   // a month on average: whole units
   const per = (v: number) => (r.count ? n(Math.round(v / r.count / 100) * 100) : '—');
-  return { rows, total: [n(r.income), n(r.spent), n(r.saved), pct], average: [per(r.income), per(r.spent), per(r.saved), ''] };
+  return { rows, total: [n(r.income), n(r.spent), n(r.saved), pct], average: [per(r.income), per(r.spent), per(r.saved), ''], unit: CURRENCY_SYMBOLS[r.currency] };
 }
 
 /** The first screen's lines: «Отложено за 10 месяцев», «38% бюджета · цель 15% ✓», «≈ … за год в таком темпе». */

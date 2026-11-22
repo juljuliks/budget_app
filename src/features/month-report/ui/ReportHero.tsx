@@ -1,7 +1,6 @@
 import React from 'react';
 import { Text, View } from 'react-native';
 import { currentYm } from '@/db/plans';
-import { formatWithCurrency } from '@/shared/lib/money';
 import Masked from '@/shared/ui/Masked';
 import type { ReportView } from '../model/reportView';
 import { FromLine, YearInfo } from './Lines';
@@ -40,8 +39,8 @@ export default function ReportHero({ v, onCloseMonth }: { v: ReportView; onClose
       <View style={styles.hero}>
         <Text style={styles.caption}>Бюджет превышен на</Text>
         <Text style={[styles.heroValue, styles.over]}>
-          {money(-r.saved)}
-          {r.overInBudget ? <Text style={styles.heroAside}>{` (${formatWithCurrency(Math.round(r.overInBudget.minor), r.overInBudget.currency)})`}</Text> : null}
+          {/* the overspend is «Отложено» below zero: in its currency, one amount */}
+          {v.savedMoney(-r.saved)}
         </Text>
         <Text style={styles.caption}>Потрачено {money(r.spent)} при бюджете {money(r.budget!)}</Text>
         <MonthNumbers v={v} />

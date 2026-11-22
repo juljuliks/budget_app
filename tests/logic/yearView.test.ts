@@ -35,6 +35,9 @@ test('the table: «—» where there is nothing, ▲▼, the total and the avera
     ['Август', '3 000', '—', '—', ''], ['Сентябрь', '0', '800', '40', '▲'], ['Октябрь', '0', '−100', '−5', '▼'], ['Ноябрь', '—', '—', '—', '']]);
   expect(t.total).toEqual(['9 000', '5 000', '700', '18']);
   expect(t.average).toEqual(['3 000', '1 667', '233', '']);
+  // the report's currency over the months, whole units in the cells
+  const usd = nb(yearTable(report({ currency: 'USD', months: [m('2026-09', { income: 15310, spent: 78362 })] })));
+  expect([usd.unit, usd.rows[0].income, usd.rows[0].spent]).toEqual(['$', '153', '784']);
 });
 
 test('the lines: so far / the whole year, the goal reached, the pace, best and worst', () => {

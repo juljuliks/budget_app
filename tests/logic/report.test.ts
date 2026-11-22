@@ -113,7 +113,7 @@ test('a report only for a month with a plan: a budget or a category with an amou
   expect((await monthReport('2026-07', 'GEL')).hasPlan).toBe(true);
 });
 
-test('the budget overspent: also in the budget\'s currency when it is another one', async () => {
+test('the budget overspent: in the budget\'s currency, as «Отложено»', async () => {
   const db = await getDb();
   await db.run("INSERT INTO fx_rates (date, currency, gel_per_unit) VALUES ('2026-09-30', 'USD', 2.5)");
   const food = (await db.run("INSERT INTO categories (name) VALUES ('Еда')")).lastInsertRowid;
@@ -121,8 +121,9 @@ test('the budget overspent: also in the budget\'s currency when it is another on
   await addManualTransaction({ amount_minor: 30000, category_id: food, occurred_at: at('2026-09-05') });
   const r = await monthReport('2026-09', 'GEL');
   expect(r.saved).toBe(-5000);
-  expect(r.overInBudget).toEqual({ minor: 2000, currency: 'USD' });
-  expect((await monthReport('2026-09', 'USD')).overInBudget).toBeNull();
+  // said as «Отложено» below zero: in the budget's currency
+  expect(r.savedIn?.currency).toBe('USD');
+  expect(Math.round(-r.saved! * r.savedIn!.rate)).toBe(2000);
 });
 
 test('«Отложено» in the budget\'s currency, the rest in the system one; the same — nothing to convert', async () => {

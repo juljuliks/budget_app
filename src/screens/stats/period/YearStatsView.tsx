@@ -58,12 +58,12 @@ export default function YearStatsView({ range }: { range: DayRange }) {
       {r.count ? <YearNumbers r={r} page /> : null}
       {r.count ? <View><YearBars r={r} onMonth={openMonthReportPage} page table={<YearTable r={r} onMonth={openMonthReportPage} page />} /></View> : null}
       {r.savings || r.fundsNow.length ? <YearSavings r={r} page /> : null}
+      {r.impulse ? <ImpulseBlock m={{ ...r.impulse, categories: [] }} money={money} onMark={markImpulse} page /> : null}
       {yearSpending({
         v, r, segments, picked, selected, onSelect: setSelected,
         h: { hidden, openInfo: setInfo, openTransactions: (id) => openTransactions(id, range) },
         onRefunds: () => openTransactions(null, range, ['refund']),
       })}
-      {r.impulse ? <ImpulseBlock m={{ ...r.impulse, categories: [] }} money={money} onMark={markImpulse} page /> : null}
       <InfoSheet v={v} info={info} onClose={() => setInfo(null)} />
     </StickyScrollView>
   );

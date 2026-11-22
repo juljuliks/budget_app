@@ -33,8 +33,8 @@ export default function YearReportSheet({ year, onClose }: { year: number | null
     <YearBars key="bars" r={r} onMonth={openReport} />,
     <YearTable key="table" r={r} onMonth={openReport} />,
     ...(r.savings || r.fundsNow.length ? [<YearSavings key="savings" r={r} />] : []),
-    ...(r.top.length ? [<YearWhere key="where" r={r} />] : []),
     ...(r.impulse ? [<View key="impulse"><ImpulseBlock m={{ ...r.impulse, categories: [] }} money={money} onMark={markImpulse} /></View>] : []),
+    ...(r.top.length ? [<YearWhere key="where" r={r} />] : []),
   ];
   return (
     <StoryPager
