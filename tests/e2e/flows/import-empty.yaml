@@ -15,4 +15,4 @@ appId: com.budgetapp
 - extendedWaitUntil:
     visible: "SMS банка не найдены"
     timeout: 10000
-- assertVisible: "За этот период в телефоне нет SMS от TBC\\."
+- assertVisible: "За этот период в телефоне нет SMS от банков, которые читаются.*"
