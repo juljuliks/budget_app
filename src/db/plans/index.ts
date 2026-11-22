@@ -3,6 +3,9 @@
 export * from './months';
 export * from './types';
 export * from './budget';
+export * from './income';
+export { lockedPctSetting } from './locked';
+export { setLockedPct } from './lockedPct';
 export * from './items';
 export * from './categoryKind';
 export * from './stats';

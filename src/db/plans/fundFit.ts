@@ -1,7 +1,6 @@
 // A month's funds' contributions fitted to its budget, without asking — they come before "🔒 Отложить сразу": what is
-// free in the plan first, then 🔒 set as an amount gives way (part of it too; "MAX" is what is left after them anyway),
-// what still doesn't fit is 0 this month — the next ones ask more (left to save over the months left). No budget — all
-// of it. Written to the funds' plan items: limit_minor (what goes in), cap_minor (what fitted, when less than it asks),
+// free in the plan first, then 🔒 gives way (part of it too), what still doesn't fit is 0 this month — the next ones
+// ask more (left to save over the months left). No budget — all of it. Written to the funds' plan items: limit_minor (what goes in), cap_minor (what fitted, when less than it asks),
 // taken_minor (of it from 🔒, in the budget's currency).
 import { getDb } from '../index';
 import { activeFunds, contributionOf, fundLedger } from './funds';
@@ -16,10 +15,7 @@ export async function fitFunds(ym: string, nowYm: string): Promise<void> {
   const items = await db.all<{ category_id: number; taken_minor: number }>(
     "SELECT category_id, taken_minor FROM plan_items WHERE ym = ? AND kind = 'fund'", [ym]);
   if (!items.length) return;
-  const month = await db.get<{ m: number }>('SELECT locked_is_max AS m FROM plan_months WHERE ym = ?', [ym]);
-  // "MAX": 🔒 is whatever the plan leaves — it follows the items by itself
-  const max = month?.m === 1;
-  const before = max ? 0 : items.reduce((a, i) => a + i.taken_minor, 0);
+  const before = items.reduce((a, i) => a + i.taken_minor, 0);
 
   const budget = await storedBudget(ym);
   const conv = await planConverter(ym);
@@ -29,10 +25,9 @@ export async function fitFunds(ym: string, nowYm: string): Promise<void> {
     const others = (await db.all<{ limit_minor: number; currency: string }>(
       "SELECT limit_minor, currency FROM plan_items WHERE ym = ? AND kind != 'fund'", [ym]))
       .reduce((a, r) => a + (conv(r.limit_minor, r.currency, budget.currency) ?? 0), 0);
-    // what the last fit took is 🔒's again (and not the plan's); "MAX": the whole budget less the plan is room — 🔒 is
-    // what the funds leave
+    // what the last fit took is 🔒's again (and not the plan's)
     free = Math.max(0, budget.plannable_minor - before - others);
-    locked = max ? 0 : budget.locked_minor + before;
+    locked = budget.locked_minor + before;
   }
   // the older first: a new fund doesn't take an older one's place
   const funds = (await activeFunds(ym, db)).filter((f) => items.some((i) => i.category_id === f.category_id))
@@ -64,6 +59,6 @@ export async function fitFunds(ym: string, nowYm: string): Promise<void> {
       await t.run("UPDATE plan_items SET limit_minor = ?, currency = ?, cap_minor = ?, taken_minor = ? WHERE ym = ? AND category_id = ? AND kind = 'fund'",
         [w.put, w.currency, w.cap, w.taken, ym, w.id]);
     }
-    if (!max && taken !== before) await t.run('UPDATE plan_months SET locked_minor = max(0, locked_minor + ? - ?) WHERE ym = ?', [before, taken, ym]);
+    if (taken !== before) await t.run('UPDATE plan_months SET locked_minor = max(0, locked_minor + ? - ?) WHERE ym = ?', [before, taken, ym]);
   });
 }

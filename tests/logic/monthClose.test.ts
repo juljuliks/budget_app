@@ -204,8 +204,8 @@ test('B4–B6, C10: October\'s budget gets the carry — plannable less what is 
   await finishClose('2026-09');
   // no October budget yet: kept for when there is one
   expect(await storedBudget('2026-10')).toBeNull();
-  // 1 000 less September's 🔒 300 (carried over), less what it owes
-  await setPlanBudget('2026-10', 100000);
+  // 1 000 less its 🔒 300, less what September owes
+  await setPlanBudget('2026-10', 100000, undefined, undefined, undefined, 30000);
   expect(await storedBudget('2026-10')).toMatchObject({ plannable_minor: 60000, carry: { from_ym: '2026-09', debt_minor: 10000, plus_minor: 0 } });
   await expect(setPlanBudget('2026-10', 5000)).rejects.toBeInstanceOf(OverBudgetError);
 

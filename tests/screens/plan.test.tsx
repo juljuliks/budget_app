@@ -1,7 +1,7 @@
 // 6: the plan, changed in the month's stats (no page of its own) — the month's budget (what's locked, the share outside
 // the plan, the leftover to savings), the categories in it, adding them («＋»), the next month. Today: 15 October 2026.
 import { act, fireEvent, waitFor } from '@testing-library/react-native';
-import { back, openApp, screen, tap, texts, backToTabs, toggleSwitch, openBudget, openPlanOf, openNextMonth, openMenu } from './app';
+import { back, openApp, screen, tap, texts, backToTabs, toggleSwitch, openBudget, openPlanOf, openNextMonth, openMenu, openSettings } from './app';
 import { base, empty, planned } from '../e2e/seeds';
 import { getDb } from '../../src/db';
 import { emitTransactionsChanged } from '../../src/domain/events';
@@ -11,8 +11,8 @@ async function openPlan(seed = planned) {
   await tap('Статистика');
   await screen.findByLabelText('Добавить в план');
 }
-const month = async () => (await getDb()).get<{ b: number | null; l: number; m: number; p: number; u: number | null; s: number }>(
-  "SELECT budget_minor AS b, locked_minor AS l, locked_is_max AS m, unplanned_pct AS p, unplanned_minor AS u, to_savings AS s FROM plan_months WHERE ym = '2026-10'");
+const month = async () => (await getDb()).get<{ b: number | null; l: number; lp: number | null; p: number; u: number | null; s: number }>(
+  "SELECT budget_minor AS b, locked_minor AS l, locked_pct AS lp, unplanned_pct AS p, unplanned_minor AS u, to_savings AS s FROM plan_months WHERE ym = '2026-10'");
 const item = async (name: string, ym = '2026-10') => (await getDb()).get<{ a: number; kind: string; norm: string; pinned: number }>(
   `SELECT p.limit_minor AS a, p.kind, p.norm_period AS norm, p.pinned FROM plan_items p JOIN categories c ON c.id = p.category_id
     WHERE p.ym = ? AND c.name = ?`, [ym, name]);
@@ -105,53 +105,44 @@ describe('6.2 locked for savings, the share outside the plan, the leftover', () 
     n.props.accessibilityRole === 'adjustable' && typeof n.props.onAccessibilityAction === 'function');
   const step = (i: number, actionName: 'increment' | 'decrement') => act(() => { fireEvent(sliders()[i], 'accessibilityAction', { nativeEvent: { actionName } }); });
 
-  test('"MAX": all that the plan and the other part leave, as an amount; typed by hand — an amount again', async () => {
+  test('6.2.1 🔒 — no field: the settings\' % of the amount typed, «Процент — в Настройках ›»; what is free in the plan', async () => {
     await openBudget();
-    await screen.findByText('300 ₾ сразу в сбережения: план и траты вне плана их не займут.');
-    const [lockedMax] = screen.getAllByRole('tab', { name: 'MAX' });
-    await tap(lockedMax);
-    // 3 000 − 2 160 planned − 300 the share outside the plan
-    expect(await screen.findByDisplayValue('540')).toBeTruthy();
-    // nothing left for the share outside the plan to grow into
-    expect(screen.getAllByRole('tab', { name: 'MAX' })[1].props.accessibilityState).toMatchObject({ disabled: true });
+    expect(await screen.findByText('ОТЛОЖИТЬ СРАЗУ')).toBeTruthy();
+    expect(screen.getByText('10% · 300 ₾')).toBeTruthy();
+    expect(screen.getByText('Сразу в сбережения: план и траты вне плана их не займут.')).toBeTruthy();
+    // 3 000 − 2 160 planned − 300 🔒 − 300 outside the plan
+    expect(screen.getByText('Свободно в плане: 240 ₾ — не распределите, уйдёт в 💰 Сэкономлено')).toBeTruthy();
+    expect(screen.queryByRole('tab', { name: 'MAX' })).toBeTruthy();
+    fireEvent.changeText(screen.getByDisplayValue('3000'), '4000');
+    expect(await screen.findByText('10% · 400 ₾')).toBeTruthy();
     await tap('Сохранить');
     expect(await screen.findByText('Бюджет месяца сохранён')).toBeTruthy();
-    expect(await month()).toMatchObject({ l: 0, m: 1 });
+    expect(await month()).toMatchObject({ b: 400000, l: 40000 });
+    await openBudget();
+    await tap('Процент — в Настройках ›');
+    expect(await screen.findByText('🔒 Отложить сразу')).toBeTruthy();
+    expect(screen.getByText('10% бюджета')).toBeTruthy();
   });
 
-  test('all that is free opens as "MAX"', async () => {
-    await (await getDb()).run("UPDATE plan_months SET locked_minor = 54000 WHERE ym = '2026-10'");
+  test('6.2.2 taken from 🔒 this month: what is left of it, «плану не хватило свободного», this month only', async () => {
+    await (await getDb()).run("UPDATE plan_months SET locked_minor = 25000, locked_taken_minor = 5000 WHERE ym = '2026-10'");
     act(() => emitTransactionsChanged());
     await openBudget();
-    await screen.findByDisplayValue('540');
-    await waitFor(() => expect(screen.getAllByRole('tab', { name: 'MAX' })[0].props.accessibilityState).toMatchObject({ selected: true }));
-    // saved as an amount before: saved as "max" now, to follow the plan and the rate
-    await tap('Сохранить');
-    expect(await screen.findByText('Бюджет месяца сохранён')).toBeTruthy();
-    expect(await month()).toMatchObject({ l: 0, m: 1 });
+    expect(await screen.findByText('250 ₾')).toBeTruthy();
+    expect(texts()).toEqual(expect.arrayContaining(['10% бюджета', '300 ₾', 'плану не хватило свободного', '−50 ₾',
+      'Только в этом месяце: процент в Настройках не меняется.', 'Настройки ›']));
   });
 
-  test('an amount typed over "MAX" is kept as the amount', async () => {
+  test('6.2.4 a new % in the settings: this month\'s 🔒 at once', async () => {
+    await openSettings();
+    const slider = await waitFor(() => screen.UNSAFE_root.find((n: { props: { accessibilityRole?: string; accessibilityValue?: { text?: string } } }) =>
+      n.props.accessibilityRole === 'adjustable' && n.props.accessibilityValue?.text === '10%'));
+    act(() => { fireEvent(slider, 'accessibilityAction', { nativeEvent: { actionName: 'increment' } }); });
+    expect(await screen.findByText('15% бюджета')).toBeTruthy();
+    await waitFor(async () => expect(await month()).toMatchObject({ l: 45000, lp: 15 }));
+    backToTabs();
     await openBudget();
-    await tap(screen.getAllByRole('tab', { name: 'MAX' })[0]);
-    fireEvent.changeText(await screen.findByDisplayValue('540'), '200');
-    await tap('Сохранить');
-    expect(await screen.findByText('Бюджет месяца сохранён')).toBeTruthy();
-    expect(await month()).toMatchObject({ l: 20000, m: 0 });
-  });
-
-  test('what doesn\'t fit can\'t be picked; less is', async () => {
-    await openBudget();
-    expect(await screen.findByText('300 ₾ сразу в сбережения: план и траты вне плана их не займут.')).toBeTruthy();
-    // 20% (600) doesn't fit next to the plan and the share
-    await step(0, 'increment');
-    expect(screen.getByText('300 ₾ сразу в сбережения: план и траты вне плана их не займут.')).toBeTruthy();
-    await step(0, 'decrement');
-    expect(await screen.findByText('Сколько бюджета сразу заблокировать для сбережений: план и траты вне плана их не займут.')).toBeTruthy();
-    await tap('Сохранить');
-    expect(await screen.findByText('Бюджет месяца сохранён')).toBeTruthy();
-    expect((await month())!.l).toBe(0);
-    await waitFor(() => expect(screen.queryByText('🔒 Отложено сразу')).toBeNull());
+    expect(await screen.findByText('15% · 450 ₾')).toBeTruthy();
   });
 
   test('an amount of one\'s own instead of the %', async () => {
@@ -176,6 +167,20 @@ describe('6.2 locked for savings, the share outside the plan, the leftover', () 
     expect(screen.queryByText('Что останется — в сбережения')).toBeNull();
     expect(screen.queryByText('Свободно')).toBeNull();
   });
+});
+
+test('6.2.3 «🔒 Отложить сразу» not set: a warning in the budget, «Задать в Настройках ›»', async () => {
+  await openPlan(async () => {
+    await planned();
+    const db = await getDb();
+    await db.run("DELETE FROM app_settings WHERE key = 'locked_pct'");
+    await db.run("UPDATE plan_months SET locked_minor = 0, locked_pct = NULL WHERE ym = '2026-10'");
+  });
+  await openBudget();
+  expect(await screen.findByText('⚠ Не задано, сколько откладывать сразу: в сбережения уйдёт только то, что останется в конце месяца.')).toBeTruthy();
+  expect(screen.queryByText('ОТЛОЖИТЬ СРАЗУ')).toBeNull();
+  await tap('Задать в Настройках ›');
+  expect(await screen.findByText('не задано')).toBeTruthy();
 });
 
 /** From an item's sheet in the plan to its category's page: «В плане» — «Регулярный платёж», «Настроить». */

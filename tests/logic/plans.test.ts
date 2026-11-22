@@ -5,7 +5,7 @@ import { openDatabase } from '../../src/db/driver';
 import { migrate, MIGRATIONS } from '../../src/db/migrations';
 import {
   addPlanItem, currentYm, ensureMonthPlan, getPlanBudget, listPlan, monthIncome, monthRange, monthStats, periodStats, planHistory,
-  removePlanItem, restorePlanItem, setPlanAmount, setPlanBudget, setPlanPinned, storedBudget, ymOf,
+  lockedPctSetting, removePlanItem, restorePlanItem, setLockedPct, setPlanAmount, setPlanBudget, setPlanPinned, storedBudget, takeLocked, ymOf,
 } from '../../src/db/plans';
 import { createCategory, deleteCategory, topUpCategoryId } from '../../src/db/categories';
 import { addManualTransaction } from '../../src/db/transactions';
@@ -259,53 +259,75 @@ describe('amount to distribute', () => {
   });
 });
 
-describe('locked_is_max', () => {
+describe('«🔒 Отложить сразу», % of the budget', () => {
   const M1 = '2099-01', M2 = '2099-02';
+  const row = async (ym: string) => (await getDb()).get<{ l: number; p: number | null; t: number }>(
+    'SELECT locked_minor AS l, locked_pct AS p, locked_taken_minor AS t FROM plan_months WHERE ym = ?', [ym]);
 
-  test('stores 0 and flag=1; storedBudget recomputes locked as budget − share − planned', async () => {
-    await setPlanBudget(M1, 300000, 'GEL', 0, true, 0, null, true);
+  test('the month\'s 🔒 is its % of the budget; a new month takes the settings\' %; a new amount — 🔒 follows', async () => {
+    await setLockedPct(15, NOW);
+    expect(await lockedPctSetting()).toBe(15);
+    await setPlanBudget(M1, 200000, 'GEL');
+    expect(await storedBudget(M1)).toEqual(expect.objectContaining({ locked_minor: 30000, locked_pct: 15, locked_taken_minor: 0, plannable_minor: 170000 }));
+    // made from M1: the settings' % of the budget carried
+    expect(await getPlanBudget(M2)).toEqual(expect.objectContaining({ amount_minor: 200000, locked_minor: 30000, locked_pct: 15 }));
+    await setPlanBudget(M1, 300000, 'GEL');
+    expect((await storedBudget(M1))!.locked_minor).toBe(45000);
+    // the coming month made from it again: the new amount, its 🔒 by the %
+    expect((await getPlanBudget(M2))!.locked_minor).toBe(45000);
+  });
+
+  test('not set: nothing locked, the month has no %', async () => {
+    expect(await lockedPctSetting()).toBeNull();
+    await setPlanBudget(M1, 200000, 'GEL');
+    expect(await row(M1)).toEqual({ l: 0, p: null, t: 0 });
+  });
+
+  test('«Вычесть из сбережений» takes from 🔒 this month only: remembered as taken, a new % keeps it', async () => {
+    await setLockedPct(15, NOW);
+    await setPlanBudget(M1, 200000, 'GEL');
+    await addPlanItem(M1, 1);
+    // 180 000 when 170 000 is free: 10 000 of 🔒
+    await setPlanAmount(M1, 1, 180000, undefined, undefined, undefined, true);
+    expect(await row(M1)).toEqual({ l: 20000, p: 15, t: 10000 });
+    await takeLocked(M1, 5000);
+    expect(await row(M1)).toEqual({ l: 15000, p: 15, t: 15000 });
+    expect((await storedBudget(M1))!.locked_taken_minor).toBe(15000);
+    // 20%: 40 000 less what was taken — 25 000, more than the plan leaves (200 000 − 180 000): 20 000
+    await setLockedPct(20, NOW);
+    const b = (await storedBudget(M1))!;
+    expect(b.locked_minor).toBe(20000);
+    expect(b.plannable_minor).toBe(180000);
+  });
+
+  test('a new %: less — the rest goes to «Сэкономлено»; more — 🔒 grows by what is free, not past it', async () => {
+    await setLockedPct(20, NOW);
+    await setPlanBudget(M1, 100000, 'GEL');
+    await addPlanItem(M1, 1); await setPlanAmount(M1, 1, 70000);
+    await setLockedPct(10, NOW);
+    expect(await storedBudget(M1)).toEqual(expect.objectContaining({ locked_minor: 10000, plannable_minor: 90000 }));
+    // 30% — 30 000, all that is free; 40% — still 30 000
+    await setLockedPct(30, NOW);
+    expect((await storedBudget(M1))!.locked_minor).toBe(30000);
+    await setLockedPct(40, NOW);
+    expect((await storedBudget(M1))!.locked_minor).toBe(30000);
+  });
+
+  test('a new %: the current, coming and past months not closed — anew; a closed one keeps its %', async () => {
     const db = await getDb();
-    const row = await db.get<{ locked_minor: number; locked_is_max: number }>('SELECT locked_minor, locked_is_max FROM plan_months WHERE ym = ?', [M1]);
-    expect(row).toEqual({ locked_minor: 0, locked_is_max: 1 });
-    // no plan items: locked = full budget
-    expect((await storedBudget(M1))?.locked_minor).toBe(300000);
-    // with a plan item: locked follows
-    await addPlanItem(M1, 1); await setPlanAmount(M1, 1, 80000);
-    expect((await storedBudget(M1))?.locked_minor).toBe(220000);
+    await db.run(`INSERT INTO plan_months (ym, budget_minor, budget_currency, locked_minor, locked_pct) VALUES
+      ('2098-10', 100000, 'GEL', 10000, 10), ('2098-11', 100000, 'GEL', 10000, 10), ('2098-12', 100000, 'GEL', 10000, 10)`);
+    await db.run("INSERT INTO month_closes (ym, closed_at) VALUES ('2098-11', 1)");
+    await setLockedPct(25, '2098-12');
+    expect(await db.all("SELECT ym, locked_minor AS l, locked_pct AS p FROM plan_months WHERE ym < '2099' ORDER BY ym")).toEqual([
+      { ym: '2098-10', l: 25000, p: 25 }, { ym: '2098-11', l: 10000, p: 10 }, { ym: '2098-12', l: 25000, p: 25 }]);
   });
 
-  test('plannable_minor is the full free budget; locked is the remainder after the plan', async () => {
-    await setPlanBudget(M1, 200000, 'GEL', 0, true, 0, null, true);
-    await addPlanItem(M1, 1); await setPlanAmount(M1, 1, 50000);
-    await addPlanItem(M1, 2); await setPlanAmount(M1, 2, 30000);
-    const b = await storedBudget(M1);
-    expect(b?.plannable_minor).toBe(200000); // full budget (MAX: locked auto-adjusts, no cap on planning)
-    expect(b?.locked_minor).toBe(120000);    // what's left after the plan
-  });
-
-  test('locked_is_max carries over to the next month and recomputes there', async () => {
-    await setPlanBudget(M1, 300000, 'GEL', 0, true, 0, null, true);
-    // carry-over initializes M2 with locked_is_max=1 and locked_minor=0
-    const b2 = await getPlanBudget(M2);
-    expect(b2?.locked_is_max).toBe(true);
-    // add an item in M2 — locked follows
-    await addPlanItem(M2, 1); await setPlanAmount(M2, 1, 100000);
-    expect((await storedBudget(M2))?.locked_minor).toBe(200000);
-  });
-
-  test('planHistory locked_minor for a MAX month uses the recomputed value', async () => {
-    await setPlanBudget(NOW, 400000, 'GEL', 0, true, 0, null, true);
-    await addPlanItem(NOW, 1); await setPlanAmount(NOW, 1, 150000);
-    const h = await planHistory();
-    expect(h[0]).toEqual(expect.objectContaining({ budget_minor: 400000, locked_minor: 250000 }));
-  });
-
-  test('switching from MAX to an explicit amount clears the flag', async () => {
-    await setPlanBudget(M1, 300000, 'GEL', 0, true, 0, null, true);
-    await setPlanBudget(M1, 300000, 'GEL', 0, true, 50000, null, false);
-    const b = await storedBudget(M1);
-    expect(b?.locked_is_max).toBe(false);
-    expect(b?.locked_minor).toBe(50000);
+  test('an amount of its own (an old month): kept when the budget changes', async () => {
+    await setPlanBudget(M1, 300000, 'GEL', 0, true, 50000);
+    expect(await row(M1)).toEqual({ l: 50000, p: null, t: 0 });
+    await setPlanBudget(M1, 400000, 'GEL');
+    expect((await storedBudget(M1))!.locked_minor).toBe(50000);
   });
 });
 
@@ -463,7 +485,7 @@ describe('savings', () => {
 describe('locked for savings', () => {
   const { getPlanBudget, setPlanBudget, setPlanAmount, ensureMonthPlan } = require('../../src/db/plans');
   const { getDb } = require('../../src/db');
-  test('the plan can take neither the share outside it nor what is locked; the lock carries over', async () => {
+  test('the plan can take neither the share outside it nor what is locked; a new month — the settings\' % (none: nothing)', async () => {
     const food = (await (await getDb()).run("INSERT INTO categories (name) VALUES ('Еда')")).lastInsertRowid;
     await setPlanBudget('2026-10', 100000, 'GEL', 10, true, 20000);
     expect(await getPlanBudget('2026-10')).toMatchObject({ locked_minor: 20000, plannable_minor: 70000 });
@@ -471,7 +493,7 @@ describe('locked for savings', () => {
     await expect(setPlanAmount('2026-10', food, 70001)).rejects.toHaveProperty('budget_minor', 70000);
     await expect(setPlanBudget('2026-10', 100000, 'GEL', 10, true, 20001)).rejects.toHaveProperty('planned_minor', 70000);
     await ensureMonthPlan('2026-11', '2026-10');
-    expect(await getPlanBudget('2026-11')).toMatchObject({ locked_minor: 20000 });
+    expect(await getPlanBudget('2026-11')).toMatchObject({ locked_minor: 0, locked_pct: null });
   });
 });
 

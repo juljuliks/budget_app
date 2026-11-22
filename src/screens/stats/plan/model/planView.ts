@@ -55,6 +55,8 @@ type Data = {
   toShown: (minor: number, from: Currency) => number | null;
   fromShown: (minor: number, to: Currency) => number | null;
   income: number;
+  /** what came in a month on average over the 6 before; null — nothing */
+  avgIncome?: number | null;
   unplannedSpentMinor: number;
   spentBy: SpentBy;
   hidden: boolean;
@@ -67,7 +69,7 @@ function withoutSaving(spentBy: SpentBy, saving: PlanItem[]): SpentBy {
   return { ...spentBy, byCategory };
 }
 
-export function planView({ ym, currency, items: all, budget, toShown, fromShown, income, unplannedSpentMinor, spentBy, hidden }: Data) {
+export function planView({ ym, currency, items: all, budget, toShown, fromShown, income, avgIncome, unplannedSpentMinor, spentBy, hidden }: Data) {
   const money = (minor: number) => formatWithCurrency(minor, currency);
   // the funds' contributions apart: in "Сбережения" (its section and its column)
   const funds = all.filter((i) => i.kind === 'fund');
@@ -93,11 +95,8 @@ export function planView({ ym, currency, items: all, budget, toShown, fromShown,
   const unplanned = shownBudget === null || !budget ? 0 : toShown(unplannedOf(budget), budget.currency) ?? unplannedOf(budget);
   // locked for savings right away (🔒), in the screen's currency
   const lockedOwn = !budget || !budget.locked_minor ? 0 : toShown(budget.locked_minor, budget.currency) ?? budget.locked_minor;
-  const freeOwn = shownBudget === null ? null : shownBudget - total - fundsTotal - unplanned - lockedOwn - debt;
-  // "MAX": 🔒 takes all that is free — no tetri left over in 💰 by the rounding of the screen's currency
-  const max = budget?.locked_is_max === true && freeOwn !== null && lockedOwn + freeOwn >= 0;
-  const locked = max ? lockedOwn + freeOwn! : lockedOwn;
-  const free = max ? 0 : freeOwn;
+  const locked = lockedOwn;
+  const free = shownBudget === null ? null : shownBudget - total - fundsTotal - unplanned - lockedOwn - debt;
   const timing: Timing = ym < currentYm() ? 'past' : ym === currentYm() ? 'current' : 'future';
   const pct = (v: number) => (shownBudget ? percentOf(v, shownBudget) || '0%' : '');
 
@@ -151,8 +150,8 @@ export function planView({ ym, currency, items: all, budget, toShown, fromShown,
       ...(plus > 0 ? [{ key: 'plus', name: `➕ Остаток ${from}`, note: `добавлен к бюджету ${genOf(ym)}`, value: plus, tone: 'free' as const, carry: 'plus' as const }] : []),
     ] });
   }
-  // what the funds' contributions took of 🔒 set as an amount, in the screen's currency
-  const lockedToFunds = !budget || budget.locked_is_max ? 0
+  // what the funds' contributions took of 🔒, in the screen's currency
+  const lockedToFunds = !budget ? 0
     : funds.reduce((a, i) => a + (i.fund?.fit?.taken ? toShown(i.fund.fit.taken, asCurrency(i.fund.fit.taken_currency ?? budget.currency)) ?? 0 : 0), 0);
   if (shownBudget) {
     // a savings amount in the budget's currency, if the screen shows another (none without a rate)
@@ -194,6 +193,7 @@ export function planView({ ym, currency, items: all, budget, toShown, fromShown,
     total + fundsTotal > 0 ? `Уже запланировано: ${money(total + fundsTotal)}` : '',
     // "Пополнение счёта" and the transfers more came back for (src/db/plans.ts monthIncome)
     income > 0 ? `Пришло за месяц: ${money(income)}` : '',
+    avgIncome ? `В среднем за 6 мес приходило ${money(avgIncome)}` : '',
   ].filter(Boolean).join('\n') || 'Сколько денег на месяц, например зарплата. План не сможет его превысить.';
 
   // under the budget: the leftover moved in on top of its own amount

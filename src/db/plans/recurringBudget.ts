@@ -40,7 +40,10 @@ export async function paymentShort(
 export async function takeLocked(ym: string, short: number): Promise<void> {
   const db = await getDb();
   await db.transaction(async (t) => {
-    await t.run('UPDATE plan_months SET locked_minor = max(0, locked_minor - ?) WHERE ym = ?', [short, ym]);
+    // what it had at most; remembered as taken this month (a new % keeps it taken)
+    await t.run(
+      'UPDATE plan_months SET locked_taken_minor = locked_taken_minor + min(?, locked_minor), locked_minor = max(0, locked_minor - ?) WHERE ym = ?',
+      [short, short, ym]);
     await ownMonth(ym, t);
   });
 }

@@ -1,13 +1,13 @@
 // The month's budget (the amount, the share outside the plan, the locked savings), its income, the plan's creation.
 import { getDb } from '../index';
 import type { Db } from '../types';
-import { Currency, dateKey, ensureRatesLater, makeConverter } from '../fx';
-import { BUDGET_CURRENCY, asCurrency, currentYm, monthRange, parseYm, planRateDate } from './months';
-import { convertSpending, spendRows, sumBy } from './spend';
+import { Currency, ensureRatesLater, makeConverter } from '../fx';
+import { BUDGET_CURRENCY, asCurrency, currentYm, planRateDate } from './months';
 import { PlanBudget } from './types';
 import { refreshFundItems, ymBefore } from './funds';
 import { refreshRecurringItem } from './recurringItems';
 import { carryItems } from './carry';
+import { fundsTaken, lockedByPct, lockedPctSetting, relockMonth } from './locked';
 
 /** The unplanned share of a budget, in its currency, with what this month covered on top of it from the plan. */
 export const unplannedOf = (b: Pick<PlanBudget, 'amount_minor' | 'unplanned_pct' | 'unplanned_minor'> & { unplanned_cover_minor?: number }) =>
@@ -43,18 +43,18 @@ async function createMonthPlan(ym: string, nowYm: string): Promise<boolean> {
     // a month following the ones before is no source: it may be behind them
     const source = await tx.get<{ ym: string }>('SELECT ym FROM plan_months WHERE ym < ? AND follows = 0 ORDER BY ym DESC LIMIT 1', [ym]);
     if (source) await carryItems(tx, source.ym, ym);
-    // the amount to distribute (usually the salary) carries over as well, with its currency, unplanned share, savings choice
-    // and what is locked for savings
+    // the amount to distribute (usually the salary) carries over as well, with its currency, unplanned share, savings
+    // choice; 🔒 — the settings' % of it (none set: nothing locked)
     await tx.run(
-      `INSERT OR IGNORE INTO plan_months (ym, follows, budget_minor, budget_currency, unplanned_pct, to_savings, locked_minor, unplanned_minor, locked_is_max) VALUES (?, ?,
+      `INSERT OR IGNORE INTO plan_months (ym, follows, budget_minor, budget_currency, unplanned_pct, to_savings, unplanned_minor, locked_pct) VALUES (?, ?,
         (SELECT budget_minor FROM plan_months WHERE ym = ?),
         coalesce((SELECT budget_currency FROM plan_months WHERE ym = ?), ?),
         coalesce((SELECT unplanned_pct FROM plan_months WHERE ym = ?), 0),
         coalesce((SELECT to_savings FROM plan_months WHERE ym = ?), 1),
-        coalesce((SELECT locked_minor FROM plan_months WHERE ym = ?), 0),
-        (SELECT unplanned_minor FROM plan_months WHERE ym = ?),
-        coalesce((SELECT locked_is_max FROM plan_months WHERE ym = ?), 0))`,
-      [ym, ym > nowYm ? 1 : 0, source?.ym ?? '', source?.ym ?? '', BUDGET_CURRENCY, source?.ym ?? '', source?.ym ?? '', source?.ym ?? '', source?.ym ?? '', source?.ym ?? '']);
+        (SELECT unplanned_minor FROM plan_months WHERE ym = ?), ?)`,
+      [ym, ym > nowYm ? 1 : 0, source?.ym ?? '', source?.ym ?? '', BUDGET_CURRENCY, source?.ym ?? '', source?.ym ?? '', source?.ym ?? '',
+        await lockedPctSetting(tx)]);
+    await relockMonth(ym, tx);
   });
   return true;
 }
@@ -90,25 +90,21 @@ export async function storedBudget(ym: string): Promise<PlanBudget | null> {
   const db = await getDb();
   const row = await db.get<{
     budget_minor: number | null; budget_currency: string | null; unplanned_pct: number; to_savings: number; locked_minor: number; unplanned_minor: number | null;
-    locked_is_max: number; unplanned_cover_minor: number;
-  }>('SELECT budget_minor, budget_currency, unplanned_pct, to_savings, locked_minor, unplanned_minor, locked_is_max, unplanned_cover_minor FROM plan_months WHERE ym = ?', [ym]);
+    locked_pct: number | null; locked_taken_minor: number; unplanned_cover_minor: number;
+  }>(`SELECT budget_minor, budget_currency, unplanned_pct, to_savings, locked_minor, unplanned_minor, locked_pct, locked_taken_minor, unplanned_cover_minor
+      FROM plan_months WHERE ym = ?`, [ym]);
   if (row?.budget_minor == null) return null;
   const share = unplannedOf({ amount_minor: row.budget_minor, unplanned_pct: row.unplanned_pct, unplanned_minor: row.unplanned_minor, unplanned_cover_minor: row.unplanned_cover_minor });
   const currency = asCurrency(row.budget_currency);
   const carry = await carryIn(ym, currency);
-  const lockedIsMax = row.locked_is_max === 1;
   const carryDelta = (carry?.plus_minor ?? 0) - (carry?.debt_minor ?? 0);
-  const locked_minor = lockedIsMax
-    ? Math.max(0, row.budget_minor - share - await plannedTotal(ym, undefined, currency) + carryDelta)
-    : row.locked_minor;
-  // for MAX, locked auto-adjusts; plannable = the full free budget (cap = budget − share), not limited by locked
-  const plannable_minor = lockedIsMax
-    ? row.budget_minor - share + carryDelta
-    : row.budget_minor - share - locked_minor + carryDelta;
+  const locked_minor = row.locked_minor;
+  const funds = await fundsTaken(ym, db);
   return {
     amount_minor: row.budget_minor, currency, unplanned_pct: row.unplanned_pct,
-    unplanned_minor: row.unplanned_minor, unplanned_cover_minor: row.unplanned_cover_minor, locked_minor, locked_is_max: lockedIsMax,
-    plannable_minor,
+    unplanned_minor: row.unplanned_minor, unplanned_cover_minor: row.unplanned_cover_minor, locked_minor,
+    locked_pct: row.locked_pct, locked_taken_minor: row.locked_taken_minor + funds, locked_funds_minor: funds,
+    plannable_minor: row.budget_minor - share - locked_minor + carryDelta,
     to_savings: row.to_savings === 1, carry,
   };
 }
@@ -151,28 +147,6 @@ export async function plannedTotal(ym: string, exceptCategoryId?: number, curren
   return rows.reduce((s, r) => s + (conv(r.limit_minor, r.currency, to) ?? 0), 0);
 }
 
-/**
- * What came in this month, in `currency` (each on its day's rate): a hint for the amount to distribute. The deposits in
- * "Пополнение счёта", and each transfer category that brought in more than was sent (a person paying back more).
- */
-export async function monthIncome(ym: string, currency: Currency = BUDGET_CURRENCY): Promise<number> {
-  const { year, month } = parseYm(ym);
-  const [from, to] = monthRange(year, month);
-  const db = await getDb();
-  const rows = await db.all<{ amount_minor: number; currency: string; occurred_at: number }>(
-    `SELECT amount_minor, currency, occurred_at FROM transactions
-      WHERE kind = 'deposit' AND occurred_at >= ? AND occurred_at < ? AND category_id = (SELECT id FROM categories WHERE system = 'topup')`,
-    [from, to]);
-  await ensureRatesLater(rows.filter((r) => r.currency !== currency).map((r) => dateKey(r.occurred_at)));
-  const conv = await makeConverter();
-  const topUp = rows.reduce((s, r) => s + (conv(r.amount_minor, r.currency, currency, dateKey(r.occurred_at)) ?? 0), 0);
-  const transferIds = new Set((await db.all<{ id: number }>(
-    'SELECT c.id FROM categories c JOIN category_types ct ON ct.id = c.type_id WHERE ct.is_transfer = 1')).map((c) => c.id));
-  const { items } = await convertSpending((await spendRows(from, to)).filter((r) => r.category_id !== null && transferIds.has(r.category_id)), currency);
-  const net = sumBy(items, (r) => r.category_id);
-  return topUp + [...net.values()].reduce((s, v) => s + Math.max(0, -v), 0);
-}
-
 /** Thrown when a change would plan more than the month's amount to distribute (amounts in `currency`). */
 export class OverBudgetError extends Error {
   constructor(public budget_minor: number, public planned_minor: number, public currency: Currency = BUDGET_CURRENCY) {
@@ -182,26 +156,27 @@ export class OverBudgetError extends Error {
 
 /**
  * null clears the amount. `unplannedPct`: the share set aside for spending outside the plan; `toSavings`: the leftover
- * goes to "Сбережения"; `lockedMinor`: locked for savings right away, in `currency`; `unplannedMinor`: the share as an amount
- * instead of the % (null = by the %). All kept when omitted.
- * Refused (OverBudgetError, its budget_minor = what the plan can take) if what is already planned (converted) doesn't fit.
- * The coming months already planned get the same budget.
+ * goes to "Сбережения"; `unplannedMinor`: the share as an amount instead of the % (null = by the %). 🔒 follows the
+ * month's % of the new amount; `lockedMinor` — an amount of its own instead (not by a %: an old month's, tests). All kept
+ * when omitted. Refused (OverBudgetError, its budget_minor = what the plan can take) if what is already planned
+ * (converted) doesn't fit. The coming months already planned get the same budget (and their 🔒 by their %).
  */
 export async function setPlanBudget(
   ym: string, budgetMinor: number | null, currency: Currency = BUDGET_CURRENCY, unplannedPct?: number, toSavings?: boolean, lockedMinor?: number,
-  unplannedMinor?: number | null, lockedIsMax?: boolean,
+  unplannedMinor?: number | null,
 ) {
   await ensureMonthPlan(ym);
   const db = await getDb();
-  const stored = await db.get<{ p: number; s: number; l: number; u: number | null; m: number; c: number }>(
-    'SELECT unplanned_pct AS p, to_savings AS s, locked_minor AS l, unplanned_minor AS u, locked_is_max AS m, unplanned_cover_minor AS c FROM plan_months WHERE ym = ?', [ym]);
+  const stored = await db.get<{ p: number; s: number; l: number; u: number | null; c: number; lp: number | null; t: number }>(
+    `SELECT unplanned_pct AS p, to_savings AS s, locked_minor AS l, unplanned_minor AS u, unplanned_cover_minor AS c, locked_pct AS lp,
+      locked_taken_minor AS t FROM plan_months WHERE ym = ?`, [ym]);
   const own = unplannedMinor === undefined ? stored?.u ?? null : unplannedMinor === null ? null : Math.max(0, unplannedMinor);
   const pct = unplannedPct ?? stored?.p ?? 0;
   const savings = toSavings ?? (stored ? stored.s === 1 : true);
-  const isMax = lockedIsMax ?? (stored?.m === 1);
-  // when MAX: store 0, recomputed on each read; otherwise store the explicit amount
-  const locked = isMax ? 0 : Math.max(0, lockedMinor ?? stored?.l ?? 0);
-  if (budgetMinor !== null && !isMax) {
+  const byPct = lockedMinor === undefined && stored?.lp != null;
+  const locked = budgetMinor === null ? 0 : lockedMinor !== undefined ? Math.max(0, lockedMinor)
+    : byPct ? Math.max(0, lockedByPct(budgetMinor, stored!.lp!) - stored!.t - await fundsTaken(ym, db)) : stored?.l ?? 0;
+  if (budgetMinor !== null) {
     const planned = await plannedTotal(ym, undefined, currency);
     const carry = await carryIn(ym, currency);
     const plannable = budgetMinor - unplannedOf({ amount_minor: budgetMinor, unplanned_pct: pct, unplanned_minor: own, unplanned_cover_minor: stored?.c }) - locked
@@ -212,10 +187,16 @@ export async function setPlanBudget(
     await ownMonth(ym, t);
     // the months after it planned already (changed by hand too) follow it: the budget goes on as set last; a past month's
     // is history, it doesn't move the others
-    await t.run(
-      `UPDATE plan_months SET budget_minor = ?, budget_currency = ?, unplanned_pct = ?, to_savings = ?, locked_minor = ?, unplanned_minor = ?, locked_is_max = ?
-        WHERE ym = ? OR (ym > ? AND ? >= ?)`,
-      [budgetMinor, currency, pct, savings ? 1 : 0, budgetMinor === null ? 0 : locked, budgetMinor === null ? null : own, budgetMinor === null ? 0 : (isMax ? 1 : 0),
-        ym, ym, ym, currentYm()]);
+    const months = (await t.all<{ ym: string }>('SELECT ym FROM plan_months WHERE ym = ? OR (ym > ? AND ? >= ?)', [ym, ym, ym, currentYm()]))
+      .map((m) => m.ym);
+    for (const m of months) {
+      await t.run(
+        'UPDATE plan_months SET budget_minor = ?, budget_currency = ?, unplanned_pct = ?, to_savings = ?, unplanned_minor = ? WHERE ym = ?',
+        [budgetMinor, currency, pct, savings ? 1 : 0, budgetMinor === null ? null : own, m]);
+      if (budgetMinor === null) await t.run('UPDATE plan_months SET locked_minor = 0 WHERE ym = ?', [m]);
+      else if (lockedMinor !== undefined) await t.run('UPDATE plan_months SET locked_minor = ?, locked_pct = NULL WHERE ym = ?', [locked, m]);
+      // by its %: of the new amount (a month without one keeps its 🔒)
+      else await relockMonth(m, t);
+    }
   });
 }

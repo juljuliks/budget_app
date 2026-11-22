@@ -3,7 +3,7 @@
 // operation read except the ones made unread. Dates are around today.
 import { getDb } from '../../src/db';
 import { createCategory, findCategoryByName, topUpCategoryId, updateCategory } from '../../src/db/categories';
-import { currentYm, setPlanAmount, setPlanBudget } from '../../src/db/plans';
+import { currentYm, setLockedPct, setPlanAmount, setPlanBudget } from '../../src/db/plans';
 import { addManualTransaction, markTransactionsSeen } from '../../src/db/transactions';
 import { backfillRule, createRule } from '../../src/categorize/rules';
 
@@ -160,8 +160,9 @@ export async function planned() {
   const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const prev = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 
-  // this month
-  await setPlanBudget(ym, 300000, 'GEL', 10, true, 30000);
+  // this month: «🔒 Отложить сразу» 10% (Настройки) — 300
+  await setLockedPct(10);
+  await setPlanBudget(ym, 300000, 'GEL', 10, true);
   await setPlanAmount(ym, food, 62000, 'limit', 'GEL', 'day');
   await setPlanAmount(ym, cafe, 31000, 'limit', 'GEL', 'week');
   await setPlanAmount(ym, home, 80000, 'fixed', 'GEL', 'month');

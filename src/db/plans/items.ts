@@ -212,7 +212,7 @@ export async function setPlanAmount(
   const before = await itemShape(ym, categoryId, db);
   // the checks above read the rates outside: the writes alone in the transaction
   await db.transaction(async (t) => {
-    if (short > 0) await t.run('UPDATE plan_months SET locked_minor = locked_minor - ? WHERE ym = ?', [short, ym]);
+    if (short > 0) await t.run('UPDATE plan_months SET locked_minor = locked_minor - ?, locked_taken_minor = locked_taken_minor + ? WHERE ym = ?', [short, short, ym]);
     await t.run(
       `INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency, norm_period) VALUES (?, ?, ?, coalesce(?, 'limit'), ?, coalesce(?, 'day'))
         ON CONFLICT(ym, category_id) DO UPDATE SET limit_minor = excluded.limit_minor, kind = coalesce(?, kind), currency = excluded.currency,

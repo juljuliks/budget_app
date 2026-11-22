@@ -459,7 +459,7 @@ describe('migrations', () => {
       await db.run(`INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency) VALUES
         (?, 90, 685040, 'limit', 'GEL'), (?, 91, 38500, 'fund', 'USD')`, [ym, ym]);
     }
-    await migrate(db);
+    await migrate(db, MIGRATIONS.slice(0, 62));
     jest.useRealTimers();
     expect(await db.all('SELECT ym, locked_minor AS l, locked_is_max AS m FROM plan_months ORDER BY ym')).toEqual([
       { ym: '2026-09', l: 77550, m: 0 }, { ym: '2026-10', l: 0, m: 1 }, { ym: '2026-11', l: 30000, m: 0 }]);
@@ -477,5 +477,27 @@ describe('migrations', () => {
       { ym: '2026-09', b: 500000, c: 'GEL', follows: 0 }, { ym: '2026-10', b: 500000, c: 'USD', follows: 0 },
       { ym: '2026-11', b: 500000, c: 'USD', follows: 0 }, { ym: '2026-12', b: 500000, c: 'USD', follows: 0 },
       { ym: '2027-01', b: 700000, c: 'GEL', follows: 0 }]);
+  });
+  test('migration 72: a "MAX" month keeps the amount it has; the first % — from the last month (to 5% stops); the current and coming months take it', async () => {
+    jest.useFakeTimers({ now: new Date('2026-11-10T12:00:00'), advanceTimers: true });
+    const db = openDatabase(':memory:');
+    await migrate(db, MIGRATIONS.slice(0, 71));
+    await db.run("INSERT INTO categories (id, name) VALUES (90, 'Еда')");
+    // October: MAX of 5 000 ₾, 10% outside the plan, 3 000 planned — 1 500; November: 740 of 5 000 (14.8%)
+    await db.run(`INSERT INTO plan_months (ym, budget_minor, budget_currency, unplanned_pct, locked_minor, locked_is_max) VALUES
+      ('2026-10', 500000, 'GEL', 10, 0, 1), ('2026-11', 500000, 'GEL', 10, 74000, 0), ('2026-12', 500000, 'GEL', 10, 74000, 0)`);
+    await db.run("INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency) VALUES ('2026-10', 90, 300000, 'limit', 'GEL')");
+    await migrate(db);
+    jest.useRealTimers();
+    expect(await db.all('SELECT ym, locked_minor AS l, locked_is_max AS m, locked_pct AS p FROM plan_months ORDER BY ym')).toEqual([
+      { ym: '2026-10', l: 150000, m: 0, p: null }, { ym: '2026-11', l: 74000, m: 0, p: 15 }, { ym: '2026-12', l: 74000, m: 0, p: 15 }]);
+    expect(await db.get("SELECT value FROM app_settings WHERE key = 'locked_pct'")).toEqual({ value: '15' });
+  });
+  test('migration 72: nothing locked in the last month — the % not set', async () => {
+    const db = openDatabase(':memory:');
+    await migrate(db, MIGRATIONS.slice(0, 71));
+    await db.run("INSERT INTO plan_months (ym, budget_minor, budget_currency, locked_minor) VALUES ('2026-10', 500000, 'GEL', 0)");
+    await migrate(db);
+    expect(await db.get("SELECT value FROM app_settings WHERE key = 'locked_pct'")).toBeUndefined();
   });
 });

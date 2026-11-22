@@ -86,8 +86,12 @@ export type PlanBudget = {
   unplanned_cover_minor: number;
   /** locked for savings right away (🔒), in the budget's currency */
   locked_minor: number;
-  /** locked_minor follows the free budget remainder automatically (MAX mode) */
-  locked_is_max: boolean;
+  /** 🔒 as a % of the amount (Настройки → «🔒 Отложить сразу»); null — an amount of its own (an old month, or no % set) */
+  locked_pct: number | null;
+  /** taken from 🔒 this month (the funds, the plan, the repeating payments — «Вычесть из сбережений»), in the budget's currency */
+  locked_taken_minor: number;
+  /** of it, by the funds' contributions */
+  locked_funds_minor: number;
   /** what the plan can take: the amount minus the unplanned share and the locked savings */
   plannable_minor: number;
   /** what the budget leaves (not planned, not spent) goes to "Сбережения" */

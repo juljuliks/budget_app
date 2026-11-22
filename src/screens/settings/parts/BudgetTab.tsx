@@ -6,9 +6,10 @@ import CurrencyPicker from '@/shared/ui/CurrencyPicker';
 import { colors } from '@/shared/theme/theme';
 import { toastFailure } from '@/shared/ui/toast';
 import { LOAD_FAILED, SAVE_FAILED } from '@/shared/lib/strings';
+import LockedPctSetting from './LockedPctSetting';
 import { styles } from './styles';
 
-/** «Бюджет»: the currency the app converts amounts to, the limit notifications. */
+/** «Бюджет»: the currency the app converts amounts to, «🔒 Отложить сразу», the limit notifications. */
 export default function BudgetTab({ open }: { open: boolean }) {
   const currency = useDisplayCurrency();
   const [alerts, setAlerts] = useState(true);
@@ -30,6 +31,7 @@ export default function BudgetTab({ open }: { open: boolean }) {
         </Text>
         <CurrencyPicker value={currency} onChange={(c) => { setDisplayCurrency(c).catch(toastFailure('save currency', SAVE_FAILED)); }} />
       </View>
+      <LockedPctSetting />
       <View style={styles.switchRow}>
         <View style={styles.flex}>
           <Text style={styles.label}>Уведомлять о лимитах</Text>

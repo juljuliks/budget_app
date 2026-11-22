@@ -2,7 +2,7 @@
 import { freshDb } from '../helpers';
 import { getDb } from '../../src/db';
 import {
-  answerFund, contributionOf, deleteFund, fundLedger, getFund, listPlan, monthStats, monthsBetween, planHistory, restoreFund, setFund, setPlanBudget, storedBudget,
+  answerFund, contributionOf, deleteFund, fundLedger, getFund, listPlan, monthStats, monthsBetween, planHistory, restoreFund, setFund, setLockedPct, setPlanBudget, storedBudget,
 } from '../../src/db/plans';
 import { createCategory } from '../../src/db/categories';
 import { addManualTransaction } from '../../src/db/transactions';
@@ -202,17 +202,22 @@ test('deleting from a past month removes that month\'s plan item and closes the 
   expect(items).toEqual([]);
 });
 
-test('"Отложить сразу" MAX: the funds come first — nothing "taken" from it, it is what they and the plan leave', async () => {
+test('"Отложить сразу" by %: the funds come first — what is free, then 🔒; what they took — «копилкам не хватило свободного»', async () => {
   const db = await getDb();
   const food = await createCategory('Еда', '🍎');
-  await setPlanBudget('2026-10', 100000, 'GEL', 0, true, 0, null, true);
+  await setLockedPct(30, '2026-10');
+  await setPlanBudget('2026-10', 100000, 'GEL', 0, true);
+  expect((await storedBudget('2026-10'))!.locked_minor).toBe(30000);
   const { setPlanAmount } = require('../../src/db/plans');
   await setPlanAmount('2026-10', food, 60000, 'limit');
   const id = await createCategory('Отпуск', '🏖');
-  // 1 500 by January: 375 a month — all of it, before 🔒
+  // 1 500 by January: 375 a month — 100 free in the plan, 275 of 🔒
   await setFund('2026-10', id, { ...HOLIDAY, target_minor: 150000, due: '2027-01-31' });
   expect(await db.get("SELECT limit_minor, cap_minor, taken_minor FROM plan_items WHERE ym = '2026-10' AND category_id = ?", [id]))
-    .toEqual({ limit_minor: 37500, cap_minor: null, taken_minor: 0 });
-  // 1 000 − 600 − 375
-  expect((await storedBudget('2026-10'))!.locked_minor).toBe(2500);
+    .toEqual({ limit_minor: 37500, cap_minor: null, taken_minor: 27500 });
+  expect(await storedBudget('2026-10')).toEqual(expect.objectContaining({
+    locked_minor: 2500, locked_pct: 30, locked_taken_minor: 27500, locked_funds_minor: 27500 }));
+  // 20%: the funds fitted again — 200 free in the plan now, 175 of 🔒: what 🔒 keeps is the same
+  await setLockedPct(20, '2026-10');
+  expect(await storedBudget('2026-10')).toEqual(expect.objectContaining({ locked_minor: 2500, locked_taken_minor: 17500 }));
 });

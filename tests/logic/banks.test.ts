@@ -4,7 +4,7 @@ import { getDb } from '../../src/db';
 import { cardBalance } from '../../src/db/balance';
 import { cardBalances, enabledBanks, setBankEnabled } from '../../src/db/banks';
 import { listUnparsed } from '../../src/db/messages';
-import { monthIncome } from '../../src/db/plans/budget';
+import { monthIncome } from '../../src/db/plans/income';
 import { spendRows } from '../../src/db/plans/spend';
 import { banksWithTransactions, listTransactionsFiltered } from '../../src/db/transactions';
 import { bankOfSender } from '../../src/domain/banks';

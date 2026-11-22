@@ -63,9 +63,9 @@ export async function deleteFund(categoryId: number, nowYm = currentYm()): Promi
   return db.transaction(async (t) => {
     const items = await t.all<{ ym: string; limit_minor: number; currency: string; taken_minor: number }>(
       'SELECT ym, limit_minor, currency, taken_minor FROM plan_items WHERE category_id = ? AND ym >= ?', [categoryId, nowYm]);
-    // what its contributions took from 🔒 goes back there ("MAX" follows by itself)
+    // what its contributions took from 🔒 goes back there
     for (const i of items.filter((x) => x.taken_minor > 0)) {
-      await t.run('UPDATE plan_months SET locked_minor = locked_minor + ? WHERE ym = ? AND locked_is_max = 0', [i.taken_minor, i.ym]);
+      await t.run('UPDATE plan_months SET locked_minor = locked_minor + ? WHERE ym = ?', [i.taken_minor, i.ym]);
     }
     await t.run('DELETE FROM plan_items WHERE category_id = ? AND ym >= ?', [categoryId, nowYm]);
     await t.run('UPDATE funds SET closed_ym = ?, released_minor = ? WHERE category_id = ?', [nowYm, balance, categoryId]);

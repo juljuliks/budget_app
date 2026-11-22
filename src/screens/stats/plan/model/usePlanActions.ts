@@ -28,18 +28,18 @@ export function usePlanActions(ym: string, load: () => void) {
   async function saveBudget(text: string, form: UseFormReturn<BudgetForm>): Promise<string | null> {
     const minor = parseAmountOrZero(text);
     if (minor === null) return AMOUNT_HINT;
-    const { unplanned: shareText, currency: cur, locked: lockedText, lockedIsMax } = form.getValues();
-    const lockedMinor = parseAmountOrZero(lockedText ?? '');
+    const { unplanned: shareText, currency: cur } = form.getValues();
     const shareMinor = parseAmountOrZero(shareText ?? '');
-    if (lockedMinor === null || shareMinor === null) return AMOUNT_HINT;
+    if (shareMinor === null) return AMOUNT_HINT;
     // a share right on a stop is kept as a % (it follows the budget), any other as the amount
     const pct = SHARE_STOPS.find((p) => Math.round((minor * p) / 100) === shareMinor);
     try {
-      await setPlanBudget(ym, minor === 0 ? null : minor, cur, pct ?? 0, undefined, lockedMinor, pct === undefined ? shareMinor : null, lockedIsMax);
+      // 🔒 — by the month's % of the new amount
+      await setPlanBudget(ym, minor === 0 ? null : minor, cur, pct ?? 0, undefined, undefined, pct === undefined ? shareMinor : null);
     } catch (e) {
       if (!(e instanceof OverBudgetError)) throw e;
       return `По категориям уже запланировано ${formatWithCurrency(e.planned_minor, e.currency)} — `
-        + (shareMinor || lockedMinor ? 'вместе с отложенным и долей вне плана это больше бюджета.' : 'бюджет не может быть меньше.');
+        + (e.budget_minor < minor ? 'вместе с отложенным и долей вне плана это больше бюджета.' : 'бюджет не может быть меньше.');
     }
     toast(minor === 0 ? 'Бюджет месяца убран' : 'Бюджет месяца сохранён');
     load();

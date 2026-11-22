@@ -1,14 +1,19 @@
 import React from 'react';
-import { Controller, UseFormReturn } from 'react-hook-form';
+import { Text } from 'react-native';
+import { Controller, UseFormReturn, useWatch } from 'react-hook-form';
 import type { Currency } from '@/db/fx';
 import { PlanBudget, unplannedOf } from '@/db/plans';
-import { formatWithCurrency, toInputValue } from '@/shared/lib/money';
+import { formatWithCurrency, parseAmountOrZero, toInputValue } from '@/shared/lib/money';
+import { useLockedPct } from '@/shared/settings/lockedPct';
+import { navigationRef } from '@/shared/navigation/navigation';
 import CurrencyButton from '@/shared/ui/CurrencyButton';
 import TextInputModal from '@/shared/ui/TextInputModal';
 import { useLoadedForm } from '@/shared/ui/form';
-import type { BudgetForm } from '../model/budgetForm';
+import { formStyles } from '@/shared/theme/formStyles';
+import { BudgetForm, lockedOfForm } from '../model/budgetForm';
 import { ShareField } from './BudgetFields';
-import { RING_LOCKED, RING_UNPLANNED } from './palette';
+import LockedCard from './LockedCard';
+import { RING_UNPLANNED } from './palette';
 
 type Props = {
   visible: boolean;
@@ -24,16 +29,26 @@ type Props = {
   onClose: () => void;
 };
 
-/** The month's budget: the amount and its currency, "Отложить сразу", the share outside the plan (the rest: "Итоги месяца"). */
+/**
+ * The month's budget: the amount and its currency, «🔒 Отложить сразу» (its % — in the settings), the share outside the
+ * plan, what is free in the plan (the rest: "Итоги месяца").
+ */
 export default function BudgetSheet({ visible, budget, currency, defaultCurrency, planned, hint, toShown, onSubmit, onClose }: Props) {
   // the amount and the currency it was entered in
   const form = useLoadedForm<BudgetForm>(visible ? {
     value: toInputValue(budget?.amount_minor), currency: budget?.currency ?? defaultCurrency,
     // the share of its own: what a cut of the plan covered this month stays on top of it
     unplanned: budget && unplannedOf({ ...budget, unplanned_cover_minor: 0 }) ? toInputValue(unplannedOf({ ...budget, unplanned_cover_minor: 0 })) : '',
-    locked: budget?.locked_minor ? toInputValue(budget.locked_minor) : '',
-    lockedIsMax: budget?.locked_is_max ?? false,
   } : null, visible);
+  const setting = useLockedPct();
+  const [value, cur, share] = useWatch({ control: form.control, name: ['value', 'currency', 'unplanned'] });
+  const amount = parseAmountOrZero(value ?? '') ?? 0;
+  const locked = lockedOfForm(budget, setting, amount);
+  // the plan in the budget's currency: screen → budget by the amount's own rate
+  const inScreen = cur === currency ? amount : toShown(amount, cur) ?? amount;
+  const plannedInBudget = inScreen > 0 ? Math.round((planned * amount) / inScreen) : planned;
+  const free = amount - plannedInBudget - locked.locked - (parseAmountOrZero(share ?? '') ?? 0);
+  const toSettings = () => { onClose(); navigationRef.navigate('Settings'); };
   return (
     <TextInputModal
       visible={visible}
@@ -49,18 +64,18 @@ export default function BudgetSheet({ visible, budget, currency, defaultCurrency
       inputAccessory={<Controller control={form.control} name="currency" render={({ field }) => <CurrencyButton value={field.value} onChange={field.onChange} />} />}
     >
       {/* parts of the budget the plan can't take */}
+      {amount > 0 ? <LockedCard l={locked} currency={cur} onSettings={toSettings} /> : null}
       <ShareField
-        form={form} name="locked" other="unplanned" planned={planned} toShown={toShown} screen={currency}
-        title="Отложить сразу" icon color={RING_LOCKED}
-        hint={(v, cur) => (v > 0 ? `${formatWithCurrency(v, cur)} сразу в сбережения: план и траты вне плана их не займут.`
-          : 'Сколько бюджета сразу заблокировать для сбережений: план и траты вне плана их не займут.')}
-      />
-      <ShareField
-        form={form} name="unplanned" other="locked" planned={planned} toShown={toShown} screen={currency}
+        form={form} planned={planned} reserved={locked.locked} toShown={toShown} screen={currency}
         title="На траты вне плана" color={RING_UNPLANNED}
-        hint={(v, cur) => (v > 0 ? `${formatWithCurrency(v, cur)} на траты вне плана — план их не займёт.`
+        hint={(v, c) => (v > 0 ? `${formatWithCurrency(v, c)} на траты вне плана — план их не займёт.`
           : 'Сколько бюджета оставить на траты вне плана. Предупреждение в статистике — только если они больше.')}
       />
+      {amount > 0 && free >= 0 ? (
+        <Text style={formStyles.hint}>
+          {free > 0 ? `Свободно в плане: ${formatWithCurrency(free, cur)} — не распределите, уйдёт в 💰 Сэкономлено` : 'Свободно в плане: 0 — всё распределено'}
+        </Text>
+      ) : null}
     </TextInputModal>
   );
 }

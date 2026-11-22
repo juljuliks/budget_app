@@ -13,16 +13,16 @@ import { BudgetForm, SHARE_STOPS } from '../model/budgetForm';
 import { styles } from './styles';
 
 /**
- * A part of the budget the plan can't take — "🔒 Отложить сразу", "На траты вне плана": a % by the slider or an
- * amount of one's own, or "max" — all that is free (off with nothing free), switched by "% | USD | max". Kept in the form
- * as an amount in the budget's currency; can't take what is planned or the other part.
+ * The part of the budget the plan can't take — "На траты вне плана": a % by the slider or an amount of one's own, or
+ * "max" — all that is free (off with nothing free), switched by "% | USD | max". Kept in the form as an amount in the
+ * budget's currency; can't take what is planned or 🔒.
  */
-export function ShareField({ form, name, other, planned, toShown, screen, title, icon, color, hint }: {
+export function ShareField({ form, planned, reserved, toShown, screen, title, icon, color, hint }: {
   form: ReturnType<typeof useLoadedForm<BudgetForm>>;
-  name: 'locked' | 'unplanned';
-  other: 'locked' | 'unplanned';
   /** what is planned (the funds, the month before's carry too), in the screen's currency */
   planned: number;
+  /** 🔒 of the amount typed, in the budget's currency */
+  reserved: number;
   toShown: (minor: number, from: Currency) => number | null;
   screen: Currency;
   title: string;
@@ -31,13 +31,14 @@ export function ShareField({ form, name, other, planned, toShown, screen, title,
   color: string;
   hint: (minor: number, currency: Currency) => string;
 }) {
-  const [value, cur, own, otherText] = useWatch({ control: form.control, name: ['value', 'currency', name, other] });
+  const name = 'unplanned';
+  const [value, cur, own] = useWatch({ control: form.control, name: ['value', 'currency', name] });
   const amount = parseAmountOrZero(value ?? '') ?? 0;
   const mine = parseAmountOrZero(own ?? '') ?? 0;
   // what is free for this part, in the budget's currency (the plan: screen → budget by the amount's own rate)
   const inScreen = cur === screen ? amount : toShown(amount, cur) ?? amount;
   const plannedInBudget = inScreen > 0 ? Math.round((planned * amount) / inScreen) : planned;
-  const room = Math.max(0, amount - plannedInBudget - (parseAmountOrZero(otherText ?? '') ?? 0));
+  const room = Math.max(0, amount - plannedInBudget - reserved);
   const stopOf = (p: number) => Math.round((amount * p) / 100);
   const stop = amount > 0 ? SHARE_STOPS.find((p) => stopOf(p) === mine) : 0;
   const maxStop = amount > 0 ? SHARE_STOPS.filter((p) => stopOf(p) <= room).pop() ?? 0 : 50;
@@ -49,16 +50,12 @@ export function ShareField({ form, name, other, planned, toShown, screen, title,
   useEffect(() => {
     if (opened.current || !amount) return;
     opened.current = true;
-    const isLockedMax = name === 'locked' && form.getValues('lockedIsMax');
-    if (!isLockedMax && !(room > 0 && mine === room)) return;
+    if (!(room > 0 && mine === room)) return;
     setMode('max');
-    // saved as an amount (before the flag, or by the slider): to follow the plan and the rate it is saved as "max" now
-    if (name === 'locked' && !isLockedMax) form.setValue('lockedIsMax', true, { shouldDirty: true });
-  }, [amount, mine, room]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [amount, mine, room]);
   // "max": all that is free, following it (the budget or the other part changed); off with nothing free (or all of it in)
   useEffect(() => { if (mode === 'max' && mine !== room) set(room); }, [mode, mine, room]); // eslint-disable-line react-hooks/exhaustive-deps
   function switchMode(m: 'pct' | 'amount' | 'max') {
-    if (name === 'locked') form.setValue('lockedIsMax', m === 'max', { shouldDirty: true });
     if (m === 'max') set(room);
     // to the slider: the nearest stop that fits
     if (m === 'pct' && stop === undefined && amount > 0) {
@@ -91,9 +88,7 @@ export function ShareField({ form, name, other, planned, toShown, screen, title,
                 // typed by hand: an amount of one's own, not "max" any more
                 onChangeText={(t) => {
                   field.onChange(t);
-                  if (mode !== 'max') return;
-                  setMode('amount');
-                  if (name === 'locked') form.setValue('lockedIsMax', false, { shouldDirty: true });
+                  if (mode === 'max') setMode('amount');
                 }}
                 placeholder="0"
                 placeholderTextColor={colors.muted}
@@ -107,7 +102,7 @@ export function ShareField({ form, name, other, planned, toShown, screen, title,
       )}
       <Text style={[formStyles.hint, mine > room && styles.overText]}>
         {mine > room
-          ? `Не помещается: свободно ${formatWithCurrency(room, cur)} — остальное занято планом${other === 'locked' ? ' и отложенным' : ' и долей вне плана'}.`
+          ? `Не помещается: свободно ${formatWithCurrency(room, cur)} — остальное занято планом и отложенным.`
           : hint(mine, cur)}
       </Text>
     </View>

@@ -45,6 +45,50 @@ async function categorySchedules(db: Db) {
   }
 }
 
+/**
+ * 72: «🔒 Отложить сразу» is a % of the budget set in the settings. A month whose 🔒 was "MAX" (all that is free) keeps
+ * the amount it has now; the setting's first % — from the last month with a budget (🔒 / budget, to the slider's 5%
+ * stops, 5–30; none locked — not set); the current and coming months take it (their amounts stay till it changes).
+ */
+async function lockedPct(db: Db) {
+  const now = new Date();
+  const p2 = (n: number) => String(n).padStart(2, '0');
+  const ym = `${now.getFullYear()}-${p2(now.getMonth() + 1)}`;
+  const today = `${ym}-${p2(now.getDate())}`;
+  const rate = async (currency: string) => (currency === 'GEL' ? 1 : (await db.get<{ g: number }>(
+    'SELECT gel_per_unit AS g FROM fx_rates WHERE currency = ? AND date <= ? ORDER BY date DESC LIMIT 1', [currency, today]))?.g ?? null);
+  const months = await db.all<{ ym: string; budget: number; currency: string; pct: number; own: number | null; cover: number }>(
+    `SELECT ym, budget_minor AS budget, budget_currency AS currency, unplanned_pct AS pct, unplanned_minor AS own,
+      unplanned_cover_minor AS cover FROM plan_months WHERE budget_minor IS NOT NULL AND locked_is_max = 1`);
+  for (const m of months) {
+    const to = await rate(m.currency);
+    const inBudget = async (minor: number, currency: string) => {
+      const from = await rate(currency);
+      return from === null || to === null ? 0 : Math.round((minor * from) / to);
+    };
+    let planned = 0;
+    for (const i of await db.all<{ v: number; c: string }>('SELECT limit_minor AS v, currency AS c FROM plan_items WHERE ym = ?', [m.ym])) {
+      planned += await inBudget(i.v, i.c);
+    }
+    const [y, mo] = m.ym.split('-').map(Number);
+    const before = mo === 1 ? `${y - 1}-12` : `${y}-${p2(mo - 1)}`;
+    const carry = await db.get<{ debt: number; plus: number; c: string }>(
+      `SELECT carry_debt_minor AS debt, carry_plus_minor AS plus, carry_currency AS c FROM month_closes
+        WHERE ym = ? AND closed_at IS NOT NULL AND carry_currency IS NOT NULL`, [before]);
+    const carryDelta = carry ? await inBudget(carry.plus - carry.debt, carry.c) : 0;
+    const share = (m.own ?? m.budget - Math.round((m.budget * (100 - m.pct)) / 100)) + m.cover;
+    await db.run('UPDATE plan_months SET locked_minor = ?, locked_is_max = 0 WHERE ym = ?',
+      [Math.max(0, m.budget - share - planned + carryDelta), m.ym]);
+  }
+  const last = await db.get<{ budget: number; locked: number }>(
+    `SELECT budget_minor AS budget, locked_minor AS locked FROM plan_months WHERE budget_minor > 0
+      ORDER BY ym <= ? DESC, CASE WHEN ym <= ? THEN ym END DESC, ym LIMIT 1`, [ym, ym]);
+  if (!last || last.locked <= 0) return;
+  const pct = Math.min(30, Math.max(5, Math.round((last.locked * 100) / last.budget / 5) * 5));
+  await db.run("INSERT INTO app_settings (key, value) VALUES ('locked_pct', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value", [String(pct)]);
+  await db.run('UPDATE plan_months SET locked_pct = ? WHERE ym >= ?', [pct, ym]);
+}
+
 /** Migrations 67 and on. */
 export const STEPS_67_ON: MigrationStep[][] = [
   // 67: a category's kind in the plan ("В плане" on its page) — what its item is and what a new month gets of it:
@@ -83,4 +127,12 @@ export const STEPS_67_ON: MigrationStep[][] = [
   // 71: a one-off payment's day in its month ("Дата списания", optional; YYYY-MM-DD): its mark on the stats' bar, the
   // month's pace counts it from that day (none — spread evenly over the month)
   ['ALTER TABLE plan_items ADD COLUMN due TEXT'],
+  // 72: «🔒 Отложить сразу» — a % of the month's budget from the settings ('locked_pct'): the month's % (null — an amount
+  // of its own: a past month, or no % set), what was taken from it this month for the plan and the repeating payments (a
+  // fund's share is its item's taken_minor); no "MAX" any more
+  [
+    'ALTER TABLE plan_months ADD COLUMN locked_pct INTEGER CHECK (locked_pct BETWEEN 0 AND 100)',
+    'ALTER TABLE plan_months ADD COLUMN locked_taken_minor INTEGER NOT NULL DEFAULT 0 CHECK (locked_taken_minor >= 0)',
+    lockedPct,
+  ],
 ];

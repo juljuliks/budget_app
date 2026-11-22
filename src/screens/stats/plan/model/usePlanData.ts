@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import type { Currency } from '@/db/fx';
-import { ensureMonthPlan, getPlanBudget, listPlan, monthIncome, monthStats, parseYm, PlanBudget, planConverter, planCurrency, PlanItem, unplannedSpent } from '@/db/plans';
+import { averageIncome, ensureMonthPlan, getPlanBudget, listPlan, monthIncome, monthStats, parseYm, PlanBudget, planConverter, planCurrency, PlanItem, unplannedSpent } from '@/db/plans';
 import { onTransactionsChanged } from '@/domain/events';
 import { useLatestRequest } from '@/shared/lib/useLatestRequest';
 import { useLoadFailed } from '@/shared/lib/useLoadFailed';
@@ -18,6 +18,8 @@ export function usePlanData(ym: string, currency: Currency) {
   // and back: an amount in the screen's currency in another one (the savings in the budget's currency)
   const [fromShown, setFromShown] = useState<(minor: number, to: Currency) => number | null>(() => () => null);
   const [income, setIncome] = useState(0);
+  // what came in a month on average over the 6 before (null — nothing)
+  const [avgIncome, setAvgIncome] = useState<number | null>(null);
   // spent outside the plan this month, in the screen's currency
   const [unplannedSpentMinor, setUnplannedSpent] = useState(0);
   // the month's spending by category (the savings forecast) and in all, in the screen's currency
@@ -34,9 +36,10 @@ export function usePlanData(ym: string, currency: Currency) {
     const keep = latest();
     started();
     const { year, month } = parseYm(ym);
-    Promise.all([listPlan(ym, currency), getPlanBudget(ym), monthIncome(ym, currency), planConverter(ym), monthStats(year, month, currency), ensureMonthPlan(ym).then(() => planCurrency(ym))])
-      .then(keep(([plan, b, inc, conv, stats, pc]) => {
-        setItems(plan); setBudget(b); setIncome(inc); setUnplannedSpent(unplannedSpent(stats));
+    Promise.all([listPlan(ym, currency), getPlanBudget(ym), monthIncome(ym, currency), planConverter(ym), monthStats(year, month, currency), ensureMonthPlan(ym).then(() => planCurrency(ym)),
+      averageIncome(ym, currency)])
+      .then(keep(([plan, b, inc, conv, stats, pc, avg]) => {
+        setItems(plan); setBudget(b); setIncome(inc); setAvgIncome(avg); setUnplannedSpent(unplannedSpent(stats));
         // a fund takes its contribution, and what was spent past what it saved
         const funds = stats.funds.map((f): [number, number] => [f.category_id, f.contribution_minor + f.shortage_minor]);
         setSpentBy({ byCategory: new Map([...stats.categories.filter((c) => c.category_id !== null).map((c): [number, number] => [c.category_id!, c.spent_minor]), ...funds]),
@@ -54,5 +57,5 @@ export function usePlanData(ym: string, currency: Currency) {
   // a sheet over it changed the month (the month before's "Итоги": what it sends here)
   useEffect(() => onTransactionsChanged(load), [load]);
 
-  return { items, budget, toShown, fromShown, income, unplannedSpentMinor, spentBy, load, failed, storedCurrency, loadedCurrency };
+  return { items, budget, toShown, fromShown, income, avgIncome, unplannedSpentMinor, spentBy, load, failed, storedCurrency, loadedCurrency };
 }
