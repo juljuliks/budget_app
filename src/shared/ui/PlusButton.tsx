@@ -8,7 +8,7 @@ type Props = {
   onPress: () => void;
   /** what it creates, for TalkBack ("Новая категория", "Свой цвет") */
   accessibilityLabel: string;
-  /** the circle's diameter: 34–38 next to chips and swatches, 56 for the floating one */
+  /** the circle's diameter: 34–38 next to chips and swatches, 48 for the floating one */
   size?: number;
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;

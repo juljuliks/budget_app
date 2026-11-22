@@ -24,7 +24,8 @@ export default function MenuButton() {
     guardLeave(() => navigationRef.navigate(route));
   };
   return (
-    <>
+    // one element of the header's row: the sheet's modal inside it, not a neighbour (the row's gap would shift ⋮)
+    <View>
       <TouchableOpacity onPress={() => setOpen(true)} hitSlop={10} style={styles.button} accessibilityLabel="Меню">
         <MoreIcon color={colors.accent} size={22} />
       </TouchableOpacity>
@@ -42,7 +43,7 @@ export default function MenuButton() {
           ))}
         </View>
       </BottomSheet>
-    </>
+    </View>
   );
 }
 
