@@ -77,6 +77,6 @@ export const topNote = (c: Pick<YearReport['top'][number], 'perMonth' | 'overIn'
   [c.perMonth === null ? '' : `${money(Math.round(c.perMonth / 100) * 100)} в месяц`, c.planned ? `перерасход в ${c.overIn} из ${ofMonths(c.planned)}` : 'без плана']
     .filter(Boolean).join(' · ');
 
-/** A fund of the year: «к 31 июля 2027 · успеваете» / «· не успеваете»; deleted — «выключена». */
+/** A fund of the year: «к 31 июля 2027 · успеваете» / «· не успеваете». */
 export const fundNote = (f: YearReport['fundsNow'][number]) =>
-  f.closed ? 'выключена' : `к ${dayTitle(f.due)}${f.ok === null ? '' : f.ok ? ' · успеваете' : ' · не успеваете'}`;
+  `к ${dayTitle(f.due)}${f.ok === null ? '' : f.ok ? ' · успеваете' : ' · не успеваете'}`;

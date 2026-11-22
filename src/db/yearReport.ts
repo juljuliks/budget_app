@@ -34,7 +34,7 @@ export type YearReport = {
   worst: { ym: string; saved: number; reason: string | null } | null;
   /** the closed months' savings: planned and put aside */
   savings: { locked: YearPlanFact; rest: YearPlanFact; funds: YearPlanFact; total: YearPlanFact; months: number } | null;
-  fundsNow: Array<{ id: number; label: string; saved: number; target: number; currency: string; due: string; ok: boolean | null; closed: boolean }>;
+  fundsNow: Array<{ id: number; label: string; saved: number; target: number; currency: string; due: string; ok: boolean | null }>;
   top: Array<TopCategory & { label: string }>;
   /** every category spent in (not the funds' or transfers'): its month on average and overspends (the stats' list) */
   byCategory: Map<number, TopCategory>;
@@ -164,15 +164,15 @@ async function yearSavings(yms: string[], currency: Currency, nowYm: string): Pr
   return s.months ? s : null;
 }
 
-/** The funds of the year: what each has of its sum, and (this year) whether it makes it by its date. */
+/** The funds of the year (not deleted ones): what each has of its sum, and (this year) whether it makes it by its date. */
 async function fundsOfYear(funds: Awaited<ReturnType<typeof allFunds>>, year: number, nowYm: string, label: (id: number) => string): Promise<YearReport['fundsNow']> {
   const forecasts = nowYm.startsWith(String(year)) ? await fundForecasts(nowYm) : new Map();
   const out: YearReport['fundsNow'] = [];
   for (const f of funds) {
-    if (f.since_ym > `${year}-12` || (f.closed_ym && f.closed_ym < `${year}-01`)) continue;
+    if (f.closed_ym || f.since_ym > `${year}-12`) continue; // a deleted fund: its money went to that month's savings
     const { balance } = await fundLedger(f, nowYm < `${year}-12` ? nowYm : `${year}-12`, nowYm);
     const fc = forecasts.get(f.category_id);
-    out.push({ id: f.category_id, label: label(f.category_id), saved: balance, target: f.target_minor, currency: f.currency, due: f.due, ok: fc ? fc.status === 'ok' : null, closed: !!f.closed_ym });
+    out.push({ id: f.category_id, label: label(f.category_id), saved: balance, target: f.target_minor, currency: f.currency, due: f.due, ok: fc ? fc.status === 'ok' : null });
   }
   return out;
 }

@@ -79,3 +79,13 @@ test('«Отложено» of the year in the last budget\'s currency, the rest 
   expect((await yearReport(2026, 'USD', '2026-10')).savedIn).toBeNull();
 });
 
+
+test('the year\'s funds: a deleted one is not among them', async () => {
+  const db = await getDb();
+  const kept = await createCategory('Отпуск', '🏖');
+  const gone = await createCategory('Ноутбук', '💻');
+  await db.run("INSERT INTO funds (category_id, target_minor, currency, due, start_minor, since_ym) VALUES (?, 300000, 'GEL', '2027-07-31', 0, '2026-09')", [kept]);
+  await db.run("INSERT INTO funds (category_id, target_minor, currency, due, start_minor, since_ym, closed_ym) VALUES (?, 150000, 'GEL', '2027-01-31', 0, '2026-08', '2026-10')", [gone]);
+  const r = await yearReport(2026, 'GEL', '2026-10');
+  expect(r.fundsNow.map((f) => f.id)).toEqual([kept]);
+});
