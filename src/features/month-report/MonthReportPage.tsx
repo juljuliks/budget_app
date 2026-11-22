@@ -29,7 +29,9 @@ export default function MonthReportPage({ ym }: { ym: string }) {
   // both currencies read up front: picking the other one only shows it (no loading, the page stays)
   const inBudget = useMonthReport(cur.budget ? ym : null, cur.budget ?? undefined);
   const inSystem = useMonthReport(cur.budget && cur.budget !== cur.system ? ym : null, cur.system);
-  const { report: r, late, failed, load } = cur.shown === cur.budget || !inSystem.report ? inBudget : inSystem;
+  const { report: read, late, failed, load } = cur.shown === cur.budget || !inSystem.report ? inBudget : inSystem;
+  // the page: every amount in the currency picked, «Отложено» too (its stories say it in the budget's)
+  const r = read && { ...read, savedIn: null };
   const [planTarget, setPlanTarget] = useState<PlanAmountTarget | null>(null);
   if (!r || !cur.shown) return <Loading failed={failed} onRetry={load} />;
   if (!r.hasPlan) return <Text style={[report.hint, styles.content]}>Плана на этот месяц не было — отчёта нет.</Text>;

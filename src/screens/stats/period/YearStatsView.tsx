@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import type { Currency } from '@/db/fx';
 import { yearCurrency } from '@/db/yearReport';
 import { CurrencyChoice, ImpulseBlock, useReportCurrency, useYearReport, YearBars, YearNumbers, YearSavings, YearTable } from '@/features/month-report';
@@ -34,7 +34,9 @@ export default function YearStatsView({ range }: { range: DayRange }) {
   const budgetData = usePeriodData(range, cur.budget ?? cur.system);
   const systemData = usePeriodData(range, cur.system, !two);
   const second = cur.shown !== cur.budget && !!inSystem.report && !!systemData.stats;
-  const { report: r, failed, load } = second ? inSystem : inBudget;
+  const { report: read, failed, load } = second ? inSystem : inBudget;
+  // the page: every amount in the currency picked, «Отложено» too (its stories say it in the budget's)
+  const r = read && { ...read, savedIn: null };
   const data = second ? systemData : budgetData;
   const [selected, setSelected] = useState<string | null>(null);
   const [info, setInfo] = useState<Info | null>(null);
@@ -51,8 +53,8 @@ export default function YearStatsView({ range }: { range: DayRange }) {
   const markImpulse = () => navigateWhenReady({ name: 'Main', params: { screen: 'Transactions', params: {
     unanswered: true, range: { from: `${year}-01-01`, to: `${year}-12-31` }, nonce: Date.now(), from: 'Stats' } } } as never);
   return (
-    <StickyScrollView style={styles.screen} contentContainerStyle={styles.content} testID="year-stats">
-      {cur.budget ? <CurrencyChoice budget={cur.budget} system={cur.system} value={cur.shown} onChange={cur.pick} /> : null}
+    <StickyScrollView style={styles.screen} contentContainerStyle={[styles.content, own.content]} testID="year-stats">
+      {cur.budget ? <CurrencyChoice budget={cur.budget} system={cur.system} value={cur.shown} onChange={cur.pick} style={own.choice} /> : null}
       {r.count ? <YearNumbers r={r} page /> : null}
       {r.count ? <View><YearBars r={r} onMonth={openMonthReportPage} page table={<YearTable r={r} onMonth={openMonthReportPage} page />} /></View> : null}
       {r.savings || r.fundsNow.length ? <YearSavings r={r} page /> : null}
@@ -66,3 +68,9 @@ export default function YearStatsView({ range }: { range: DayRange }) {
     </StickyScrollView>
   );
 }
+
+const own = StyleSheet.create({
+  // right under «‹ 2026 ›»: the currency, then «Отложено»
+  content: { paddingTop: 0 },
+  choice: { marginTop: 0, marginBottom: 16 },
+});

@@ -221,6 +221,8 @@ describe('7.2.6–7.3.7 the reports as pages', () => {
     expect(await screen.findByRole('tab', { name: '₾ GEL', selected: true })).toBeTruthy();
     await waitFor(() => expect(screen.queryAllByText(/ ₾$/).length).toBeGreaterThan(0));
     expect(screen.getByTestId('month-report')).toBe(page);
+    // every amount in the currency picked, «Отложено» too
+    expect(texts().filter((t) => /\d.*\$$/.test(t))).toEqual([]);
   });
 
   test('7.3.7 «Итоги 2026 — статистика за год» past its stories: the year\'s stats — by months, the spending by categories', async () => {
