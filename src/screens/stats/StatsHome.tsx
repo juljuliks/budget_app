@@ -118,7 +118,8 @@ export default function StatsHome() {
     <View style={styles.screen}>
       {/* the 1st to the 3rd: a month over to close */}
       <CloseBanner />
-      <PlanAlert currency={currency} />
+      {/* the overspend's alert: the current month's stats only (not a past month, a year or a period) */}
+      {!byPeriod && shownYm === ymOf(now.getFullYear(), now.getMonth()) ? <PlanAlert currency={currency} /> : null}
       {/* a fresh report (the 24th to the 7th): its stories */}
       <ReportBanner />
 

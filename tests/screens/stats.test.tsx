@@ -419,6 +419,17 @@ describe('5.4–5.6 hidden amounts, the currency, the warning', () => {
     expect(await getSetting('display_currency')).toBe('USD');
   });
 
+  test('5.6.1a the warning: the current month\'s stats only — not a past month, not the year', async () => {
+    expect(screen.getByText(/^⚠ Вне плана потрачено/)).toBeTruthy();
+    await tap('Предыдущий месяц');
+    await waitFor(() => expect(screen.queryByText(/^⚠ Вне плана потрачено/)).toBeNull());
+    await tap('Следующий месяц');
+    expect(await screen.findByText(/^⚠ Вне плана потрачено/)).toBeTruthy();
+    await tap('Выбрать период');
+    await tap('За год');
+    await waitFor(() => expect(screen.queryByText(/^⚠ Вне плана потрачено/)).toBeNull());
+  });
+
   test('the warning: spending outside the plan past its share; ✕ hides it', async () => {
     expect(screen.getByText('⚠ Вне плана потрачено 380 ₾ — на 80 ₾ больше, чем выделено на траты вне плана')).toBeTruthy();
     await tap('Скрыть предупреждение');
