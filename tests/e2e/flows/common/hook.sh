@@ -42,6 +42,14 @@ notified() {
 # not_notified "<regex>": no notification of the app has it now
 not_notified() { ! grep -qE -- "$1" <<<"$(app_notifications)"; }
 
+# run_scheduled: the app's scheduled notifications shown now (notifee puts them in WorkManager: its jobs forced to run —
+# the emulator's clock moved forward wouldn't start them)
+run_scheduled() {
+  local jobs
+  jobs="$($ADB shell dumpsys jobscheduler | tr -d '\r' | grep -oE "JOB #u0a[0-9]+/[0-9]+: [0-9a-f]+ $PKG/androidx.work" | sed -E 's|.*/([0-9]+):.*|\1|' | sort -u)"
+  for j in $jobs; do $ADB shell cmd jobscheduler run -f "$PKG" "$j" >/dev/null; done
+}
+
 # dd/mm/yyyy and hh:mm, minutes ago (default now)
 day() { date -v-"${1:-0}"M +%d/%m/%Y; }
 hm() { date -v-"${1:-0}"M +%H:%M; }

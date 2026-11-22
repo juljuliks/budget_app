@@ -1,5 +1,6 @@
 package com.budgetapp
 
+import android.content.Intent
 import android.os.Bundle
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
@@ -14,6 +15,13 @@ class MainActivity : ReactActivity() {
     // (https://github.com/software-mansion/react-native-screens#android)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(null)
+    }
+
+    // singleTask: a notification tapped while the app is alive comes here; kept as the activity's intent so that
+    // notifee.getInitialNotification() (asked again when the app comes back) sees it, not the launch's
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
     }
 
     override fun createReactActivityDelegate(): ReactActivityDelegate =

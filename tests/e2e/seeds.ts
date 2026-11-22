@@ -3,7 +3,7 @@
 // operation read except the ones made unread. Dates are around today.
 import { getDb } from '../../src/db';
 import { createCategory, findCategoryByName, topUpCategoryId, updateCategory } from '../../src/db/categories';
-import { currentYm, setLockedPct, setPlanAmount, setPlanBudget } from '../../src/db/plans';
+import { currentYm, setFund, setLockedPct, setPlanAmount, setPlanBudget } from '../../src/db/plans';
 import { addManualTransaction, markTransactionsSeen } from '../../src/db/transactions';
 import { backfillRule, createRule } from '../../src/categorize/rules';
 
@@ -194,3 +194,18 @@ export async function planned() {
   await buy('SPAR', 400, on(5, 10, 2), food);
   for (const m of ['SPAR', 'ZARA']) await rule(m, m === 'SPAR' ? food : clothes);
 }
+
+/**
+ * `planned` and a fund that can't make it: «👕 Одежда» — 4 000 ₾ by the end of the month after next (≈ 1 330 a month;
+ * the month leaves it ≈ 940).
+ */
+export async function lateFund() {
+  await planned();
+  const id = await category('Одежда', '👕');
+  const due = new Date(now.getFullYear(), now.getMonth() + 3, 0);
+  const key = `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, '0')}-${String(due.getDate()).padStart(2, '0')}`;
+  await setFund(currentYm(), id, { target_minor: 400000, currency: 'GEL', due: key, start_minor: 0 });
+  // its kind, as «В плане» → «Копилка» saves it
+  await (await getDb()).run("UPDATE categories SET plan_kind = 'fund' WHERE id = ?", [id]);
+}
+

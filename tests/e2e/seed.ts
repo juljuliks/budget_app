@@ -6,13 +6,15 @@ import fs from 'fs';
 import { openDatabase } from '../../src/db/driver';
 import { closeDb, useDb } from '../../src/db';
 import { setRatesFetcher } from '../../src/fx/nbg';
-import { base, done, empty } from './seeds';
+import { base, done, empty, lateFund, planned } from './seeds';
 
 setRatesFetcher(async () => []);
 
 /** Databases of their own, by flow name; any other flow starts from `base`. */
 const SEEDS: Record<string, () => Promise<void>> = {
   'sms-receive': empty,
+  'fund-late': lateFund,
+  'year-report': planned,
 };
 
 async function main(flow: string, out: string) {

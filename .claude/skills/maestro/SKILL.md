@@ -29,7 +29,7 @@ tests/e2e/run.sh sms-receive              # один сценарий (все �
 2. `run.sh`: все разрешения выданы, READ_SMS отозван; запуск через `am start` (не monkey).
 3. `flows/<flow>.sh before` → `flows/<flow>.yaml` → `flows/<flow>.sh after` → `verify.ts <flow>` (проверка базы, `case`).
 4. Хуки подключают `flows/common/hook.sh`: `sms "<text>" [sender]`, `sql "<query>"`, `wait_for "<query>" "<ожидаемое>"`,
-   `notified "<regex>"` / `not_notified`, `clear_inbox`, `day [мин назад]` (dd/mm/yyyy), `hm` (hh:mm).
+   `notified "<regex>"` / `not_notified`, `run_scheduled` (запланированные уведомления — сейчас), `clear_inbox`, `day [мин назад]` (dd/mm/yyyy), `hm` (hh:mm).
    Переменные: `ADB`, `DIR` (files приложения), `OUT`.
 5. JS-ошибка — только строки `E ReactNativeJS` в logcat.
 
@@ -48,3 +48,5 @@ tests/e2e/run.sh sms-receive              # один сценарий (все �
 - `sqlite3` на эмуляторе без `json_extract` — `instr`; всегда `-cmd '.timeout 5000'` (приложение пишет параллельно).
 - Ручные операции из seed'а имеют `source='sms'` — отличать по `sms_hash NOT LIKE 'manual:%'`.
 - Пуш от имени пакета TBC с эмулятора не отправить — 1.3 только вручную.
+- Уведомление по расписанию (notifee `createTriggerNotification`) — задание WorkManager: перевод часов эмулятора его не
+  запустит, только `cmd jobscheduler run -f` — хелпер `run_scheduled`.

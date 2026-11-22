@@ -1,0 +1,15 @@
+# 6.5.12: «👕 Одежда не успевает к …» in the shade; a tap — the category's page with «⚠ Не успеваете к …».
+appId: com.budgetapp
+---
+# the shade is opened by the hook
+- tapOn: ".*Одежда не успевает к .*"
+- extendedWaitUntil:
+    visible: "Удалить категорию"
+    timeout: 30000
+# the fund's card is under «В плане»
+- scrollUntilVisible:
+    element: "⚠ Не успеваете к .*"
+    direction: DOWN
+- scrollUntilVisible:
+    element: "Копить .* к .*"
+    direction: DOWN

@@ -47,6 +47,8 @@ switch (flow) {
     break;
   }
   case 'lock-start':
+  case 'fund-late':
+  case 'year-report':
     // the screens only: the database isn't touched
     break;
   default:

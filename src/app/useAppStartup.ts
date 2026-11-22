@@ -16,6 +16,23 @@ import { runAutoBackupIfDue } from '@/features/backup';
 import { syncNativeBanks } from '@/features/banks';
 import { offerUpdate } from '@/features/app-update';
 
+/** The notifications already acted on: the activity keeps the intent it was opened with, asked again on every return. */
+const handled = new Set<string>();
+
+/** The notification the app was opened or brought back with, acted on once. */
+function openedByNotification() {
+  notifee.getInitialNotification()
+    .then((initial) => {
+      // a return without a notification: nothing pressed
+      if (!initial?.pressAction || !initial.notification) return;
+      const key = `${initial.notification.id ?? ''}|${initial.pressAction.id}`;
+      if (handled.has(key)) return;
+      handled.add(key);
+      return handleNotificationAction({ id: initial.pressAction.id, notification: initial.notification });
+    })
+    .catch((e) => console.error('initial notification failed', e));
+}
+
 export function useAppStartup() {
   useEffect(() => {
     createNotificationChannel();
@@ -25,13 +42,14 @@ export function useAppStartup() {
     // refunds that came before their merchant had a category (or before this existed) get one
     autoCategorizeRefunds().then((n) => { if (n > 0) emitTransactionsChanged(); }).catch((e) => console.error('refund categories failed', e));
 
-    // app was launched by tapping a notification / its action button
-    notifee.getInitialNotification()
-      .then((initial) => initial && handleNotificationAction({ id: initial.pressAction.id, notification: initial.notification }))
-      .catch((e) => console.error('initial notification failed', e));
+    // app was launched (or brought back: a scheduled one, shown by WorkManager, gives no press event then) by tapping a
+    // notification / its action button
+    openedByNotification();
 
     const unsubscribe = notifee.onForegroundEvent(({ type, detail }) => {
       if (type === EventType.PRESS || type === EventType.ACTION_PRESS) {
+        // the same press isn't acted on again when the app comes back with its intent
+        handled.add(`${detail.notification?.id ?? ''}|${detail.pressAction?.id}`);
         handleNotificationAction({ id: detail.pressAction?.id, notification: detail.notification })
           .catch((e) => console.error('notification action failed', e));
       }
@@ -39,6 +57,8 @@ export function useAppStartup() {
 
     // the month's report on the 1st: scheduled now and re-scheduled after every change of the operations
     scheduleMonthReports();
+    // a fund that stopped making it while the app was closed (a new month, the spending)
+    notifyFundsLate();
     // a fund that stopped making it by its date: said once (the plan, the budget, the % of 🔒 changed it)
     const offReport = onTransactionsChanged(() => { scheduleMonthReports(); notifyFundsLate(); });
 
@@ -49,6 +69,7 @@ export function useAppStartup() {
     // a press handled by the background handler may have queued a screen while we were in background
     const appState = AppState.addEventListener('change', (s) => {
       if (s !== 'active') return;
+      openedByNotification();
       flushPendingNavigation();
       runAutoBackupIfDue();
       offerUpdate();
