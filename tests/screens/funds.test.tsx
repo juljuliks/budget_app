@@ -93,10 +93,54 @@ describe('6.5 funds', () => {
     expect(await (await getDb()).get("SELECT locked_minor AS l FROM plan_months WHERE ym = '2026-10'")).toEqual({ l: 26500 });
   });
 
+  test('6.5.12 its card: «✓ Успеваете к …» — the contribution fits (of the free part and 🔒)', async () => {
+    await openApp(planned);
+    await fillFund('2700');
+    await tap('Сохранить копилку');
+    expect(await screen.findByText('✓ Успеваете к 31 января')).toBeTruthy();
+    expect(screen.getByText(`Взнос 675${N}₾ в месяц влезает: свободно в плане 640${N}₾ + из 🔒 35${N}₾.`)).toBeTruthy();
+    expect(screen.getByText(`В таком темпе 2 700${N}₾ будут к 31 января 2027.`)).toBeTruthy();
+  });
+
+  test('6.5.13 not making it: why, «Сдвинуть на …» and «Копить … к …» — saved at once, «Отменить» puts it back', async () => {
+    await openApp(planned);
+    // 4 000 over 4 months: 1 000 a month, 940 is left for it (640 free + 300 of 🔒)
+    await fillFund('4000');
+    await tap('Сохранить копилку');
+    expect(await screen.findByText('⚠ Не успеваете к 31 января')).toBeTruthy();
+    expect(screen.getByText(`Нужно 1 000${N}₾ в месяц, а копилке остаётся 940${N}₾: свободно в плане 640${N}₾ + из 🔒 300${N}₾ (сначала — копилки с датой раньше).`)).toBeTruthy();
+    expect(screen.getByText(`В таком темпе к 31 января будет ≈ 3 760${N}₾ из 4 000${N}₾.`)).toBeTruthy();
+    await tap(`Копить 3 760${N}₾ к 31 января`);
+    expect(await screen.findByText(`Копилка «👕 Одежда» — 3 760${N}₾`)).toBeTruthy();
+    expect(await fund()).toMatchObject({ target_minor: 376000, due: '2027-01-31' });
+    expect(await screen.findByText('✓ Успеваете к 31 января')).toBeTruthy();
+    await tap('Отменить');
+    expect(await screen.findByText('⚠ Не успеваете к 31 января')).toBeTruthy();
+    expect(await fund()).toMatchObject({ target_minor: 400000 });
+    await tap('Сдвинуть на 28 февраля 2027');
+    expect(await screen.findByText('Копилка «👕 Одежда» — к 28 февраля 2027')).toBeTruthy();
+    expect(await fund()).toMatchObject({ target_minor: 400000, due: '2027-02-28' });
+    // the stats: «взнос 940 / 1 000 ₾ · ⚠ не успевает ›» before the move — now it makes it
+    expect(await screen.findByText('✓ Успеваете к 28 февраля')).toBeTruthy();
+  });
+
+  test('6.5.14 the stats: a fund not making it — «взнос … / … · ⚠ не успевает ›», a tap — its category\'s page', async () => {
+    await openApp(planned);
+    await fillFund('4000');
+    await tap('Сохранить копилку');
+    await screen.findByText('⚠ Не успеваете к 31 января');
+    backToTabs();
+    await tap('Статистика');
+    await screen.findByLabelText('Добавить в план');
+    await screen.findByLabelText('Добавить в план');
+    await tap(`взнос 940${N}₾ / 1 000${N}₾ · ⚠ не успевает ›`);
+    expect(await screen.findByText('⚠ Не успеваете к 31 января')).toBeTruthy();
+  });
+
   test('nothing free, 🔒 empty: 0 this month, the next ones more — nothing asked', async () => {
     await openApp(async () => {
       await planned();
-      await (await getDb()).run("UPDATE plan_months SET locked_minor = 0, locked_is_max = 0 WHERE ym = '2026-10'");
+      await (await getDb()).run("UPDATE plan_months SET locked_minor = 0, locked_pct = NULL WHERE ym = '2026-10'");
       const { id } = (await (await getDb()).get<{ id: number }>("SELECT id FROM categories WHERE name = 'Продукты'"))!;
       // the plan takes all of it: 2 400 − 2 160 + 400 of Одежда freed (it becomes the fund) — 640 more to Продукты
       await (await getDb()).run("UPDATE plan_items SET limit_minor = limit_minor + 94000 WHERE ym = '2026-10' AND category_id = ?", [id]);

@@ -6,6 +6,7 @@ import { AppState } from 'react-native';
 import notifee, { EventType } from '@notifee/react-native';
 import { createNotificationChannel } from '@/notifications/notifeeBootstrap';
 import { scheduleMonthReports } from '@/notifications/monthReportNotice';
+import { notifyFundsLate } from '@/notifications/fundLateNotice';
 import { handleNotificationAction } from '@/notifications/notifeeIntegration';
 import { requestAppPermissions } from '@/native/permissions';
 import { emitTransactionsChanged, onTransactionsChanged } from '@/domain/events';
@@ -38,7 +39,8 @@ export function useAppStartup() {
 
     // the month's report on the 1st: scheduled now and re-scheduled after every change of the operations
     scheduleMonthReports();
-    const offReport = onTransactionsChanged(() => { scheduleMonthReports(); });
+    // a fund that stopped making it by its date: said once (the plan, the budget, the % of 🔒 changed it)
+    const offReport = onTransactionsChanged(() => { scheduleMonthReports(); notifyFundsLate(); });
 
     // the weekly automatic copy, if it is on and due: on start and on coming back (the app is seldom started anew)
     runAutoBackupIfDue();

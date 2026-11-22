@@ -3,7 +3,7 @@
 import { currentYm, deleteFund, FundInput, fundThisMonth, restoreFund, setFund } from '@/db/plans';
 import { emitTransactionsChanged } from '@/domain/events';
 import { formatWithCurrency } from '@/shared/lib/money';
-import { MONTHS_GEN } from '@/shared/lib/dates';
+import { dayTitle, MONTHS_GEN } from '@/shared/lib/dates';
 import { SAVE_FAILED, UNDO } from '@/shared/lib/strings';
 import { sheetAlert } from '@/shared/ui/sheetAlert';
 import { toast, toastError, toastFailure } from '@/shared/ui/toast';
@@ -57,4 +57,21 @@ export function confirmDeleteFund(categoryId: number, label: string, saved: numb
       { text: 'Отмена', style: 'cancel' },
       { text: 'Выключить', style: 'destructive', onPress: () => { remove(categoryId, label, onDone, ym); } },
     ]);
+}
+
+/**
+ * Not making it by its date: «Сдвинуть на 30 сентября 2027» (a later date) or «Копить 1 185 $ к 31 июля» (a smaller sum) —
+ * saved at once, «Отменить» in the toast puts back what it was.
+ */
+export function changeFundGoal(categoryId: number, label: string, was: FundInput, now: Partial<Pick<FundInput, 'due' | 'target_minor'>>) {
+  const done = now.due ? `Копилка «${label}» — к ${dayTitle(now.due)}` : `Копилка «${label}» — ${formatWithCurrency(now.target_minor ?? 0, was.currency)}`;
+  setFund(currentYm(), categoryId, { ...was, ...now })
+    .then(() => {
+      emitTransactionsChanged();
+      toast(done, {
+        label: UNDO,
+        onPress: () => { setFund(currentYm(), categoryId, was).then(emitTransactionsChanged).catch(toastFailure('restore fund goal', 'Не удалось восстановить')); },
+      });
+    })
+    .catch(toastFailure('save fund goal', SAVE_FAILED));
 }

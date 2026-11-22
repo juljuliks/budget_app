@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { categoryLabel } from '@/db/categories';
 import type { Currency } from '@/db/fx';
-import { currentYm, ensureMonthPlan, planCurrency } from '@/db/plans';
+import { currentYm, ensureMonthPlan, FundForecast, fundForecasts, planCurrency } from '@/db/plans';
 import { SavingsPlanFact, savingsPlanFact } from '@/db/reportSavings';
 import { onTransactionsChanged } from '@/domain/events';
 import { formatWithCurrency } from '@/shared/lib/money';
@@ -23,11 +23,14 @@ export function useMonthSavings(ym: string, shown: Currency, hidden: boolean) {
   const data = usePlanData(ym, currency);
   // with the currency it came in: switched to another one, it is stale until it loads
   const [fact, setFact] = useState<{ fact: SavingsPlanFact | null; currency: Currency } | null>(null);
+  // this month: will each fund make it by its date
+  const [forecasts, setForecasts] = useState<Map<number, FundForecast>>(new Map());
   const past = ym < currentYm();
   const latest = useLatestRequest();
   const load = useCallback(() => {
     const keep = latest();
     ensureMonthPlan(ym).then(() => planCurrency(ym)).then(keep(setBudgetCurrency)).catch((e) => console.error('load budget currency failed', e));
+    if (ym === currentYm()) fundForecasts(ym).then(keep(setForecasts)).catch((e) => console.error('load fund forecasts failed', e));
     if (!past) return;
     savingsPlanFact(ym, currency).then(keep((f) => setFact({ fact: f, currency }))).catch((e) => console.error('load month savings failed', e));
   }, [ym, currency, past, latest]);
@@ -38,7 +41,7 @@ export function useMonthSavings(ym: string, shown: Currency, hidden: boolean) {
   if (past) return { section: fact?.currency === currency ? pastSavings(fact.fact, ym, money, hidden) : null, view: null, currency };
   if (!data.items || data.loadedCurrency !== currency || ym > currentYm()) return { section: null, view: null, currency };
   const view = planView({ ...data, items: data.items, ym, currency, hidden });
-  return { section: currentSavings(view, money, hidden, ym, paymentWords), view, currency };
+  return { section: currentSavings(view, money, hidden, ym, paymentWords, forecasts), view, currency };
 }
 
 /** A category of «Сбережения меньше на …»: its plan amount to change. null — not in the plan. */

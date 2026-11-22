@@ -2,7 +2,7 @@
 // rest is spent by plan (the overspend takes 💰, then 🔒, then the funds' contributions, the farthest due first, then the
 // savings from before); a month over — what its "Итоги" laid out. No React.
 import type { SavingsPlanFact } from '@/db/reportSavings';
-import type { PlanItem } from '@/db/plans';
+import type { FundForecast, PlanItem } from '@/db/plans';
 import { MONTHS_GEN, MONTHS_PREP } from '@/shared/lib/dates';
 import { formatWithCurrency } from '@/shared/lib/money';
 import type { PlanView } from '../../plan/model/planView';
@@ -19,6 +19,10 @@ export type SavingsPart = {
   fund?: { saved: number; target: number; due: string; currency: string };
   /** fund or saving-subscription category: its id for a long press to open the edit sheet */
   categoryId?: number;
+  /** a fund not making it by its date: its status opens its category's page */
+  late?: boolean;
+  /** the first of two or more funds: «Копилки · ближайшие выше» over it */
+  fundsFirst?: boolean;
 };
 export type SavingsSection = {
   parts: SavingsPart[];
@@ -54,8 +58,27 @@ export function fundFitStatus(f: PlanItem, ym: string, hidden: boolean): Savings
   return f.limit_minor < fit.asked ? { text: `взнос меньше · ${next}`, tone: 'muted' } : null;
 }
 
-/** This month, from the plan's view. null — no budget, or nothing goes to savings. */
-export function currentSavings(p: PlanView, money: Money, hidden: boolean, ym = '', words?: UpcomingWords): SavingsSection | null {
+/**
+ * A fund not making it by its date: «взнос 85 / 120 $ · ⚠ не успевает ›», nothing left for it — «⚠ бюджет расписан ›»
+ * (in its own currency). null — it makes it, or not known.
+ */
+export function fundLateStatus(f: FundForecast | undefined, hidden: boolean): SavingsStatus | null {
+  if (!f || f.status === 'ok') return null;
+  const mark = f.status === 'full' ? '⚠ бюджет расписан ›' : '⚠ не успевает ›';
+  if (hidden) return { text: mark, tone: 'warn' };
+  return { text: `взнос ${formatWithCurrency(f.fromFree + f.fromLocked, f.currency)} / ${formatWithCurrency(f.asked, f.currency)} · ${mark}`, tone: 'warn' };
+}
+
+/** The funds the nearest date first (one date — the smaller sum): the queue they get the budget in. */
+const byDue = (a: PlanItem, b: PlanItem) => (a.fund?.due ?? '').localeCompare(b.fund?.due ?? '') || (a.fund?.target_minor ?? 0) - (b.fund?.target_minor ?? 0);
+
+/**
+ * This month, from the plan's view (`forecasts`: will each fund make it by its date). null — no budget, or nothing goes
+ * to savings.
+ */
+export function currentSavings(
+  p: PlanView, money: Money, hidden: boolean, ym = '', words?: UpcomingWords, forecasts?: Map<number, FundForecast>,
+): SavingsSection | null {
   if (!p.shownBudget || p.savingsPlanned <= 0) return null;
   const less = p.less;
   const parts: SavingsPart[] = [];
@@ -66,16 +89,20 @@ export function currentSavings(p: PlanView, money: Money, hidden: boolean, ym = 
       status: now < p.locked ? took(p.locked - now, money, hidden) : { text: '✓ отложено в начале месяца', tone: 'muted' },
     });
   }
-  for (const f of p.funds) {
+  const funds = [...p.funds].sort(byDue);
+  for (const f of funds) {
     const plan = f.converted_minor ?? 0;
+    const late = fundLateStatus(forecasts?.get(f.category_id), hidden);
     const fit = ym ? fundFitStatus(f, ym, hidden) : null;
     // nothing fitted this month: still shown, "без взноса"
     if (plan <= 0 && !fit) continue;
     const cut = less?.funds.cut.get(f.category_id) ?? 0;
     parts.push({
       key: `fund-${f.category_id}`, categoryId: f.category_id, name: `${f.emoji || ''} ${f.name}`.trim(), color: RING_FUNDS, plan, now: plan - cut,
-      status: cut > 0 ? took(cut, money, hidden, ' — следующие взносы станут больше') : fit ?? { text: 'взнос в копилку', tone: 'muted' },
-      ...(f.fund && !cut && !hidden ? { fund: { saved: f.fund.saved_minor, target: f.fund.target_minor, due: f.fund.due, currency: f.currency } } : {}),
+      // not making it by its date comes first (the overspend is said over the stats too)
+      status: late ?? (cut > 0 ? took(cut, money, hidden, ' — следующие взносы станут больше') : fit ?? { text: 'взнос в копилку', tone: 'muted' }),
+      late: !!late, fundsFirst: funds.length > 1 && f === funds[0],
+      ...(f.fund && !cut && !hidden && !late ? { fund: { saved: f.fund.saved_minor, target: f.fund.target_minor, due: f.fund.due, currency: f.currency } } : {}),
     });
   }
   for (const s of p.saving) {

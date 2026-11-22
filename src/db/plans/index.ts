@@ -18,6 +18,7 @@ export * from './funds';
 export * from './fundEntries';
 export * from './fundWrites';
 export * from './fundMonth';
+export * from './fundForecast';
 export * from './close';
 export * from './closeWrites';
 export type { ClosePayment, PaymentChoice } from './closePayments';

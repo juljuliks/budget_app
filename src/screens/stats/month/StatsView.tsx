@@ -130,6 +130,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
         onLongPressLocked: plan.openBudget,
         // a fund spent from: said under its part; without one there — in "Копилки"
         fundSpent: fundSpentOf(stats, ym, hidden),
+        openCategory,
       })}
       {fundsSection(stats, (f) => (
         <FundStatRow key={f.category_id} f={f} ym={ym} currency={stats.currency} hidden={hidden} actions={fundActions(f.category_id, ym, openTransactions, () => setFundSheet({ id: f.category_id, label: `${f.emoji || ''} ${f.name}`.trim() }))} />

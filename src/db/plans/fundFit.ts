@@ -5,6 +5,7 @@
 import { getDb } from '../index';
 import { activeFunds, contributionOf, fundLedger } from './funds';
 import { planConverter, storedBudget } from './budget';
+import { fundOrder } from './fundForecast';
 
 /**
  * Fits the funds of `ym` (one of the current and the coming months) anew: counted as if what they took from 🔒 last
@@ -29,9 +30,8 @@ export async function fitFunds(ym: string, nowYm: string): Promise<void> {
     free = Math.max(0, budget.plannable_minor - before - others);
     locked = budget.locked_minor + before;
   }
-  // the older first: a new fund doesn't take an older one's place
-  const funds = (await activeFunds(ym, db)).filter((f) => items.some((i) => i.category_id === f.category_id))
-    .sort((a, b) => (a.since_ym < b.since_ym ? -1 : a.since_ym > b.since_ym ? 1 : a.category_id - b.category_id));
+  // the nearest date first (one date — the smaller sum): the queue of fundOrder
+  const funds = (await activeFunds(ym, db)).filter((f) => items.some((i) => i.category_id === f.category_id)).sort(fundOrder);
   const writes: Array<{ id: number; put: number; cap: number | null; taken: number; currency: string }> = [];
   let taken = 0;
   for (const fund of funds) {

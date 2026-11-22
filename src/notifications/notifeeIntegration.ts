@@ -13,6 +13,7 @@ import { KIND_LABELS } from '@/shared/lib/format';
 import { formatMoneyWithCurrency } from '@/shared/lib/money';
 import { limitAlertFor } from './limitAlerts';
 import { AMOUNTS_HIDDEN, REPORT_ACTION } from './monthReportNotice';
+import { FUND_ACTION } from './fundLateNotice';
 import { hideNotificationAmounts } from '../native/appLock';
 
 export const CHANNEL_ID = 'transactions';
@@ -173,6 +174,13 @@ export async function handleNotificationAction(event: ActionEvent) {
     const sheets = require('@/shared/navigation/sheets') as typeof import('@/shared/navigation/sheets');
     const open = event.notification?.data?.kind === 'close' && !(await monthClose(ym)).closed;
     if (open) sheets.openMonthClose(ym); else sheets.openMonthReport(ym);
+    return;
+  }
+  // a fund not making it by its date: its category's page
+  if (id === FUND_ACTION) {
+    const categoryId = Number(event.notification?.data?.categoryId);
+    const { navigateWhenReady } = require('@/shared/navigation/navigation') as typeof import('@/shared/navigation/navigation');
+    if (categoryId) navigateWhenReady({ name: 'Category', params: { id: categoryId } } as never);
     return;
   }
   const txId = Number(event.notification?.data?.txId);

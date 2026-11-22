@@ -2,11 +2,12 @@
 // category can have one (not a system or a transfer one).
 import { useCallback, useEffect, useState } from 'react';
 import { getCategory, isSystemCategory, isTransferCategory } from '@/db/categories';
-import { fundThisMonth, FundThisMonth } from '@/db/plans';
+import { fundForecast, FundForecast, fundThisMonth, FundThisMonth } from '@/db/plans';
 import { onTransactionsChanged } from '@/domain/events';
 import { useLatestRequest } from '@/shared/lib/useLatestRequest';
 
-export type CategoryFund = { allowed: boolean; label: string; month: FundThisMonth | null };
+/** `forecast`: will it make it by its date (null — no budget this month) */
+export type CategoryFund = { allowed: boolean; label: string; month: FundThisMonth | null; forecast: FundForecast | null };
 
 /** null while loading. */
 export function useCategoryFund(categoryId: number) {
@@ -14,11 +15,12 @@ export function useCategoryFund(categoryId: number) {
   const latest = useLatestRequest();
   const load = useCallback(() => {
     const keep = latest();
-    Promise.all([getCategory(categoryId), fundThisMonth(categoryId)])
-      .then(keep(([c, month]: [Awaited<ReturnType<typeof getCategory>>, FundThisMonth | null]) => setData({
+    Promise.all([getCategory(categoryId), fundThisMonth(categoryId), fundForecast(categoryId)])
+      .then(keep(([c, month, forecast]: [Awaited<ReturnType<typeof getCategory>>, FundThisMonth | null, FundForecast | null]) => setData({
         allowed: !!c && !isSystemCategory(c) && !isTransferCategory(c),
         label: c ? `${c.emoji || ''} ${c.name}`.trim() : '',
         month,
+        forecast,
       })))
       .catch(keep((e: unknown) => console.error('load category fund failed', e)));
   }, [categoryId, latest]);

@@ -27,6 +27,8 @@ type Open = {
   onLongPressLocked?: () => void;
   /** a fund spent from this month: what is shown under its part (FundSpent) */
   fundSpent?: (id: number) => React.ReactNode;
+  /** a fund not making it by its date: «⚠ не успевает ›» — its category's page */
+  openCategory?: (id: number) => void;
 };
 
 /** "now / plan ₾ (%)"; not known yet — "? / plan ₾". "Скрыть суммы": the % alone. */
@@ -59,8 +61,10 @@ function savingsHeaderTotal(now: number | null, plan: number, currency: string) 
   );
 }
 
-function Part({ x, currency, onLess, onLongPress, spent, actions }: {
+function Part({ x, currency, onLess, onLongPress, spent, actions, onLate }: {
   x: SavingsPart; currency: string; onLess: () => void; onLongPress?: () => void; spent?: React.ReactNode;
+  /** a fund not making it: its status opens its category's page */
+  onLate?: (id: number) => void;
   /** a fund's: the menu of a tap or a long press instead of onLongPress */
   actions?: PressAction[];
 }) {
@@ -76,8 +80,10 @@ function Part({ x, currency, onLess, onLongPress, spent, actions }: {
         <Text style={styles.rowName} numberOfLines={1}>{x.name}</Text>
         {nowOfPlan(x.now, x.plan, currency)}
       </View>
-      {x.plan > 0 && x.now !== null ? <Meter ratio={Math.max(0, x.now) / x.plan} height={6} color={x.color} /> : null}
-      {x.status.info ? (
+      {x.plan > 0 && x.now !== null ? <Meter ratio={Math.max(0, x.now) / x.plan} height={6} color={x.late ? colors.warn : x.color} /> : null}
+      {x.late && onLate && x.categoryId !== undefined ? (
+        <TouchableOpacity onPress={() => onLate(x.categoryId!)} hitSlop={8} accessibilityRole="button">{status}</TouchableOpacity>
+      ) : x.status.info ? (
         <TouchableOpacity style={styles.rowTop} onPress={onLess} hitSlop={8} accessibilityRole="button" accessibilityLabel={`${x.name}: что съело сбережения`}>
           {status}<InfoIcon color={colors.accent} size={13} />
         </TouchableOpacity>
@@ -109,13 +115,20 @@ export function savingsSection(s: SavingsSection | null, currency: string, open:
       <View>
         {s.caption ? <Text style={styles.savingsCaption}>{s.caption}</Text> : null}
         {s.parts.map((x) => {
+          // the funds in the queue they get the budget in
+          const caption = x.fundsFirst ? <Text style={styles.savingsCaption}>Копилки · ближайшие выше</Text> : null;
           const kind = x.key.startsWith('fund-') ? 'fund' : x.key.startsWith('saving-') ? 'saving' : null;
           const lp = x.key === 'locked' && open.onLongPressLocked
             ? open.onLongPressLocked
             : (kind === 'saving' && x.categoryId !== undefined && open.longPressCategory ? () => open.longPressCategory!(x.categoryId!, x.name, kind) : undefined);
           const actions = kind === 'fund' && x.categoryId !== undefined ? open.fundActions?.(x.categoryId, x.name) : undefined;
           const spent = kind === 'fund' && x.categoryId !== undefined ? open.fundSpent?.(x.categoryId) : undefined;
-          return <Part key={x.key} x={x} currency={currency} onLess={open.less} onLongPress={lp} spent={spent} actions={actions} />;
+          return (
+            <React.Fragment key={x.key}>
+              {caption}
+              <Part x={x} currency={currency} onLess={open.less} onLongPress={lp} spent={spent} actions={actions} onLate={open.openCategory} />
+            </React.Fragment>
+          );
         })}
         {s.past > 0 ? (
           <TouchableOpacity style={styles.row} onPress={open.less} accessibilityRole="button" accessibilityLabel="Из прошлых сбережений: что съело сбережения">
