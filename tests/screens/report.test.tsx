@@ -1,5 +1,5 @@
 // 7: the month's report and the history. Today: 15 October 2026; September planned, August not.
-import { waitFor, within } from '@testing-library/react-native';
+import { fireEvent, waitFor, within } from '@testing-library/react-native';
 import { openApp, screen, tap, texts, openHistoryPage, toStory, rowOf, openStories, openYearStories } from './app';
 import { buy, on, planned } from '../e2e/seeds';
 import { getDb } from '../../src/db';
@@ -205,18 +205,22 @@ describe('7.2.6–7.3.7 the reports as pages', () => {
     expect(await screen.findByTestId('month-report')).toBeTruthy();
     expect(texts()).toEqual(expect.arrayContaining(['Что можно улучшить', 'Что уже хорошо', 'В сбережения']));
     // the budget in lari, the system currency lari
-    expect(screen.queryByText(/· бюджет$/)).toBeNull();
+    expect(screen.queryByRole('tab', { name: '₾ GEL' })).toBeNull();
   });
 
-  test('7.2.7 a budget in dollars: «$ USD · бюджет | ₾ GEL · системная», opened in the budget\'s', async () => {
+  test('7.2.7 a budget in dollars: «$ USD | ₾ GEL», opened in the budget\'s', async () => {
     await openApp(async () => { await planned(); await (await getDb()).run("UPDATE plan_months SET budget_currency = 'USD' WHERE ym = '2026-09'"); });
     await tap('Статистика');
     await openHistoryPage();
     await tap('Отчёт за месяц ›');
-    expect(await screen.findByText('$ USD · бюджет')).toBeTruthy();
-    expect(screen.getByRole('tab', { name: '$ USD · бюджет', selected: true })).toBeTruthy();
-    await tap('₾ GEL · системная');
-    expect(await screen.findByRole('tab', { name: '₾ GEL · системная', selected: true })).toBeTruthy();
+    expect(await screen.findByRole('tab', { name: '$ USD', selected: true })).toBeTruthy();
+    const page = screen.getByTestId('month-report');
+    fireEvent.press(screen.getByRole('tab', { name: '₾ GEL' }));
+    // recounted in place: the same page, no loading in between
+    expect(screen.getByTestId('month-report')).toBe(page);
+    expect(await screen.findByRole('tab', { name: '₾ GEL', selected: true })).toBeTruthy();
+    await waitFor(() => expect(screen.queryAllByText(/ ₾$/).length).toBeGreaterThan(0));
+    expect(screen.getByTestId('month-report')).toBe(page);
   });
 
   test('7.3.7 «Итоги 2026 — статистика за год» past its stories: the year\'s stats — by months, the spending by categories', async () => {

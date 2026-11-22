@@ -12,7 +12,8 @@ import { loadNorms, Norms } from '@/stats/norms';
 /** Periods up to this long are measured against the plan (its share for these days); longer ones aren't. */
 export const PACE_MAX_DAYS = 31;
 
-export function usePeriodData(range: DayRange, currency: Currency) {
+/** `off` — not read at all (a second currency that is the same as the first). */
+export function usePeriodData(range: DayRange, currency: Currency, off = false) {
   const [stats, setStats] = useState<PeriodStats | null>(null);
   const [norms, setNorms] = useState<Norms | null>(null);
   // the month the period ends in: which categories have a plan, the spending outside it and its share (a day / week only)
@@ -30,6 +31,7 @@ export function usePeriodData(range: DayRange, currency: Currency) {
     // answers of a previous period (switched quickly) are dropped
     const keep = latest();
     started();
+    if (off) return;
     const { from, to } = rangeToUnix(range);
     if (pace) {
       // a day / week / 2-week limit not touched in the period but spent earlier in the month is listed too (0 ₾):
@@ -46,7 +48,7 @@ export function usePeriodData(range: DayRange, currency: Currency) {
       periodStats(from, to, currency).then(keep(setStats)).catch(keep(fail));
     }
     if (!pace) averageFullMonths(range.from, range.to, currency).then(keep(setAverage)).catch((e) => console.error('load average failed', e));
-  }, [range, currency, pace, latest, started, fail]);
+  }, [range, currency, pace, off, latest, started, fail]);
   useEffect(load, [load]);
   useEffect(() => onTransactionsChanged(load), [load]);
 

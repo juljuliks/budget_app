@@ -26,11 +26,14 @@ import { styles as report } from './ui/styles';
  */
 export default function MonthReportPage({ ym }: { ym: string }) {
   const cur = useReportCurrency(ym);
-  const { report: r, late, failed, load } = useMonthReport(cur.shown ? ym : null, cur.shown ?? undefined);
+  // both currencies read up front: picking the other one only shows it (no loading, the page stays)
+  const inBudget = useMonthReport(cur.budget ? ym : null, cur.budget ?? undefined);
+  const inSystem = useMonthReport(cur.budget && cur.budget !== cur.system ? ym : null, cur.system);
+  const { report: r, late, failed, load } = cur.shown === cur.budget || !inSystem.report ? inBudget : inSystem;
   const [planTarget, setPlanTarget] = useState<PlanAmountTarget | null>(null);
-  if (!r || !cur.shown || r.currency !== cur.shown) return <Loading failed={failed} onRetry={load} />;
+  if (!r || !cur.shown) return <Loading failed={failed} onRetry={load} />;
   if (!r.hasPlan) return <Text style={[report.hint, styles.content]}>Плана на этот месяц не было — отчёта нет.</Text>;
-  const v = reportView(r, cur.shown);
+  const v = reportView(r, r.currency);
   const toOperations = (params: object) => () => navigateWhenReady({ name: 'Main', params: { screen: 'Transactions', params: {
     ...params, range: monthDays(ym), nonce: Date.now(), from: 'Stats' } } } as never);
   return (
@@ -39,10 +42,10 @@ export default function MonthReportPage({ ym }: { ym: string }) {
       <ReportHero v={v} onCloseMonth={() => openMonthClose(ym)} />
       <LateFunds late={late} onOpen={openCategory} />
       {v.limits ? <ImproveBlock v={v} page /> : null}
-      {v.outside ? <OutsideBlock v={v} currency={cur.shown} onPlan={setPlanTarget} onSortOut={toOperations({ category: 'none' })} page /> : null}
+      {v.outside ? <OutsideBlock v={v} currency={r.currency} onPlan={setPlanTarget} onSortOut={toOperations({ category: 'none' })} page /> : null}
       {v.good ? <GoodBlock v={v} page /> : null}
       {r.impulse ? <ImpulseBlock m={r.impulse} money={v.money} onMark={toOperations({ unanswered: true })} page month={ym} /> : null}
-      <PlanAmountModal ym={ym} currency={cur.shown} target={planTarget} onClose={() => setPlanTarget(null)} onSaved={() => setPlanTarget(null)} />
+      <PlanAmountModal ym={ym} currency={r.currency} target={planTarget} onClose={() => setPlanTarget(null)} onSaved={() => setPlanTarget(null)} />
     </ScrollView>
   );
 }

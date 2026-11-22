@@ -42,8 +42,9 @@ export function useMonthReport(ym: string | null, shown?: Currency) {
     monthReport(ym, currency).then(keep(setReport)).catch(keep(fail));
     lateFunds(ym).then(keep(setLate)).catch((e) => console.error('load late funds failed', e));
   }, [ym, currency, latest, started, fail]);
+  // another month / year: nothing until it's read; another currency: the old one stays till the new one comes (no blink)
+  useEffect(() => setReport(null), [ym]);
   useEffect(() => {
-    setReport(null);
     load();
     return ym ? onTransactionsChanged(load) : undefined;
   }, [ym, load]);

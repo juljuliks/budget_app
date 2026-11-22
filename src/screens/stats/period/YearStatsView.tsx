@@ -27,8 +27,15 @@ const yearBudget = (year: string, system: Currency) => yearCurrency(Number(year)
 export default function YearStatsView({ range }: { range: DayRange }) {
   const year = Number(range.from.slice(0, 4));
   const cur = useReportCurrency(String(year), yearBudget);
-  const { report: r, failed, load } = useYearReport(cur.shown ? year : null, cur.shown ?? undefined);
-  const data = usePeriodData(range, cur.shown ?? cur.system);
+  // both currencies read up front: picking the other one only shows it (no loading, the page stays)
+  const two = !!cur.budget && cur.budget !== cur.system;
+  const inBudget = useYearReport(cur.budget ? year : null, cur.budget ?? undefined);
+  const inSystem = useYearReport(two ? year : null, cur.system);
+  const budgetData = usePeriodData(range, cur.budget ?? cur.system);
+  const systemData = usePeriodData(range, cur.system, !two);
+  const second = cur.shown !== cur.budget && !!inSystem.report && !!systemData.stats;
+  const { report: r, failed, load } = second ? inSystem : inBudget;
+  const data = second ? systemData : budgetData;
   const [selected, setSelected] = useState<string | null>(null);
   const [info, setInfo] = useState<Info | null>(null);
   const openTransactions = useOpenCategoryTransactions();
@@ -36,7 +43,7 @@ export default function YearStatsView({ range }: { range: DayRange }) {
   const { stats } = data;
   const segments = useMemo(() => (stats?.groups ?? []).flatMap((g) => g.categories)
     .map((c) => ({ key: String(c.category_id), value: c.spent_minor, color: c.color })), [stats]);
-  if (!r || !stats || !cur.shown || r.currency !== cur.shown) return <Loading failed={failed || data.failed} onRetry={() => { load(); data.load(); }} />;
+  if (!r || !stats || !cur.shown) return <Loading failed={failed || data.failed} onRetry={() => { load(); data.load(); }} />;
   const v = periodView({ ...data, stats, range, today: dayKeyOf(new Date()) });
   const money = (m: number) => formatWithCurrency(Math.round(m), r.currency);
   const picked = selected === null ? undefined : stats.categories.find((c) => String(c.category_id) === selected);

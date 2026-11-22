@@ -21,8 +21,9 @@ export function useYearReport(year: number | null, shown?: Currency) {
     started();
     if (year !== null) yearReport(year, currency).then(keep(setReport)).catch(keep(fail));
   }, [year, currency, latest, started, fail]);
+  // another month / year: nothing until it's read; another currency: the old one stays till the new one comes (no blink)
+  useEffect(() => setReport(null), [year]);
   useEffect(() => {
-    setReport(null);
     load();
     return year !== null ? onTransactionsChanged(load) : undefined;
   }, [year, load]);
