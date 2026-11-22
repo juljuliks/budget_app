@@ -2,6 +2,7 @@ import { StyleSheet } from 'react-native';
 import { colors } from '@/shared/theme/theme';
 
 export const styles = StyleSheet.create({
+  yearLink: { marginBottom: 12 },
   reportLink: { alignSelf: 'flex-start', marginTop: 8 },
   reportText: { fontSize: 14, color: colors.accent },
   links: { flexDirection: 'row', gap: 20 },

@@ -101,11 +101,15 @@ describe('8.3 the limits', () => {
   });
 });
 
+/** the months' report notifications scheduled (not the year's) */
+const monthCalls = () => (notifee.createTriggerNotification as jest.Mock).mock.calls.filter(([n]) => String(n.id).startsWith('report_'));
+
 describe('8.2 the month\'s report on the 1st', () => {
   test('a month with a budget: its "Итоги" instead, at 10:00 on the 1st — what goes to savings as planned', async () => {
     await freshDb(); await planned(); await done();
     await scheduleMonthReports();
-    const calls = (notifee.createTriggerNotification as jest.Mock).mock.calls;
+    // the month's (the year's on 1 January aside: 8.2.4)
+    const calls = monthCalls();
     expect(calls).toHaveLength(1);
     const [n, trigger] = calls[0];
     expect(n).toMatchObject({ id: 'report_2026-10', title: 'Итоги октября — удалось отложить?', data: { kind: 'close', ym: '2026-10' } });
@@ -129,8 +133,21 @@ describe('8.2 the month\'s report on the 1st', () => {
   test('a month without a plan: none, a scheduled one cancelled', async () => {
     await freshDb(); await ops(); await done();
     await scheduleMonthReports();
-    expect(notifee.createTriggerNotification).not.toHaveBeenCalled();
+    expect(monthCalls()).toEqual([]);
     expect(notifee.cancelTriggerNotification).toHaveBeenCalledWith('report_2026-10');
+  });
+  test('8.2.4 «Итоги 2026» at 10:00 on 1 January: what the year put aside; its tap — the year\'s stories', async () => {
+    await freshDb(); await planned(); await done();
+    await scheduleMonthReports();
+    const year = (notifee.createTriggerNotification as jest.Mock).mock.calls.filter(([n]) => n.id === 'year_2026');
+    expect(year).toHaveLength(1);
+    const [n, trigger] = year[0];
+    expect(n).toMatchObject({ title: 'Итоги 2026', data: { kind: 'year', year: '2026' } });
+    expect(nb(n.body)).toMatch(/^Отложено [\d ]+ ₾ за год · \d+% бюджета$/);
+    expect(new Date(trigger.timestamp)).toEqual(new Date(2027, 0, 1, 10));
+    await openApp(planned);
+    await act(() => handleNotificationAction({ id: 'month_report', notification: { data: { kind: 'year', year: '2026' } } }));
+    expect(await screen.findByText('Ваш 2026 в цифрах')).toBeTruthy();
   });
   test('its tap: the stats with the report', async () => {
     await openApp(planned);

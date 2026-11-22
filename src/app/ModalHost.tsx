@@ -3,7 +3,7 @@ import { attachSheetHost, CLOSED, detachSheetHost, SheetState } from '@/shared/n
 import { AddTransactionSheet } from '@/features/add-transaction';
 import { CategoryDeleteSheet } from '@/features/category-delete';
 import { CategoryTypesSheet } from '@/features/category-types';
-import { MonthReportSheet } from '@/features/month-report';
+import { MonthReportSheet, YearReportSheet } from '@/features/month-report';
 import { MonthCloseSheet } from '@/features/month-close';
 import { PaymentHost } from '@/features/recurring-payments';
 import { BackupSheet, PasswordHost } from '@/features/backup';
@@ -24,6 +24,8 @@ export function ModalHost() {
       <AddTransactionSheet visible={state.addTransaction} onClose={() => close({ addTransaction: false })} />
       <CategoryTypesSheet visible={state.categoryTypes} onClose={() => close({ categoryTypes: false })} />
       <CategoryDeleteSheet categoryId={state.categoryDelete} onClose={() => close({ categoryDelete: null })} />
+      {/* under the month's report: a month opened from the year comes over it */}
+      <YearReportSheet year={state.yearReport} onClose={() => close({ yearReport: null })} />
       <MonthReportSheet ym={state.monthReport} onClose={() => close({ monthReport: null })} />
       <MonthCloseSheet ym={state.monthClose} onClose={() => close({ monthClose: null })} />
       <BackupSheet visible={state.backup} onClose={() => close({ backup: false })} />

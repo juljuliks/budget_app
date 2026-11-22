@@ -1,6 +1,6 @@
 // 7: the month's report and the history. Today: 15 October 2026; September planned, August not.
-import { waitFor } from '@testing-library/react-native';
-import { openApp, screen, tap, texts, openHistoryPage, toStory } from './app';
+import { waitFor, within } from '@testing-library/react-native';
+import { openApp, screen, tap, texts, openHistoryPage, toStory, rowOf } from './app';
 import { buy, on, planned } from '../e2e/seeds';
 import { getDb } from '../../src/db';
 
@@ -146,4 +146,44 @@ test('7.1.4a «Без категории: N операций» — «Разме�
   await waitFor(() => expect(screen.queryByText('Отчёт · Сентябрь 2026')).toBeNull());
   expect(await screen.findByText('KIOSK')).toBeTruthy();
   expect(screen.queryByText('SPAR')).toBeNull();
+});
+
+describe('7.3 «Итоги 2026» — stories', () => {
+  beforeEach(async () => {
+    await openHistory();
+    // a card with an arrow: «Итоги 2026 ›»
+    await tap('Итоги 2026');
+    await screen.findByText('Ваш 2026 в цифрах');
+  });
+
+  test('7.3.1 in numbers: put aside so far, its share of the budget against the goal, the pace; came in, spent, in the plan', async () => {
+    expect(screen.getByText('1 из 5')).toBeTruthy();
+    expect(texts()).toEqual(expect.arrayContaining(['Отложено за 3 месяца', '2 140 ₾', '36% бюджета · цель 10% ✓',
+      '≈ 4 280 ₾ за год в таком темпе', 'В плане', '2 из 3 мес']));
+  });
+
+  test('7.3.2 by months and month by month: the future grey and not pressed; a month — its report over the year\'s', async () => {
+    await tap('Дальше ›');
+    expect(await screen.findByText('2 из 3 месяцев — в плане')).toBeTruthy();
+    expect(screen.getByLabelText('ноя: —').props.accessibilityState).toMatchObject({ disabled: true });
+    await tap('Дальше ›');
+    expect(await screen.findByText('Месяц за месяцем')).toBeTruthy();
+    // August had no plan: only what came in and was spent
+    const aug = rowOf('Август');
+    expect(within(aug).getAllByText('—')).toHaveLength(2);
+    expect(rowOf('Декабрь').props.accessibilityState).toMatchObject({ disabled: true });
+    // the current month: no report yet
+    expect(rowOf(/Октябрь$/).props.accessibilityState).toMatchObject({ disabled: true });
+    await tap(/Сентябрь$/);
+    expect(await screen.findByText('Отчёт · Сентябрь 2026')).toBeTruthy();
+  });
+
+  test('7.3.3 where it went, what is remembered; «Готово» on the last closes', async () => {
+    await toStory('Запомнилось');
+    expect(screen.getByText('5 из 5')).toBeTruthy();
+    expect(screen.getByText('Самая большая трата')).toBeTruthy();
+    expect(screen.getByText('Чаще всего')).toBeTruthy();
+    await tap('Готово');
+    await waitFor(() => expect(screen.queryByText('Ваш 2026 в цифрах')).toBeNull());
+  });
 });

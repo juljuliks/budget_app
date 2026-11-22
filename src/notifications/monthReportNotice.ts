@@ -91,6 +91,9 @@ export async function scheduleMonthReports(now = new Date()) {
         data: { kind: 'report', ym },
       }, { type: TriggerType.TIMESTAMP, timestamp: at });
     }
+    // «Итоги года» on 1 January
+    const { scheduleYearReport } = require('./yearReportNotice') as typeof import('./yearReportNotice');
+    await scheduleYearReport(now, currency, hide);
   } catch (e) {
     console.error('schedule month report failed', e);
   }

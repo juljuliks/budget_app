@@ -12,6 +12,8 @@ export type SheetState = {
   categoryDelete: number | null;
   /** a month's report ('YYYY-MM'): the notification on the 1st, «История», the stats of a past month */
   monthReport: string | null;
+  /** «Итоги года» (its year): «История по месяцам», the notification on 1 January */
+  yearReport: number | null;
   /** "Итоги месяца" of a month over ('YYYY-MM'): the notification on the 1st, the banner, «История» */
   monthClose: string | null;
   /** "Резервная копия" (from the settings page): save, restore, CSV, the automatic copy, the password */
@@ -29,7 +31,7 @@ export type PaymentOpen = {
   onSaved?: () => void;
 };
 
-export const CLOSED: SheetState = { addTransaction: false, categoryTypes: false, categoryDelete: null, monthReport: null, monthClose: null, backup: false, lockOptions: false, payment: null };
+export const CLOSED: SheetState = { addTransaction: false, categoryTypes: false, categoryDelete: null, monthReport: null, yearReport: null, monthClose: null, backup: false, lockOptions: false, payment: null };
 
 let handler: ((patch: Partial<SheetState>) => void) | null = null;
 let pending: Partial<SheetState> = {};
@@ -42,6 +44,7 @@ export const openAddTransaction = () => open({ addTransaction: true });
 export const openCategoryTypes = () => open({ categoryTypes: true });
 export const openCategoryDelete = (categoryId: number) => open({ categoryDelete: categoryId });
 export const openMonthReport = (ym: string) => open({ monthReport: ym });
+export const openYearReport = (year: number) => open({ yearReport: year });
 export const openMonthClose = (ym: string) => open({ monthClose: ym });
 export const openBackup = () => open({ backup: true });
 export const openLockOptions = () => open({ lockOptions: true });

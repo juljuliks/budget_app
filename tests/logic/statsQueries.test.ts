@@ -56,3 +56,10 @@ test('a month of stats: the month and today\'s norms', async () => {
   // 19: one look for the subscriptions saved up for (db/recurring/saving.ts)
   expect(n).toBeLessThanOrEqual(19);
 });
+
+test('«Итоги года»: the year\'s spending read once, not a month at a time', async () => {
+  const { yearReport } = require('../../src/db/yearReport');
+  const n = await count(() => yearReport(2026, 'GEL', '2026-10'));
+  // 22 for a month of plan and spending: the history, the year's spending, the plans, the impulses at once
+  expect(n).toBeLessThanOrEqual(30);
+});

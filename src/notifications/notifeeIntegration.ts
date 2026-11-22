@@ -170,8 +170,10 @@ export async function handleNotificationAction(event: ActionEvent) {
     const ym = String(event.notification?.data?.ym ?? '');
     const { navigateWhenReady } = require('@/shared/navigation/navigation') as typeof import('@/shared/navigation/navigation');
     navigateWhenReady({ name: 'Main', params: { screen: 'Stats' } } as never);
-    if (!ym) return;
     const sheets = require('@/shared/navigation/sheets') as typeof import('@/shared/navigation/sheets');
+    // «Итоги года»
+    if (event.notification?.data?.kind === 'year') { sheets.openYearReport(Number(event.notification.data.year)); return; }
+    if (!ym) return;
     const open = event.notification?.data?.kind === 'close' && !(await monthClose(ym)).closed;
     if (open) sheets.openMonthClose(ym); else sheets.openMonthReport(ym);
     return;
