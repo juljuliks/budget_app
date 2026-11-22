@@ -87,7 +87,7 @@ export default function CategoryDeleteSheet({ categoryId: openId, onClose }: Pro
           <Text style={styles.text} testID="delete-category-text">{preview ? deleteStartText(preview, label) : ''}</Text>
           <View style={styles.buttons}>
             <Button title={n === 1 ? "Перенести в другую категорию" : "Перенести всё в одну категорию"} onPress={() => setPicking(true)} disabled={!preview || saving} testID="delete-move-all" />
-            {n > 1 ? <Button title="Разложить по разным категориям" outline onPress={sortOut} disabled={saving} testID="delete-sort-out" /> : null}
+            {n > 1 ? <Button title="Разложить по разным категориям" variant="secondary" onPress={sortOut} disabled={saving} testID="delete-sort-out" /> : null}
           </View>
           <SheetActions submit={null} onCancel={onClose} />
         </SheetScrollView>

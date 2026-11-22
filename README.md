@@ -331,6 +331,7 @@ scripts/demo/docs.sh     # скриншоты для документации: �
 
 - [GLOSSARY.md](GLOSSARY.md) — термины интерфейса (одно слово на одно понятие)
 - [IMPROVEMENTS.md](IMPROVEMENTS.md) — план улучшений
+- [PLAN.md](PLAN.md) — что делаем сейчас: шаги по порядку, с логикой, файлами и тестами
 - [ARCHITECTURE.md](ARCHITECTURE.md) — слои кода, куда класть файл, правила размеров (их проверяет `npm run lint`)
 - [README_ANDROID.md](README_ANDROID.md) — приём SMS на Android и сборка APK
 - [CLAUDE.md](CLAUDE.md) — заметки для Claude: правила работы, команды, тесты

@@ -56,8 +56,8 @@ export default function MarkMessage({ message, onDone }: { message: UnparsedMess
       </ScrollView>
       <View style={styles.actions}>
         <Button title={NEXT} onPress={() => setPreview(true)} disabled={!m.result} />
-        <Button title={ONLY_THIS} onPress={onlyThis} disabled={!m.result} outline />
-        <Button title={HIDE_SUCH} onPress={() => { askHide().catch(() => undefined); }} outline danger />
+        <Button title={ONLY_THIS} onPress={onlyThis} disabled={!m.result} variant="secondary" />
+        <Button title={HIDE_SUCH} onPress={() => { askHide().catch(() => undefined); }} variant="secondary" danger />
       </View>
       <TemplatePreviewSheet
         message={message}

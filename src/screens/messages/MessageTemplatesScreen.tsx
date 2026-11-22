@@ -60,7 +60,7 @@ export default function MessageTemplatesScreen() {
     {list.length ? (
       <View style={styles.footer}>
         <Text style={styles.note}>{DELETE_INFO}</Text>
-        <Button title={RESET} onPress={reset} outline danger />
+        <Button title={RESET} onPress={reset} variant="secondary" danger />
       </View>
     ) : null}
     </View>

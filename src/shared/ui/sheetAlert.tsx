@@ -46,13 +46,13 @@ export function SheetAlertHost() {
           </Text>
         ) : null}
         {req?.extra?.(close)}
-        {/* the same buttons as every sheet (SheetActions): filled, outlined for 'secondary', red for 'destructive' */}
+        {/* the same buttons as every sheet (SheetActions): 'primary', 'secondary' for 'secondary', red for 'destructive' */}
         {actions.map((b) => (
           <Button
             key={b.text}
             title={b.text}
             danger={b.style === 'destructive'}
-            outline={b.style === 'secondary'}
+            variant={b.style === 'secondary' ? 'secondary' : 'primary'}
             onPress={() => { close(); b.onPress?.(); }}
           />
         ))}

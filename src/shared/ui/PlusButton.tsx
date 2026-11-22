@@ -1,7 +1,8 @@
 import React from 'react';
-import { StyleProp, StyleSheet, Text, TouchableOpacity, ViewStyle } from 'react-native';
+import { StyleProp, StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors } from '../theme/theme';
+import Button from './Button';
 
 type Props = {
   onPress: () => void;
@@ -32,37 +33,32 @@ export default function PlusButton({ onPress, accessibilityLabel, size = 38, dis
   );
 }
 
-/** The drawn plus, white, `size` points across. */
-function Plus({ size, stroke }: { size: number; stroke: number }) {
+/** The drawn plus, `size` points across: white, or `color`. */
+function Plus({ size, stroke, color = '#FFFFFF' }: { size: number; stroke: number; color?: string }) {
   const c = size / 2;
   return (
     <Svg width={size} height={size}>
-      <Path d={`M${c} 0 V${size} M0 ${c} H${size}`} stroke="#FFFFFF" strokeWidth={stroke} strokeLinecap="round" />
+      <Path d={`M${c} 0 V${size} M0 ${c} H${size}`} stroke={color} strokeWidth={stroke} strokeLinecap="round" />
     </Svg>
   );
 }
 
 /**
- * The other "create" button: "+ Создать" on an accent pill, where a word fits better than a bare plus (a screen
- * header). The app has just these two: PlusButton and CreateButton.
+ * The other "create" button: "+ Создать" — a small primary `Button` with the drawn plus, where a word fits better than
+ * a bare plus (a screen header). The circle above is the app's only button of its own; everything else is `Button`.
  */
 export function CreateButton({ onPress, accessibilityLabel, title = 'Создать', style }: {
   onPress: () => void; accessibilityLabel: string; title?: string; style?: StyleProp<ViewStyle>;
 }) {
   return (
-    <TouchableOpacity style={[styles.pill, style]} onPress={onPress} accessibilityRole="button" accessibilityLabel={accessibilityLabel}>
-      <Plus size={12} stroke={2.2} />
-      <Text style={styles.pillText}>{title}</Text>
-    </TouchableOpacity>
+    <Button
+      title={title} onPress={onPress} size="small" accessibilityLabel={accessibilityLabel} style={style}
+      icon={(c) => <Plus size={12} stroke={2.2} color={c} />}
+    />
   );
 }
 
 const styles = StyleSheet.create({
   circle: { backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
   disabled: { opacity: 0.5 },
-  pill: {
-    flexDirection: 'row', alignItems: 'center', gap: 6, height: 34, paddingHorizontal: 14, borderRadius: 17,
-    backgroundColor: colors.accent,
-  },
-  pillText: { color: '#FFFFFF', fontSize: 15, fontWeight: '600' },
 });

@@ -22,9 +22,12 @@ model: haiku
    в корне `src` файлов нет. Хук над настройкой — `shared/settings`.
 3. Запись в базу — команда слайса (`model/commands.ts`: запись + `emitTransactionsChanged`), не вызов из компонента.
 4. Прикинуть размер: файл ≤ 250 строк кода, компонент/функция ≤ 120, хук ≤ 100. Подходит к пределу — делить сейчас.
-5. Расчёты — в `.ts` (`model/`) с тестом в `tests/logic/`; тексты — в `texts.ts` и по GLOSSARY.md; цвета — из темы
+5. Кнопка — только `shared/ui/Button` (`variant="primary" | "secondary" | "cancel"`, `danger`, `size="small"`, `icon`),
+   своей не рисовать; своя только круглая ＋ `PlusButton`
+   (ARCHITECTURE.md §1, после страниц и шитов).
+6. Расчёты — в `.ts` (`model/`) с тестом в `tests/logic/`; тексты — в `texts.ts` и по GLOSSARY.md; цвета — из темы
    (`colors.onAccent` для текста на акценте); месяцы и дни недели — `shared/lib/dates.ts`, не новая копия.
-6. Списки и статистика: строка длинного списка — `React.memo`, обработчики стабильные (`useStableCallback`); новый
+7. Списки и статистика: строка длинного списка — `React.memo`, обработчики стабильные (`useStableCallback`); новый
    расчёт статистики — одной выборкой, не `periodStats` в цикле: бюджет запросов — `tests/logic/statsQueries.test.ts`.
 
 ## Как делить длинный компонент

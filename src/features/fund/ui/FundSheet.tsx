@@ -74,7 +74,7 @@ export default function FundSheet({ categoryId, label, onClose, onEdit, ym }: Pr
             <Button title="Изменить" onPress={onEdit} />
             {/* what it had at the month's start goes to the savings, this month's contribution back to the budget and its
                 spending to the month's: the savings get what it has now */}
-            <Button title="Выключить копилку" danger outline onPress={() => confirmDeleteFund(card.fund.category_id, label, card.saved, card.fund.currency, onClose, ym)} />
+            <Button title="Выключить копилку" danger variant="secondary" onPress={() => confirmDeleteFund(card.fund.category_id, label, card.saved, card.fund.currency, onClose, ym)} />
           </View>
         </SheetScrollView>
       )}

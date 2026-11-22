@@ -3,6 +3,7 @@ import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { categoryLabel } from '@/db/categories';
 import type { ReportCategory } from '@/db/report';
+import Button from '@/shared/ui/Button';
 import { InfoIcon } from '@/shared/ui/icons';
 import Masked from '@/shared/ui/Masked';
 import { sheetAlert } from '@/shared/ui/sheetAlert';
@@ -71,9 +72,7 @@ export function CategoryLine({ c, note, value, valueStyle, onPlan }: {
       </View>
       <Text style={[styles.lineValue, valueStyle]}>{value}</Text>
       {onPlan ? (
-        <TouchableOpacity onPress={onPlan} style={styles.planButton} hitSlop={8} accessibilityLabel={`Добавить в план: ${c.name}`}>
-          <Text style={styles.planText}>＋ В план</Text>
-        </TouchableOpacity>
+        <Button title="＋ В план" onPress={onPlan} variant="secondary" size="small" accessibilityLabel={`Добавить в план: ${c.name}`} />
       ) : null}
     </View>
   );

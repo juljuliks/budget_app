@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { CategoryInfo, CategoryPickerModal } from '@/entities/category';
+import Button from '@/shared/ui/Button';
 import SectionHeading from '@/shared/ui/SectionHeading';
 import { PencilIcon } from '@/shared/ui/icons';
 import { NO_CATEGORY } from '@/shared/lib/strings';
@@ -28,10 +29,11 @@ function SideButton({ label, accessibilityLabel, disabled, plus, onPress }: {
   label: string; accessibilityLabel: string; disabled: boolean; plus?: boolean; onPress: () => void;
 }) {
   return (
-    <TouchableOpacity style={styles.changeButton} disabled={disabled} onPress={onPress} accessibilityLabel={accessibilityLabel}>
-      {plus ? <Text style={styles.plus}>＋</Text> : <PencilIcon color={colors.accent} size={16} />}
-      <Text style={styles.changeText}>{label}</Text>
-    </TouchableOpacity>
+    <Button
+      title={label} onPress={onPress} disabled={disabled} accessibilityLabel={accessibilityLabel}
+      variant="secondary" size="small"
+      icon={(c) => (plus ? <Text style={[styles.plus, { color: c }]}>＋</Text> : <PencilIcon color={c} size={16} />)}
+    />
   );
 }
 
@@ -71,9 +73,7 @@ export default function MerchantCategories(p: Props) {
         title="Категория"
         right={ordering
           ? (
-            <TouchableOpacity style={styles.done} onPress={() => setMode(false)} accessibilityRole="button">
-              <Text style={styles.doneText}>Готово</Text>
-            </TouchableOpacity>
+            <Button title="Готово" onPress={() => setMode(false)} size="small" />
           )
           : several
             ? <SideButton label="Добавить" accessibilityLabel="Добавить категорию" disabled={p.saving} plus onPress={() => setAdding(true)} />
@@ -112,13 +112,5 @@ const styles = StyleSheet.create({
   pickerTop: { marginTop: 8 },
   hint: { fontSize: 13, color: colors.muted, lineHeight: 18, marginBottom: 4 },
   none: { fontSize: 18, color: colors.text, paddingVertical: 8 },
-  changeButton: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16,
-    borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed',
-  },
-  changeText: { fontSize: 15, color: colors.accent },
-  plus: { fontSize: 16, color: colors.accent, lineHeight: 18 },
-  done: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16, backgroundColor: colors.accent },
-  doneText: { fontSize: 15, color: colors.onAccent, fontWeight: '600' },
+  plus: { fontSize: 16, lineHeight: 18 },
 });

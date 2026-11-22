@@ -38,8 +38,6 @@ export const styles = StyleSheet.create({
   catText: { flex: 1 },
   catName: { fontSize: 14, color: colors.text },
   catNote: { fontSize: 12, color: colors.muted },
-  planButton: { borderWidth: 1, borderColor: colors.accent, borderRadius: 14, paddingHorizontal: 10, paddingVertical: 3 },
-  planText: { fontSize: 13, color: colors.accent },
   good: { color: colors.income },
   over: { color: colors.warn },
   bad: { color: colors.danger },
