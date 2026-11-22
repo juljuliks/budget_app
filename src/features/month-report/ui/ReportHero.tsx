@@ -7,6 +7,22 @@ import { FromLine, YearInfo } from './Lines';
 import PlanFact from './PlanFact';
 import { styles } from './styles';
 
+/** «Пришло · План · Потрачено» of the month, side by side. */
+function MonthNumbers({ v }: { v: ReportView }) {
+  const { r, money } = v;
+  const cells: Array<[string, number]> = [...(r.income > 0 ? [['Пришло', r.income] as [string, number]] : []), ['План', r.planned], ['Потрачено', r.spent]];
+  return (
+    <View style={styles.numbers}>
+      {cells.map(([label, value]) => (
+        <View key={label} style={styles.numberCell}>
+          <Text style={styles.numberLabel}>{label}</Text>
+          <Masked style={styles.numberValue}>{money(value)}</Masked>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 /**
  * What was put aside and that a year, against the month before, where it came from; or the budget's overspend. A month
  * over: its savings and funds, planned and put aside (PlanFact) — closed, the put-aside one on top.
@@ -27,6 +43,7 @@ export default function ReportHero({ v, onCloseMonth }: { v: ReportView; onClose
           {r.overInBudget ? <Text style={styles.heroAside}>{` (${formatWithCurrency(Math.round(r.overInBudget.minor), r.overInBudget.currency)})`}</Text> : null}
         </Text>
         <Text style={styles.caption}>Потрачено {money(r.spent)} при бюджете {money(r.budget!)}</Text>
+        <MonthNumbers v={v} />
       </View>
     );
   }
@@ -44,11 +61,14 @@ export default function ReportHero({ v, onCloseMonth }: { v: ReportView; onClose
           {r.average.months.length > 1 ? ` · в среднем за ${r.average.months.length} мес.` : ' в таком темпе'}
         </YearInfo>
       ) : null}
+      {v.ofBudget ? <Text style={styles.caption}>{v.ofBudget}</Text> : null}
+      {v.ofIncome ? <Text style={styles.caption}>{v.ofIncome}</Text> : null}
       {r.previousSaved !== null && Math.round(r.saved) !== Math.round(r.previousSaved) ? (
         <Text style={[styles.caption, r.saved > r.previousSaved ? styles.good : styles.over]}>
           На {money(Math.abs(r.saved - r.previousSaved))} {r.saved > r.previousSaved ? 'больше' : 'меньше'}, чем месяцем раньше
         </Text>
       ) : null}
+      <MonthNumbers v={v} />
       {pf ? <PlanFact v={v} pf={pf} onCloseMonth={onCloseMonth} /> : null}
       {/* where it comes from: the parts add up to it */}
       {r.savedFrom && !pf ? (

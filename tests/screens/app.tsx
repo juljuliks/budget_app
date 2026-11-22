@@ -172,3 +172,12 @@ export function toggleSwitch(on: boolean, label?: string) {
 }
 
 export { screen };
+
+/** The stories (a month's report, the year's): «Дальше ›» until `text` shows (at most `pages` times). */
+export async function toStory(text: string | RegExp, pages = 7) {
+  for (let i = 0; i < pages; i++) {
+    if (screen.queryAllByText(text).length) return;
+    await tap('Дальше ›');
+  }
+  expect(screen.queryAllByText(text).length).toBeGreaterThan(0);
+}

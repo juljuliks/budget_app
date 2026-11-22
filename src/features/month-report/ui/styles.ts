@@ -9,7 +9,7 @@ export const styles = StyleSheet.create({
   loading: { marginVertical: 32 },
   content: { paddingHorizontal: 20, paddingBottom: 24, gap: 12 },
   hero: { alignItems: 'center', paddingVertical: 8, gap: 2 },
-  heroValue: { fontSize: 30, fontWeight: '700', color: SAVINGS, fontVariant: ['tabular-nums'] },
+  heroValue: { fontSize: 44, fontWeight: '700', color: SAVINGS, fontVariant: ['tabular-nums'] },
   // the overspend in the budget's currency, after the amount
   heroAside: { fontSize: 18, fontWeight: '600' },
   caption: { fontSize: 13, color: colors.muted, textAlign: 'center' },
@@ -48,5 +48,12 @@ export const styles = StyleSheet.create({
     borderRadius: 10, backgroundColor: colors.surface,
   },
   rowText: { flex: 1, fontSize: 14, color: colors.text },
+  overBar: { flexDirection: 'row', height: 8, borderRadius: 4, overflow: 'hidden', marginLeft: 12, marginTop: 4, gap: 2 },
+  overPlan: { backgroundColor: colors.accent },
+  overPast: { backgroundColor: colors.warn },
+  numbers: { flexDirection: 'row', alignSelf: 'stretch', gap: 8, marginTop: 16, padding: 12, borderRadius: 12, backgroundColor: colors.surface },
+  numberCell: { flex: 1, gap: 2 },
+  numberLabel: { fontSize: 13, color: colors.muted },
+  numberValue: { fontSize: 15, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
   savedInline: { fontSize: 14, fontWeight: '600', color: SAVINGS },
 });

@@ -46,7 +46,15 @@ export function reportView(r: MonthReport, currency: Currency) {
     return `Отложено в среднем за месяц: ${avg}; × 12 = ${perYear(a.saved)}.\n\nМесяцы: ${names}. Берутся до ${AVERAGE_MONTHS} последних `
       + 'месяцев с бюджетом и полными данными (операции с первой половины месяца): один удачный или неудачный месяц меньше качает оценку.';
   };
+  // the stories: a screen without anything to say is left out
+  const outside = r.unplannedOver > 0 || r.review || r.uncategorizedCount > 0 || r.unpaid.length > 0 || r.lockedTouched > 0 || worse > 0
+    || (r.saved !== null && r.couldSaveMore > 0);
+  // «12% бюджета · цель 15%», «8% дохода»: what was put aside of them
+  const put = r.planFact?.fact ?? r.saved;
+  const ofBudget = put !== null && put > 0 && r.budget ? `${Math.round((put / r.budget) * 100)}% бюджета${r.goalPct !== null ? ` · цель ${r.goalPct}%` : ''}` : null;
+  const ofIncome = put !== null && put > 0 && r.income > 0 ? `${Math.round((put / r.income) * 100)}% дохода` : null;
   return {
+    limits: r.overLimitsTotal > 0, outside, ofBudget, ofIncome,
     r, money, perYear, better, worse, badParts, goodParts, badMonth, goodMonth, yearInfo, improve, good, unplannedInfo, averageInfo,
     plus: (v: number) => `+${money(v)}`,
     minus: (v: number) => `−${money(v)}`,

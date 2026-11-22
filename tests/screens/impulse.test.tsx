@@ -1,7 +1,7 @@
 // 7.1.6 and 5.8.7: impulsive purchases in the month's report and in a category's «Динамика»; «Покупка: без ответа» in
 // the operations. Today: Thursday 15 October 2026 (setup.ts).
 import { waitFor } from '@testing-library/react-native';
-import { openApp, openHistoryPage, screen, tap, texts, openMenu } from './app';
+import { openApp, openHistoryPage, screen, tap, texts, openMenu, toStory } from './app';
 import { buy, on, planned } from '../e2e/seeds';
 import { getDb } from '../../src/db';
 import { findCategoryByName } from '../../src/db/categories';
@@ -41,6 +41,8 @@ describe('7.1.6 the report: «Импульсивные покупки»', () => 
     await openHistoryPage();
     await tap('Отчёт за месяц ›');
     await screen.findByText('Отчёт · Сентябрь 2026');
+    // the last story
+    await toStory('Импульсивные покупки');
   });
 
   test('how many of the answered, what pushed, each category against its plan («без плана» if not in it)', async () => {

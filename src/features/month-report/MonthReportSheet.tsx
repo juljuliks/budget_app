@@ -1,68 +1,77 @@
 import React, { useState } from 'react';
-import { Text } from 'react-native';
+import { Text, View } from 'react-native';
 import { currentYm } from '@/db/plans';
 import { useDisplayCurrency } from '@/shared/settings/displayCurrency';
 import { PlanAmountModal, PlanAmountTarget } from '@/entities/plan';
 import { monthDays } from '@/shared/lib/dateRange';
-import { navigateWhenReady } from '@/shared/navigation/navigation';
+import { dayTitle } from '@/shared/lib/dates';
+import { navigateWhenReady, openCategory } from '@/shared/navigation/navigation';
 import { openMonthClose } from '@/shared/navigation/sheets';
-import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
 import Loading from '@/shared/ui/Loading';
+import StoryPager from '@/shared/ui/StoryPager';
+import TextLink from '@/shared/ui/TextLink';
 import { reportTitle, reportView } from './model/reportView';
-import { useMonthReport } from './model/useMonthReport';
+import { LateFund, useMonthReport } from './model/useMonthReport';
 import GoodBlock from './ui/GoodBlock';
 import ImproveBlock from './ui/ImproveBlock';
 import ImpulseBlock from './ui/ImpulseBlock';
+import OutsideBlock from './ui/OutsideBlock';
 import ReportHero from './ui/ReportHero';
 import { styles } from './ui/styles';
 
-/** The month's report in a sheet (sheets.ts → openMonthReport): from the notification, «История», the stats. */
+/** «⚠ 🏖 Отпуск не успевает к 31 июля 2027 ›»: the funds not making it, on «Отложено». */
+function LateFunds({ late, onOpen }: { late: LateFund[]; onOpen: (id: number) => void }) {
+  if (!late.length) return null;
+  return (
+    <View style={styles.block}>
+      {late.map((f) => <TextLink key={f.id} label={`⚠ ${f.label} не успевает к ${dayTitle(f.due)}`} onPress={() => onOpen(f.id)} style={styles.over} />)}
+    </View>
+  );
+}
+
+/**
+ * The month's report as stories (sheets.ts → openMonthReport): from the notification, «История», the stats. «Отложено»,
+ * «Что можно улучшить», «Вне плана сверх доли», «Что уже хорошо», «Импульсивные покупки» — one without data left out.
+ */
 export default function MonthReportSheet({ ym, onClose }: { ym: string | null; onClose: () => void }) {
-  const { report: r, failed, load } = useMonthReport(ym);
+  const { report: r, late, failed, load } = useMonthReport(ym);
   const currency = useDisplayCurrency();
   const [planTarget, setPlanTarget] = useState<PlanAmountTarget | null>(null);
   const v = r ? reportView(r, currency) : null;
 
-  // "Подвести итоги ›": the report closes, the month's "Итоги" open (one sheet at a time)
-  function closeMonth() {
-    if (!ym) return;
-    onClose();
-    setTimeout(() => openMonthClose(ym), 250);
-  }
+  // the report closes, then `go` (one screen at a time)
+  const leave = (go: () => void) => { if (!ym) return; onClose(); setTimeout(go, 250); };
+  // "Подвести итоги ›": the month's "Итоги"
+  const closeMonth = () => leave(() => openMonthClose(ym!));
+  // the month's operations without a category / without an answer to "Обдуманная" / "Импульсивная"
+  const toOperations = (params: object) => () => { if (!ym) return; onClose(); navigateWhenReady({ name: 'Main', params: { screen: 'Transactions', params: { ...params, range: monthDays(ym), nonce: Date.now(), from: 'Stats' } } } as never); };
 
-  // the month's operations without a category, on the operations page
-  function sortOut() {
-    if (!ym) return;
-    onClose();
-    navigateWhenReady({ name: 'Main', params: { screen: 'Transactions', params: { category: 'none', range: monthDays(ym), nonce: Date.now(), from: 'Stats' } } } as never);
-  }
-
-  // the month's purchases with no answer to "Обдуманная" / "Импульсивная", on the operations page
-  function markImpulse() {
-    if (!ym) return;
-    onClose();
-    navigateWhenReady({ name: 'Main', params: { screen: 'Transactions', params: { unanswered: true, range: monthDays(ym), nonce: Date.now(), from: 'Stats' } } } as never);
-  }
+  const pages = !r || !v ? [] : !r.hasPlan ? [
+    // an old notification of a month whose plan is gone
+    <Text key="none" style={styles.hint}>Плана на этот месяц не было — отчёта нет.</Text>,
+  ] : [
+    <View key="saved" style={styles.content}>
+      <ReportHero v={v} onCloseMonth={closeMonth} />
+      <LateFunds late={late} onOpen={(id) => leave(() => openCategory(id))} />
+    </View>,
+    ...(v.limits ? [<ImproveBlock key="improve" v={v} />] : []),
+    ...(v.outside ? [<OutsideBlock key="outside" v={v} currency={currency} onPlan={setPlanTarget} onSortOut={toOperations({ category: 'none' })} />] : []),
+    ...(v.good ? [<GoodBlock key="good" v={v} />] : []),
+    ...(r.impulse ? [<ImpulseBlock key="impulse" m={r.impulse} money={v.money} onMark={toOperations({ unanswered: true })} />] : []),
+  ];
 
   return (
-    <BottomSheet visible={ym !== null} onClose={onClose} title={ym ? `Отчёт · ${reportTitle(ym)}` : ''}>
-      {!r || !v ? <Loading inline style={styles.loading} failed={failed} onRetry={load} /> : !r.hasPlan ? (
-        // an old notification of a month whose plan is gone
-        <Text style={[styles.hint, styles.content]}>Плана на этот месяц не было — отчёта нет.</Text>
-      ) : (
-        <SheetScrollView contentContainerStyle={styles.content}>
-          <ReportHero v={v} onCloseMonth={closeMonth} />
-          {v.improve ? <ImproveBlock v={v} currency={currency} onPlan={setPlanTarget} onSortOut={sortOut} /> : null}
-          {v.good ? <GoodBlock v={v} /> : null}
-          {r.impulse ? <ImpulseBlock m={r.impulse} money={v.money} onMark={markImpulse} /> : null}
-        </SheetScrollView>
-      )}
+    <>
+      <StoryPager
+        visible={ym !== null} onClose={onClose} title={ym ? `Отчёт · ${reportTitle(ym)}` : ''} pages={pages}
+        placeholder={!r || !v ? <Loading inline style={styles.loading} failed={failed} onRetry={load} /> : undefined}
+      />
       {/* planned into the report's own month */}
       <PlanAmountModal
         ym={ym ?? currentYm()} currency={currency} target={planTarget} onClose={() => setPlanTarget(null)} onSaved={() => setPlanTarget(null)}
         // to the operations: the report closes too (it would cover them)
         onLeave={() => { setPlanTarget(null); onClose(); }}
       />
-    </BottomSheet>
+    </>
   );
 }

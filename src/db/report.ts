@@ -1,6 +1,6 @@
 import { getDb } from './index';
 import { Currency } from './fx';
-import { getPlanBudget, monthRange, monthStats, parseYm, planConverter, unplannedOf, unplannedSpent, ymOf } from './plans';
+import { getPlanBudget, lockedPctSetting, monthIncome, monthRange, monthStats, parseYm, planConverter, unplannedOf, unplannedSpent, ymOf } from './plans';
 import { EXPENSE_KINDS } from './spending';
 import { SavingsPlanFact, savingsPlanFact } from './reportSavings';
 import { MonthImpulse, monthImpulse } from './reportImpulse';
@@ -32,6 +32,12 @@ export type MonthReport = {
   hasPlan: boolean;
   /** null without a budget for the month */
   budget: number | null;
+  /** what the plan's categories had (the funds' contributions aside) */
+  planned: number;
+  /** what came in (monthIncome): «Пришло», «N% дохода» */
+  income: number;
+  /** «🔒 Отложить сразу» of the month (its own %, else the settings'): «цель 15%»; null — not set */
+  goalPct: number | null;
   spent: number;
   /** budget − spending; null without a budget */
   saved: number | null;
@@ -168,7 +174,8 @@ export async function monthReport(ym: string, currency: Currency): Promise<Month
   const funds = planFact ? planFact.fundsPlanned : stats.funds.reduce((a, f) => a + f.contribution_minor, 0);
 
   return {
-    ym, currency, hasPlan, budget, spent: stats.spent_minor, saved,
+    ym, currency, hasPlan, budget, spent: stats.spent_minor, saved, planned: stats.planned_minor,
+    income: await monthIncome(ym, currency), goalPct: planBudget?.locked_pct ?? await lockedPctSetting(),
     overInBudget: saved === null || saved >= 0 || !planBudget || planBudget.currency === currency ? null
       : ((minor) => (minor === null ? null : { minor, currency: planBudget.currency }))(conv(-saved, currency, planBudget.currency)),
     previousSaved: hasData && previousHasData ? previous.saved : null,
