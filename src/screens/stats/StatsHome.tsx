@@ -15,6 +15,7 @@ import YearStatsView from './period/YearStatsView';
 import { ReportBanner } from '@/features/month-report';
 import { monthTitle } from '@/shared/lib/dates';
 import PeriodNav from './parts/PeriodNav';
+import { useStatsBack } from './model/useStatsBack';
 import CloseBanner from './parts/CloseBanner';
 import PlanAlert from './parts/PlanAlert';
 import StatsView from './month/StatsView';
@@ -62,6 +63,9 @@ export default function StatsHome() {
     setKind('year');
     setAnchor(new Date(year, 6, 1));
   }, [year, nonce]);
+
+  // opened from elsewhere: back returns there, the stats as usual next time
+  useStatsBack(() => { setKind('month'); setAnchor(new Date()); });
 
   const ym = ymOf(period.year, period.month);
   // the stats go some months ahead: nothing spent yet, their plans made in advance

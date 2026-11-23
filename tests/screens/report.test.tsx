@@ -233,6 +233,15 @@ describe('7.2.6–7.3.7 the reports as pages', () => {
     expect(screen.queryByText('Ваш 2026 в цифрах')).toBeNull();
     expect(screen.getAllByText(/^[\d ]+ ₾ в месяц · (перерасход в \d+ из \d+ месяц(а|ев)|без плана)$/).length).toBeGreaterThan(0);
   });
+
+  test('7.3.7 back from the year\'s stats: «История по месяцам» again', async () => {
+    await openHistory();
+    await tap('Итоги 2026 — статистика за год');
+    await screen.findByTestId('year-stats');
+    await tap('Назад');
+    expect(await screen.findByText('Сентябрь 2026')).toBeTruthy();
+    expect(screen.queryByTestId('year-stats')).toBeNull();
+  });
 });
 
 describe('7.1.1a a fresh report: the banner over the stats and its stories', () => {

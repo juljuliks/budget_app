@@ -6,7 +6,8 @@ import type { DayRange } from '../lib/dateRange';
 export type TabParamList = {
   /** day: open the stats of that day (a day header in the transactions list), its local midnight in unix seconds */
   /** `day`: that day's stats (a day of the operations); `year`: that year's («Итоги 2026» past its stories) */
-  Stats: { day?: number; year?: number; nonce?: number } | undefined;
+  /** from: opened from another screen (not the tab bar or the period list) -> a back button returns there */
+  Stats: { day?: number; year?: number; nonce?: number; from?: BackTarget } | undefined;
   /**
    * open filtered by a category ('none' = uncategorized), within a range (the stats month); nonce re-applies the same one.
    * from: the tab we came from (not via the tab bar) -> a back button in the header returns there.
@@ -116,9 +117,14 @@ const left: NavigationState[] = [];
  * from there (backToPages) puts the pages back as they were (the operation it was opened from under it too).
  */
 export function showOperationsFrom(filter: { category?: number; query?: string; range?: DayRange; unanswered?: boolean }) {
-  left.push(navigationRef.getRootState());
+  rememberPages();
   // `as never`: a nested navigate the root types don't describe
   navigationRef.navigate('Main', { screen: 'Transactions', params: { ...filter, nonce: Date.now(), from: 'pages' } } as never);
+}
+
+/** The pages over the tabs now, to put back on «назад» from a tab a page opened (backToPages). */
+export function rememberPages() {
+  left.push(navigationRef.getRootState());
 }
 
 /** Back from the operations a page's link opened: those pages again; false — there were none. */

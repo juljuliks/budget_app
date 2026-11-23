@@ -61,6 +61,13 @@ test('2.1.4: the day\'s arrow opens its stats', async () => {
   await screen.findByText('Сегодня');
   await tap('Траты за день: Сегодня');
   expect(await screen.findByText('за день')).toBeTruthy();
+  // opened not from the tab bar: back returns to the operations, the stats as usual next time
+  await tap('Назад');
+  expect(await screen.findByText('Сегодня')).toBeTruthy();
+  expect(screen.queryByLabelText('Назад')).toBeNull();
+  await tap('Статистика');
+  expect(await screen.findByText('за месяц')).toBeTruthy();
+  expect(screen.queryByLabelText('Назад')).toBeNull();
 });
 
 test('2.1.10: a split operation — its categories in the row; from the stats\' category, only its part there', async () => {

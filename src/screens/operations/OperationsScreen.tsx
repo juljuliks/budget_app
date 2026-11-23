@@ -137,7 +137,7 @@ export default function OperationsScreen() {
             .catch(toastFailure(section.group ? 'select group' : 'select day', LOAD_FAILED));
         }}
         // the stats tab with this day picked
-        onOpenDay={(dayStart) => guardLeave(() => route.tabNavigation.navigate('Stats', { day: dayStart, nonce: Date.now() }))}
+        onOpenDay={(dayStart) => guardLeave(() => route.tabNavigation.navigate('Stats', { day: dayStart, nonce: Date.now(), from: 'Transactions' }))}
         onPressRow={onPressRow}
         onLongPressRow={selecting ? undefined : onLongPressRow}
         loadMore={list.loadMore}
