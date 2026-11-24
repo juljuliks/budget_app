@@ -4,6 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { getSetting, setSetting } from '@/db/settings';
 import { isPushAccessEnabled, openPushAccessSettings } from '@/native/notificationAccess';
 import { colors } from '@/shared/theme/theme';
+import { font, radius, space, weight } from '@/shared/theme/tokens';
 
 const DISMISSED_KEY = 'push_banner_dismissed';
 
@@ -55,10 +56,10 @@ export default function PushAccessBanner() {
 }
 
 const styles = StyleSheet.create({
-  box: { backgroundColor: '#EFF6FF', borderRadius: 10, padding: 12, marginBottom: 8 },
-  title: { fontSize: 15, fontWeight: '600', color: colors.text },
-  text: { fontSize: 13, color: colors.muted, marginTop: 4, lineHeight: 18 },
-  buttons: { flexDirection: 'row', justifyContent: 'flex-end', gap: 20, marginTop: 8 },
-  later: { fontSize: 14, color: colors.muted },
-  enable: { fontSize: 14, fontWeight: '600', color: colors.accent },
+  box: { backgroundColor: '#EFF6FF', borderRadius: radius.md, padding: space[12], marginBottom: space[8] },
+  title: { fontSize: font.body, fontWeight: weight.semibold, color: colors.text },
+  text: { fontSize: font.meta, color: colors.muted, marginTop: space[4], lineHeight: 18 },
+  buttons: { flexDirection: 'row', justifyContent: 'flex-end', gap: space[20], marginTop: space[8] },
+  later: { fontSize: font.secondary, color: colors.muted },
+  enable: { fontSize: font.secondary, fontWeight: weight.semibold, color: colors.accent },
 });

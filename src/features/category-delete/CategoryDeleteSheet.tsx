@@ -14,6 +14,7 @@ import { colors } from '@/shared/theme/theme';
 import { useLast } from '@/shared/lib/useLast';
 import { toast, toastError, toastFailure } from '@/shared/ui/toast';
 import { LOAD_FAILED, SAVE_FAILED } from '@/shared/lib/strings';
+import { font, space } from '@/shared/theme/tokens';
 
 type Props = {
   /** the category being deleted; null = closed */
@@ -136,7 +137,7 @@ export default function CategoryDeleteSheet({ categoryId: openId, onClose }: Pro
 
 const styles = StyleSheet.create({
   sheet: { maxHeight: '88%' },
-  content: { paddingHorizontal: 20, paddingBottom: 8 },
-  text: { fontSize: 15, color: colors.text, lineHeight: 21 },
-  buttons: { gap: 10, marginTop: 16 },
+  content: { paddingHorizontal: space[20], paddingBottom: space[8] },
+  text: { fontSize: font.body, color: colors.text, lineHeight: 21 },
+  buttons: { gap: space[10], marginTop: space[16] },
 });

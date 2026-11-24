@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors } from '@/shared/theme/theme';
+import { font, radius, space, weight } from '@/shared/theme/tokens';
 
 type Option<T extends string> = { value: T; title: string; note: string };
 
@@ -37,18 +38,18 @@ export default function Choice<T extends string>({
 }
 
 const styles = StyleSheet.create({
-  list: { gap: 8 },
+  list: { gap: space[8] },
   card: {
     backgroundColor: colors.bg,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderRadius: radius.md,
+    paddingHorizontal: space[12],
+    paddingVertical: space[10],
     borderWidth: 1,
     borderColor: '#D1D5DB',
-    gap: 2,
+    gap: space[2],
   },
   // the border takes a point of the padding: the same size as the others
   on: { borderWidth: 2, borderColor: colors.accent, paddingHorizontal: 11, paddingVertical: 9 },
-  title: { fontSize: 15, fontWeight: '500', color: colors.text },
-  note: { fontSize: 13, color: colors.muted },
+  title: { fontSize: font.body, fontWeight: weight.medium, color: colors.text },
+  note: { fontSize: font.meta, color: colors.muted },
 });

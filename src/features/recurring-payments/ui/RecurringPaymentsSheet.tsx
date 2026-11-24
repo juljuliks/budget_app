@@ -17,6 +17,7 @@ import { inMonth, monthGen } from '../texts';
 import MonthPaymentsView from './MonthPaymentsView';
 import PaymentSheet from './PaymentSheet';
 import UpcomingPaymentsView, { upcomingOf } from './UpcomingPaymentsView';
+import { font, space, weight } from '@/shared/theme/tokens';
 
 /** The month's payments, or the coming ones (saved up for, and later) */
 export type PaymentsView = 'month' | 'upcoming';
@@ -167,11 +168,11 @@ export default function RecurringPaymentsSheet({
 
 const styles = StyleSheet.create({
   root: { maxHeight: '94%' },
-  body: { paddingHorizontal: 20, paddingBottom: 20 },
-  fact: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
-  factLabel: { fontSize: 15, color: colors.muted },
-  factValue: { fontSize: 15, fontWeight: '700', color: colors.text, fontVariant: ['tabular-nums'] },
+  body: { paddingHorizontal: space[20], paddingBottom: space[20] },
+  fact: { flexDirection: 'row', justifyContent: 'space-between', gap: space[12] },
+  factLabel: { fontSize: font.body, color: colors.muted },
+  factValue: { fontSize: font.body, fontWeight: weight.bold, color: colors.text, fontVariant: ['tabular-nums'] },
   link: { color: colors.accent },
-  planLink: { fontSize: 14 },
-  planLinkBox: { alignSelf: 'flex-start', marginTop: 4 },
+  planLink: { fontSize: font.secondary },
+  planLinkBox: { alignSelf: 'flex-start', marginTop: space[4] },
 });

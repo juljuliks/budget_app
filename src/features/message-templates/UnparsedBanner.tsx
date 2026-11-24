@@ -6,6 +6,7 @@ import { onTransactionsChanged } from '@/domain/events';
 import { useRootNavigation } from '@/shared/navigation/navigation';
 import { colors } from '@/shared/theme/theme';
 import { UNPARSED } from './texts';
+import { font, radius, space, weight } from '@/shared/theme/tokens';
 
 /** Over the operations: "Не распознано: N ›" while bank messages wait for marking; opens their list. */
 export default function UnparsedBanner() {
@@ -37,14 +38,14 @@ const styles = StyleSheet.create({
   box: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: space[12],
     backgroundColor: colors.warnBg,
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 8,
+    borderRadius: radius.md,
+    padding: space[12],
+    marginBottom: space[8],
   },
   flex: { flex: 1 },
-  title: { fontSize: 15, fontWeight: '600', color: '#92400E' },
-  text: { fontSize: 13, color: '#92400E', marginTop: 2 },
+  title: { fontSize: font.body, fontWeight: weight.semibold, color: '#92400E' },
+  text: { fontSize: font.meta, color: '#92400E', marginTop: space[2] },
   chevron: { fontSize: 22, color: colors.warn },
 });

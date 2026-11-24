@@ -5,6 +5,7 @@ import { ChevronRightIcon, GearIcon, GridIcon, MoreIcon, StoreIcon } from '@/sha
 import { guardLeave } from '@/shared/navigation/leaveGuard';
 import { navigationRef } from '@/shared/navigation/navigation';
 import { colors } from '@/shared/theme/theme';
+import { font, space } from '@/shared/theme/tokens';
 
 type Route = 'Categories' | 'Merchants' | 'Settings';
 type Item = { route: Route; label: string; hint: string; icon: (color: string) => React.ReactNode };
@@ -68,11 +69,17 @@ export default function MenuButton() {
 }
 
 const styles = StyleSheet.create({
-  button: { padding: 4 },
-  list: { paddingTop: 4, paddingBottom: 12 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 16, paddingHorizontal: 20, paddingVertical: 14 },
+  button: { padding: space[4] },
+  list: { paddingTop: space[4], paddingBottom: space[12] },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[16],
+    paddingHorizontal: space[20],
+    paddingVertical: space[14],
+  },
   divider: { borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
   text: { flex: 1 },
   label: { fontSize: 17, color: colors.text },
-  hint: { fontSize: 14, color: colors.muted, marginTop: 2 },
+  hint: { fontSize: font.secondary, color: colors.muted, marginTop: space[2] },
 });

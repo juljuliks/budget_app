@@ -13,6 +13,7 @@ import TemplatePreviewSheet from './TemplatePreviewSheet';
 import MarkSteps from './ui/MarkSteps';
 import ResultRow from './ui/ResultRow';
 import { HIDE, HIDE_QUESTION, HIDE_SUCH, hideInfo, missingText, NEXT, ONLY_THIS, STEP_RESULT } from './texts';
+import { font, space } from '@/shared/theme/tokens';
 
 /**
  * A message no operation came from, marked by the user: the amount, its currency, the merchant, the date, the balance
@@ -100,8 +101,8 @@ export default function MarkMessage({ message, onDone }: { message: UnparsedMess
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   scroll: { flex: 1 },
-  content: { paddingHorizontal: 16, paddingBottom: 8 },
+  content: { paddingHorizontal: space[16], paddingBottom: space[8] },
   edge: { marginHorizontal: -16 },
-  missing: { fontSize: 13, color: colors.warn, paddingTop: 8 },
-  actions: { padding: 16, gap: 10 },
+  missing: { fontSize: font.meta, color: colors.warn, paddingTop: space[8] },
+  actions: { padding: space[16], gap: space[10] },
 });

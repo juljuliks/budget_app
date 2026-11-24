@@ -13,6 +13,7 @@ import { draftFromIds, draftParts, splitDraftOf, splitState, SplitDraft } from '
 import type { Tx } from '../model/useTransaction';
 import SplitBar from './SplitBar';
 import SplitRow from './SplitRow';
+import { font, radius, space, weight } from '@/shared/theme/tokens';
 
 type Props = {
   visible: boolean;
@@ -120,20 +121,26 @@ export default function SplitSheet({ visible, tx, onClose, seed }: Props) {
 
 const styles = StyleSheet.create({
   sheet: { maxHeight: '92%' },
-  content: { paddingHorizontal: 20, paddingBottom: 8 },
-  sub: { fontSize: 15, color: colors.muted, marginBottom: 16 },
-  heading: { fontSize: 13, fontWeight: '600', color: colors.muted, marginTop: 20, marginBottom: 2 },
+  content: { paddingHorizontal: space[20], paddingBottom: space[8] },
+  sub: { fontSize: font.body, color: colors.muted, marginBottom: space[16] },
+  heading: {
+    fontSize: font.meta,
+    fontWeight: weight.semibold,
+    color: colors.muted,
+    marginTop: space[20],
+    marginBottom: space[2],
+  },
   add: {
     alignSelf: 'flex-start',
-    marginTop: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 16,
+    marginTop: space[14],
+    paddingHorizontal: space[14],
+    paddingVertical: space[8],
+    borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: colors.border,
     borderStyle: 'dashed',
   },
-  addText: { fontSize: 15, color: colors.accent },
-  error: { fontSize: 14, color: colors.danger, marginTop: 16 },
-  hint: { fontSize: 13, color: colors.muted, marginTop: 16, lineHeight: 18 },
+  addText: { fontSize: font.body, color: colors.accent },
+  error: { fontSize: font.secondary, color: colors.danger, marginTop: space[16] },
+  hint: { fontSize: font.meta, color: colors.muted, marginTop: space[16], lineHeight: 18 },
 });

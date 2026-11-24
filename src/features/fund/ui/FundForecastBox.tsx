@@ -5,6 +5,7 @@ import Button from '@/shared/ui/Button';
 import { colors } from '@/shared/theme/theme';
 import { changeFundGoal } from '../model/commands';
 import { forecastText } from '../model/forecastText';
+import { font, radius, space, weight } from '@/shared/theme/tokens';
 
 /**
  * A fund's card on its category's page: «✓ Успеваете к 31 июля» (green) or «⚠ Не успеваете к 31 июля» (yellow) with
@@ -56,12 +57,12 @@ export default function FundForecastBox({
 }
 
 const styles = StyleSheet.create({
-  box: { marginTop: 12, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12 },
+  box: { marginTop: space[12], borderRadius: radius.lg, paddingHorizontal: space[14], paddingVertical: space[12] },
   ok: { backgroundColor: colors.savingsBg },
   late: { backgroundColor: colors.warnBg },
-  title: { fontSize: 16, fontWeight: '700' },
+  title: { fontSize: font.input, fontWeight: weight.bold },
   okText: { color: colors.income },
   lateText: { color: colors.warn },
-  line: { fontSize: 14, color: colors.text, marginTop: 4, lineHeight: 19 },
-  actions: { gap: 10, marginTop: 12 },
+  line: { fontSize: font.secondary, color: colors.text, marginTop: space[4], lineHeight: 19 },
+  actions: { gap: space[10], marginTop: space[12] },
 });

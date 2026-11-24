@@ -26,6 +26,7 @@ import {
   SET_PASSWORD,
   TURN_OFF,
 } from '../texts';
+import { font, space } from '@/shared/theme/tokens';
 
 type Where = 'cloud' | 'local';
 export type AutoState = { on: boolean; cloud: string | null; text: string };
@@ -113,8 +114,8 @@ export default function AutoBackupSection({ auto, password }: { auto: AutoState;
 }
 
 const styles = StyleSheet.create({
-  box: { paddingHorizontal: 20, paddingBottom: 12 },
-  save: { marginTop: 8 },
-  links: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 20, rowGap: 4, marginTop: 8 },
-  link: { fontSize: 14, color: colors.accent },
+  box: { paddingHorizontal: space[20], paddingBottom: space[12] },
+  save: { marginTop: space[8] },
+  links: { flexDirection: 'row', flexWrap: 'wrap', columnGap: space[20], rowGap: space[4], marginTop: space[8] },
+  link: { fontSize: font.secondary, color: colors.accent },
 });

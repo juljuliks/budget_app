@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import ProgressRing from '@/shared/ui/ProgressRing';
 import { colors } from '@/shared/theme/theme';
+import { font, space, weight } from '@/shared/theme/tokens';
 
 type Props = {
   name: string;
@@ -57,18 +58,18 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingVertical: 10,
+    gap: space[12],
+    paddingVertical: space[10],
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
   body: { flex: 1, minWidth: 0 },
-  name: { fontSize: 16, color: colors.text },
-  note: { fontSize: 13, color: colors.muted, marginTop: 2 },
+  name: { fontSize: font.input, color: colors.text },
+  note: { fontSize: font.meta, color: colors.muted, marginTop: space[2] },
   ok: { color: colors.income },
-  warn: { color: colors.warn, fontWeight: '500' },
+  warn: { color: colors.warn, fontWeight: weight.medium },
   amountBox: { alignItems: 'flex-end' },
-  amount: { fontSize: 16, color: colors.text, fontVariant: ['tabular-nums'] },
+  amount: { fontSize: font.input, color: colors.text, fontVariant: ['tabular-nums'] },
   muted: { color: colors.muted },
-  amountNote: { fontSize: 12, color: colors.muted, marginTop: 2 },
+  amountNote: { fontSize: font.caption, color: colors.muted, marginTop: space[2] },
 });

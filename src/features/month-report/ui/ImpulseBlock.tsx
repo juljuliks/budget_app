@@ -10,6 +10,7 @@ import Masked from '@/shared/ui/Masked';
 import { colors } from '@/shared/theme/theme';
 import ReportBlock from './ReportBlock';
 import { styles as report } from './styles';
+import { font, radius, space, weight } from '@/shared/theme/tokens';
 
 /** `month`: the month's report — its purchases on the calendar «Покупки по дням» (the year's — none) */
 type Props = { m: MonthImpulse; money: (minor: number) => string; onMark: () => void; page?: boolean; month?: string };
@@ -97,22 +98,22 @@ export default function ImpulseBlock({ m, money, onMark, page, month }: Props) {
 }
 
 const styles = StyleSheet.create({
-  heading: { fontSize: 14, fontWeight: '600', color: colors.text, marginTop: 6 },
-  moods: { flexDirection: 'row', gap: 6 },
+  heading: { fontSize: font.secondary, fontWeight: weight.semibold, color: colors.text, marginTop: space[6] },
+  moods: { flexDirection: 'row', gap: space[6] },
   mood: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 6,
-    borderRadius: 10,
+    paddingVertical: space[6],
+    borderRadius: radius.md,
     backgroundColor: colors.bg,
     borderWidth: 1,
     borderColor: 'transparent',
   },
   moodTop: { borderColor: colors.accent },
   moodNone: { opacity: 0.45 },
-  emoji: { fontSize: 20 },
-  count: { fontSize: 12, color: colors.muted },
+  emoji: { fontSize: font.heading },
+  count: { fontSize: font.caption, color: colors.muted },
   countTop: { color: colors.text },
-  noPlan: { fontSize: 12, color: colors.warn, backgroundColor: colors.warnBg },
+  noPlan: { fontSize: font.caption, color: colors.warn, backgroundColor: colors.warnBg },
   sum: { color: colors.impulseText },
 });

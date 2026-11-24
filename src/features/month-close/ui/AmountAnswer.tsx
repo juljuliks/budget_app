@@ -4,6 +4,7 @@ import { currencySymbol, formatWithCurrency, parseAmountOrZero } from '@/shared/
 import { toastError } from '@/shared/ui/toast';
 import Button from '@/shared/ui/Button';
 import { colors } from '@/shared/theme/theme';
+import { font, radius, space, weight } from '@/shared/theme/tokens';
 
 type Props = {
   /** what "Да" puts aside */
@@ -85,22 +86,22 @@ export default function AmountAnswer({ asked, currency, answered, onAnswer, onRe
 }
 
 const styles = StyleSheet.create({
-  buttons: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'space-between' },
-  done: { fontSize: 15, fontWeight: '500', color: colors.income, flexShrink: 1 },
+  buttons: { flexDirection: 'row', flexWrap: 'wrap', gap: space[8] },
+  row: { flexDirection: 'row', alignItems: 'center', gap: space[8], justifyContent: 'space-between' },
+  done: { fontSize: font.body, fontWeight: weight.medium, color: colors.income, flexShrink: 1 },
   none: { color: colors.muted },
-  link: { fontSize: 15, color: colors.accent },
+  link: { fontSize: font.body, color: colors.accent },
   field: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    borderRadius: 10,
+    gap: space[8],
+    borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.bg,
-    paddingHorizontal: 12,
+    paddingHorizontal: space[12],
   },
-  input: { flex: 1, fontSize: 16, color: colors.text, paddingVertical: 8 },
-  cur: { fontSize: 15, color: colors.muted },
+  input: { flex: 1, fontSize: font.input, color: colors.text, paddingVertical: space[8] },
+  cur: { fontSize: font.body, color: colors.muted },
 });

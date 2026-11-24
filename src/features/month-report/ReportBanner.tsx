@@ -8,6 +8,7 @@ import { colors } from '@/shared/theme/theme';
 import { freshMonth, freshYear } from '@/stats/reportWindow';
 import { reportView } from './model/reportView';
 import { useMonthReport } from './model/useMonthReport';
+import { font, space, weight } from '@/shared/theme/tokens';
 
 const days = (n: number) => (n === 0 ? 'последний день' : `ещё ${n} ${plural(n, ['день', 'дня', 'дней'])}`);
 
@@ -61,15 +62,15 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginHorizontal: 16,
-    marginTop: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    gap: space[10],
+    marginHorizontal: space[16],
+    marginTop: space[10],
+    paddingHorizontal: space[14],
+    paddingVertical: space[12],
     borderRadius: 14,
     backgroundColor: colors.accentBg,
   },
   text: { flex: 1 },
-  title: { fontSize: 16, fontWeight: '600', color: colors.text },
-  note: { fontSize: 14, color: colors.muted, marginTop: 2 },
+  title: { fontSize: font.input, fontWeight: weight.semibold, color: colors.text },
+  note: { fontSize: font.secondary, color: colors.muted, marginTop: space[2] },
 });

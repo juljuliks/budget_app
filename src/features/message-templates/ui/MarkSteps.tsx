@@ -5,6 +5,7 @@ import type { Role, Word } from '@/parsers/template';
 import SectionHeading from '@/shared/ui/SectionHeading';
 import { colors } from '@/shared/theme/theme';
 import { KINDS, ROLES, STEP_KIND, STEP_ROLE, STEP_WORDS, WORDS_HINT } from '../texts';
+import { font, radius, space, weight } from '@/shared/theme/tokens';
 
 type Props = {
   words: Word[];
@@ -34,7 +35,7 @@ export default function MarkSteps({ words, role, onRole, marks, onWord, kind, on
                 on ? { backgroundColor: r.bg, borderColor: r.line, borderWidth: 2 } : styles.pillOff,
               ]}
             >
-              <Text style={[styles.pillText, on && { color: r.fg, fontWeight: '600' }]}>{r.label}</Text>
+              <Text style={[styles.pillText, on && { color: r.fg, fontWeight: weight.semibold }]}>{r.label}</Text>
             </TouchableOpacity>
           );
         })}
@@ -56,7 +57,7 @@ export default function MarkSteps({ words, role, onRole, marks, onWord, kind, on
                   : styles.wordOff,
               ]}
             >
-              <Text style={[styles.wordText, r && { color: r.fg, fontWeight: '600' }]}>{w.text}</Text>
+              <Text style={[styles.wordText, r && { color: r.fg, fontWeight: weight.semibold }]}>{w.text}</Text>
             </TouchableOpacity>
           );
         })}
@@ -81,15 +82,15 @@ export default function MarkSteps({ words, role, onRole, marks, onWord, kind, on
 }
 
 const styles = StyleSheet.create({
-  wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  pill: { minHeight: 44, paddingHorizontal: 14, borderRadius: 22, justifyContent: 'center' },
+  wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: space[8] },
+  pill: { minHeight: 44, paddingHorizontal: space[14], borderRadius: 22, justifyContent: 'center' },
   pillOff: { backgroundColor: colors.bg, borderWidth: 1.5, borderColor: '#D1D5DB' },
-  pillText: { fontSize: 15, color: '#374151' },
+  pillText: { fontSize: font.body, color: '#374151' },
   kindOn: { backgroundColor: colors.accent, borderWidth: 1.5, borderColor: colors.accent },
-  kindOnText: { color: colors.onAccent, fontWeight: '600' },
-  text: { backgroundColor: colors.surface, borderRadius: 12, padding: 12, gap: 6 },
-  word: { minHeight: 36, paddingHorizontal: 8, borderRadius: 8, justifyContent: 'center' },
+  kindOnText: { color: colors.onAccent, fontWeight: weight.semibold },
+  text: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: space[12], gap: space[6] },
+  word: { minHeight: 36, paddingHorizontal: space[8], borderRadius: radius.sm, justifyContent: 'center' },
   wordOff: { backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border },
-  wordText: { fontSize: 16, color: colors.text },
-  hint: { fontSize: 13, color: colors.muted, marginTop: 8 },
+  wordText: { fontSize: font.input, color: colors.text },
+  hint: { fontSize: font.meta, color: colors.muted, marginTop: space[8] },
 });

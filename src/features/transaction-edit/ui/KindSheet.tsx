@@ -5,6 +5,7 @@ import BottomSheet from '@/shared/ui/BottomSheet';
 import RadioGroup from '@/shared/ui/RadioGroup';
 import { KIND_CHOICES, pickKind } from '../model/kindChoice';
 import type { Tx } from '../model/useTransaction';
+import { space } from '@/shared/theme/tokens';
 
 type Props = { visible: boolean; tx: Tx; onClose: () => void };
 
@@ -27,5 +28,5 @@ export default function KindSheet({ visible, tx, onClose }: Props) {
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: 20, paddingBottom: 24 },
+  content: { paddingHorizontal: space[20], paddingBottom: space[24] },
 });

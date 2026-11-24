@@ -13,6 +13,7 @@ import { RepeatIcon } from '@/shared/ui/icons';
 import { toast, toastFailure } from '@/shared/ui/toast';
 import { colors } from '@/shared/theme/theme';
 import type { Tx } from '../model/useTransaction';
+import { font, radius, space, weight } from '@/shared/theme/tokens';
 
 /**
  * An operation in "Подписки": its merchant's repeating payment — how often, the next charge, this year's; "Изменить
@@ -98,15 +99,21 @@ export default function PaymentNote({ tx }: { tx: Tx }) {
 }
 
 const styles = StyleSheet.create({
-  box: { marginTop: 12, padding: 12, borderRadius: 10, backgroundColor: colors.surface, gap: 6 },
-  head: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  title: { flex: 1, fontSize: 15, fontWeight: '500', color: colors.text },
-  amount: { fontSize: 15, fontWeight: '500', color: colors.text, fontVariant: ['tabular-nums'] },
-  fact: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
-  factLabel: { fontSize: 13, color: colors.muted },
-  factValue: { fontSize: 13, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
-  link: { fontSize: 14, color: colors.accent },
-  warn: { marginTop: 8, padding: 12, borderRadius: 10, backgroundColor: colors.warnBg },
-  warnText: { fontSize: 14, color: colors.warn },
-  warnBold: { fontWeight: '600' },
+  box: {
+    marginTop: space[12],
+    padding: space[12],
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    gap: space[6],
+  },
+  head: { flexDirection: 'row', alignItems: 'center', gap: space[6] },
+  title: { flex: 1, fontSize: font.body, fontWeight: weight.medium, color: colors.text },
+  amount: { fontSize: font.body, fontWeight: weight.medium, color: colors.text, fontVariant: ['tabular-nums'] },
+  fact: { flexDirection: 'row', justifyContent: 'space-between', gap: space[12] },
+  factLabel: { fontSize: font.meta, color: colors.muted },
+  factValue: { fontSize: font.meta, fontWeight: weight.semibold, color: colors.text, fontVariant: ['tabular-nums'] },
+  link: { fontSize: font.secondary, color: colors.accent },
+  warn: { marginTop: space[8], padding: space[12], borderRadius: radius.md, backgroundColor: colors.warnBg },
+  warnText: { fontSize: font.secondary, color: colors.warn },
+  warnBold: { fontWeight: weight.semibold },
 });

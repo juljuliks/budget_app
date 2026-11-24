@@ -14,6 +14,7 @@ import { colors } from '@/shared/theme/theme';
 import { useDisplayCurrency } from '@/shared/settings/displayCurrency';
 import { saveCategoryFund } from '../model/commands';
 import { FUND_SWITCH, months, SAVE_FUND } from '../texts';
+import { font, radius, space, weight } from '@/shared/theme/tokens';
 
 type Draft = { target: string; currency: Currency; due: string | null; start: string };
 
@@ -143,11 +144,11 @@ export default function FundSetupSheet({ categoryId, label, onClose, onSaved }: 
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: 20, paddingBottom: 16 },
-  category: { fontSize: 15, color: colors.muted },
-  amountRow: { flexDirection: 'row', gap: 10, alignItems: 'center' },
+  content: { paddingHorizontal: space[20], paddingBottom: space[16] },
+  category: { fontSize: font.body, color: colors.muted },
+  amountRow: { flexDirection: 'row', gap: space[10], alignItems: 'center' },
   amount: { flex: 1 },
-  plate: { backgroundColor: colors.fundBg, borderRadius: 12, padding: 12, marginTop: 14 },
-  plateTitle: { fontSize: 15, fontWeight: '600', color: colors.fundText },
+  plate: { backgroundColor: colors.fundBg, borderRadius: radius.lg, padding: space[12], marginTop: space[14] },
+  plateTitle: { fontSize: font.body, fontWeight: weight.semibold, color: colors.fundText },
   muted: { color: colors.muted },
 });

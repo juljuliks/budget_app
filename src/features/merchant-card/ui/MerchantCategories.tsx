@@ -7,6 +7,7 @@ import { PencilIcon } from '@/shared/ui/icons';
 import { NO_CATEGORY } from '@/shared/lib/strings';
 import { colors } from '@/shared/theme/theme';
 import MerchantCategoryList from './MerchantCategoryList';
+import { font, space } from '@/shared/theme/tokens';
 
 type Props = {
   merchantId: string;
@@ -153,8 +154,8 @@ export default function MerchantCategories(p: Props) {
 }
 
 const styles = StyleSheet.create({
-  pickerTop: { marginTop: 8 },
-  hint: { fontSize: 13, color: colors.muted, lineHeight: 18, marginBottom: 4 },
-  none: { fontSize: 18, color: colors.text, paddingVertical: 8 },
-  plus: { fontSize: 16, lineHeight: 18 },
+  pickerTop: { marginTop: space[8] },
+  hint: { fontSize: font.meta, color: colors.muted, lineHeight: 18, marginBottom: space[4] },
+  none: { fontSize: font.title, color: colors.text, paddingVertical: space[8] },
+  plus: { fontSize: font.input, lineHeight: 18 },
 });

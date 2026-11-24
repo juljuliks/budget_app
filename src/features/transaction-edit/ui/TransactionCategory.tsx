@@ -13,6 +13,7 @@ import { colors } from '@/shared/theme/theme';
 import type { Tx } from '../model/useTransaction';
 import FundNote from './FundNote';
 import SplitView from './SplitView';
+import { font, space, weight } from '@/shared/theme/tokens';
 
 type Cat = { id: number; label: string };
 
@@ -112,6 +113,6 @@ export default function TransactionCategory({ tx, mixedCats, picked, saving, cho
 }
 
 const styles = StyleSheet.create({
-  chips: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
-  refundDone: { fontSize: 15, color: colors.income, fontWeight: '600' },
+  chips: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: space[8] },
+  refundDone: { fontSize: font.body, color: colors.income, fontWeight: weight.semibold },
 });

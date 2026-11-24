@@ -17,6 +17,7 @@ import SplitSheet from './ui/SplitSheet';
 import PaymentNote from './ui/PaymentNote';
 import TransactionCategory from './ui/TransactionCategory';
 import TransactionHeader from './ui/TransactionHeader';
+import { font, radius, space, weight } from '@/shared/theme/tokens';
 
 type Props = {
   txId: number;
@@ -157,17 +158,29 @@ export default function TransactionView({ txId, onClose }: Props) {
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: 20, paddingTop: 16 },
+  content: { paddingHorizontal: space[20], paddingTop: space[16] },
   actions: { marginTop: 0 },
-  gone: { fontSize: 15, color: colors.muted, textAlign: 'center', paddingHorizontal: 20, paddingVertical: 48 },
-  heading: {
-    fontSize: 13,
-    fontWeight: '600',
+  gone: {
+    fontSize: font.body,
     color: colors.muted,
-    marginTop: 24,
-    marginBottom: 8,
+    textAlign: 'center',
+    paddingHorizontal: space[20],
+    paddingVertical: space[48],
+  },
+  heading: {
+    fontSize: font.meta,
+    fontWeight: weight.semibold,
+    color: colors.muted,
+    marginTop: space[24],
+    marginBottom: space[8],
     textTransform: 'uppercase',
   },
-  merchantInfo: { fontSize: 13, color: colors.muted, marginTop: 10 },
-  sms: { fontSize: 13, color: colors.muted, backgroundColor: colors.surface, padding: 12, borderRadius: 8 },
+  merchantInfo: { fontSize: font.meta, color: colors.muted, marginTop: space[10] },
+  sms: {
+    fontSize: font.meta,
+    color: colors.muted,
+    backgroundColor: colors.surface,
+    padding: space[12],
+    borderRadius: radius.sm,
+  },
 });

@@ -5,6 +5,7 @@ import { useCategoryFund } from '../model/useCategoryFund';
 import { FUND_CARD } from '../texts';
 import FundForecastBox from './FundForecastBox';
 import FundSheet from './FundSheet';
+import { space } from '@/shared/theme/tokens';
 
 /**
  * A category's page, a fund's one: will it make it by its date (no budget this month — not said), «Копилка: взносы и
@@ -29,5 +30,5 @@ export default function FundSection({ categoryId }: { categoryId: number }) {
 }
 
 const styles = StyleSheet.create({
-  card: { marginTop: 12 },
+  card: { marginTop: space[12] },
 });

@@ -4,6 +4,7 @@ import { SPLIT_COLORS } from '@/entities/transaction';
 import { currencySymbol, formatMoneyWithCurrency } from '@/shared/lib/money';
 import { CloseIcon } from '@/shared/ui/icons';
 import { colors } from '@/shared/theme/theme';
+import { font, radius, space } from '@/shared/theme/tokens';
 
 type Props = {
   index: number;
@@ -64,41 +65,41 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingVertical: 10,
+    gap: space[10],
+    paddingVertical: space[10],
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
   dot: { width: 10, height: 10, borderRadius: 5 },
   name: { flex: 1, alignItems: 'flex-start', gap: 3 },
   chip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
+    paddingHorizontal: space[12],
+    paddingVertical: space[8],
+    borderRadius: radius.xl,
     backgroundColor: colors.surface,
     maxWidth: '100%',
   },
-  chipText: { fontSize: 15, color: colors.text },
-  hint: { fontSize: 13, color: colors.muted, paddingLeft: 4 },
-  rest: { fontSize: 16, color: colors.text, fontVariant: ['tabular-nums'] },
+  chipText: { fontSize: font.body, color: colors.text },
+  hint: { fontSize: font.meta, color: colors.muted, paddingLeft: space[4] },
+  rest: { fontSize: font.input, color: colors.text, fontVariant: ['tabular-nums'] },
   danger: { color: colors.danger },
   input: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: space[4],
     borderWidth: 1.5,
     borderColor: colors.accent,
-    borderRadius: 8,
-    paddingHorizontal: 10,
+    borderRadius: radius.sm,
+    paddingHorizontal: space[10],
   },
   inputText: {
-    fontSize: 16,
+    fontSize: font.input,
     color: colors.text,
     minWidth: 48,
     textAlign: 'right',
-    paddingVertical: 6,
+    paddingVertical: space[6],
     fontVariant: ['tabular-nums'],
   },
-  symbol: { fontSize: 16, color: colors.text },
+  symbol: { fontSize: font.input, color: colors.text },
   remove: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
 });

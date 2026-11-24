@@ -5,6 +5,7 @@ import { plural } from '@/shared/lib/format';
 import TextLink from '@/shared/ui/TextLink';
 import { colors } from '@/shared/theme/theme';
 import { money } from '../texts';
+import { font } from '@/shared/theme/tokens';
 
 type Props = { m: MerchantDetails; onShowTransactions: () => void };
 
@@ -24,6 +25,6 @@ export default function MerchantHead({ m, onShowTransactions }: Props) {
 
 const styles = StyleSheet.create({
   summaryBox: { alignSelf: 'flex-start' },
-  summary: { fontSize: 15 },
-  meta: { fontSize: 15, color: colors.muted },
+  summary: { fontSize: font.body },
+  meta: { fontSize: font.body, color: colors.muted },
 });

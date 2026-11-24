@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { SPLIT_COLORS } from '@/entities/transaction';
 import { chart } from '@/shared/theme/theme';
+import { radius, space } from '@/shared/theme/tokens';
 
 type Props = {
   /** the parts' amounts in their order (the own category first); one over the total is drawn red at the end */
@@ -33,9 +34,9 @@ const styles = StyleSheet.create({
   bar: {
     flexDirection: 'row',
     height: 8,
-    borderRadius: 4,
+    borderRadius: radius.xs,
     overflow: 'hidden',
-    gap: 2,
+    gap: space[2],
     backgroundColor: chart.meterTrack,
   },
 });

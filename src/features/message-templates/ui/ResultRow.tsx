@@ -5,6 +5,7 @@ import { merchantLabel } from '@/entities/transaction';
 import { formatAmount, formatDay, formatTime, isIncome } from '@/shared/lib/format';
 import { NO_CATEGORY } from '@/shared/lib/strings';
 import { colors } from '@/shared/theme/theme';
+import { font, radius, space } from '@/shared/theme/tokens';
 
 /** When it happened: the date in the text, else when the message came. */
 export const occurredOf = (p: ParsedTx, receivedAt: number) =>
@@ -38,25 +39,25 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: space[16],
+    paddingVertical: space[12],
     borderTopWidth: StyleSheet.hairlineWidth,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
-  main: { flex: 1, marginRight: 12 },
-  title: { fontSize: 16, color: colors.text },
-  meta: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
+  main: { flex: 1, marginRight: space[12] },
+  title: { fontSize: font.input, color: colors.text },
+  meta: { flexDirection: 'row', alignItems: 'center', marginTop: space[2] },
   badge: {
-    fontSize: 12,
+    fontSize: font.caption,
     color: colors.warn,
     backgroundColor: colors.warnBg,
-    paddingHorizontal: 6,
+    paddingHorizontal: space[6],
     paddingVertical: 1,
-    borderRadius: 4,
+    borderRadius: radius.xs,
     overflow: 'hidden',
   },
-  time: { fontSize: 13, color: colors.muted },
-  amount: { fontSize: 16, color: colors.text, fontVariant: ['tabular-nums'] },
+  time: { fontSize: font.meta, color: colors.muted },
+  amount: { fontSize: font.input, color: colors.text, fontVariant: ['tabular-nums'] },
   income: { color: colors.income },
 });

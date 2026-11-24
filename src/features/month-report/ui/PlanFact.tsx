@@ -6,6 +6,7 @@ import Masked from '@/shared/ui/Masked';
 import { colors } from '@/shared/theme/theme';
 import type { ReportView } from '../model/reportView';
 import { styles as report } from './styles';
+import { font, radius, space, weight } from '@/shared/theme/tokens';
 
 /** `onCloseMonth`: "Подвести итоги ›" — the report closes, the month's "Итоги" open */
 type Props = { v: ReportView; pf: SavingsPlanFact; onCloseMonth: () => void };
@@ -122,24 +123,24 @@ export default function PlanFact({ v, pf, onCloseMonth }: Props) {
 }
 
 const styles = StyleSheet.create({
-  box: { alignSelf: 'stretch', marginTop: 10, gap: 4 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  name: { flex: 1, fontSize: 14, color: colors.text },
-  num: { width: 92, textAlign: 'right', fontSize: 14, color: colors.text, fontVariant: ['tabular-nums'] },
-  head: { fontSize: 12, fontWeight: '500', color: colors.muted },
+  box: { alignSelf: 'stretch', marginTop: space[10], gap: space[4] },
+  row: { flexDirection: 'row', alignItems: 'center', gap: space[8] },
+  name: { flex: 1, fontSize: font.secondary, color: colors.text },
+  num: { width: 92, textAlign: 'right', fontSize: font.secondary, color: colors.text, fontVariant: ['tabular-nums'] },
+  head: { fontSize: font.caption, fontWeight: weight.medium, color: colors.muted },
   plan: { color: colors.muted },
-  sub: { fontSize: 12, color: colors.muted, paddingLeft: 12 },
-  subNum: { fontSize: 12, color: colors.muted },
-  strong: { fontWeight: '600', color: colors.text },
-  rule: { height: 1, backgroundColor: colors.border, marginVertical: 2 },
-  apart: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 },
+  sub: { fontSize: font.caption, color: colors.muted, paddingLeft: space[12] },
+  subNum: { fontSize: font.caption, color: colors.muted },
+  strong: { fontWeight: weight.semibold, color: colors.text },
+  rule: { height: 1, backgroundColor: colors.border, marginVertical: space[2] },
+  apart: { flexDirection: 'row', alignItems: 'center', gap: space[8], marginTop: space[6] },
   open: {
-    marginTop: 8,
-    gap: 4,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    marginTop: space[8],
+    gap: space[4],
+    borderRadius: radius.md,
+    paddingHorizontal: space[12],
+    paddingVertical: space[10],
     backgroundColor: colors.warnBg,
   },
-  openText: { fontSize: 14, color: colors.warn },
+  openText: { fontSize: font.secondary, color: colors.warn },
 });

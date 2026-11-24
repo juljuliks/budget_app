@@ -19,6 +19,7 @@ import {
   SET_PASSWORD_INFO,
   SKIP,
 } from '../texts';
+import { font, space } from '@/shared/theme/tokens';
 
 /**
  * 'set': a new password and its confirmation; 'set-optional': the same with «Пропустить» instead of «Отмена» (the
@@ -99,6 +100,6 @@ export function PasswordHost() {
 }
 
 const styles = StyleSheet.create({
-  body: { paddingHorizontal: 20, paddingBottom: 8, gap: 10 },
-  hint: { fontSize: 14, color: colors.muted },
+  body: { paddingHorizontal: space[20], paddingBottom: space[8], gap: space[10] },
+  hint: { fontSize: font.secondary, color: colors.muted },
 });

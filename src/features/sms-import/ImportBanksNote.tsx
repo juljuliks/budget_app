@@ -4,6 +4,7 @@ import { enabledBanks } from '@/db/banks';
 import { bankById, BankId } from '@/domain/banks';
 import { navigationRef } from '@/shared/navigation/navigation';
 import { colors } from '@/shared/theme/theme';
+import { font, radius, space, weight } from '@/shared/theme/tokens';
 
 /** In "Импорт SMS": which banks' SMS it reads (the ones on), and where to turn on others ("Банки"). */
 export default function ImportBanksNote({ close }: { close: () => void }) {
@@ -47,17 +48,17 @@ const styles = StyleSheet.create({
   box: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: space[10],
     backgroundColor: colors.surface,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 6,
+    borderRadius: radius.md,
+    paddingHorizontal: space[12],
+    paddingVertical: space[10],
+    marginBottom: space[6],
   },
-  badges: { flexDirection: 'row', gap: 4 },
+  badges: { flexDirection: 'row', gap: space[4] },
   badge: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  badgeText: { fontSize: 10, fontWeight: '700', color: colors.onAccent },
-  text: { flex: 1, gap: 2 },
-  label: { fontSize: 15, color: colors.text },
-  link: { fontSize: 14, color: colors.accent },
+  badgeText: { fontSize: font.micro, fontWeight: weight.bold, color: colors.onAccent },
+  text: { flex: 1, gap: space[2] },
+  label: { fontSize: font.body, color: colors.text },
+  link: { fontSize: font.secondary, color: colors.accent },
 });

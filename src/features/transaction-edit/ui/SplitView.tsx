@@ -7,6 +7,7 @@ import { formatMoneyWithCurrency } from '@/shared/lib/money';
 import { PencilIcon } from '@/shared/ui/icons';
 import { colors } from '@/shared/theme/theme';
 import SplitBar from './SplitBar';
+import { font, space, weight } from '@/shared/theme/tokens';
 
 type Props = {
   /** every part, the operation's own category first */
@@ -47,16 +48,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 24,
-    marginBottom: 10,
+    marginTop: space[24],
+    marginBottom: space[10],
   },
-  title: { fontSize: 13, fontWeight: '600', color: colors.muted, textTransform: 'uppercase' },
-  edit: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  editText: { fontSize: 15, color: colors.accent },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 11 },
+  title: { fontSize: font.meta, fontWeight: weight.semibold, color: colors.muted, textTransform: 'uppercase' },
+  edit: { flexDirection: 'row', alignItems: 'center', gap: space[6] },
+  editText: { fontSize: font.body, color: colors.accent },
+  row: { flexDirection: 'row', alignItems: 'center', gap: space[10], paddingVertical: 11 },
   divider: { borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
   dot: { width: 10, height: 10, borderRadius: 5 },
   name: { flex: 1 },
-  share: { fontSize: 14, color: colors.muted, fontVariant: ['tabular-nums'] },
-  amount: { minWidth: 84, textAlign: 'right', fontSize: 16, color: colors.text, fontVariant: ['tabular-nums'] },
+  share: { fontSize: font.secondary, color: colors.muted, fontVariant: ['tabular-nums'] },
+  amount: { minWidth: 84, textAlign: 'right', fontSize: font.input, color: colors.text, fontVariant: ['tabular-nums'] },
 });

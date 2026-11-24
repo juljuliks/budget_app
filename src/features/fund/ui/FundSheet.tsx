@@ -13,6 +13,7 @@ import { colors } from '@/shared/theme/theme';
 import type { FundEntry } from '@/db/plans';
 import { confirmDeleteFund } from '../model/commands';
 import { useFund } from '../model/useFund';
+import { font, space, weight } from '@/shared/theme/tokens';
 
 type Props = {
   /** null = closed */
@@ -115,34 +116,39 @@ export default function FundSheet({ categoryId, label, onClose, onEdit, ym }: Pr
 }
 
 const styles = StyleSheet.create({
-  body: { paddingHorizontal: 20, paddingBottom: 20 },
-  amounts: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
-  saved: { fontSize: 28, fontWeight: '700', color: colors.text, fontVariant: ['tabular-nums'] },
-  of: { fontSize: 16, color: colors.muted, fontVariant: ['tabular-nums'] },
+  body: { paddingHorizontal: space[20], paddingBottom: space[20] },
+  amounts: { flexDirection: 'row', alignItems: 'baseline', gap: space[8] },
+  saved: { fontSize: font.display, fontWeight: weight.bold, color: colors.text, fontVariant: ['tabular-nums'] },
+  of: { fontSize: font.input, color: colors.muted, fontVariant: ['tabular-nums'] },
   track: {
     flexDirection: 'row',
     height: 10,
     borderRadius: 5,
     backgroundColor: colors.fundTrack,
     overflow: 'hidden',
-    marginTop: 10,
+    marginTop: space[10],
   },
   fill: { backgroundColor: colors.fund, borderRadius: 5 },
-  line: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, marginTop: 10 },
-  lineText: { flex: 1, fontSize: 14, color: colors.muted },
-  lineValue: { fontSize: 14, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
+  line: { flexDirection: 'row', justifyContent: 'space-between', gap: space[12], marginTop: space[10] },
+  lineText: { flex: 1, fontSize: font.secondary, color: colors.muted },
+  lineValue: {
+    fontSize: font.secondary,
+    fontWeight: weight.semibold,
+    color: colors.text,
+    fontVariant: ['tabular-nums'],
+  },
   entry: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 12,
-    paddingVertical: 8,
+    gap: space[12],
+    paddingVertical: space[8],
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
-  entryText: { flex: 1, fontSize: 15, color: colors.text },
-  entryWhat: { fontSize: 13, color: colors.muted },
-  entryAmount: { fontSize: 15, color: colors.text, fontVariant: ['tabular-nums'] },
+  entryText: { flex: 1, fontSize: font.body, color: colors.text },
+  entryWhat: { fontSize: font.meta, color: colors.muted },
+  entryAmount: { fontSize: font.body, color: colors.text, fontVariant: ['tabular-nums'] },
   in: { color: colors.fundText },
-  note: { marginTop: 10 },
-  actions: { gap: 10, marginTop: 14 },
+  note: { marginTop: space[10] },
+  actions: { gap: space[10], marginTop: space[14] },
 });

@@ -12,6 +12,7 @@ import { BACKUP, BACKUP_INFO, EXPORT_COPY, EXPORT_CSV, RESTORE_BACKUP } from '..
 import { toastFailure } from '@/shared/ui/toast';
 import { LOAD_FAILED } from '@/shared/lib/strings';
 import AutoBackupSection, { type AutoState } from './AutoBackupSection';
+import { font, space } from '@/shared/theme/tokens';
 
 type Settings = { auto: AutoState; password: boolean };
 
@@ -50,11 +51,11 @@ export default function BackupSheet({ visible, onClose }: { visible: boolean; on
 }
 
 const styles = StyleSheet.create({
-  info: { fontSize: 14, color: colors.muted, paddingHorizontal: 20, paddingBottom: 12 },
+  info: { fontSize: font.secondary, color: colors.muted, paddingHorizontal: space[20], paddingBottom: space[12] },
   actions: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 12,
+    paddingHorizontal: space[20],
+    paddingTop: space[16],
+    paddingBottom: space[12],
     borderTopWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },

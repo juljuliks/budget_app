@@ -10,6 +10,7 @@ import { useDisplayCurrency } from '@/shared/settings/displayCurrency';
 import type { CategoryKind } from '../model/useCategoryKind';
 import type { KindData } from '../model/useKindData';
 import { CHANGE, KIND_HINTS, KIND_OPTIONS, KIND_TITLE } from '../texts';
+import { font, radius, space } from '@/shared/theme/tokens';
 
 /**
  * The regular payment's sheet starts from its category's schedule within the month, if it has one; else from this
@@ -81,13 +82,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 10,
+    gap: space[10],
     backgroundColor: colors.surface,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginTop: 4,
+    borderRadius: radius.md,
+    paddingHorizontal: space[12],
+    paddingVertical: space[10],
+    marginTop: space[4],
   },
-  summaryText: { fontSize: 15, color: colors.text, flexShrink: 1 },
-  hint: { color: colors.muted, marginTop: 6, fontSize: 13, lineHeight: 18 },
+  summaryText: { fontSize: font.body, color: colors.text, flexShrink: 1 },
+  hint: { color: colors.muted, marginTop: space[6], fontSize: font.meta, lineHeight: 18 },
 });

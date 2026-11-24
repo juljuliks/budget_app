@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { BackspaceIcon, FingerprintIcon } from '@/shared/ui/icons';
 import { colors } from '@/shared/theme/theme';
+import { font, space } from '@/shared/theme/tokens';
 
 type Props = {
   onDigit: (d: string) => void;
@@ -55,10 +56,10 @@ export default function Keypad({ onDigit, onErase, onBiometric, disabled }: Prop
 }
 
 const styles = StyleSheet.create({
-  pad: { gap: 12, paddingHorizontal: 40 },
-  row: { flexDirection: 'row', gap: 24 },
+  pad: { gap: space[12], paddingHorizontal: 40 },
+  row: { flexDirection: 'row', gap: space[24] },
   key: { flex: 1, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center' },
   digit: { backgroundColor: colors.surface },
-  text: { fontSize: 28, color: colors.text },
+  text: { fontSize: font.display, color: colors.text },
   off: { opacity: 0.4 },
 });

@@ -6,6 +6,7 @@ import TextInputModal from '@/shared/ui/TextInputModal';
 import { PencilIcon } from '@/shared/ui/icons';
 import { toast } from '@/shared/ui/toast';
 import { colors } from '@/shared/theme/theme';
+import { font, radius, space } from '@/shared/theme/tokens';
 
 /** The operation's note ("Описание"; a manual operation's is the one entered with it): shown with a pencil, or
  * "＋ Добавить описание"; edited in a sheet (empty removes it). */
@@ -56,14 +57,14 @@ export default function NoteSection({
 }
 
 const styles = StyleSheet.create({
-  link: { fontSize: 14, color: colors.accent },
+  link: { fontSize: font.secondary, color: colors.accent },
   note: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 8,
+    gap: space[8],
     backgroundColor: colors.surface,
-    padding: 12,
-    borderRadius: 8,
+    padding: space[12],
+    borderRadius: radius.sm,
   },
-  noteText: { flex: 1, fontSize: 15, color: colors.text },
+  noteText: { flex: 1, fontSize: font.body, color: colors.text },
 });

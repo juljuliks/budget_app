@@ -18,6 +18,7 @@ import OutsideBlock from './ui/OutsideBlock';
 import ReportHero from './ui/ReportHero';
 import { PAGE_INSET } from './ui/ReportBlock';
 import { styles as report } from './ui/styles';
+import { space } from '@/shared/theme/tokens';
 
 /**
  * A month's report as a page («Отчёт за месяц ›» in «История» and a past month's stats): the same blocks as its
@@ -83,5 +84,5 @@ export default function MonthReportPage({ ym }: { ym: string }) {
 
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: colors.bg },
-  content: { paddingHorizontal: PAGE_INSET, paddingBottom: 32 },
+  content: { paddingHorizontal: PAGE_INSET, paddingBottom: space[32] },
 });

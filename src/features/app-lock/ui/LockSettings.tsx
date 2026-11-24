@@ -5,6 +5,7 @@ import Toggle from './Toggle';
 import { useLockState } from '../model/useLockState';
 import { disableLock, enableLock } from '../model/commands';
 import { LOCK, LOCK_BIO_HINT, LOCK_OFF_HINT, LOCK_PIN_HINT, SET_UP } from '../texts';
+import { font, space } from '@/shared/theme/tokens';
 
 /**
  * "Блокировка" in the settings: its switch (on — a PIN twice right away; off — after the PIN) and, while on,
@@ -35,14 +36,14 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
+    gap: space[12],
+    paddingHorizontal: space[20],
+    paddingVertical: space[14],
     borderTopWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
-  text: { flex: 1, gap: 2 },
-  label: { fontSize: 16, color: colors.text },
-  hint: { fontSize: 13, color: colors.muted },
-  link: { fontSize: 14, color: colors.accent, marginTop: 6 },
+  text: { flex: 1, gap: space[2] },
+  label: { fontSize: font.input, color: colors.text },
+  hint: { fontSize: font.meta, color: colors.muted },
+  link: { fontSize: font.secondary, color: colors.accent, marginTop: space[6] },
 });

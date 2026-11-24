@@ -13,6 +13,7 @@ import { TypeEditModal } from '@/entities/category';
 import { colors } from '@/shared/theme/theme';
 import { toast, toastFailure } from '@/shared/ui/toast';
 import { LOAD_FAILED } from '@/shared/lib/strings';
+import { font, space } from '@/shared/theme/tokens';
 
 /** Category sections ("Переводы", "Хобби", ...) in a sheet: create, edit (name and colors), delete. From the categories. */
 export default function CategoryTypesSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
@@ -100,17 +101,17 @@ const styles = StyleSheet.create({
   sheet: { maxHeight: '85%' },
   // "+ Создать" at the top right, under the title
   top: { position: 'absolute', top: 14, right: 20 },
-  content: { paddingHorizontal: 20, paddingBottom: 16 },
+  content: { paddingHorizontal: space[20], paddingBottom: space[16] },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: space[10],
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
   flex: { flex: 1 },
-  name: { fontSize: 16, color: colors.text },
-  note: { fontSize: 12, color: colors.muted, marginTop: 2 },
-  palette: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6, alignSelf: 'flex-start' },
-  empty: { padding: 32, textAlign: 'center', color: colors.muted },
+  name: { fontSize: font.input, color: colors.text },
+  note: { fontSize: font.caption, color: colors.muted, marginTop: space[2] },
+  palette: { flexDirection: 'row', alignItems: 'center', gap: space[8], marginTop: space[6], alignSelf: 'flex-start' },
+  empty: { padding: space[32], textAlign: 'center', color: colors.muted },
 });

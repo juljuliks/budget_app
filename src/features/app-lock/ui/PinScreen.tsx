@@ -5,6 +5,7 @@ import { CloseIcon, LockIcon } from '@/shared/ui/icons';
 import { colors } from '@/shared/theme/theme';
 import Keypad from './Keypad';
 import { MAX_PIN, MIN_PIN, NEXT } from '../texts';
+import { font, space, weight } from '@/shared/theme/tokens';
 
 export type PinScreenProps = {
   /** a window's name, with ✕ (cancel); none: the lock screen (the lock icon, no way around) */
@@ -87,12 +88,18 @@ export default function PinScreen({ visible, ...p }: PinScreenProps & { visible:
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg, paddingTop: StatusBar.currentHeight ?? 24 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 10 },
-  close: { padding: 8 },
-  title: { fontSize: 17, fontWeight: '600', color: colors.text },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[8],
+    paddingHorizontal: space[12],
+    paddingVertical: space[10],
+  },
+  close: { padding: space[8] },
+  title: { fontSize: 17, fontWeight: weight.semibold, color: colors.text },
   badge: {
     alignSelf: 'center',
-    marginTop: 48,
+    marginTop: space[48],
     width: 64,
     height: 64,
     borderRadius: 18,
@@ -100,13 +107,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  body: { flex: 1, alignItems: 'center', paddingTop: 32, paddingHorizontal: 24, gap: 14 },
-  heading: { fontSize: 22, fontWeight: '600', color: colors.text },
-  hint: { fontSize: 14, color: colors.muted, textAlign: 'center' },
-  dots: { flexDirection: 'row', gap: 14, height: 24, alignItems: 'center' },
+  body: { flex: 1, alignItems: 'center', paddingTop: space[32], paddingHorizontal: space[24], gap: space[14] },
+  heading: { fontSize: 22, fontWeight: weight.semibold, color: colors.text },
+  hint: { fontSize: font.secondary, color: colors.muted, textAlign: 'center' },
+  dots: { flexDirection: 'row', gap: space[14], height: 24, alignItems: 'center' },
   dot: { width: 14, height: 14, borderRadius: 7, borderWidth: 2, borderColor: '#9CA3AF' },
   dotOn: { backgroundColor: colors.accent, borderColor: colors.accent },
-  error: { fontSize: 14, color: colors.danger, textAlign: 'center', minHeight: 20 },
-  link: { fontSize: 15, fontWeight: '600', color: colors.accent, padding: 4 },
-  footer: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 28, minHeight: 76 },
+  error: { fontSize: font.secondary, color: colors.danger, textAlign: 'center', minHeight: 20 },
+  link: { fontSize: font.body, fontWeight: weight.semibold, color: colors.accent, padding: space[4] },
+  footer: { paddingHorizontal: space[16], paddingTop: space[12], paddingBottom: 28, minHeight: 76 },
 });

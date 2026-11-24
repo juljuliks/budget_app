@@ -17,6 +17,7 @@ import { formStyles } from '@/shared/theme/formStyles';
 import { colors } from '@/shared/theme/theme';
 import { dayLabel } from './model/dayLabel';
 import { KINDS, useAddForm } from './model/useAddForm';
+import { font, space, weight } from '@/shared/theme/tokens';
 
 /** Manual entry in a sheet (the "+" on the operations): cash, or anything the bank didn't send an SMS for. */
 export default function AddTransactionSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
@@ -101,10 +102,10 @@ export default function AddTransactionSheet({ visible, onClose }: { visible: boo
 
 const styles = StyleSheet.create({
   root: { maxHeight: '92%' },
-  content: { paddingHorizontal: 20, paddingBottom: 8 },
+  content: { paddingHorizontal: space[20], paddingBottom: space[8] },
   // stretch: the currency button as tall as the amount field
-  amountRow: { flexDirection: 'row', alignItems: 'stretch', gap: 8 },
-  amount: { flex: 1, fontSize: 24, fontWeight: '600' },
+  amountRow: { flexDirection: 'row', alignItems: 'stretch', gap: space[8] },
+  amount: { flex: 1, fontSize: font.headline, fontWeight: weight.semibold },
 });
 
 /** The new operation's category: a field, a tap opens the shared list. */

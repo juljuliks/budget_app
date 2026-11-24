@@ -9,6 +9,7 @@ import { colors } from '@/shared/theme/theme';
 import { toastFailure } from '@/shared/ui/toast';
 import { SAVE_FAILED } from '@/shared/lib/strings';
 import type { Tx } from '../model/useTransaction';
+import { font, space } from '@/shared/theme/tokens';
 
 const ANSWERS = [
   { label: 'Обдуманная', value: false },
@@ -62,6 +63,6 @@ export default function ImpulseQuestion({ tx }: { tx: Tx }) {
 }
 
 const styles = StyleSheet.create({
-  chips: { flexDirection: 'row', gap: 8 },
-  question: { fontSize: 15, color: colors.text, marginTop: 16, marginBottom: 8 },
+  chips: { flexDirection: 'row', gap: space[8] },
+  question: { fontSize: font.body, color: colors.text, marginTop: space[16], marginBottom: space[8] },
 });

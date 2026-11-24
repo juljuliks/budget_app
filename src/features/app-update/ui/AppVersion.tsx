@@ -5,6 +5,7 @@ import Button from '@/shared/ui/Button';
 import { colors } from '@/shared/theme/theme';
 import { checkForUpdate, onUpdateState, startUpdate, updateState, updatesOn } from '../model/update';
 import { LATEST, downloading, updateTo } from '../texts';
+import { font, space } from '@/shared/theme/tokens';
 
 /**
  * The bottom of «Настройки»: «Версия 1.0.N» (which build is installed: the phone's and the emulator's can differ),
@@ -39,11 +40,11 @@ export default function AppVersion({ open }: { open: boolean }) {
 
 const styles = StyleSheet.create({
   box: {
-    paddingVertical: 14,
-    paddingHorizontal: 20,
+    paddingVertical: space[14],
+    paddingHorizontal: space[20],
     borderTopWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
-  version: { fontSize: 13, color: colors.muted, textAlign: 'center' },
-  button: { marginTop: 12 },
+  version: { fontSize: font.meta, color: colors.muted, textAlign: 'center' },
+  button: { marginTop: space[12] },
 });

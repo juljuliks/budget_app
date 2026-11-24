@@ -11,6 +11,7 @@ import { SheetActions } from '@/shared/ui/Button';
 import { colors } from '@/shared/theme/theme';
 import { toast, toastFailure } from '@/shared/ui/toast';
 import ResultRow from './ui/ResultRow';
+import { font, space, weight } from '@/shared/theme/tokens';
 
 type Props = {
   message: UnparsedMessage;
@@ -73,7 +74,13 @@ export default function TemplatePreviewSheet({ message, marks, kind, visible, on
 
 const styles = StyleSheet.create({
   sheet: { maxHeight: '85%' },
-  count: { fontSize: 16, fontWeight: '600', color: colors.text, paddingHorizontal: 20 },
-  hint: { fontSize: 13, color: colors.muted, paddingHorizontal: 20, marginTop: 4, marginBottom: 10 },
-  actions: { paddingHorizontal: 20 },
+  count: { fontSize: font.input, fontWeight: weight.semibold, color: colors.text, paddingHorizontal: space[20] },
+  hint: {
+    fontSize: font.meta,
+    color: colors.muted,
+    paddingHorizontal: space[20],
+    marginTop: space[4],
+    marginBottom: space[10],
+  },
+  actions: { paddingHorizontal: space[20] },
 });

@@ -14,6 +14,7 @@ import RadioGroup from '@/shared/ui/RadioGroup';
 import { NO_SECTION, SPENDING_PATTERN, LOAD_FAILED } from '@/shared/lib/strings';
 import { colors } from '@/shared/theme/theme';
 import { toast, toastError, toastFailure } from '@/shared/ui/toast';
+import { font, radius, space, weight } from '@/shared/theme/tokens';
 
 const rhythmKey = (r: MergeRhythm) => `${r.kind}:${r.norm}:${r.every ?? ''}:${r.weekdays ?? ''}`;
 // a regular payment within the month: its days ("Регулярный платёж · пн, чт")
@@ -205,9 +206,15 @@ export default function MergeCategoriesSheet({
 
 const styles = StyleSheet.create({
   sheet: { maxHeight: '88%' },
-  content: { paddingHorizontal: 20, paddingBottom: 8 },
-  text: { fontSize: 15, color: colors.text, lineHeight: 21 },
-  bold: { fontWeight: '600' },
-  warn: { marginTop: 16, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10, backgroundColor: colors.warnBg },
-  warnText: { fontSize: 14, color: colors.warn, lineHeight: 20 },
+  content: { paddingHorizontal: space[20], paddingBottom: space[8] },
+  text: { fontSize: font.body, color: colors.text, lineHeight: 21 },
+  bold: { fontWeight: weight.semibold },
+  warn: {
+    marginTop: space[16],
+    paddingHorizontal: space[12],
+    paddingVertical: space[10],
+    borderRadius: radius.md,
+    backgroundColor: colors.warnBg,
+  },
+  warnText: { fontSize: font.secondary, color: colors.warn, lineHeight: 20 },
 });

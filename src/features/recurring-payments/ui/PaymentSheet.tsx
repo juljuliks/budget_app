@@ -22,6 +22,7 @@ import { PaymentTarget, usePaymentForm } from '../model/usePaymentForm';
 import { usePaymentOperations } from '../model/usePaymentOperations';
 import { SavingFields, usePaymentSaving } from '@/entities/plan';
 import { inTime, monthGenYear, periodText } from '../texts';
+import { font, radius, space, weight } from '@/shared/theme/tokens';
 
 type Props = {
   /** null = closed */
@@ -223,13 +224,19 @@ export default function PaymentSheet({ target, onClose, onSaved, onLeave }: Prop
 
 const styles = StyleSheet.create({
   root: { maxHeight: '94%' },
-  content: { paddingHorizontal: 20, paddingBottom: 8 },
+  content: { paddingHorizontal: space[20], paddingBottom: space[8] },
   lead: { marginTop: 0 },
-  amountRow: { flexDirection: 'row', alignItems: 'stretch', gap: 8 },
-  amount: { flex: 1, fontSize: 18 },
+  amountRow: { flexDirection: 'row', alignItems: 'stretch', gap: space[8] },
+  amount: { flex: 1, fontSize: font.title },
   error: { color: colors.danger },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  plate: { marginTop: 14, borderRadius: 10, padding: 12, backgroundColor: colors.surface, gap: 4 },
-  plateTitle: { fontSize: 16, fontWeight: '600', color: colors.text },
-  plateText: { fontSize: 13, color: colors.muted },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space[8] },
+  plate: {
+    marginTop: space[14],
+    borderRadius: radius.md,
+    padding: space[12],
+    backgroundColor: colors.surface,
+    gap: space[4],
+  },
+  plateTitle: { fontSize: font.input, fontWeight: weight.semibold, color: colors.text },
+  plateText: { fontSize: font.meta, color: colors.muted },
 });

@@ -5,6 +5,7 @@ import { savingOfTransaction } from '@/db/recurring';
 import { formatWithCurrency } from '@/shared/lib/money';
 import ProgressRing from '@/shared/ui/ProgressRing';
 import { colors } from '@/shared/theme/theme';
+import { font, radius, space } from '@/shared/theme/tokens';
 
 type Props = {
   txId: number;
@@ -60,13 +61,13 @@ const styles = StyleSheet.create({
   box: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginTop: 12,
-    padding: 12,
-    borderRadius: 10,
+    gap: space[10],
+    marginTop: space[12],
+    padding: space[12],
+    borderRadius: radius.md,
     backgroundColor: colors.fundBg,
   },
-  text: { flex: 1, gap: 2 },
-  title: { fontSize: 15, color: colors.text },
-  note: { fontSize: 13, color: colors.muted },
+  text: { flex: 1, gap: space[2] },
+  title: { fontSize: font.body, color: colors.text },
+  note: { fontSize: font.meta, color: colors.muted },
 });

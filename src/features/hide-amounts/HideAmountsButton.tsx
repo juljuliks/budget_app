@@ -5,6 +5,7 @@ import { EyeIcon, EyeOffIcon } from '@/shared/ui/icons';
 import { colors } from '@/shared/theme/theme';
 import { toastFailure } from '@/shared/ui/toast';
 import { SAVE_FAILED } from '@/shared/lib/strings';
+import { space } from '@/shared/theme/tokens';
 
 /**
  * The eye next to the menu ⋮ in the stats header: blurs the budget and plan totals (see Masked). Hiding is at once;
@@ -39,5 +40,5 @@ export default function HideAmountsButton({ confirmShow }: { confirmShow: () => 
 }
 
 const styles = StyleSheet.create({
-  button: { padding: 4 },
+  button: { padding: space[4] },
 });

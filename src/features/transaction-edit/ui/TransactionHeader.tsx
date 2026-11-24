@@ -7,6 +7,7 @@ import { PencilIcon } from '@/shared/ui/icons';
 import { colors } from '@/shared/theme/theme';
 import { canChangeKind } from '../model/kindChoice';
 import type { Tx } from '../model/useTransaction';
+import { font, space, weight } from '@/shared/theme/tokens';
 
 type Props = {
   tx: Tx;
@@ -51,11 +52,11 @@ export default function TransactionHeader({ tx, onEditAmount, onEditKind, mercha
 }
 
 const styles = StyleSheet.create({
-  amountRow: { flexDirection: 'row', alignItems: 'center', gap: 10, alignSelf: 'flex-start' },
-  amount: { fontSize: 28, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
+  amountRow: { flexDirection: 'row', alignItems: 'center', gap: space[10], alignSelf: 'flex-start' },
+  amount: { fontSize: font.display, fontWeight: weight.semibold, color: colors.text, fontVariant: ['tabular-nums'] },
   income: { color: colors.income },
-  merchant: { fontSize: 18, color: colors.text, marginTop: 4 },
-  kindRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  merchant: { fontSize: font.title, color: colors.text, marginTop: space[4] },
+  kindRow: { flexDirection: 'row', alignItems: 'center', gap: space[10] },
   kindTitle: { flexShrink: 1 },
-  meta: { fontSize: 14, color: colors.muted, marginTop: 2 },
+  meta: { fontSize: font.secondary, color: colors.muted, marginTop: space[2] },
 });

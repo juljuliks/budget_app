@@ -7,6 +7,7 @@ import Toggle from './Toggle';
 import { useLockState } from '../model/useLockState';
 import { changePin, saveHideNotifications, saveLockDelay, switchBiometric } from '../model/commands';
 import { BIOMETRIC, CHANGE_PIN, DELAY, DELAYS, HIDE_NOTIFICATIONS, HIDE_NOTIFICATIONS_HINT, LOCK } from '../texts';
+import { font, space, weight } from '@/shared/theme/tokens';
 
 /**
  * "Блокировка" (Настройки → "Настроить", while it is on): the fingerprint (when the phone has one), how soon to ask
@@ -66,17 +67,17 @@ export default function LockOptionsSheet({ visible, onClose }: { visible: boolea
 const styles = StyleSheet.create({
   body: {
     gap: 18,
-    paddingHorizontal: 20,
-    paddingTop: 14,
+    paddingHorizontal: space[20],
+    paddingTop: space[14],
     paddingBottom: 28,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: space[12] },
   flex: { flex: 1 },
-  label: { fontSize: 16, color: colors.text },
-  hint: { fontSize: 13, color: colors.muted, marginTop: 2 },
-  delay: { gap: 8 },
+  label: { fontSize: font.input, color: colors.text },
+  hint: { fontSize: font.meta, color: colors.muted, marginTop: space[2] },
+  delay: { gap: space[8] },
   linkWrap: { alignSelf: 'flex-start' },
-  link: { fontSize: 15, fontWeight: '600', color: colors.accent },
+  link: { fontSize: font.body, fontWeight: weight.semibold, color: colors.accent },
 });

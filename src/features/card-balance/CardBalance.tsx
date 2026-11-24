@@ -9,6 +9,7 @@ import { formatDay, formatTime, plural } from '@/shared/lib/format';
 import { formatMoneyWithCurrency } from '@/shared/lib/money';
 import { sheetAlert } from '@/shared/ui/sheetAlert';
 import { colors } from '@/shared/theme/theme';
+import { font, radius, space, weight } from '@/shared/theme/tokens';
 
 type Card = { bank: BankId; balance: Balance | null };
 
@@ -105,20 +106,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: colors.surface,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    marginBottom: 8,
+    borderRadius: radius.lg,
+    paddingHorizontal: space[14],
+    paddingVertical: space[10],
+    marginBottom: space[8],
   },
   column: { flexDirection: 'column', alignItems: 'stretch' },
-  text: { flex: 1, marginRight: 12 },
-  label: { fontSize: 13, color: colors.muted },
+  text: { flex: 1, marginRight: space[12] },
+  label: { fontSize: font.meta, color: colors.muted },
   unknown: { color: colors.muted },
-  note: { fontSize: 12, color: colors.muted, marginTop: 2 },
-  amount: { fontSize: 20, fontWeight: '700', color: colors.text, fontVariant: ['tabular-nums'] },
-  line: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 5 },
+  note: { fontSize: font.caption, color: colors.muted, marginTop: space[2] },
+  amount: { fontSize: font.heading, fontWeight: weight.bold, color: colors.text, fontVariant: ['tabular-nums'] },
+  line: { flexDirection: 'row', alignItems: 'center', gap: space[10], paddingVertical: 5 },
   lineNote: { flex: 1, marginTop: 0 },
-  lineAmount: { fontSize: 17, fontWeight: '700', color: colors.text, fontVariant: ['tabular-nums'] },
+  lineAmount: { fontSize: 17, fontWeight: weight.bold, color: colors.text, fontVariant: ['tabular-nums'] },
   badge: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  badgeText: { fontSize: 10, fontWeight: '700', color: colors.onAccent },
+  badgeText: { fontSize: font.micro, fontWeight: weight.bold, color: colors.onAccent },
 });

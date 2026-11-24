@@ -7,6 +7,7 @@ import { useMerchantActions } from './model/useMerchantActions';
 import { useMerchantCard } from './model/useMerchantCard';
 import MerchantCategories from './ui/MerchantCategories';
 import MerchantHead from './ui/MerchantHead';
+import { space } from '@/shared/theme/tokens';
 
 type Props = {
   merchantId: string;
@@ -63,6 +64,6 @@ export default function MerchantView({ merchantId, onClose, onShowOperations, re
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: 20, paddingTop: 14 },
+  content: { paddingHorizontal: space[20], paddingTop: space[14] },
   actions: { marginTop: 0 },
 });

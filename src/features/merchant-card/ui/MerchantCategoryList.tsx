@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { colors } from '@/shared/theme/theme';
 import { StarIcon, TrashIcon } from '@/shared/ui/icons';
+import { font, space } from '@/shared/theme/tokens';
 
 /** Until a row reports its height: enough for one place up or down. */
 const ROW_H = 44;
@@ -232,7 +233,7 @@ function Grip() {
 }
 
 const styles = StyleSheet.create({
-  hint: { fontSize: 13, color: colors.muted, lineHeight: 18, marginBottom: 4 },
+  hint: { fontSize: font.meta, color: colors.muted, lineHeight: 18, marginBottom: space[4] },
   block: { overflow: 'hidden' },
   drag: { backgroundColor: colors.bg },
   lifted: {
@@ -245,14 +246,14 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: space[10],
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
-  mark: { width: 16, marginRight: 10, alignItems: 'center' },
+  mark: { width: 16, marginRight: space[10], alignItems: 'center' },
   dot: { width: 10, height: 10, borderRadius: 5 },
-  name: { flex: 1, fontSize: 16, color: colors.text },
-  grip: { width: 14, gap: 3, marginLeft: 10 },
+  name: { flex: 1, fontSize: font.input, color: colors.text },
+  grip: { width: 14, gap: 3, marginLeft: space[10] },
   gripBar: { height: 2, borderRadius: 1, backgroundColor: colors.muted },
-  trash: { padding: 6 },
+  trash: { padding: space[6] },
 });

@@ -8,6 +8,7 @@ import { SheetActions } from '@/shared/ui/Button';
 import { formStyles } from '@/shared/theme/formStyles';
 import { colors } from '@/shared/theme/theme';
 import { monthWords } from '../model/closeTexts';
+import { font, radius, space, weight } from '@/shared/theme/tokens';
 
 type Parts = Array<{ category_id: number; minor: number }>;
 type Props = { c: MonthClose | null; visible: boolean; onSave: (parts: Parts) => void; onClose: () => void };
@@ -92,32 +93,32 @@ export default function SplitSheet({ c, visible, onSave, onClose }: Props) {
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: 20, paddingBottom: 8 },
-  fact: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 },
-  factLabel: { fontSize: 15, color: colors.muted },
-  factValue: { fontSize: 15, fontWeight: '700', color: colors.text },
+  content: { paddingHorizontal: space[20], paddingBottom: space[8] },
+  fact: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: space[4] },
+  factLabel: { fontSize: font.body, color: colors.muted },
+  factValue: { fontSize: font.body, fontWeight: weight.bold, color: colors.text },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: space[12],
     paddingVertical: 9,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
   body: { flex: 1, minWidth: 0 },
-  name: { fontSize: 16, color: colors.text },
-  note: { fontSize: 13, color: colors.muted, marginTop: 2 },
+  name: { fontSize: font.input, color: colors.text },
+  note: { fontSize: font.meta, color: colors.muted, marginTop: space[2] },
   field: {
     width: 120,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: space[6],
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 10,
-    paddingHorizontal: 10,
+    borderRadius: radius.md,
+    paddingHorizontal: space[10],
   },
-  input: { flex: 1, fontSize: 16, color: colors.text, paddingVertical: 8 },
-  cur: { fontSize: 14, color: colors.muted },
+  input: { flex: 1, fontSize: font.input, color: colors.text, paddingVertical: space[8] },
+  cur: { fontSize: font.secondary, color: colors.muted },
   warn: { color: colors.warn },
 });

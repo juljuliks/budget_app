@@ -3,6 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { MerchantLink } from '@/entities/merchant';
 import Masked from '@/shared/ui/Masked';
 import { colors } from '@/shared/theme/theme';
+import { font, space } from '@/shared/theme/tokens';
 
 export type SubRowNote = { prefix?: string; text: string; warn?: boolean };
 
@@ -69,12 +70,12 @@ export default function SubRow({
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 10 },
+  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: space[10] },
   gone: { opacity: 0.6 },
-  left: { flex: 1, marginRight: 12 },
+  left: { flex: 1, marginRight: space[12] },
   right: { alignItems: 'flex-end' },
-  name: { fontSize: 16, color: colors.text, marginTop: 4 },
-  note: { fontSize: 13, color: colors.muted, marginTop: 2 },
+  name: { fontSize: font.input, color: colors.text, marginTop: space[4] },
+  note: { fontSize: font.meta, color: colors.muted, marginTop: space[2] },
   muted: { color: colors.muted },
   warn: { color: colors.warn },
 });

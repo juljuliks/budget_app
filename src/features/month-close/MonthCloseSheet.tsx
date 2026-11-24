@@ -13,6 +13,7 @@ import StepPayments from './ui/StepPayments';
 import SplitSheet from './ui/SplitSheet';
 import StepSavings from './ui/StepSavings';
 import { styles } from './ui/styles';
+import { space } from '@/shared/theme/tokens';
 
 /** after this sheet has closed: one sheet at a time */
 const NEXT_SHEET_MS = 250;
@@ -77,7 +78,7 @@ export default function MonthCloseSheet({ ym, onClose }: { ym: string | null; on
                     <Text style={styles.hint}>Отчёт откроется, когда ответите на вопросы выше</Text>
                   ) : null}
                   <SheetActions
-                    style={c.complete ? undefined : { marginTop: 8 }}
+                    style={c.complete ? undefined : { marginTop: space[8] }}
                     submit={{
                       title: `Отчёт за ${words.nom}`,
                       disabled: !c.complete,
