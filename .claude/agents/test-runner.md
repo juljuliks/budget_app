@@ -12,7 +12,7 @@ Commands (run what the caller asked; if they named nothing, run `npm test`):
 
 - `npx jest --silent` — everything (logic + screens, ~30 s)
 - `npx jest --selectProjects logic --silent` / `npx jest --selectProjects screens --silent`
-- `npx jest --selectProjects screens <file> -t "<case>" --silent` — one file / cases
+- `npx jest <file> -t "<case>" --silent` — one file / cases (a path not after `--selectProjects`: it may take the words after it as project names)
 - `npx tsc --noEmit -p .` — types
 - `tests/e2e/run.sh <flow>` — one Maestro flow on the running emulator (only when asked; never all flows unless asked).
   Artifacts of a failure: `e2e-out/<flow>/` (maestro.log, logcat, screenshots).

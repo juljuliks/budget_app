@@ -1,4 +1,6 @@
 // The screens' tests: native parts the app uses, replaced (no device here).
+// the render counter (countRenders) listens to React's commits: its hook is there before React loads
+require('./renders').installRenderCounter();
 /* eslint-disable @typescript-eslint/no-var-requires */
 jest.mock('@notifee/react-native', () => {
   const mock = require('@notifee/react-native/jest-mock');

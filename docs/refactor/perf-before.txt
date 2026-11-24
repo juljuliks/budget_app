@@ -1,0 +1,3 @@
+# scripts/perf.sh, release on emulator-5554, the demo database: medians of 5 runs, ms (2026-11-25)
+start	503
+stats	569

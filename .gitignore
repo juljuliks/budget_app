@@ -35,3 +35,6 @@ e2e-out/
 
 # Firebase config (the release push): kept out of the public repo, CI gets it from the GOOGLE_SERVICES_JSON secret
 android/app/google-services.json
+
+# jest --coverage (npm run coverage)
+coverage/

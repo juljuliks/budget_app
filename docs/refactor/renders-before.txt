@@ -1,0 +1,65 @@
+Операции — прокрутка вниз и вверх: 1407
+    365  View
+    170  VirtualizedListCellContextProvider
+    168  CellRenderer
+    100  ItemWithSeparator
+     94  Text
+     94  TouchableOpacity
+     92  C
+     51  AnimatedComponent
+     47  AnimatedComponentWrapper
+     47  PressabilityDebugView
+     34  OperationsSectionHeader
+     34  ChevronRightIcon
+Операции — вторая страница: 5440
+   1451  View
+    685  VirtualizedListCellContextProvider
+    679  CellRenderer
+    405  ItemWithSeparator
+    376  Text
+    376  TouchableOpacity
+    329  C
+    189  AnimatedComponent
+    188  AnimatedComponentWrapper
+    188  PressabilityDebugView
+    137  OperationsSectionHeader
+    137  ChevronRightIcon
+Операции — выбор: зажать SPAR, тап WOLT: 2703
+    801  View
+    278  TouchableOpacity
+    266  Text
+    170  VirtualizedListCellContextProvider
+    168  CellRenderer
+    157  AnimatedComponent
+    149  AnimatedComponentWrapper
+    141  PressabilityDebugView
+    110  C
+    100  ItemWithSeparator
+     85  Checkbox
+     51  TransactionItem
+Статистика — вкладки «План» и «Траты»: 1125
+    292  View
+    102  Modal
+     88  C
+     78  TouchableOpacity
+     76  AnimatedComponent
+     73  AnimatedComponentWrapper
+     72  Text
+     49  BottomSheet
+     43  PressabilityDebugView
+     16  TextInputModal
+     14  PlanAmountModal
+     13  SavingsLessSheet
+Бюджет месяца — ввод 3000 по цифре: 495
+    149  View
+     77  Text
+     56  TouchableOpacity
+     41  AnimatedComponent
+     36  AnimatedComponentWrapper
+     28  PressabilityDebugView
+     16  Modal
+      8  BottomSheet
+      8  Anonymous
+      8  C
+      8  Button
+      4  BudgetSheet

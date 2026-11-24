@@ -7,7 +7,7 @@
 | Папка | Что там | Чем запускается |
 |---|---|---|
 | [logic/](logic/) | логика без экранов: парсер SMS, база, категории, план, отчёт, лимиты, курсы, число запросов статистики (`statsQueries`); что уходит в отчёт о сбое (`crashText`); расчёты экранов (`periodText`, `planView`, `reportView`, `dates`); свои правила линта (`eslintRules`: доступность, размер хука) | Jest, проект `logic` (ts-jest, Node) |
-| [screens/](screens/) | тесты экранов: всё приложение на SQLite в памяти, нажатия и тексты | Jest, проект `screens` (React Native Testing Library) |
+| [screens/](screens/) | тесты экранов: всё приложение на SQLite в памяти, нажатия и тексты; число рендеров на действие (`renders.test.tsx`, хелпер `countRenders`; цифры «до» — `docs/refactor/renders-before.txt`, `RENDERS_OUT=<файл>` пишет новые) | Jest, проект `screens` (React Native Testing Library) |
 | [screens/plan/](screens/plan/) | кейсы для Jest, по разделам 1–9 | — |
 | [e2e/](e2e/) | Maestro на эмуляторе: только то, что без устройства не проверить | `tests/e2e/run.sh` |
 | [e2e/plan/](e2e/plan/) | кейсы на устройстве (Maestro и вручную): разделы 1, 8, 9 | — |
@@ -90,7 +90,7 @@ category_id)`, `mixed_merchants`, `merchant_categories`, `plan_months`, `plan_it
 SQLite в памяти. Тесты нажимают кнопки, вводят текст, проверяют тексты на экране и строки в базе.
 
 ```sh
-npm test                                  # всё: логика и экраны (~30 с)
+npm test                                  # всё: логика и экраны (~100 с)
 npx jest --selectProjects logic           # только логика
 npx jest --selectProjects screens         # только экраны
 npx jest --selectProjects screens -t "2.5"  # кейсы раздела

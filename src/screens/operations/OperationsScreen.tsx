@@ -35,6 +35,7 @@ import SelectToolbar from './parts/SelectToolbar';
 import { EMPTY, EMPTY_FILTERED, SEARCH_PLACEHOLDER, SELECT_HINT } from './texts';
 import { toastFailure } from '@/shared/ui/toast';
 import { LOAD_FAILED, SAVE_FAILED } from '@/shared/lib/strings';
+import { usePerfMark } from '@/shared/lib/usePerfMark';
 
 /**
  * The operations tab: the search and the filters, the list by day or grouped, selecting several, sorting out a
@@ -50,6 +51,7 @@ export default function OperationsScreen() {
   const filters = useTransactionFilters(lockRef);
   const { query, categories, merchants, kinds, banks, range } = filters;
   const list = useOperationsList(filters.filterRef, groupByRef);
+  usePerfMark('operations', !list.loading);
   const route = useOperationsRoute(filters.reset);
   const so = useSortOut<GroupBy>({
     incoming: route.params.sortOut,

@@ -340,16 +340,18 @@ debug-ключом не обновит приложение на телефон�
 
 ```sh
 npm ci
-npm test                 # Jest: логика и тесты экранов (~30 с)
+npm test                 # Jest: логика и тесты экранов (~100 с)
 npm run lint             # ESLint: размеры файлов и хуков, границы слоёв (ARCHITECTURE.md); предупреждения — строгий TS, доступность
 npm run format           # Prettier: формат кода (в CI — npm run format:check)
 npm run knip             # мёртвый код: неиспользуемые файлы, экспорты, зависимости (список — docs/refactor/dead-code.txt)
+npm run coverage         # Jest с покрытием: ниже порога (jest.config.js) — ошибка
 npm run emulator         # release-сборка для эмулятора (читает SMS и от «TBC»: консоль не шлёт «TBC SMS») и установка на budget_pixel (создаётся при первом запуске)
 npm run release          # следующий budget-app-<версия>.apk на Рабочий стол и отдельная сборка на эмулятор
 npm run apk              # APK на Рабочий стол
 scripts/send_test_sms.sh # тестовое SMS банка на эмулятор
 tests/e2e/run.sh         # Maestro на эмуляторе: то, что без устройства не проверить
 scripts/demo/docs.sh     # скриншоты для документации: демо-база на эмуляторе, кадры в e2e-out/docs
+scripts/perf.sh          # время запуска и открытия «Статистики» (release на эмуляторе, демо-база, медиана из 5)
 ```
 
 Приложение не удалять с телефона: вместе с ним удаляются все операции. Обновлять только установкой поверх

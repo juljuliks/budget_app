@@ -194,6 +194,8 @@ export function toggleSwitch(on: boolean, label?: string) {
 }
 
 export { screen };
+export { countRenders } from './renders';
+export type { Renders } from './renders';
 
 /** The stories (a month's report, the year's): «Дальше ›» until `text` shows (at most `pages` times). */
 export async function toStory(text: string | RegExp, pages = 7) {

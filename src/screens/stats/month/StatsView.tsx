@@ -38,6 +38,7 @@ import { savingsSection } from './parts/savingsSection';
 import { categoryActions, fundActions, ROW_MENU_HINT } from './parts/rowActions';
 import { fundsSection, spentFunds, typeSections, unplannedSection } from './parts/sections';
 import { styles } from './parts/styles';
+import { usePerfMark } from '@/shared/lib/usePerfMark';
 
 type Props = { year: number; month: number; currency: Currency; view: DonutView };
 
@@ -48,6 +49,7 @@ type Props = { year: number; month: number; currency: Currency; view: DonutView 
 export default function StatsView({ year, month, currency, view }: Props) {
   const hidden = useHideAmounts();
   const { stats, share, today, marks, load, failed } = useMonthData(year, month, currency);
+  usePerfMark('stats', !!stats);
   const openTransactions = useOpenCategoryTransactions();
   // «Сбережения»: what goes to savings against the plan; ⓘ — what the overspend took
   // in the currency of the month's budget, as its "Итоги" (the funds' progress — in their own)

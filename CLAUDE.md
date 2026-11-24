@@ -27,9 +27,9 @@
 ## Команды
 
 ```sh
-npm test                                        # весь Jest (~30 с): logic + screens
+npm test                                        # весь Jest (~100 с): logic + screens
 npx jest --selectProjects logic                 # логика: парсер, база, план, отчёт (ts-jest, node)
-npx jest --selectProjects screens tests/screens/stats.test.tsx -t "5.1"   # один файл / кейсы раздела
+npx jest tests/screens/stats.test.tsx -t "5.1"   # один файл / кейсы раздела (путь — не после --selectProjects)
 npx tsc --noEmit -p .                           # типы
 npm run lint                                    # ESLint: размеры файлов и границы слоёв (ARCHITECTURE.md)
 npm run format                                  # Prettier — перед коммитом (CI проверяет format:check)
@@ -49,7 +49,8 @@ Gradle — только JDK 17: `JAVA_HOME=$(/usr/libexec/java_home -v 17)` (п�
   `driver` замаплен на `src/db/driver.ts`). «Сегодня» — чт 15.10.2026 12:00, время идёт (`setup.ts`).
   `console.error` в тесте — провал. Списки без виртуализации.
 - Хелперы в `tests/screens/app.tsx`: `openApp(seed)`, `tap(text | /re/ | '#testId')` — ждёт элемент и ищет в
-  верхнем открытом BottomSheet, `longPress`, `rowOf`, `scrollTo(testId, text)`, `openSettings`, `toggleSwitch`, `texts()`.
+  верхнем открытом BottomSheet, `longPress`, `rowOf`, `scrollTo(testId, text)`, `openSettings`, `toggleSwitch`, `texts()`,
+  `countRenders(action)` — сколько раз какой компонент перерисовался.
 - Seed'ы общие с Maestro: `tests/e2e/seeds.ts` (`base`, `empty`, `ops`, `planned`, `autoCategory`, `buy`, `rule`,
   `category`, `on`, `at`, `daysAgo`, `done()`).
 - Проверки — по тексту; testID — только для неоднозначных тапов. Перед ₾ — неразрывный пробел; тост ошибки
