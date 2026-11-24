@@ -7,6 +7,7 @@ import TextLink from '@/shared/ui/TextLink';
 import { colors } from '@/shared/theme/theme';
 import type { LockedOfForm } from '../model/budgetForm';
 import { RING_LOCKED } from './palette';
+import { font, radius, space, weight } from '@/shared/theme/tokens';
 
 /**
  * «🔒 Отложить сразу» in the budget sheet: no field — the % is set in the settings. «15% · 300 $»; taken this month
@@ -78,15 +79,15 @@ export default function LockedCard({
 }
 
 const styles = StyleSheet.create({
-  card: { marginTop: 12, padding: 12, borderRadius: 12, backgroundColor: colors.savingsBg },
+  card: { marginTop: space[12], padding: space[12], borderRadius: radius.lg, backgroundColor: colors.savingsBg },
   warn: { backgroundColor: colors.warnBg },
-  warnText: { fontSize: 14, color: colors.warn },
-  head: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  title: { flex: 1, fontSize: 13, fontWeight: '700', color: colors.muted, letterSpacing: 0.3 },
-  value: { fontSize: 15, fontWeight: '700', color: RING_LOCKED, fontVariant: ['tabular-nums'] },
-  line: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
-  muted: { fontSize: 13, color: colors.muted, fontVariant: ['tabular-nums'] },
-  note: { fontSize: 13, color: colors.muted, marginTop: 6 },
-  link: { fontSize: 13 },
-  linkBox: { marginTop: 4, alignSelf: 'flex-start' },
+  warnText: { fontSize: font.secondary, color: colors.warn },
+  head: { flexDirection: 'row', alignItems: 'center', gap: space[6] },
+  title: { flex: 1, fontSize: font.meta, fontWeight: weight.bold, color: colors.muted, letterSpacing: 0.3 },
+  value: { fontSize: font.body, fontWeight: weight.bold, color: RING_LOCKED, fontVariant: ['tabular-nums'] },
+  line: { flexDirection: 'row', justifyContent: 'space-between', marginTop: space[4] },
+  muted: { fontSize: font.meta, color: colors.muted, fontVariant: ['tabular-nums'] },
+  note: { fontSize: font.meta, color: colors.muted, marginTop: space[6] },
+  link: { fontSize: font.meta },
+  linkBox: { marginTop: space[4], alignSelf: 'flex-start' },
 });

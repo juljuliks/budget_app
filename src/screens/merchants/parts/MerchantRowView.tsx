@@ -4,6 +4,7 @@ import type { MerchantRow } from '@/db/merchants';
 import Checkbox from '@/shared/ui/Checkbox';
 import { colors } from '@/shared/theme/theme';
 import { activityText } from '../model/activity';
+import { font, space } from '@/shared/theme/tokens';
 
 type Props = {
   m: MerchantRow;
@@ -38,13 +39,13 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    gap: space[12],
+    paddingHorizontal: space[16],
+    paddingVertical: space[12],
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
   main: { flex: 1, minWidth: 0 },
-  name: { fontSize: 16, color: colors.text },
-  meta: { fontSize: 13, color: colors.muted, marginTop: 2 },
+  name: { fontSize: font.input, color: colors.text },
+  meta: { fontSize: font.meta, color: colors.muted, marginTop: space[2] },
 });

@@ -18,6 +18,7 @@ import { colors } from '@/shared/theme/theme';
 import { toastFailure } from '@/shared/ui/toast';
 import type { Row, Section } from '../model/listData';
 import SectionHeader from './SectionHeader';
+import { space } from '@/shared/theme/tokens';
 
 type Props = {
   /** a new filter remounts the list */
@@ -114,8 +115,8 @@ export default function OperationsList(p: Props) {
 
 const styles = StyleSheet.create({
   list: { flex: 1, backgroundColor: colors.bg },
-  footer: { paddingVertical: 16, marginBottom: 72 },
+  footer: { paddingVertical: space[16], marginBottom: 72 },
   // edit mode: room for two buttons in the bottom bar
   footerTall: { marginBottom: 130 },
-  empty: { padding: 32, textAlign: 'center', color: colors.muted },
+  empty: { padding: space[32], textAlign: 'center', color: colors.muted },
 });

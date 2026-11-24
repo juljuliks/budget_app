@@ -15,6 +15,7 @@ import LinkCard from '@/shared/ui/LinkCard';
 import { toastFailure } from '@/shared/ui/toast';
 import { LOAD_FAILED } from '@/shared/lib/strings';
 import { useDisplayCurrency } from '@/shared/settings/displayCurrency';
+import { space } from '@/shared/theme/tokens';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Category'>;
 
@@ -87,5 +88,5 @@ export default function CategoryScreen({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  trends: { marginTop: 12 },
+  trends: { marginTop: space[12] },
 });

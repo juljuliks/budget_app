@@ -5,6 +5,7 @@ import { FilterButton } from '@/features/operations-filters';
 import { colors } from '@/shared/theme/theme';
 import { UNANSWERED_CHIP } from '@/domain/moods';
 import { GROUP_BY, GroupBy } from '../model/listData';
+import { font, space } from '@/shared/theme/tokens';
 
 export type FilterSheet = 'category' | 'kind' | 'bank' | 'date' | 'all' | 'group';
 
@@ -107,8 +108,15 @@ export default function FiltersBar({
 
 const styles = StyleSheet.create({
   // under the search field; wrap onto the next lines
-  buttons: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginBottom: 8, marginTop: 10 },
-  appliedRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
-  appliedText: { fontSize: 14, color: colors.accent },
-  resetText: { fontSize: 14, color: colors.danger },
+  buttons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: space[6],
+    marginBottom: space[8],
+    marginTop: space[10],
+  },
+  appliedRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: space[8] },
+  appliedText: { fontSize: font.secondary, color: colors.accent },
+  resetText: { fontSize: font.secondary, color: colors.danger },
 });

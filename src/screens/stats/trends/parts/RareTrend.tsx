@@ -12,6 +12,7 @@ import type { Bar } from '../model/trendsView';
 import { detailStyles as s } from './detailStyles';
 import CategoryMerchants from './CategoryMerchants';
 import TrendBars from './TrendBars';
+import { space } from '@/shared/theme/tokens';
 
 export const shortDay = (k: string) => `${Number(k.slice(8))} ${SHORT_MONTHS[Number(k.slice(5, 7)) - 1]}`;
 const monthGen = (ym: string) => MONTHS_GEN[Number(ym.slice(5)) - 1];
@@ -129,7 +130,7 @@ export default function RareTrend({
                   range: { from: `${r.bars[0].ym}-01`, to: r.payments[0].day },
                 })
               }
-              containerStyle={{ marginTop: 10 }}
+              containerStyle={{ marginTop: space[10] }}
             />
           ) : null}
         </View>

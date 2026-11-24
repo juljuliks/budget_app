@@ -10,6 +10,7 @@ import TextLink from '@/shared/ui/TextLink';
 import { colors } from '@/shared/theme/theme';
 import type { FundTrend as Fund } from '@/stats/subsFundTrend';
 import { detailStyles as s } from './detailStyles';
+import { font, radius, space } from '@/shared/theme/tokens';
 
 const UP = 84;
 const DOWN = 40;
@@ -145,9 +146,15 @@ export default function FundTrend({
 }
 
 const styles = StyleSheet.create({
-  track: { height: 8, borderRadius: 4, backgroundColor: colors.fundTrack, overflow: 'hidden', marginTop: 8 },
+  track: {
+    height: 8,
+    borderRadius: radius.xs,
+    backgroundColor: colors.fundTrack,
+    overflow: 'hidden',
+    marginTop: space[8],
+  },
   fill: { height: '100%', backgroundColor: colors.fund },
-  chart: { flexDirection: 'row', gap: 6, marginTop: 16 },
+  chart: { flexDirection: 'row', gap: space[6], marginTop: space[16] },
   col: { flex: 1, alignItems: 'stretch' },
   up: { height: UP, justifyContent: 'flex-end', borderBottomWidth: 1, borderColor: colors.faint },
   saved: { backgroundColor: colors.fundTrack, borderTopLeftRadius: 3, borderTopRightRadius: 3 },
@@ -155,6 +162,6 @@ const styles = StyleSheet.create({
   none: { borderTopWidth: 2, borderStyle: 'dashed', borderColor: colors.border },
   down: { height: DOWN },
   spent: { backgroundColor: colors.impulse, opacity: 0.75, borderBottomLeftRadius: 3, borderBottomRightRadius: 3 },
-  month: { fontSize: 10, color: colors.muted, textAlign: 'center', marginTop: 4 },
+  month: { fontSize: font.micro, color: colors.muted, textAlign: 'center', marginTop: space[4] },
   monthNow: { color: colors.text },
 });

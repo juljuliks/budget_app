@@ -30,6 +30,7 @@ import CloseBanner from './parts/CloseBanner';
 import PlanAlert from './parts/PlanAlert';
 import StatsView from './month/StatsView';
 import PeriodSheet, { PERIODS } from './parts/PeriodSheet';
+import { font, space, weight } from '@/shared/theme/tokens';
 
 // the month's spending, or its plan: the ring, its legend and the categories under it
 const TABS = [
@@ -231,11 +232,11 @@ export default function StatsHome() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   body: { flex: 1 },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  title: { fontSize: 20, fontWeight: '500', color: colors.text },
-  titlePeriod: { fontSize: 20, fontWeight: '500', color: colors.accent },
-  titleArrow: { marginTop: 2 },
-  segmented: { marginHorizontal: 16, marginTop: 4, marginBottom: 8 },
-  sheet: { paddingHorizontal: 16 },
-  sheetHint: { fontSize: 14, color: colors.muted, marginBottom: 8, paddingHorizontal: 4 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: space[6] },
+  title: { fontSize: font.heading, fontWeight: weight.medium, color: colors.text },
+  titlePeriod: { fontSize: font.heading, fontWeight: weight.medium, color: colors.accent },
+  titleArrow: { marginTop: space[2] },
+  segmented: { marginHorizontal: space[16], marginTop: space[4], marginBottom: space[8] },
+  sheet: { paddingHorizontal: space[16] },
+  sheetHint: { fontSize: font.secondary, color: colors.muted, marginBottom: space[8], paddingHorizontal: space[4] },
 });

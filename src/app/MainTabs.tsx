@@ -13,9 +13,10 @@ import { countUnseenTransactions } from '@/db/transactions';
 import { onTransactionsChanged } from '@/domain/events';
 import { guardLeave, hasLeaveGuard } from '@/shared/navigation/leaveGuard';
 import type { TabParamList } from '@/shared/navigation/navigation';
+import { font, space } from '@/shared/theme/tokens';
 
-const headerRightStyle = { marginRight: 16 };
-const statsHeaderRight = { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 14 };
+const headerRightStyle = { marginRight: space[16] };
+const statsHeaderRight = { flexDirection: 'row' as const, alignItems: 'center' as const, gap: space[14] };
 const Tab = createBottomTabNavigator<TabParamList>();
 
 /** Unread (not yet opened) transactions for the tab badge; refreshed on any data change. */
@@ -52,9 +53,9 @@ export default function MainTabs() {
           tabBarActiveTintColor: colors.accent,
           tabBarInactiveTintColor: colors.muted,
           // the label right under the icon, with room below it (the default leaves the labels at the very bottom)
-          tabBarStyle: { height: 64, paddingTop: 6, paddingBottom: 10 },
+          tabBarStyle: { height: 64, paddingTop: space[6], paddingBottom: space[10] },
           tabBarIconStyle: { marginBottom: -2 },
-          tabBarLabelStyle: { fontSize: 12 },
+          tabBarLabelStyle: { fontSize: font.caption },
         }}
       >
         <Tab.Screen

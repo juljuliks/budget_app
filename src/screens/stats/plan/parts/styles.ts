@@ -3,36 +3,37 @@ import { StyleSheet } from 'react-native';
 import { chart, colors } from '@/shared/theme/theme';
 import type { Tone } from '../model/planView';
 import { BAR_HEIGHT, LOCK_BADGE, RING_LOCKED } from './palette';
+import { font, radius, space, weight } from '@/shared/theme/tokens';
 
 export const styles = StyleSheet.create({
-  share: { marginTop: 4 },
-  lockTitle: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12 },
+  share: { marginTop: space[4] },
+  lockTitle: { flexDirection: 'row', alignItems: 'center', gap: space[6], marginTop: space[12] },
   lockMode: { marginLeft: 'auto', width: 168 },
   lockLabel: { marginBottom: 0, marginTop: 0, flexShrink: 1 },
-  lockRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 },
-  lockOwn: { fontSize: 14, color: colors.muted },
-  lockInput: { flex: 1, paddingVertical: 6 },
+  lockRow: { flexDirection: 'row', alignItems: 'center', gap: space[8], marginTop: space[6] },
+  lockOwn: { fontSize: font.secondary, color: colors.muted },
+  lockInput: { flex: 1, paddingVertical: space[6] },
   // white like the stats: the sections' grey bands stand out
   screen: { flex: 1, backgroundColor: colors.bg },
   // room under the last row for the "+"
-  content: { paddingHorizontal: 16, paddingBottom: 88 },
+  content: { paddingHorizontal: space[16], paddingBottom: 88 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  budgetBox: { marginBottom: 8, padding: 14, borderRadius: 12, backgroundColor: colors.surface },
+  budgetBox: { marginBottom: space[8], padding: space[14], borderRadius: radius.lg, backgroundColor: colors.surface },
   budgetHead: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   // the pencil at the top, by the amount (not between it and the original one under it)
-  budgetRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, paddingVertical: 2 },
+  budgetRow: { flexDirection: 'row', alignItems: 'flex-start', gap: space[8], paddingVertical: space[2] },
   pencil: { marginTop: 5 },
-  budgetValue: { fontSize: 22, fontWeight: '700', color: colors.text, fontVariant: ['tabular-nums'] },
+  budgetValue: { fontSize: 22, fontWeight: weight.bold, color: colors.text, fontVariant: ['tabular-nums'] },
   left: { textAlign: 'left' },
   budgetAmounts: { alignItems: 'flex-end' },
-  budgetOriginal: { fontSize: 13, color: colors.muted, fontVariant: ['tabular-nums'] },
-  barBox: { marginTop: 10 },
+  budgetOriginal: { fontSize: font.meta, color: colors.muted, fontVariant: ['tabular-nums'] },
+  barBox: { marginTop: space[10] },
   bar: {
     flexDirection: 'row',
     height: BAR_HEIGHT,
     borderRadius: 5,
     overflow: 'hidden',
-    gap: 2,
+    gap: space[2],
     backgroundColor: chart.track,
   },
   lockBadgeBox: {
@@ -53,24 +54,36 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   // the parts as a legend: a line each, the amounts and shares in columns
-  parts: { gap: 6, marginTop: 10 },
-  part: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  parts: { gap: space[6], marginTop: space[10] },
+  part: { flexDirection: 'row', alignItems: 'center', gap: space[8] },
   legendBox: { width: 16, flexDirection: 'row', alignItems: 'center' },
-  legendDot: { width: 8, height: 8, borderRadius: 4 },
+  legendDot: { width: 8, height: 8, borderRadius: radius.xs },
   legendPair: { flexDirection: 'row', alignItems: 'center' },
   // the second dot covers a third of the first, a ring of the card's colour between them
   legendOver: { width: 12, height: 12, borderRadius: 6, marginLeft: -5, borderWidth: 2, borderColor: colors.surface },
-  partLabel: { fontSize: 14, color: colors.muted },
+  partLabel: { fontSize: font.secondary, color: colors.muted },
   // the amounts right-aligned at the edge; the shares in a column right by the names.
   // center, not baseline: the overspend's ⓘ is a drawing, and baseline drops it under the amount
-  partValues: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 6 },
-  partValue: { textAlign: 'right', fontSize: 14, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
-  partForeign: { fontSize: 13, color: colors.faint, fontVariant: ['tabular-nums'] },
+  partValues: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: space[6] },
+  partValue: {
+    textAlign: 'right',
+    fontSize: font.secondary,
+    fontWeight: weight.semibold,
+    color: colors.text,
+    fontVariant: ['tabular-nums'],
+  },
+  partForeign: { fontSize: font.meta, color: colors.faint, fontVariant: ['tabular-nums'] },
   // the legend's names laid out unseen: the widest sets the names' column
   measure: { position: 'absolute', opacity: 0, alignItems: 'flex-start' },
   // a share ("43%") or a word ("сэкономлено") right by the name
-  partNote: { minWidth: 34, textAlign: 'right', fontSize: 13, color: colors.muted, fontVariant: ['tabular-nums'] },
-  note: { fontSize: 12, color: colors.muted, marginTop: 8 },
+  partNote: {
+    minWidth: 34,
+    textAlign: 'right',
+    fontSize: font.meta,
+    color: colors.muted,
+    fontVariant: ['tabular-nums'],
+  },
+  note: { fontSize: font.caption, color: colors.muted, marginTop: space[8] },
   overText: { color: colors.warn },
   savingsValue: { color: RING_LOCKED },
   lockedValue: { color: RING_LOCKED },
@@ -80,43 +93,49 @@ export const styles = StyleSheet.create({
   iconsLink: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: space[6],
     alignSelf: 'flex-start',
-    paddingVertical: 4,
-    marginTop: 16,
+    paddingVertical: space[4],
+    marginTop: space[16],
   },
-  iconsLinkText: { fontSize: 14, color: colors.accent },
-  caption: { fontSize: 13, color: colors.muted, textAlign: 'center' },
-  hint: { color: colors.muted, fontSize: 14, textAlign: 'center', marginVertical: 12 },
-  group: { marginTop: 16 },
+  iconsLinkText: { fontSize: font.secondary, color: colors.accent },
+  caption: { fontSize: font.meta, color: colors.muted, textAlign: 'center' },
+  hint: { color: colors.muted, fontSize: font.secondary, textAlign: 'center', marginVertical: space[12] },
+  group: { marginTop: space[16] },
   // a grey band across the screen, sticking on top as the days on the operations do
   groupHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: -16 },
-  groupTitle: { fontSize: 13, fontWeight: '600', color: colors.muted },
+  groupTitle: { fontSize: font.meta, fontWeight: weight.semibold, color: colors.muted },
   // as the stats' headers: the amount dark, " · 23%" muted
   groupShare: { color: colors.muted },
-  groupTotal: { fontSize: 13, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
+  groupTotal: { fontSize: font.meta, fontWeight: weight.semibold, color: colors.text, fontVariant: ['tabular-nums'] },
   // a row charged in a later month only: faded
   later: { opacity: 0.5 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: space[10],
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
   // a row's icon in a column of one width
-  pin: { width: 28, alignItems: 'center', marginRight: 10 },
-  nameBox: { flex: 1, marginRight: 8 },
-  name: { fontSize: 15, color: colors.text },
-  percent: { fontSize: 12, color: colors.muted, marginTop: 2, fontVariant: ['tabular-nums'] },
+  pin: { width: 28, alignItems: 'center', marginRight: space[10] },
+  nameBox: { flex: 1, marginRight: space[8] },
+  name: { fontSize: font.body, color: colors.text },
+  percent: { fontSize: font.caption, color: colors.muted, marginTop: space[2], fontVariant: ['tabular-nums'] },
   // as the stats' rows: "1 200 ₾ · 10%" in one line on the name's, the share muted
-  amount: { fontSize: 13, color: colors.text, fontVariant: ['tabular-nums'] },
-  amountBox: { flexDirection: 'row', alignItems: 'baseline', alignSelf: 'flex-start', paddingTop: 2, paddingLeft: 8 },
-  amountOriginal: { fontSize: 13, color: colors.muted, fontVariant: ['tabular-nums'] },
+  amount: { fontSize: font.meta, color: colors.text, fontVariant: ['tabular-nums'] },
+  amountBox: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    alignSelf: 'flex-start',
+    paddingTop: space[2],
+    paddingLeft: space[8],
+  },
+  amountOriginal: { fontSize: font.meta, color: colors.muted, fontVariant: ['tabular-nums'] },
   // another currency's amount before the one shown, as large, muted
-  amountLine: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
+  amountLine: { flexDirection: 'row', alignItems: 'baseline', gap: space[4] },
   // the amount in another currency ("(300 $)") before the screen's one: smaller and lighter, in every row of the plan
-  amountForeign: { fontSize: 13, color: colors.faint },
+  amountForeign: { fontSize: font.meta, color: colors.faint },
   amountEmpty: { color: colors.muted },
 });
 

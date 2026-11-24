@@ -36,6 +36,7 @@ import { EMPTY, EMPTY_FILTERED, SEARCH_PLACEHOLDER, SELECT_HINT } from './texts'
 import { toastFailure } from '@/shared/ui/toast';
 import { LOAD_FAILED, SAVE_FAILED } from '@/shared/lib/strings';
 import { usePerfMark } from '@/shared/lib/usePerfMark';
+import { font, space } from '@/shared/theme/tokens';
 
 /**
  * The operations tab: the search and the filters, the list by day or grouped, selecting several, sorting out a
@@ -244,6 +245,6 @@ const styles = StyleSheet.create({
   list: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
   // close under the header title
-  header: { paddingHorizontal: 16, paddingTop: 2, paddingBottom: 4, backgroundColor: colors.bg },
-  selectHint: { fontSize: 13, color: colors.muted, paddingBottom: 6 },
+  header: { paddingHorizontal: space[16], paddingTop: space[2], paddingBottom: space[4], backgroundColor: colors.bg },
+  selectHint: { fontSize: font.meta, color: colors.muted, paddingBottom: space[6] },
 });

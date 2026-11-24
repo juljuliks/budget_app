@@ -6,6 +6,7 @@ import { colors } from '@/shared/theme/theme';
 import AppTab from './parts/AppTab';
 import BanksTab from './parts/BanksTab';
 import BudgetTab from './parts/BudgetTab';
+import { space } from '@/shared/theme/tokens';
 
 type Tab = 'budget' | 'banks' | 'app';
 const TABS = [
@@ -33,5 +34,5 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: colors.bg },
-  tabs: { marginHorizontal: 16, marginTop: 12, marginBottom: 12 },
+  tabs: { marginHorizontal: space[16], marginTop: space[12], marginBottom: space[12] },
 });

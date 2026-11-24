@@ -15,6 +15,7 @@ import { SheetActions } from '@/shared/ui/Button';
 import SearchBar from '@/shared/ui/SearchBar';
 import StepsNav from '@/shared/ui/StepsNav';
 import { toastFailure } from '@/shared/ui/toast';
+import { font, space } from '@/shared/theme/tokens';
 
 type Props = {
   ym: string;
@@ -121,24 +122,24 @@ export default function PlanAddModal({ ym, currency, visible, onClose, onPick }:
 
 const styles = StyleSheet.create({
   sheet: { maxHeight: '88%' },
-  inset: { paddingHorizontal: 20 },
-  caption: { fontSize: 13, color: colors.muted, paddingHorizontal: 20, paddingBottom: 8 },
-  searchWrap: { paddingHorizontal: 16, paddingBottom: 8 },
+  inset: { paddingHorizontal: space[20] },
+  caption: { fontSize: font.meta, color: colors.muted, paddingHorizontal: space[20], paddingBottom: space[8] },
+  searchWrap: { paddingHorizontal: space[16], paddingBottom: space[8] },
   // as in "Настройки → Категории"
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingLeft: 16,
-    paddingRight: 8,
-    paddingVertical: 10,
+    paddingLeft: space[16],
+    paddingRight: space[8],
+    paddingVertical: space[10],
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
-  dot: { width: 10, height: 10, borderRadius: 5, marginRight: 10 },
-  text: { flex: 1, gap: 2 },
-  name: { fontSize: 16, color: colors.text },
-  note: { fontSize: 13, color: colors.muted },
-  chevron: { fontSize: 24, color: colors.muted, marginLeft: 8 },
-  empty: { color: colors.muted, textAlign: 'center', paddingVertical: 16 },
-  actions: { paddingHorizontal: 16, marginTop: 8 },
+  dot: { width: 10, height: 10, borderRadius: 5, marginRight: space[10] },
+  text: { flex: 1, gap: space[2] },
+  name: { fontSize: font.input, color: colors.text },
+  note: { fontSize: font.meta, color: colors.muted },
+  chevron: { fontSize: font.headline, color: colors.muted, marginLeft: space[8] },
+  empty: { color: colors.muted, textAlign: 'center', paddingVertical: space[16] },
+  actions: { paddingHorizontal: space[16], marginTop: space[8] },
 });

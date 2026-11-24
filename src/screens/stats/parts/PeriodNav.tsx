@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors } from '@/shared/theme/theme';
+import { font, space, weight } from '@/shared/theme/tokens';
 
 type Props = {
   label: string;
@@ -47,11 +48,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    marginBottom: 8,
+    paddingHorizontal: space[24],
+    marginBottom: space[8],
   },
-  rangeButton: { flex: 1, alignItems: 'center', paddingVertical: 6 },
-  arrow: { fontSize: 28, color: colors.accent, paddingHorizontal: 8 },
+  rangeButton: { flex: 1, alignItems: 'center', paddingVertical: space[6] },
+  arrow: { fontSize: font.display, color: colors.accent, paddingHorizontal: space[8] },
   arrowDisabled: { color: colors.border },
-  label: { fontSize: 17, fontWeight: '600', color: colors.text },
+  label: { fontSize: 17, fontWeight: weight.semibold, color: colors.text },
 });

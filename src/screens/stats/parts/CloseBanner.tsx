@@ -10,6 +10,7 @@ import { SAVE_FAILED } from '@/shared/lib/strings';
 import { openMonthClose } from '@/shared/navigation/sheets';
 import { colors } from '@/shared/theme/theme';
 import { toastFailure } from '@/shared/ui/toast';
+import { font, radius, space, weight } from '@/shared/theme/tokens';
 
 /** the day ✕ hid the banner till: it comes back the next day */
 const HIDDEN_KEY = 'close_banner_hidden';
@@ -64,17 +65,17 @@ const styles = StyleSheet.create({
   box: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 10,
-    marginHorizontal: 16,
-    marginBottom: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 12,
+    gap: space[10],
+    marginHorizontal: space[16],
+    marginBottom: space[8],
+    paddingHorizontal: space[14],
+    paddingVertical: space[12],
+    borderRadius: radius.lg,
     backgroundColor: colors.warnBg,
   },
-  text: { flex: 1, gap: 2 },
-  title: { fontSize: 16, fontWeight: '600', color: colors.warn },
-  body: { fontSize: 14, color: colors.warn },
-  link: { fontSize: 14, fontWeight: '500', color: colors.accent, marginTop: 4 },
-  close: { fontSize: 16, color: colors.warn },
+  text: { flex: 1, gap: space[2] },
+  title: { fontSize: font.input, fontWeight: weight.semibold, color: colors.warn },
+  body: { fontSize: font.secondary, color: colors.warn },
+  link: { fontSize: font.secondary, fontWeight: weight.medium, color: colors.accent, marginTop: space[4] },
+  close: { fontSize: font.input, color: colors.warn },
 });

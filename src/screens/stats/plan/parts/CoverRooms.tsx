@@ -3,6 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Masked from '@/shared/ui/Masked';
 import { colors } from '@/shared/theme/theme';
 import type { CoverRoom } from '../model/savingsLess';
+import { font, space } from '@/shared/theme/tokens';
 
 type Props = {
   rooms: CoverRoom[];
@@ -44,20 +45,20 @@ export default function CoverRooms({ rooms, over, money, onPick }: Props) {
 }
 
 const styles = StyleSheet.create({
-  lead: { fontSize: 14, color: colors.muted, marginBottom: 6 },
+  lead: { fontSize: font.secondary, color: colors.muted, marginBottom: space[6] },
   // as the overspent rows of the sheet
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingVertical: 12,
+    gap: space[10],
+    paddingVertical: space[12],
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
-  emoji: { fontSize: 20, width: 26 },
+  emoji: { fontSize: font.heading, width: 26 },
   text: { flex: 1 },
-  name: { fontSize: 16, color: colors.text },
-  note: { fontSize: 13, color: colors.muted, marginTop: 2 },
-  take: { fontSize: 16, color: colors.text, fontVariant: ['tabular-nums'] },
-  hint: { fontSize: 13, color: colors.muted, marginTop: 10 },
+  name: { fontSize: font.input, color: colors.text },
+  note: { fontSize: font.meta, color: colors.muted, marginTop: space[2] },
+  take: { fontSize: font.input, color: colors.text, fontVariant: ['tabular-nums'] },
+  hint: { fontSize: font.meta, color: colors.muted, marginTop: space[10] },
 });

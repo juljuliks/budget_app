@@ -3,6 +3,7 @@ import { StyleSheet, TouchableOpacity } from 'react-native';
 import { openTrends } from '@/shared/navigation/navigation';
 import { colors } from '@/shared/theme/theme';
 import { TrendsIcon } from '@/shared/ui/icons';
+import { space } from '@/shared/theme/tokens';
 
 /** By the eye in the stats header: «Динамика трат». */
 export default function TrendsButton() {
@@ -20,5 +21,5 @@ export default function TrendsButton() {
 }
 
 const styles = StyleSheet.create({
-  button: { padding: 4 },
+  button: { padding: space[4] },
 });

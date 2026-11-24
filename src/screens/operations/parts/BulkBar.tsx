@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import Button from '@/shared/ui/Button';
 import { colors } from '@/shared/theme/theme';
+import { space } from '@/shared/theme/tokens';
 
 type Props = {
   count: number;
@@ -34,13 +35,13 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    padding: 12,
-    gap: 8,
+    padding: space[12],
+    gap: space[8],
     backgroundColor: colors.bg,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
-  actions: { flexDirection: 'row', gap: 10 },
+  actions: { flexDirection: 'row', gap: space[10] },
   button: { flex: 1 },
   secondary: { backgroundColor: colors.muted },
 });

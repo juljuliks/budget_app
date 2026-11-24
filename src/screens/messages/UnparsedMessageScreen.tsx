@@ -9,6 +9,7 @@ import { useLoadFailed } from '@/shared/lib/useLoadFailed';
 import type { RootStackParamList } from '@/shared/navigation/navigation';
 import Loading from '@/shared/ui/Loading';
 import { colors } from '@/shared/theme/theme';
+import { font, space } from '@/shared/theme/tokens';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'UnparsedMessage'>;
 
@@ -37,5 +38,12 @@ export default function UnparsedMessageScreen({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  gone: { fontSize: 15, color: colors.muted, textAlign: 'center', padding: 32, backgroundColor: colors.bg, flex: 1 },
+  gone: {
+    fontSize: font.body,
+    color: colors.muted,
+    textAlign: 'center',
+    padding: space[32],
+    backgroundColor: colors.bg,
+    flex: 1,
+  },
 });

@@ -14,6 +14,7 @@ import { SAVE_FAILED } from '@/shared/lib/strings';
 import { lessTarget, useMonthSavings } from '../month/model/useMonthSavings';
 import { lessTaken } from '../plan/model/savingsLess';
 import SavingsLessSheet from '../plan/parts/SavingsLessSheet';
+import { font, radius, space, weight } from '@/shared/theme/tokens';
 
 const DISMISSED_KEY = 'plan_alert_dismissed';
 /** "До отложенного осталось …" once what may be spent (budget − 🔒) is down to this share */
@@ -158,16 +159,16 @@ const styles = StyleSheet.create({
   box: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 10,
-    marginHorizontal: 16,
-    marginBottom: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 10,
+    gap: space[10],
+    marginHorizontal: space[16],
+    marginBottom: space[8],
+    paddingHorizontal: space[12],
+    paddingVertical: space[10],
+    borderRadius: radius.md,
     backgroundColor: colors.warnBg,
   },
-  body: { flex: 1, gap: 4 },
-  text: { fontSize: 14, color: colors.warn },
-  more: { fontWeight: '600' },
-  close: { fontSize: 16, color: colors.warn },
+  body: { flex: 1, gap: space[4] },
+  text: { fontSize: font.secondary, color: colors.warn },
+  more: { fontWeight: weight.semibold },
+  close: { fontSize: font.input, color: colors.warn },
 });

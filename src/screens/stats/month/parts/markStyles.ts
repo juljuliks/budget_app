@@ -1,9 +1,10 @@
 // The payments' marks over the month's bar.
 import { StyleSheet } from 'react-native';
 import { colors } from '@/shared/theme/theme';
+import { font, space, weight } from '@/shared/theme/tokens';
 
 export const markStyles = StyleSheet.create({
-  row: { height: 36, marginTop: 8 },
+  row: { height: 36, marginTop: space[8] },
   mark: { position: 'absolute', bottom: 0, width: 30, alignItems: 'center' },
   // still ahead: faded
   ahead: { opacity: 0.55 },
@@ -17,7 +18,7 @@ export const markStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  icon: { fontSize: 15 },
+  icon: { fontSize: font.body },
   // payments drawn as one: their icons side by side, each over the one before, a ring of the page between them
   stack: { height: 28 },
   stacked: { position: 'absolute', top: 0, borderWidth: 1.5, borderColor: colors.bg },
@@ -36,7 +37,7 @@ export const markStyles = StyleSheet.create({
     justifyContent: 'center',
   },
   missed: { backgroundColor: colors.warn },
-  statusText: { fontSize: 8, lineHeight: 10, fontWeight: '700', color: colors.bg },
+  statusText: { fontSize: 8, lineHeight: 10, fontWeight: weight.bold, color: colors.bg },
   count: {
     position: 'absolute',
     right: -5,
@@ -44,19 +45,19 @@ export const markStyles = StyleSheet.create({
     minWidth: 13,
     height: 13,
     borderRadius: 7,
-    paddingHorizontal: 2,
+    paddingHorizontal: space[2],
     backgroundColor: colors.muted,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  countText: { fontSize: 9, lineHeight: 11, fontWeight: '700', color: colors.bg },
+  countText: { fontSize: 9, lineHeight: 11, fontWeight: weight.bold, color: colors.bg },
   // the mark tapped: outlined
   picked: { borderWidth: 1.5, borderColor: colors.accent },
   // its payments under the bar, instead of «Осталось …»; their state's word coloured
-  infoLine: { fontSize: 13, color: colors.text, marginTop: 4 },
-  infoPaid: { color: colors.income, fontWeight: '600' },
-  infoMissed: { color: colors.warn, fontWeight: '600' },
+  infoLine: { fontSize: font.meta, color: colors.text, marginTop: space[4] },
+  infoPaid: { color: colors.income, fontWeight: weight.semibold },
+  infoMissed: { color: colors.warn, fontWeight: weight.semibold },
   infoAhead: { color: colors.muted },
   // a payment whose day is past and not paid, under the bar
-  missedLine: { fontSize: 13, fontWeight: '600', color: colors.warn, marginTop: 2 },
+  missedLine: { fontSize: font.meta, fontWeight: weight.semibold, color: colors.warn, marginTop: space[2] },
 });

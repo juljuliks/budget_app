@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Checkbox from '@/shared/ui/Checkbox';
 import { colors } from '@/shared/theme/theme';
+import { font, space } from '@/shared/theme/tokens';
 
 type Props = { count: number; allSelected: boolean; onToggleAll: () => void; onCancel?: () => void };
 
@@ -30,9 +31,9 @@ export default function SelectToolbar({ count, allSelected, onToggleAll, onCance
 
 const styles = StyleSheet.create({
   // wraps to a second line when "Выбрать все" is shown and everything doesn't fit
-  toolbar: { flexDirection: 'row', alignItems: 'center', gap: 20, paddingVertical: 8 },
-  toggle: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 },
-  label: { fontSize: 15, color: colors.text },
+  toolbar: { flexDirection: 'row', alignItems: 'center', gap: space[20], paddingVertical: space[8] },
+  toggle: { flexDirection: 'row', alignItems: 'center', gap: space[8], paddingVertical: space[4] },
+  label: { fontSize: font.body, color: colors.text },
   flex: { flex: 1 },
-  cancel: { fontSize: 15, color: colors.accent },
+  cancel: { fontSize: font.body, color: colors.accent },
 });

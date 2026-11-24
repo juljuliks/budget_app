@@ -13,6 +13,7 @@ import type { DayPurchase } from '@/entities/transaction';
 import type { ImpulseTrendView } from '../model/impulseTrendView';
 import { ImpulseCalendar } from '@/entities/transaction';
 import { detailStyles as s } from './detailStyles';
+import { font, radius, space, weight } from '@/shared/theme/tokens';
 
 const BAR_HEIGHT = 40;
 
@@ -129,12 +130,17 @@ export default function ImpulseTrend({
 }
 
 const styles = StyleSheet.create({
-  head: { flexDirection: 'row', justifyContent: 'space-between', gap: 8, marginBottom: 6 },
-  mark: { marginTop: 8 },
-  bars: { flexDirection: 'row', alignItems: 'flex-end', gap: 14, marginTop: 8 },
-  month: { flex: 1, alignItems: 'center', gap: 4 },
-  bar: { alignSelf: 'stretch', backgroundColor: colors.impulse, borderTopLeftRadius: 4, borderTopRightRadius: 4 },
-  pct: { fontSize: 12, color: colors.muted },
-  now: { color: colors.text, fontWeight: '600' },
+  head: { flexDirection: 'row', justifyContent: 'space-between', gap: space[8], marginBottom: space[6] },
+  mark: { marginTop: space[8] },
+  bars: { flexDirection: 'row', alignItems: 'flex-end', gap: space[14], marginTop: space[8] },
+  month: { flex: 1, alignItems: 'center', gap: space[4] },
+  bar: {
+    alignSelf: 'stretch',
+    backgroundColor: colors.impulse,
+    borderTopLeftRadius: radius.xs,
+    borderTopRightRadius: radius.xs,
+  },
+  pct: { fontSize: font.caption, color: colors.muted },
+  now: { color: colors.text, fontWeight: weight.semibold },
   muted: { color: colors.muted },
 });

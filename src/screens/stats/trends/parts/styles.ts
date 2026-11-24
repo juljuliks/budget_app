@@ -1,28 +1,29 @@
 import { StyleSheet } from 'react-native';
 import { colors } from '@/shared/theme/theme';
+import { font, space, weight } from '@/shared/theme/tokens';
 
 export const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { paddingBottom: 24 },
-  pad: { paddingHorizontal: 16 },
-  hint: { fontSize: 13, color: colors.muted, marginTop: 8, lineHeight: 18 },
-  empty: { fontSize: 15, color: colors.muted, paddingHorizontal: 16, paddingVertical: 14 },
+  content: { paddingBottom: space[24] },
+  pad: { paddingHorizontal: space[16] },
+  hint: { fontSize: font.meta, color: colors.muted, marginTop: space[8], lineHeight: 18 },
+  empty: { fontSize: font.body, color: colors.muted, paddingHorizontal: space[16], paddingVertical: space[14] },
 
   row: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: space[16],
+    paddingVertical: space[12],
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
-  rowTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  rowTop: { flexDirection: 'row', alignItems: 'center', gap: space[10] },
   dot: { width: 10, height: 10, borderRadius: 5 },
-  name: { flex: 1, fontSize: 16, color: colors.text },
-  delta: { fontSize: 16, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
-  line: { fontSize: 14, color: colors.muted, marginTop: 4 },
-  why: { fontSize: 14, color: colors.text, marginTop: 8 },
-  chart: { marginTop: 10 },
+  name: { flex: 1, fontSize: font.input, color: colors.text },
+  delta: { fontSize: font.input, fontWeight: weight.semibold, color: colors.text, fontVariant: ['tabular-nums'] },
+  line: { fontSize: font.secondary, color: colors.muted, marginTop: space[4] },
+  why: { fontSize: font.secondary, color: colors.text, marginTop: space[8] },
+  chart: { marginTop: space[10] },
 
-  allLink: { paddingHorizontal: 16, paddingVertical: 12, marginTop: 8, alignSelf: 'flex-start' },
+  allLink: { paddingHorizontal: space[16], paddingVertical: space[12], marginTop: space[8], alignSelf: 'flex-start' },
 
   bars: { flexDirection: 'row', alignItems: 'flex-end' },
   barCell: { flex: 1, alignItems: 'stretch' },
@@ -39,6 +40,6 @@ export const styles = StyleSheet.create({
   bar: { borderTopLeftRadius: 3, borderTopRightRadius: 3 },
   barPicked: { borderWidth: 2, borderColor: colors.text },
   barLabel: { fontSize: 11, color: colors.muted, textAlign: 'center', marginTop: 3 },
-  barLabelNow: { color: colors.text, fontWeight: '600' },
+  barLabelNow: { color: colors.text, fontWeight: weight.semibold },
   barLabelLater: { color: colors.faint },
 });

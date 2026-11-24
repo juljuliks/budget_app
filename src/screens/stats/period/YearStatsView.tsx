@@ -24,6 +24,7 @@ import InfoSheet from './parts/InfoSheet';
 import { styles } from './parts/styles';
 import type { Info } from './parts/types';
 import { yearSpending } from './parts/yearSpending';
+import { space } from '@/shared/theme/tokens';
 
 /** the year's budget currency: its last month's with a budget (the key — the year) */
 const yearBudget = (year: string, system: Currency) => yearCurrency(Number(year), system);
@@ -128,5 +129,5 @@ export default function YearStatsView({ range }: { range: DayRange }) {
 const own = StyleSheet.create({
   // right under «‹ 2026 ›»: the currency, then «Отложено»
   content: { paddingTop: 0 },
-  choice: { marginTop: 0, marginBottom: 16 },
+  choice: { marginTop: 0, marginBottom: space[16] },
 });

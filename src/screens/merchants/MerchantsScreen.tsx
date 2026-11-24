@@ -11,6 +11,7 @@ import { useMerchantBulk } from './model/useMerchantBulk';
 import { MIXED, useMerchants } from './model/useMerchants';
 import MerchantRowView from './parts/MerchantRowView';
 import SectionBand from './parts/SectionBand';
+import { font, space } from '@/shared/theme/tokens';
 
 /**
  * Merchants by their category: "Без категории" first (what needs a category), then the categories in the
@@ -135,23 +136,23 @@ export default function MerchantsScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   // room under the search: the first section band doesn't stick to it
-  header: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, gap: 8 },
-  filters: { flexDirection: 'row', gap: 8 },
-  selectBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8 },
-  selectLabel: { fontSize: 15, color: colors.text },
-  cancelSelect: { fontSize: 15, color: colors.accent },
-  empty: { padding: 32, textAlign: 'center', color: colors.muted },
+  header: { paddingHorizontal: space[16], paddingTop: space[12], paddingBottom: space[12], gap: space[8] },
+  filters: { flexDirection: 'row', gap: space[8] },
+  selectBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: space[8] },
+  selectLabel: { fontSize: font.body, color: colors.text },
+  cancelSelect: { fontSize: font.body, color: colors.accent },
+  empty: { padding: space[32], textAlign: 'center', color: colors.muted },
   footer: { height: 88 },
   bottomBar: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    padding: 12,
+    padding: space[12],
     backgroundColor: colors.bg,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
-  bottomActions: { flexDirection: 'row', gap: 10 },
+  bottomActions: { flexDirection: 'row', gap: space[10] },
   bottomButton: { flex: 1 },
 });

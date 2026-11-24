@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { MenuButton } from '@/features/settings';
 import Button from '@/shared/ui/Button';
+import { space } from '@/shared/theme/tokens';
 
 /** The tab header's right: «Готово» while selecting several (leaves it), and the menu ⋮. */
 export default function HeaderActions({ selecting, onDone }: { selecting: boolean; onDone: () => void }) {
@@ -14,5 +15,5 @@ export default function HeaderActions({ selecting, onDone }: { selecting: boolea
 }
 
 const styles = StyleSheet.create({
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 14, marginRight: 16 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: space[14], marginRight: space[16] },
 });

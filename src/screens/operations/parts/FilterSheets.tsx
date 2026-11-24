@@ -14,6 +14,7 @@ import { bankById } from '@/domain/banks';
 import { KIND_LABELS } from '@/shared/lib/format';
 import { GROUP_BY, GroupBy } from '../model/listData';
 import type { FilterSheet } from './FiltersBar';
+import { space } from '@/shared/theme/tokens';
 
 type Props = {
   sheet: FilterSheet | null;
@@ -82,5 +83,5 @@ export default function FilterSheets({ sheet, active, filters: f, groupBy, onGro
 }
 
 const styles = StyleSheet.create({
-  groupSheet: { paddingHorizontal: 20, paddingBottom: 24 },
+  groupSheet: { paddingHorizontal: space[20], paddingBottom: space[24] },
 });

@@ -6,6 +6,7 @@ import { formatWithCurrency } from '@/shared/lib/money';
 import { formatPercent } from '@/shared/lib/format';
 import { colors } from '@/shared/theme/theme';
 import { PencilIcon } from '@/shared/ui/icons';
+import { font, space, weight } from '@/shared/theme/tokens';
 
 /** the hole's width the amount may take: the ring's inner diameter (220 − 2 × 22) minus some air */
 const HOLE_TEXT_WIDTH = 150;
@@ -74,15 +75,15 @@ export default function DonutCenter({ total, picked, currency, of, hole }: Props
 
 /** the hole's look: the month's «План» view writes in it too */
 export const centerStyles = StyleSheet.create({
-  caption: { fontSize: 13, color: colors.muted },
-  over: { color: colors.warn, fontWeight: '600' },
-  ofRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
-  hero: { fontSize: 34, fontWeight: '700', color: colors.text },
-  pickedName: { fontSize: 15, color: colors.text, textAlign: 'center', maxWidth: 150 },
+  caption: { fontSize: font.meta, color: colors.muted },
+  over: { color: colors.warn, fontWeight: weight.semibold },
+  ofRow: { flexDirection: 'row', alignItems: 'center', gap: space[4], marginTop: space[2] },
+  hero: { fontSize: 34, fontWeight: weight.bold, color: colors.text },
+  pickedName: { fontSize: font.body, color: colors.text, textAlign: 'center', maxWidth: 150 },
   // the small ring
-  captionSmall: { fontSize: 12 },
+  captionSmall: { fontSize: font.caption },
   ofRowSmall: { flexWrap: 'wrap', justifyContent: 'center', columnGap: 3, rowGap: 0 },
-  pickedNameSmall: { fontSize: 13 },
-  pickedAmount: { fontSize: 24, fontWeight: '700', color: colors.text, marginVertical: 2 },
+  pickedNameSmall: { fontSize: font.meta },
+  pickedAmount: { fontSize: font.headline, fontWeight: weight.bold, color: colors.text, marginVertical: space[2] },
 });
 const styles = centerStyles;

@@ -4,6 +4,7 @@ import { plural } from '@/shared/lib/format';
 import { formStyles } from '@/shared/theme/formStyles';
 import { colors } from '@/shared/theme/theme';
 import type { Section } from '../model/useMerchants';
+import { font, weight } from '@/shared/theme/tokens';
 
 /** A grey band, like the days on the operations: "🛒 Еда · 5 мерчантов"; the stale one folds and unfolds. */
 export default function SectionBand({
@@ -32,6 +33,6 @@ export default function SectionBand({
 
 const styles = StyleSheet.create({
   staleHeader: { flexDirection: 'row', alignItems: 'center' },
-  staleTitle: { flex: 1, fontSize: 13, fontWeight: '600', color: colors.muted },
-  staleToggle: { fontSize: 13, color: colors.accent },
+  staleTitle: { flex: 1, fontSize: font.meta, fontWeight: weight.semibold, color: colors.muted },
+  staleToggle: { fontSize: font.meta, color: colors.accent },
 });

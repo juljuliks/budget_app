@@ -8,6 +8,7 @@ import type { Currency } from '@/db/fx';
 import { coverWithUndo } from '@/entities/plan';
 import { CoverRoom, lessLines, Overspent, SavingsLess } from '../model/savingsLess';
 import CoverRooms from './CoverRooms';
+import { font, space } from '@/shared/theme/tokens';
 
 type Props = {
   ym: string;
@@ -129,31 +130,31 @@ export default function SavingsLessSheet({ ym, currency, less, visible, money, o
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: 20, paddingBottom: 16 },
-  lead: { fontSize: 14, color: colors.muted, marginBottom: 6 },
-  part: { fontSize: 15, color: colors.text, paddingVertical: 2 },
+  content: { paddingHorizontal: space[20], paddingBottom: space[16] },
+  lead: { fontSize: font.secondary, color: colors.muted, marginBottom: space[6] },
+  part: { fontSize: font.body, color: colors.text, paddingVertical: space[2] },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingVertical: 12,
+    gap: space[10],
+    paddingVertical: space[12],
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
-  inner: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  rowTop: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingTop: 12 },
+  inner: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space[10] },
+  rowTop: { flexDirection: 'row', alignItems: 'center', gap: space[10], paddingTop: space[12] },
   coverLink: {
-    paddingTop: 4,
-    paddingBottom: 12,
+    paddingTop: space[4],
+    paddingBottom: space[12],
     paddingLeft: 36,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
-  link: { fontSize: 14, color: colors.accent },
-  emoji: { fontSize: 20, width: 26 },
+  link: { fontSize: font.secondary, color: colors.accent },
+  emoji: { fontSize: font.heading, width: 26 },
   text: { flex: 1 },
-  name: { fontSize: 16, color: colors.text },
-  note: { fontSize: 13, color: colors.muted, marginTop: 2 },
-  over: { fontSize: 16, color: colors.danger, fontVariant: ['tabular-nums'] },
-  hint: { fontSize: 13, color: colors.muted, marginTop: 10 },
+  name: { fontSize: font.input, color: colors.text },
+  note: { fontSize: font.meta, color: colors.muted, marginTop: space[2] },
+  over: { fontSize: font.input, color: colors.danger, fontVariant: ['tabular-nums'] },
+  hint: { fontSize: font.meta, color: colors.muted, marginTop: space[10] },
 });

@@ -1,37 +1,38 @@
 import { StyleSheet } from 'react-native';
 import { colors } from '@/shared/theme/theme';
+import { font, space, weight } from '@/shared/theme/tokens';
 
 export const styles = StyleSheet.create({
-  hint: { fontSize: 13, color: colors.muted, marginTop: 2, marginBottom: 10 },
+  hint: { fontSize: font.meta, color: colors.muted, marginTop: space[2], marginBottom: space[10] },
   block: {
-    paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingHorizontal: space[20],
+    paddingVertical: space[14],
     borderTopWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: space[20],
+    paddingVertical: space[16],
     borderTopWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
   switchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
+    gap: space[12],
+    paddingHorizontal: space[20],
+    paddingVertical: space[14],
     borderTopWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
   flex: { flex: 1 },
-  titleRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
-  value: { fontSize: 15, fontWeight: '700' },
-  after: { marginTop: 10, marginBottom: 0 },
-  switchHint: { fontSize: 13, color: colors.muted, marginTop: 2 },
-  rowLabel: { flex: 1, fontSize: 16, color: colors.text },
-  label: { fontSize: 16, color: colors.text },
-  chevron: { fontSize: 20, color: colors.muted, width: 20, textAlign: 'right' },
+  titleRow: { flexDirection: 'row', alignItems: 'baseline', gap: space[8] },
+  value: { fontSize: font.body, fontWeight: weight.bold },
+  after: { marginTop: space[10], marginBottom: 0 },
+  switchHint: { fontSize: font.meta, color: colors.muted, marginTop: space[2] },
+  rowLabel: { flex: 1, fontSize: font.input, color: colors.text },
+  label: { fontSize: font.input, color: colors.text },
+  chevron: { fontSize: font.heading, color: colors.muted, width: 20, textAlign: 'right' },
 });

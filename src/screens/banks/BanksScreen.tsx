@@ -9,6 +9,7 @@ import Loading from '@/shared/ui/Loading';
 import { toast, toastFailure } from '@/shared/ui/toast';
 import { colors } from '@/shared/theme/theme';
 import { BankInfo, useBanksInfo } from './model/useBanksInfo';
+import { font, radius, space, weight } from '@/shared/theme/tokens';
 
 const parseOf = (i: BankInfo) => (i.bank.builtIn ? 'встроенный' : `шаблоны сообщений · ${i.templates}`);
 const balanceOf = (i: BankInfo) =>
@@ -88,16 +89,21 @@ export default function BanksScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: 16, gap: 12 },
-  hint: { fontSize: 14, color: colors.muted, lineHeight: 20 },
-  card: { borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 14, gap: 10 },
-  head: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  content: { padding: space[16], gap: space[12] },
+  hint: { fontSize: font.secondary, color: colors.muted, lineHeight: 20 },
+  card: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, padding: space[14], gap: space[10] },
+  head: { flexDirection: 'row', alignItems: 'center', gap: space[10] },
   badge: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
-  badgeText: { fontSize: 12, fontWeight: '700', color: colors.onAccent },
-  name: { flex: 1, fontSize: 17, fontWeight: '500', color: colors.text },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 6 },
-  key: { width: '34%', fontSize: 14, color: colors.muted },
-  value: { width: '66%', fontSize: 14, color: colors.text },
-  unparsed: { backgroundColor: colors.warnBg, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8 },
-  unparsedText: { fontSize: 14, color: colors.warn },
+  badgeText: { fontSize: font.caption, fontWeight: weight.bold, color: colors.onAccent },
+  name: { flex: 1, fontSize: 17, fontWeight: weight.medium, color: colors.text },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: space[6] },
+  key: { width: '34%', fontSize: font.secondary, color: colors.muted },
+  value: { width: '66%', fontSize: font.secondary, color: colors.text },
+  unparsed: {
+    backgroundColor: colors.warnBg,
+    borderRadius: radius.sm,
+    paddingHorizontal: space[10],
+    paddingVertical: space[8],
+  },
+  unparsedText: { fontSize: font.secondary, color: colors.warn },
 });

@@ -4,6 +4,7 @@ import type { PeriodKind } from '@/shared/lib/dateRange';
 import { openHistory } from '@/shared/navigation/navigation';
 import { colors } from '@/shared/theme/theme';
 import BottomSheet from '@/shared/ui/BottomSheet';
+import { font, space, weight } from '@/shared/theme/tokens';
 
 /** The stats' periods: the kind, its sheet's line, the header's words ("Статистика за месяц ▾"). */
 export const PERIODS: Array<[PeriodKind, string, string]> = [
@@ -51,12 +52,12 @@ const styles = StyleSheet.create({
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: space[20],
+    paddingVertical: space[16],
     borderTopWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
-  menuText: { flex: 1, fontSize: 16, color: colors.text },
-  menuSelected: { color: colors.accent, fontWeight: '600' },
-  menuCheck: { fontSize: 16, color: colors.accent, marginLeft: 12 },
+  menuText: { flex: 1, fontSize: font.input, color: colors.text },
+  menuSelected: { color: colors.accent, fontWeight: weight.semibold },
+  menuCheck: { fontSize: font.input, color: colors.accent, marginLeft: space[12] },
 });

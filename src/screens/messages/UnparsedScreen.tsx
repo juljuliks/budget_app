@@ -10,6 +10,7 @@ import { useLoadFailed } from '@/shared/lib/useLoadFailed';
 import { useRootNavigation } from '@/shared/navigation/navigation';
 import Loading from '@/shared/ui/Loading';
 import { colors } from '@/shared/theme/theme';
+import { font, space, weight } from '@/shared/theme/tokens';
 
 /** "Не распознано": bank messages no operation came from, newest first; a tap opens one for marking. */
 export default function UnparsedScreen() {
@@ -52,28 +53,28 @@ export default function UnparsedScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  hint: { fontSize: 14, lineHeight: 20, color: colors.muted, padding: 16, paddingBottom: 12 },
-  empty: { fontSize: 15, color: colors.muted, textAlign: 'center', padding: 32 },
+  hint: { fontSize: font.secondary, lineHeight: 20, color: colors.muted, padding: space[16], paddingBottom: space[12] },
+  empty: { fontSize: font.body, color: colors.muted, textAlign: 'center', padding: space[32] },
   row: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: space[16],
+    paddingVertical: space[14],
     borderTopWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
-    gap: 6,
+    gap: space[6],
   },
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   badge: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: font.caption,
+    fontWeight: weight.semibold,
     letterSpacing: 0.4,
     color: '#374151',
     backgroundColor: colors.surface,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingHorizontal: space[8],
+    paddingVertical: space[2],
     borderRadius: 6,
     overflow: 'hidden',
   },
   push: { color: '#1D4ED8', backgroundColor: '#DBEAFE' },
-  time: { fontSize: 13, color: colors.muted },
-  body: { fontSize: 15, lineHeight: 21, color: colors.text },
+  time: { fontSize: font.meta, color: colors.muted },
+  body: { fontSize: font.body, lineHeight: 21, color: colors.text },
 });

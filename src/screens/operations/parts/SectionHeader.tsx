@@ -8,6 +8,7 @@ import { formatWithCurrency } from '@/shared/lib/money';
 import { colors } from '@/shared/theme/theme';
 import { groupTotal } from '../model/groups';
 import type { Section } from '../model/listData';
+import { font, space, weight } from '@/shared/theme/tokens';
 
 type Props = {
   section: Section;
@@ -90,8 +91,8 @@ export default function OperationsSectionHeader({
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  title: { flex: 1, fontSize: 13, fontWeight: '600', color: colors.muted },
-  amount: { fontSize: 13, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
+  header: { flexDirection: 'row', alignItems: 'center', gap: space[8] },
+  title: { flex: 1, fontSize: font.meta, fontWeight: weight.semibold, color: colors.muted },
+  amount: { fontSize: font.meta, fontWeight: weight.semibold, color: colors.text, fontVariant: ['tabular-nums'] },
   cameBack: { color: colors.income },
 });

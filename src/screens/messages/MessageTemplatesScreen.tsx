@@ -21,6 +21,7 @@ import Loading from '@/shared/ui/Loading';
 import { sheetAlert } from '@/shared/ui/sheetAlert';
 import { toast, toastFailure } from '@/shared/ui/toast';
 import { colors } from '@/shared/theme/theme';
+import { font, space, weight } from '@/shared/theme/tokens';
 
 const titleOf = (t: MessageTemplate) =>
   `${t.action === 'hide' ? 'Не операция' : (KIND_LABELS[t.kind ?? ''] ?? 'Операция')} · ${sourceLabel(t.source, bankById(t.bank)?.name)}`;
@@ -109,21 +110,21 @@ export default function MessageTemplatesScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   list: { flex: 1 },
-  hint: { fontSize: 14, lineHeight: 20, color: colors.muted, padding: 16, paddingBottom: 12 },
-  empty: { fontSize: 15, color: colors.muted, textAlign: 'center', padding: 32 },
+  hint: { fontSize: font.secondary, lineHeight: 20, color: colors.muted, padding: space[16], paddingBottom: space[12] },
+  empty: { fontSize: font.body, color: colors.muted, textAlign: 'center', padding: space[32] },
   row: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    paddingLeft: 16,
-    paddingVertical: 12,
+    paddingLeft: space[16],
+    paddingVertical: space[12],
     borderTopWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
-  flex: { flex: 1, gap: 4 },
-  title: { fontSize: 16, fontWeight: '600', color: colors.text },
-  example: { fontSize: 14, color: '#374151', lineHeight: 20 },
-  used: { fontSize: 13, color: colors.muted },
+  flex: { flex: 1, gap: space[4] },
+  title: { fontSize: font.input, fontWeight: weight.semibold, color: colors.text },
+  example: { fontSize: font.secondary, color: '#374151', lineHeight: 20 },
+  used: { fontSize: font.meta, color: colors.muted },
   trash: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
-  footer: { padding: 16, gap: 12, borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
-  note: { fontSize: 13, lineHeight: 18, color: colors.muted },
+  footer: { padding: space[16], gap: space[12], borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
+  note: { fontSize: font.meta, lineHeight: 18, color: colors.muted },
 });
