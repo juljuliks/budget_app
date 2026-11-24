@@ -31,14 +31,21 @@ import CarryLines from './parts/CarryLines';
 import NoPlan from './parts/NoPlan';
 import { donutInput } from './parts/donutInput';
 import { usePlanSheets } from './parts/usePlanSheets';
+import { planList } from './parts/planList';
+import type { DonutView } from './model/donutSlices';
 import FundStatRow, { fundSpentOf } from './parts/FundStatRow';
 import { savingsSection } from './parts/savingsSection';
 import { categoryActions, fundActions, ROW_MENU_HINT } from './parts/rowActions';
 import { fundsSection, spentFunds, typeSections, unplannedSection } from './parts/sections';
 import { styles } from './parts/styles';
 
-/** A month's spending: the donut, the month against its plan, «Сбережения», the categories by section, "Вне плана". */
-export default function StatsView({ year, month, currency }: { year: number; month: number; currency: Currency }) {
+type Props = { year: number; month: number; currency: Currency; view: DonutView };
+
+/**
+ * A month: «Траты» — the spending's ring, the month against its plan, the categories by section, "Вне плана",
+ * «Сбережения»; «План» — the plan's ring and the categories' plans by section, no spending.
+ */
+export default function StatsView({ year, month, currency, view }: Props) {
   const hidden = useHideAmounts();
   const { stats, share, today, marks, load, failed } = useMonthData(year, month, currency);
   const openTransactions = useOpenCategoryTransactions();
@@ -111,7 +118,13 @@ export default function StatsView({ year, month, currency }: { year: number; mon
     <StickyScrollView style={styles.screen} contentContainerStyle={styles.content} testID="month-stats" onScroll={fab.onScroll} scrollEventThrottle={100}>
       {/* a month that is over: its report on top */}
       {ym < currentYm() ? <View style={styles.report}><MonthReportRow ym={ym} /></View> : null}
-      <MonthDonut stats={stats} plannedAll={plannedAll} input={donutInput(split.groups, { share, spent: split.spent }, savings.section, plan.shareBase(plannedAll).minor)} word={plan.shareBase(plannedAll).word} onBudget={plan.openBudget} />
+      {view === 'plan' && plannedAll <= 0 ? null : <MonthDonut stats={stats} view={view} plannedAll={plannedAll} input={donutInput(split.groups, { share, spent: split.spent }, savings.section, plan.shareBase(plannedAll).minor)} word={plan.shareBase(plannedAll).word} onBudget={plan.openBudget} />}
+      {view === 'plan' ? (
+        <>
+          {plannedAll > 0 ? null : <NoPlan onBudget={plan.openBudget} />}
+          {planList(plan, ym, currency, { subs: (i) => setSubsOpen({ id: i.category_id, name: i.name, emoji: i.emoji }), fund: (i) => setFundSheet({ id: i.category_id, label: `${i.emoji || ''} ${i.name}`.trim() }) })}
+        </>
+      ) : <>
       {plannedAll > 0 ? <MonthTotal stats={stats} ym={ym} plannedAll={plannedAll} evenPace={evenPace} marks={marks} /> : (
         <NoPlan onBudget={plan.openBudget} />
       )}
@@ -141,6 +154,7 @@ export default function StatsView({ year, month, currency }: { year: number; mon
           {NO_RATE} {stats.other_currencies.map((o) => formatMoneyWithCurrency(o.spent_minor, o.currency)).join(', ')}
         </Text>
       ) : null}
+      </>}
 
       <SavingsLessSheet
         ym={ym} currency={savings.currency} less={savings.view?.less ?? null} visible={lessOpen} money={(minor) => formatWithCurrency(minor, savings.currency)} onClose={() => setLessOpen(false)}

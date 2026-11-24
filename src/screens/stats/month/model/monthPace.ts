@@ -1,14 +1,15 @@
 // The month's bar with its payments' days: where the plan expects the spending to be on each day — the payments with a
 // day whole on that day, all the rest (the limits, the share outside the plan, the payments without a day) evenly over
-// the month — so a payment's mark sits where its day is on the money bar, and today's tick counts the payments due by
-// today. Paid or not: a subscription by its merchant's operation, the others by the category's spending; a payment
-// without a day — on its category's last spending day, once paid (not paid: no mark, spread evenly). No React.
+// the month — today's tick counts the payments due by today. A mark sits by its day of the month (the middle of the
+// day), not by money: payments on days near each other stay apart. Paid or not: a subscription by its merchant's
+// operation, the others by the category's spending; a payment without a day — a mark on each day its category was
+// spent on, with that day's spending (the rest of its plan spread evenly). No React.
 import { CategoryStat, isPaid, MonthStats, PaymentMark, spentOf } from '@/db/plans';
 import { daysInMonth } from '@/shared/lib/dateRange';
 
 export type MarkStatus = 'paid' | 'missed' | 'ahead';
 
-/** A payment on the bar: `at` — its place (0…1 of the month's plan), its category's emoji, its day and amount. */
+/** A payment on the bar: `at` — its place (0…1 of the month's days), its category's emoji, its day and amount. */
 export type BarMark = { key: string; at: number; category_id: number; emoji: string; name: string; day: string; minor: number; status: MarkStatus };
 
 export type MonthPace = {
@@ -32,8 +33,6 @@ export function monthPace(stats: MonthStats, share: number, marks: PaymentMark[]
   const dated = marks.flatMap((m) => {
     const c = cats.get(m.category_id);
     const minor = m.minor ?? c?.limit_minor ?? 0;
-    // without a day: only when it is paid (isPaid: a rate's difference allowed, as everywhere)
-    if (m.undated && c && !isPaid(spentOf(c), minor)) return [];
     return c && minor > 0 && m.day.startsWith(stats.ym) ? [{ ...m, c, minor }] : [];
   });
   if (!dated.length || plannedAll <= 0) return { marks: [], tick: null, expected: null };
@@ -49,7 +48,7 @@ export function monthPace(stats: MonthStats, share: number, marks: PaymentMark[]
     covered.set(m.category_id, cum);
     const paid = m.done ?? isPaid(spentOf(m.c), cum);
     return {
-      key: `${m.category_id}-${m.day}-${i}`, at: Math.min(1, by(dayOf(m.day), false) / plannedAll), category_id: m.category_id,
+      key: `${m.category_id}-${m.day}-${i}`, at: (dayOf(m.day) - 0.5) / dim, category_id: m.category_id,
       emoji: labelOf(m.c), name: m.c.name, day: m.day, minor: m.minor,
       status: paid ? 'paid' : m.day < today ? 'missed' : 'ahead',
     };

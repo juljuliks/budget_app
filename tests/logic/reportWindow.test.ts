@@ -3,9 +3,15 @@ import { freshMonth, freshYear, isMonthFresh, isYearFresh } from '../../src/stat
 
 const at = (s: string) => new Date(`${s}T12:00:00`);
 
-test('a month\'s report: from the 24th of it to the 7th of the next; between them — none', () => {
-  expect(freshMonth(at('2026-10-23'))).toBeNull();
-  expect(freshMonth(at('2026-10-24'))).toEqual({ ym: '2026-10', daysLeft: 14 });
+test('a month\'s report: its last 7 days and the first 7 of the next; between them — none', () => {
+  // 31 days: from the 25th
+  expect(freshMonth(at('2026-10-24'))).toBeNull();
+  expect(freshMonth(at('2026-10-25'))).toEqual({ ym: '2026-10', daysLeft: 13 });
+  // 30 days: from the 24th; February 2027 (28): from the 22nd
+  expect(freshMonth(at('2026-11-23'))).toBeNull();
+  expect(freshMonth(at('2026-11-24'))).toEqual({ ym: '2026-11', daysLeft: 13 });
+  expect(freshMonth(at('2027-02-21'))).toBeNull();
+  expect(freshMonth(at('2027-02-22'))?.ym).toBe('2027-02');
   expect(freshMonth(at('2026-10-31'))).toEqual({ ym: '2026-10', daysLeft: 7 });
   expect(freshMonth(at('2026-11-01'))).toEqual({ ym: '2026-10', daysLeft: 6 });
   expect(freshMonth(at('2026-11-07'))).toEqual({ ym: '2026-10', daysLeft: 0 });
@@ -15,9 +21,9 @@ test('a month\'s report: from the 24th of it to the 7th of the next; between the
   expect(isMonthFresh('2026-09', at('2026-11-03'))).toBe(false);
 });
 
-test('the year\'s: 24 December — 7 January', () => {
-  expect(freshYear(at('2026-12-23'))).toBeNull();
-  expect(freshYear(at('2026-12-24'))).toEqual({ year: 2026, daysLeft: 14 });
+test('the year\'s: its last 7 days and the first 7 of January, 25 December — 7 January', () => {
+  expect(freshYear(at('2026-12-24'))).toBeNull();
+  expect(freshYear(at('2026-12-25'))).toEqual({ year: 2026, daysLeft: 13 });
   expect(freshYear(at('2027-01-07'))).toEqual({ year: 2026, daysLeft: 0 });
   expect(freshYear(at('2027-01-08'))).toBeNull();
   expect(isYearFresh(2026, at('2027-01-02'))).toBe(true);

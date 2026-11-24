@@ -1,8 +1,8 @@
-// 6: the plan, changed in the month's stats (no page of its own) — the month's budget (what's locked, the share outside
+// 6: the plan — its «План» tab (the categories' plans) and changed in the month's stats — the month's budget (what's locked, the share outside
 // the plan, the leftover to savings), the categories in it, adding them («＋»), the next month. Today: 15 October 2026.
 import { act, fireEvent, waitFor } from '@testing-library/react-native';
 import { back, openApp, screen, tap, texts, backToTabs, toggleSwitch, openBudget, openPlanOf, openNextMonth, openMenu, openSettings } from './app';
-import { base, empty, planned } from '../e2e/seeds';
+import { base, empty, lateFund, planned } from '../e2e/seeds';
 import { getDb } from '../../src/db';
 import { emitTransactionsChanged } from '../../src/domain/events';
 
@@ -97,6 +97,44 @@ describe('6.1 the month\'s budget', () => {
     expect(await screen.findByText('Бюджет месяца убран')).toBeTruthy();
     expect(await month()).toMatchObject({ b: null, l: 0, u: null });
   });
+});
+
+test('6.3.13 the «План» tab: the categories\' plans by section, no spending; a row — its amount\'s sheet', async () => {
+  await openPlan();
+  await tap('План');
+  // the row (the legend has its name too)
+  expect(await screen.findByLabelText('Изменить: 🛒 Продукты')).toBeTruthy();
+  // the plan's ring over them: «Бюджет» in its hole
+  expect(screen.getByText('Бюджет')).toBeTruthy();
+  expect(texts()).toEqual(expect.arrayContaining(['Без раздела', '🏠 Дом и коммуналка', 'разовый платёж', '👕 Одежда']));
+  // only the categories' plans: no spending sections («Вне плана · 10% бюджета», «Сбережения · …»), no «Осталось»
+  expect(sectionTitles()).toEqual([]);
+  expect(screen.queryByText(/^Осталось/)).toBeNull();
+  // «Траты»: the stats again
+  await tap('Траты');
+  expect(await screen.findByText('Потрачено')).toBeTruthy();
+  expect(screen.queryByText('разовый платёж')).toBeNull();
+  // a row of the plan: its amount's sheet
+  await tap('План');
+  await tap('Изменить: 🛒 Продукты');
+  expect(await screen.findByText('Удалить из плана')).toBeTruthy();
+});
+
+test('6.3.13 the «План» tab: «Сбережения» — the funds with their goal; a tap — the fund\'s card', async () => {
+  await openPlan(lateFund);
+  await tap('План');
+  expect(await screen.findByLabelText('Копилка: 👕 Одежда')).toBeTruthy();
+  expect(texts()).toContain('Сбережения');
+  expect(texts().some((t) => / из 4 000 ₾ · /.test(t))).toBe(true);
+  await tap('Копилка: 👕 Одежда');
+  expect(await screen.findByText(/Изменить/)).toBeTruthy();
+});
+
+test('6.3.13 the «План» tab of a month without a plan: the hint', async () => {
+  await openApp(empty);
+  await tap('Статистика');
+  await tap('План');
+  expect(await screen.findByText('План пуст. Нажмите ＋, чтобы добавить категории и суммы.')).toBeTruthy();
 });
 
 describe('6.2 locked for savings, the share outside the plan, the leftover', () => {

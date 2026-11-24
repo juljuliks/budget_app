@@ -1,12 +1,13 @@
-// The month's plan worked out from its data (changed from the stats: there is no plan page): the budget's split as
+// The month's plan worked out from its data (the «План» tab and the plan changed from the stats): the budget's split as
 // planned (planned / outside the plan / savings or free), what the month before sent, the items by type. The stats'
 // «Сбережения» take what the overspend took of the savings from here too (`less`). No React.
 import type { Currency } from '@/db/fx';
 import { asCurrency, currentYm, PlanBudget, PlanItem, unplannedOf } from '@/db/plans';
-import { MONTHS_GEN } from '@/shared/lib/dates';
+import { daysInMonth } from '@/shared/lib/dateRange';
+import { MONTHS_GEN, RHYTHM_DAYS } from '@/shared/lib/dates';
 import { formatPercent } from '@/shared/lib/format';
 import { formatWithCurrency } from '@/shared/lib/money';
-import { NO_SECTION } from '@/shared/lib/strings';
+import { NO_SECTION, PER_PERIOD, SPENDING_PATTERN } from '@/shared/lib/strings';
 import { chart } from '@/shared/theme/theme';
 import { RING_DEBT, RING_SAVINGS, RING_UNPLANNED } from '../parts/palette';
 import type { SpentBy } from './usePlanData';
@@ -24,6 +25,15 @@ export type Timing = 'past' | 'current' | 'future';
 export type SystemRow = { key: string; name: string; note: string; value: number; tone?: Tone; carry?: 'debt' | 'plus'; inBudget?: number };
 /** "сентября" of a month key */
 const genOf = (ym: string) => MONTHS_GEN[Number(ym.slice(5)) - 1];
+
+/** "лимит ≈ 46 ₾ в неделю": a flexible item's plan per its spending pattern (the month's plan / days in the month × days). */
+export function normText(item: PlanItem, ym: string, currency: Currency): string {
+  const amount = item.converted_minor ?? 0;
+  if (!amount) return '';
+  if (item.norm_period === 'month') return SPENDING_PATTERN.month.title.toLowerCase();
+  const per = (amount / daysInMonth(ym)) * RHYTHM_DAYS[item.norm_period];
+  return `лимит ≈ ${formatWithCurrency(Math.round(per), currency)} ${PER_PERIOD[item.norm_period]}`;
+}
 
 /** Share of the amount to distribute, "35%"; "<1%" for tiny non-zero amounts. */
 export function percentOf(part: number, whole: number): string {

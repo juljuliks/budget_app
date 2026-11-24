@@ -1,4 +1,4 @@
-// The month's plan, changed from the stats (there is no plan page): its budget, a category added («＋»), an amount
+// The month's plan, changed from the stats and from the «План» tab: its budget, a category added («＋»), an amount
 // changed or removed, what the month before sent. The sheets as one element, opened by what the hook returns.
 import React, { useState } from 'react';
 import type { Currency } from '@/db/fx';
@@ -66,6 +66,11 @@ export function usePlanSheets(ym: string, currency: Currency) {
   return {
     /** the plan worked out (null — loading): the budget, the carry, each section's share */
     p,
+    /** the plan's data failed to load, and loading it again */
+    failed: data.failed,
+    load: data.load,
+    /** an amount in the screen's currency (null — no rate) */
+    toShown,
     /** under a category with repeating payments: what they are */
     notes: p ? recurringNotes(p.recurring, currency, p.timing === 'current', { words: paymentWords, shortDay: (d) => shortDay(d), inTime }) : new Map<number, string>(),
     /** a category's payments charged this month and how many are done */

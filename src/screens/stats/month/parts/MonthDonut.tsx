@@ -4,7 +4,6 @@ import type { MonthStats, StatGroup } from '@/db/plans';
 import { formatPercent } from '@/shared/lib/format';
 import { chart } from '@/shared/theme/theme';
 import Donut, { DonutSegment } from '@/shared/ui/Donut';
-import Segmented from '@/shared/ui/Segmented';
 import TextLink from '@/shared/ui/TextLink';
 import DonutCenter from '../../parts/DonutCenter';
 import { DonutCut, DonutView, donutSlices, type Slice, type SliceInput } from '../model/donutSlices';
@@ -23,10 +22,10 @@ function donutSegments(groups: StatGroup[]): DonutSegment[] {
     .map((c) => ({ key: String(c.category_id), value: c.spent_minor, color: c.color }));
 }
 
-const VIEWS = [['spent', 'Траты'], ['plan', 'План']] as const;
-
 type Props = {
   stats: MonthStats;
+  /** «Траты» / «План»: the tab over the stats */
+  view: DonutView;
   /** the month's plan with the share outside it: "из 3 666 ₾ · 96% ✏️" in the hole (0 — none: no «План») */
   plannedAll: number;
   /** the sections, the share outside the plan, the savings and what the shares are of («бюджета» / «плана») */
@@ -37,14 +36,16 @@ type Props = {
 };
 
 /**
- * The month's ring. «Траты» / «План» over it. The ring is half the block wide; beside it the biggest slices,
+ * The month's ring: what is spent or how the budget is planned (the tab «Траты» / «План» over the stats). The ring is half the block wide; beside it the biggest slices,
  * «Подробнее» — «Распределение бюджета», every piece of the plan — under the cut «Категории» / «Разделы». In the hole
  * the total spent of the plan or the budget and what is free (a tap — its sheet); a segment tapped — its slice.
  */
-export default function MonthDonut({ stats, plannedAll, input, word, onBudget }: Props) {
-  const [view, setView] = useState<DonutView>('spent');
+export default function MonthDonut({ stats, view, plannedAll, input, word, onBudget }: Props) {
   const [cut, setCut] = useState<DonutCut>('category');
   const [selected, setSelected] = useState<string | null>(null);
+  // the other tab: nothing picked
+  const [pickedIn, setPickedIn] = useState(view);
+  if (pickedIn !== view) { setPickedIn(view); setSelected(null); }
   // «Подробнее»: the budget's every piece
   const [more, setMore] = useState(false);
   // the block: the screen less its sides
@@ -69,7 +70,6 @@ export default function MonthDonut({ stats, plannedAll, input, word, onBudget }:
 
   return (
     <View style={styles.donutWrap}>
-      {plannedAll > 0 ? <Segmented options={VIEWS} value={shown} onChange={change(setView)} style={styles.donutViews} /> : null}
       {ring ? (
         <View style={styles.donutRow}>
           <Donut

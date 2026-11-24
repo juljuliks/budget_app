@@ -86,6 +86,19 @@ describe('5.1 a month', () => {
     expect(screen.queryByText(/не оплачен$/)).toBeNull();
   });
 
+  test('5.1.3b a payment without a day (a tutor every week): a mark on each day it was spent on', async () => {
+    expect(await screen.findByLabelText('Дом и коммуналка, 3 окт, оплачен')).toBeTruthy();
+    const home = (await (await getDb()).get<{ id: number }>("SELECT id FROM categories WHERE name = 'Дом и коммуналка'"))!.id;
+    await buy('TUTOR', 100, on(10, 18), home);
+    await act(async () => { emitTransactionsChanged(); });
+    // each spending its own mark, with what was spent that day
+    expect(await screen.findByLabelText('Дом и коммуналка, 10 окт, оплачен')).toBeTruthy();
+    expect(screen.getByLabelText('Дом и коммуналка, 3 окт, оплачен')).toBeTruthy();
+    await tap(screen.getByLabelText('Дом и коммуналка, 10 окт, оплачен'));
+    expect(await screen.findByText(/🏠 Дом и коммуналка · 100 ₾ · 10 окт · /)).toBeTruthy();
+    // near ones as one: by the bar's width (logic/monthPace.test.ts)
+  });
+
   test('a section\'s header: fact / plan · %', async () => {
     expect(screen.getByText('1 645 / 2 160 ₾ · 76%')).toBeTruthy();
   });

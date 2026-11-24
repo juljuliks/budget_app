@@ -11,7 +11,6 @@ export const styles = StyleSheet.create({
   donutWrap: { alignItems: 'center', marginBottom: 16 },
   // over the ring «Траты» / «План»; the ring at the left, half the block; at its right the cut — «Категории» /
   // «Разделы» as words with an underline, not a second segmented — and the legend
-  donutViews: { alignSelf: 'stretch', marginBottom: 14 },
   donutRow: { flexDirection: 'row', alignItems: 'flex-start', alignSelf: 'stretch', gap: 16 },
   donutSide: { flex: 1, minWidth: 0 },
   donutCuts: { marginBottom: 10 },
