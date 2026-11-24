@@ -5,6 +5,8 @@ apply plugin: "com.facebook.react"
 // with the daily check only (update/UpdateCheckWorker.kt)
 if (file("google-services.json").exists()) {
     apply plugin: "com.google.gms.google-services"
+    // crash reports (crash/CrashReportModule.kt); the build isn't minified: no mapping to upload
+    apply plugin: "com.google.firebase.crashlytics"
 }
 
 react {
@@ -103,6 +105,8 @@ dependencies {
     // the release's push (update/ReleasePushService.kt)
     implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
     implementation("com.google.firebase:firebase-messaging")
+    // crash reports (crash/CrashReportModule.kt)
+    implementation("com.google.firebase:firebase-crashlytics")
     implementation("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
 
     if (hermesEnabled.toBoolean()) {

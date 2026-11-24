@@ -17,6 +17,9 @@
       android:allowBackup="false"
       android:theme="@style/AppTheme">
 
+      <!-- crash reports off until the app turns them on for a release build (crash/CrashReportModule.setUp) -->
+      <meta-data android:name="firebase_crashlytics_collection_enabled" android:value="false" />
+
       <activity
         android:name=".MainActivity"
         android:label="@string/app_name"

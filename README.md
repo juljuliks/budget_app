@@ -305,6 +305,10 @@
   ищет.
 - Автоматической копии Android в облако нет (`allowBackup="false"`): данные уходят с телефона, только если вы сами
   сохраните копию или выберете для автокопии облачную папку.
+- Отчёты о сбоях — Firebase Crashlytics (только релизная сборка «1.0.N» с `google-services.json`; в манифесте сбор
+  выключен, включает его `crash/CrashReportModule.setUp`): нативные падения сами, из JS — фатальная ошибка и каждый
+  `console.error`, только текст и сообщение и стек `Error` ([src/native/crashText.ts](src/native/crashText.ts)): суммы,
+  мерчанты и SMS не уходят. Смотреть — Firebase Console → Crashlytics.
 
 ## Стек
 

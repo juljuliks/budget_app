@@ -18,6 +18,8 @@ buildscript {
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
         // Firebase's config (app/google-services.json) read into the build: the release's push
         classpath("com.google.gms:google-services:4.4.0")
+        // crash reports (Crashlytics)
+        classpath("com.google.firebase:firebase-crashlytics-gradle:2.9.9")
     }
 }
 

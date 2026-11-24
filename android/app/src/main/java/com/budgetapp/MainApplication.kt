@@ -9,6 +9,8 @@ import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint
 import com.facebook.react.defaults.DefaultReactNativeHost
 import com.facebook.soloader.SoLoader
 import com.budgetapp.backup.BackupPackage
+import com.budgetapp.crash.CrashReportModule
+import com.budgetapp.crash.CrashReportPackage
 import com.budgetapp.lock.AppLockPackage
 import com.budgetapp.push.NotificationAccessPackage
 import com.budgetapp.sms.BankSourcesPackage
@@ -25,7 +27,7 @@ class MainApplication : Application(), ReactApplication {
 
         // Autolinked packages (Notifee, Picker, ...)
         override fun getPackages(): List<ReactPackage> =
-            PackageList(this).packages + NotificationAccessPackage() + SmsInboxPackage() + AppInfoPackage() + BackupPackage() + AppLockPackage() + BankSourcesPackage() + AppUpdatePackage()
+            PackageList(this).packages + NotificationAccessPackage() + SmsInboxPackage() + AppInfoPackage() + BackupPackage() + AppLockPackage() + BankSourcesPackage() + AppUpdatePackage() + CrashReportPackage()
 
         override fun getJSMainModuleName(): String = "index"
 
@@ -42,6 +44,8 @@ class MainApplication : Application(), ReactApplication {
         if (BuildConfig.IS_NEW_ARCHITECTURE_ENABLED) {
             DefaultNewArchitectureEntryPoint.load()
         }
+        // crash reports: a release build with Firebase only
+        CrashReportModule.setUp(this)
         // a newer release with the app closed too: its push (Firebase), and a check once a day if that one is lost
         ReleasePushService.subscribe(this)
         // «Доступна версия» of the version that is installed now: gone
