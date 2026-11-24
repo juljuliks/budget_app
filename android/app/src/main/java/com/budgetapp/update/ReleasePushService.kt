@@ -10,7 +10,7 @@ import com.google.firebase.messaging.RemoteMessage
 /**
  * A release's push (Firebase Cloud Messaging, topic [TOPIC]; .github/workflows/android-release.yml sends it once the
  * release is published, scripts/notify-release.mjs): a data message {version} — «Доступна версия 1.0.N» by
- * UpdateNotices' rules. No server of our own, no token kept: the app only subscribes to the topic.
+ * UpdateNotices' rules (every newer version, once). No server of our own, no token kept: the app only subscribes to the topic.
  */
 class ReleasePushService : FirebaseMessagingService() {
     override fun onMessageReceived(message: RemoteMessage) {

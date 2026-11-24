@@ -1,6 +1,6 @@
 // The release's push (.github/workflows/android-release.yml, after it is published): a data message {version} to the
 // Firebase Cloud Messaging topic "releases" the app subscribes to (update/ReleasePushService.kt) — it says
-// «Доступна версия 1.0.N» by its rules (newer, once per version, once a day). No server: the service account's key
+// «Доступна версия 1.0.N» by its rules (newer, once per version). No server: the service account's key
 // signs a token here, FCM's HTTP v1 API delivers.
 // Usage: FIREBASE_SERVICE_ACCOUNT='<the key's JSON>' node scripts/notify-release.mjs 1.0.183
 import { createSign } from 'node:crypto';

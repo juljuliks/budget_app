@@ -237,7 +237,7 @@ jobs:
           { grep '^build-' "$RUNNER_TEMP/releases" || true; echo "$NEWER"; grep '^v' "$RUNNER_TEMP/releases" | tail -n +$(( KEEP_RELEASES + 1 )) || true; } \
             | sort -u | while read -r tag; do [ -n "$tag" ] && gh release delete "$tag" --cleanup-tag -y || true; done
 
-      # the phones told: a data message to the topic "releases" (the app says «Доступна версия 1.0.N» by its rules)
+      # the phones told: a data message to the topic "releases" (the app says «Доступна версия 1.0.N» for every newer one)
       - uses: actions/checkout@v4
         with:
           sparse-checkout: scripts

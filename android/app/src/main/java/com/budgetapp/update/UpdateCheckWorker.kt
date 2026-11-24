@@ -16,7 +16,7 @@ import java.util.concurrent.TimeUnit
 /**
  * Once a day, with the app closed too, the fallback of the release's push (ReleasePushService: lost, or no Google
  * services): GitHub's latest release (as src/update/releases.ts asks it) — «Доступна версия 1.0.N» by UpdateNotices'
- * rules (newer, once per version, once a day).
+ * rules (newer, once per version).
  */
 class UpdateCheckWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, params) {
 

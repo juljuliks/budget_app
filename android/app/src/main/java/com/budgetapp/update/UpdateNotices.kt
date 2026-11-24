@@ -14,9 +14,8 @@ import com.budgetapp.R
 
 /**
  * The app's notices about its own versions: «Доступна версия 1.0.N» (from the release's push, ReleasePushService, or the
- * daily check, UpdateCheckWorker) and «Обновлено до 1.0.N» after it was replaced (UpdatedReceiver). «Доступна» — once
- * per version and not more often than once a day; a version the toast on start said (AppUpdateModule.markOffered) — not
- * again. Its tap opens the app with [ACTION_EXTRA] = [ACTION_UPDATE]: «Обновить» at once (AppUpdateModule.takeLaunchAction).
+ * daily check, UpdateCheckWorker) and «Обновлено до 1.0.N» after it was replaced (UpdatedReceiver). «Доступна» — for
+ * every newer version, once; a version the toast on start said (AppUpdateModule.markOffered) — not again. Its tap opens the app with [ACTION_EXTRA] = [ACTION_UPDATE]: «Обновить» at once (AppUpdateModule.takeLaunchAction).
  */
 object UpdateNotices {
     const val ACTION_EXTRA = "budget_action"
@@ -26,9 +25,6 @@ object UpdateNotices {
     private const val UPDATED_ID = 4202
     private const val PREFS = "app_update"
     private const val OFFERED = "offered"
-    private const val NOTIFIED_AT = "notified_at"
-    /** «Доступна» at most this often (a day, a few hours' slack for the daily check's drift) */
-    private const val MIN_GAP_MS = 20L * 3600_000
 
     /** Opened by the notification: kept till JS takes it (AppUpdateModule.takeLaunchAction), once. */
     @Volatile var pendingAction: String? = null
@@ -62,18 +58,14 @@ object UpdateNotices {
         prefs(ctx).edit().putString(OFFERED, version).apply()
     }
 
-    /**
-     * «Доступна версия [version]», if it is newer than this build, not said yet, and nothing was said for a day; true —
-     * said. A skipped one is said by the next day's check (it asks the latest).
-     */
-    fun notifyAvailable(ctx: Context, version: String, now: Long = System.currentTimeMillis()): Boolean {
+    /** «Доступна версия [version]», if it is newer than this build and not said yet; true — said. */
+    fun notifyAvailable(ctx: Context, version: String): Boolean {
         val current = parseVersion(BuildConfig.VERSION_NAME) ?: return false
         val latest = parseVersion(version) ?: return false
         val p = prefs(ctx)
         if (compare(latest, current) <= 0 || p.getString(OFFERED, null) == version) return false
-        if (now - p.getLong(NOTIFIED_AT, 0) < MIN_GAP_MS) return false
         post(ctx, AVAILABLE_ID, "Доступна версия $version", "Нажмите, чтобы обновить приложение", update = true)
-        p.edit().putString(OFFERED, version).putLong(NOTIFIED_AT, now).apply()
+        p.edit().putString(OFFERED, version).apply()
         return true
     }
 
