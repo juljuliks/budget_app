@@ -31,7 +31,7 @@
 | 5. Статистика | [screens/plan/5-stats.md](screens/plan/5-stats.md) | — |
 | 6. План | [screens/plan/6-plan.md](screens/plan/6-plan.md) | — |
 | 7. Отчёт и история | [screens/plan/7-report.md](screens/plan/7-report.md) | — |
-| 8. Уведомления | [screens/plan/8-notifications.md](screens/plan/8-notifications.md) | [e2e/plan/8-notifications.md](e2e/plan/8-notifications.md): кнопка в шторке, тап, холодный старт, итоги года и копилка в шторке |
+| 8. Уведомления | [screens/plan/8-notifications.md](screens/plan/8-notifications.md) | [e2e/plan/8-notifications.md](e2e/plan/8-notifications.md): кнопка в шторке, тап, холодный старт, итоги года и копилка в шторке, уведомление об обновлении |
 | 9. Общее | [screens/plan/9-general.md](screens/plan/9-general.md) | [e2e/plan/9-general.md](e2e/plan/9-general.md): разрешения при первом запуске, «Назад» Android |
 
 ### Какой кейс где проверяется

@@ -1,6 +1,11 @@
 apply plugin: "com.android.application"
 apply plugin: "kotlin-android"
 apply plugin: "com.facebook.react"
+// the release's push (Firebase Cloud Messaging) needs the project's config; without the file the app builds as before,
+// with the daily check only (update/UpdateCheckWorker.kt)
+if (file("google-services.json").exists()) {
+    apply plugin: "com.google.gms.google-services"
+}
 
 react {
     // Defaults work for a standard layout: root = "../..", entry = index.js
@@ -93,6 +98,11 @@ dependencies {
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.0.0")
     // the system fingerprint / face window for "Блокировка" (lock/AppLockModule.kt)
     implementation("androidx.biometric:biometric:1.1.0")
+    // the daily check for a newer release with the app closed (update/UpdateCheckWorker.kt); the version notifee brings
+    implementation("androidx.work:work-runtime:2.8.0")
+    // the release's push (update/ReleasePushService.kt)
+    implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
+    implementation("com.google.firebase:firebase-messaging")
     implementation("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
 
     if (hermesEnabled.toBoolean()) {

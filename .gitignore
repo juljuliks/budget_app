@@ -31,3 +31,6 @@ data/
 dist-demo/
 dist-e2e/
 e2e-out/
+
+# Firebase config (the release push): kept out of the public repo, CI gets it from the GOOGLE_SERVICES_JSON secret
+android/app/google-services.json

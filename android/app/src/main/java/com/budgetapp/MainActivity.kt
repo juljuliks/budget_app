@@ -2,6 +2,7 @@ package com.budgetapp
 
 import android.content.Intent
 import android.os.Bundle
+import com.budgetapp.update.UpdateNotices
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint
@@ -15,6 +16,7 @@ class MainActivity : ReactActivity() {
     // (https://github.com/software-mansion/react-native-screens#android)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(null)
+        UpdateNotices.takeIntent(intent)
     }
 
     // singleTask: a notification tapped while the app is alive comes here; kept as the activity's intent so that
@@ -22,6 +24,7 @@ class MainActivity : ReactActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        UpdateNotices.takeIntent(intent)
     }
 
     override fun createReactActivityDelegate(): ReactActivityDelegate =

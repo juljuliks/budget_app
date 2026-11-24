@@ -6,6 +6,8 @@ type Native = {
   canInstall(): Promise<boolean>;
   openInstallSettings(): void;
   install(path: string): Promise<void>;
+  takeLaunchAction(): Promise<string | null>;
+  markOffered(version: string): void;
 };
 const native = NativeModules.AppUpdate as Native | undefined;
 
@@ -36,4 +38,14 @@ export function openInstallSettings() {
 export async function installApk(path: string): Promise<void> {
   if (!native) throw new Error('AppUpdate native module is missing');
   await native.install(path);
+}
+
+/** Opened by the update's notification (the daily check, UpdateCheckWorker): true once. */
+export async function openedForUpdate(): Promise<boolean> {
+  return native ? (await native.takeLaunchAction()) === 'update' : false;
+}
+
+/** A version said by the toast: the daily check won't notify about it. */
+export function markUpdateOffered(version: string) {
+  native?.markOffered(version);
 }

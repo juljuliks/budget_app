@@ -9,6 +9,9 @@ const mockNative = {
   download: jest.fn(async (_url: string, onProgress: (p: number) => void) => { onProgress(40); return '/cache/updates/update.apk'; }),
   install: jest.fn(async (_path: string) => {}),
   openInstallSettings: jest.fn(),
+  // opened by the update's notification (the daily check): once
+  opened: jest.fn(async () => false),
+  markOffered: jest.fn((_v: string) => {}),
 };
 jest.mock('../../src/native/appInfo', () => ({ appVersion: () => '1.0.161' }));
 jest.mock('../../src/native/appUpdate', () => ({
@@ -17,6 +20,8 @@ jest.mock('../../src/native/appUpdate', () => ({
   downloadApk: (url: string, onProgress: (p: number) => void) => mockNative.download(url, onProgress),
   installApk: (path: string) => mockNative.install(path),
   openInstallSettings: () => mockNative.openInstallSettings(),
+  openedForUpdate: () => mockNative.opened(),
+  markUpdateOffered: (v: string) => mockNative.markOffered(v),
 }));
 
 const APK = 'https://github.com/juljuliks/budget_app/releases/download/v1.0.162/budget-app-1.0.162-arm64-v8a.apk';
@@ -31,6 +36,7 @@ beforeEach(() => {
   global.fetch = fetchMock as unknown as typeof fetch;
   jest.spyOn(console, 'warn').mockImplementation(() => {});
   Object.values(mockNative).forEach((m) => m.mockClear());
+  mockNative.opened.mockImplementation(async () => false);
 });
 
 it('9.13.1 a newer release: the toast on start → «Обновить» → downloaded and given to the installer', async () => {
@@ -77,4 +83,20 @@ it('9.13.5 the download failed: a red toast', async () => {
   await tap('Обновить до 1.0.162');
   await screen.findByText('⚠️  Не удалось скачать обновление');
   expect(mockNative.install).not.toHaveBeenCalled();
+});
+
+it('9.13.6 the toast\'s version is marked said: the daily check won\'t notify about it', async () => {
+  await openApp();
+  await screen.findByText('Доступна версия 1.0.162');
+  expect(mockNative.markOffered).toHaveBeenCalledWith('1.0.162');
+});
+
+it('9.13.7 opened by the update\'s notification: «Скачивается…» and the download at once, no toast to tap', async () => {
+  mockNative.opened.mockImplementationOnce(async () => true);
+  await openApp();
+  expect(await screen.findByText('Скачивается…')).toBeTruthy();
+  await act(async () => {});
+  expect(mockNative.download).toHaveBeenCalledWith(APK, expect.any(Function));
+  expect(mockNative.install).toHaveBeenCalledWith('/cache/updates/update.apk');
+  expect(screen.queryByText('Доступна версия 1.0.162')).toBeNull();
 });

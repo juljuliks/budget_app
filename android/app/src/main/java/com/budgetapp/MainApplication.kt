@@ -14,6 +14,8 @@ import com.budgetapp.push.NotificationAccessPackage
 import com.budgetapp.sms.BankSourcesPackage
 import com.budgetapp.sms.SmsInboxPackage
 import com.budgetapp.update.AppUpdatePackage
+import com.budgetapp.update.ReleasePushService
+import com.budgetapp.update.UpdateCheckWorker
 
 class MainApplication : Application(), ReactApplication {
 
@@ -39,5 +41,8 @@ class MainApplication : Application(), ReactApplication {
         if (BuildConfig.IS_NEW_ARCHITECTURE_ENABLED) {
             DefaultNewArchitectureEntryPoint.load()
         }
+        // a newer release with the app closed too: its push (Firebase), and a check once a day if that one is lost
+        ReleasePushService.subscribe(this)
+        UpdateCheckWorker.schedule(this)
     }
 }

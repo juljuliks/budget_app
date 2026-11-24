@@ -2,12 +2,12 @@
 // state for the whole app: the toast on start and the row in the settings show the same download.
 import { fetchLatestRelease, isNewer, parseVersion, type Release } from '@/update/releases';
 import { appVersion } from '@/native/appInfo';
-import { canInstallApps, canSelfUpdate, downloadApk, installApk, openInstallSettings } from '@/native/appUpdate';
+import { canInstallApps, canSelfUpdate, downloadApk, installApk, markUpdateOffered, openedForUpdate, openInstallSettings } from '@/native/appUpdate';
 import { getSetting, setSetting } from '@/db/settings';
 import { CANCEL } from '@/shared/lib/strings';
 import { sheetAlert } from '@/shared/ui/sheetAlert';
 import { toast, toastError } from '@/shared/ui/toast';
-import { ALLOW_TEXT, ALLOW_TITLE, OPEN_SETTINGS, UPDATE, UPDATE_FAILED, updateAvailable } from '../texts';
+import { ALLOW_TEXT, ALLOW_TITLE, downloading, OPEN_SETTINGS, UPDATE, UPDATE_FAILED, updateAvailable } from '../texts';
 
 export type UpdateState = {
   /** a release newer than this build */
@@ -50,12 +50,21 @@ export async function checkForUpdate(force = false): Promise<Release | null> {
   return state.latest;
 }
 
-/** On start and on coming back: a newer release is said by a toast with «Обновить» — once per version. */
+/**
+ * On start and on coming back: opened by the update's notification — «Обновить» at once; else a newer release is said
+ * by a toast with «Обновить» — once per version; a version the toast said isn't notified by the daily check after.
+ */
 export async function offerUpdate(): Promise<void> {
   try {
+    if (await openedForUpdate()) {
+      // its progress is in the settings' row: said here, the app opened on the list
+      if (await checkForUpdate(true)) { toast(downloading(-1)); await startUpdate(); }
+      return;
+    }
     const release = await checkForUpdate();
     if (!release || (await getSetting(OFFERED_KEY)) === release.version) return;
     await setSetting(OFFERED_KEY, release.version);
+    markUpdateOffered(release.version);
     toast(updateAvailable(release.version), { label: UPDATE, onPress: () => { startUpdate(); } });
   } catch (e) {
     // no network: the settings show the version without «последняя»

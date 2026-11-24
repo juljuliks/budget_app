@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- AppUpdateModule: the downloaded APK, shared with the system installer -->
-<paths>
-    <cache-path name="updates" path="updates/" />
-</paths>

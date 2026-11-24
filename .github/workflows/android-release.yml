@@ -11,6 +11,9 @@
 #   BUDGETAPP_RELEASE_KEY_PASSWORD     from ~/.gradle/gradle.properties
 # Without them the build stops: an APK signed with another key can't update the installed app (it would have to be
 # uninstalled, which deletes its transactions).
+#   FIREBASE_SERVICE_ACCOUNT           optional: a Firebase service account's key (JSON) — the release's push to the
+#                                      phones (scripts/notify-release.mjs); unset — no push, the app's daily check only
+#   GOOGLE_SERVICES_JSON               optional: android/app/google-services.json as base64, when it isn't in the repo
 name: Android release APK
 
 on:
@@ -150,6 +153,16 @@ jobs:
             /usr/local/lib/android/sdk/build-tools/30.0.3
           key: android-sdk-ndk-23.1.7779620-cmake-3.22.1-platform-33-build-tools-33.0.0-30.0.3
 
+      # Firebase's config (the release's push), from the secret when the file isn't committed; none — the app builds
+      # without the push
+      - name: Firebase config
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ ! -f android/app/google-services.json ] && [ -n "$GOOGLE_SERVICES_JSON" ]; then
+            echo "$GOOGLE_SERVICES_JSON" | base64 --decode > android/app/google-services.json
+          fi
+
       - name: Release keystore
         env:
           KEYSTORE: ${{ secrets.BUDGETAPP_KEYSTORE_BASE64 }}
@@ -224,3 +237,11 @@ jobs:
           { grep '^build-' "$RUNNER_TEMP/releases" || true; echo "$NEWER"; grep '^v' "$RUNNER_TEMP/releases" | tail -n +$(( KEEP_RELEASES + 1 )) || true; } \
             | sort -u | while read -r tag; do [ -n "$tag" ] && gh release delete "$tag" --cleanup-tag -y || true; done
 
+      # the phones told: a data message to the topic "releases" (the app says «Доступна версия 1.0.N» by its rules)
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts
+      - name: Push the release to the phones
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: node scripts/notify-release.mjs "${{ needs.build.outputs.version }}"
