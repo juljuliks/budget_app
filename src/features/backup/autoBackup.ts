@@ -3,16 +3,14 @@
 import {
   AUTO_BACKUP_KEEP, AUTO_BACKUP_PREFIX, autoBackup, autoBackupDue, markAutoBackupMade, setAutoBackupFolder,
 } from '@/backup';
-import { folderName, pickFolder, releaseFolder, saveToFolder } from '@/native/backup';
+import { folderName, hasPassword, pickFolder, releaseFolder, saveToFolder } from '@/native/backup';
 import { formatDay } from '@/shared/lib/format';
-import { CANCEL } from '@/shared/lib/strings';
-import { sheetAlert } from '@/shared/ui/sheetAlert';
 import { toast, toastError } from '@/shared/ui/toast';
-import { makeCopy } from './password';
-import { dateKey, run, timeKey } from './run';
+import { choosePassword, makeCopy } from './password';
+import { dateKey, timeKey } from './run';
 import { backupSettingsChanged } from './model/changes';
 import { writeCloudCopy } from './cloud';
-import { AUTO, AUTO_FAILED, AUTO_FIRST, AUTO_GONE, AUTO_INFO, AUTO_OFF, AUTO_OFF_HINT, AUTO_ON, CLOUD_FAILED, PICK_FOLDER, autoStatus, cloudStatus } from './texts';
+import { AUTO_FAILED, AUTO_FIRST, AUTO_GONE, AUTO_OFF, AUTO_OFF_HINT, AUTO_ON, CLOUD_FAILED, autoStatus, cloudStatus } from './texts';
 
 /** The copy written before it goes to the folder, in the app's files dir. */
 const AUTO_COPY = 'auto-copy.db';
@@ -57,16 +55,15 @@ export async function autoBackupStatus(): Promise<{ on: boolean; cloud: string |
   return { on: true, cloud: auto.cloud, text: last === null ? `${where} ${AUTO_FIRST}` : `${where} Последняя — ${last}.` };
 }
 
-/** The switch turned on: what it does, then the folder (on only once one is picked). */
-export function askAutoBackupOn() {
-  sheetAlert(AUTO, AUTO_INFO, [{ text: PICK_FOLDER, onPress: run('auto backup on', pickAutoBackupFolder) }, { text: CANCEL, style: 'cancel' }]);
-}
-
-/** A folder picked ("Выбрать папку", "Сменить папку"): the copies go there from now on, the first one right away. */
+/**
+ * A folder picked ("Выбрать папку", "Сменить папку"): the copies go there from now on, the first one right away. Turned
+ * on to it (not a change of folder) without a password: the password asked first, «Пропустить» — without one.
+ */
 export async function pickAutoBackupFolder() {
   const folder = await pickFolder();
   if (!folder) return;
   const before = await autoBackup();
+  if (!before?.folder && !(await hasPassword())) await choosePassword(true);
   if (before?.folder && before.folder !== folder) await releaseFolder(before.folder);
   await setAutoBackupFolder(folder);
   backupSettingsChanged();

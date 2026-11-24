@@ -6,12 +6,16 @@ import { toastError } from '@/shared/ui/toast';
 import { formStyles } from '@/shared/theme/formStyles';
 import { colors } from '@/shared/theme/theme';
 import {
-  ENTER_PASSWORD, ENTER_PASSWORD_INFO, MIN_PASSWORD, PASSWORD, PASSWORD_FIELD, PASSWORD_MISMATCH, PASSWORD_REPEAT, PASSWORD_SHORT,
-  SET_PASSWORD, SET_PASSWORD_INFO,
+  CHANGE_PASSWORD_INFO, ENTER_PASSWORD, ENTER_PASSWORD_INFO, MIN_PASSWORD, PASSWORD, PASSWORD_FIELD, PASSWORD_MISMATCH, PASSWORD_REPEAT, PASSWORD_SHORT,
+  SET_PASSWORD, SET_PASSWORD_INFO, SKIP,
 } from '../texts';
 
-/** 'set': a new password and its confirmation; 'enter': the password of an encrypted copy being restored. */
-type Mode = 'set' | 'enter';
+/**
+ * 'set': a new password and its confirmation; 'set-optional': the same with «Пропустить» instead of «Отмена» (the
+ * folder's copies may go without one); 'change': a new one in place of the set one (the copies made keep the old one);
+ * 'enter': the password of an encrypted copy being restored.
+ */
+type Mode = 'set' | 'set-optional' | 'change' | 'enter';
 type Ask = { mode: Mode; resolve: (password: string | null) => void };
 
 let show: ((a: Ask) => void) | null = null;
@@ -33,8 +37,9 @@ export function PasswordHost() {
   }, []);
 
   const close = (value: string | null) => { ask?.resolve(value); setAsk(null); };
+  const setting = ask?.mode === 'set' || ask?.mode === 'set-optional' || ask?.mode === 'change';
   const submit = () => {
-    if (ask?.mode === 'set') {
+    if (setting) {
       if (password.length < MIN_PASSWORD) return toastError(PASSWORD_SHORT);
       if (password !== repeat) return toastError(PASSWORD_MISMATCH);
     }
@@ -56,14 +61,14 @@ export function PasswordHost() {
     />
   );
 
-  const setting = ask?.mode === 'set';
   return (
     <BottomSheet visible={ask !== null} onClose={() => close(null)} title={setting ? PASSWORD : ENTER_PASSWORD}>
       <View style={styles.body}>
-        <Text style={styles.hint}>{setting ? SET_PASSWORD_INFO : ENTER_PASSWORD_INFO}</Text>
+        <Text style={styles.hint}>{ask?.mode === 'change' ? CHANGE_PASSWORD_INFO : setting ? SET_PASSWORD_INFO : ENTER_PASSWORD_INFO}</Text>
         {field(password, setPasswordText, PASSWORD_FIELD, !setting)}
         {setting ? field(repeat, setRepeat, PASSWORD_REPEAT, true) : null}
-        <SheetActions submit={{ title: setting ? SET_PASSWORD : 'Открыть', onPress: submit, disabled: password.length === 0 }} onCancel={() => close(null)} />
+        <SheetActions submit={{ title: setting ? SET_PASSWORD : 'Открыть', onPress: submit, disabled: password.length === 0 }} onCancel={() => close(null)}
+          cancelTitle={ask?.mode === 'set-optional' ? SKIP : undefined} />
       </View>
     </BottomSheet>
   );

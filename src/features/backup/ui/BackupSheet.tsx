@@ -1,30 +1,24 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import { hasPassword } from '@/native/backup';
 import BottomSheet from '@/shared/ui/BottomSheet';
 import { SheetActions } from '@/shared/ui/Button';
 import { colors } from '@/shared/theme/theme';
-import { askAutoBackupOn, autoBackupStatus, pickAutoBackupFolder, turnAutoBackupOff } from '../autoBackup';
-import { askCloudOn, turnCloudOn } from '../cloud';
-import { exportCsv, restoreBackup, saveBackup } from '../backupFlow';
+import { autoBackupStatus } from '../autoBackup';
+import { exportCopy, exportCsv, restoreBackup } from '../backupFlow';
 import { onBackupSettingsChanged } from '../model/changes';
-import { askPasswordOn, choosePassword, removePassword } from '../password';
 import { run } from '../run';
-import {
-  AUTO, BACKUP, BACKUP_INFO, CHANGE_ACCOUNT, CHANGE_FOLDER, CHANGE_PASSWORD, CLOUD, CLOUD_OFF_HINT, cloudHint, EXPORT_CSV, PASSWORD,
-  PASSWORD_OFF_HINT, PASSWORD_ON_HINT, RESTORE_BACKUP, SAVE_BACKUP,
-} from '../texts';
-import SwitchRow from '@/shared/ui/SwitchRow';
+import { BACKUP, BACKUP_INFO, EXPORT_COPY, EXPORT_CSV, RESTORE_BACKUP } from '../texts';
 import { toastFailure } from '@/shared/ui/toast';
 import { LOAD_FAILED } from '@/shared/lib/strings';
+import AutoBackupSection, { type AutoState } from './AutoBackupSection';
 
-type Settings = { auto: { on: boolean; cloud: string | null; text: string }; password: boolean };
+type Settings = { auto: AutoState; password: boolean };
 
 /**
- * "Резервная копия" (Настройки): the automatic copy and the password as switches — turned on through a sheet saying
- * what they do (the folder, the password twice), off at once; «На Google Диске» — the automatic copy to Drive instead
- * of the folder (the account, the password a must), off — back to a folder; under them save a copy, restore from one
- * (a file or Drive), CSV.
+ * "Резервная копия" (Настройки): «Автокопия» — where it goes, «Google Диск» / «Локально» (AutoBackupSection); then
+ * restore from a copy (a file or Drive; its password when encrypted), export a copy (its password offered, «Пропустить»
+ * allowed), the operations as CSV.
  */
 export default function BackupSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -39,36 +33,13 @@ export default function BackupSheet({ visible, onClose }: { visible: boolean; on
   return (
     <BottomSheet visible={visible} onClose={onClose} title={BACKUP}>
       <Text style={styles.info}>{BACKUP_INFO}</Text>
-      {settings ? (
-        <View>
-          <SwitchRow
-            label={AUTO}
-            hint={settings.auto.text}
-            on={settings.auto.on}
-            onChange={(on) => (on ? askAutoBackupOn() : run('auto backup off', turnAutoBackupOff)())}
-            change={settings.auto.cloud ? undefined : { title: CHANGE_FOLDER, onPress: run('auto backup folder', pickAutoBackupFolder) }}
-          />
-          <SwitchRow
-            label={CLOUD}
-            hint={settings.auto.cloud ? cloudHint(settings.auto.cloud) : CLOUD_OFF_HINT}
-            on={!!settings.auto.cloud}
-            onChange={(on) => (on ? askCloudOn() : askAutoBackupOn())}
-            change={{ title: CHANGE_ACCOUNT, onPress: run('cloud account', turnCloudOn) }}
-          />
-          <SwitchRow
-            label={PASSWORD}
-            hint={settings.password ? PASSWORD_ON_HINT : PASSWORD_OFF_HINT}
-            on={settings.password}
-            onChange={(on) => (on ? askPasswordOn() : run('password off', removePassword)())}
-            change={{ title: CHANGE_PASSWORD, onPress: run('password change', choosePassword) }}
-          />
-        </View>
-      ) : null}
+      {settings ? <AutoBackupSection auto={settings.auto} password={settings.password} /> : null}
       <SheetActions
         style={styles.actions}
-        submit={{ title: SAVE_BACKUP, onPress: run('backup', saveBackup) }}
+        submit={null}
         extra={[
           { title: RESTORE_BACKUP, onPress: run('restore', restoreBackup) },
+          { title: EXPORT_COPY, onPress: run('backup', exportCopy) },
           { title: EXPORT_CSV, onPress: run('csv export', exportCsv) },
         ]}
       />

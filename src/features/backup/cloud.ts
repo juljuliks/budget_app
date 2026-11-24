@@ -9,9 +9,9 @@ import { CANCEL } from '@/shared/lib/strings';
 import { sheetAlert } from '@/shared/ui/sheetAlert';
 import { toast } from '@/shared/ui/toast';
 import { choosePassword, makeCopy } from './password';
-import { dateKey, run, timeKey } from './run';
+import { dateKey, timeKey } from './run';
 import { backupSettingsChanged } from './model/changes';
-import { CLOUD, CLOUD_INFO, CLOUD_ON, NO_CLOUD_COPIES, noCloudCopiesInfo, PICK_CLOUD_COPY, SIGN_IN } from './texts';
+import { CLOUD_ON, NO_CLOUD_COPIES, noCloudCopiesInfo, PICK_CLOUD_COPY } from './texts';
 
 const CLOUD_COPY = 'cloud-copy.db';
 const now = () => Math.floor(Date.now() / 1000);
@@ -22,11 +22,6 @@ export async function writeCloudCopy(at: number) {
   if (!name.endsWith('.enc')) throw new Error('no password: a copy goes to Google Drive only encrypted');
   await uploadCopy(name, `${AUTO_BACKUP_PREFIX}${dateKey(at)}-${timeKey(at)}.db.enc`, CLOUD_BACKUP_KEEP);
   await markAutoBackupMade(at);
-}
-
-/** The switch turned on: what it does, then the account, then the password if none — on only with both. */
-export function askCloudOn() {
-  sheetAlert(CLOUD, CLOUD_INFO, [{ text: SIGN_IN, onPress: run('cloud backup on', turnCloudOn) }, { text: CANCEL, style: 'cancel' }]);
 }
 
 /** The account picked (also «Сменить аккаунт»), the password made sure of, the first copy sent at once. */

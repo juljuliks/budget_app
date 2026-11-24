@@ -1,13 +1,11 @@
-// "Пароль для копий": copies (by hand and automatic) encrypted with it when it is set; an encrypted copy asks for it
-// when restored. The password itself is kept by the native side (BackupCrypto), apart from the database.
-import { autoBackup, exportDatabase } from '@/backup';
+// "Пароль для копий": asked when the automatic copy's place is picked (optional for a folder, a must for Google Drive);
+// copies (by hand and automatic) encrypted with it when it is set; an encrypted copy asks for it when restored. The
+// password itself is kept by the native side (BackupCrypto), apart from the database.
+import { exportDatabase } from '@/backup';
 import { decryptFile, deleteFile, encryptFile, filePath, hasPassword, isEncrypted, setPassword } from '@/native/backup';
-import { CANCEL } from '@/shared/lib/strings';
-import { sheetAlert } from '@/shared/ui/sheetAlert';
 import { toast, toastError } from '@/shared/ui/toast';
-import { run } from './run';
 import { backupSettingsChanged } from './model/changes';
-import { CLOUD_NEEDS_PASSWORD, CLOUD_NEEDS_PASSWORD_INFO, PASSWORD, PASSWORD_INFO, PASSWORD_REMOVED, PASSWORD_SET, SET_PASSWORD, WRONG_PASSWORD } from './texts';
+import { PASSWORD_SET, WRONG_PASSWORD } from './texts';
 import { askPassword } from './ui/PasswordHost';
 
 /**
@@ -42,31 +40,14 @@ export async function openCopy(name: string, plain: string): Promise<string | nu
   }
 }
 
-/** The switch turned on: what the password does, then the password and its confirmation (on only once set). */
-export function askPasswordOn() {
-  sheetAlert(PASSWORD, PASSWORD_INFO, [{ text: SET_PASSWORD, onPress: run('password set', choosePassword) }, { text: CANCEL, style: 'cancel' }]);
-}
-
-/** A new password ("Задать пароль", "Сменить пароль"): asked twice. */
-export async function choosePassword() {
-  const password = await askPassword('set');
+/**
+ * A new password ("Задать пароль", "Сменить пароль"): asked twice. `optional` — «Пропустить» instead of «Отмена» (a
+ * folder picked for the automatic copy: the password is asked right after it, may be skipped).
+ */
+export async function choosePassword(optional = false) {
+  const password = await askPassword(optional ? 'set-optional' : (await hasPassword()) ? 'change' : 'set');
   if (password === null) return;
   await setPassword(password);
   backupSettingsChanged();
   toast(PASSWORD_SET);
-}
-
-/**
- * The switch turned off: new copies aren't encrypted (the ones made are, and still need it). Not while the automatic
- * copy goes to Google Drive: there only encrypted.
- */
-export async function removePassword() {
-  if ((await autoBackup())?.cloud) {
-    sheetAlert(CLOUD_NEEDS_PASSWORD, CLOUD_NEEDS_PASSWORD_INFO);
-    backupSettingsChanged();
-    return;
-  }
-  await setPassword(null);
-  backupSettingsChanged();
-  toast(PASSWORD_REMOVED);
 }
