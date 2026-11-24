@@ -2,6 +2,7 @@
 // into a neighbour slice, from outside a slice only through its index.ts). All errors: CI stops the release on one.
 const tseslint = require('typescript-eslint');
 const reactHooks = require('eslint-plugin-react-hooks');
+const app = require('./eslint-rules');
 
 const LAYERS = ['app', 'screens', 'features', 'entities', 'shared'];
 /** imports of these layers, through the alias or by a relative path */
@@ -30,20 +31,34 @@ const CORE_UI = [...LAYERS.flatMap((l) => [`@/${l}`, `@/${l}/**`]).filter((g) =>
   '**/app/**', '**/screens/**', '**/features/**', '**/entities/**', '**/shared/ui/**', '**/shared/theme/**', '**/shared/settings/**'];
 const CORE_MESSAGE = 'The core imports no UI: move the helper to src/shared/lib or into the core.';
 
+/** a rule set as warnings: turned into errors rule by rule while the code is cleaned up (REFACTOR_PLAN.md, stage 5) */
+const asWarnings = (rules = {}) => Object.fromEntries(Object.entries(rules)
+  .map(([k, v]) => [k, (Array.isArray(v) ? v[0] : v) === 'off' || v === 0 ? v : Array.isArray(v) ? ['warn', ...v.slice(1)] : 'warn']));
+/** strict TypeScript (REFACTOR_PLAN.md A5): typescript-eslint recommended-type-checked */
+const TYPE_CHECKED = tseslint.configs.recommendedTypeChecked.map((c) => ({
+  ...c, files: ['src/**/*.{ts,tsx}'], rules: asWarnings(c.rules),
+}));
+
 module.exports = tseslint.config(
   { ignores: ['node_modules/**', 'android/**', 'ios/**', 'dist/**', 'coverage/**', '**/*.js'] },
   {
     files: ['src/**/*.{ts,tsx}'],
-    languageOptions: { parser: tseslint.parser },
-    plugins: { 'react-hooks': reactHooks },
+    languageOptions: { parser: tseslint.parser, parserOptions: { projectService: true, tsconfigRootDir: __dirname } },
+    plugins: { 'react-hooks': reactHooks, app },
     linterOptions: { reportUnusedDisableDirectives: 'warn' },
     rules: {
       'max-lines': ['error', { max: 250, skipBlankLines: true, skipComments: true }],
       'max-lines-per-function': ['error', { max: 120, skipBlankLines: true, skipComments: true, IIFEs: true }],
+      'app/max-hook-lines': ['error', { max: 100 }],
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'error',
+      // accessibility (REFACTOR_PLAN.md C5): warnings until stage 7
+      'app/touchable-role': 'warn',
+      'app/icon-touchable-label': 'warn',
+      'app/icon-touchable-hit-slop': 'warn',
     },
   },
+  ...TYPE_CHECKED,
   // the core (db, ingest, categorize, parsers, …): no React layers, no React; shared/lib and shared/navigation are fine
   {
     files: ['src/**/*.{ts,tsx}'],

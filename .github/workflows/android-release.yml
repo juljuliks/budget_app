@@ -42,7 +42,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 22
 
       # node_modules itself, by the lockfile: npm ci only when it changed
       - name: node_modules cache
@@ -50,7 +50,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: node_modules
-          key: node-modules-${{ runner.os }}-node18-${{ hashFiles('package-lock.json') }}
+          key: node-modules-${{ runner.os }}-node22-${{ hashFiles('package-lock.json') }}
 
       - name: Install JS dependencies
         if: steps.node-modules.outputs.cache-hit != 'true'
@@ -71,14 +71,14 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 22
 
       - name: node_modules cache
         id: node-modules
         uses: actions/cache@v4
         with:
           path: node_modules
-          key: node-modules-${{ runner.os }}-node18-${{ hashFiles('package-lock.json') }}
+          key: node-modules-${{ runner.os }}-node22-${{ hashFiles('package-lock.json') }}
 
       - name: Install JS dependencies
         if: steps.node-modules.outputs.cache-hit != 'true'
@@ -115,14 +115,14 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 22
 
       - name: node_modules cache
         id: node-modules
         uses: actions/cache@v4
         with:
           path: node_modules
-          key: node-modules-${{ runner.os }}-node18-${{ hashFiles('package-lock.json') }}
+          key: node-modules-${{ runner.os }}-node22-${{ hashFiles('package-lock.json') }}
 
       - name: Install JS dependencies
         if: steps.node-modules.outputs.cache-hit != 'true'

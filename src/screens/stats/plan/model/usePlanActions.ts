@@ -11,6 +11,35 @@ import { sheetAlert } from '@/shared/ui/sheetAlert';
 import { toast, toastError, toastFailure } from '@/shared/ui/toast';
 import { BudgetForm, SHARE_STOPS } from './budgetForm';
 
+interface Repeating<T> {
+  stop: () => Promise<T>;
+  restore: (stopped: T) => Promise<unknown>;
+  /** what the toast says was turned off */
+  off: string;
+  failed: string;
+  restoreFailed: string;
+}
+
+/** Out of the plan with what repeats it turned off; "Отменить" in the toast turns it back on. */
+async function removeRepeating<T>(item: PlanItem, r: Repeating<T>, load: () => void) {
+  const label = categoryLabel(item);
+  try {
+    const stopped = await r.stop();
+    emitTransactionsChanged();
+    toast(`«${label}» убрана из плана, ${r.off}`, {
+      label: UNDO,
+      onPress: () => {
+        r.restore(stopped).then(() => { emitTransactionsChanged(); toast(`«${label}» снова в плане`); })
+          .catch(toastFailure(r.restoreFailed, 'Не удалось восстановить'));
+      },
+    });
+  } catch (e) {
+    console.error(r.failed, e);
+    toastError(SAVE_FAILED);
+  }
+  load();
+}
+
 export function usePlanActions(ym: string, load: () => void) {
   /** A change of the plan, then `done` in a toast. */
   async function run(action: Promise<unknown>, done: string) {
@@ -66,44 +95,16 @@ export function usePlanActions(ym: string, load: () => void) {
   }
 
   /** A category with repeating payments: out of this month's plan and the next ones', its payments off. */
-  async function removeRecurring(item: PlanItem) {
-    const label = categoryLabel(item);
-    try {
-      const removed = await removeRecurringFrom(ym, item.category_id);
-      emitTransactionsChanged();
-      toast(`«${label}» убрана из плана, регулярные платежи выключены`, {
-        label: UNDO,
-        onPress: () => {
-          restoreRecurring(removed).then(() => { emitTransactionsChanged(); toast(`«${label}» снова в плане`); })
-            .catch(toastFailure('restore recurring item', 'Не удалось восстановить'));
-        },
-      });
-    } catch (e) {
-      console.error('remove recurring item failed', e);
-      toastError(SAVE_FAILED);
-    }
-    load();
-  }
+  const removeRecurring = (item: PlanItem) => removeRepeating(item, {
+    stop: () => removeRecurringFrom(ym, item.category_id), restore: restoreRecurring,
+    off: 'регулярные платежи выключены', failed: 'remove recurring item failed', restoreFailed: 'restore recurring item',
+  }, load);
 
   /** A regular payment within the month: its schedule off, gone from this month's plan and the next ones'. */
-  async function removeSchedule(item: PlanItem) {
-    const label = categoryLabel(item);
-    try {
-      const stopped = await stopSchedule(ym, item.category_id);
-      emitTransactionsChanged();
-      toast(`«${label}» убрана из плана, регулярный платёж выключен`, {
-        label: UNDO,
-        onPress: () => {
-          restoreSchedule(stopped).then(() => { emitTransactionsChanged(); toast(`«${label}» снова в плане`); })
-            .catch(toastFailure('restore schedule', 'Не удалось восстановить'));
-        },
-      });
-    } catch (e) {
-      console.error('stop schedule failed', e);
-      toastError(SAVE_FAILED);
-    }
-    load();
-  }
+  const removeSchedule = (item: PlanItem) => removeRepeating(item, {
+    stop: () => stopSchedule(ym, item.category_id), restore: restoreSchedule,
+    off: 'регулярный платёж выключен', failed: 'stop schedule failed', restoreFailed: 'restore schedule',
+  }, load);
 
   // a category repeated every month is asked about: removing it also stops it carrying over; one with repeating
   // payments — they'd count it again next month: they are turned off, it is gone from the next months too

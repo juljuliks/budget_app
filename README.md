@@ -336,12 +336,12 @@ debug-ключом не обновит приложение на телефон�
 
 ## Запуск
 
-Нужны Node, Android SDK и JDK 17 (Gradle 7.5 не работает с более новой Java).
+Нужны Node 20+ (в CI — 22), Android SDK и JDK 17 (Gradle 7.5 не работает с более новой Java).
 
 ```sh
 npm ci
 npm test                 # Jest: логика и тесты экранов (~30 с)
-npm run lint             # ESLint: размеры файлов и границы слоёв (ARCHITECTURE.md)
+npm run lint             # ESLint: размеры файлов и хуков, границы слоёв (ARCHITECTURE.md); предупреждения — строгий TS, доступность
 npm run emulator         # release-сборка для эмулятора (читает SMS и от «TBC»: консоль не шлёт «TBC SMS») и установка на budget_pixel (создаётся при первом запуске)
 npm run release          # следующий budget-app-<версия>.apk на Рабочий стол и отдельная сборка на эмулятор
 npm run apk              # APK на Рабочий стол
@@ -398,5 +398,6 @@ Project settings → Service accounts → Generate new private key → JSON це
 - [IMPROVEMENTS.md](IMPROVEMENTS.md) — план улучшений
 - [PLAN.md](PLAN.md) — что делаем сейчас: шаги по порядку, с логикой, файлами и тестами
 - [ARCHITECTURE.md](ARCHITECTURE.md) — слои кода, куда класть файл, правила размеров (их проверяет `npm run lint`)
+- [REFACTOR_PLAN.md](REFACTOR_PLAN.md) — план рефакторинга: критерии, этапы; замеры и списки — [docs/refactor/](docs/refactor/)
 - [README_ANDROID.md](README_ANDROID.md) — приём SMS на Android и сборка APK
 - [CLAUDE.md](CLAUDE.md) — заметки для Claude: правила работы, команды, тесты
