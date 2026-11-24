@@ -30,6 +30,7 @@ data/
 # demo database builder output (scripts/demo)
 dist-demo/
 dist-e2e/
+dist-tools/
 e2e-out/
 
 # Firebase config (the release push): kept out of the public repo, CI gets it from the GOOGLE_SERVICES_JSON secret

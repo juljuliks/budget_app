@@ -15,6 +15,7 @@ import { flushPendingNavigation } from '@/shared/navigation/navigation';
 import { runAutoBackupIfDue } from '@/features/backup';
 import { syncNativeBanks } from '@/features/banks';
 import { offerUpdate } from '@/features/app-update';
+import { syncRemoteTemplates } from '@/features/message-templates';
 
 /** The notifications already acted on: the activity keeps the intent it was opened with, asked again on every return. */
 const handled = new Set<string>();
@@ -66,6 +67,8 @@ export function useAppStartup() {
     runAutoBackupIfDue();
     // a newer release on GitHub: a toast with «Обновить», once per version (asked at most every few hours)
     offerUpdate();
+    // the bank's templates from Remote Config (a new message format read without a release)
+    syncRemoteTemplates();
     // a press handled by the background handler may have queued a screen while we were in background
     const appState = AppState.addEventListener('change', (s) => {
       if (s !== 'active') return;

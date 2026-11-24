@@ -2,7 +2,7 @@
 // for marking ("Не распознано"). A new template reads the kept ones too.
 import { getDb, Db } from '../db';
 import {
-  addTemplate, countTemplateMatch, deleteUnparsed, listTemplates, listUnparsed, MessageSource, MessageTemplate, saveUnparsed, UnparsedMessage,
+  addTemplate, countTemplateMatch, deleteUnparsed, listRemoteTemplates, listTemplates, listUnparsed, MessageSource, MessageTemplate, saveUnparsed, UnparsedMessage,
 } from '../db/messages';
 import type { Kind, ParsedTx } from '../domain/types';
 import { bankOfSender } from '../domain/banks';
@@ -10,14 +10,17 @@ import { emitTransactionsChanged } from '../domain/events';
 import { balanceByTemplate, buildTemplate, matchTemplate, readByTemplate, Role } from '../parsers/template';
 import { IncomingSms, IngestResult, smsHash, store } from './store';
 
-/** What a template does with a message: an operation stored, hidden, or nothing (not like it). */
-async function apply(t: MessageTemplate, sms: IncomingSms, db: Db): Promise<IngestResult | null> {
+/** What a template (the user's or a remote one) does with a message: an operation stored, hidden, or nothing (not like it). */
+async function apply(t: Pick<MessageTemplate, 'action' | 'kind' | 'spec'>, sms: IncomingSms, db: Db): Promise<IngestResult | null> {
   if (t.action === 'hide') return matchTemplate(t.spec, sms.body) ? { status: 'ignored', kept: 'hidden' } : null;
   const parsed = readByTemplate(t.spec, t.kind ?? 'purchase', sms.body);
   return parsed ? store(sms, { ...parsed, bank: bankOfSender(sms.sender).id }, balanceByTemplate(t.spec, sms.body), db) : null;
 }
 
-/** On arrival: the first of the user's templates that fits reads it; none — it waits in "Не распознано". */
+/**
+ * On arrival: the first of the user's templates that fits reads it, then the bank's remote ones (Remote Config); none —
+ * it waits in "Не распознано".
+ */
 export async function readByTemplates(sms: IncomingSms, outer?: Db): Promise<IngestResult> {
   const source: MessageSource = sms.source ?? 'sms';
   return (outer ?? await getDb()).transaction(async (db) => {
@@ -26,6 +29,10 @@ export async function readByTemplates(sms: IncomingSms, outer?: Db): Promise<Ing
       if (!res) continue;
       await countTemplateMatch(t.id, 1, db);
       return res;
+    }
+    for (const t of await listRemoteTemplates(source, bankOfSender(sms.sender).id, db)) {
+      const res = await apply(t, sms, db);
+      if (res) return res;
     }
     const hash = sms.hash ?? smsHash(sms);
     // made an operation already (marked by hand), the bank sent it again
@@ -100,4 +107,24 @@ export async function addFromMessage(message: { id: number; source: MessageSourc
   });
   emitTransactionsChanged();
   return res;
+}
+
+/** New remote templates: the kept messages ("Не распознано") read by them; how many they took. */
+export async function readKeptByRemote(): Promise<number> {
+  const kept = await listUnparsed();
+  if (!kept.length) return 0;
+  const db = await getDb();
+  const taken = await db.transaction(async (tx) => {
+    const done: number[] = [];
+    for (const m of kept) {
+      const hash = (await tx.get<{ hash: string }>('SELECT hash FROM unparsed_messages WHERE id = ?', [m.id]))!.hash;
+      for (const t of await listRemoteTemplates(m.source, bankOfSender(m.sender).id, tx)) {
+        if (await apply(t, asSms(m, hash), tx)) { done.push(m.id); break; }
+      }
+    }
+    await deleteUnparsed(done, tx);
+    return done.length;
+  });
+  if (taken) emitTransactionsChanged();
+  return taken;
 }

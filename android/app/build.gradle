@@ -107,6 +107,8 @@ dependencies {
     implementation("com.google.firebase:firebase-messaging")
     // crash reports (crash/CrashReportModule.kt)
     implementation("com.google.firebase:firebase-crashlytics")
+    // the bank's message templates without a release (config/RemoteConfigModule.kt)
+    implementation("com.google.firebase:firebase-config")
     implementation("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
 
     if (hermesEnabled.toBoolean()) {

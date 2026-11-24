@@ -4,6 +4,8 @@ import { getDb } from './index';
 import type { Db } from './types';
 import type { Kind } from '../domain/types';
 import type { TemplateSpec } from '../parsers/template';
+import type { RemoteTemplate } from '../parsers/remoteTemplates';
+import { getSetting, setSetting } from './settings';
 
 export type MessageSource = 'sms' | 'push';
 
@@ -95,4 +97,22 @@ export async function deleteTemplates(id: number | null) {
   const db = await getDb();
   if (id === null) await db.run('DELETE FROM message_templates');
   else await db.run('DELETE FROM message_templates WHERE id = ?', [id]);
+}
+
+/** The bank's templates from Remote Config, checked (parsers/remoteTemplates.ts), kept for the headless SMS task. */
+const REMOTE_KEY = 'remote_templates';
+
+/** The remote templates of this source and bank, in their order (after the user's own). */
+export async function listRemoteTemplates(source: MessageSource, bank: string, db?: Db): Promise<RemoteTemplate[]> {
+  const raw = await getSetting(REMOTE_KEY, db);
+  const all: RemoteTemplate[] = raw ? JSON.parse(raw) : [];
+  return all.filter((t) => t.source === source && t.bank === bank);
+}
+
+/** Kept as they came; true — they differ from the kept ones (the kept messages are worth reading again). */
+export async function saveRemoteTemplates(templates: RemoteTemplate[], db?: Db): Promise<boolean> {
+  const value = JSON.stringify(templates);
+  if ((await getSetting(REMOTE_KEY, db)) === value) return false;
+  await setSetting(REMOTE_KEY, value, db);
+  return true;
 }

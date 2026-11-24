@@ -9,6 +9,7 @@ import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint
 import com.facebook.react.defaults.DefaultReactNativeHost
 import com.facebook.soloader.SoLoader
 import com.budgetapp.backup.BackupPackage
+import com.budgetapp.config.RemoteConfigPackage
 import com.budgetapp.crash.CrashReportModule
 import com.budgetapp.crash.CrashReportPackage
 import com.budgetapp.lock.AppLockPackage
@@ -27,7 +28,7 @@ class MainApplication : Application(), ReactApplication {
 
         // Autolinked packages (Notifee, Picker, ...)
         override fun getPackages(): List<ReactPackage> =
-            PackageList(this).packages + NotificationAccessPackage() + SmsInboxPackage() + AppInfoPackage() + BackupPackage() + AppLockPackage() + BankSourcesPackage() + AppUpdatePackage() + CrashReportPackage()
+            PackageList(this).packages + NotificationAccessPackage() + SmsInboxPackage() + AppInfoPackage() + BackupPackage() + AppLockPackage() + BankSourcesPackage() + AppUpdatePackage() + CrashReportPackage() + RemoteConfigPackage()
 
         override fun getJSMainModuleName(): String = "index"
 

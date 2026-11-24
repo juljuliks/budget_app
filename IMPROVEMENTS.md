@@ -251,7 +251,7 @@
 - **Размер APK**: релиз на GitHub — только телефон (`arm64-v8a`). Локальная сборка по-прежнему кладёт все 4 ABI в один
   APK (`reactNativeArchitectures` в `android/gradle.properties`). Позже R8 с keep-правилами (Notifee, quick-sqlite).
 - **Скрипты не только под macOS**: `java_home` только если есть, образ эмулятора по `uname -m`, `OUT_DIR` вместо `~/Desktop`.
-- **Firebase дальше** — Remote Config для шаблонов SMS, облачная зашифрованная копия, Test Lab: [FIREBASE_PLAN.md](FIREBASE_PLAN.md).
+- **Firebase дальше** — облачная зашифрованная копия, Test Lab: [FIREBASE_PLAN.md](FIREBASE_PLAN.md).
 - **RN 0.71 → 0.73+** вместе с заменой `react-native-quick-sqlite` (op-sqlite): targetSdk 34+, AGP 8 — отдельный проект.
 
 ## По желанию
