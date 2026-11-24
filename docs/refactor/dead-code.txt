@@ -1,0 +1,101 @@
+# npx knip — dead code at the start of the refactor (REFACTOR_PLAN.md, stage 0). Removed in stage 5, slice by slice;
+# once empty, npm run knip goes into CI.
+
+Unused devDependencies (1)
+package.json: @types/react-native
+Unused exports (66)
+src/backup/auto.ts: AUTO_BACKUP_DAYS
+src/backup/index.ts: AUTO_BACKUP_DAYS
+src/categorize/assign.ts: default
+src/db/categories.ts: TOP_UP, isRecurring, categoryUsageCounts
+src/db/categoryTypes.ts: default
+src/db/colors.ts: default
+src/db/fx.ts: CURRENCIES, default
+src/db/merchants.ts: RECENT_DAYS
+src/db/plans/budget.ts: carryIn, plannableOf
+src/db/plans/funds.ts: fundBalance
+src/db/plans/history.ts: CATEGORY_AVERAGE_MONTHS
+src/db/plans/regularTimes.ts: weekdayBit
+src/db/plans/stats.ts: PAID_TOLERANCE, groupByType
+src/db/plans/types.ts: NORM_PERIODS
+src/db/recurring/saving.ts: savingsIn
+src/db/recurring/savingLedger.ts: nextYm
+src/db/recurring/schedule.ts: WINDOW_DAYS, windowOf, daysBetween
+src/db/refunds.ts: REFUND_LOOKBACK_DAYS, getRefund
+src/db/report.ts: REVIEW_SHARE_OF_SPENDING, REVIEW_SHARE_EXCEEDED, OVER_TOLERANCE, hasMonthPlan
+src/db/spending.ts: unsettledRefundSql
+src/db/transactions/filter.ts: searchTextOf
+src/db/transactions/kind.ts: INCOME_KIND_CHOICES
+src/db/transactions/sql.ts: PAYMENT_PERIOD_COLUMN
+src/domain/colors.ts: untypedColors, isPaletteKey
+src/entities/plan/ui/turnOffRecurring.ts: askTurnOff
+src/entities/transaction/index.ts: removeTransactions, partsLabel
+src/entities/transaction/model/parts.ts: parseParts
+src/features/category-delete/deleteCategory.ts: confirmDeleteCategory
+src/features/category-delete/texts.ts: money, opsOn, names
+src/features/message-templates/index.ts: TEMPLATES, UNPARSED
+src/features/message-templates/model/remote.ts: REMOTE_PARAM
+src/features/message-templates/texts.ts: TEMPLATES
+src/features/message-templates/ui/ResultRow.tsx: occurredOf
+src/features/month-close/model/closeTexts.ts: answerOf
+src/features/recurring-payments/index.ts: PaymentSheet
+src/features/recurring-payments/texts.ts: longDayYear
+src/ingest/hash.ts: default
+src/ingest/ingest.ts: CROSS_SOURCE_WINDOW_S, smsHash, default
+src/ingest/store.ts: CROSS_SOURCE_WINDOW_S
+src/native/backup.ts: DB_FILE
+src/native/drive.ts: signOutGoogle
+src/native/permissions.ts: default
+src/notifications/fundNotice.ts: fundNoticeFor
+src/notifications/limitAlerts.ts: LIMIT_ALERTS_SETTING
+src/notifications/notifeeBootstrap.ts: default
+src/notifications/notifeeIntegration.ts: ALL_CATEGORIES_ACTION, default
+src/notifications/notifyHelper.ts: default
+src/notifications/yearReportNotice.ts: yearReportTime, yearNotice
+src/parsers/normalize.ts: default
+src/parsers/remoteTemplates.ts: REMOTE_SCHEMA
+src/screens/stats/month/model/savingsSection.ts: fundLateStatus
+src/screens/stats/month/parts/FundStatRow.tsx: FundSpent
+src/screens/stats/month/parts/rowActions.tsx: ACTION_SPENDING, ACTION_PLAN, ACTION_TO_PLAN, ACTION_TREND, ACTION_CATEGORY
+src/screens/stats/plan/parts/palette.ts: LOCK_SHARE, LOCK_MIN
+src/screens/stats/trends/model/trendsView.ts: MORE_COUNT, LESS_COUNT
+src/screens/stats/trends/model/useCategoryMerchants.ts: periodFrom
+src/shared/lib/pressMenu.ts: MOVED
+src/shared/lib/strings.ts: SAVE
+src/shared/ui/RangeCalendar.tsx: rangeToUnix
+src/shared/ui/RowActions.tsx: ROW_ICON_SIZE
+src/shared/ui/icons.tsx: PinIcon, MinusCircleIcon
+src/shared/ui/toast.tsx: ACTION_MS
+src/stats/reportWindow.ts: FRESH_DAYS
+src/stats/trendKind.ts: KIND_MONTHS, KIND_MIN_MONTHS
+src/stats/trends.ts: USUAL_MIN_MONTHS, NOTABLE_PCT, NOTABLE_MIN
+src/update/releases.ts: LATEST_RELEASE_URL
+Unused exported types (22)
+src/backup/index.ts: CsvOperation, AutoBackup
+src/db/plans/close.ts: SavingsBalance, SavedAnswer, CloseSplit, CloseFund, CloseBudget
+src/db/plans/fundForecast.ts: FundStatus
+src/db/plans/index.ts: ClosePayment
+src/db/plans/recurringItems.ts: PaymentCharge, PaymentSavingMonth
+src/db/recurring/savingLedger.ts: SavingSpend
+src/db/refunds.ts: Refund
+src/db/reportSavings.ts: PlanFact
+src/db/yearReport.ts: YearPlanFact
+src/features/app-update/model/update.ts: UpdateState
+src/features/category-delete/index.ts: SortOut
+src/features/category-kind/index.ts: CategoryKind
+src/features/operations-filters/index.ts: Option
+src/features/recurring-payments/index.ts: PaymentTarget
+src/features/transaction-edit/model/splitDraft.ts: DraftPart
+src/native/appLock.ts: PinCheck
+src/native/drive.ts: CloudCopy
+src/screens/stats/month/model/monthPace.ts: MarkStatus
+src/screens/stats/plan/model/planView.ts: BudgetPart, Timing
+src/shared/navigation/navigation.ts: BackTarget
+src/shared/ui/Button.tsx: ButtonVariant
+src/shared/ui/DPad.tsx: DPadAction
+Duplicate exports (5)
+src/categorize/assign.ts: assignCategory, default
+src/ingest/hash.ts: sha256Hex, default
+src/ingest/ingest.ts: ingestSms, default
+src/parsers/normalize.ts: normalizeMerchant, default
+src/parsers/tbc.ts: parseTbc, default

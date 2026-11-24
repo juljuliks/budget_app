@@ -1,0 +1,22 @@
+// Dead code (REFACTOR_PLAN.md A4): npm run knip. smsImporter — scripts/run_importer.js runs it from dist/;
+// module-resolver — babel.config.js names it by its short name.
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "index.js",
+    "src/**/*.native.{ts,tsx}",
+    "scripts/**/*.{js,mjs,ts}",
+    "tests/e2e/*.ts",
+    "tests/e2e/**/*.ts",
+    "src/importer/smsImporter.ts"
+  ],
+  "project": [
+    "src/**/*.{ts,tsx}",
+    "tests/**/*.{ts,tsx}",
+    "scripts/**/*.{js,mjs,ts}",
+    "eslint-rules/**/*.js"
+  ],
+  "ignoreDependencies": [
+    "babel-plugin-module-resolver"
+  ]
+}

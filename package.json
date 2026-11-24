@@ -10,7 +10,8 @@
     "apk": "./scripts/apk_to_desktop.sh",
     "release": "./scripts/release.sh",
     "format": "prettier --write \"src/**/*.{ts,tsx,js}\" \"tests/**/*.{ts,tsx,js}\" \"eslint-rules/**/*.js\" \"*.js\"",
-    "format:check": "prettier --check \"src/**/*.{ts,tsx,js}\" \"tests/**/*.{ts,tsx,js}\" \"eslint-rules/**/*.js\" \"*.js\""
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,js}\" \"tests/**/*.{ts,tsx,js}\" \"eslint-rules/**/*.js\" \"*.js\"",
+    "knip": "knip"
   },
   "devDependencies": {
     "@testing-library/react-native": "^12.9.0",
@@ -23,6 +24,7 @@
     "eslint": "^10.15.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "jest": "^30.5.2",
+    "knip": "^6.48.0",
     "prettier": "^3.10.1",
     "react-test-renderer": "^18.2.0",
     "ts-jest": "^29.4.15",

@@ -343,6 +343,7 @@ npm ci
 npm test                 # Jest: логика и тесты экранов (~30 с)
 npm run lint             # ESLint: размеры файлов и хуков, границы слоёв (ARCHITECTURE.md); предупреждения — строгий TS, доступность
 npm run format           # Prettier: формат кода (в CI — npm run format:check)
+npm run knip             # мёртвый код: неиспользуемые файлы, экспорты, зависимости (список — docs/refactor/dead-code.txt)
 npm run emulator         # release-сборка для эмулятора (читает SMS и от «TBC»: консоль не шлёт «TBC SMS») и установка на budget_pixel (создаётся при первом запуске)
 npm run release          # следующий budget-app-<версия>.apk на Рабочий стол и отдельная сборка на эмулятор
 npm run apk              # APK на Рабочий стол
