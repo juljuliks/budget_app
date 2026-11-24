@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleProp, StyleSheet, Text, TextStyle, TouchableOpacity, ViewStyle } from 'react-native';
 import { colors } from '../theme/theme';
+import { font } from '../theme/tokens';
 
 type Props = {
   label: string;
@@ -37,6 +38,6 @@ export default function TextLink({ label, onPress, style, containerStyle, hint, 
 }
 
 const styles = StyleSheet.create({
-  text: { fontSize: 16 },
+  text: { fontSize: font.input },
   link: { color: colors.accent },
 });

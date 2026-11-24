@@ -3,6 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { DayKey, dayKeyOf } from '../lib/dateRange';
 import { MONTHS } from '../lib/dates';
 import { colors } from '../theme/theme';
+import { font, space, weight } from '../theme/tokens';
 
 /** A calendar's month: its year and month (0-based). */
 export type GridMonth = { y: number; m: number };
@@ -75,8 +76,8 @@ export function MonthHeader({ month, onShift, canPrev = true, canNext = true, su
 export const gridStyles = StyleSheet.create({
   row: { flexDirection: 'row' },
   cell: { flex: 1, height: 36, alignItems: 'center', justifyContent: 'center' },
-  day: { fontSize: 15, color: colors.text },
-  today: { fontWeight: '700', color: colors.accent },
+  day: { fontSize: font.body, color: colors.text },
+  today: { fontWeight: weight.bold, color: colors.accent },
   off: { color: colors.border },
 });
 
@@ -85,13 +86,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 8,
-    marginBottom: 4,
+    paddingHorizontal: space[8],
+    marginBottom: space[4],
   },
   titles: { alignItems: 'center' },
-  arrow: { fontSize: 24, color: colors.accent, paddingHorizontal: 8 },
+  arrow: { fontSize: font.headline, color: colors.accent, paddingHorizontal: space[8] },
   arrowOff: { color: colors.border },
-  title: { fontSize: 15, fontWeight: '600', color: colors.text },
-  subtitle: { fontSize: 12, color: colors.muted, marginTop: 2 },
-  weekday: { fontSize: 12, color: colors.muted, textAlign: 'center', textAlignVertical: 'center' },
+  title: { fontSize: font.body, fontWeight: weight.semibold, color: colors.text },
+  subtitle: { fontSize: font.caption, color: colors.muted, marginTop: space[2] },
+  weekday: { fontSize: font.caption, color: colors.muted, textAlign: 'center', textAlignVertical: 'center' },
 });

@@ -15,6 +15,7 @@ import { SearchIcon } from './icons';
 import { colors } from '../theme/theme';
 // [emoji, group, emoji version, search words in Russian and English] — built by scripts/build_emoji.js
 import EMOJI from './emoji/emoji.json';
+import { font, radius, space, weight } from '../theme/tokens';
 
 type Props = {
   visible: boolean;
@@ -202,40 +203,40 @@ export default function EmojiPicker({ visible, value, onPick, onClose }: Props) 
 const styles = StyleSheet.create({
   // a fixed height: it doesn't jump while searching
   sheet: { height: '85%', maxHeight: '85%' },
-  top: { paddingHorizontal: 16 },
+  top: { paddingHorizontal: space[16] },
   search: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: space[8],
     backgroundColor: colors.surface,
-    borderRadius: 10,
-    paddingHorizontal: 12,
+    borderRadius: radius.md,
+    paddingHorizontal: space[12],
   },
-  searchInput: { flex: 1, fontSize: 16, color: colors.text, paddingVertical: 8 },
-  clear: { fontSize: 16, color: colors.muted },
+  searchInput: { flex: 1, fontSize: font.input, color: colors.text, paddingVertical: space[8] },
+  clear: { fontSize: font.input, color: colors.muted },
   tabs: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 8,
+    marginTop: space[8],
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
-  tab: { paddingVertical: 8, paddingHorizontal: 4 },
+  tab: { paddingVertical: space[8], paddingHorizontal: space[4] },
   // an opaque color: Android draws color emoji with the text color's alpha (the default one is translucent)
-  tabIcon: { fontSize: 20, color: '#000000' },
-  content: { paddingHorizontal: 16, paddingBottom: 8 },
+  tabIcon: { fontSize: font.heading, color: '#000000' },
+  content: { paddingHorizontal: space[16], paddingBottom: space[8] },
   header: {
     height: HEADER_HEIGHT,
-    paddingTop: 12,
-    fontSize: 13,
-    fontWeight: '600',
+    paddingTop: space[12],
+    fontSize: font.meta,
+    fontWeight: weight.semibold,
     color: colors.muted,
     textTransform: 'uppercase',
   },
   row: { height: ROW_HEIGHT, flexDirection: 'row' },
-  cell: { height: ROW_HEIGHT, alignItems: 'center', justifyContent: 'center', borderRadius: 10 },
+  cell: { height: ROW_HEIGHT, alignItems: 'center', justifyContent: 'center', borderRadius: radius.md },
   selected: { backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.accent },
-  emoji: { fontSize: 28, color: '#000000' },
-  empty: { padding: 24, textAlign: 'center', color: colors.muted },
-  actions: { paddingHorizontal: 16, marginTop: 8 },
+  emoji: { fontSize: font.display, color: '#000000' },
+  empty: { padding: space[24], textAlign: 'center', color: colors.muted },
+  actions: { paddingHorizontal: space[16], marginTop: space[8] },
 });

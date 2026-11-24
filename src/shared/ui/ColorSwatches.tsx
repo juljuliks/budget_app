@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleProp, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
 import { colors } from '../theme/theme';
 import PlusButton from './PlusButton';
+import { font, radius, space, weight } from '../theme/tokens';
 
 type Props = {
   options: string[];
@@ -79,23 +80,23 @@ export function PaletteStrip({ shades, size = 14 }: { shades: string[]; size?: n
 
 const styles = StyleSheet.create({
   // "Авто", 6 colors and "+" in one line on a phone
-  row: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, alignItems: 'center' },
+  row: { flexDirection: 'row', flexWrap: 'wrap', gap: space[6], alignItems: 'center' },
   ring: { padding: 3, borderRadius: 20, borderWidth: 2, borderColor: 'transparent' },
   selected: { borderColor: colors.accent },
   swatch: { width: 26, height: 26, borderRadius: 13 },
   // the size of a swatch with its ring
-  plus: { margin: 2 },
+  plus: { margin: space[2] },
   auto: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 10,
+    paddingHorizontal: space[10],
     height: 38,
-    borderRadius: 10,
+    borderRadius: radius.md,
     borderWidth: 2,
     borderColor: colors.border,
     borderStyle: 'dashed',
   },
   autoSelected: { borderColor: colors.accent, borderStyle: 'solid' },
-  autoText: { fontSize: 14, fontWeight: '600', color: colors.accent },
+  autoText: { fontSize: font.secondary, fontWeight: weight.semibold, color: colors.accent },
   strip: { flexDirection: 'row', gap: 3 },
 });

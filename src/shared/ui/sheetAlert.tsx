@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import BottomSheet from './BottomSheet';
 import Button, { SheetActions } from './Button';
 import { colors } from '../theme/theme';
+import { font, space, weight } from '../theme/tokens';
 
 // Confirmations and messages as bottom sheets, called like Alert.alert. <SheetAlertHost /> (mounted once in App)
 // shows them.
@@ -103,8 +104,8 @@ export function SheetAlertHost() {
 }
 
 const styles = StyleSheet.create({
-  body: { paddingHorizontal: 20, gap: 10 },
-  message: { fontSize: 15, color: colors.text, lineHeight: 21, marginBottom: 6 },
-  question: { fontWeight: '600' },
+  body: { paddingHorizontal: space[20], gap: space[10] },
+  message: { fontSize: font.body, color: colors.text, lineHeight: 21, marginBottom: space[6] },
+  question: { fontWeight: weight.semibold },
   cancelRow: { marginTop: 0 },
 });

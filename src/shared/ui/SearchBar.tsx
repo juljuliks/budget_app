@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SearchIcon } from './icons';
 import { colors } from '../theme/theme';
+import { font, radius, space } from '../theme/tokens';
 
 /** The text search: a field with ✕ to clear it. */
 export default function SearchBar({
@@ -38,11 +39,11 @@ const styles = StyleSheet.create({
   search: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: space[8],
     backgroundColor: colors.surface,
-    borderRadius: 10,
-    paddingHorizontal: 12,
+    borderRadius: radius.md,
+    paddingHorizontal: space[12],
   },
-  input: { flex: 1, fontSize: 16, color: colors.text, paddingVertical: 8 },
-  clear: { fontSize: 16, color: colors.muted },
+  input: { flex: 1, fontSize: font.input, color: colors.text, paddingVertical: space[8] },
+  clear: { fontSize: font.input, color: colors.muted },
 });

@@ -5,6 +5,7 @@ import BottomSheet from './BottomSheet';
 import { CURRENCY_ORDER } from './CurrencyPicker';
 import { ChevronDownIcon } from './icons';
 import { colors } from '../theme/theme';
+import { font, radius, space, weight } from '../theme/tokens';
 
 const NAMES: Record<Currency, string> = { GEL: 'Лари', USD: 'Доллар США', EUR: 'Евро' };
 
@@ -66,26 +67,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    borderRadius: 8,
+    gap: space[4],
+    paddingHorizontal: space[10],
+    borderRadius: radius.sm,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.bg,
   },
-  symbol: { fontSize: 16, fontWeight: '600', color: colors.text },
-  code: { fontSize: 16, color: colors.text },
+  symbol: { fontSize: font.input, fontWeight: weight.semibold, color: colors.text },
+  code: { fontSize: font.input, color: colors.text },
   option: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingHorizontal: space[20],
+    paddingVertical: space[14],
     borderTopWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
-  optionSymbol: { width: 32, fontSize: 20, fontWeight: '600', color: colors.text },
+  optionSymbol: { width: 32, fontSize: font.heading, fontWeight: weight.semibold, color: colors.text },
   optionText: { flex: 1 },
-  optionName: { fontSize: 16, color: colors.text },
-  optionCode: { fontSize: 13, color: colors.muted },
-  check: { fontSize: 18, color: colors.accent, fontWeight: '700' },
+  optionName: { fontSize: font.input, color: colors.text },
+  optionCode: { fontSize: font.meta, color: colors.muted },
+  check: { fontSize: font.title, color: colors.accent, fontWeight: weight.bold },
 });

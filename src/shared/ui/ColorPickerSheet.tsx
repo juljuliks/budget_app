@@ -6,6 +6,7 @@ import BottomSheet from './BottomSheet';
 import { SheetActions } from './Button';
 import HueBar from './HueBar';
 import { colors } from '../theme/theme';
+import { font, space } from '../theme/tokens';
 
 const SQUARE = 200;
 const MARK = 26;
@@ -101,8 +102,8 @@ export default function ColorPickerSheet({ visible, title = 'Свой цвет',
 }
 
 const styles = StyleSheet.create({
-  body: { paddingHorizontal: 20 },
-  square: { height: SQUARE, marginTop: 4, marginBottom: 10 },
+  body: { paddingHorizontal: space[20] },
+  square: { height: SQUARE, marginTop: space[4], marginBottom: space[10] },
   mark: {
     position: 'absolute',
     width: MARK,
@@ -112,7 +113,7 @@ const styles = StyleSheet.create({
     borderColor: '#FFFFFF',
     elevation: 3,
   },
-  previewRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 8 },
+  previewRow: { flexDirection: 'row', alignItems: 'center', gap: space[12], marginTop: space[8] },
   preview: { width: 40, height: 40, borderRadius: 20 },
-  hex: { fontSize: 15, color: colors.muted },
+  hex: { fontSize: font.body, color: colors.muted },
 });

@@ -3,6 +3,7 @@ import { GestureResponderEvent, StyleSheet, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { colorFromHue } from '@/domain/colors';
 import { colors } from '../theme/theme';
+import { space } from '../theme/tokens';
 
 const HEIGHT = 28;
 const STOPS = [0, 60, 120, 180, 240, 300, 360];
@@ -52,7 +53,7 @@ export default function HueBar({ hue, onChange }: { hue: number | null; onChange
 }
 
 const styles = StyleSheet.create({
-  bar: { height: HEIGHT, marginVertical: 6 },
+  bar: { height: HEIGHT, marginVertical: space[6] },
   marker: {
     position: 'absolute',
     top: -3,

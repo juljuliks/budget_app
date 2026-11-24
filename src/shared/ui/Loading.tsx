@@ -3,6 +3,7 @@ import { ActivityIndicator, StyleProp, StyleSheet, Text, View, ViewStyle } from 
 import { LOAD_FAILED, RETRY } from '../lib/strings';
 import { colors } from '../theme/theme';
 import Button from './Button';
+import { font, space } from '../theme/tokens';
 
 type Props = {
   /** the load failed (useLoadFailed): said, with "Повторить", instead of the spinner */
@@ -30,8 +31,8 @@ export default function Loading({ failed, onRetry, inline, style }: Props) {
 }
 
 const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 12 },
-  inline: { alignItems: 'center', paddingVertical: 10, gap: 8 },
-  text: { fontSize: 15, color: colors.muted, textAlign: 'center' },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: space[24], gap: space[12] },
+  inline: { alignItems: 'center', paddingVertical: space[10], gap: space[8] },
+  text: { fontSize: font.body, color: colors.muted, textAlign: 'center' },
   retry: { alignSelf: 'stretch', marginTop: 0 },
 });

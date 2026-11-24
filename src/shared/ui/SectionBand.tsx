@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { formStyles } from '../theme/formStyles';
 import { colors } from '../theme/theme';
+import { font, space, weight } from '../theme/tokens';
 
 type Props = {
   title: string;
@@ -32,8 +33,14 @@ export default function SectionBand({ title, total, share, inset = 20, right }: 
 }
 
 const styles = StyleSheet.create({
-  band: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, marginBottom: 4 },
-  title: { fontSize: 13, fontWeight: '600', color: colors.muted },
-  total: { fontSize: 13, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
-  share: { color: colors.muted, fontWeight: '400' },
+  band: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: space[16],
+    marginBottom: space[4],
+  },
+  title: { fontSize: font.meta, fontWeight: weight.semibold, color: colors.muted },
+  total: { fontSize: font.meta, fontWeight: weight.semibold, color: colors.text, fontVariant: ['tabular-nums'] },
+  share: { color: colors.muted, fontWeight: weight.regular },
 });

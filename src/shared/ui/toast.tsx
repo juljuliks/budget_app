@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors } from '../theme/theme';
+import { font, radius, space, weight } from '../theme/tokens';
 
 /** A button in the toast: "Отменить" after deleting. */
 export type ToastAction = { label: string; onPress: () => void };
@@ -173,9 +174,9 @@ const styles = StyleSheet.create({
   wrap: { position: 'absolute', left: 16, right: 16, alignItems: 'center', zIndex: 1000, elevation: 1000 },
   toast: {
     backgroundColor: '#1F2937',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    borderRadius: radius.lg,
+    paddingHorizontal: space[16],
+    paddingVertical: space[12],
     maxWidth: '100%',
     shadowColor: '#000',
     shadowOpacity: 0.2,
@@ -184,19 +185,19 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   error: { backgroundColor: '#FEF2F2', borderWidth: 2, borderColor: colors.danger },
-  text: { color: '#FFFFFF', fontSize: 15, textAlign: 'center' },
+  text: { color: '#FFFFFF', fontSize: font.body, textAlign: 'center' },
   // the whole width: the text on the left, the button at the right edge
   withAction: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'stretch',
-    gap: 16,
+    gap: space[16],
     overflow: 'hidden',
     paddingBottom: 15,
   },
   timeLeft: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 3, overflow: 'hidden' },
   timeLeftBar: { flex: 1, backgroundColor: '#93C5FD' },
   textWithAction: { flex: 1, textAlign: 'left' },
-  action: { color: '#93C5FD', fontSize: 15, fontWeight: '600' },
-  errorText: { color: colors.danger, fontWeight: '600' },
+  action: { color: '#93C5FD', fontSize: font.body, fontWeight: weight.semibold },
+  errorText: { color: colors.danger, fontWeight: weight.semibold },
 });

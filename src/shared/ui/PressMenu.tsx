@@ -21,6 +21,7 @@ import { colors } from '../theme/theme';
 import DPad from './DPad';
 import { useScrollLock } from './scrollLock';
 import { setRowMenuUsed } from '../settings/rowMenuHint';
+import { font, space, weight } from '../theme/tokens';
 
 export type PressAction = { key: string; label: string; icon: (color: string) => React.ReactNode; onPress: () => void };
 
@@ -201,7 +202,7 @@ export default function PressMenu({ actions, style, accessibilityHint, testID, c
 const styles = StyleSheet.create({
   backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(22,24,29,0.28)' },
   // 80 wide: the label fits under the circle
-  button: { position: 'absolute', width: 80, alignItems: 'center', gap: 4 },
+  button: { position: 'absolute', width: 80, alignItems: 'center', gap: space[4] },
   circle: {
     backgroundColor: colors.bg,
     alignItems: 'center',
@@ -214,11 +215,11 @@ const styles = StyleSheet.create({
   },
   circleOn: { backgroundColor: colors.accent },
   label: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: font.meta,
+    fontWeight: weight.semibold,
     color: colors.onAccent,
     textShadowColor: 'rgba(0,0,0,0.5)',
     textShadowRadius: 3,
   },
-  labelOn: { fontSize: 14, fontWeight: '700' },
+  labelOn: { fontSize: font.secondary, fontWeight: weight.bold },
 });

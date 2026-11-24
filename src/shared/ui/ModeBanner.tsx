@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors } from '@/shared/theme/theme';
+import { font, radius, space, weight } from '../theme/tokens';
 
 type Props = {
   /** what is going on: sorting out a category being deleted, picking an operation for a payment */
@@ -31,13 +32,13 @@ const styles = StyleSheet.create({
   banner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 10,
+    gap: space[12],
+    marginBottom: space[8],
+    paddingHorizontal: space[12],
+    paddingVertical: space[10],
+    borderRadius: radius.md,
     backgroundColor: colors.warnBg,
   },
-  text: { flex: 1, fontSize: 14, fontWeight: '600', color: colors.warn },
-  cancel: { fontSize: 14, color: colors.danger },
+  text: { flex: 1, fontSize: font.secondary, fontWeight: weight.semibold, color: colors.warn },
+  cancel: { fontSize: font.secondary, color: colors.danger },
 });

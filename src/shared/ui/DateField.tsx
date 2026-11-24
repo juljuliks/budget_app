@@ -6,6 +6,7 @@ import { colors } from '../theme/theme';
 import BottomSheet from './BottomSheet';
 import { SheetActions } from './Button';
 import RangeCalendar from './RangeCalendar';
+import { font, space } from '../theme/tokens';
 
 type Props = {
   /** above the row ("Дата", "К какой дате") */
@@ -100,10 +101,10 @@ export default function DateField({
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  date: { flex: 1, fontSize: 16, color: colors.text },
-  muted: { color: colors.muted, fontSize: 14 },
-  change: { fontSize: 15, color: colors.accent },
-  clear: { fontSize: 15, color: colors.muted },
-  sheet: { paddingHorizontal: 16 },
+  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space[12] },
+  date: { flex: 1, fontSize: font.input, color: colors.text },
+  muted: { color: colors.muted, fontSize: font.secondary },
+  change: { fontSize: font.body, color: colors.accent },
+  clear: { fontSize: font.body, color: colors.muted },
+  sheet: { paddingHorizontal: space[16] },
 });

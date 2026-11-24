@@ -22,6 +22,7 @@ import {
 import { colors } from '../theme/theme';
 import { SHEET_INSET, ToastHost } from './toast';
 import TextLink from './TextLink';
+import { font, radius, space, weight } from '../theme/tokens';
 
 type Props = {
   visible: boolean;
@@ -223,23 +224,23 @@ const styles = StyleSheet.create({
   sheet: {
     maxHeight: '90%',
     backgroundColor: colors.bg,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    paddingBottom: 24,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    paddingBottom: space[24],
   },
   // a taller touch zone around the handle, easier to grab
-  handleZone: { paddingTop: 8, paddingBottom: 8, marginBottom: -8 },
+  handleZone: { paddingTop: space[8], paddingBottom: space[8], marginBottom: -8 },
   handle: { alignSelf: 'center', width: 36, height: 4, borderRadius: 2, backgroundColor: colors.border },
-  titleRow: { flexDirection: 'row', alignItems: 'center', paddingRight: 12 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', paddingRight: space[12] },
   title: {
     flex: 1,
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: font.title,
+    fontWeight: weight.semibold,
     color: colors.text,
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 8,
+    paddingHorizontal: space[20],
+    paddingTop: space[12],
+    paddingBottom: space[8],
   },
-  titleLink: { flex: 1, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8 },
-  titleText: { fontSize: 18, fontWeight: '600' },
+  titleLink: { flex: 1, paddingHorizontal: space[20], paddingTop: space[12], paddingBottom: space[8] },
+  titleText: { fontSize: font.title, fontWeight: weight.semibold },
 });

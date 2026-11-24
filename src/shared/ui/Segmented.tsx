@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleProp, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
 import { colors } from '../theme/theme';
+import { font, radius, space, weight } from '../theme/tokens';
 
 type Props<T extends string> = {
   options: ReadonlyArray<readonly [T, string]>;
@@ -37,10 +38,10 @@ export default function Segmented<T extends string>({ options, value, onChange, 
 }
 
 const styles = StyleSheet.create({
-  segmented: { flexDirection: 'row', backgroundColor: colors.surface, borderRadius: 8, padding: 2 },
+  segmented: { flexDirection: 'row', backgroundColor: colors.surface, borderRadius: radius.sm, padding: space[2] },
   segment: { flex: 1, paddingVertical: 7, alignItems: 'center', borderRadius: 6 },
   segmentOn: { backgroundColor: colors.bg },
-  text: { fontSize: 14, color: colors.muted },
-  textOn: { color: colors.text, fontWeight: '600' },
+  text: { fontSize: font.secondary, color: colors.muted },
+  textOn: { color: colors.text, fontWeight: weight.semibold },
   textOff: { opacity: 0.4 },
 });

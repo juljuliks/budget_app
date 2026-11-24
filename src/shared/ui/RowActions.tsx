@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { PencilIcon, TrashIcon } from './icons';
 import { colors } from '../theme/theme';
+import { space } from '../theme/tokens';
 
 type Props = {
   onEdit?: () => void;
@@ -33,5 +34,5 @@ export default function RowActions({ onEdit, onDelete, subject, deleteDisabled }
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center' },
-  action: { padding: 6, marginLeft: 6 },
+  action: { padding: space[6], marginLeft: space[6] },
 });

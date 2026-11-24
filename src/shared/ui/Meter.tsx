@@ -2,6 +2,7 @@ import React from 'react';
 import { LayoutChangeEvent, StyleSheet, View } from 'react-native';
 import { WarnTriangleIcon } from './icons';
 import { chart, colors, meterColor } from '../theme/theme';
+import { radius } from '../theme/tokens';
 
 type Props = {
   /** filled part, 0..1 (clamped) */
@@ -83,7 +84,7 @@ export default function Meter({ ratio, height = 6, color, marginTop = 8, base = 
 
 const styles = StyleSheet.create({
   track: { alignSelf: 'stretch', backgroundColor: chart.meterTrack, overflow: 'hidden' },
-  fills: { flexDirection: 'row', height: '100%', borderRadius: 999, overflow: 'hidden' },
+  fills: { flexDirection: 'row', height: '100%', borderRadius: radius.pill, overflow: 'hidden' },
   overPart: { position: 'absolute', top: 0, bottom: 0, right: 0, backgroundColor: colors.warn },
   overIcon: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
   marker: { position: 'absolute', width: 2, marginLeft: -1, borderRadius: 1, backgroundColor: colors.text },

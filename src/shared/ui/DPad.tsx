@@ -3,6 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { BUTTON_RADIUS, CROSS, crossPath, LABEL_GAP, LABEL_H, LABEL_W, PLATE_PAD, Point } from '../lib/pressMenu';
 import { colors } from '../theme/theme';
+import { font, weight } from '../theme/tokens';
 
 export type DPadAction = { key: string; label: string; icon: (color: string) => React.ReactNode };
 
@@ -124,11 +125,11 @@ const styles = StyleSheet.create({
     position: 'absolute',
     height: LABEL_H,
     lineHeight: LABEL_H,
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: font.meta,
+    fontWeight: weight.semibold,
     color: colors.onAccent,
     textShadowColor: 'rgba(0,0,0,0.5)',
     textShadowRadius: 3,
   },
-  labelOn: { fontSize: 14, fontWeight: '700' },
+  labelOn: { fontSize: font.secondary, fontWeight: weight.bold },
 });

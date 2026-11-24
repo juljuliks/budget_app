@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { colors } from '../theme/theme';
 import PlusButton from './PlusButton';
+import { font, radius, space } from '../theme/tokens';
 
 type Props = {
   label: string;
@@ -110,30 +111,30 @@ export default function Chip({
 
 const styles = StyleSheet.create({
   chip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
+    paddingHorizontal: space[12],
+    paddingVertical: space[8],
+    borderRadius: radius.xl,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.surface,
   },
   // a long name is cut with "…" so several fit on a line
-  chipSmall: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, maxWidth: '48%' },
+  chipSmall: { paddingHorizontal: space[10], paddingVertical: space[4], borderRadius: radius.lg, maxWidth: '48%' },
   row: { flexDirection: 'row', alignItems: 'center' },
   fill: { flex: 1, alignItems: 'center' },
-  withCaption: { paddingHorizontal: 2, paddingVertical: 6 },
-  textIcon: { fontSize: 24 },
-  caption: { fontSize: 11, color: colors.muted, marginTop: 2 },
+  withCaption: { paddingHorizontal: space[2], paddingVertical: space[6] },
+  textIcon: { fontSize: font.headline },
+  caption: { fontSize: 11, color: colors.muted, marginTop: space[2] },
   captionSelected: { color: colors.accent },
   selectedSoft: { backgroundColor: colors.accentBg, borderColor: colors.accent },
-  trailing: { marginLeft: 6, flexShrink: 0 },
+  trailing: { marginLeft: space[6], flexShrink: 0 },
   shrink: { flexShrink: 1 },
   selected: { backgroundColor: colors.accent, borderColor: colors.accent },
   action: { backgroundColor: colors.bg, borderColor: colors.border, borderStyle: 'dashed' },
-  text: { fontSize: 15, color: colors.text },
-  textSmall: { fontSize: 13 },
-  chipCompact: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 14 },
-  textCompact: { fontSize: 14 },
+  text: { fontSize: font.body, color: colors.text },
+  textSmall: { fontSize: font.meta },
+  chipCompact: { paddingHorizontal: space[10], paddingVertical: 5, borderRadius: 14 },
+  textCompact: { fontSize: font.secondary },
   textSelected: { color: '#FFFFFF' },
   textMuted: { color: colors.muted },
   textAction: { color: colors.accent },

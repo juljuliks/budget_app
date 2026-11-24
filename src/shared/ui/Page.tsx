@@ -1,6 +1,7 @@
 import React from 'react';
 import { ScrollView, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import { colors } from '../theme/theme';
+import { space } from '../theme/tokens';
 
 type Props = {
   children: React.ReactNode;
@@ -34,11 +35,11 @@ export default function Page({ children, footer, contentStyle, scrollEnabled = t
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: colors.bg },
   scroll: { flex: 1 },
-  content: { paddingBottom: 16 },
+  content: { paddingBottom: space[16] },
   footer: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 16,
+    paddingHorizontal: space[20],
+    paddingTop: space[12],
+    paddingBottom: space[16],
     borderTopWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
     backgroundColor: colors.bg,

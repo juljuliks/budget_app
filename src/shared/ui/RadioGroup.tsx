@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors } from '../theme/theme';
+import { font, radius, space } from '../theme/tokens';
 
 type Props<T extends string> = {
   options: ReadonlyArray<readonly [T, string, string?]>;
@@ -35,21 +36,21 @@ export default function RadioGroup<T extends string>({ options, value, onChange 
 }
 
 const styles = StyleSheet.create({
-  group: { gap: 4 },
-  option: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6 },
+  group: { gap: space[4] },
+  option: { flexDirection: 'row', alignItems: 'center', paddingVertical: space[6] },
   circle: {
     width: 20,
     height: 20,
-    borderRadius: 10,
+    borderRadius: radius.md,
     borderWidth: 2,
     borderColor: colors.muted,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
+    marginRight: space[10],
   },
   circleOn: { borderColor: colors.accent },
   dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.accent },
   texts: { flex: 1 },
-  label: { fontSize: 15, color: colors.text },
-  hint: { fontSize: 12, color: colors.muted, marginTop: 1 },
+  label: { fontSize: font.body, color: colors.text },
+  hint: { fontSize: font.caption, color: colors.muted, marginTop: 1 },
 });

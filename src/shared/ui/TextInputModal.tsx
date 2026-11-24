@@ -7,6 +7,7 @@ import { submitForm, useLoadedForm } from './form';
 import { toastError } from './toast';
 import { formStyles } from '../theme/formStyles';
 import { colors } from '../theme/theme';
+import { font, space } from '../theme/tokens';
 
 /** The field this sheet edits; a form passed in may hold more (the amount's currency, the plan item kind, …). */
 export type TextFormValues = { value: string };
@@ -164,14 +165,14 @@ export function setField<V extends FieldValues, K extends Path<V>>(
 }
 
 const styles = StyleSheet.create({
-  dialog: { paddingHorizontal: 20 },
+  dialog: { paddingHorizontal: space[20] },
   scroll: { flexShrink: 1 },
-  hint: { fontSize: 14, color: colors.muted, marginBottom: 12 },
+  hint: { fontSize: font.secondary, color: colors.muted, marginBottom: space[12] },
   label: { marginTop: 0 },
-  extra: { marginTop: 12 },
-  above: { marginBottom: 12 },
+  extra: { marginTop: space[12] },
+  above: { marginBottom: space[12] },
   // the field and its accessory (the currency) the same height
-  inputRow: { flexDirection: 'row', alignItems: 'stretch', gap: 8 },
+  inputRow: { flexDirection: 'row', alignItems: 'stretch', gap: space[8] },
   input: { flex: 1 },
   multiline: { minHeight: 96, maxHeight: 200 },
 });

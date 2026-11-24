@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleProp, StyleSheet, Text, TextStyle, TouchableOpacity, View, ViewStyle } from 'react-native';
 import { colors } from '../theme/theme';
+import { font, radius, space, weight } from '../theme/tokens';
 
 /**
  * The app's three buttons — every button is one of them, no hand-made ones:
@@ -108,16 +109,16 @@ export function SheetActions({ submit, extra, onCancel, cancelTitle = 'Отме�
 }
 
 const styles = StyleSheet.create({
-  button: { borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
+  button: { borderRadius: radius.md, paddingVertical: space[14], alignItems: 'center' },
   // white, not see-through (on a grey card too); the border takes a point of the padding: as tall as a primary one
   secondary: { backgroundColor: colors.bg, borderWidth: 1, paddingVertical: 13 },
   cancel: { backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, paddingVertical: 13 },
-  small: { paddingHorizontal: 14, paddingVertical: 10 },
-  smallBordered: { paddingHorizontal: 14, paddingVertical: 9 },
-  smallText: { fontSize: 15 },
-  withIcon: { flexDirection: 'row', justifyContent: 'center', gap: 6 },
+  small: { paddingHorizontal: space[14], paddingVertical: space[10] },
+  smallBordered: { paddingHorizontal: space[14], paddingVertical: 9 },
+  smallText: { fontSize: font.body },
+  withIcon: { flexDirection: 'row', justifyContent: 'center', gap: space[6] },
   disabled: { opacity: 0.5 },
-  text: { color: colors.onAccent, fontSize: 16, fontWeight: '600' },
-  cancelText: { fontSize: 16, color: colors.muted },
-  actions: { gap: 10, marginTop: 16 },
+  text: { color: colors.onAccent, fontSize: font.input, fontWeight: weight.semibold },
+  cancelText: { fontSize: font.input, color: colors.muted },
+  actions: { gap: space[10], marginTop: space[16] },
 });

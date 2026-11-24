@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleProp, StyleSheet, Text, TouchableOpacity, ViewStyle } from 'react-native';
 import { colors } from '../theme/theme';
+import { font } from '../theme/tokens';
 
 /** "‹ Назад" over a sheet: a step back (StepsNav) or back to where the sheet was opened from. */
 export default function BackLink({ onPress, style }: { onPress: () => void; style?: StyleProp<ViewStyle> }) {
@@ -12,5 +13,5 @@ export default function BackLink({ onPress, style }: { onPress: () => void; styl
 }
 
 const styles = StyleSheet.create({
-  back: { fontSize: 15, color: colors.accent },
+  back: { fontSize: font.body, color: colors.accent },
 });

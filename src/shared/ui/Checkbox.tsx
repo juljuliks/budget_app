@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { colors } from '../theme/theme';
+import { weight } from '../theme/tokens';
 
 export default function Checkbox({ checked, size = 22 }: { checked: boolean; size?: number }) {
   return (
@@ -13,5 +14,5 @@ export default function Checkbox({ checked, size = 22 }: { checked: boolean; siz
 const styles = StyleSheet.create({
   box: { borderWidth: 2, borderColor: colors.muted, alignItems: 'center', justifyContent: 'center' },
   on: { backgroundColor: colors.accent, borderColor: colors.accent },
-  tick: { color: '#FFFFFF', fontWeight: '700' },
+  tick: { color: '#FFFFFF', fontWeight: weight.bold },
 });

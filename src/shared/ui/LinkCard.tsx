@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleProp, StyleSheet, Text, TouchableOpacity, ViewStyle } from 'react-native';
 import { colors } from '../theme/theme';
 import { ChevronRightIcon } from './icons';
+import { font, radius, space } from '../theme/tokens';
 
 /**
  * A grey card opening a page: an icon, its name, an arrow (a category's «Динамика трат»). The look of the stats' line
@@ -33,12 +34,12 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: space[12],
     minHeight: 48,
-    paddingLeft: 14,
-    paddingRight: 12,
-    borderRadius: 12,
+    paddingLeft: space[14],
+    paddingRight: space[12],
+    borderRadius: radius.lg,
     backgroundColor: colors.surface,
   },
-  label: { flex: 1, fontSize: 16, color: colors.text },
+  label: { flex: 1, fontSize: font.input, color: colors.text },
 });

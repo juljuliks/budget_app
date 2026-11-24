@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { LayoutChangeEvent, PanResponder, StyleSheet, Text, View } from 'react-native';
 import { colors } from '../theme/theme';
+import { font, weight } from '../theme/tokens';
 
 const THUMB = 24;
 
@@ -128,7 +129,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
   },
   labels: { height: 18 },
-  label: { position: 'absolute', width: 40, textAlign: 'center', fontSize: 12, color: colors.muted },
-  labelOn: { color: colors.text, fontWeight: '600' },
+  label: { position: 'absolute', width: 40, textAlign: 'center', fontSize: font.caption, color: colors.muted },
+  labelOn: { color: colors.text, fontWeight: weight.semibold },
   faded: { opacity: 0.35 },
 });

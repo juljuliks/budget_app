@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleProp, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
 import { ChevronDownIcon, ChevronRightIcon } from './icons';
 import { colors } from '../theme/theme';
+import { radius, space } from '../theme/tokens';
 
 type Props = {
   /** what is chosen ("☕️ Жизнь: Кафе и рестораны", "⚪️ Без категории") */
@@ -54,16 +55,16 @@ export default function SelectField({ value, onPress, accessibilityLabel, disabl
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'stretch', gap: 8 },
+  row: { flexDirection: 'row', alignItems: 'stretch', gap: space[8] },
   field: {
     flex: 1,
     minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 10,
+    gap: space[8],
+    paddingHorizontal: space[14],
+    paddingVertical: space[12],
+    borderRadius: radius.md,
     backgroundColor: colors.surface,
   },
   value: { flex: 1, fontSize: 17, color: colors.text },
@@ -71,7 +72,7 @@ const styles = StyleSheet.create({
     width: 52,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 10,
+    borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
   },

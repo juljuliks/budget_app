@@ -3,6 +3,7 @@ import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'rea
 import { colors } from '../theme/theme';
 import Button from './Button';
 import { CloseIcon } from './icons';
+import { font, space } from '../theme/tokens';
 
 type Props = {
   visible: boolean;
@@ -84,19 +85,25 @@ export default function StoryPager({ visible, title, pages, onClose, start = 0, 
 const EDGE = 28;
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 16 },
-  bars: { flexDirection: 'row', gap: 4 },
+  screen: {
+    flex: 1,
+    backgroundColor: colors.bg,
+    paddingHorizontal: space[16],
+    paddingTop: space[14],
+    paddingBottom: space[16],
+  },
+  bars: { flexDirection: 'row', gap: space[4] },
   bar: { flex: 1, height: 3, borderRadius: 2, backgroundColor: colors.border },
   barOn: { backgroundColor: colors.accent },
-  head: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 },
-  title: { fontSize: 15, color: colors.muted, flexShrink: 1 },
-  count: { fontSize: 15, color: colors.muted, flex: 1 },
-  close: { marginLeft: 'auto', padding: 8 },
+  head: { flexDirection: 'row', alignItems: 'center', gap: space[8], marginTop: space[6] },
+  title: { fontSize: font.body, color: colors.muted, flexShrink: 1 },
+  count: { fontSize: font.body, color: colors.muted, flex: 1 },
+  close: { marginLeft: 'auto', padding: space[8] },
   body: { flex: 1 },
-  content: { flexGrow: 1, justifyContent: 'center', paddingVertical: 12, paddingHorizontal: 4 },
+  content: { flexGrow: 1, justifyContent: 'center', paddingVertical: space[12], paddingHorizontal: space[4] },
   edge: { position: 'absolute', top: 0, bottom: 0, width: EDGE },
   left: { left: -16 },
   right: { right: -16 },
-  buttons: { flexDirection: 'row', gap: 10, marginTop: 8 },
+  buttons: { flexDirection: 'row', gap: space[10], marginTop: space[8] },
   flex: { flex: 1 },
 });

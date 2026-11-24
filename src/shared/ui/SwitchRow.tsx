@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleProp, StyleSheet, Switch, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
 import { colors } from '../theme/theme';
+import { font, space } from '../theme/tokens';
 
 type Props = {
   label: string;
@@ -44,15 +45,15 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
+    gap: space[12],
+    paddingHorizontal: space[20],
+    paddingVertical: space[14],
     borderTopWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
-  text: { flex: 1, gap: 2 },
-  label: { fontSize: 16, color: colors.text },
-  hint: { fontSize: 13, color: colors.muted },
-  link: { fontSize: 14, color: colors.accent, marginTop: 6 },
+  text: { flex: 1, gap: space[2] },
+  label: { fontSize: font.input, color: colors.text },
+  hint: { fontSize: font.meta, color: colors.muted },
+  link: { fontSize: font.secondary, color: colors.accent, marginTop: space[6] },
   disabled: { opacity: 0.5 },
 });

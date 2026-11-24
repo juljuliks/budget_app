@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GearIcon } from './icons';
 import { colors } from '../theme/theme';
+import { font, space, weight } from '../theme/tokens';
 
 type Props = {
   title: string;
@@ -27,7 +28,7 @@ export default function SectionHeading({ title, onSettings, settingsLabel, right
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 24, marginBottom: 8 },
-  title: { fontSize: 13, fontWeight: '600', color: colors.muted, textTransform: 'uppercase' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: space[8], marginTop: space[24], marginBottom: space[8] },
+  title: { fontSize: font.meta, fontWeight: weight.semibold, color: colors.muted, textTransform: 'uppercase' },
   grow: { flex: 1 },
 });
