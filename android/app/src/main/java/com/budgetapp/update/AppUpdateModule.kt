@@ -138,6 +138,12 @@ class AppUpdateModule(private val ctx: ReactApplicationContext) : ReactContextBa
         UpdateNotices.markOffered(ctx, version)
     }
 
+    /** The version the notification (or the toast) last said: the toast doesn't say it again. */
+    @ReactMethod
+    fun offeredVersion(promise: Promise) {
+        promise.resolve(UpdateNotices.offered(ctx))
+    }
+
     // NativeEventEmitter's bookkeeping
     @ReactMethod
     fun addListener(eventName: String) {}

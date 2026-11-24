@@ -12,6 +12,7 @@ const mockNative = {
   // opened by the update's notification (the daily check): once
   opened: jest.fn(async () => false),
   markOffered: jest.fn((_v: string) => {}),
+  notified: jest.fn(async (): Promise<string | null> => null),
 };
 jest.mock('../../src/native/appInfo', () => ({ appVersion: () => '1.0.161' }));
 jest.mock('../../src/native/appUpdate', () => ({
@@ -22,6 +23,7 @@ jest.mock('../../src/native/appUpdate', () => ({
   openInstallSettings: () => mockNative.openInstallSettings(),
   openedForUpdate: () => mockNative.opened(),
   markUpdateOffered: (v: string) => mockNative.markOffered(v),
+  notifiedVersion: () => mockNative.notified(),
 }));
 
 const APK = 'https://github.com/juljuliks/budget_app/releases/download/v1.0.162/budget-app-1.0.162-arm64-v8a.apk';
@@ -37,6 +39,7 @@ beforeEach(() => {
   jest.spyOn(console, 'warn').mockImplementation(() => {});
   Object.values(mockNative).forEach((m) => m.mockClear());
   mockNative.opened.mockImplementation(async () => false);
+  mockNative.notified.mockImplementation(async () => null);
 });
 
 it('9.13.1 a newer release: the toast on start → «Обновить» → downloaded and given to the installer', async () => {
@@ -98,5 +101,24 @@ it('9.13.7 opened by the update\'s notification: «Скачивается…» a
   await act(async () => {});
   expect(mockNative.download).toHaveBeenCalledWith(APK, expect.any(Function));
   expect(mockNative.install).toHaveBeenCalledWith('/cache/updates/update.apk');
+  expect(screen.queryByText('Доступна версия 1.0.162')).toBeNull();
+});
+
+it('9.13.8 opened by the notification and back to the app at once (two offers together): no «Доступна версия» toast', async () => {
+  mockNative.opened.mockImplementationOnce(async () => true);
+  await openApp();
+  // the return to the app right after the start: the same offer
+  const { offerUpdate } = jest.requireActual<typeof import('../../src/features/app-update')>('../../src/features/app-update');
+  await act(async () => { await offerUpdate(); });
+  expect(await screen.findByText('Скачивается…')).toBeTruthy();
+  expect(mockNative.download).toHaveBeenCalledTimes(1);
+  expect(screen.queryByText('Доступна версия 1.0.162')).toBeNull();
+});
+
+it('9.13.9 a version the notification said: no toast on opening the app', async () => {
+  mockNative.notified.mockImplementation(async () => '1.0.162');
+  await openApp();
+  await act(async () => {});
+  expect(fetchMock).toHaveBeenCalled();
   expect(screen.queryByText('Доступна версия 1.0.162')).toBeNull();
 });

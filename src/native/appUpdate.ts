@@ -8,6 +8,7 @@ type Native = {
   install(path: string): Promise<void>;
   takeLaunchAction(): Promise<string | null>;
   markOffered(version: string): void;
+  offeredVersion(): Promise<string | null>;
 };
 const native = NativeModules.AppUpdate as Native | undefined;
 
@@ -48,4 +49,9 @@ export async function openedForUpdate(): Promise<boolean> {
 /** A version said by the toast: the daily check won't notify about it. */
 export function markUpdateOffered(version: string) {
   native?.markOffered(version);
+}
+
+/** The version the update's notification (or the toast) last said; null — none. */
+export async function notifiedVersion(): Promise<string | null> {
+  return native ? native.offeredVersion() : null;
 }

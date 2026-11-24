@@ -56,6 +56,8 @@ object UpdateNotices {
 
     private fun prefs(ctx: Context) = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
+    fun offered(ctx: Context): String? = prefs(ctx).getString(OFFERED, null)
+
     fun markOffered(ctx: Context, version: String) {
         prefs(ctx).edit().putString(OFFERED, version).apply()
     }

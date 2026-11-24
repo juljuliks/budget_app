@@ -2,7 +2,7 @@
 // state for the whole app: the toast on start and the row in the settings show the same download.
 import { fetchLatestRelease, isNewer, parseVersion, type Release } from '@/update/releases';
 import { appVersion } from '@/native/appInfo';
-import { canInstallApps, canSelfUpdate, downloadApk, installApk, markUpdateOffered, openedForUpdate, openInstallSettings } from '@/native/appUpdate';
+import { canInstallApps, canSelfUpdate, downloadApk, installApk, markUpdateOffered, notifiedVersion, openedForUpdate, openInstallSettings } from '@/native/appUpdate';
 import { getSetting, setSetting } from '@/db/settings';
 import { CANCEL } from '@/shared/lib/strings';
 import { sheetAlert } from '@/shared/ui/sheetAlert';
@@ -50,19 +50,32 @@ export async function checkForUpdate(force = false): Promise<Release | null> {
   return state.latest;
 }
 
+/** the offer under way: the start and the return to the app come together (opened by a notification) — one offer */
+let offering: Promise<void> | null = null;
+
 /**
  * On start and on coming back: opened by the update's notification — «Обновить» at once; else a newer release is said
- * by a toast with «Обновить» — once per version; a version the toast said isn't notified by the daily check after.
+ * by a toast with «Обновить» — once per version, the notification's and the toast's together: a version the
+ * notification said isn't toasted, one the toast said isn't notified.
  */
-export async function offerUpdate(): Promise<void> {
+export function offerUpdate(): Promise<void> {
+  offering ??= offer().finally(() => { offering = null; });
+  return offering;
+}
+
+async function offer(): Promise<void> {
   try {
     if (await openedForUpdate()) {
+      const release = await checkForUpdate(true);
+      if (!release) return;
+      await setSetting(OFFERED_KEY, release.version);
       // its progress is in the settings' row: said here, the app opened on the list
-      if (await checkForUpdate(true)) { toast(downloading(-1)); await startUpdate(); }
+      toast(downloading(-1));
+      await startUpdate();
       return;
     }
     const release = await checkForUpdate();
-    if (!release || (await getSetting(OFFERED_KEY)) === release.version) return;
+    if (!release || (await getSetting(OFFERED_KEY)) === release.version || (await notifiedVersion()) === release.version) return;
     await setSetting(OFFERED_KEY, release.version);
     markUpdateOffered(release.version);
     toast(updateAvailable(release.version), { label: UPDATE, onPress: () => { startUpdate(); } });
