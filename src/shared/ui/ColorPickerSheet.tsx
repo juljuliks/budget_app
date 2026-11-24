@@ -73,7 +73,10 @@ export default function ColorPickerSheet({ visible, title = 'Свой цвет',
           {width > 0 ? (
             <View
               pointerEvents="none"
-              style={[styles.mark, { left: (s / 100) * width - MARK / 2, top: (1 - v / 100) * SQUARE - MARK / 2, backgroundColor: hex }]}
+              style={[
+                styles.mark,
+                { left: (s / 100) * width - MARK / 2, top: (1 - v / 100) * SQUARE - MARK / 2, backgroundColor: hex },
+              ]}
             />
           ) : null}
         </View>
@@ -82,7 +85,16 @@ export default function ColorPickerSheet({ visible, title = 'Свой цвет',
           <View style={[styles.preview, { backgroundColor: hex }]} />
           <Text style={styles.hex}>{hex.toUpperCase()}</Text>
         </View>
-        <SheetActions submit={{ title: 'Выбрать', onPress: () => { onPick(hex); onClose(); } }} onCancel={onClose} />
+        <SheetActions
+          submit={{
+            title: 'Выбрать',
+            onPress: () => {
+              onPick(hex);
+              onClose();
+            },
+          }}
+          onCancel={onClose}
+        />
       </View>
     </BottomSheet>
   );
@@ -91,7 +103,15 @@ export default function ColorPickerSheet({ visible, title = 'Свой цвет',
 const styles = StyleSheet.create({
   body: { paddingHorizontal: 20 },
   square: { height: SQUARE, marginTop: 4, marginBottom: 10 },
-  mark: { position: 'absolute', width: MARK, height: MARK, borderRadius: MARK / 2, borderWidth: 3, borderColor: '#FFFFFF', elevation: 3 },
+  mark: {
+    position: 'absolute',
+    width: MARK,
+    height: MARK,
+    borderRadius: MARK / 2,
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+    elevation: 3,
+  },
   previewRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 8 },
   preview: { width: 40, height: 40, borderRadius: 20 },
   hex: { fontSize: 15, color: colors.muted },

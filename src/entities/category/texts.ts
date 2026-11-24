@@ -21,15 +21,31 @@ export const QUICK_HINT = 'Цвет подберётся сам. Изменит�
 export function paymentWords(byMerchant: boolean) {
   return byMerchant
     ? {
-      One: 'Подписка', one: 'подписка', acc: 'подписку', deleted: 'удалена', noneHas: 'ни у одной подписки',
-      toAll: 'подпискам', noDated: 'нет подписок с датой', none: 'нет подписок',
-      upcoming: 'Предстоящие подписки', Many: 'Подписки', subscriptions: true,
-    }
+        One: 'Подписка',
+        one: 'подписка',
+        acc: 'подписку',
+        deleted: 'удалена',
+        noneHas: 'ни у одной подписки',
+        toAll: 'подпискам',
+        noDated: 'нет подписок с датой',
+        none: 'нет подписок',
+        upcoming: 'Предстоящие подписки',
+        Many: 'Подписки',
+        subscriptions: true,
+      }
     : {
-      One: 'Платёж', one: 'платёж', acc: 'платёж', deleted: 'удалён', noneHas: 'ни у одного платежа',
-      toAll: 'платежам', noDated: 'нет платежей с датой', none: 'нет платежей',
-      upcoming: 'Предстоящие платежи', Many: 'Платежи', subscriptions: false,
-    };
+        One: 'Платёж',
+        one: 'платёж',
+        acc: 'платёж',
+        deleted: 'удалён',
+        noneHas: 'ни у одного платежа',
+        toAll: 'платежам',
+        noDated: 'нет платежей с датой',
+        none: 'нет платежей',
+        upcoming: 'Предстоящие платежи',
+        Many: 'Платежи',
+        subscriptions: false,
+      };
 }
 export type PaymentWords = ReturnType<typeof paymentWords>;
 
@@ -46,4 +62,5 @@ export const SEVERAL_HINT = 'Несколько категорий можно в
 export const IMPULSE_SWITCH = 'Импульсивные покупки';
 /** a category with a fund (its purchases are planned) */
 export const IMPULSE_HINT_OFF = 'Спрашивать в операциях категории, была ли покупка импульсивной.';
-export const IMPULSE_HINT_ON = 'В операциях категории — «Обдуманная» или «Импульсивная», у импульсивной — «Что подтолкнуло?». Итоги — в отчёте за месяц и в «Динамике трат».';
+export const IMPULSE_HINT_ON =
+  'В операциях категории — «Обдуманная» или «Импульсивная», у импульсивной — «Что подтолкнуло?». Итоги — в отчёте за месяц и в «Динамике трат».';

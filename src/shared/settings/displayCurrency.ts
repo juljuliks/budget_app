@@ -32,7 +32,9 @@ export function useDisplayCurrency(): Currency {
     listeners.add(setC);
     load().catch((e) => console.error('load display currency failed', e));
     setC(current);
-    return () => { listeners.delete(setC); };
+    return () => {
+      listeners.delete(setC);
+    };
   }, []);
   return c;
 }

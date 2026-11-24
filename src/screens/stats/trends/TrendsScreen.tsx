@@ -30,9 +30,14 @@ export default function TrendsScreen(_: Props) {
 
   const section = (title: string, rows: Row[]) => (
     <>
-      <View style={styles.pad}><SectionBand title={title} inset={16} /></View>
-      {rows.length === 0 ? <Text style={styles.empty}>{NO_CHANGES}</Text>
-        : rows.map((r) => <TrendRow key={r.category.id} row={r} currency={currency} />)}
+      <View style={styles.pad}>
+        <SectionBand title={title} inset={16} />
+      </View>
+      {rows.length === 0 ? (
+        <Text style={styles.empty}>{NO_CHANGES}</Text>
+      ) : (
+        rows.map((r) => <TrendRow key={r.category.id} row={r} currency={currency} />)
+      )}
     </>
   );
   return (
@@ -51,7 +56,10 @@ export default function TrendsScreen(_: Props) {
         visible={picking}
         title={PICK_TITLE}
         onClose={() => setPicking(false)}
-        onPick={(id) => { setPicking(false); if (id !== null) openCategoryTrend(id); }}
+        onPick={(id) => {
+          setPicking(false);
+          if (id !== null) openCategoryTrend(id);
+        }}
       />
     </ScrollView>
   );

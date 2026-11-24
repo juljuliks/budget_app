@@ -27,14 +27,18 @@ export const KIND_HINTS: Record<CategoryPlanKind, string> = {
 
 /** "1 200 ₾ · раз в год" — the category's own payment rarer than monthly; a monthly one's amount is the plan's: "каждый месяц". */
 export const paymentSummary = (p: Pick<RecurringPayment, 'amount_minor' | 'currency' | 'period' | 'until'>) =>
-  (p.period === 1 ? withEnd('каждый месяц', p.until) : `${formatWithCurrency(p.amount_minor, p.currency)} · ${periodText(p.period)}`);
+  p.period === 1
+    ? withEnd('каждый месяц', p.until)
+    : `${formatWithCurrency(p.amount_minor, p.currency)} · ${periodText(p.period)}`;
 
 /** "пн, чт", "каждый день · до 15 окт" — a payment within the month: how often (its amount is the plan's). */
-export const withinMonthSummary = (every: 'day' | 'week', weekdays: number, until: string | null) => withEnd(everyText(every, weekdays), until);
+export const withinMonthSummary = (every: 'day' | 'week', weekdays: number, until: string | null) =>
+  withEnd(everyText(every, weekdays), until);
 
 const withEnd = (text: string, until: string | null) => (until ? `${text} · до ${longDay(until)}` : text);
 
 /** "1 500 $ к 31 июля 2027" — a fund. */
-export const fundSummary = (target: number, currency: string, due: string) => `${formatWithCurrency(target, currency)} к ${dayTitle(due)}`;
+export const fundSummary = (target: number, currency: string, due: string) =>
+  `${formatWithCurrency(target, currency)} к ${dayTitle(due)}`;
 
 export const kindSaved = (label: string) => `«${label}»: вид в плане сохранён`;

@@ -24,14 +24,25 @@ type Props = {
 
 /** A subscription row in the «SubsTrend» visual style: left — name + note, right — amount + per-month/year. */
 export default function SubRow({
-  name, merchantKey, linked, gone, note, amount, amountInShown, amountNote, onPress, accessibilityLabel,
+  name,
+  merchantKey,
+  linked,
+  gone,
+  note,
+  amount,
+  amountInShown,
+  amountNote,
+  onPress,
+  accessibilityLabel,
 }: Props) {
   const inner = (
     <View style={[styles.row, gone && styles.gone]}>
       <View style={styles.left}>
-        {merchantKey && linked && !gone
-          ? <MerchantLink merchantKey={merchantKey} label={name} />
-          : <Text style={styles.name}>{name}</Text>}
+        {merchantKey && linked && !gone ? (
+          <MerchantLink merchantKey={merchantKey} label={name} />
+        ) : (
+          <Text style={styles.name}>{name}</Text>
+        )}
         {note ? (
           <Text style={styles.note}>
             {note.prefix ? note.prefix + ' · ' : ''}
@@ -48,9 +59,13 @@ export default function SubRow({
       </View>
     </View>
   );
-  return onPress
-    ? <TouchableOpacity onPress={onPress} accessibilityRole="button" accessibilityLabel={accessibilityLabel}>{inner}</TouchableOpacity>
-    : inner;
+  return onPress ? (
+    <TouchableOpacity onPress={onPress} accessibilityRole="button" accessibilityLabel={accessibilityLabel}>
+      {inner}
+    </TouchableOpacity>
+  ) : (
+    inner
+  );
 }
 
 const styles = StyleSheet.create({

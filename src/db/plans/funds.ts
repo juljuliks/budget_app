@@ -30,15 +30,27 @@ export type Fund = {
 };
 
 /** A month of a fund: its contribution, what was spent from it, what the spending took past what was saved. */
-export type FundMonth = { ym: string; contribution: number; spent: number; shortage: number; start: number; end: number };
+export type FundMonth = {
+  ym: string;
+  contribution: number;
+  spent: number;
+  shortage: number;
+  start: number;
+  end: number;
+};
 
 export type FundLedger = {
-  fund: Fund; months: FundMonth[]; balance: number;
+  fund: Fund;
+  months: FundMonth[];
+  balance: number;
   /** each operation's (its part's) spending from it: what the fund had before and after it */
   byTx: Map<number, { before: number; after: number }>;
 };
 
-const nextYm = (ym: string) => { const { year, month } = parseYm(ym); return ymOf(year, month + 1); };
+const nextYm = (ym: string) => {
+  const { year, month } = parseYm(ym);
+  return ymOf(year, month + 1);
+};
 
 /** Months from `from` to `to` inclusive (0 if `to` is before). */
 export function monthsBetween(from: string, to: string): number {
@@ -67,7 +79,10 @@ export async function getFund(categoryId: number, db?: Db): Promise<Fund | null>
 /** The funds that count in `ym`: made by then, not deleted before or in it. */
 export async function activeFunds(ym: string, db?: Db): Promise<Fund[]> {
   db ??= await getDb();
-  const rows = await db.all<FundRow>('SELECT * FROM funds WHERE since_ym <= ? AND (closed_ym IS NULL OR closed_ym > ?)', [ym, ym]);
+  const rows = await db.all<FundRow>(
+    'SELECT * FROM funds WHERE since_ym <= ? AND (closed_ym IS NULL OR closed_ym > ?)',
+    [ym, ym],
+  );
   return rows.map(asFund);
 }
 
@@ -85,15 +100,31 @@ export async function fundLedger(fund: Fund, until = currentYm(), nowYm = curren
   const db = await getDb();
   const last = fund.closed_ym && fund.closed_ym <= until ? ymBefore(fund.closed_ym) : until;
   // a month's item: what of the contribution fitted its budget (null — all of it)
-  const items = new Map((await db.all<{ ym: string; cap_minor: number | null }>(
-    "SELECT ym, cap_minor FROM plan_items WHERE category_id = ? AND kind = 'fund' AND ym >= ? AND ym <= ?",
-    [fund.category_id, fund.since_ym, last])).map((r) => [r.ym, r.cap_minor]));
-  const confirmed = new Map((await db.all<{ ym: string; saved_minor: number }>(
-    'SELECT ym, saved_minor FROM fund_confirms WHERE category_id = ? AND ym >= ? AND ym <= ?',
-    [fund.category_id, fund.since_ym, last])).map((r) => [r.ym, r.saved_minor]));
+  const items = new Map(
+    (
+      await db.all<{ ym: string; cap_minor: number | null }>(
+        "SELECT ym, cap_minor FROM plan_items WHERE category_id = ? AND kind = 'fund' AND ym >= ? AND ym <= ?",
+        [fund.category_id, fund.since_ym, last],
+      )
+    ).map((r) => [r.ym, r.cap_minor]),
+  );
+  const confirmed = new Map(
+    (
+      await db.all<{ ym: string; saved_minor: number }>(
+        'SELECT ym, saved_minor FROM fund_confirms WHERE category_id = ? AND ym >= ? AND ym <= ?',
+        [fund.category_id, fund.since_ym, last],
+      )
+    ).map((r) => [r.ym, r.saved_minor]),
+  );
   const { year: ly, month: lm } = parseYm(last);
-  const rows = last < fund.since_ym ? [] : await spendRows(monthStart(fund.since_ym), monthRange(ly, lm)[1], { categories: [fund.category_id] });
-  const { items: spent } = await convertSpending(rows.filter((r) => r.category_id === fund.category_id), fund.currency);
+  const rows =
+    last < fund.since_ym
+      ? []
+      : await spendRows(monthStart(fund.since_ym), monthRange(ly, lm)[1], { categories: [fund.category_id] });
+  const { items: spent } = await convertSpending(
+    rows.filter((r) => r.category_id === fund.category_id),
+    fund.currency,
+  );
   spent.sort((a, b) => a.row.occurred_at - b.row.occurred_at);
 
   const months: FundMonth[] = [];
@@ -104,7 +135,8 @@ export async function fundLedger(fund: Fund, until = currentYm(), nowYm = curren
     const start = balance;
     const cap = items.get(ym);
     const asked = cap === undefined ? 0 : contributionOf(fund, ym, balance);
-    const contribution = ym < nowYm ? confirmed.get(ym) ?? 0 : cap === null || cap === undefined ? asked : Math.min(asked, cap);
+    const contribution =
+      ym < nowYm ? (confirmed.get(ym) ?? 0) : cap === null || cap === undefined ? asked : Math.min(asked, cap);
     balance += contribution;
     const [, end] = monthRange(parseYm(ym).year, parseYm(ym).month);
     let out = 0;
@@ -114,7 +146,10 @@ export async function fundLedger(fund: Fund, until = currentYm(), nowYm = curren
       const before = balance;
       out += v;
       // a refund puts back; spending past what is saved is the month's
-      if (v > balance) { shortage += v - balance; balance = 0; } else balance -= v;
+      if (v > balance) {
+        shortage += v - balance;
+        balance = 0;
+      } else balance -= v;
       byTx.set(spent[i].row.id, { before, after: balance });
     }
     months.push({ ym, contribution, spent: out, shortage, start, end: balance });
@@ -122,7 +157,10 @@ export async function fundLedger(fund: Fund, until = currentYm(), nowYm = curren
   return { fund, months, balance, byTx };
 }
 
-export const ymBefore = (ym: string) => { const { year, month } = parseYm(ym); return ymOf(year, month - 1); };
+export const ymBefore = (ym: string) => {
+  const { year, month } = parseYm(ym);
+  return ymOf(year, month - 1);
+};
 
 /**
  * The current and the coming months' contributions as the ledger counts them now (the spending changed what is left to
@@ -146,7 +184,9 @@ async function refreshNow(ym: string, nowYm: string): Promise<void> {
   for (const fund of funds) {
     await db.run(
       `INSERT OR IGNORE INTO plan_items (ym, category_id, limit_minor, kind, currency)
-        SELECT ?, id, 0, 'fund', ? FROM categories WHERE id = ? AND deleted_at IS NULL`, [ym, fund.currency, fund.category_id]);
+        SELECT ?, id, 0, 'fund', ? FROM categories WHERE id = ? AND deleted_at IS NULL`,
+      [ym, fund.currency, fund.category_id],
+    );
   }
   for (let m = nowYm; m <= ym; m = nextYm(m)) await fitFunds(m, nowYm);
 }
@@ -157,7 +197,11 @@ export async function fundBalance(fund: Fund): Promise<number> {
 }
 
 /** An operation in a fund's category: the fund's name and what it had before and after it; null — not a fund's. */
-export async function fundOfTransaction(txId: number, categoryId: number | null, occurredAt: number): Promise<{ before: number; after: number; currency: Currency } | null> {
+export async function fundOfTransaction(
+  txId: number,
+  categoryId: number | null,
+  occurredAt: number,
+): Promise<{ before: number; after: number; currency: Currency } | null> {
   if (categoryId === null) return null;
   const fund = await getFund(categoryId);
   const d = new Date(occurredAt * 1000);

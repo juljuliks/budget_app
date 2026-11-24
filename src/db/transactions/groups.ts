@@ -17,7 +17,9 @@ const GROUP_KEY: Record<GroupKind, string> = {
   category: "coalesce(CAST(g.category_id AS TEXT), 'none')",
   month: "strftime('%Y-%m', t.occurred_at, 'unixepoch', 'localtime')",
   kind: 't.kind',
-  amount: `CASE ${AMOUNT_BANDS.slice(0, -1).map((b, i) => `WHEN abs(t.amount_minor) >= ${b} THEN '${i}'`).join(' ')} ELSE '${AMOUNT_BANDS.length - 1}' END`,
+  amount: `CASE ${AMOUNT_BANDS.slice(0, -1)
+    .map((b, i) => `WHEN abs(t.amount_minor) >= ${b} THEN '${i}'`)
+    .join(' ')} ELSE '${AMOUNT_BANDS.length - 1}' END`,
 };
 
 /**
@@ -34,7 +36,8 @@ const GROUP_ORDER: Record<GroupKind, string> = {
 };
 
 /** Inside a group: newest first, by amount the biggest first. */
-const ROW_ORDER = (by: GroupKind) => (by === 'amount' ? 'abs(t.amount_minor) DESC, t.occurred_at DESC, t.id DESC' : 't.occurred_at DESC, t.id DESC');
+const ROW_ORDER = (by: GroupKind) =>
+  by === 'amount' ? 'abs(t.amount_minor) DESC, t.occurred_at DESC, t.id DESC' : 't.occurred_at DESC, t.id DESC';
 
 /** By category, the operations as their parts (spend_parts `g`: a split one once per part, the part's amount). */
 const partsJoin = (by: GroupKind) => (by === 'category' ? ' JOIN spend_parts g ON g.id = t.id' : '');
@@ -54,7 +57,10 @@ function groupWhere(f: TxFilter, by: GroupKind): { sql: string; params: Array<nu
   const cats = [...(f.categories ?? []), ...(f.category !== undefined ? [f.category] : [])];
   if (by !== 'category' || cats.length === 0) return { sql, params };
   const ids = cats.filter((c): c is number => c !== 'none');
-  const any = [...(ids.length ? [`g.category_id IN (${ids.map(() => '?').join(', ')})`] : []), ...(cats.includes('none') ? ['g.category_id IS NULL'] : [])];
+  const any = [
+    ...(ids.length ? [`g.category_id IN (${ids.map(() => '?').join(', ')})`] : []),
+    ...(cats.includes('none') ? ['g.category_id IS NULL'] : []),
+  ];
   return { sql: `${sql ? `${sql} AND` : 'WHERE'} (${any.join(' OR ')})`, params: [...params, ...ids] };
 }
 
@@ -81,18 +87,29 @@ export async function listTransactionGroups(f: TxFilter, by: GroupKind): Promise
     `SELECT ${key} AS k, count(*) AS n, max(t.occurred_at) AS last, t.occurred_at, t.raw_merchant, t.kind, ${cat}.category_id AS category_id, ${CATEGORY_COLUMNS}
       FROM transactions t${partsJoin(by)}
       LEFT JOIN categories c ON c.id = ${cat}.category_id LEFT JOIN category_types ct ON ct.id = c.type_id
-      ${sql} GROUP BY k ORDER BY ${GROUP_ORDER[by]}`, params);
+      ${sql} GROUP BY k ORDER BY ${GROUP_ORDER[by]}`,
+    params,
+  );
   const totals = await db.all<{ k: string; currency: string; total: number }>(
     `SELECT ${key} AS k, t.currency, sum(${signed(by)}) AS total FROM transactions t${partsJoin(by)} ${sql}
-      GROUP BY k, t.currency ORDER BY t.currency`, params);
+      GROUP BY k, t.currency ORDER BY t.currency`,
+    params,
+  );
   return groups.map(({ k, n, ...g }) => ({
-    ...g, key: k, count: n,
+    ...g,
+    key: k,
+    count: n,
     totals: totals.filter((t) => t.k === k).map(({ currency, total }) => ({ currency, total })),
   }));
 }
 
 /** A page of the operations matching `f` in the groups' order (see listTransactionGroups), each with its group. */
-export async function listGroupedPage(f: TxFilter, by: GroupKind, offset: number, limit = 50): Promise<Array<TransactionRow & { group_key: string }>> {
+export async function listGroupedPage(
+  f: TxFilter,
+  by: GroupKind,
+  offset: number,
+  limit = 50,
+): Promise<Array<TransactionRow & { group_key: string }>> {
   const { sql, params } = groupWhere(f, by);
   const db = await getDb();
   const key = GROUP_KEY[by];
@@ -101,7 +118,8 @@ export async function listGroupedPage(f: TxFilter, by: GroupKind, offset: number
     `WITH grp AS (SELECT ${key} AS k, count(*) AS n, max(t.occurred_at) AS last FROM transactions t${partsJoin(by)} ${sql} GROUP BY k)
       SELECT ${TX_COLUMNS}, grp.k AS group_key ${FROM_TX}${partsJoin(by)} JOIN grp ON grp.k = ${key} ${sql}
       ORDER BY ${GROUP_ORDER[by]}, ${ROW_ORDER(by)} LIMIT ? OFFSET ?`,
-    [...params, ...params, limit, offset]);
+    [...params, ...params, limit, offset],
+  );
 }
 
 /** Every operation of one day (from `dayStart`, unix seconds, to the next day) matching `f`: the day header's checkbox. */
@@ -109,7 +127,9 @@ export async function transactionDayIds(f: TxFilter, dayStart: number, dayEnd: n
   const { sql, params } = filterWhere(f);
   const db = await getDb();
   const rows = await db.all<{ id: number }>(
-    `SELECT t.id FROM transactions t ${sql ? `${sql} AND` : 'WHERE'} t.occurred_at >= ? AND t.occurred_at < ?`, [...params, dayStart, dayEnd]);
+    `SELECT t.id FROM transactions t ${sql ? `${sql} AND` : 'WHERE'} t.occurred_at >= ? AND t.occurred_at < ?`,
+    [...params, dayStart, dayEnd],
+  );
   return rows.map((r) => r.id);
 }
 
@@ -118,6 +138,8 @@ export async function transactionGroupIds(f: TxFilter, by: GroupKind, groupKey: 
   const { sql, params } = groupWhere(f, by);
   const db = await getDb();
   const rows = await db.all<{ id: number }>(
-    `SELECT DISTINCT t.id FROM transactions t${partsJoin(by)} ${sql ? `${sql} AND` : 'WHERE'} ${GROUP_KEY[by]} = ?`, [...params, groupKey]);
+    `SELECT DISTINCT t.id FROM transactions t${partsJoin(by)} ${sql ? `${sql} AND` : 'WHERE'} ${GROUP_KEY[by]} = ?`,
+    [...params, groupKey],
+  );
   return rows.map((r) => r.id);
 }

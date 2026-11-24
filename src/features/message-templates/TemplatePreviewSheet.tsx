@@ -47,13 +47,26 @@ export default function TemplatePreviewSheet({ message, marks, kind, visible, on
   }
 
   return (
-    <BottomSheet visible={visible} onClose={onClose} title={`Шаблон: ${(KIND_LABELS[kind] ?? '').toLowerCase()}`} style={styles.sheet}>
-      <Text style={styles.count}>Подойдёт к {n} {plural(n, ['сообщению', 'сообщениям', 'сообщениям'])}</Text>
+    <BottomSheet
+      visible={visible}
+      onClose={onClose}
+      title={`Шаблон: ${(KIND_LABELS[kind] ?? '').toLowerCase()}`}
+      style={styles.sheet}
+    >
+      <Text style={styles.count}>
+        Подойдёт к {n} {plural(n, ['сообщению', 'сообщениям', 'сообщениям'])}
+      </Text>
       <Text style={styles.hint}>Так они станут операциями. Если что-то не так — вернитесь и отметьте иначе.</Text>
       <SheetScrollView>
-        {found?.map((f) => (f.parsed ? <ResultRow key={f.message.id} parsed={f.parsed} receivedAt={f.message.received_at} /> : null))}
+        {found?.map((f) =>
+          f.parsed ? <ResultRow key={f.message.id} parsed={f.parsed} receivedAt={f.message.received_at} /> : null,
+        )}
       </SheetScrollView>
-      <SheetActions submit={{ title: `Сохранить и разобрать ${n}`, onPress: save, disabled: saving || !found }} onCancel={onClose} style={styles.actions} />
+      <SheetActions
+        submit={{ title: `Сохранить и разобрать ${n}`, onPress: save, disabled: saving || !found }}
+        onCancel={onClose}
+        style={styles.actions}
+      />
     </BottomSheet>
   );
 }

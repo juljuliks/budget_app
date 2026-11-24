@@ -4,7 +4,8 @@ import { openApp, rowOf, screen, scrollTo, tap } from './app';
 import { ops } from '../e2e/seeds';
 import { dayKeyOf } from '../../src/shared/lib/dateRange';
 
-const search = (text: string) => fireEvent.changeText(screen.getByPlaceholderText('Поиск: мерчант, описание, сумма…'), text);
+const search = (text: string) =>
+  fireEvent.changeText(screen.getByPlaceholderText('Поиск: мерчант, описание, сумма…'), text);
 /** the list shows exactly these (and not those) */
 async function shows(yes: string[], no: string[] = []) {
   await waitFor(() => {
@@ -75,7 +76,7 @@ describe('2.3 the filters', () => {
     await shows(['Категория · 2', 'Возврат · ZARA', 'NETFLIX.COM', 'Применено фильтров: 2'], ['SPAR', 'WOLT']);
   });
 
-  test('2.1.3: a day\'s total is what its section shows: the spending of the filtered operations only', async () => {
+  test("2.1.3: a day's total is what its section shows: the spending of the filtered operations only", async () => {
     // today without filters: SPAR 30 + the transfer 10 − the refund 5
     expect(await screen.findByText('−35 ₾')).toBeTruthy();
     await tap('#filter-category');
@@ -160,7 +161,10 @@ describe('2.3 the filters', () => {
 
 describe('2.4 the groupings', () => {
   beforeEach(() => openApp(ops));
-  const groupBy = async (name: string) => { await tap('#filter-group'); await tap(name); };
+  const groupBy = async (name: string) => {
+    await tap('#filter-group');
+    await tap(name);
+  };
 
   test('by merchant: the busiest first, spent minus received', async () => {
     await groupBy('По мерчантам');

@@ -42,23 +42,34 @@ export default function Meter({ ratio, height = 6, color, marginTop = 8, base = 
   const icon = height * 2;
   const overWidth = at === undefined ? 0 : (1 - clamp(at)) * width;
   return (
-    <View style={{ marginTop }} onLayout={at === undefined ? undefined : (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)}>
+    <View
+      style={{ marginTop }}
+      onLayout={at === undefined ? undefined : (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)}
+    >
       <View style={[styles.track, fill]}>
         <View style={[styles.fills, { width: `${total * 100}%` }]}>
-          {faded > 0 ? <View style={{ height, width: `${(faded / total) * 100}%`, backgroundColor, opacity: 0.4 }} /> : null}
+          {faded > 0 ? (
+            <View style={{ height, width: `${(faded / total) * 100}%`, backgroundColor, opacity: 0.4 }} />
+          ) : null}
           <View style={{ height, flex: 1, backgroundColor }} />
         </View>
         {/* the overspend: always orange, whatever the bar's color */}
         {at !== undefined ? <View style={[styles.overPart, { left: `${clamp(at) * 100}%` }]} /> : null}
       </View>
       {at !== undefined && overWidth >= icon + ICON_ROOM ? (
-        <View pointerEvents="none" style={[styles.overIcon, { top: (height - icon) / 2, height: icon, left: `${clamp(at) * 100}%`, right: 0 }]}>
+        <View
+          pointerEvents="none"
+          style={[styles.overIcon, { top: (height - icon) / 2, height: icon, left: `${clamp(at) * 100}%`, right: 0 }]}
+        >
           <WarnTriangleIcon color={colors.danger} size={icon} />
         </View>
       ) : null}
       {/* the limit's tick, unless it is at the bar's very end (a tiny overspend): there it only looks like the bar's edge */}
       {(over ?? limitTick) !== undefined && clamp((over ?? limitTick)!) < TICK_AT_END ? (
-        <View style={[styles.marker, { height: height + 6, top: -3, left: `${clamp((over ?? limitTick)!) * 100}%` }]} accessibilityLabel="Лимит" />
+        <View
+          style={[styles.marker, { height: height + 6, top: -3, left: `${clamp((over ?? limitTick)!) * 100}%` }]}
+          accessibilityLabel="Лимит"
+        />
       ) : null}
       {marker !== undefined ? (
         <View

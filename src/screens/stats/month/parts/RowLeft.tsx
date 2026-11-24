@@ -9,7 +9,9 @@ import { formatWithCurrency } from '@/shared/lib/money';
 import { styles } from './styles';
 
 type Props = {
-  spent: number; limit: number; currency: Currency;
+  spent: number;
+  limit: number;
+  currency: Currency;
   /** a payment (rent, a subscription): "осталось оплатить", paid — "✓ оплачено" */
   fixed: boolean;
   /** "Скрыть суммы": what is left as a share of the plan, an overspend just the word */
@@ -19,9 +21,14 @@ type Props = {
 export default function RowLeft({ spent, limit, currency, fixed, hidden }: Props) {
   const over = spent > Math.round(limit);
   const paid = fixed && !over && isPaid(spent, limit);
-  const [big, caption] = over ? [hidden ? '' : `−${formatWithCurrency(spent - limit, currency)}`, 'перерасход']
-    : paid ? ['✓', 'оплачено']
-    : [hidden ? formatPercent(limit - spent, limit) : formatWithCurrency(limit - spent, currency), fixed ? 'осталось оплатить' : 'осталось'];
+  const [big, caption] = over
+    ? [hidden ? '' : `−${formatWithCurrency(spent - limit, currency)}`, 'перерасход']
+    : paid
+      ? ['✓', 'оплачено']
+      : [
+          hidden ? formatPercent(limit - spent, limit) : formatWithCurrency(limit - spent, currency),
+          fixed ? 'осталось оплатить' : 'осталось',
+        ];
   const tone = over ? styles.overNum : paid ? styles.paidOn : undefined;
   return (
     <View style={styles.rowLeft}>

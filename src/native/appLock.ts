@@ -41,21 +41,45 @@ let backUntil = 0;
 
 /** In memory, for tests: the same rules, no hashing. `biometricAvailable` and `nextBiometric` set by a test, `asked` counts the fingerprint windows. */
 export const memoryLock = {
-  pin: null as string | null, biometric: false, delayS: DEFAULT_DELAY_S, hideNotifications: false, failures: 0,
-  biometricAvailable: false, nextBiometric: 'ok' as BiometricResult, asked: 0,
+  pin: null as string | null,
+  biometric: false,
+  delayS: DEFAULT_DELAY_S,
+  hideNotifications: false,
+  failures: 0,
+  biometricAvailable: false,
+  nextBiometric: 'ok' as BiometricResult,
+  asked: 0,
   reset() {
-    Object.assign(memoryLock, { pin: null, biometric: false, delayS: DEFAULT_DELAY_S, hideNotifications: false, failures: 0, biometricAvailable: false, nextBiometric: 'ok', asked: 0 });
+    Object.assign(memoryLock, {
+      pin: null,
+      biometric: false,
+      delayS: DEFAULT_DELAY_S,
+      hideNotifications: false,
+      failures: 0,
+      biometricAvailable: false,
+      nextBiometric: 'ok',
+      asked: 0,
+    });
     outside = 0;
     backUntil = 0;
   },
 };
 
 const memory: Native = {
-  get pin() { return memoryLock.pin !== null; },
-  get biometric() { return memoryLock.biometric; },
+  get pin() {
+    return memoryLock.pin !== null;
+  },
+  get biometric() {
+    return memoryLock.biometric;
+  },
   getState: async () => ({
-    pin: memoryLock.pin !== null, pinLength: memoryLock.pin?.length ?? 0, biometric: memoryLock.biometric,
-    biometricAvailable: memoryLock.biometricAvailable, delayS: memoryLock.delayS, hideNotifications: memoryLock.hideNotifications, waitS: 0,
+    pin: memoryLock.pin !== null,
+    pinLength: memoryLock.pin?.length ?? 0,
+    biometric: memoryLock.biometric,
+    biometricAvailable: memoryLock.biometricAvailable,
+    delayS: memoryLock.delayS,
+    hideNotifications: memoryLock.hideNotifications,
+    waitS: 0,
   }),
   setPin: async (pin) => {
     if (pin === null) memoryLock.reset();
@@ -63,15 +87,33 @@ const memory: Native = {
     return true;
   },
   checkPin: async (pin) => {
-    if (pin === memoryLock.pin) { memoryLock.failures = 0; return { ok: true, left: ATTEMPTS, waitS: 0 }; }
+    if (pin === memoryLock.pin) {
+      memoryLock.failures = 0;
+      return { ok: true, left: ATTEMPTS, waitS: 0 };
+    }
     memoryLock.failures += 1;
-    if (memoryLock.failures >= ATTEMPTS) { memoryLock.failures = 0; return { ok: false, left: 0, waitS: 30 }; }
+    if (memoryLock.failures >= ATTEMPTS) {
+      memoryLock.failures = 0;
+      return { ok: false, left: 0, waitS: 30 };
+    }
     return { ok: false, left: ATTEMPTS - memoryLock.failures, waitS: 0 };
   },
-  setBiometric: async (on) => { memoryLock.biometric = on; return true; },
-  setDelay: async (s) => { memoryLock.delayS = s; return true; },
-  setHideNotifications: async (on) => { memoryLock.hideNotifications = on; return true; },
-  authenticate: async () => { memoryLock.asked += 1; return memoryLock.nextBiometric; },
+  setBiometric: async (on) => {
+    memoryLock.biometric = on;
+    return true;
+  },
+  setDelay: async (s) => {
+    memoryLock.delayS = s;
+    return true;
+  },
+  setHideNotifications: async (on) => {
+    memoryLock.hideNotifications = on;
+    return true;
+  },
+  authenticate: async () => {
+    memoryLock.asked += 1;
+    return memoryLock.nextBiometric;
+  },
 };
 
 const native = (NativeModules.AppLock as Native | undefined) ?? memory;

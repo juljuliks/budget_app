@@ -7,7 +7,11 @@ export type SavedSplit = { funds: number[]; locked: number; rest: number };
 /** `total` over the funds (in their order, each up to its contribution), 🔒 up to `locked`, the rest to 💰. */
 export function splitSaved(total: number, funds: number[], locked: number): SavedSplit {
   let left = Math.max(0, total);
-  const out = funds.map((planned) => { const v = Math.min(Math.max(0, planned), left); left -= v; return v; });
+  const out = funds.map((planned) => {
+    const v = Math.min(Math.max(0, planned), left);
+    left -= v;
+    return v;
+  });
   const l = Math.min(Math.max(0, locked), left);
   return { funds: out, locked: l, rest: left - l };
 }

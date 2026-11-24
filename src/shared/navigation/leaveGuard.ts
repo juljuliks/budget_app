@@ -6,7 +6,9 @@ let guard: Guard | null = null;
 /** Set while the screen should ask; returns the remover. */
 export function setLeaveGuard(g: Guard): () => void {
   guard = g;
-  return () => { if (guard === g) guard = null; };
+  return () => {
+    if (guard === g) guard = null;
+  };
 }
 
 export const hasLeaveGuard = () => guard !== null;

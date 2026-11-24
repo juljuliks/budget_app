@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
-import { openMonthClose, } from '@/shared/navigation/sheets';
+import { openMonthClose } from '@/shared/navigation/sheets';
 import { openReport } from '@/shared/navigation/reports';
 import { Currency } from '@/db/fx';
 import { currentYm, HistoryMonth, parseYm } from '@/db/plans';
@@ -13,11 +13,25 @@ import MonthDetails from './MonthDetails';
 import { styles } from './styles';
 import { monthSavings } from '../model/savings';
 
-function Total({ label, value, danger, good, muted }: { label: string; value: string; danger?: boolean; good?: boolean; muted?: boolean }) {
+function Total({
+  label,
+  value,
+  danger,
+  good,
+  muted,
+}: {
+  label: string;
+  value: string;
+  danger?: boolean;
+  good?: boolean;
+  muted?: boolean;
+}) {
   return (
     <View style={styles.total}>
       <Text style={styles.caption}>{label}</Text>
-      <Text style={[styles.totalValue, danger && styles.danger, good && styles.good, muted && styles.muted]}>{value}</Text>
+      <Text style={[styles.totalValue, danger && styles.danger, good && styles.good, muted && styles.muted]}>
+        {value}
+      </Text>
     </View>
   );
 }

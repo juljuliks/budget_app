@@ -4,7 +4,10 @@ import { dayTitle, MONTHS_GEN } from '@/shared/lib/dates';
 import { formatWithCurrency } from '@/shared/lib/money';
 
 /** «31 июля» — without the year */
-const dayMonth = (key: string) => { const [, m, d] = key.split('-').map(Number); return `${d} ${MONTHS_GEN[m - 1]}`; };
+const dayMonth = (key: string) => {
+  const [, m, d] = key.split('-').map(Number);
+  return `${d} ${MONTHS_GEN[m - 1]}`;
+};
 
 export type ForecastText = {
   ok: boolean;
@@ -25,11 +28,13 @@ export function forecastText(f: FundForecast): ForecastText {
       ok: true,
       title: `✓ Успеваете к ${by}`,
       lines: [
-        f.fromLocked > 0 ? `Взнос ${money(f.asked)} в месяц влезает: ${parts}.`
+        f.fromLocked > 0
+          ? `Взнос ${money(f.asked)} в месяц влезает: ${parts}.`
           : `Взнос ${money(f.asked)} в месяц влезает: свободно в плане ${money(f.free)}, 🔒 не трогаем.`,
         `В таком темпе ${money(f.target)} будут к ${dayTitle(f.due)}.`,
       ],
-      move: null, keep: null,
+      move: null,
+      keep: null,
     };
   }
   const got = f.fromFree + f.fromLocked;

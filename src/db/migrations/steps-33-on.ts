@@ -45,21 +45,20 @@ export const STEPS_33_ON: MigrationStep[][] = [
     "ALTER TABLE message_templates ADD COLUMN bank TEXT NOT NULL DEFAULT 'tbc'",
     async (db) => {
       const own = await db.get<{ id: number }>(
-        "SELECT id FROM categories WHERE deleted_at IS NULL AND system IS NULL AND lower(name) = 'между своими картами' LIMIT 1");
+        "SELECT id FROM categories WHERE deleted_at IS NULL AND system IS NULL AND lower(name) = 'между своими картами' LIMIT 1",
+      );
       if (own) await db.run("UPDATE categories SET system = 'own' WHERE id = ?", [own.id]);
       else {
         await db.run(
           `INSERT INTO categories (name, emoji, system, sort_order, type_id)
-            VALUES ('Между своими картами', '🔁', 'own', 102, (SELECT id FROM category_types WHERE is_transfer = 1 ORDER BY id LIMIT 1))`);
+            VALUES ('Между своими картами', '🔁', 'own', 102, (SELECT id FROM category_types WHERE is_transfer = 1 ORDER BY id LIMIT 1))`,
+        );
       }
     },
   ],
   // 36: "Не распознано" keeps a message 30 days from when it was kept, not from its date: an import of months (another
   // bank's SMS before its template) all waits for the template
-  [
-    'ALTER TABLE unparsed_messages ADD COLUMN kept_at INTEGER',
-    'UPDATE unparsed_messages SET kept_at = received_at',
-  ],
+  ['ALTER TABLE unparsed_messages ADD COLUMN kept_at INTEGER', 'UPDATE unparsed_messages SET kept_at = received_at'],
   // 37: "Копилка": a category saved up for (a holiday, the insurance) — how much by when. Each month of a plan puts a
   // contribution in it (its plan item, kind 'fund': what is left to save over the months left), its spending is taken
   // from what is saved. Deleted: closed_ym, what was saved goes to that month's savings (released_minor). plan_items
@@ -121,10 +120,12 @@ export const STEPS_33_ON: MigrationStep[][] = [
       await db.run(
         `INSERT OR IGNORE INTO month_closes (ym, rest_choice, closed_at)
           SELECT ym, CASE WHEN to_savings = 1 THEN 'savings' ELSE 'keep' END, ? FROM plan_months WHERE ym < ?`,
-        [Math.floor(now.getTime() / 1000), ym]);
+        [Math.floor(now.getTime() / 1000), ym],
+      );
       await db.run(
         "INSERT OR IGNORE INTO fund_confirms (category_id, ym, saved_minor) SELECT category_id, ym, limit_minor FROM plan_items WHERE kind = 'fund' AND ym < ?",
-        [ym]);
+        [ym],
+      );
     },
   ],
   // 39: "Подписки": a system category (system = 'subs'; the one so named, or a new one) and its subscriptions — a merchant
@@ -164,10 +165,14 @@ export const STEPS_33_ON: MigrationStep[][] = [
     'ALTER TABLE plan_items_new RENAME TO plan_items',
     async (db) => {
       // by name in JS: SQLite's lower() leaves Cyrillic as it is
-      const subs = (await db.all<{ id: number; name: string }>('SELECT id, name FROM categories WHERE deleted_at IS NULL AND system IS NULL ORDER BY id'))
-        .find((c) => c.name.trim().toLowerCase() === 'подписки');
+      const subs = (
+        await db.all<{ id: number; name: string }>(
+          'SELECT id, name FROM categories WHERE deleted_at IS NULL AND system IS NULL ORDER BY id',
+        )
+      ).find((c) => c.name.trim().toLowerCase() === 'подписки');
       if (subs) await db.run("UPDATE categories SET system = 'subs' WHERE id = ?", [subs.id]);
-      else await db.run("INSERT INTO categories (name, emoji, system, sort_order) VALUES ('Подписки', '📺', 'subs', 7)");
+      else
+        await db.run("INSERT INTO categories (name, emoji, system, sort_order) VALUES ('Подписки', '📺', 'subs', 7)");
     },
   ],
   // 40: no "Сбережения" category (system = 'savings'): money moved to one's own savings account is a transfer between
@@ -181,7 +186,9 @@ export const STEPS_33_ON: MigrationStep[][] = [
       if (own === undefined) {
         await db.run(
           `UPDATE categories SET system = 'own', name = 'Между своими картами', emoji = '🔁', deleted_at = NULL,
-            type_id = (SELECT id FROM category_types WHERE is_transfer = 1 ORDER BY id LIMIT 1) WHERE id = ?`, [savings]);
+            type_id = (SELECT id FROM category_types WHERE is_transfer = 1 ORDER BY id LIMIT 1) WHERE id = ?`,
+          [savings],
+        );
         return;
       }
       await moveParts(db, [savings], own);
@@ -190,12 +197,20 @@ export const STEPS_33_ON: MigrationStep[][] = [
       await db.run('DELETE FROM merchant_rules WHERE category_id = ?', [savings]);
       await db.run('UPDATE OR IGNORE merchant_categories SET category_id = ? WHERE category_id = ?', [own, savings]);
       await db.run('DELETE FROM merchant_categories WHERE category_id = ?', [savings]);
-      const used = (await db.get<{ n: number }>('SELECT coalesce(sum(usage_count), 0) AS n FROM category_usage WHERE category_id = ?', [savings]))?.n ?? 0;
+      const used =
+        (
+          await db.get<{ n: number }>(
+            'SELECT coalesce(sum(usage_count), 0) AS n FROM category_usage WHERE category_id = ?',
+            [savings],
+          )
+        )?.n ?? 0;
       await db.run('DELETE FROM category_usage WHERE category_id = ?', [savings]);
       if (used) {
         await db.run(
           `INSERT INTO category_usage (category_id, usage_count) VALUES (?, ?)
-            ON CONFLICT (category_id) DO UPDATE SET usage_count = usage_count + excluded.usage_count`, [own, used]);
+            ON CONFLICT (category_id) DO UPDATE SET usage_count = usage_count + excluded.usage_count`,
+          [own, used],
+        );
       }
       await db.run('DELETE FROM plan_items WHERE category_id = ?', [savings]);
       await db.run('DELETE FROM categories WHERE id = ?', [savings]);

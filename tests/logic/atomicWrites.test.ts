@@ -8,11 +8,21 @@ import { freshDb } from '../helpers';
 
 // The multi-step writes are all or none: a step failing after the first leaves nothing of the earlier ones.
 
-const insert = async (merchant: string, hash: string) => (await (await getDb()).run(
-  `INSERT INTO transactions (bank, kind, amount_minor, currency, raw_merchant, merchant_key, occurred_at, raw_sms, sms_hash)
-    VALUES ('tbc', 'purchase', 1000, 'GEL', ?, ?, 1000, '', ?)`, [merchant, merchant, hash])).lastInsertRowid;
+const insert = async (merchant: string, hash: string) =>
+  (
+    await (
+      await getDb()
+    ).run(
+      `INSERT INTO transactions (bank, kind, amount_minor, currency, raw_merchant, merchant_key, occurred_at, raw_sms, sms_hash)
+    VALUES ('tbc', 'purchase', 1000, 'GEL', ?, ?, 1000, '', ?)`,
+      [merchant, merchant, hash],
+    )
+  ).lastInsertRowid;
 const rulesOf = async () => (await getDb()).all('SELECT pattern, category_id FROM merchant_rules');
-const categories = async () => (await (await getDb()).all<{ c: number | null }>('SELECT category_id AS c FROM transactions ORDER BY id')).map((r) => r.c);
+const categories = async () =>
+  (await (await getDb()).all<{ c: number | null }>('SELECT category_id AS c FROM transactions ORDER BY id')).map(
+    (r) => r.c,
+  );
 
 beforeEach(() => freshDb());
 afterEach(() => jest.restoreAllMocks());
@@ -30,7 +40,7 @@ test('a category for the merchant: the rule, this operation and the others toget
   expect(await categories()).toEqual([3, 3]);
 });
 
-test('a merchant\'s category from its card: no rule left without its operations', async () => {
+test("a merchant's category from its card: no rule left without its operations", async () => {
   await insert('SPAR', 'a');
   jest.spyOn(rules, 'backfillRule').mockRejectedValueOnce(new Error('disk full'));
   await expect(setMerchantCategory('SPAR', 4)).rejects.toThrow('disk full');

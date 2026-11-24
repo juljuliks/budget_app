@@ -1,16 +1,36 @@
 jest.mock('../../src/shared/navigation/navigation', () => ({ navigateWhenReady: jest.fn() }));
 
 import { getDb } from '../../src/db';
-import { dateKey, ensureRates, ensureRatesLater, forgetRateFailures, makeConverter, RETRY_AFTER_MS } from '../../src/db/fx';
+import {
+  dateKey,
+  ensureRates,
+  ensureRatesLater,
+  forgetRateFailures,
+  makeConverter,
+  RETRY_AFTER_MS,
+} from '../../src/db/fx';
 import { RATES_TIMEOUT_MS, setRatesFetcher } from '../../src/fx/nbg';
 import {
-  addPlanItem, getPlanBudget, listPlan, monthStats, OverBudgetError, periodStats, planHistory, setPlanAmount, setPlanBudget, ymOf,
+  addPlanItem,
+  getPlanBudget,
+  listPlan,
+  monthStats,
+  OverBudgetError,
+  periodStats,
+  planHistory,
+  setPlanAmount,
+  setPlanBudget,
+  ymOf,
 } from '../../src/db/plans';
 import { addManualTransaction } from '../../src/db/transactions';
 import { freshDb } from '../helpers';
 
 const rate = async (date: string, currency: string, gel: number) =>
-  (await getDb()).run('INSERT OR REPLACE INTO fx_rates (date, currency, gel_per_unit) VALUES (?, ?, ?)', [date, currency, gel]);
+  (await getDb()).run('INSERT OR REPLACE INTO fx_rates (date, currency, gel_per_unit) VALUES (?, ?, ?)', [
+    date,
+    currency,
+    gel,
+  ]);
 const at = (y: number, m: number, d: number) => Math.floor(new Date(y, m, d, 12).getTime() / 1000);
 
 beforeEach(async () => {
@@ -19,7 +39,7 @@ beforeEach(async () => {
   forgetRateFailures();
 });
 
-test('converter: the day\'s rate, else the nearest earlier, else the nearest later; GEL is 1; cross rates', async () => {
+test("converter: the day's rate, else the nearest earlier, else the nearest later; GEL is 1; cross rates", async () => {
   await rate('2026-09-10', 'USD', 2.5);
   await rate('2026-09-20', 'USD', 2.7);
   await rate('2026-09-20', 'EUR', 3.0);
@@ -34,9 +54,14 @@ test('converter: the day\'s rate, else the nearest earlier, else the nearest lat
 });
 
 test('rates are fetched once per missing day and cached (National Bank of Georgia format)', async () => {
-  const fetcher = jest.fn(async (url: string) => [{ currencies: [
-    { code: 'USD', quantity: 1, rate: 2.6 }, { code: 'EUR', quantity: 1, rate: 3.0 },
-  ] }]);
+  const fetcher = jest.fn(async (url: string) => [
+    {
+      currencies: [
+        { code: 'USD', quantity: 1, rate: 2.6 },
+        { code: 'EUR', quantity: 1, rate: 3.0 },
+      ],
+    },
+  ]);
   setRatesFetcher(fetcher);
   await ensureRates(['2026-09-15', '2026-09-15', '2026-09-16']);
   expect(fetcher).toHaveBeenCalledTimes(2);
@@ -49,7 +74,12 @@ test('rates are fetched once per missing day and cached (National Bank of Georgi
 test('in the background: the cached rates now, the missing fetched after, and the screens told once they came', async () => {
   await rate('2026-09-10', 'USD', 2.5);
   let answer: (v: unknown) => void = () => {};
-  setRatesFetcher(() => new Promise((r) => { answer = r; }));
+  setRatesFetcher(
+    () =>
+      new Promise((r) => {
+        answer = r;
+      }),
+  );
   const fetched = jest.fn();
   await ensureRatesLater(['2026-09-10', '2026-09-12'], fetched);
   // not waited for: the 12th takes the 10th's rate meanwhile
@@ -68,7 +98,9 @@ test('in the background: the cached rates now, the missing fetched after, and th
 });
 
 test('a failing request is ignored: no rate, the spending stays out of the totals as unconverted', async () => {
-  setRatesFetcher(async () => { throw new Error('offline'); });
+  setRatesFetcher(async () => {
+    throw new Error('offline');
+  });
   const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
   await addManualTransaction({ amount_minor: 1000, currency: 'USD', category_id: 1, occurred_at: at(2026, 8, 10) });
   await addManualTransaction({ amount_minor: 500, currency: 'GEL', category_id: 1, occurred_at: at(2026, 8, 10) });
@@ -78,8 +110,10 @@ test('a failing request is ignored: no rate, the spending stays out of the total
   warn.mockRestore();
 });
 
-test('offline: a failed day isn\'t asked again for a while, and after a batch that all failed the rest isn\'t tried', async () => {
-  const fetcher = jest.fn(async () => { throw new Error('offline'); });
+test("offline: a failed day isn't asked again for a while, and after a batch that all failed the rest isn't tried", async () => {
+  const fetcher = jest.fn(async () => {
+    throw new Error('offline');
+  });
   setRatesFetcher(fetcher);
   const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
   const now = jest.spyOn(Date, 'now');
@@ -106,24 +140,33 @@ test('a request that hangs is given up after the timeout', async () => {
   const done = ensureRates(['2026-09-10']);
   await jest.advanceTimersByTimeAsync(RATES_TIMEOUT_MS + 1);
   await done;
-  expect(warn).toHaveBeenCalledWith('rates for', '2026-09-10', 'not loaded', expect.objectContaining({ message: 'rates timeout' }));
+  expect(warn).toHaveBeenCalledWith(
+    'rates for',
+    '2026-09-10',
+    'not loaded',
+    expect.objectContaining({ message: 'rates timeout' }),
+  );
   jest.useRealTimers();
   warn.mockRestore();
 });
 
-test('an answer for another day (today\'s rates not published yet) isn\'t kept as this day\'s', async () => {
-  setRatesFetcher(async (url: string) => [{ date: url.endsWith('2026-09-11') ? '2026-09-10T00:00:00.000Z' : '2026-09-12T00:00:00.000Z',
-    currencies: [{ code: 'USD', quantity: 1, rate: 2.6 }] }]);
+test("an answer for another day (today's rates not published yet) isn't kept as this day's", async () => {
+  setRatesFetcher(async (url: string) => [
+    {
+      date: url.endsWith('2026-09-11') ? '2026-09-10T00:00:00.000Z' : '2026-09-12T00:00:00.000Z',
+      currencies: [{ code: 'USD', quantity: 1, rate: 2.6 }],
+    },
+  ]);
   await ensureRates(['2026-09-11', '2026-09-12']);
   const days = await (await getDb()).all<{ date: string }>("SELECT date FROM fx_rates WHERE currency = 'USD'");
   expect(days.map((d) => d.date)).toEqual(['2026-09-12']);
 });
 
-test('stats in any currency: each transaction on its day\'s rate, the plan on the month\'s plan date', async () => {
+test("stats in any currency: each transaction on its day's rate, the plan on the month's plan date", async () => {
   await rate('2026-09-05', 'USD', 2.5);
   await rate('2026-09-25', 'USD', 3.0);
   await rate('2026-09-30', 'USD', 3.0);
-  await addManualTransaction({ amount_minor: 2500, currency: 'GEL', category_id: 1, occurred_at: at(2026, 8, 5) });  // = 10 USD
+  await addManualTransaction({ amount_minor: 2500, currency: 'GEL', category_id: 1, occurred_at: at(2026, 8, 5) }); // = 10 USD
   await addManualTransaction({ amount_minor: 1000, currency: 'USD', category_id: 1, occurred_at: at(2026, 8, 25) }); // = 30 GEL
   const usd = await monthStats(2026, 8, 'USD');
   expect(usd.currency).toBe('USD');
@@ -134,15 +177,18 @@ test('stats in any currency: each transaction on its day\'s rate, the plan on th
   expect(day.spent_minor).toBe(3000);
 });
 
-test('plan: every amount in its own currency; the cap and totals are converted to the amount to distribute\'s', async () => {
+test("plan: every amount in its own currency; the cap and totals are converted to the amount to distribute's", async () => {
   const M = '2099-01';
   await rate('2099-01-31', 'USD', 2.5);
-  await setPlanBudget(M, 100000, 'GEL');                  // 1000 GEL
-  await addPlanItem(M, 1); await setPlanAmount(M, 1, 20000, undefined, 'USD'); // 200 USD = 500 GEL
-  await addPlanItem(M, 2); await setPlanAmount(M, 2, 40000);                     // 400 GEL (the budget's currency)
+  await setPlanBudget(M, 100000, 'GEL'); // 1000 GEL
+  await addPlanItem(M, 1);
+  await setPlanAmount(M, 1, 20000, undefined, 'USD'); // 200 USD = 500 GEL
+  await addPlanItem(M, 2);
+  await setPlanAmount(M, 2, 40000); // 400 GEL (the budget's currency)
   const items = await listPlan(M);
   expect(items.map((i) => [i.category_id, i.limit_minor, i.currency, i.converted_minor])).toEqual([
-    [1, 20000, 'USD', 50000], [2, 40000, 'GEL', 40000],
+    [1, 20000, 'USD', 50000],
+    [2, 40000, 'GEL', 40000],
   ]);
   // 300 GEL more would be 1200 > 1000
   await expect(setPlanAmount(M, 3, 30000)).rejects.toBeInstanceOf(OverBudgetError);
@@ -160,7 +206,12 @@ test('history in another currency', async () => {
   const now = new Date();
   const today = dateKey(Date.now() / 1000);
   await rate(today, 'USD', 2.0);
-  await addManualTransaction({ amount_minor: 4000, currency: 'GEL', category_id: 1, occurred_at: Math.floor(Date.now() / 1000) - 60 });
+  await addManualTransaction({
+    amount_minor: 4000,
+    currency: 'GEL',
+    category_id: 1,
+    occurred_at: Math.floor(Date.now() / 1000) - 60,
+  });
   const ym = ymOf(now.getFullYear(), now.getMonth());
   await setPlanBudget(ym, 10000, 'GEL');
   const h = await planHistory(ym, 'USD');
@@ -194,10 +245,25 @@ test("a category's usual spending: the latest full months (up to 3) before the p
   await addManualTransaction({ amount_minor: 70000, category_id: 2, occurred_at: at(2026, 8, 6) });
   await addManualTransaction({ amount_minor: 50000, category_id: 1, occurred_at: at(2026, 9, 2) });
   // October's plan (and November's: the current month isn't over): Jul–Sep, only this category
-  expect(await categoryMonthlyAverage(1, '2026-10', 'GEL', now)).toEqual({ average_minor: 60000, months: 3, from: '2026-07', to: '2026-09' });
-  expect(await categoryMonthlyAverage(1, '2026-11', 'GEL', now)).toEqual({ average_minor: 60000, months: 3, from: '2026-07', to: '2026-09' });
+  expect(await categoryMonthlyAverage(1, '2026-10', 'GEL', now)).toEqual({
+    average_minor: 60000,
+    months: 3,
+    from: '2026-07',
+    to: '2026-09',
+  });
+  expect(await categoryMonthlyAverage(1, '2026-11', 'GEL', now)).toEqual({
+    average_minor: 60000,
+    months: 3,
+    from: '2026-07',
+    to: '2026-09',
+  });
   // August's plan: Jun–Jul (May is partial)
-  expect(await categoryMonthlyAverage(1, '2026-08', 'GEL', now)).toEqual({ average_minor: 60000, months: 2, from: '2026-06', to: '2026-07' });
+  expect(await categoryMonthlyAverage(1, '2026-08', 'GEL', now)).toEqual({
+    average_minor: 60000,
+    months: 2,
+    from: '2026-06',
+    to: '2026-07',
+  });
   // June's plan: no full month before it
   expect(await categoryMonthlyAverage(1, '2026-06', 'GEL', now)).toBeNull();
 });

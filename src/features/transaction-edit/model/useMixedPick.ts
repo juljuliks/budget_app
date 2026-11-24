@@ -9,7 +9,8 @@ export function useMixedPick(txId: number, currentId: number | null, ready: bool
     key.current = txId;
     setPicked(currentId != null ? [currentId] : []);
   }, [ready, txId, currentId]);
-  const toggle = (id: number) => setPicked((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  const toggle = (id: number) =>
+    setPicked((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   // "Сменить" saved one category: that chip alone, the rest cleared
   const select = (id: number | null) => setPicked(id != null ? [id] : []);
   return { picked, toggle, select };

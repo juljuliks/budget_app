@@ -59,7 +59,12 @@ function cross(f: Point, width: number, height: number): Point[] {
   const right = f.x + hz + SIDE;
   const dx = left < 0 ? -left : right > width ? width - right : 0;
   const c = { x: f.x + dx, y: f.y + dy };
-  return [{ x: c.x - CROSS, y: c.y }, { x: c.x, y: c.y - CROSS }, { x: c.x + CROSS, y: c.y }, { x: c.x, y: c.y + CROSS }];
+  return [
+    { x: c.x - CROSS, y: c.y },
+    { x: c.x, y: c.y - CROSS },
+    { x: c.x + CROSS, y: c.y },
+    { x: c.x, y: c.y + CROSS },
+  ];
 }
 
 /**
@@ -67,13 +72,27 @@ function cross(f: Point, width: number, height: number): Point[] {
  * `down` under the middle, and one `h` to each side from `vUp` over to `vDown` under; the outer corners rounded by `r`
  * (half a bar's width: its end a half circle), the inner ones by `ri`.
  */
-export function crossPath(cx: number, cy: number, s: { w: number; h: number; up: number; down: number; vUp: number; vDown: number; r: number; ri: number }): string {
+export function crossPath(
+  cx: number,
+  cy: number,
+  s: { w: number; h: number; up: number; down: number; vUp: number; vDown: number; r: number; ri: number },
+): string {
   const { w, h, up, down, vUp, vDown, r, ri } = s;
   // clockwise from the top bar's left corner; the inner corners (where the bars meet) turn the other way
   type Corner = [number, number, number, boolean];
   const pts: Corner[] = [
-    [-h, -vUp, r, true], [h, -vUp, r, true], [h, -up, ri, false], [w, -up, r, true], [w, down, r, true], [h, down, ri, false],
-    [h, vDown, r, true], [-h, vDown, r, true], [-h, down, ri, false], [-w, down, r, true], [-w, -up, r, true], [-h, -up, ri, false],
+    [-h, -vUp, r, true],
+    [h, -vUp, r, true],
+    [h, -up, ri, false],
+    [w, -up, r, true],
+    [w, down, r, true],
+    [h, down, ri, false],
+    [h, vDown, r, true],
+    [-h, vDown, r, true],
+    [-h, down, ri, false],
+    [-w, down, r, true],
+    [-w, -up, r, true],
+    [-h, -up, ri, false],
   ];
   const at = (i: number) => pts[(i + pts.length) % pts.length];
   const toward = (a: Corner, b: Corner, d: number) => {
@@ -82,11 +101,15 @@ export function crossPath(cx: number, cy: number, s: { w: number; h: number; up:
   };
   const xy = (p: number[]) => `${(cx + p[0]).toFixed(1)} ${(cy + p[1]).toFixed(1)}`;
   // each corner: a line to `rad` before it, a quarter circle round it to `rad` after it
-  return pts.map((p, i) => {
-    const before = toward(p, at(i - 1), p[2]);
-    const after = toward(p, at(i + 1), p[2]);
-    return `${i === 0 ? 'M' : 'L'}${xy(before)} A${p[2]} ${p[2]} 0 0 ${p[3] ? 1 : 0} ${xy(after)}`;
-  }).join(' ') + ' Z';
+  return (
+    pts
+      .map((p, i) => {
+        const before = toward(p, at(i - 1), p[2]);
+        const after = toward(p, at(i + 1), p[2]);
+        return `${i === 0 ? 'M' : 'L'}${xy(before)} A${p[2]} ${p[2]} 0 0 ${p[3] ? 1 : 0} ${xy(after)}`;
+      })
+      .join(' ') + ' Z'
+  );
 }
 
 /** The button the finger is over, null — none. */
@@ -96,7 +119,10 @@ export function buttonAt(buttons: Point[], p: Point): number | null {
   let bestD = buttons.length === 4 ? CROSS_HIT : HIT;
   buttons.forEach((b, i) => {
     const d = Math.hypot(b.x - p.x, b.y - p.y);
-    if (d <= bestD) { best = i; bestD = d; }
+    if (d <= bestD) {
+      best = i;
+      bestD = d;
+    }
   });
   return best;
 }

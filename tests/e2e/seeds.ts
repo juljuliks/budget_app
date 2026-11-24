@@ -11,27 +11,54 @@ export const now = new Date();
 /** this month: the 1st, `hour` o'clock (the operations come before any of today's) */
 const thisMonth = (hour: number) => Math.floor(new Date(now.getFullYear(), now.getMonth(), 1, hour).getTime() / 1000);
 /** two months back, the 10th */
-const pastMonth = (hour: number) => Math.floor(new Date(now.getFullYear(), now.getMonth() - 2, 10, hour).getTime() / 1000);
+const pastMonth = (hour: number) =>
+  Math.floor(new Date(now.getFullYear(), now.getMonth() - 2, 10, hour).getTime() / 1000);
 
 /** operations left unread (no category, not opened): the others are marked seen */
 const unread = new Set<number>();
 
-export async function buy(merchant: string, lari: number, at: number, categoryId: number | null = null,
-  opts: { kind?: 'purchase' | 'payment' | 'refund' | 'deposit' | 'transfer' | 'withdrawal'; currency?: string; unread?: boolean; note?: string } = {}) {
+export async function buy(
+  merchant: string,
+  lari: number,
+  at: number,
+  categoryId: number | null = null,
+  opts: {
+    kind?: 'purchase' | 'payment' | 'refund' | 'deposit' | 'transfer' | 'withdrawal';
+    currency?: string;
+    unread?: boolean;
+    note?: string;
+  } = {},
+) {
   const kind = opts.kind ?? 'purchase';
   // a deposit from the bank goes to "Пополнение счёта" (src/ingest/ingest.ts)
   if (kind === 'deposit' && categoryId === null) categoryId = await topUpCategoryId();
-  const id = await addManualTransaction({ amount_minor: Math.round(lari * 100), currency: opts.currency ?? 'GEL', category_id: categoryId, occurred_at: at, kind: kind === 'payment' ? 'purchase' : kind });
+  const id = await addManualTransaction({
+    amount_minor: Math.round(lari * 100),
+    currency: opts.currency ?? 'GEL',
+    category_id: categoryId,
+    occurred_at: at,
+    kind: kind === 'payment' ? 'purchase' : kind,
+  });
   if (kind === 'payment') await (await getDb()).run("UPDATE transactions SET kind = 'payment' WHERE id = ?", [id]);
   // a manual one is created seen: a bank one isn't until opened
-  if (opts.unread) { unread.add(id); await (await getDb()).run('UPDATE transactions SET seen_at = NULL WHERE id = ?', [id]); }
+  if (opts.unread) {
+    unread.add(id);
+    await (await getDb()).run('UPDATE transactions SET seen_at = NULL WHERE id = ?', [id]);
+  }
   if (opts.note) await (await getDb()).run('UPDATE transactions SET note = ? WHERE id = ?', [opts.note, id]);
   // from the bank (an SMS): the balance and the list treat manual ones apart
-  await (await getDb()).run("UPDATE transactions SET bank = 'tbc', raw_sms = ? WHERE id = ?", [`${merchant} ${lari}`, id]);
+  await (
+    await getDb()
+  ).run("UPDATE transactions SET bank = 'tbc', raw_sms = ? WHERE id = ?", [`${merchant} ${lari}`, id]);
   // as if from an SMS: the merchant and its key
-  await (await getDb()).run("UPDATE transactions SET raw_merchant = ?, merchant_key = ?, category_source = CASE WHEN category_id IS NULL THEN NULL ELSE 'user' END WHERE id = ?",
-    [merchant, merchant.toUpperCase(), id]);
-  if (kind === 'deposit') await (await getDb()).run('UPDATE transactions SET category_source = NULL WHERE id = ?', [id]);
+  await (
+    await getDb()
+  ).run(
+    "UPDATE transactions SET raw_merchant = ?, merchant_key = ?, category_source = CASE WHEN category_id IS NULL THEN NULL ELSE 'user' END WHERE id = ?",
+    [merchant, merchant.toUpperCase(), id],
+  );
+  if (kind === 'deposit')
+    await (await getDb()).run('UPDATE transactions SET category_source = NULL WHERE id = ?', [id]);
   return id;
 }
 /** the merchant's category: its operations follow it */
@@ -39,7 +66,12 @@ export async function rule(merchant: string, categoryId: number) {
   await createRule('exact', merchant, categoryId);
   await backfillRule('exact', merchant, categoryId);
   // its operations of that category follow it (as the rule had picked them), the hand-picked ones of others stay
-  await (await getDb()).run("UPDATE transactions SET category_source = 'rule' WHERE merchant_key = ? AND category_id = ?", [merchant.toUpperCase(), categoryId]);
+  await (
+    await getDb()
+  ).run("UPDATE transactions SET category_source = 'rule' WHERE merchant_key = ? AND category_id = ?", [
+    merchant.toUpperCase(),
+    categoryId,
+  ]);
 }
 
 /** the default categories exist already: those are reused (with this emoji), the rest created */
@@ -76,7 +108,8 @@ export async function base() {
 export async function empty() {}
 
 /** unix seconds `days` ago at noon */
-export const daysAgo = (days: number) => Math.floor(new Date(now.getFullYear(), now.getMonth(), now.getDate() - days, 12).getTime() / 1000);
+export const daysAgo = (days: number) =>
+  Math.floor(new Date(now.getFullYear(), now.getMonth(), now.getDate() - days, 12).getTime() / 1000);
 
 /**
  * 1.6, 8.1: merchants with a category (SPAR exactly, WOLT… by prefix), one of different categories (GLOVO), a person
@@ -91,14 +124,19 @@ export async function autoCategory() {
   await createRule('prefix', 'WOLT', cafe);
   await createRule('exact', 'NINO B', cafe);
   await db.run("INSERT INTO mixed_merchants (merchant_key, created_at) VALUES ('GLOVO', 0)");
-  for (const [i, c] of [cafe, food].entries()) await db.run("INSERT INTO merchant_categories (merchant_key, category_id, position) VALUES ('GLOVO', ?, ?)", [c, i]);
+  for (const [i, c] of [cafe, food].entries())
+    await db.run("INSERT INTO merchant_categories (merchant_key, category_id, position) VALUES ('GLOVO', ?, ?)", [
+      c,
+      i,
+    ]);
   await buy('TEMU.COM', 60, daysAgo(10), shop);
   await db.run("UPDATE transactions SET merchant_key = 'TEMU COM' WHERE raw_merchant = 'TEMU.COM'");
   await buy('OLDSHOP', 40, daysAgo(100), shop);
 }
 
 /** unix seconds: `days` ago at `hour` */
-export const at = (days: number, hour: number) => Math.floor(new Date(now.getFullYear(), now.getMonth(), now.getDate() - days, hour).getTime() / 1000);
+export const at = (days: number, hour: number) =>
+  Math.floor(new Date(now.getFullYear(), now.getMonth(), now.getDate() - days, hour).getTime() / 1000);
 
 /**
  * Section 2 (the operations): today (a purchase of a merchant's category, an unread transfer, a refund, a deposit, money
@@ -125,7 +163,12 @@ export async function ops() {
   await buy('ZARA', 80, at(3, 17), clothes);
   await buy('NETFLIX.COM', 10, at(3, 16), subs, { currency: 'USD' });
   for (let i = 0; i < 60; i++) await buy('MARKET', 3 + (i % 7), at(10 + Math.floor(i / 3), 10 + (i % 3)), food);
-  await buy('OLDSHOP', 15, Math.floor(new Date(now.getFullYear() - 1, now.getMonth(), 15, 12).getTime() / 1000), clothes);
+  await buy(
+    'OLDSHOP',
+    15,
+    Math.floor(new Date(now.getFullYear() - 1, now.getMonth(), 15, 12).getTime() / 1000),
+    clothes,
+  );
   await rule('SPAR', food);
   await rule('ZARA', clothes);
   await rule('MARKET', food);
@@ -140,7 +183,8 @@ export async function done() {
 }
 
 /** unix seconds: that day of this month (`m` months back), at `hour` */
-export const on = (day: number, hour = 12, m = 0) => Math.floor(new Date(now.getFullYear(), now.getMonth() - m, day, hour).getTime() / 1000);
+export const on = (day: number, hour = 12, m = 0) =>
+  Math.floor(new Date(now.getFullYear(), now.getMonth() - m, day, hour).getTime() / 1000);
 
 /**
  * Sections 5–7 (the stats, the plan, the report), for "today" = the 15th (the screens' tests fix it). This month: a
@@ -208,4 +252,3 @@ export async function lateFund() {
   // its kind, as «В плане» → «Копилка» saves it
   await (await getDb()).run("UPDATE categories SET plan_kind = 'fund' WHERE id = ?", [id]);
 }
-

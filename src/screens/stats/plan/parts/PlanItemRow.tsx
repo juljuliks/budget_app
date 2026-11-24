@@ -13,7 +13,11 @@ import { colors } from '@/shared/theme/theme';
 import { styles, toneStyle } from './styles';
 
 type Props = {
-  p: PlanView; item: PlanItem; ym: string; currency: Currency; hidden: boolean;
+  p: PlanView;
+  item: PlanItem;
+  ym: string;
+  currency: Currency;
+  hidden: boolean;
   toShown: (minor: number, from: Currency) => number | null;
   onOpen: () => void;
 };
@@ -41,13 +45,21 @@ export function PlanItemRow({ p, item, ym, currency, hidden, toShown, onOpen }: 
   const label = `${item.emoji || ''} ${item.name}`.trim();
   // a regular payment within the month ("каждый день · 31 × 5 ₾"), a one-off payment; a flexible item's amount per its
   // norm rhythm, e.g. "лимит ≈ 46 ₾ в неделю"
-  const note = item.every ? regularNote(item, ym, dayKeyOf(new Date())) : item.kind === 'fixed' ? 'разовый платёж' : item.kind === 'limit' && !hidden ? normText(item, ym, currency) : '';
+  const note = item.every
+    ? regularNote(item, ym, dayKeyOf(new Date()))
+    : item.kind === 'fixed'
+      ? 'разовый платёж'
+      : item.kind === 'limit' && !hidden
+        ? normText(item, ym, currency)
+        : '';
   return (
     <TouchableOpacity style={styles.row} onPress={onOpen} accessibilityLabel={`Изменить: ${categoryLabel(item)}`}>
       <KindIcon item={item} />
       <View style={styles.nameBox}>
         {/* the type is the section title, so just emoji + name here */}
-        <Text style={styles.name} numberOfLines={1}>{label}</Text>
+        <Text style={styles.name} numberOfLines={1}>
+          {label}
+        </Text>
         {note ? <Text style={styles.percent}>{note}</Text> : null}
       </View>
       {item.limit_minor ? (
@@ -56,10 +68,14 @@ export function PlanItemRow({ p, item, ym, currency, hidden, toShown, onOpen }: 
           {hidden ? null : (
             <View style={styles.amountLine}>
               {item.converted_minor !== null && item.currency !== currency ? (
-                <Text style={[styles.amount, styles.amountForeign]}>({formatWithCurrency(item.limit_minor, item.currency)})</Text>
+                <Text style={[styles.amount, styles.amountForeign]}>
+                  ({formatWithCurrency(item.limit_minor, item.currency)})
+                </Text>
               ) : null}
               <Text style={styles.amount}>
-                {item.converted_minor !== null ? p.money(item.converted_minor) : formatWithCurrency(item.limit_minor, item.currency)}
+                {item.converted_minor !== null
+                  ? p.money(item.converted_minor)
+                  : formatWithCurrency(item.limit_minor, item.currency)}
               </Text>
             </View>
           )}
@@ -79,23 +95,44 @@ export function PlanItemRow({ p, item, ym, currency, hidden, toShown, onOpen }: 
  * A system row of the plan («🔒 Отложено сразу»: the settings' % of the budget): a lock for its icon, its note, the
  * amount (in the budget's currency when the screen shows another) and its share; a tap opens the budget.
  */
-export function SystemRowView({ p, r, hidden, onOpen }: { p: PlanView; r: SystemRow; hidden: boolean; onOpen: () => void }) {
+export function SystemRowView({
+  p,
+  r,
+  hidden,
+  onOpen,
+}: {
+  p: PlanView;
+  r: SystemRow;
+  hidden: boolean;
+  onOpen: () => void;
+}) {
   return (
     <TouchableOpacity style={styles.row} onPress={onOpen} accessibilityLabel={`Изменить: ${r.name}`}>
-      <View style={styles.pin}><LockIcon color={colors.muted} size={20} /></View>
+      <View style={styles.pin}>
+        <LockIcon color={colors.muted} size={20} />
+      </View>
       <View style={styles.nameBox}>
-        <Text style={styles.name} numberOfLines={1}>{r.name}</Text>
+        <Text style={styles.name} numberOfLines={1}>
+          {r.name}
+        </Text>
         <Text style={styles.percent}>{r.note}</Text>
       </View>
       <View style={styles.amountBox}>
         {hidden ? null : (
           <View style={styles.amountLine}>
-            {r.inBudget !== undefined && p.budgetMoney
-              ? <Text style={styles.amount}>{p.budgetMoney(r.inBudget).slice(1, -1)}</Text>
-              : <Text style={[styles.amount, toneStyle(r.tone)]}>{p.money(r.value)}</Text>}
+            {r.inBudget !== undefined && p.budgetMoney ? (
+              <Text style={styles.amount}>{p.budgetMoney(r.inBudget).slice(1, -1)}</Text>
+            ) : (
+              <Text style={[styles.amount, toneStyle(r.tone)]}>{p.money(r.value)}</Text>
+            )}
           </View>
         )}
-        {p.shownBudget ? <Text style={styles.amountOriginal}>{hidden ? '' : ' · '}{percentOf(r.value, p.shownBudget) || '0%'}</Text> : null}
+        {p.shownBudget ? (
+          <Text style={styles.amountOriginal}>
+            {hidden ? '' : ' · '}
+            {percentOf(r.value, p.shownBudget) || '0%'}
+          </Text>
+        ) : null}
       </View>
     </TouchableOpacity>
   );

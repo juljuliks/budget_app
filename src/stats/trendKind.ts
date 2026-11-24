@@ -25,10 +25,19 @@ const STABLE_OF = 6;
 const CHANGE_MIN = 0.02;
 
 const ymOfDay = (d: DayKey) => d.slice(0, 7);
-const ymBack = (today: DayKey, n: number) => { const d = parseDayKey(today); return ymOfDay(dayKeyOf(new Date(d.getFullYear(), d.getMonth() - n, 1))); };
+const ymBack = (today: DayKey, n: number) => {
+  const d = parseDayKey(today);
+  return ymOfDay(dayKeyOf(new Date(d.getFullYear(), d.getMonth() - n, 1)));
+};
 
 /** One operation (its parts in the category together), the newest first. */
-export type Payment = { tx: number | null; day: DayKey; value: number; merchant: string | null; merchantKey: string | null };
+export type Payment = {
+  tx: number | null;
+  day: DayKey;
+  value: number;
+  merchant: string | null;
+  merchantKey: string | null;
+};
 
 export function paymentsOf(spends: TrendSpend[]): Payment[] {
   const by = new Map<string, Payment>();
@@ -36,7 +45,12 @@ export function paymentsOf(spends: TrendSpend[]): Payment[] {
     if (s.value <= 0) return;
     const id = s.tx !== undefined ? `t${s.tx}` : `i${i}`;
     const had = by.get(id);
-    by.set(id, had ? { ...had, value: had.value + s.value } : { tx: s.tx ?? null, day: s.day, value: s.value, merchant: s.merchant, merchantKey: s.merchantKey });
+    by.set(
+      id,
+      had
+        ? { ...had, value: had.value + s.value }
+        : { tx: s.tx ?? null, day: s.day, value: s.value, merchant: s.merchant, merchantKey: s.merchantKey },
+    );
   });
   return [...by.values()].sort((a, b) => (a.day < b.day ? 1 : a.day > b.day ? -1 : 0));
 }
@@ -80,7 +94,10 @@ export function rareTrend(spends: TrendSpend[], today: DayKey) {
   const payments = paymentsOf(spends).filter((p) => p.day >= from);
   // the latest payments in runs of nearly the same amount: one run — the same; two — the amount changed once
   const recent = payments.slice(0, STABLE_OF).map((p) => p.value);
-  const runs = recent.reduce((n, v, i) => (i > 0 && Math.abs(v - recent[i - 1]) > recent[i - 1] * SAME_AMOUNT ? n + 1 : n), 1);
+  const runs = recent.reduce(
+    (n, v, i) => (i > 0 && Math.abs(v - recent[i - 1]) > recent[i - 1] * SAME_AMOUNT ? n + 1 : n),
+    1,
+  );
   const stable = recent.length >= 2 && (runs === 1 || (runs === 2 && recent.length >= 3));
   const days = payments.slice(0, 6).map((p) => Number(p.day.slice(8)));
   const total = bars.reduce((a, b) => a + b.value, 0);
@@ -94,7 +111,10 @@ export function rareTrend(spends: TrendSpend[], today: DayKey) {
     stable,
     change: stable ? lastChange(payments) : null,
     /** "3–5 числа": when it is charged within a week of the month */
-    days: stable && days.length >= 2 && Math.max(...days) - Math.min(...days) <= 7 ? { from: Math.min(...days), to: Math.max(...days) } : null,
+    days:
+      stable && days.length >= 2 && Math.max(...days) - Math.min(...days) <= 7
+        ? { from: Math.min(...days), to: Math.max(...days) }
+        : null,
     paidMonths,
     /** "раз в 3 месяца": twelve months over the payments */
     every: payments.length >= 2 ? Math.max(1, Math.round(bars.length / payments.length)) : null,

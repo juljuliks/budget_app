@@ -18,7 +18,12 @@ export default function FundSection({ categoryId }: { categoryId: number }) {
     <>
       {data.forecast ? <FundForecastBox forecast={data.forecast} fund={data.month.fund} label={data.label} /> : null}
       <TextLink label={FUND_CARD} onPress={() => setCard(true)} containerStyle={styles.card} />
-      <FundSheet categoryId={card ? categoryId : null} label={data.label} onClose={() => setCard(false)} onEdit={() => setCard(false)} />
+      <FundSheet
+        categoryId={card ? categoryId : null}
+        label={data.label}
+        onClose={() => setCard(false)}
+        onEdit={() => setCard(false)}
+      />
     </>
   );
 }

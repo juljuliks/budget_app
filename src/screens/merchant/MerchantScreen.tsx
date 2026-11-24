@@ -16,19 +16,23 @@ export default function MerchantScreen({ route, navigation }: Props) {
   const [count, setCount] = useState(0);
   const rows = useRecentOperations({ merchant: key });
   useEffect(() => {
-    getMerchant(key).then((m) => {
-      if (!m) return;
-      setName(m.name);
-      setCount(m.count);
-      navigation.setOptions({ title: m.name });
-    }).catch(toastFailure('load merchant', LOAD_FAILED));
+    getMerchant(key)
+      .then((m) => {
+        if (!m) return;
+        setName(m.name);
+        setCount(m.count);
+        navigation.setOptions({ title: m.name });
+      })
+      .catch(toastFailure('load merchant', LOAD_FAILED));
   }, [key, navigation, rows]);
   // all its operations: searched by its name, back returns here
   const showAll = (n = name) => showOperationsFrom({ query: n });
   return (
     <MerchantView
       merchantId={key}
-      onClose={() => { if (navigation.canGoBack()) navigation.goBack(); }}
+      onClose={() => {
+        if (navigation.canGoBack()) navigation.goBack();
+      }}
       onShowOperations={showAll}
       recent={<RecentOperations rows={rows} count={count} of="merchant" onShowAll={() => showAll()} />}
     />

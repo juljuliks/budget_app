@@ -26,7 +26,10 @@ export default function MonthCloseSheet({ ym, onClose }: { ym: string | null; on
   const { close: c, failed, load, split, answer, pay, finish } = useMonthClose(ym);
   const [wanted, setWanted] = useState<CloseStep | null>(null);
   const [splitOpen, setSplitOpen] = useState(false);
-  useEffect(() => { setWanted(null); setSplitOpen(false); }, [ym]);
+  useEffect(() => {
+    setWanted(null);
+    setSplitOpen(false);
+  }, [ym]);
   const words = ym ? monthWords(ym) : null;
   const step = c ? currentStep(c.steps, wanted) : null;
   const at = c && step ? c.steps.indexOf(step) : -1;
@@ -40,39 +43,76 @@ export default function MonthCloseSheet({ ym, onClose }: { ym: string | null; on
 
   return (
     <>
-    <BottomSheet visible={ym !== null} onClose={onClose} title={words ? `Итоги · ${words.title}` : ''}>
-      {!c || !words ? <Loading inline failed={failed} onRetry={load} /> : (
-        <>
-          {step ? (
-            <StepsNav at={at} count={c.steps.length} name={STEP_NAMES[step]} style={styles.steps}
-              onBack={at > 0 ? () => setWanted(c.steps[at - 1]) : undefined} />
-          ) : null}
-          <SheetScrollView contentContainerStyle={styles.content}>
-            {step === 'payments' ? <StepPayments c={c} onAnswer={(id, v) => { pay(id, v); }} /> : null}
-            {step === 'over' ? <StepOver c={c} onAnswer={answer} /> : null}
-            {step === 'savings' ? <StepSavings c={c} onAnswer={answer} onSplit={() => setSplitOpen(true)} /> : null}
-            {!step ? <Text style={styles.empty}>{`Вопросов о ${words.prep} нет`}</Text> : null}
-          </SheetScrollView>
-          <View style={styles.actions}>
-            {last || !step ? (
-              <>
-                {!c.complete ? <Text style={styles.hint}>Отчёт откроется, когда ответите на вопросы выше</Text> : null}
-                <SheetActions style={c.complete ? undefined : { marginTop: 8 }}
-                  submit={{ title: `Отчёт за ${words.nom}`, disabled: !c.complete, onPress: () => { report(); } }}
-                  onCancel={onClose} cancelTitle="Подвести позже" />
-              </>
-            ) : (
-              <SheetActions
-                submit={{ title: 'Далее', disabled: !stepAnswered(c, step), onPress: () => setWanted(c.steps[at + 1]) }}
-                onCancel={onClose} cancelTitle="Подвести позже" />
-            )}
-          </View>
-        </>
-      )}
-    </BottomSheet>
-    {/* over it: a sibling (each sheet its own window) */}
-    <SplitSheet c={c} visible={ym !== null && splitOpen} onClose={() => setSplitOpen(false)}
-      onSave={(parts) => { split(parts).then(() => setSplitOpen(false)); }} />
+      <BottomSheet visible={ym !== null} onClose={onClose} title={words ? `Итоги · ${words.title}` : ''}>
+        {!c || !words ? (
+          <Loading inline failed={failed} onRetry={load} />
+        ) : (
+          <>
+            {step ? (
+              <StepsNav
+                at={at}
+                count={c.steps.length}
+                name={STEP_NAMES[step]}
+                style={styles.steps}
+                onBack={at > 0 ? () => setWanted(c.steps[at - 1]) : undefined}
+              />
+            ) : null}
+            <SheetScrollView contentContainerStyle={styles.content}>
+              {step === 'payments' ? (
+                <StepPayments
+                  c={c}
+                  onAnswer={(id, v) => {
+                    pay(id, v);
+                  }}
+                />
+              ) : null}
+              {step === 'over' ? <StepOver c={c} onAnswer={answer} /> : null}
+              {step === 'savings' ? <StepSavings c={c} onAnswer={answer} onSplit={() => setSplitOpen(true)} /> : null}
+              {!step ? <Text style={styles.empty}>{`Вопросов о ${words.prep} нет`}</Text> : null}
+            </SheetScrollView>
+            <View style={styles.actions}>
+              {last || !step ? (
+                <>
+                  {!c.complete ? (
+                    <Text style={styles.hint}>Отчёт откроется, когда ответите на вопросы выше</Text>
+                  ) : null}
+                  <SheetActions
+                    style={c.complete ? undefined : { marginTop: 8 }}
+                    submit={{
+                      title: `Отчёт за ${words.nom}`,
+                      disabled: !c.complete,
+                      onPress: () => {
+                        report();
+                      },
+                    }}
+                    onCancel={onClose}
+                    cancelTitle="Подвести позже"
+                  />
+                </>
+              ) : (
+                <SheetActions
+                  submit={{
+                    title: 'Далее',
+                    disabled: !stepAnswered(c, step),
+                    onPress: () => setWanted(c.steps[at + 1]),
+                  }}
+                  onCancel={onClose}
+                  cancelTitle="Подвести позже"
+                />
+              )}
+            </View>
+          </>
+        )}
+      </BottomSheet>
+      {/* over it: a sibling (each sheet its own window) */}
+      <SplitSheet
+        c={c}
+        visible={ym !== null && splitOpen}
+        onClose={() => setSplitOpen(false)}
+        onSave={(parts) => {
+          split(parts).then(() => setSplitOpen(false));
+        }}
+      />
     </>
   );
 }

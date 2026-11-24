@@ -10,21 +10,29 @@ let seq = 0;
 
 async function tx(categoryId: number, occurredAt: number, merchant: string, source = 'rule') {
   const db = await getDb();
-  return (await db.run(
-    `INSERT INTO transactions (bank, kind, amount_minor, currency, merchant_key, category_id, category_source, occurred_at, raw_sms, sms_hash)
-      VALUES ('tbc', 'purchase', 100, 'GEL', ?, ?, ?, ?, '', ?)`, [merchant, categoryId, source, occurredAt, `m${seq++}`])).lastInsertRowid;
+  return (
+    await db.run(
+      `INSERT INTO transactions (bank, kind, amount_minor, currency, merchant_key, category_id, category_source, occurred_at, raw_sms, sms_hash)
+      VALUES ('tbc', 'purchase', 100, 'GEL', ?, ?, ?, ?, '', ?)`,
+      [merchant, categoryId, source, occurredAt, `m${seq++}`],
+    )
+  ).lastInsertRowid;
 }
 
 async function plan(ym: string, categoryId: number, minor: number, kind = 'limit', norm = 'day', pinned = 0) {
   const db = await getDb();
   await db.run('INSERT OR IGNORE INTO plan_months (ym) VALUES (?)', [ym]);
-  await db.run('INSERT INTO plan_items (ym, category_id, limit_minor, currency, kind, norm_period, pinned) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    [ym, categoryId, minor, 'GEL', kind, norm, pinned]);
+  await db.run(
+    'INSERT INTO plan_items (ym, category_id, limit_minor, currency, kind, norm_period, pinned) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    [ym, categoryId, minor, 'GEL', kind, norm, pinned],
+  );
 }
 
-beforeEach(async () => { await freshDb(); });
+beforeEach(async () => {
+  await freshDb();
+});
 
-test('merging moves every month\'s operations, rules and plan into the target and removes the others', async () => {
+test("merging moves every month's operations, rules and plan into the target and removes the others", async () => {
   const cafe = await createCategory('Кафе', '☕️');
   const bars = await createCategory('Рестораны', '🍽');
   const old = await tx(bars, at(2026, 8, 3), 'FABRIKA');
@@ -37,11 +45,19 @@ test('merging moves every month\'s operations, rules and plan into the target an
 
   await mergeCategories(cafe, [bars], 'Кафе & Рестораны', null, { kind: 'limit', norm: 'week' });
 
-  const cat = (id: number) => db.get<{ category_id: number; category_source: string }>('SELECT category_id, category_source FROM transactions WHERE id = ?', [id]);
+  const cat = (id: number) =>
+    db.get<{ category_id: number; category_source: string }>(
+      'SELECT category_id, category_source FROM transactions WHERE id = ?',
+      [id],
+    );
   expect(await cat(old)).toEqual({ category_id: cafe, category_source: 'rule' });
   expect(await cat(now)).toEqual({ category_id: cafe, category_source: 'rule' });
-  expect(await db.get('SELECT category_id FROM merchant_rules WHERE pattern = ?', ['FABRIKA'])).toEqual({ category_id: cafe });
-  expect(await db.all('SELECT ym, category_id, limit_minor, kind, norm_period, pinned FROM plan_items ORDER BY ym')).toEqual([
+  expect(await db.get('SELECT category_id FROM merchant_rules WHERE pattern = ?', ['FABRIKA'])).toEqual({
+    category_id: cafe,
+  });
+  expect(
+    await db.all('SELECT ym, category_id, limit_minor, kind, norm_period, pinned FROM plan_items ORDER BY ym'),
+  ).toEqual([
     { ym: '2026-08', category_id: cafe, limit_minor: 30000, kind: 'limit', norm_period: 'week', pinned: 0 },
     { ym: '2026-10', category_id: cafe, limit_minor: 73000, kind: 'limit', norm_period: 'week', pinned: 1 },
   ]);
@@ -51,14 +67,18 @@ test('merging moves every month\'s operations, rules and plan into the target an
   expect(await db.get('SELECT id FROM categories WHERE id = ?', [bars])).toBeUndefined();
 });
 
-test('without a chosen rhythm the target\'s kind and pattern stay', async () => {
+test("without a chosen rhythm the target's kind and pattern stay", async () => {
   const a = await createCategory('A');
   const b = await createCategory('B');
   await plan('2026-10', a, 1000, 'fixed', 'month');
   await plan('2026-10', b, 500, 'limit', 'day');
   await mergeCategories(a, [b], 'A', null, null);
   const db = await getDb();
-  expect(await db.get('SELECT limit_minor, kind, norm_period FROM plan_items')).toEqual({ limit_minor: 1500, kind: 'fixed', norm_period: 'month' });
+  expect(await db.get('SELECT limit_minor, kind, norm_period FROM plan_items')).toEqual({
+    limit_minor: 1500,
+    kind: 'fixed',
+    norm_period: 'month',
+  });
 });
 
 test('a name taken by another category of the section is refused', async () => {
@@ -81,14 +101,24 @@ test('a merchant of different categories: they merge in its list; all of them me
   const food = await createCategory('Продукты', '🛒');
   const db = await getDb();
   await db.run("INSERT INTO mixed_merchants (merchant_key, created_at) VALUES ('WOLT', 0), ('GLOVO', 0)");
-  await db.run('INSERT INTO merchant_categories (merchant_key, category_id) VALUES (?, ?), (?, ?), (?, ?), (?, ?)',
-    ['WOLT', cafe, 'WOLT', bars, 'GLOVO', bars, 'GLOVO', food]);
+  await db.run('INSERT INTO merchant_categories (merchant_key, category_id) VALUES (?, ?), (?, ?), (?, ?), (?, ?)', [
+    'WOLT',
+    cafe,
+    'WOLT',
+    bars,
+    'GLOVO',
+    bars,
+    'GLOVO',
+    food,
+  ]);
 
   await mergeCategories(cafe, [bars], 'Кафе & Рестораны', null, null);
 
   // GLOVO: still two to pick from
   expect(await isMixedMerchant('GLOVO')).toBe(true);
-  expect(await db.all("SELECT category_id FROM merchant_categories WHERE merchant_key = 'GLOVO' ORDER BY category_id")).toEqual([{ category_id: cafe }, { category_id: food }]);
+  expect(
+    await db.all("SELECT category_id FROM merchant_categories WHERE merchant_key = 'GLOVO' ORDER BY category_id"),
+  ).toEqual([{ category_id: cafe }, { category_id: food }]);
   // WOLT: nothing to pick from — its new operations go to the merged one without asking
   expect(await isMixedMerchant('WOLT')).toBe(false);
   expect(await findCategoryForMerchant('WOLT')).toEqual({ category_id: cafe, source: 'rule' });
@@ -99,20 +129,36 @@ test('a regular payment within the month picked: the merged item keeps its days 
   const gym = await createCategory('Зал');
   await plan('2026-10', yoga, 18000, 'fixed', 'month');
   // Tuesdays and Fridays, 20 ₾ each: 9 times in October
-  await (await getDb()).run("UPDATE plan_items SET every = 'week', weekdays = ?, unit_minor = 2000 WHERE category_id = ?", [(1 << 1) | (1 << 4), yoga]);
+  await (
+    await getDb()
+  ).run("UPDATE plan_items SET every = 'week', weekdays = ?, unit_minor = 2000 WHERE category_id = ?", [
+    (1 << 1) | (1 << 4),
+    yoga,
+  ]);
   await plan('2026-10', gym, 30000);
-  await mergeCategories(yoga, [gym], 'Спорт', null, { kind: 'fixed', norm: 'month', every: 'week', weekdays: (1 << 1) | (1 << 4) });
-  expect(await (await getDb()).get('SELECT limit_minor, kind, every, weekdays, unit_minor FROM plan_items WHERE category_id = ?', [yoga]))
-    .toEqual({ limit_minor: 18000, kind: 'fixed', every: 'week', weekdays: 18, unit_minor: 2000 });
+  await mergeCategories(yoga, [gym], 'Спорт', null, {
+    kind: 'fixed',
+    norm: 'month',
+    every: 'week',
+    weekdays: (1 << 1) | (1 << 4),
+  });
+  expect(
+    await (
+      await getDb()
+    ).get('SELECT limit_minor, kind, every, weekdays, unit_minor FROM plan_items WHERE category_id = ?', [yoga]),
+  ).toEqual({ limit_minor: 18000, kind: 'fixed', every: 'week', weekdays: 18, unit_minor: 2000 });
 });
 
 test('another rhythm picked: no longer a regular payment — the amounts summed', async () => {
   const yoga = await createCategory('Йога');
   const gym = await createCategory('Зал');
   await plan('2026-10', yoga, 18000, 'fixed', 'month');
-  await (await getDb()).run("UPDATE plan_items SET every = 'week', weekdays = 18, unit_minor = 2000 WHERE category_id = ?", [yoga]);
+  await (
+    await getDb()
+  ).run("UPDATE plan_items SET every = 'week', weekdays = 18, unit_minor = 2000 WHERE category_id = ?", [yoga]);
   await plan('2026-10', gym, 30000);
   await mergeCategories(yoga, [gym], 'Спорт', null, { kind: 'limit', norm: 'day' });
-  expect(await (await getDb()).get('SELECT limit_minor, kind, every FROM plan_items WHERE category_id = ?', [yoga]))
-    .toEqual({ limit_minor: 48000, kind: 'limit', every: null });
+  expect(
+    await (await getDb()).get('SELECT limit_minor, kind, every FROM plan_items WHERE category_id = ?', [yoga]),
+  ).toEqual({ limit_minor: 48000, kind: 'limit', every: null });
 });

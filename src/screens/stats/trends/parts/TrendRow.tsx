@@ -20,14 +20,22 @@ export default function TrendRow({ row, currency }: { row: Row; currency: Curren
   const t = row.trend;
   const why = hidden ? null : whyText(t, money);
   return (
-    <TouchableOpacity style={styles.row} onPress={() => openCategoryTrend(row.category.id)} accessibilityHint="Открыть динамику категории">
+    <TouchableOpacity
+      style={styles.row}
+      onPress={() => openCategoryTrend(row.category.id)}
+      accessibilityHint="Открыть динамику категории"
+    >
       <View style={styles.rowTop}>
         <View style={[styles.dot, { backgroundColor: row.category.color }]} />
-        <Text style={styles.name} numberOfLines={1}>{row.label}</Text>
+        <Text style={styles.name} numberOfLines={1}>
+          {row.label}
+        </Text>
         {hidden ? null : <Text style={styles.delta}>{`${t.delta > 0 ? '+' : '−'}${money(t.delta)}`}</Text>}
         <ChevronRightIcon color={colors.muted} size={16} />
       </View>
-      <Text style={styles.line}>{hidden ? pctText(t) : `${money(t.cur)} · обычно ${money(t.usual)} · ${pctText(t)}`}</Text>
+      <Text style={styles.line}>
+        {hidden ? pctText(t) : `${money(t.cur)} · обычно ${money(t.usual)} · ${pctText(t)}`}
+      </Text>
       <View style={styles.chart}>
         <TrendBars bars={row.bars} color={row.category.color} height={48} />
       </View>

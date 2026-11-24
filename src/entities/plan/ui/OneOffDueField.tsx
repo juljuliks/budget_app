@@ -16,12 +16,22 @@ export function OneOffDueField({ ym, form }: { ym: string; form: UseFormReturn<D
   const { from, to } = monthDays(ym);
   return (
     <>
-      <Controller control={form.control} name="due" render={({ field }) => (
-        <DateField
-          label="Дата списания (необязательно)" value={field.value} format={dayTitle} sheetTitle="Дата списания" minDay={from} maxDay={to}
-          onChange={field.onChange} onClear={() => field.onChange(null)}
-        />
-      )} />
+      <Controller
+        control={form.control}
+        name="due"
+        render={({ field }) => (
+          <DateField
+            label="Дата списания (необязательно)"
+            value={field.value}
+            format={dayTitle}
+            sheetTitle="Дата списания"
+            minDay={from}
+            maxDay={to}
+            onChange={field.onChange}
+            onClear={() => field.onChange(null)}
+          />
+        )}
+      />
       <Text style={formStyles.hint}>С датой платёж встанет на шкалу месяца в статистике.</Text>
     </>
   );

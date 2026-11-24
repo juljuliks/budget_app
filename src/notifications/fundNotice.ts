@@ -12,8 +12,17 @@ import { hideNotificationAmounts } from '../native/appLock';
 /** The notice's lines; null — not a fund's operation. */
 export async function fundNoticeFor(txId: number, hide: boolean): Promise<{ title: string; body: string } | null> {
   const db = await getDb();
-  const tx = await db.get<{ amount_minor: number; currency: string; raw_merchant: string | null; merchant_key: string | null; category_id: number | null; occurred_at: number }>(
-    'SELECT amount_minor, currency, raw_merchant, merchant_key, category_id, occurred_at FROM transactions WHERE id = ?', [txId]);
+  const tx = await db.get<{
+    amount_minor: number;
+    currency: string;
+    raw_merchant: string | null;
+    merchant_key: string | null;
+    category_id: number | null;
+    occurred_at: number;
+  }>(
+    'SELECT amount_minor, currency, raw_merchant, merchant_key, category_id, occurred_at FROM transactions WHERE id = ?',
+    [txId],
+  );
   if (!tx) return null;
   const fund = await fundOfTransaction(txId, tx.category_id, tx.occurred_at);
   const saving = fund ? null : await savingOfTransaction(txId, tx.merchant_key, tx.occurred_at);
@@ -35,7 +44,12 @@ export async function showFundSpent(txId: number, channelId: string): Promise<bo
     await notifee.displayNotification({
       id: `tx_${txId}`,
       ...notice,
-      android: { channelId, smallIcon: 'ic_notification', importance: AndroidImportance.HIGH, pressAction: { id: 'default', launchActivity: 'default' } },
+      android: {
+        channelId,
+        smallIcon: 'ic_notification',
+        importance: AndroidImportance.HIGH,
+        pressAction: { id: 'default', launchActivity: 'default' },
+      },
       data: { txId: String(txId), merchant_key: '' },
     });
     return true;

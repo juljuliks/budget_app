@@ -10,9 +10,24 @@ type Route = 'Categories' | 'Merchants' | 'Settings';
 type Item = { route: Route; label: string; hint: string; icon: (color: string) => React.ReactNode };
 
 const ITEMS: Item[] = [
-  { route: 'Categories', label: 'Категории', hint: 'разделы, эмодзи, вид в плане', icon: (c) => <GridIcon color={c} size={24} /> },
-  { route: 'Merchants', label: 'Мерчанты', hint: 'какая категория у какого магазина', icon: (c) => <StoreIcon color={c} size={24} /> },
-  { route: 'Settings', label: 'Настройки', hint: 'бюджет, банки, приложение', icon: (c) => <GearIcon color={c} size={24} /> },
+  {
+    route: 'Categories',
+    label: 'Категории',
+    hint: 'разделы, эмодзи, вид в плане',
+    icon: (c) => <GridIcon color={c} size={24} />,
+  },
+  {
+    route: 'Merchants',
+    label: 'Мерчанты',
+    hint: 'какая категория у какого магазина',
+    icon: (c) => <StoreIcon color={c} size={24} />,
+  },
+  {
+    route: 'Settings',
+    label: 'Настройки',
+    hint: 'бюджет, банки, приложение',
+    icon: (c) => <GearIcon color={c} size={24} />,
+  },
 ];
 
 /** ⋮ in the tab headers: a sheet of the pages over the tabs — Категории, Мерчанты, Настройки (back — to the tab). */
@@ -32,7 +47,12 @@ export default function MenuButton() {
       <BottomSheet visible={open} onClose={() => setOpen(false)}>
         <View style={styles.list}>
           {ITEMS.map((it, i) => (
-            <TouchableOpacity key={it.route} style={[styles.row, i > 0 && styles.divider]} onPress={() => go(it.route)} accessibilityRole="button">
+            <TouchableOpacity
+              key={it.route}
+              style={[styles.row, i > 0 && styles.divider]}
+              onPress={() => go(it.route)}
+              accessibilityRole="button"
+            >
               {it.icon(colors.accent)}
               <View style={styles.text}>
                 <Text style={styles.label}>{it.label}</Text>

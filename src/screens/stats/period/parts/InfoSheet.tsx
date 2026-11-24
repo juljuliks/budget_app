@@ -23,21 +23,23 @@ export default function InfoSheet({ v, info, onClose }: { v: PeriodView; info: I
     >
       {/* the text scrolls, "Понятно" stays at the bottom; every calculation is set apart in a code style */}
       <SheetScrollView style={styles.infoScroll} contentContainerStyle={styles.info}>
-        {cat && catPlan ? <CategoryInfo key={cat.id} v={v} id={cat.id} p={catPlan} />
-          : g ? <GroupInfo v={v} g={g} />
-            : v.pace ? (
-              <Text style={styles.infoText}>
-                На эти дни плана нет: показана только структура трат. Задайте лимиты категорий в плане — здесь появятся
-                дневные, недельные и месячные лимиты.
-              </Text>
-            ) : (
-              <Text style={styles.infoText}>
-                Период длиннее месяца с планом не сравнивается: показана структура трат по категориям и среднее в месяц.
-                Среднее считается только по полным месяцам с данными: текущий месяц ещё не закончился, а первый не
-                учитывается, если учёт начался не с 1-го числа. Так аренда в начале месяца и дни до установки
-                приложения не искажают цифру.
-              </Text>
-            )}
+        {cat && catPlan ? (
+          <CategoryInfo key={cat.id} v={v} id={cat.id} p={catPlan} />
+        ) : g ? (
+          <GroupInfo v={v} g={g} />
+        ) : v.pace ? (
+          <Text style={styles.infoText}>
+            На эти дни плана нет: показана только структура трат. Задайте лимиты категорий в плане — здесь появятся
+            дневные, недельные и месячные лимиты.
+          </Text>
+        ) : (
+          <Text style={styles.infoText}>
+            Период длиннее месяца с планом не сравнивается: показана структура трат по категориям и среднее в месяц.
+            Среднее считается только по полным месяцам с данными: текущий месяц ещё не закончился, а первый не
+            учитывается, если учёт начался не с 1-го числа. Так аренда в начале месяца и дни до установки приложения не
+            искажают цифру.
+          </Text>
+        )}
         <Text style={styles.infoText}>Все суммы — в валюте из настроек, по курсу на день каждой траты.</Text>
       </SheetScrollView>
       <Button title="Понятно" onPress={onClose} style={styles.infoButton} />

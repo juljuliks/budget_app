@@ -5,9 +5,20 @@ import { ops } from '../e2e/seeds';
 import { getDb } from '../../src/db';
 
 const q = async <T,>(sql: string, p: unknown[] = []) => (await getDb()).all<T>(sql, p as never);
-const ruleOf = async (m: string) => (await q<{ name: string }>('SELECT c.name FROM merchant_rules r JOIN categories c ON c.id = r.category_id WHERE r.pattern = ?', [m]))[0]?.name ?? null;
-const opsOf = async (m: string) => (await q<{ c: string | null; s: string | null }>(
-  'SELECT c.name AS c, t.category_source AS s FROM transactions t LEFT JOIN categories c ON c.id = t.category_id WHERE t.merchant_key = ? ORDER BY t.occurred_at DESC', [m])).map((r) => [r.c, r.s]);
+const ruleOf = async (m: string) =>
+  (
+    await q<{ name: string }>(
+      'SELECT c.name FROM merchant_rules r JOIN categories c ON c.id = r.category_id WHERE r.pattern = ?',
+      [m],
+    )
+  )[0]?.name ?? null;
+const opsOf = async (m: string) =>
+  (
+    await q<{ c: string | null; s: string | null }>(
+      'SELECT c.name AS c, t.category_source AS s FROM transactions t LEFT JOIN categories c ON c.id = t.category_id WHERE t.merchant_key = ? ORDER BY t.occurred_at DESC',
+      [m],
+    )
+  ).map((r) => [r.c, r.s]);
 
 beforeEach(async () => {
   await openApp(ops);
@@ -32,7 +43,9 @@ describe('3.1 the list', () => {
     expect(screen.queryByText('OLDSHOP')).toBeNull();
     await tap('Показать');
     expect(await screen.findByText('OLDSHOP')).toBeTruthy();
-    expect(within(rowOf('OLDSHOP')).getByText(/^⚪️ Без категории · 1 покупка на 15\.00 ₾ · 15 [а-я]+ \d{4}$/)).toBeTruthy();
+    expect(
+      within(rowOf('OLDSHOP')).getByText(/^⚪️ Без категории · 1 покупка на 15\.00 ₾ · 15 [а-я]+ \d{4}$/),
+    ).toBeTruthy();
     await tap('Свернуть');
     await waitFor(() => expect(screen.queryByText('OLDSHOP')).toBeNull());
   });
@@ -55,7 +68,7 @@ describe('3.1 the list', () => {
   });
 });
 
-describe('3.2 a merchant\'s card', () => {
+describe("3.2 a merchant's card", () => {
   test('what it shows', async () => {
     await tap('ZARA');
     // its purchases; spent there: minus the refund
@@ -85,7 +98,11 @@ describe('3.2 a merchant\'s card', () => {
       await tap('☕️ Кафе и рестораны');
       await tap('Сохранить');
       expect(await screen.findByText('Категория «☕️ Кафе и рестораны» для «SPAR»')).toBeTruthy();
-      expect(screen.getByText(/^Новые операции будут получать «☕️ Кафе и рестораны»\. Выбранные вручную категории не изменятся\..*Какую категорию сделать для 1 прошлой операции на 30\.00 ₾\?$/)).toBeTruthy();
+      expect(
+        screen.getByText(
+          /^Новые операции будут получать «☕️ Кафе и рестораны»\. Выбранные вручную категории не изменятся\..*Какую категорию сделать для 1 прошлой операции на 30\.00 ₾\?$/,
+        ),
+      ).toBeTruthy();
     }
     test('the past ones change too', async () => {
       await change();
@@ -107,14 +124,16 @@ describe('3.2 a merchant\'s card', () => {
     await tap('⚪️ Без категории');
     await tap('Сохранить');
     expect(await screen.findByText('Без категории для «SPAR»')).toBeTruthy();
-    expect(screen.getByText(/^Новые операции будут приходить без категории\. Выбранные вручную категории не изменятся\./)).toBeTruthy();
+    expect(
+      screen.getByText(/^Новые операции будут приходить без категории\. Выбранные вручную категории не изменятся\./),
+    ).toBeTruthy();
     await tap('⚪️ Без категории');
     expect(await screen.findByText('Новые операции «SPAR» будут приходить без категории')).toBeTruthy();
     expect(await ruleOf('SPAR')).toBeNull();
     expect(await opsOf('SPAR')).toEqual([[null, null]]);
   });
 
-  test('a long press on another category keeps the merchant\'s, and it stays first', async () => {
+  test("a long press on another category keeps the merchant's, and it stays first", async () => {
     await tap('ZARA');
     await tap('Сменить');
     await longPress('🛍️ Покупки');
@@ -124,8 +143,14 @@ describe('3.2 a merchant\'s card', () => {
     expect(await screen.findByText('Разные категории у «ZARA»: «👕 Одежда», «🛍️ Покупки»')).toBeTruthy();
     await tap('Продолжить');
     expect(await screen.findByText('«ZARA»: разные категории')).toBeTruthy();
-    expect((await q<{ name: string }>('SELECT c.name FROM merchant_categories m JOIN categories c ON c.id = m.category_id WHERE m.merchant_key = ? ORDER BY m.position', ['ZARA'])).map((r) => r.name))
-      .toEqual(['Одежда', 'Покупки']);
+    expect(
+      (
+        await q<{ name: string }>(
+          'SELECT c.name FROM merchant_categories m JOIN categories c ON c.id = m.category_id WHERE m.merchant_key = ? ORDER BY m.position',
+          ['ZARA'],
+        )
+      ).map((r) => r.name),
+    ).toEqual(['Одежда', 'Покупки']);
   });
 
   test('"Разные категории": a long press picks several, then each new operation asks', async () => {
@@ -137,15 +162,25 @@ describe('3.2 a merchant\'s card', () => {
     await tap('Готово');
     await tap('Сохранить');
     expect(await screen.findByText('Разные категории у «ZARA»: «👕 Одежда», «🛍️ Покупки»')).toBeTruthy();
-    expect(screen.getByText(/Новые операции «ZARA» получат «👕 Одежда» — основную категорию\. Уведомление всё равно спросит категорию — кнопками будут эти\. Если не выбрать, останется «👕 Одежда»\./)).toBeTruthy();
+    expect(
+      screen.getByText(
+        /Новые операции «ZARA» получат «👕 Одежда» — основную категорию\. Уведомление всё равно спросит категорию — кнопками будут эти\. Если не выбрать, останется «👕 Одежда»\./,
+      ),
+    ).toBeTruthy();
     expect(screen.getByText('Добавить')).toBeTruthy();
     expect(screen.getByLabelText(/Основная категория/)).toBeTruthy();
     await tap('Продолжить');
     expect(await screen.findByText('«ZARA»: разные категории')).toBeTruthy();
     expect(await ruleOf('ZARA')).toBeNull();
     expect((await q('SELECT 1 FROM mixed_merchants WHERE merchant_key = ?', ['ZARA'])).length).toBe(1);
-    expect((await q<{ name: string }>('SELECT c.name FROM merchant_categories m JOIN categories c ON c.id = m.category_id WHERE m.merchant_key = ? ORDER BY m.position', ['ZARA'])).map((r) => r.name))
-      .toEqual(['Одежда', 'Покупки']);
+    expect(
+      (
+        await q<{ name: string }>(
+          'SELECT c.name FROM merchant_categories m JOIN categories c ON c.id = m.category_id WHERE m.merchant_key = ? ORDER BY m.position',
+          ['ZARA'],
+        )
+      ).map((r) => r.name),
+    ).toEqual(['Одежда', 'Покупки']);
     // its operations keep their categories as their own
     expect((await opsOf('ZARA')).map((o) => o[1])).toEqual(['user', 'user', 'user']);
     // in its own section now
@@ -163,7 +198,7 @@ describe('3.2 a merchant\'s card', () => {
     expect(await screen.findByPlaceholderText('Найти мерчанта')).toBeTruthy();
   });
 
-  test('its latest operations: a tap opens the operation\'s page over it, back returns', async () => {
+  test("its latest operations: a tap opens the operation's page over it, back returns", async () => {
     await tap('ZARA');
     expect(await screen.findByText('Последние операции')).toBeTruthy();
     await tap(screen.getAllByText(/^👕 Одежда · \d\d:\d\d$/)[0]);
@@ -182,7 +217,13 @@ describe('3.2 a merchant\'s card', () => {
     expect(await screen.findByText('Мерчант «ZARA» удалён')).toBeTruthy();
     expect(await opsOf('ZARA')).toEqual([]);
     expect(await ruleOf('ZARA')).toBeNull();
-    expect((await q<{ c: string; s: string }>("SELECT c.name AS c, t.category_source AS s FROM transactions t JOIN categories c ON c.id = t.category_id WHERE t.amount_minor IN (12000, 8000) AND t.merchant_key IS NULL")).length).toBe(2);
+    expect(
+      (
+        await q<{ c: string; s: string }>(
+          'SELECT c.name AS c, t.category_source AS s FROM transactions t JOIN categories c ON c.id = t.category_id WHERE t.amount_minor IN (12000, 8000) AND t.merchant_key IS NULL',
+        )
+      ).length,
+    ).toBe(2);
   });
 });
 
@@ -236,7 +277,9 @@ describe('3.2.6–3.2.7 one category again', () => {
     await tap(within(rowOf('🛒 Продукты')).getByLabelText('Удалить: 🛒 Продукты'));
     await tap('Сохранить');
     expect(await screen.findByText('Категория «☕️ Кафе и рестораны» для «GLOVO»')).toBeTruthy();
-    expect(screen.getByText('Новые операции мерчанта будут получать её автоматически. Разные категории выключатся.')).toBeTruthy();
+    expect(
+      screen.getByText('Новые операции мерчанта будут получать её автоматически. Разные категории выключатся.'),
+    ).toBeTruthy();
     await tap('Продолжить');
     expect(await screen.findByText('Категория «☕️ Кафе и рестораны» назначена мерчанту «GLOVO»')).toBeTruthy();
     expect(await isMixed()).toBe(false);
@@ -269,7 +312,13 @@ describe('3.2.6–3.2.7 one category again', () => {
     expect(await screen.findByText(/Новые операции «GLOVO» получат «🛒 Продукты» — основную категорию/)).toBeTruthy();
     await tap('Продолжить');
     expect(await screen.findByText('«GLOVO»: разные категории')).toBeTruthy();
-    expect((await q<{ name: string }>('SELECT c.name FROM merchant_categories m JOIN categories c ON c.id = m.category_id WHERE m.merchant_key = ? ORDER BY m.position', ['GLOVO'])).map((r) => r.name))
-      .toEqual(['Продукты', 'Кафе и рестораны', 'Одежда']);
+    expect(
+      (
+        await q<{ name: string }>(
+          'SELECT c.name FROM merchant_categories m JOIN categories c ON c.id = m.category_id WHERE m.merchant_key = ? ORDER BY m.position',
+          ['GLOVO'],
+        )
+      ).map((r) => r.name),
+    ).toEqual(['Продукты', 'Кафе и рестораны', 'Одежда']);
   });
 });

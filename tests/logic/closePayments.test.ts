@@ -1,13 +1,27 @@
 // "Итоги месяца", step "Платежи" (db/plans/closePayments.ts): the one-off payments not paid — moved to the next month
 // with their money, or not needed. Today: 15 October 2026, September is to close.
 import { freshDb } from '../helpers';
-import { answerClosePayment, answerClose, finishClose, listPlan, monthClose, setPlanAmount, setPlanBudget } from '../../src/db/plans';
+import {
+  answerClosePayment,
+  answerClose,
+  finishClose,
+  listPlan,
+  monthClose,
+  setPlanAmount,
+  setPlanBudget,
+} from '../../src/db/plans';
 import { createCategory } from '../../src/db/categories';
 import { addManualTransaction } from '../../src/db/transactions';
 
 const at = (s: string) => Math.floor(new Date(s).getTime() / 1000);
 const spend = (amount: number, categoryId: number) =>
-  addManualTransaction({ amount_minor: amount, category_id: categoryId, occurred_at: at('2026-09-10T12:00:00'), kind: 'purchase', currency: 'GEL' });
+  addManualTransaction({
+    amount_minor: amount,
+    category_id: categoryId,
+    occurred_at: at('2026-09-10T12:00:00'),
+    kind: 'purchase',
+    currency: 'GEL',
+  });
 
 beforeEach(async () => {
   jest.useFakeTimers({ now: new Date('2026-10-15T12:00:00'), advanceTimers: true });
@@ -28,17 +42,21 @@ async function september() {
   return { repair, gifts, taxi };
 }
 
-test('the step: the one-off payments with something not paid (the rest of a part paid); a limit isn\'t asked', async () => {
+test("the step: the one-off payments with something not paid (the rest of a part paid); a limit isn't asked", async () => {
   const { repair, gifts } = await september();
   const c = await monthClose('2026-09');
   expect(c.steps[0]).toBe('payments');
-  expect(c.payments.map((p) => ({ id: p.category_id, unpaid: p.unpaid_minor, paid: p.paid_minor, choice: p.choice }))).toEqual([
-    { id: repair, unpaid: 30000, paid: 0, choice: null }, { id: gifts, unpaid: 5000, paid: 15000, choice: null }]);
+  expect(
+    c.payments.map((p) => ({ id: p.category_id, unpaid: p.unpaid_minor, paid: p.paid_minor, choice: p.choice })),
+  ).toEqual([
+    { id: repair, unpaid: 30000, paid: 0, choice: null },
+    { id: gifts, unpaid: 5000, paid: 15000, choice: null },
+  ]);
   await answerClose('2026-09', { saved: 'yes' });
   expect((await monthClose('2026-09')).complete).toBe(false);
 });
 
-test('moved on: in the next month\'s plan, its money in the leftover moved — the savings ask the rest; not needed: stays the leftover', async () => {
+test("moved on: in the next month's plan, its money in the leftover moved — the savings ask the rest; not needed: stays the leftover", async () => {
   const { repair, gifts } = await september();
   const before = (await monthClose('2026-09')).budget!.rest_minor;
   await answerClosePayment('2026-09', repair, 'next');
@@ -68,7 +86,7 @@ test('the next month has it already: the sums add up', async () => {
   expect((await listPlan('2026-10')).find((i) => i.category_id === repair)).toMatchObject({ limit_minor: 40000 });
 });
 
-test('a payment a little short of its plan (a rate\'s difference, within 2%) is paid: not asked; more short — asked', async () => {
+test("a payment a little short of its plan (a rate's difference, within 2%) is paid: not asked; more short — asked", async () => {
   const { repair, gifts } = await september();
   await spend(29500, repair);
   await spend(4000, gifts);

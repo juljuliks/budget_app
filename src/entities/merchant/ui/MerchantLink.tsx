@@ -14,5 +14,13 @@ type Props = {
 
 /** A merchant's name as a link: "SPAR ›" opens its page (its category, its operations) over the current one. */
 export default function MerchantLink({ merchantKey, label, style, containerStyle }: Props) {
-  return <TextLink label={label} onPress={() => openMerchant(merchantKey)} style={style} containerStyle={containerStyle} hint="Открыть мерчанта" />;
+  return (
+    <TextLink
+      label={label}
+      onPress={() => openMerchant(merchantKey)}
+      style={style}
+      containerStyle={containerStyle}
+      hint="Открыть мерчанта"
+    />
+  );
 }

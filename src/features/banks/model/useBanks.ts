@@ -7,7 +7,9 @@ import { onTransactionsChanged } from '@/domain/events';
 export function useBanks(): { ids: BankId[]; several: boolean } {
   const [ids, setIds] = useState<BankId[]>(['tbc']);
   const load = useCallback(() => {
-    enabledBanks().then(setIds).catch((e) => console.error('load banks failed', e));
+    enabledBanks()
+      .then(setIds)
+      .catch((e) => console.error('load banks failed', e));
   }, []);
   useEffect(load, [load]);
   useEffect(() => onTransactionsChanged(load), [load]);

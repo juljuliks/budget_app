@@ -1,7 +1,7 @@
 // Crash reports (src/native/crashText.ts): what leaves the phone with a console.error.
 import { reportOf } from '../../src/native/crashText';
 
-test('the text and the Error\'s message and stack go; an object logged with them does not', () => {
+test("the text and the Error's message and stack go; an object logged with them does not", () => {
   const e = new Error('no such table: plans');
   const r = reportOf(['save failed', { merchant: 'SPAR', amount_minor: 2500, raw_sms: 'TBC 25 GEL SPAR' }, e]);
   expect(r.message).toBe('save failed Error: no such table: plans');

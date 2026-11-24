@@ -8,21 +8,29 @@ import { navigationRef } from '../../src/shared/navigation/navigation';
 /** the switch toggled, its saving done */
 async function toggle(label: string, on: boolean) {
   fireEvent(screen.getByLabelText(label), 'valueChange', on);
-  await act(async () => { await new Promise((r) => setTimeout(r, 50)); });
+  await act(async () => {
+    await new Promise((r) => setTimeout(r, 50));
+  });
 }
 
 test('9.12.1: TBC read, Bank of Georgia off; turned on — "Балансы карт", the "Банк" filter, its label on its rows', async () => {
   await openApp(async () => {
     await ops();
     const db = await getDb();
-    await db.run("INSERT INTO transactions (bank, kind, amount_minor, currency, raw_merchant, occurred_at, raw_sms, sms_hash, seen_at) VALUES ('bog', 'purchase', 1250, 'GEL', 'CARREFOUR', strftime('%s','now') - 60, 'x', 'bog1', 1)");
+    await db.run(
+      "INSERT INTO transactions (bank, kind, amount_minor, currency, raw_merchant, occurred_at, raw_sms, sms_hash, seen_at) VALUES ('bog', 'purchase', 1250, 'GEL', 'CARREFOUR', strftime('%s','now') - 60, 'x', 'bog1', 1)",
+    );
   });
   expect(screen.queryByText('Банк')).toBeNull();
   await openSettings('Банки', 'Банки');
   expect(await screen.findByText('Bank of Georgia')).toBeTruthy();
-  expect(texts()).toEqual(expect.arrayContaining(['Разбор', 'встроенный', 'шаблоны сообщений · 0', '«TBC SMS»', '«BOG»']));
+  expect(texts()).toEqual(
+    expect.arrayContaining(['Разбор', 'встроенный', 'шаблоны сообщений · 0', '«TBC SMS»', '«BOG»']),
+  );
   await toggle('Читать Bank of Georgia', true);
-  expect(await (await getDb()).get("SELECT value FROM app_settings WHERE key = 'banks_enabled'")).toEqual({ value: '["tbc","bog"]' });
+  expect(await (await getDb()).get("SELECT value FROM app_settings WHERE key = 'banks_enabled'")).toEqual({
+    value: '["tbc","bog"]',
+  });
   // the last bank on stays on
   await toggle('Читать TBC', false);
   await toggle('Читать Bank of Georgia', false);

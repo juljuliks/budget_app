@@ -16,13 +16,22 @@ export async function monthIncome(ym: string, currency: Currency = BUDGET_CURREN
   const rows = await db.all<{ amount_minor: number; currency: string; occurred_at: number }>(
     `SELECT amount_minor, currency, occurred_at FROM transactions
       WHERE kind = 'deposit' AND occurred_at >= ? AND occurred_at < ? AND category_id = (SELECT id FROM categories WHERE system = 'topup')`,
-    [from, to]);
+    [from, to],
+  );
   await ensureRatesLater(rows.filter((r) => r.currency !== currency).map((r) => dateKey(r.occurred_at)));
   const conv = await makeConverter();
   const topUp = rows.reduce((s, r) => s + (conv(r.amount_minor, r.currency, currency, dateKey(r.occurred_at)) ?? 0), 0);
-  const transferIds = new Set((await db.all<{ id: number }>(
-    'SELECT c.id FROM categories c JOIN category_types ct ON ct.id = c.type_id WHERE ct.is_transfer = 1')).map((c) => c.id));
-  const { items } = await convertSpending((await spendRows(from, to)).filter((r) => r.category_id !== null && transferIds.has(r.category_id)), currency);
+  const transferIds = new Set(
+    (
+      await db.all<{ id: number }>(
+        'SELECT c.id FROM categories c JOIN category_types ct ON ct.id = c.type_id WHERE ct.is_transfer = 1',
+      )
+    ).map((c) => c.id),
+  );
+  const { items } = await convertSpending(
+    (await spendRows(from, to)).filter((r) => r.category_id !== null && transferIds.has(r.category_id)),
+    currency,
+  );
   const net = sumBy(items, (r) => r.category_id);
   return topUp + [...net.values()].reduce((s, v) => s + Math.max(0, -v), 0);
 }

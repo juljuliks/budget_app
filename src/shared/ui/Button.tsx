@@ -32,13 +32,25 @@ function looks(variant: ButtonVariant, danger?: boolean): [StyleProp<ViewStyle>,
   if (variant === 'cancel') return [styles.cancel, styles.cancelText];
   const color = danger ? colors.danger : colors.accent;
   return variant === 'secondary'
-    ? [[styles.secondary, { borderColor: color }], [styles.text, { color }]]
+    ? [
+        [styles.secondary, { borderColor: color }],
+        [styles.text, { color }],
+      ]
     : [{ backgroundColor: color }, styles.text];
 }
 
 /** Full-width button ("Сохранить", "Удалить операцию", "Отмена"): `primary`, `secondary` or `cancel`; accent or red. */
 export default function Button({
-  title, onPress, variant = 'primary', size = 'regular', disabled, danger, icon, accessibilityLabel, style, testID,
+  title,
+  onPress,
+  variant = 'primary',
+  size = 'regular',
+  disabled,
+  danger,
+  icon,
+  accessibilityLabel,
+  style,
+  testID,
 }: Props) {
   const [box, text] = looks(variant, danger);
   const small = size === 'small';
@@ -47,7 +59,14 @@ export default function Button({
   const textColor = StyleSheet.flatten(text).color as string;
   return (
     <TouchableOpacity
-      style={[styles.button, box, small && (bordered ? styles.smallBordered : styles.small), icon && styles.withIcon, disabled && styles.disabled, style]}
+      style={[
+        styles.button,
+        box,
+        small && (bordered ? styles.smallBordered : styles.small),
+        icon && styles.withIcon,
+        disabled && styles.disabled,
+        style,
+      ]}
       disabled={disabled}
       onPress={onPress}
       testID={testID}
@@ -77,8 +96,12 @@ type SheetActionsProps = {
 export function SheetActions({ submit, extra, onCancel, cancelTitle = 'Отмена', style }: SheetActionsProps) {
   return (
     <View style={[styles.actions, style]}>
-      {submit ? <Button title={submit.title} onPress={submit.onPress} disabled={submit.disabled} danger={submit.danger} /> : null}
-      {extra?.map((b) => <Button key={b.title} title={b.title} onPress={b.onPress} danger={b.danger} variant="secondary" />)}
+      {submit ? (
+        <Button title={submit.title} onPress={submit.onPress} disabled={submit.disabled} danger={submit.danger} />
+      ) : null}
+      {extra?.map((b) => (
+        <Button key={b.title} title={b.title} onPress={b.onPress} danger={b.danger} variant="secondary" />
+      ))}
       {onCancel ? <Button title={cancelTitle} onPress={onCancel} variant="cancel" /> : null}
     </View>
   );

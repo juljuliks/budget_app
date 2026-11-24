@@ -26,7 +26,9 @@ export default function CategoryPickerModal(props: Props) {
       onClose={props.onClose}
       title={props.title}
       style={styles.sheet}
-      headerRight={<CreateButton onPress={() => c.setCreating(true)} accessibilityLabel="Новая категория" style={styles.create} />}
+      headerRight={
+        <CreateButton onPress={() => c.setCreating(true)} accessibilityLabel="Новая категория" style={styles.create} />
+      }
     >
       <SheetScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.top}>
@@ -55,14 +57,20 @@ export default function CategoryPickerModal(props: Props) {
         />
       ) : props.saveTitle ? (
         <SheetActions
-          submit={{ title: props.saveTitle, disabled: c.draft === undefined, onPress: () => { if (c.draft !== undefined) props.onPick(c.draft); } }}
+          submit={{
+            title: props.saveTitle,
+            disabled: c.draft === undefined,
+            onPress: () => {
+              if (c.draft !== undefined) props.onPick(c.draft);
+            },
+          }}
           onCancel={props.onClose}
           style={styles.actions}
         />
       ) : null}
       <CategorySheet
         visible={c.creating}
-        typeId={props.transferFirst ? c.transferTypeId ?? undefined : undefined}
+        typeId={props.transferFirst ? (c.transferTypeId ?? undefined) : undefined}
         quick
         onClose={() => c.setCreating(false)}
         onSaved={(id) => c.created(id)}

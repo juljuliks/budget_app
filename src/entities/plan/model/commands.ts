@@ -1,5 +1,13 @@
 // The plan's writes from its sheets: each one tells the screens (the stats, the reports) the data changed.
-import { addUnplannedCover, coverFromLimit, RegularItem, setItemDue, setPlanAmount, setRegularItem, setUndatedAhead } from '@/db/plans';
+import {
+  addUnplannedCover,
+  coverFromLimit,
+  RegularItem,
+  setItemDue,
+  setPlanAmount,
+  setRegularItem,
+  setUndatedAhead,
+} from '@/db/plans';
 import type { Currency } from '@/db/fx';
 import type { NormPeriod, PlanKind } from '@/db/plans';
 import { getCategory } from '@/db/categories';
@@ -12,7 +20,13 @@ import { emitTransactionsChanged } from '@/domain/events';
  * one-off payment's day in the month: `due` (null — none; undefined — left as it is).
  */
 export async function savePlanAmount(
-  ym: string, categoryId: number, limitMinor: number, kind?: PlanKind, currency?: Currency, normPeriod?: NormPeriod, takeLocked: boolean | 'all' = false,
+  ym: string,
+  categoryId: number,
+  limitMinor: number,
+  kind?: PlanKind,
+  currency?: Currency,
+  normPeriod?: NormPeriod,
+  takeLocked: boolean | 'all' = false,
   due?: string | null,
 ) {
   await setPlanAmount(ym, categoryId, limitMinor, kind, currency, normPeriod, takeLocked);
@@ -39,7 +53,13 @@ export async function coverFromPlan(ym: string, categoryId: number, minor: numbe
 }
 
 /** A regular payment within the month (every day, on weekdays); throws OverBudgetError past the budget. */
-export async function saveRegular(ym: string, categoryId: number, r: RegularItem, currency: Currency, takeLocked: boolean | 'all' = false) {
+export async function saveRegular(
+  ym: string,
+  categoryId: number,
+  r: RegularItem,
+  currency: Currency,
+  takeLocked: boolean | 'all' = false,
+) {
   await setRegularItem(ym, categoryId, r, currency, takeLocked);
   emitTransactionsChanged();
 }
@@ -49,7 +69,16 @@ export async function saveRegular(ym: string, categoryId: number, r: RegularItem
  * rarer — saved up for from now ("Откладывать каждый месяц?") or not any more (what it had goes to this month's savings).
  */
 export async function saveCategoryPayment(
-  ym: string, categoryId: number, p: { amount_minor: number; currency: Currency; period: number; due: string | null; until: string | null; saving?: SavingChoice | null },
+  ym: string,
+  categoryId: number,
+  p: {
+    amount_minor: number;
+    currency: Currency;
+    period: number;
+    due: string | null;
+    until: string | null;
+    saving?: SavingChoice | null;
+  },
 ) {
   // without a day: the amount by hand in the plan, each month (carried over with it); past the budget — OverBudgetError
   // before anything else is changed
@@ -61,7 +90,10 @@ export async function saveCategoryPayment(
   const c = await getCategory(categoryId);
   const own = await categoryPayment(categoryId);
   const { saving, ...payment } = p;
-  const id = await savePayment({ category_id: categoryId, merchant_key: null, name: c?.name ?? '', ...payment }, own?.id);
+  const id = await savePayment(
+    { category_id: categoryId, merchant_key: null, name: c?.name ?? '', ...payment },
+    own?.id,
+  );
   const on = !!saving?.on && !!p.due;
   if (on && !saving!.had) await startSaving(id, saving!.start);
   if (!on && saving?.had) await stopSaving(id);

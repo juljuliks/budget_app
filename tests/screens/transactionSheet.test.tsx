@@ -6,11 +6,23 @@ import { getDb } from '../../src/db';
 import { createCategory } from '../../src/db/categories';
 import { getTransferTypeId } from '../../src/db/categoryTypes';
 
-const opsOf = async (merchant: string) => (await (await getDb()).all<{ c: string | null; s: string | null; a: number; cur: string; note: string | null }>(
-  `SELECT c.name AS c, t.category_source AS s, t.amount_minor AS a, t.currency AS cur, t.note FROM transactions t
-    LEFT JOIN categories c ON c.id = t.category_id WHERE t.raw_merchant = ? ORDER BY t.occurred_at DESC`, [merchant]));
-const ruleOf = async (merchant: string) => (await (await getDb()).get<{ name: string }>(
-  'SELECT c.name FROM merchant_rules r JOIN categories c ON c.id = r.category_id WHERE r.pattern = ?', [merchant]))?.name ?? null;
+const opsOf = async (merchant: string) =>
+  await (
+    await getDb()
+  ).all<{ c: string | null; s: string | null; a: number; cur: string; note: string | null }>(
+    `SELECT c.name AS c, t.category_source AS s, t.amount_minor AS a, t.currency AS cur, t.note FROM transactions t
+    LEFT JOIN categories c ON c.id = t.category_id WHERE t.raw_merchant = ? ORDER BY t.occurred_at DESC`,
+    [merchant],
+  );
+const ruleOf = async (merchant: string) =>
+  (
+    await (
+      await getDb()
+    ).get<{ name: string }>(
+      'SELECT c.name FROM merchant_rules r JOIN categories c ON c.id = r.category_id WHERE r.pattern = ?',
+      [merchant],
+    )
+  )?.name ?? null;
 
 beforeEach(() => openApp(ops));
 
@@ -22,7 +34,9 @@ test('2.7.1: the card — the amount, the merchant as a link, the date, the cate
   expect(screen.getByText('SPAR ›')).toBeTruthy();
   expect(screen.getByText(/^Сегодня, \d\d:\d\d$/)).toBeTruthy();
   expect(screen.getByTestId('tx-category')).toBeTruthy();
-  expect(screen.getByText('Категория мерчанта «SPAR»: 🛒 Продукты. Новые операции мерчанта получают её автоматически.')).toBeTruthy();
+  expect(
+    screen.getByText('Категория мерчанта «SPAR»: 🛒 Продукты. Новые операции мерчанта получают её автоматически.'),
+  ).toBeTruthy();
   expect(screen.getByText('SMS')).toBeTruthy();
   expect(screen.getByText('SPAR 30')).toBeTruthy();
   expect(screen.getByText('＋ Добавить описание')).toBeTruthy();
@@ -47,7 +61,10 @@ test('2.7.3a: the category a field (a tap — "Сменить категорию
   // the field under the "Категория" title
   await screen.findByTestId('tx-category');
   const all = texts();
-  expect(all.slice(all.lastIndexOf('Категория'), all.lastIndexOf('Категория') + 2)).toEqual(['Категория', '🛒 Продукты']);
+  expect(all.slice(all.lastIndexOf('Категория'), all.lastIndexOf('Категория') + 2)).toEqual([
+    'Категория',
+    '🛒 Продукты',
+  ]);
   expect(screen.queryByText('Разделить по категориям')).toBeNull();
   await tap('#tx-category-open');
   expect(await screen.findByDisplayValue('Продукты')).toBeTruthy();
@@ -61,27 +78,37 @@ describe('2.7.4: the merchant has another category', () => {
     await tap('#tx-category');
     expect(await screen.findByText('Сменить категорию')).toBeTruthy();
     await tap('🛒 Продукты');
-    expect(await screen.findByText('Категория «🛒 Продукты» — для этой операции или для мерчанта «ZARA»?')).toBeTruthy();
+    expect(
+      await screen.findByText('Категория «🛒 Продукты» — для этой операции или для мерчанта «ZARA»?'),
+    ).toBeTruthy();
   }
   test('this operation only', async () => {
     await pick();
     await tap('Только для этой операции');
     expect(await screen.findByText('Категория «🛒 Продукты» назначена')).toBeTruthy();
     expect(screen.getByText('Удалить операцию')).toBeTruthy();
-    expect((await opsOf('ZARA')).map((o) => [o.c, o.s])).toEqual([['Одежда', 'rule'], ['Одежда', 'rule'], ['Продукты', 'user']]);
+    expect((await opsOf('ZARA')).map((o) => [o.c, o.s])).toEqual([
+      ['Одежда', 'rule'],
+      ['Одежда', 'rule'],
+      ['Продукты', 'user'],
+    ]);
     expect(await ruleOf('ZARA')).toBe('Одежда');
   });
   test('the merchant', async () => {
     await pick();
     // the refund and both purchases follow the merchant: 120 + 80 − 5
-    expect(screen.getByText('Сейчас у мерчанта «👕 Одежда». Для мерчанта: категория изменится у 3 операций на 195.00 ₾, и новые операции мерчанта будут получать её автоматически. Выбранные вручную категории не изменятся.')).toBeTruthy();
+    expect(
+      screen.getByText(
+        'Сейчас у мерчанта «👕 Одежда». Для мерчанта: категория изменится у 3 операций на 195.00 ₾, и новые операции мерчанта будут получать её автоматически. Выбранные вручную категории не изменятся.',
+      ),
+    ).toBeTruthy();
     await tap('Для мерчанта');
     expect(await screen.findByText('Категория «🛒 Продукты» назначена мерчанту «ZARA»')).toBeTruthy();
     expect(screen.getByText('Удалить операцию')).toBeTruthy();
     expect((await opsOf('ZARA')).map((o) => o.c)).toEqual(['Продукты', 'Продукты', 'Продукты']);
     expect(await ruleOf('ZARA')).toBe('Продукты');
   });
-  test('the same category as the merchant\'s: no question', async () => {
+  test("the same category as the merchant's: no question", async () => {
     await tap('ZARA');
     await tap('#tx-category');
     await tap('👕 Одежда');
@@ -199,17 +226,28 @@ test('2.7.14: a manual operation: no SMS', async () => {
 async function mixedGlovo() {
   const db = await getDb();
   await db.run("INSERT INTO mixed_merchants (merchant_key, created_at) VALUES ('GLOVO', 0)");
-  await db.run("INSERT INTO merchant_categories (merchant_key, category_id) SELECT 'GLOVO', id FROM categories WHERE name IN ('Кафе и рестораны', 'Продукты')");
+  await db.run(
+    "INSERT INTO merchant_categories (merchant_key, category_id) SELECT 'GLOVO', id FROM categories WHERE name IN ('Кафе и рестораны', 'Продукты')",
+  );
 }
-const mixedOf = async (m: string) => (await (await getDb()).all<{ name: string }>(
-  'SELECT c.name FROM merchant_categories mc JOIN categories c ON c.id = mc.category_id WHERE mc.merchant_key = ? ORDER BY c.name', [m])).map((r) => r.name);
+const mixedOf = async (m: string) =>
+  (
+    await (
+      await getDb()
+    ).all<{ name: string }>(
+      'SELECT c.name FROM merchant_categories mc JOIN categories c ON c.id = mc.category_id WHERE mc.merchant_key = ? ORDER BY c.name',
+      [m],
+    )
+  ).map((r) => r.name);
 
-test('2.7.6: a merchant of different categories: the category as a link, its categories to tap under it, no question; another one stays this operation\'s', async () => {
+test("2.7.6: a merchant of different categories: the category as a link, its categories to tap under it, no question; another one stays this operation's", async () => {
   await mixedGlovo();
   await tap('GLOVO');
   expect(await screen.findByText('Разные категории у «GLOVO»')).toBeTruthy();
   expect(screen.getByText(/ Без категории$/)).toBeTruthy();
-  expect(await screen.findByText(/^Основная — «.+»: новые операции получают её, если в уведомлении не выбрать другую\.$/)).toBeTruthy();
+  expect(
+    await screen.findByText(/^Основная — «.+»: новые операции получают её, если в уведомлении не выбрать другую\.$/),
+  ).toBeTruthy();
   await tap('☕️ Кафе и рестораны');
   expect(await screen.findByText('Категория «☕️ Кафе и рестораны» назначена')).toBeTruthy();
   await waitFor(() => expect(within(screen.getByTestId('tx-category')).getByText('☕️ Кафе и рестораны')).toBeTruthy());
@@ -235,13 +273,15 @@ test('2.7.6: a merchant of different categories: the category as a link, its cat
   expect(await mixedOf('GLOVO')).toEqual(['Кафе и рестораны', 'Продукты']);
 });
 
-test('2.7.6: a refund of such a merchant offers its categories; the pick stays this refund\'s', async () => {
+test("2.7.6: a refund of such a merchant offers its categories; the pick stays this refund's", async () => {
   await mixedGlovo();
   await buy('GLOVO', 4, at(0, 10), null, { kind: 'refund' });
   // the list was already open: search reloads it and brings the refund in
   fireEvent.changeText(screen.getByPlaceholderText('Поиск: мерчант, описание, сумма…'), 'GLOVO');
   await tap('Возврат · GLOVO');
-  expect(await screen.findByText(/^Основная — «.+»: новые операции получают её, если в уведомлении не выбрать другую\.$/)).toBeTruthy();
+  expect(
+    await screen.findByText(/^Основная — «.+»: новые операции получают её, если в уведомлении не выбрать другую\.$/),
+  ).toBeTruthy();
   expect(screen.getByText('☕️ Кафе и рестораны')).toBeTruthy();
   expect(screen.getByText('🛒 Продукты')).toBeTruthy();
   await tap('☕️ Кафе и рестораны');
@@ -294,8 +334,10 @@ describe('2.7.16 split between categories', () => {
     expect(await screen.findByText('18.00\u00a0₾')).toBeTruthy();
     await tap('Сохранить');
     expect(await screen.findByText('Разделена · 2 категории')).toBeTruthy();
-    expect(texts().slice(texts().indexOf('Разделена · 2 категории'))).toEqual(expect.arrayContaining(['🛒 Продукты ›', '60%', '18.00 ₾', '👕 Одежда ›', '40%', '12.00 ₾']));
-    const parts = () => (getDb()).then((db) => db.all('SELECT amount_minor FROM transaction_parts'));
+    expect(texts().slice(texts().indexOf('Разделена · 2 категории'))).toEqual(
+      expect.arrayContaining(['🛒 Продукты ›', '60%', '18.00 ₾', '👕 Одежда ›', '40%', '12.00 ₾']),
+    );
+    const parts = () => getDb().then((db) => db.all('SELECT amount_minor FROM transaction_parts'));
     expect(await parts()).toEqual([{ amount_minor: 1200 }]);
     await tap('Убрать разделение');
     expect(await screen.findByText('Убрать разделение?')).toBeTruthy();
@@ -311,8 +353,11 @@ describe('2.7.16 split between categories', () => {
 });
 
 describe('2.7.17 the type of money that came in', () => {
-  const kindOf = async (merchant: string) => (await getDb()).get<{ kind: string; c: string | null }>(
-    'SELECT t.kind, c.name AS c FROM transactions t LEFT JOIN categories c ON c.id = t.category_id WHERE t.raw_merchant = ?', [merchant]);
+  const kindOf = async (merchant: string) =>
+    (await getDb()).get<{ kind: string; c: string | null }>(
+      'SELECT t.kind, c.name AS c FROM transactions t LEFT JOIN categories c ON c.id = t.category_id WHERE t.raw_merchant = ?',
+      [merchant],
+    );
 
   test('a deposit made a refund: "Тип операции" (one choice), out of "Пополнение счёта", the categories, "Разделить по категориям"', async () => {
     await tap('Пополнение · SALARY');
@@ -351,14 +396,21 @@ describe('2.7.17 the type of money that came in', () => {
 });
 
 test('2.7.18: «Покупка» — «Обдуманная» / «Импульсивная», an impulsive one «Что подтолкнуло?» — asked once its category has «Импульсивные покупки» on; tapped again — no answer', async () => {
-  const impulseOf = async () => (await (await getDb()).get<{ i: number | null }>("SELECT impulse AS i FROM transactions WHERE raw_merchant = 'SPAR'"))!.i;
+  const impulseOf = async () =>
+    (await (
+      await getDb()
+    ).get<{ i: number | null }>("SELECT impulse AS i FROM transactions WHERE raw_merchant = 'SPAR'"))!.i;
   await tap('SPAR');
   await screen.findByTestId('tx-category');
   expect(screen.queryByText('Импульсивная')).toBeNull();
   await tap('#tx-category-open');
   expect(await screen.findByText('Спрашивать в операциях категории, была ли покупка импульсивной.')).toBeTruthy();
   toggleSwitch(true, 'Импульсивные покупки');
-  expect(await screen.findByText('В операциях категории — «Обдуманная» или «Импульсивная», у импульсивной — «Что подтолкнуло?». Итоги — в отчёте за месяц и в «Динамике трат».')).toBeTruthy();
+  expect(
+    await screen.findByText(
+      'В операциях категории — «Обдуманная» или «Импульсивная», у импульсивной — «Что подтолкнуло?». Итоги — в отчёте за месяц и в «Динамике трат».',
+    ),
+  ).toBeTruthy();
   back();
   expect(await screen.findByText('Импульсивная')).toBeTruthy();
   expect(screen.queryByText('Что подтолкнуло?')).toBeNull();
@@ -372,13 +424,27 @@ test('2.7.18: «Покупка» — «Обдуманная» / «Импульс
   await tap('Импульсивная');
   await waitFor(async () => expect(await impulseOf()).toBe(1));
   // «Что подтолкнуло?»: one mood, tapped again — none
-  const moodOf = async () => (await (await getDb()).get<{ m: string | null }>("SELECT mood AS m FROM transactions WHERE raw_merchant = 'SPAR'"))!.m;
+  const moodOf = async () =>
+    (await (await getDb()).get<{ m: string | null }>("SELECT mood AS m FROM transactions WHERE raw_merchant = 'SPAR'"))!
+      .m;
   expect(await screen.findByText('Что подтолкнуло?')).toBeTruthy();
   // each emoji with its name under it
   const all = texts();
   expect(all.slice(all.indexOf('Покупка'), all.indexOf('Покупка') + 14)).toEqual([
-    'Покупка', 'Обдуманная', 'Импульсивная', 'Что подтолкнуло?',
-    '😄', 'Радость', '😔', 'Грусть', '😰', 'Тревога', '🥱', 'Скука', '😐', 'Нейтрально',
+    'Покупка',
+    'Обдуманная',
+    'Импульсивная',
+    'Что подтолкнуло?',
+    '😄',
+    'Радость',
+    '😔',
+    'Грусть',
+    '😰',
+    'Тревога',
+    '🥱',
+    'Скука',
+    '😐',
+    'Нейтрально',
   ]);
   const chosen = (name: string) => screen.getByLabelText(name).props.accessibilityState?.selected;
   await tap('🥱');

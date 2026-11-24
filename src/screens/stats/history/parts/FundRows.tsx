@@ -16,9 +16,15 @@ export default function FundRows({ funds, money }: { funds: FundStat[]; money: (
       {funds.map((f) => (
         <View key={f.category_id} style={styles.detailRow}>
           <View style={styles.detailName}>
-            <Text style={styles.detailText} numberOfLines={1}>{`${f.emoji || ''} ${f.name}`.trim()}</Text>
+            <Text style={styles.detailText} numberOfLines={1}>
+              {`${f.emoji || ''} ${f.name}`.trim()}
+            </Text>
             <Text style={styles.detailHint}>
-              {f.shortage_minor > 0 ? `не хватило ${money(f.shortage_minor)}` : f.spent_minor > 0 ? 'из копилки' : 'взнос'}
+              {f.shortage_minor > 0
+                ? `не хватило ${money(f.shortage_minor)}`
+                : f.spent_minor > 0
+                  ? 'из копилки'
+                  : 'взнос'}
             </Text>
           </View>
           <Text style={styles.detailNum}>{f.contribution_minor ? money(f.contribution_minor) : '—'}</Text>

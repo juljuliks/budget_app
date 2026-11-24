@@ -10,7 +10,14 @@ export default function LateFunds({ late, onOpen }: { late: LateFund[]; onOpen: 
   if (!late.length) return null;
   return (
     <View style={styles.block}>
-      {late.map((f) => <TextLink key={f.id} label={`⚠ ${f.label} не успевает к ${dayTitle(f.due)}`} onPress={() => onOpen(f.id)} style={styles.over} />)}
+      {late.map((f) => (
+        <TextLink
+          key={f.id}
+          label={`⚠ ${f.label} не успевает к ${dayTitle(f.due)}`}
+          onPress={() => onOpen(f.id)}
+          style={styles.over}
+        />
+      ))}
     </View>
   );
 }

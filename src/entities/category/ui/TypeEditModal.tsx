@@ -3,7 +3,13 @@ import { useWatch } from 'react-hook-form';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { CategoryType, findCategoryTypeByName } from '@/db/categoryTypes';
 import {
-  colorFromHue, distinctHue, freePalettes, isCustomPalette, PALETTES, paletteShades, typePalette,
+  colorFromHue,
+  distinctHue,
+  freePalettes,
+  isCustomPalette,
+  PALETTES,
+  paletteShades,
+  typePalette,
 } from '@/domain/colors';
 import { saveCategoryType } from '../model/commands';
 import { AutoButton, PaletteStrip } from '@/shared/ui/ColorSwatches';
@@ -34,10 +40,20 @@ export default function TypeEditModal({ visible, type, types, onClose, onSaved }
   const presets = freePalettes(types, type?.id ?? -1);
 
   // the name and the palette: an existing type's saved ones, a new one starts with the first free preset
-  const form = useLoadedForm<{ value: string; palette: string }>(visible ? {
-    value: type?.name ?? '',
-    palette: type ? typePalette(type, types.findIndex((t) => t.id === type.id)) : presets[0],
-  } : null, visible);
+  const form = useLoadedForm<{ value: string; palette: string }>(
+    visible
+      ? {
+          value: type?.name ?? '',
+          palette: type
+            ? typePalette(
+                type,
+                types.findIndex((t) => t.id === type.id),
+              )
+            : presets[0],
+        }
+      : null,
+    visible,
+  );
   const palette = useWatch({ control: form.control, name: 'palette' }) ?? presets[0];
   const setPalette = (p: string) => setField(form, 'palette', p);
 
@@ -51,7 +67,14 @@ export default function TypeEditModal({ visible, type, types, onClose, onSaved }
 
   function randomPalette() {
     // away from the base colors of the palettes the other types use
-    setPalette(colorFromHue(distinctHue(others.map((t, i) => paletteShades(typePalette(t, i))[0]), palette)));
+    setPalette(
+      colorFromHue(
+        distinctHue(
+          others.map((t, i) => paletteShades(typePalette(t, i))[0]),
+          palette,
+        ),
+      ),
+    );
   }
 
   const custom = isCustomPalette(palette);
@@ -59,9 +82,10 @@ export default function TypeEditModal({ visible, type, types, onClose, onSaved }
   // down the list takes the last one (the order stays put while picking among the shown ones)
   const SHOWN = 4;
   const first = presets.slice(0, custom ? SHOWN - 1 : SHOWN);
-  const shownPresets = !custom && presets.includes(palette as never) && !first.includes(palette as never)
-    ? [...first.slice(0, SHOWN - 1), palette as typeof presets[number]]
-    : first;
+  const shownPresets =
+    !custom && presets.includes(palette as never) && !first.includes(palette as never)
+      ? [...first.slice(0, SHOWN - 1), palette as (typeof presets)[number]]
+      : first;
   const [pickerOpen, setPickerOpen] = useState(false);
 
   return (
@@ -80,7 +104,11 @@ export default function TypeEditModal({ visible, type, types, onClose, onSaved }
         <AutoButton onPress={randomPalette} style={styles.autoTile} accessibilityLabel="Палитра автоматически" />
         {/* a palette of its own ("Авто" or the "+" picker): first among the offered ones, selected */}
         {custom ? (
-          <View style={[styles.preset, styles.selected]} accessibilityLabel="Своя палитра" accessibilityState={{ selected: true }}>
+          <View
+            style={[styles.preset, styles.selected]}
+            accessibilityLabel="Своя палитра"
+            accessibilityState={{ selected: true }}
+          >
             <PaletteStrip shades={paletteShades(palette)} size={11} />
           </View>
         ) : null}
@@ -96,11 +124,24 @@ export default function TypeEditModal({ visible, type, types, onClose, onSaved }
           </TouchableOpacity>
         ))}
         {/* "+": a palette of one's own, from a base color picked in the color picker (the shades follow) */}
-        <TouchableOpacity style={[styles.preset, styles.createTile]} onPress={() => setPickerOpen(true)} accessibilityRole="button" accessibilityLabel="Создать палитру">
-          <Text style={styles.createText} numberOfLines={1}>＋ Создать</Text>
+        <TouchableOpacity
+          style={[styles.preset, styles.createTile]}
+          onPress={() => setPickerOpen(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Создать палитру"
+        >
+          <Text style={styles.createText} numberOfLines={1}>
+            ＋ Создать
+          </Text>
         </TouchableOpacity>
       </View>
-      <ColorPickerSheet visible={pickerOpen} title="Своя палитра" value={custom ? palette : null} onPick={setPalette} onClose={() => setPickerOpen(false)} />
+      <ColorPickerSheet
+        visible={pickerOpen}
+        title="Своя палитра"
+        value={custom ? palette : null}
+        onPick={setPalette}
+        onClose={() => setPickerOpen(false)}
+      />
     </TextInputModal>
   );
 }
@@ -109,8 +150,14 @@ const styles = StyleSheet.create({
   // three in a row
   presets: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   preset: {
-    width: '31.5%', height: 38, alignItems: 'center', justifyContent: 'center',
-    borderRadius: 10, borderWidth: 2, borderColor: 'transparent', backgroundColor: colors.surface,
+    width: '31.5%',
+    height: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    backgroundColor: colors.surface,
   },
   autoTile: { width: '31.5%' },
   selected: { borderColor: colors.accent },

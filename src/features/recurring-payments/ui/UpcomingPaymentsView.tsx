@@ -54,29 +54,64 @@ export function upcomingOf(data: RecurringPaymentsData) {
  * "Предстоящие подписки": those saved up for ("Копим": a ring of what is saved, the month's contribution), those not
  * ("Без откладывания": the next charge and its month), the line back to the month's ones.
  */
-export default function UpcomingPaymentsView({ ym, data, w, money, shareOf, savingMinor, chargesMinor, open, targetOf, onMonth }: Props) {
+export default function UpcomingPaymentsView({
+  ym,
+  data,
+  w,
+  money,
+  shareOf,
+  savingMinor,
+  chargesMinor,
+  open,
+  targetOf,
+  onMonth,
+}: Props) {
   const { saving, plain } = upcomingOf(data);
   return (
     <>
-      <Text style={formStyles.hint}>Каждый месяц откладываем часть — к дате списания набирается вся сумма, и она не ударит по бюджету того месяца.</Text>
+      <Text style={formStyles.hint}>
+        Каждый месяц откладываем часть — к дате списания набирается вся сумма, и она не ударит по бюджету того месяца.
+      </Text>
       {saving.length ? <SectionBand title="Копим" total={money(savingMinor)} share={shareOf(savingMinor)} /> : null}
       {saving.map(({ v, sub, day }) => (
-        <PaymentRow label={w.One}
-          key={sub.id} name={sub.name} onPress={() => open(targetOf(sub))} ring={sub.amount_minor ? v.end_minor / sub.amount_minor : 0}
-          note={[periodText(sub.period), shortDay(day), `${money(v.end_minor, sub.currency)} из ${money(sub.amount_minor, sub.currency)}`]}
-          amount={money(v.contribution_minor, sub.currency)} amountNote="в месяц"
+        <PaymentRow
+          label={w.One}
+          key={sub.id}
+          name={sub.name}
+          onPress={() => open(targetOf(sub))}
+          ring={sub.amount_minor ? v.end_minor / sub.amount_minor : 0}
+          note={[
+            periodText(sub.period),
+            shortDay(day),
+            `${money(v.end_minor, sub.currency)} из ${money(sub.amount_minor, sub.currency)}`,
+          ]}
+          amount={money(v.contribution_minor, sub.currency)}
+          amountNote="в месяц"
         />
       ))}
       {plain.length ? <SectionBand title="Без откладывания" /> : null}
       {plain.map(({ sub, next }) => (
-        <PaymentRow label={w.One}
-          key={sub.id} name={sub.name} onPress={() => open(targetOf(sub))}
+        <PaymentRow
+          label={w.One}
+          key={sub.id}
+          name={sub.name}
+          onPress={() => open(targetOf(sub))}
           note={[periodText(sub.period), shortDay(next)]}
-          amount={money(sub.amount_minor, sub.currency)} amountNote={inMonthYear(next.slice(0, 7))} muted
+          amount={money(sub.amount_minor, sub.currency)}
+          amountNote={inMonthYear(next.slice(0, 7))}
+          muted
         />
       ))}
-      {!saving.length && !plain.length ? <Text style={formStyles.hint}>Пока ничего — всё списывается в этом месяце.</Text> : null}
-      <PaymentRow label="Перейти" name={`${w.Many} ${monthGen(ym)} ›`} onPress={onMonth} note={[`списания ${money(chargesMinor)}`]} amount={null} />
+      {!saving.length && !plain.length ? (
+        <Text style={formStyles.hint}>Пока ничего — всё списывается в этом месяце.</Text>
+      ) : null}
+      <PaymentRow
+        label="Перейти"
+        name={`${w.Many} ${monthGen(ym)} ›`}
+        onPress={onMonth}
+        note={[`списания ${money(chargesMinor)}`]}
+        amount={null}
+      />
     </>
   );
 }

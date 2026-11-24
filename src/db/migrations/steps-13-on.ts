@@ -11,9 +11,7 @@ export const STEPS_13_ON: MigrationStep[][] = [
   ],
   // 14: no more detaching a transaction from its merchant (any transaction can simply get a category of its
   // own). Detached ones keep their category as a manual choice, which rules never overwrite; the column stays unused
-  [
-    "UPDATE transactions SET category_source = 'user' WHERE merchant_detached = 1 AND category_id IS NOT NULL",
-  ],
+  ["UPDATE transactions SET category_source = 'user' WHERE merchant_detached = 1 AND category_id IS NOT NULL"],
   // 15: until now picking a category always marked the transaction as a manual choice, even when that pick made
   // it the merchant's category; so it didn't follow when the merchant's category changed. Purchases / payments
   // that have their merchant's category follow the merchant from now on
@@ -74,25 +72,23 @@ export const STEPS_13_ON: MigrationStep[][] = [
     'ALTER TABLE categories ADD COLUMN system TEXT',
     async (db) => {
       const own = await db.get<{ id: number }>(
-        "SELECT id FROM categories WHERE deleted_at IS NULL AND lower(name) IN ('сбережения', 'накопления') ORDER BY id LIMIT 1");
+        "SELECT id FROM categories WHERE deleted_at IS NULL AND lower(name) IN ('сбережения', 'накопления') ORDER BY id LIMIT 1",
+      );
       if (own) await db.run("UPDATE categories SET system = 'savings' WHERE id = ?", [own.id]);
       else {
         await db.run(
           `INSERT INTO categories (name, emoji, system, sort_order)
-            VALUES ('Сбережения', '🏦', 'savings', 100)`); // last, after the seeded "Другое" (99)
+            VALUES ('Сбережения', '🏦', 'savings', 100)`,
+        ); // last, after the seeded "Другое" (99)
       }
     },
     'CREATE UNIQUE INDEX IF NOT EXISTS categories_system ON categories(system) WHERE system IS NOT NULL',
     'ALTER TABLE plan_months ADD COLUMN to_savings INTEGER NOT NULL DEFAULT 1',
   ],
   // 22: money locked for savings right away, in the budget's currency: neither the plan nor the share outside it can take it
-  [
-    'ALTER TABLE plan_months ADD COLUMN locked_minor INTEGER NOT NULL DEFAULT 0 CHECK (locked_minor >= 0)',
-  ],
+  ['ALTER TABLE plan_months ADD COLUMN locked_minor INTEGER NOT NULL DEFAULT 0 CHECK (locked_minor >= 0)'],
   // 23: the share outside the plan as an amount of one's own (in the budget's currency) instead of a % of it; null = by %
-  [
-    'ALTER TABLE plan_months ADD COLUMN unplanned_minor INTEGER CHECK (unplanned_minor >= 0)',
-  ],
+  ['ALTER TABLE plan_months ADD COLUMN unplanned_minor INTEGER CHECK (unplanned_minor >= 0)'],
   // 24: refunds are no longer settled on a purchase (they're subtracted from the merchant's category). One settled
   // earlier on a purchase it reduced (the purchase still there, same currency): the purchase gets its amount back, the
   // refund counts by itself again in the purchase's category — the same total. One whose purchase was deleted (a full
@@ -143,11 +139,14 @@ export const STEPS_13_ON: MigrationStep[][] = [
     async (db) => {
       const others = await db.all<{ id: number }>(
         `SELECT c.id FROM categories c JOIN category_types t ON t.id = c.type_id
-          WHERE t.is_transfer = 1 AND c.name = 'Прочие' AND c.system IS NULL`);
+          WHERE t.is_transfer = 1 AND c.name = 'Прочие' AND c.system IS NULL`,
+      );
       for (const { id } of others) {
         await db.run(
           `UPDATE transactions SET category_id = (SELECT id FROM categories WHERE system = 'topup'), category_source = NULL
-            WHERE category_id = ? AND kind = 'deposit'`, [id]);
+            WHERE category_id = ? AND kind = 'deposit'`,
+          [id],
+        );
         await db.run('UPDATE transactions SET category_id = NULL, category_source = NULL WHERE category_id = ?', [id]);
         for (const table of ['plan_items', 'merchant_rules', 'merchant_categories', 'category_usage']) {
           await db.run(`DELETE FROM ${table} WHERE category_id = ?`, [id]);
@@ -163,7 +162,8 @@ export const STEPS_13_ON: MigrationStep[][] = [
       const { placeByBalances } = require('../balance') as typeof import('../balance');
       const rows = await db.all<{ id: number }>(
         `SELECT id FROM transactions WHERE bank != 'manual' AND kind IN ('deposit', 'transfer', 'withdrawal')
-          AND occurred_at >= CAST(strftime('%s', 'now') AS INTEGER) - 31 * 86400 ORDER BY occurred_at, id`);
+          AND occurred_at >= CAST(strftime('%s', 'now') AS INTEGER) - 31 * 86400 ORDER BY occurred_at, id`,
+      );
       for (const { id } of rows) await placeByBalances(id, db);
     },
   ],

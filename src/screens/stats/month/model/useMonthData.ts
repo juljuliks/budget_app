@@ -26,13 +26,20 @@ export function useMonthData(year: number, month: number, currency: Currency) {
     const keep = latest();
     started();
     monthStats(year, month, currency).then(keep(setStats)).catch(keep(fail));
-    unplannedShare(ymOf(year, month), currency).then(keep(setShare)).catch((e) => console.error('load unplanned share failed', e));
-    if (ymOf(year, month) <= currentYm()) monthPaymentMarks(ymOf(year, month), currency).then(keep(setMarks)).catch((e) => console.error('load payment marks failed', e));
+    unplannedShare(ymOf(year, month), currency)
+      .then(keep(setShare))
+      .catch((e) => console.error('load unplanned share failed', e));
+    if (ymOf(year, month) <= currentYm())
+      monthPaymentMarks(ymOf(year, month), currency)
+        .then(keep(setMarks))
+        .catch((e) => console.error('load payment marks failed', e));
     else setMarks([]);
     if (ymOf(year, month) === currentYm()) {
       const d = dayKeyOf(new Date());
       const monthStart = `${ymOf(year, month)}-01` as DayKey;
-      loadNorms({ from: d, to: d }, currency, monthStart).then(keep(setToday)).catch((e) => console.error('load norms failed', e));
+      loadNorms({ from: d, to: d }, currency, monthStart)
+        .then(keep(setToday))
+        .catch((e) => console.error('load norms failed', e));
     } else setToday(null);
   }, [year, month, currency, latest, started, fail]);
 

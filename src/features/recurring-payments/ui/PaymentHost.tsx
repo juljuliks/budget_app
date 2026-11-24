@@ -24,7 +24,7 @@ async function categoryOf(id: number | null): Promise<PaymentCategory | null> {
 async function targetOf(which: PaymentOpen): Promise<PaymentTarget | null> {
   if (which.id !== undefined) {
     const own = await getPayment(which.id);
-    const category = own && await categoryOf(own.category_id);
+    const category = own && (await categoryOf(own.category_id));
     return own && category ? { ...own, category } : null;
   }
   const tx = which.txId === undefined ? null : await getTransaction(which.txId);
@@ -35,8 +35,15 @@ async function targetOf(which: PaymentOpen): Promise<PaymentTarget | null> {
   if (!category) return null;
   if (sub) return { ...sub, category, last_day: dayOfUnix(tx.occurred_at) };
   return {
-    category, merchant_key: tx.merchant_key, name: tx.raw_merchant || tx.merchant_key, amount_minor: tx.amount_minor,
-    currency: asCurrency(tx.currency), period: 1, due: null, last_day: dayOfUnix(tx.occurred_at), from_operation: true,
+    category,
+    merchant_key: tx.merchant_key,
+    name: tx.raw_merchant || tx.merchant_key,
+    amount_minor: tx.amount_minor,
+    currency: asCurrency(tx.currency),
+    period: 1,
+    due: null,
+    last_day: dayOfUnix(tx.occurred_at),
+    from_operation: true,
   };
 }
 
@@ -44,10 +51,21 @@ async function targetOf(which: PaymentOpen): Promise<PaymentTarget | null> {
 export default function PaymentHost({ which, onClose }: Props) {
   const [target, setTarget] = useState<PaymentTarget | null>(null);
   useEffect(() => {
-    if (!which) { setTarget(null); return undefined; }
+    if (!which) {
+      setTarget(null);
+      return undefined;
+    }
     let live = true;
-    targetOf(which).then((t) => { if (!live) return; if (t) setTarget(t); else onClose(); }).catch(toastFailure('load payment', LOAD_FAILED));
-    return () => { live = false; };
+    targetOf(which)
+      .then((t) => {
+        if (!live) return;
+        if (t) setTarget(t);
+        else onClose();
+      })
+      .catch(toastFailure('load payment', LOAD_FAILED));
+    return () => {
+      live = false;
+    };
   }, [which]); // eslint-disable-line react-hooks/exhaustive-deps
   return <PaymentSheet target={target} onClose={onClose} onSaved={which?.onSaved} />;
 }

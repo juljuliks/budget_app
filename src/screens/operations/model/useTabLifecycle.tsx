@@ -22,37 +22,62 @@ type Options = {
   resetOnLeave: () => void;
 };
 
-export function useTabLifecycle({ tabNavigation, from, sortingOut, askLeave, selecting, endSelecting, resetOnLeave }: Options) {
+export function useTabLifecycle({
+  tabNavigation,
+  from,
+  sortingOut,
+  askLeave,
+  selecting,
+  endSelecting,
+  resetOnLeave,
+}: Options) {
   // the latest callbacks for the listeners added once
   const cb = useRef({ askLeave, endSelecting, resetOnLeave, sortingOut });
   cb.current = { askLeave, endSelecting, resetOnLeave, sortingOut };
 
   // Android hardware back does the same as the header arrow
-  useFocusEffect(useCallback(() => {
-    if (!from) return undefined;
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => { cb.current.askLeave(); return true; });
-    return () => sub.remove();
-  }, [from]));
+  useFocusEffect(
+    useCallback(() => {
+      if (!from) return undefined;
+      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+        cb.current.askLeave();
+        return true;
+      });
+      return () => sub.remove();
+    }, [from]),
+  );
 
   // opening the tab from the tab bar is a normal visit: no back button, no sheets to come back to
-  useEffect(() => tabNavigation.addListener('tabPress', () => {
-    if (from) { tabNavigation.setParams({ from: undefined }); forgetPages(); }
-  }), [tabNavigation, from]);
+  useEffect(
+    () =>
+      tabNavigation.addListener('tabPress', () => {
+        if (from) {
+          tabNavigation.setParams({ from: undefined });
+          forgetPages();
+        }
+      }),
+    [tabNavigation, from],
+  );
 
   // Leaving for another tab starts the next visit clean. A screen pushed over the tabs (merchants, categories) keeps the
   // list, to come back to the same one; a sort-out stays: back on the tab, it goes on
-  useEffect(() => tabNavigation.addListener('blur', () => {
-    const routes = navigationRef.getRootState()?.routes;
-    if (routes && routes[routes.length - 1].name !== 'Main') return;
-    if (cb.current.sortingOut) return;
-    cb.current.resetOnLeave();
-  }), [tabNavigation]);
+  useEffect(
+    () =>
+      tabNavigation.addListener('blur', () => {
+        const routes = navigationRef.getRootState()?.routes;
+        if (routes && routes[routes.length - 1].name !== 'Main') return;
+        if (cb.current.sortingOut) return;
+        cb.current.resetOnLeave();
+      }),
+    [tabNavigation],
+  );
 
   useLayoutEffect(() => {
     tabNavigation.setOptions({
-      headerLeft: from || sortingOut
-        ? () => <HeaderBackButton onPress={() => cb.current.askLeave()} accessibilityLabel="Назад" />
-        : undefined,
+      headerLeft:
+        from || sortingOut
+          ? () => <HeaderBackButton onPress={() => cb.current.askLeave()} accessibilityLabel="Назад" />
+          : undefined,
       headerRight: () => <HeaderActions selecting={selecting} onDone={() => cb.current.endSelecting()} />,
     });
   }, [tabNavigation, selecting, from, sortingOut]);

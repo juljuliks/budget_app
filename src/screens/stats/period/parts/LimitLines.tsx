@@ -18,7 +18,15 @@ import { INFO_SIZE, paceStyle, styles } from './styles';
 type Props = { v: PeriodView; c: CategoryStat; plan: CategoryNorm; noBar: boolean; onInfo: () => void };
 
 /** The ⓘ line: what the line says and a tap to how it is counted. */
-function InfoLine({ onInfo, children, textStyle }: { onInfo: () => void; children: React.ReactNode; textStyle?: object }) {
+function InfoLine({
+  onInfo,
+  children,
+  textStyle,
+}: {
+  onInfo: () => void;
+  children: React.ReactNode;
+  textStyle?: object;
+}) {
   return (
     <TouchableOpacity style={styles.paceRow} onPress={onInfo} accessibilityLabel="Как считается категория">
       <Text style={textStyle ?? [styles.share, styles.paceText]}>{children}</Text>
@@ -51,7 +59,10 @@ export function RhythmLine({ v, c, plan, noBar, onInfo }: Props) {
       <>
         {noBar ? null : <Meter ratio={1} over={plan.monthLimit / mtd} height={8} color={c.color} />}
         <InfoLine onInfo={onInfo}>
-          <Text style={[styles.pace, styles.paceAhead]}>Перерасход на {v.monthIn}{hidden ? '' : ` ${v.money(mtd - plan.monthLimit)}`}</Text>
+          <Text style={[styles.pace, styles.paceAhead]}>
+            Перерасход на {v.monthIn}
+            {hidden ? '' : ` ${v.money(mtd - plan.monthLimit)}`}
+          </Text>
         </InfoLine>
       </>
     );
@@ -62,35 +73,64 @@ export function RhythmLine({ v, c, plan, noBar, onInfo }: Props) {
     <>
       {/* the bar is scaled to the bigger of the two: an overspend shows how far past the limit; nothing spent: no bar */}
       {limit > 0 && !noBar && spent > 0 ? (
-        spent <= limit ? <Meter ratio={spent / limit} base={others / limit} height={8} color={c.color} />
-          : whole ? <Meter ratio={1} base={others / spent} limitTick={limit / spent} height={8} color={c.color} />
-            : <Meter ratio={1} over={limit / spent} height={8} color={c.color} />
+        spent <= limit ? (
+          <Meter ratio={spent / limit} base={others / limit} height={8} color={c.color} />
+        ) : whole ? (
+          <Meter ratio={1} base={others / spent} limitTick={limit / spent} height={8} color={c.color} />
+        ) : (
+          <Meter ratio={1} over={limit / spent} height={8} color={c.color} />
+        )
       ) : null}
       <InfoLine onInfo={onInfo}>
         {/* as in the month stats: the limit first — how the period moved it: at its start (crossed out) → for the rest
             of the month after it — then what's left */}
-        {effect && hidden ? (moved && limitMove(effect.before, effect.after!) ? (
-          <>
-            <Text style={effect.after! < effect.before ? styles.paceAhead : styles.paceOk}>{`Лимит ${limitMove(effect.before, effect.after!)}`}</Text>{'\n'}
-          </>
-        ) : null) : effect ? (
+        {effect && hidden ? (
+          moved && limitMove(effect.before, effect.after!) ? (
+            <>
+              <Text
+                style={effect.after! < effect.before ? styles.paceAhead : styles.paceOk}
+              >{`Лимит ${limitMove(effect.before, effect.after!)}`}</Text>
+              {'\n'}
+            </>
+          ) : null
+        ) : effect ? (
           <>
             {/* "старый → новый": no "Лимит" word, it's plain what it is */}
-            {moved ? <><Text style={styles.crossed}>{v.m(effect.before)}</Text>{' → '}</> : 'Лимит '}
-            <Text style={moved ? (effect.after! < effect.before ? styles.paceAhead : styles.paceOk) : undefined}>{v.m(moved ? effect.after! : effect.before)}</Text>
-            {/* no "в неделю": the section says which limit it is */}{'\n'}
+            {moved ? (
+              <>
+                <Text style={styles.crossed}>{v.m(effect.before)}</Text>
+                {' → '}
+              </>
+            ) : (
+              'Лимит '
+            )}
+            <Text style={moved ? (effect.after! < effect.before ? styles.paceAhead : styles.paceOk) : undefined}>
+              {v.m(moved ? effect.after! : effect.before)}
+            </Text>
+            {/* no "в неделю": the section says which limit it is */}
+            {'\n'}
           </>
         ) : null}
         {label}
         {limit > 0 ? (
           <>
             <Text style={[styles.pace, paceStyle(p)]}>
-              {(hidden ? hiddenLeft(left, limit, ongoing ? 'осталось' : 'сэкономлено')
-                : left < 0 ? `перерасход ${v.money(-left)}` : ongoing ? `осталось ${v.money(left)}` : `сэкономлено ${v.money(left)}`).replace(/^./, (ch) => (label ? ch : ch.toUpperCase()))}
+              {(hidden
+                ? hiddenLeft(left, limit, ongoing ? 'осталось' : 'сэкономлено')
+                : left < 0
+                  ? `перерасход ${v.money(-left)}`
+                  : ongoing
+                    ? `осталось ${v.money(left)}`
+                    : `сэкономлено ${v.money(left)}`
+              ).replace(/^./, (ch) => (label ? ch : ch.toUpperCase()))}
             </Text>
-            {left >= 0 && ongoing && rangeDays({ from: whole ? plan.window.from : v.range.from, to: end }) > 1 ? ` · до ${WEEKDAYS[parseDayKey(end).getDay()]}` : ''}
+            {left >= 0 && ongoing && rangeDays({ from: whole ? plan.window.from : v.range.from, to: end }) > 1
+              ? ` · до ${WEEKDAYS[parseDayKey(end).getDay()]}`
+              : ''}
           </>
-        ) : `${label ? 'п' : 'П'}лана нет`}
+        ) : (
+          `${label ? 'п' : 'П'}лана нет`
+        )}
       </InfoLine>
     </>
   );
@@ -107,7 +147,12 @@ export function MonthLine({ v, c, plan, noBar, onInfo }: Props) {
       {noBar || bar.ratio <= 0 ? null : <Meter ratio={bar.ratio} base={bar.base} height={8} color={c.color} />}
       <InfoLine onInfo={onInfo}>
         <Text style={[styles.pace, paceStyle(p)]}>
-          На {v.monthIn} {hidden ? hiddenLeft(left, plan.windowNorm) : left < 0 ? `перерасход ${v.money(-left)}` : `осталось ${v.money(left)}`}
+          На {v.monthIn}{' '}
+          {hidden
+            ? hiddenLeft(left, plan.windowNorm)
+            : left < 0
+              ? `перерасход ${v.money(-left)}`
+              : `осталось ${v.money(left)}`}
         </Text>
       </InfoLine>
     </>
@@ -122,17 +167,39 @@ export function FixedLine({ v, c, plan, noBar, onInfo }: Props) {
   return (
     <>
       {/* paid more than planned: an overspend like a limit's — the bar scaled to the spending, a tick at the plan */}
-      {plan.monthLimit > 0 && !noBar && mtd > 0 ? (mtd > plan.monthLimit
-        ? <Meter ratio={1} over={plan.monthLimit / mtd} height={8} color={c.color} />
-        : <Meter ratio={mtd / plan.monthLimit} height={8} color={c.color} />) : null}
+      {plan.monthLimit > 0 && !noBar && mtd > 0 ? (
+        mtd > plan.monthLimit ? (
+          <Meter ratio={1} over={plan.monthLimit / mtd} height={8} color={c.color} />
+        ) : (
+          <Meter ratio={mtd / plan.monthLimit} height={8} color={c.color} />
+        )
+      ) : null}
       <InfoLine onInfo={onInfo} textStyle={styles.share}>
-        {plan.monthLimit <= 0 ? `в ${MONTHS_PREP[parseYm(v.norms!.ym).month]} плана нет`
-          // "paid / plan" on the right: what's still to pay this month, like a limit's "осталось"
-          : ofLimit ? (mtd < plan.monthLimit ? <>{hidden ? `Осталось оплатить ${formatPercent(plan.monthLimit - mtd, plan.monthLimit)}` : `Осталось оплатить ${v.money(plan.monthLimit - mtd)}`}<Text> · до {v.monthEndShort}</Text></> : null)
-            : Math.round(mtd) === Math.round(plan.monthLimit) ? `Оплачено · ${v.monthIn}`
-              : hidden ? `${formatPercent(mtd, plan.monthLimit)} на ${v.monthIn}` : `${v.money(mtd)} из ${v.money(plan.monthLimit)} на ${v.monthIn}`}
+        {plan.monthLimit <= 0 ? (
+          `в ${MONTHS_PREP[parseYm(v.norms!.ym).month]} плана нет`
+        ) : // "paid / plan" on the right: what's still to pay this month, like a limit's "осталось"
+        ofLimit ? (
+          mtd < plan.monthLimit ? (
+            <>
+              {hidden
+                ? `Осталось оплатить ${formatPercent(plan.monthLimit - mtd, plan.monthLimit)}`
+                : `Осталось оплатить ${v.money(plan.monthLimit - mtd)}`}
+              <Text> · до {v.monthEndShort}</Text>
+            </>
+          ) : null
+        ) : Math.round(mtd) === Math.round(plan.monthLimit) ? (
+          `Оплачено · ${v.monthIn}`
+        ) : hidden ? (
+          `${formatPercent(mtd, plan.monthLimit)} на ${v.monthIn}`
+        ) : (
+          `${v.money(mtd)} из ${v.money(plan.monthLimit)} на ${v.monthIn}`
+        )}
         {/* an overspend, as in every other row */}
-        {plan.monthLimit > 0 && mtd > plan.monthLimit ? <Text style={[styles.pace, styles.paceAhead]}>{`${ofLimit ? '' : '\n'}Перерасход${hidden ? '' : ` ${v.money(mtd - plan.monthLimit)}`}`}</Text> : null}
+        {plan.monthLimit > 0 && mtd > plan.monthLimit ? (
+          <Text
+            style={[styles.pace, styles.paceAhead]}
+          >{`${ofLimit ? '' : '\n'}Перерасход${hidden ? '' : ` ${v.money(mtd - plan.monthLimit)}`}`}</Text>
+        ) : null}
       </InfoLine>
     </>
   );

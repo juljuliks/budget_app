@@ -28,7 +28,16 @@ export const SPENDING_PATTERN: Record<NormPeriod, { title: string; hint: string 
 };
 
 /** "в день" / "в неделю" / "за 2 недели" / "в месяц": a limit per its period ("≈ 113 ₾ в неделю"). */
-export const PER_PERIOD: Record<NormPeriod, string> = { day: 'в день', week: 'в неделю', '2weeks': 'за 2 недели', month: 'в месяц' };
+export const PER_PERIOD: Record<NormPeriod, string> = {
+  day: 'в день',
+  week: 'в неделю',
+  '2weeks': 'за 2 недели',
+  month: 'в месяц',
+};
 
 /** "на день" / "на неделю" / "на 2 недели": the limit of a period ("лимит на неделю"). */
-export const FOR_PERIOD: Record<Exclude<NormPeriod, 'month'>, string> = { day: 'на день', week: 'на неделю', '2weeks': 'на 2 недели' };
+export const FOR_PERIOD: Record<Exclude<NormPeriod, 'month'>, string> = {
+  day: 'на день',
+  week: 'на неделю',
+  '2weeks': 'на 2 недели',
+};

@@ -49,16 +49,32 @@ export function monthSavings(m: HistoryMonth, current: boolean): MonthSavings | 
   const kept = Math.min(locked, Math.max(0, total));
   const planned = m.budget_minor - m.planned_minor - m.unplanned_minor - locked;
   return {
-    label: total < 0 ? 'Перерасход бюджета' : rest === 'next' ? 'Перенесено' : rest === 'keep' ? 'Сэкономлено' : 'В сбережения',
+    label:
+      total < 0
+        ? 'Перерасход бюджета'
+        : rest === 'next'
+          ? 'Перенесено'
+          : rest === 'keep'
+            ? 'Сэкономлено'
+            : 'В сбережения',
     saved: m.close?.closed ? m.close.saved_minor : null,
     open: !!m.close && !m.close.closed,
     total,
-    value: total >= 0 && rest === 'next' ? total - kept - released : total >= 0 && m.close?.closed && m.close.saved_minor !== null ? m.close.saved_minor : total,
+    value:
+      total >= 0 && rest === 'next'
+        ? total - kept - released
+        : total >= 0 && m.close?.closed && m.close.saved_minor !== null
+          ? m.close.saved_minor
+          : total,
     pending: current,
     section: locked > 0 || rest === 'savings' || rest === null || released > 0,
     locked: { plan: locked, kept },
     // over the budget the plan has nothing for it; under a unit — the rate's dust, not a plan
-    rest: { label: total < 0 ? 'Сверх бюджета' : 'Сэкономлено', plan: total >= 0 && planned >= MIN_PLANNED ? planned : null, value: total - kept - released },
+    rest: {
+      label: total < 0 ? 'Сверх бюджета' : 'Сэкономлено',
+      plan: total >= 0 && planned >= MIN_PLANNED ? planned : null,
+      value: total - kept - released,
+    },
     unpaidFixed,
     released: m.released,
   };

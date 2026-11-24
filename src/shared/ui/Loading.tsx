@@ -22,7 +22,9 @@ export default function Loading({ failed, onRetry, inline, style }: Props) {
           <Text style={styles.text}>{LOAD_FAILED}</Text>
           {onRetry ? <Button title={RETRY} onPress={onRetry} variant="secondary" style={styles.retry} /> : null}
         </>
-      ) : <ActivityIndicator />}
+      ) : (
+        <ActivityIndicator />
+      )}
     </View>
   );
 }

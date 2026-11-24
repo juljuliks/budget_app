@@ -19,7 +19,9 @@ async function impulsive() {
   const cafe = await id('Кафе и рестораны');
   const clothes = await id('Одежда');
   await (await getDb()).run('UPDATE categories SET impulse = 1 WHERE id IN (?, ?)', [cafe, clothes]);
-  const wolt = (await (await getDb()).get<{ id: number }>("SELECT id FROM transactions WHERE raw_merchant = 'WOLT' AND amount_minor = 35000"))!.id;
+  const wolt = (await (
+    await getDb()
+  ).get<{ id: number }>("SELECT id FROM transactions WHERE raw_merchant = 'WOLT' AND amount_minor = 35000"))!.id;
   await answer(wolt, true, 'anxious');
   await answer(await buy('LUCA', 30, on(8, 13, 1), cafe), false);
   await buy('BARI', 20, on(9, 13, 1), cafe);
@@ -51,19 +53,22 @@ describe('7.1.6 the report: «Импульсивные покупки»', () => 
     expect(screen.getByText(/Обдуманные · 1/)).toBeTruthy();
     expect(screen.getByText('Что подталкивает')).toBeTruthy();
     expect(screen.getByText('Чаще всего — тревога: 1 из 2 импульсивных покупок с ответом.')).toBeTruthy();
-    expect(after('☕️ Кафе и рестораны', 2)).toEqual(['1 из 2 импульсивные · перерасход 100 ₾, из них 100 ₾ — импульсивные', '350 ₾']);
+    expect(after('☕️ Кафе и рестораны', 2)).toEqual([
+      '1 из 2 импульсивные · перерасход 100 ₾, из них 100 ₾ — импульсивные',
+      '350 ₾',
+    ]);
     expect(after(/^👕 Одежда/, 2)).toEqual(['1 из 1 импульсивные', '100 ₾']);
     expect(texts()).toContain('👕 Одежда без плана ');
   });
 
-  test('7.1.7 «Покупки по дням»: the month\'s purchases asked about on its calendar, a day\'s card', async () => {
+  test("7.1.7 «Покупки по дням»: the month's purchases asked about on its calendar, a day's card", async () => {
     expect(await screen.findByText('Покупки по дням')).toBeTruthy();
     // WOLT (impulsive) is on the 6th of September in the seed
     await tap('#day-2026-09-06');
     expect(await screen.findByText('WOLT')).toBeTruthy();
   });
 
-  test('«Отметить ещё 1 покупку ›»: the month\'s purchases with no answer, «Покупка: без ответа»', async () => {
+  test("«Отметить ещё 1 покупку ›»: the month's purchases with no answer, «Покупка: без ответа»", async () => {
     await tap('Отметить ещё 1 покупку ›');
     expect(await screen.findByText('Покупка: без ответа')).toBeTruthy();
     await waitFor(() => expect(screen.getByText('BARI')).toBeTruthy());
@@ -72,7 +77,7 @@ describe('7.1.6 the report: «Импульсивные покупки»', () => 
   });
 });
 
-describe('5.8.7 a category\'s «Динамика»: impulsive purchases of 3 months', () => {
+describe("5.8.7 a category's «Динамика»: impulsive purchases of 3 months", () => {
   async function openCafeTrend() {
     await openMenu('Категории');
     await tap('☕️ Кафе и рестораны');
@@ -93,7 +98,8 @@ describe('5.8.7 a category\'s «Динамика»: impulsive purchases of 3 mon
     await openApp(async () => {
       await impulsive();
       const cafe = await id('Кафе и рестораны');
-      for (let day = 1; day <= 8; day++) await answer(await buy('LUCA', 10, on(day, 18), cafe), day % 2 === 0, day % 2 === 0 ? 'bored' : null);
+      for (let day = 1; day <= 8; day++)
+        await answer(await buy('LUCA', 10, on(day, 18), cafe), day % 2 === 0, day % 2 === 0 ? 'bored' : null);
     });
     await openCafeTrend();
     expect(await screen.findByText('отмечено 10 из 13')).toBeTruthy();
@@ -105,7 +111,7 @@ describe('5.8.7 a category\'s «Динамика»: impulsive purchases of 3 mon
     expect(after('🥱 Скука', 1)).toEqual(['4 · 40 ₾']);
   });
 
-  test('5.8.10 «Покупки по дням»: marks by day, back to the first month, a tapped day\'s purchases, its operation', async () => {
+  test("5.8.10 «Покупки по дням»: marks by day, back to the first month, a tapped day's purchases, its operation", async () => {
     await openApp(impulsive);
     await openCafeTrend();
     expect(screen.getByText('Покупки по дням')).toBeTruthy();

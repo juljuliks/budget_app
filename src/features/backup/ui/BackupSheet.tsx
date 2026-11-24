@@ -27,7 +27,9 @@ export default function BackupSheet({ visible, onClose }: { visible: boolean; on
       .then(([auto, password]) => setSettings({ auto, password }))
       .catch(toastFailure('load backup settings', LOAD_FAILED));
   }, []);
-  useEffect(() => { if (visible) load(); }, [visible, load]);
+  useEffect(() => {
+    if (visible) load();
+  }, [visible, load]);
   useEffect(() => onBackupSettingsChanged(load), [load]);
 
   return (
@@ -49,5 +51,11 @@ export default function BackupSheet({ visible, onClose }: { visible: boolean; on
 
 const styles = StyleSheet.create({
   info: { fontSize: 14, color: colors.muted, paddingHorizontal: 20, paddingBottom: 12 },
-  actions: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12, borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
+  actions: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+  },
 });

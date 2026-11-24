@@ -28,7 +28,8 @@ export async function fundThisMonth(categoryId: number, nowYm = currentYm()): Pr
   const db = await getDb();
   const item = await db.get<{ taken: number; c: string | null }>(
     "SELECT p.taken_minor AS taken, pm.budget_currency AS c FROM plan_items p LEFT JOIN plan_months pm ON pm.ym = p.ym WHERE p.ym = ? AND p.category_id = ? AND p.kind = 'fund'",
-    [nowYm, categoryId]);
+    [nowYm, categoryId],
+  );
   const { year, month } = parseYm(nowYm);
   const next = ymOf(year, month + 1);
   return {

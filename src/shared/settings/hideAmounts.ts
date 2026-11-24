@@ -31,7 +31,9 @@ export function useHideAmounts(): boolean {
     listeners.add(setV);
     load().catch((e) => console.error('load hide amounts failed', e));
     setV(current);
-    return () => { listeners.delete(setV); };
+    return () => {
+      listeners.delete(setV);
+    };
   }, []);
   return v;
 }

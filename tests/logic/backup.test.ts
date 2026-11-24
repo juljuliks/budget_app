@@ -18,19 +18,30 @@ beforeEach(() => freshDb());
 afterAll(() => fs.rmSync(dir, { recursive: true, force: true }));
 
 test('a backup has every operation and passes the check; opened, it is the same database', async () => {
-  await addManualTransaction({ amount_minor: 1250, category_id: 1, description: 'Хлеб', occurred_at: at('2026-10-03T09:30:00') });
-  await addManualTransaction({ amount_minor: 99, currency: 'USD', category_id: null, occurred_at: at('2026-10-04T10:00:00') });
+  await addManualTransaction({
+    amount_minor: 1250,
+    category_id: 1,
+    description: 'Хлеб',
+    occurred_at: at('2026-10-03T09:30:00'),
+  });
+  await addManualTransaction({
+    amount_minor: 99,
+    currency: 'USD',
+    category_id: null,
+    occurred_at: at('2026-10-04T10:00:00'),
+  });
   await exportDatabase(file('copy.db'));
   expect(await checkBackup(file('copy.db'))).toBeNull();
   const copy = openDatabase(file('copy.db'));
   expect(await copy.all('SELECT amount_minor, currency FROM transactions ORDER BY id')).toEqual([
-    { amount_minor: 1250, currency: 'GEL' }, { amount_minor: 99, currency: 'USD' },
+    { amount_minor: 1250, currency: 'GEL' },
+    { amount_minor: 99, currency: 'USD' },
   ]);
   expect((await copy.get<{ user_version: number }>('PRAGMA user_version'))!.user_version).toBe(MIGRATIONS.length);
   copy.close();
 });
 
-test('the check refuses a file that is not a database, another app\'s database, one from a newer app', async () => {
+test("the check refuses a file that is not a database, another app's database, one from a newer app", async () => {
   fs.writeFileSync(file('photo.db'), 'definitely not sqlite, just some bytes of a photo '.repeat(100));
   expect(await checkBackup(file('photo.db'))).toBe('not-db');
 
@@ -58,18 +69,26 @@ test('CSV: a header, ";" between cells, a decimal comma, spending negative, quot
   const id = await addManualTransaction({ amount_minor: 1250, category_id: 1, occurred_at: at('2026-10-03T09:30:00') });
   await (await getDb()).run('UPDATE transactions SET raw_merchant = ? WHERE id = ?', ['Кафе "Ромашка"; летняя', id]);
   await setTransactionNote(id, 'с Аней\nи Борей');
-  await addManualTransaction({ amount_minor: 10000, kind: 'deposit', category_id: null, occurred_at: at('2026-10-04T10:05:00') });
+  await addManualTransaction({
+    amount_minor: 10000,
+    kind: 'deposit',
+    category_id: null,
+    occurred_at: at('2026-10-04T10:05:00'),
+  });
   const csv = operationsCsv(await csvOperations());
   const category = (await (await getDb()).get<{ name: string }>('SELECT name FROM categories WHERE id = 1'))!.name;
   expect(csv.startsWith('﻿Дата;Сумма;Валюта;Тип;Категория;Раздел;Мерчант;Описание\r\n')).toBe(true);
   const rows = csv.slice(1).split('\r\n');
-  expect(rows[1]).toMatch(new RegExp(`^2026-10-03 09:30;-12,50;GEL;Покупка;${category};[^;]*;"Кафе ""Ромашка""; летняя";"с Аней\\nи Борей"$`));
+  expect(rows[1]).toMatch(
+    new RegExp(`^2026-10-03 09:30;-12,50;GEL;Покупка;${category};[^;]*;"Кафе ""Ромашка""; летняя";"с Аней\\nи Борей"$`),
+  );
   expect(rows[2]).toBe('2026-10-04 10:05;100,00;GEL;Пополнение;Без категории;;;');
   expect(rows[3]).toBe('');
 });
 
 test('the automatic copy: due when never made or a week after the last; the setting kept, turned off clears it', async () => {
-  const { autoBackup, autoBackupDue, markAutoBackupMade, setAutoBackupCloud, setAutoBackupFolder } = await import('../../src/backup');
+  const { autoBackup, autoBackupDue, markAutoBackupMade, setAutoBackupCloud, setAutoBackupFolder } =
+    await import('../../src/backup');
   const day = 86400;
   expect(autoBackupDue(null, 1000)).toBe(true);
   expect(autoBackupDue(1000, 1000 + 6 * day)).toBe(false);

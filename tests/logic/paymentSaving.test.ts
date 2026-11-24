@@ -5,21 +5,34 @@ import { getDb } from '../../src/db';
 import { subscriptionsCategoryId } from '../../src/db/categories';
 import { listPlan, monthStats, setPlanBudget } from '../../src/db/plans';
 import {
-  deletePayment, restorePayment, savePayment, savedNow, savingFor, savingMonths, savingOfTransaction, startSaving, stopSaving, undoSaving,
+  deletePayment,
+  restorePayment,
+  savePayment,
+  savedNow,
+  savingFor,
+  savingMonths,
+  savingOfTransaction,
+  startSaving,
+  stopSaving,
+  undoSaving,
 } from '../../src/db/recurring';
 
 let n = 0;
 const at = (s: string) => Math.floor(new Date(s).getTime() / 1000);
 async function charge(merchant: string, amount: number, when: string) {
   n++;
-  await (await getDb()).run(
+  await (
+    await getDb()
+  ).run(
     `INSERT INTO transactions (bank, kind, amount_minor, currency, raw_merchant, merchant_key, category_id, category_source, occurred_at, raw_sms, sms_hash)
       VALUES ('tbc', 'purchase', ?, 'GEL', ?, ?, ?, 'user', ?, ?, ?)`,
-    [amount, merchant, merchant, await subscriptionsCategoryId(), at(when), `sms ${n}`, `h${n}`]);
+    [amount, merchant, merchant, await subscriptionsCategoryId(), at(when), `sms ${n}`, `h${n}`],
+  );
 }
 const YANDEX = { merchant_key: 'YANDEX', name: 'Яндекс Плюс', amount_minor: 4500, currency: 'GEL' as const, period: 3 };
 const subsItem = async (ym: string) => (await listPlan(ym)).find((i) => i.recurring)?.limit_minor;
-const subsSpent = async (year: number, month: number) => (await monthStats(year, month, 'GEL')).categories.find((c) => c.name === 'Подписки')?.spent_minor ?? 0;
+const subsSpent = async (year: number, month: number) =>
+  (await monthStats(year, month, 'GEL')).categories.find((c) => c.name === 'Подписки')?.spent_minor ?? 0;
 
 beforeEach(async () => {
   jest.useFakeTimers({ now: new Date('2026-10-18T12:00:00'), advanceTimers: true });
@@ -36,14 +49,24 @@ describe('the month a saving is for', () => {
     expect(savingFor('2026-11-01', 3, '2026-11', ['2026-10-29'])).toBe('2027-02-01');
   });
 
-  test('its months: the amount over the months left, a charge takes what was saved, past it — the month\'s', () => {
+  test("its months: the amount over the months left, a charge takes what was saved, past it — the month's", () => {
     const r = savingMonths({
-      since: '2026-10', last: '2027-02', nowYm: '2026-10', start: 0, amount: 4500, planned: () => true, stored: new Map(),
+      since: '2026-10',
+      last: '2027-02',
+      nowYm: '2026-10',
+      start: 0,
+      amount: 4500,
+      planned: () => true,
+      stored: new Map(),
       dueOf: (ym) => (ym <= '2027-01' ? '2027-01-29' : '2027-04-29'),
       spends: [{ id: 1, at: at('2027-01-29T10:00:00'), value: 5000 }],
     });
     expect(r.months.map((m) => [m.ym, m.contribution, m.shortage, m.end])).toEqual([
-      ['2026-10', 1200, 0, 1200], ['2026-11', 1100, 0, 2300], ['2026-12', 1100, 0, 3400], ['2027-01', 1100, 500, 0], ['2027-02', 1500, 0, 1500],
+      ['2026-10', 1200, 0, 1200],
+      ['2026-11', 1100, 0, 2300],
+      ['2026-12', 1100, 0, 3400],
+      ['2027-01', 1100, 500, 0],
+      ['2027-02', 1500, 0, 1500],
     ]);
   });
 });
@@ -60,18 +83,25 @@ describe('saving up for a subscription', () => {
     expect(await subsItem('2026-11')).toBe(1100);
   });
 
-  test('a charge paid from what was saved isn\'t the month\'s spending', async () => {
+  test("a charge paid from what was saved isn't the month's spending", async () => {
     const id = await savePayment({ ...YANDEX, due: '2026-10-29' });
     await startSaving(id, 4500);
     await charge('YANDEX', 4500, '2026-10-29T10:00:00');
     expect(await subsItem('2026-10')).toBe(0);
     expect(await subsSpent(2026, 9)).toBe(0);
     // its card: from what was saved
-    const tx = (await (await getDb()).get<{ id: number; occurred_at: number }>('SELECT id, occurred_at FROM transactions'))!;
-    expect(await savingOfTransaction(tx.id, 'YANDEX', tx.occurred_at)).toEqual({ before: 4500, after: 0, currency: 'GEL', name: 'Яндекс Плюс' });
+    const tx = (await (
+      await getDb()
+    ).get<{ id: number; occurred_at: number }>('SELECT id, occurred_at FROM transactions'))!;
+    expect(await savingOfTransaction(tx.id, 'YANDEX', tx.occurred_at)).toEqual({
+      before: 4500,
+      after: 0,
+      currency: 'GEL',
+      name: 'Яндекс Плюс',
+    });
   });
 
-  test('a charge paid before the saving was turned on is the month\'s, not the saving\'s', async () => {
+  test("a charge paid before the saving was turned on is the month's, not the saving's", async () => {
     await charge('YANDEX', 4500, '2026-10-05T10:00:00');
     const id = await savePayment({ ...YANDEX, due: '2027-01-05' });
     await startSaving(id, 0);
@@ -84,7 +114,9 @@ describe('saving up for a subscription', () => {
     await setPlanBudget('2026-09', 500000, 'GEL');
     const id = await savePayment({ ...YANDEX, due: '2027-01-29' });
     const db = await getDb();
-    await db.run("INSERT INTO payment_savings (id, payment_id, since_ym, start_minor) VALUES (7, ?, '2026-09', 0)", [id]);
+    await db.run("INSERT INTO payment_savings (id, payment_id, since_ym, start_minor) VALUES (7, ?, '2026-09', 0)", [
+      id,
+    ]);
     await db.run("INSERT INTO payment_contributions (saving_id, ym, minor) VALUES (7, '2026-09', 1000)");
     expect(await savedNow(id)).toBe(1000);
     const stopped = await stopSaving(id);

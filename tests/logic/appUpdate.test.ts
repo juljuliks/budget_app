@@ -25,9 +25,10 @@ describe('versions', () => {
 describe('the release', () => {
   const apk = (name: string) => ({ name, browser_download_url: `https://github.com/x/${name}` });
 
-  it('takes the phone\'s APK', () => {
-    expect(releaseOf({ tag_name: 'v1.0.162', assets: [apk('notes.txt'), apk('budget-app-1.0.162-arm64-v8a.apk')] }))
-      .toEqual({ version: '1.0.162', apkUrl: 'https://github.com/x/budget-app-1.0.162-arm64-v8a.apk' });
+  it("takes the phone's APK", () => {
+    expect(
+      releaseOf({ tag_name: 'v1.0.162', assets: [apk('notes.txt'), apk('budget-app-1.0.162-arm64-v8a.apk')] }),
+    ).toEqual({ version: '1.0.162', apkUrl: 'https://github.com/x/budget-app-1.0.162-arm64-v8a.apk' });
   });
 
   it('is none without an APK or a version', () => {

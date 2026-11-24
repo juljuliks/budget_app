@@ -6,8 +6,18 @@ import { toastError } from '@/shared/ui/toast';
 import { formStyles } from '@/shared/theme/formStyles';
 import { colors } from '@/shared/theme/theme';
 import {
-  CHANGE_PASSWORD_INFO, ENTER_PASSWORD, ENTER_PASSWORD_INFO, MIN_PASSWORD, PASSWORD, PASSWORD_FIELD, PASSWORD_MISMATCH, PASSWORD_REPEAT, PASSWORD_SHORT,
-  SET_PASSWORD, SET_PASSWORD_INFO, SKIP,
+  CHANGE_PASSWORD_INFO,
+  ENTER_PASSWORD,
+  ENTER_PASSWORD_INFO,
+  MIN_PASSWORD,
+  PASSWORD,
+  PASSWORD_FIELD,
+  PASSWORD_MISMATCH,
+  PASSWORD_REPEAT,
+  PASSWORD_SHORT,
+  SET_PASSWORD,
+  SET_PASSWORD_INFO,
+  SKIP,
 } from '../texts';
 
 /**
@@ -32,11 +42,20 @@ export function PasswordHost() {
   const [repeat, setRepeat] = useState('');
 
   useEffect(() => {
-    show = (a) => { setPasswordText(''); setRepeat(''); setAsk(a); };
-    return () => { show = null; };
+    show = (a) => {
+      setPasswordText('');
+      setRepeat('');
+      setAsk(a);
+    };
+    return () => {
+      show = null;
+    };
   }, []);
 
-  const close = (value: string | null) => { ask?.resolve(value); setAsk(null); };
+  const close = (value: string | null) => {
+    ask?.resolve(value);
+    setAsk(null);
+  };
   const setting = ask?.mode === 'set' || ask?.mode === 'set-optional' || ask?.mode === 'change';
   const submit = () => {
     if (setting) {
@@ -64,11 +83,16 @@ export function PasswordHost() {
   return (
     <BottomSheet visible={ask !== null} onClose={() => close(null)} title={setting ? PASSWORD : ENTER_PASSWORD}>
       <View style={styles.body}>
-        <Text style={styles.hint}>{ask?.mode === 'change' ? CHANGE_PASSWORD_INFO : setting ? SET_PASSWORD_INFO : ENTER_PASSWORD_INFO}</Text>
+        <Text style={styles.hint}>
+          {ask?.mode === 'change' ? CHANGE_PASSWORD_INFO : setting ? SET_PASSWORD_INFO : ENTER_PASSWORD_INFO}
+        </Text>
         {field(password, setPasswordText, PASSWORD_FIELD, !setting)}
         {setting ? field(repeat, setRepeat, PASSWORD_REPEAT, true) : null}
-        <SheetActions submit={{ title: setting ? SET_PASSWORD : 'Открыть', onPress: submit, disabled: password.length === 0 }} onCancel={() => close(null)}
-          cancelTitle={ask?.mode === 'set-optional' ? SKIP : undefined} />
+        <SheetActions
+          submit={{ title: setting ? SET_PASSWORD : 'Открыть', onPress: submit, disabled: password.length === 0 }}
+          onCancel={() => close(null)}
+          cancelTitle={ask?.mode === 'set-optional' ? SKIP : undefined}
+        />
       </View>
     </BottomSheet>
   );

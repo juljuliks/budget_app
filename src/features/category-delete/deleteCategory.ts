@@ -10,11 +10,21 @@ import { openCategoryDelete } from '@/shared/navigation/sheets';
  * «Удалить категорию»: with operations this month — the sheet that moves them first (`close` closes the category's
  * sheet before it); without — a confirmation, then `close` and `onDeleted`.
  */
-export async function startCategoryDelete(categoryId: number, { close, onDeleted }: { close: () => void; onDeleted: () => void }) {
+export async function startCategoryDelete(
+  categoryId: number,
+  { close, onDeleted }: { close: () => void; onDeleted: () => void },
+) {
   const [c, current] = await Promise.all([getCategory(categoryId), currentTransactionsOfCategory(categoryId)]);
   if (!c) return;
-  if (current.length > 0) { close(); openCategoryDelete(c.id); return; }
-  confirmDeleteCategory(c, () => { close(); onDeleted(); });
+  if (current.length > 0) {
+    close();
+    openCategoryDelete(c.id);
+    return;
+  }
+  confirmDeleteCategory(c, () => {
+    close();
+    onDeleted();
+  });
 }
 
 /** Deletes the category, its operations of this month moved to `target` (null: left without a category). */
@@ -33,12 +43,18 @@ export async function confirmDeleteCategory(category: Category, onDeleted: () =>
   sheetAlert(t.title, t.message, [
     { text: 'Отмена', style: 'cancel' },
     {
-      text: 'Удалить', style: 'destructive', onPress: () => {
-        removeCategory(category.id, null).then(() => {
-          toast(`Категория «${label}» удалена`);
-          onDeleted();
-        })
-          .catch((e) => { console.error('delete category failed', e); toastError('Не удалось удалить'); });
+      text: 'Удалить',
+      style: 'destructive',
+      onPress: () => {
+        removeCategory(category.id, null)
+          .then(() => {
+            toast(`Категория «${label}» удалена`);
+            onDeleted();
+          })
+          .catch((e) => {
+            console.error('delete category failed', e);
+            toastError('Не удалось удалить');
+          });
       },
     },
   ]);

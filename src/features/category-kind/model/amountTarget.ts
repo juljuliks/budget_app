@@ -9,10 +9,20 @@ import type { PlanAmountTarget } from '@/entities/plan';
  * This month's item of the category for the plan's sheet (not in the plan — a new one, the sheet offers last month's);
  * null — its amount isn't the plan's: a fund, a regular payment rarer than monthly (asked on its page).
  */
-export async function amountTargetOf(categoryId: number, label: string, shown: Currency): Promise<PlanAmountTarget | null> {
+export async function amountTargetOf(
+  categoryId: number,
+  label: string,
+  shown: Currency,
+): Promise<PlanAmountTarget | null> {
   const [c, item, schedule, own] = await Promise.all([
-    getCategory(categoryId), getPlanItemBasics(currentYm(), categoryId), categorySchedule(categoryId), categoryPayment(categoryId)]);
+    getCategory(categoryId),
+    getPlanItemBasics(currentYm(), categoryId),
+    categorySchedule(categoryId),
+    categoryPayment(categoryId),
+  ]);
   if (!c || c.plan_kind === 'fund') return null;
   if (c.plan_kind === 'regular' && !schedule && own && own.period > 1) return null;
-  return item ? { category_id: categoryId, label, ...item } : { category_id: categoryId, label, limit_minor: 0, currency: shown };
+  return item
+    ? { category_id: categoryId, label, ...item }
+    : { category_id: categoryId, label, limit_minor: 0, currency: shown };
 }

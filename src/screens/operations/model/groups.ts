@@ -15,18 +15,27 @@ const bandTitle = (i: number) => {
 /** A group's section title in the operations list. */
 export function groupTitle(g: TransactionGroup, by: GroupKind): string {
   switch (by) {
-    case 'merchant': return g.key ? g.raw_merchant ?? g.key : 'Без мерчанта';
-    case 'category': return txCategoryLabel(g) ?? NO_CATEGORY;
+    case 'merchant':
+      return g.key ? (g.raw_merchant ?? g.key) : 'Без мерчанта';
+    case 'category':
+      return txCategoryLabel(g) ?? NO_CATEGORY;
     case 'month': {
       const [y, m] = g.key.split('-').map(Number);
       return `${MONTHS[m - 1]} ${y}`;
     }
-    case 'kind': return KIND_LABELS[g.key] ?? g.key;
-    case 'amount': return bandTitle(Number(g.key));
+    case 'kind':
+      return KIND_LABELS[g.key] ?? g.key;
+    case 'amount':
+      return bandTitle(Number(g.key));
   }
 }
 
 /** "−512 ₾ · −20 $": spent minus received, per currency. */
 export function groupTotal(g: TransactionGroup): string {
-  return g.totals.map(({ currency, total }) => `${total > 0 ? '+' : total < 0 ? '−' : ''}${formatMoneyWithCurrency(Math.abs(total), currency)}`).join(' · ');
+  return g.totals
+    .map(
+      ({ currency, total }) =>
+        `${total > 0 ? '+' : total < 0 ? '−' : ''}${formatMoneyWithCurrency(Math.abs(total), currency)}`,
+    )
+    .join(' · ');
 }

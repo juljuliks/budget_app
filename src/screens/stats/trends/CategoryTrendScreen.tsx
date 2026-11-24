@@ -43,7 +43,9 @@ export default function CategoryTrendScreen({ route, navigation }: Props) {
   const v = useMemo(() => (data ? categoryTrendView(data, id, today) : null), [data, id, today]);
   const impulse = useCategoryImpulse(id, currency, today);
   const kindData = useKindTrend(id, v?.kind ?? null);
-  useEffect(() => { if (v) navigation.setOptions({ title: `Динамика · ${v.label}` }); }, [navigation, v]);
+  useEffect(() => {
+    if (v) navigation.setOptions({ title: `Динамика · ${v.label}` });
+  }, [navigation, v]);
   if (!v) return <Loading failed={failed || (data !== null && !v)} onRetry={load} />;
 
   const money = (minor: number) => formatWithCurrency(Math.round(Math.abs(minor)), currency);
@@ -56,25 +58,52 @@ export default function CategoryTrendScreen({ route, navigation }: Props) {
     );
   }
   const t = v.trend;
-  const line = !v.category.compared ? NOT_COMPARED : !t ? TOO_EARLY
-    : hidden ? pctText(t) : `обычно ${money(t.usual)} · ${pctText(t)}`;
+  const line = !v.category.compared
+    ? NOT_COMPARED
+    : !t
+      ? TOO_EARLY
+      : hidden
+        ? pctText(t)
+        : `обычно ${money(t.usual)} · ${pctText(t)}`;
   const bar = picked === null ? null : v.bars[picked];
-  const point = !bar ? TAP_BAR : bar.value === null ? `${barName(bar)} — ещё впереди`
-    : `${barName(bar)}: ${money(bar.value)}${bar.usual !== undefined ? ` · обычно ${money(bar.usual)}` : ''}`;
+  const point = !bar
+    ? TAP_BAR
+    : bar.value === null
+      ? `${barName(bar)} — ещё впереди`
+      : `${barName(bar)}: ${money(bar.value)}${bar.usual !== undefined ? ` · обычно ${money(bar.usual)}` : ''}`;
   return (
     <ScrollView style={styles.screen} contentContainerStyle={[styles.content, styles.pad]}>
       {v.kind === 'few' ? <Text style={s.few}>{FEW_DATA}</Text> : null}
       <View style={s.head}>
-        <Text><Masked style={s.spent}>{money(v.spent)}</Masked><Text style={s.spentWhen}>{` ${SPENT_WHEN}`}</Text></Text>
-        {t && v.category.compared && !hidden ? <Text style={s.delta}>{`${t.delta >= 0 ? '+' : '−'}${money(t.delta)}`}</Text> : null}
+        <Text>
+          <Masked style={s.spent}>{money(v.spent)}</Masked>
+          <Text style={s.spentWhen}>{` ${SPENT_WHEN}`}</Text>
+        </Text>
+        {t && v.category.compared && !hidden ? (
+          <Text style={s.delta}>{`${t.delta >= 0 ? '+' : '−'}${money(t.delta)}`}</Text>
+        ) : null}
       </View>
       <Text style={s.line}>{line}</Text>
       <View style={s.chart}>
-        <TrendBars bars={v.bars} color={v.category.color} height={140} picked={picked} onPick={setPicked} accessibilityLabelOf={barName} />
+        <TrendBars
+          bars={v.bars}
+          color={v.category.color}
+          height={140}
+          picked={picked}
+          onPick={setPicked}
+          accessibilityLabelOf={barName}
+        />
       </View>
       <Text style={s.point}>{hidden && bar ? barName(bar) : point}</Text>
-      <CategoryTrendDetails v={v} why={t && v.category.compared && !hidden ? whyText(t, money) : null} currency={currency} money={money} />
-      {impulse ? <ImpulseTrend v={impulse.trend} days={impulse.days} today={today} categoryId={id} money={money} /> : null}
+      <CategoryTrendDetails
+        v={v}
+        why={t && v.category.compared && !hidden ? whyText(t, money) : null}
+        currency={currency}
+        money={money}
+      />
+      {impulse ? (
+        <ImpulseTrend v={impulse.trend} days={impulse.days} today={today} categoryId={id} money={money} />
+      ) : null}
       <View style={s.operations}>
         <TextLink
           label={`${v.count} ${plural(v.count, ['операция', 'операции', 'операций'])} ${SPENT_WHEN}`}

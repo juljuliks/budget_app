@@ -10,16 +10,20 @@ const at = (d: string) => Math.floor(new Date(`${d}T12:00:00`).getTime() / 1000)
 
 test('the month report: put aside, limits overspent, spending outside the plan past its share', async () => {
   const db = await getDb();
-  const cat = async (name: string) => (await db.run('INSERT INTO categories (name) VALUES (?)', [name])).lastInsertRowid;
-  const food = await cat('Еда'), bars = await cat('Бары'), rent = await cat('Квартира'), cafe = await cat('Кафе');
+  const cat = async (name: string) =>
+    (await db.run('INSERT INTO categories (name) VALUES (?)', [name])).lastInsertRowid;
+  const food = await cat('Еда'),
+    bars = await cat('Бары'),
+    rent = await cat('Квартира'),
+    cafe = await cat('Кафе');
   await setPlanBudget('2026-09', 100000, 'GEL', 10); // 10% = 100 ₾ outside the plan
   await setPlanAmount('2026-09', food, 30000, 'limit');
   await setPlanAmount('2026-09', bars, 10000, 'limit');
   await setPlanAmount('2026-09', rent, 40000, 'fixed');
   await addManualTransaction({ amount_minor: 35000, category_id: food, occurred_at: at('2026-09-05') }); // +50 over
-  await addManualTransaction({ amount_minor: 6000, category_id: bars, occurred_at: at('2026-09-06') });  // 40 under
+  await addManualTransaction({ amount_minor: 6000, category_id: bars, occurred_at: at('2026-09-06') }); // 40 under
   await addManualTransaction({ amount_minor: 15000, category_id: cafe, occurred_at: at('2026-09-07') }); // outside: 150 > 100
-  await addManualTransaction({ amount_minor: 2000, category_id: null, occurred_at: at('2026-09-08') });  // outside too
+  await addManualTransaction({ amount_minor: 2000, category_id: null, occurred_at: at('2026-09-08') }); // outside too
 
   const r = await monthReport('2026-09', 'GEL');
   expect(r.spent).toBe(58000);
@@ -105,7 +109,10 @@ test('a report only for a month with a plan: a budget or a category with an amou
   await addManualTransaction({ amount_minor: 5000, category_id: food, occurred_at: at('2026-08-05') });
   expect((await monthReport('2026-08', 'GEL')).hasPlan).toBe(false);
   // a category in the plan without an amount yet is not a plan
-  await db.run("INSERT INTO plan_items (ym, category_id, limit_minor, currency, kind, norm_period) VALUES ('2026-08', ?, 0, 'GEL', 'limit', 'day')", [food]);
+  await db.run(
+    "INSERT INTO plan_items (ym, category_id, limit_minor, currency, kind, norm_period) VALUES ('2026-08', ?, 0, 'GEL', 'limit', 'day')",
+    [food],
+  );
   expect((await monthReport('2026-08', 'GEL')).hasPlan).toBe(false);
   await setPlanAmount('2026-08', food, 30000, 'limit');
   expect((await monthReport('2026-08', 'GEL')).hasPlan).toBe(true);
@@ -113,7 +120,7 @@ test('a report only for a month with a plan: a budget or a category with an amou
   expect((await monthReport('2026-07', 'GEL')).hasPlan).toBe(true);
 });
 
-test('the budget overspent: in the budget\'s currency, as «Отложено»', async () => {
+test("the budget overspent: in the budget's currency, as «Отложено»", async () => {
   const db = await getDb();
   await db.run("INSERT INTO fx_rates (date, currency, gel_per_unit) VALUES ('2026-09-30', 'USD', 2.5)");
   const food = (await db.run("INSERT INTO categories (name) VALUES ('Еда')")).lastInsertRowid;
@@ -126,8 +133,12 @@ test('the budget overspent: in the budget\'s currency, as «Отложено»',
   expect(Math.round(-r.saved! * r.savedIn!.rate)).toBe(2000);
 });
 
-test('«Отложено» in the budget\'s currency, the rest in the system one; the same — nothing to convert', async () => {
-  await (await getDb()).run("INSERT INTO fx_rates (date, currency, gel_per_unit) VALUES ('2026-09-01', 'USD', 2.5), ('2026-09-30', 'USD', 2.5)");
+test("«Отложено» in the budget's currency, the rest in the system one; the same — nothing to convert", async () => {
+  await (
+    await getDb()
+  ).run(
+    "INSERT INTO fx_rates (date, currency, gel_per_unit) VALUES ('2026-09-01', 'USD', 2.5), ('2026-09-30', 'USD', 2.5)",
+  );
   await setPlanBudget('2026-09', 100000, 'USD', 0, true, 0);
   expect(await reportCurrency('2026-09', 'GEL')).toBe('USD');
   expect(await reportCurrency('2026-08', 'EUR')).toBe('EUR');

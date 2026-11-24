@@ -29,8 +29,10 @@ export function useTransaction(txId: number, visible: boolean) {
     const rule = key && t && isRememberable(t.kind) ? await findCategoryForMerchant(key) : null;
     const c = rule ? await getCategory(rule.category_id) : undefined;
     setMerchantCategory(c ? categoryLabel(c) : null);
-    const mixed = !!key && await isMixedMerchant(key);
-    setMixedCats(mixed ? (await merchantCategories(key, 50)).map((x) => ({ id: x.id, label: categoryLabel(x) })) : null);
+    const mixed = !!key && (await isMixedMerchant(key));
+    setMixedCats(
+      mixed ? (await merchantCategories(key, 50)).map((x) => ({ id: x.id, label: categoryLabel(x) })) : null,
+    );
     return t;
   }, [txId]);
 

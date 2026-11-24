@@ -20,11 +20,18 @@ export function useCategoryImpulse(id: number, currency: Currency, today: string
       .then(keep(([rows, on]: [ImpulseRow[], boolean]) => setData({ rows, on })))
       .catch(keep((e: unknown) => console.error('load category impulse failed', e)));
   }, [id, currency, today, latest]);
-  useEffect(() => { load(); return onTransactionsChanged(load); }, [load]);
+  useEffect(() => {
+    load();
+    return onTransactionsChanged(load);
+  }, [load]);
   return useMemo(() => {
     if (!data) return null;
     const from = impulseWindow(today).from;
-    const trend = impulseTrendView(data.rows.filter((r) => r.day >= from), data.on, today);
+    const trend = impulseTrendView(
+      data.rows.filter((r) => r.day >= from),
+      data.on,
+      today,
+    );
     return trend ? { trend, days: purchasesByDay(data.rows) } : null;
   }, [data, today]);
 }

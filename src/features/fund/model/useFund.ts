@@ -25,9 +25,14 @@ export function useFund(categoryId: number | null) {
       // the contributions after this month, up to the due one
       const left = Math.max(0, monthsBetween(now, fund.due.slice(0, 7)) - 1);
       return { fund, saved: balance, contribution, left, entries: await fundEntries(fund, now) };
-    })().then(keep(setCard)).catch(keep(fail));
+    })()
+      .then(keep(setCard))
+      .catch(keep(fail));
   }, [categoryId, latest, started, fail]);
-  useEffect(() => { setCard(null); load(); }, [load]);
+  useEffect(() => {
+    setCard(null);
+    load();
+  }, [load]);
   useEffect(() => onTransactionsChanged(load), [load]);
   return { card, failed, load };
 }

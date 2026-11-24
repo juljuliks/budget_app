@@ -18,7 +18,8 @@ import { hideNotificationAmounts } from '../native/appLock';
 
 export const CHANNEL_ID = 'transactions';
 /** " — 25.00 ₾" after the title; nothing when the amounts are hidden */
-const amountPart = (hide: boolean, minor: number, currency: string) => (hide ? '' : ` — ${formatMoneyWithCurrency(minor, currency)}`);
+const amountPart = (hide: boolean, minor: number, currency: string) =>
+  hide ? '' : ` — ${formatMoneyWithCurrency(minor, currency)}`;
 /** «Лимиты»: a category near / over its plan or its rhythm's limit (src/notifications/limitAlerts.ts) */
 export const LIMITS_CHANNEL_ID = 'limits';
 const LIMITS_ACTION = 'limits';
@@ -30,8 +31,16 @@ const MAX_ACTIONS = 3;
 
 export async function showUncategorizedTransactionNotification(txId: number) {
   const db = await getDb();
-  const tx = await db.get<{ kind: string; amount_minor: number; currency: string; raw_merchant: string | null; merchant_key: string | null; category_id: number | null }>(
-    'SELECT kind, amount_minor, currency, raw_merchant, merchant_key, category_id FROM transactions WHERE id = ?', [txId]);
+  const tx = await db.get<{
+    kind: string;
+    amount_minor: number;
+    currency: string;
+    raw_merchant: string | null;
+    merchant_key: string | null;
+    category_id: number | null;
+  }>('SELECT kind, amount_minor, currency, raw_merchant, merchant_key, category_id FROM transactions WHERE id = ?', [
+    txId,
+  ]);
   if (!tx) return;
 
   if (tx.kind === 'refund') {
@@ -41,15 +50,19 @@ export async function showUncategorizedTransactionNotification(txId: number) {
   }
 
   // a merchant of different categories already has its primary category, and still asks — its own first, in its order
-  const mixed = !!tx.merchant_key && isRememberable(tx.kind) && await isMixedMerchant(tx.merchant_key);
+  const mixed = !!tx.merchant_key && isRememberable(tx.kind) && (await isMixedMerchant(tx.merchant_key));
   if (tx.category_id != null && !mixed) return;
-  const own = mixed ? (await merchantCategories(tx.merchant_key!, MAX_ACTIONS - 1)) : [];
-  const suggestions = [...own, ...(await buildCategorySuggestions(tx.kind, MAX_ACTIONS - 1)).filter((s) => !own.some((o) => o.id === s.id))]
-    .slice(0, MAX_ACTIONS - 1);
-  const actions: Array<{ title: string; pressAction: { id: string; launchActivity?: string } }> = suggestions.map((s) => ({
-    title: categoryShortLabel(s),
-    pressAction: { id: `suggest_${s.id}` },
-  }));
+  const own = mixed ? await merchantCategories(tx.merchant_key!, MAX_ACTIONS - 1) : [];
+  const suggestions = [
+    ...own,
+    ...(await buildCategorySuggestions(tx.kind, MAX_ACTIONS - 1)).filter((s) => !own.some((o) => o.id === s.id)),
+  ].slice(0, MAX_ACTIONS - 1);
+  const actions: Array<{ title: string; pressAction: { id: string; launchActivity?: string } }> = suggestions.map(
+    (s) => ({
+      title: categoryShortLabel(s),
+      pressAction: { id: `suggest_${s.id}` },
+    }),
+  );
   // "➡️ К категориям": the transaction with the full category list (a new category can be created there too)
   actions.push({ title: '➡️ К категориям', pressAction: { id: ALL_CATEGORIES_ACTION, launchActivity: 'default' } });
   const hide = await hideNotificationAmounts();
@@ -79,15 +92,25 @@ export async function showUncategorizedTransactionNotification(txId: number) {
  */
 export async function showDepositNotification(txId: number) {
   const db = await getDb();
-  const tx = await db.get<{ amount_minor: number; currency: string; raw_merchant: string | null; category_id: number | null }>(
-    "SELECT amount_minor, currency, raw_merchant, category_id FROM transactions WHERE id = ? AND kind = 'deposit'", [txId]);
+  const tx = await db.get<{
+    amount_minor: number;
+    currency: string;
+    raw_merchant: string | null;
+    category_id: number | null;
+  }>("SELECT amount_minor, currency, raw_merchant, category_id FROM transactions WHERE id = ? AND kind = 'deposit'", [
+    txId,
+  ]);
   if (!tx) return;
   const category = (await listCategories()).find((c) => c.id === tx.category_id);
-  const transfers = (await topCategories(10_000)).filter((c) => c.type_is_transfer === 1 && !isTopUp(c)).slice(0, MAX_ACTIONS - 1);
-  const actions: Array<{ title: string; pressAction: { id: string; launchActivity?: string } }> = transfers.map((s) => ({
-    title: categoryShortLabel(s),
-    pressAction: { id: `suggest_${s.id}` },
-  }));
+  const transfers = (await topCategories(10_000))
+    .filter((c) => c.type_is_transfer === 1 && !isTopUp(c))
+    .slice(0, MAX_ACTIONS - 1);
+  const actions: Array<{ title: string; pressAction: { id: string; launchActivity?: string } }> = transfers.map(
+    (s) => ({
+      title: categoryShortLabel(s),
+      pressAction: { id: `suggest_${s.id}` },
+    }),
+  );
   actions.push({ title: '➡️ К категориям', pressAction: { id: ALL_CATEGORIES_ACTION, launchActivity: 'default' } });
   const hide = await hideNotificationAmounts();
   await notifee.displayNotification({
@@ -109,7 +132,10 @@ export async function showDepositNotification(txId: number) {
  * A refund whose merchant has no category: money back, counted in the stats as "Возвраты без категории". Just
  * news, no buttons; tapping it opens the operation (a category can be picked there).
  */
-async function showRefundNotification(txId: number, tx: { amount_minor: number; currency: string; raw_merchant: string | null }) {
+async function showRefundNotification(
+  txId: number,
+  tx: { amount_minor: number; currency: string; raw_merchant: string | null },
+) {
   await notifee.displayNotification({
     id: `tx_${txId}`,
     title: `Возврат${amountPart(await hideNotificationAmounts(), tx.amount_minor, tx.currency)}`,
@@ -161,29 +187,36 @@ export async function handleNotificationAction(event: ActionEvent) {
   const { id } = event;
   // a limit notification: the stats (required here: the navigation isn't loaded in the headless SMS task)
   if (id === LIMITS_ACTION) {
-    const { navigateWhenReady } = require('@/shared/navigation/navigation') as typeof import('@/shared/navigation/navigation');
+    const { navigateWhenReady } =
+      require('@/shared/navigation/navigation') as typeof import('@/shared/navigation/navigation');
     navigateWhenReady({ name: 'Main', params: { screen: 'Stats' } } as never);
     return;
   }
   // the month's report (or its "Итоги", until they're done): the stats with it over them
   if (id === REPORT_ACTION) {
     const ym = String(event.notification?.data?.ym ?? '');
-    const { navigateWhenReady } = require('@/shared/navigation/navigation') as typeof import('@/shared/navigation/navigation');
+    const { navigateWhenReady } =
+      require('@/shared/navigation/navigation') as typeof import('@/shared/navigation/navigation');
     navigateWhenReady({ name: 'Main', params: { screen: 'Stats' } } as never);
     const sheets = require('@/shared/navigation/sheets') as typeof import('@/shared/navigation/sheets');
     // «Итоги года»
     const reports = require('@/shared/navigation/reports') as typeof import('@/shared/navigation/reports');
     // «Итоги года»: stories while fresh, else the year's stats
-    if (event.notification?.data?.kind === 'year') { reports.openYear(Number(event.notification.data.year)); return; }
+    if (event.notification?.data?.kind === 'year') {
+      reports.openYear(Number(event.notification.data.year));
+      return;
+    }
     if (!ym) return;
     const open = event.notification?.data?.kind === 'close' && !(await monthClose(ym)).closed;
-    if (open) sheets.openMonthClose(ym); else reports.openReport(ym);
+    if (open) sheets.openMonthClose(ym);
+    else reports.openReport(ym);
     return;
   }
   // a fund not making it by its date: its category's page
   if (id === FUND_ACTION) {
     const categoryId = Number(event.notification?.data?.categoryId);
-    const { navigateWhenReady } = require('@/shared/navigation/navigation') as typeof import('@/shared/navigation/navigation');
+    const { navigateWhenReady } =
+      require('@/shared/navigation/navigation') as typeof import('@/shared/navigation/navigation');
     if (categoryId) navigateWhenReady({ name: 'Category', params: { id: categoryId } } as never);
     return;
   }
@@ -204,4 +237,9 @@ export async function handleNotificationAction(event: ActionEvent) {
   if (event.notification?.id) await notifee.cancelNotification(event.notification.id);
 }
 
-export default { showUncategorizedTransactionNotification, showDepositNotification, showLimitAlert, handleNotificationAction };
+export default {
+  showUncategorizedTransactionNotification,
+  showDepositNotification,
+  showLimitAlert,
+  handleNotificationAction,
+};

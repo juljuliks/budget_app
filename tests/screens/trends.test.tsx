@@ -35,7 +35,11 @@ async function openTrends(seed = planned) {
 describe('5.8 Динамика трат', () => {
   test('5.8.1 the month only: no «Неделя / Месяц», what is put against what', async () => {
     await openTrends(withHistory);
-    expect(screen.getByText('Этот месяц по сегодня — к обычному по те же дни (медиана до 6 прошлых месяцев); показаны те, что вышли за привычный разброс')).toBeTruthy();
+    expect(
+      screen.getByText(
+        'Этот месяц по сегодня — к обычному по те же дни (медиана до 6 прошлых месяцев); показаны те, что вышли за привычный разброс',
+      ),
+    ).toBeTruthy();
     expect(screen.queryByText('Неделя')).toBeNull();
     expect(screen.queryByText('Месяц')).toBeNull();
   });
@@ -46,7 +50,7 @@ describe('5.8 Динамика трат', () => {
     expect(screen.queryByText('Больше обычного')).toBeNull();
   });
 
-  test('5.8.3 the month with 3 months behind: Кафе +550% (past all of them), why; a category\'s page with its chart, months, merchants', async () => {
+  test("5.8.3 the month with 3 months behind: Кафе +550% (past all of them), why; a category's page with its chart, months, merchants", async () => {
     await openTrends(withHistory);
     // 390 ₾: more than each tracked month by the 15th (60, 60, 350)
     const cafe = await screen.findByText('390 ₾ · обычно 60 ₾ · +550% к обычному');
@@ -79,7 +83,7 @@ describe('5.8 Динамика трат', () => {
     expect(await screen.findByText('Нажмите на столбик — сумма месяца')).toBeTruthy();
   });
 
-  test('5.8.9 a category\'s merchants: this month, this year, all the time', async () => {
+  test("5.8.9 a category's merchants: this month, this year, all the time", async () => {
     await openTrends(async () => {
       await withHistory();
       // August 2025: before this year
@@ -88,7 +92,10 @@ describe('5.8 Динамика трат', () => {
     await tap('Все категории ›');
     await tap('☕️ Кафе и рестораны');
     expect(await screen.findByText('Мерчанты')).toBeTruthy();
-    const list = () => { const t = texts(); return t.slice(t.indexOf('Всё время') + 1, t.indexOf('Всё время') + 7); };
+    const list = () => {
+      const t = texts();
+      return t.slice(t.indexOf('Всё время') + 1, t.indexOf('Всё время') + 7);
+    };
     // this month (BARI on the 1st, WOLT 40 + 50)
     expect(await screen.findByText('BARI ›')).toBeTruthy();
     expect(list().slice(0, 4)).toEqual(['BARI ›', '300 ₾', 'WOLT ›', '90 ₾']);
@@ -102,7 +109,7 @@ describe('5.8 Динамика трат', () => {
     expect(list().slice(0, 2)).toEqual(['GLOVO ›', '900 ₾']);
   });
 
-  test('5.8.5 a category\'s page has «Динамика трат»', async () => {
+  test("5.8.5 a category's page has «Динамика трат»", async () => {
     await openApp(planned);
     await openMenu('Категории');
     await tap('☕️ Кафе и рестораны');
@@ -116,7 +123,7 @@ describe('5.8 Динамика трат', () => {
     expect(screen.getByText(/^Мало данных: нужно 2 полных месяца с тратами/)).toBeTruthy();
   });
 
-  test('5.8.6 the month\'s stats: «+N% к обычному» under a category well off its usual', async () => {
+  test("5.8.6 the month's stats: «+N% к обычному» under a category well off its usual", async () => {
     await openApp(withHistory);
     await tap('Статистика');
     await screen.findAllByText('☕️ Кафе и рестораны');

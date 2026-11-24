@@ -10,7 +10,11 @@ import { styles } from './styles';
 /** «Пришло · План · Потрачено» of the month, side by side. */
 function MonthNumbers({ v }: { v: ReportView }) {
   const { r, money } = v;
-  const cells: Array<[string, number]> = [...(r.income > 0 ? [['Пришло', r.income] as [string, number]] : []), ['План', r.planned], ['Потрачено', r.spent]];
+  const cells: Array<[string, number]> = [
+    ...(r.income > 0 ? [['Пришло', r.income] as [string, number]] : []),
+    ['План', r.planned],
+    ['Потрачено', r.spent],
+  ];
   return (
     <View style={styles.numbers}>
       {cells.map(([label, value]) => (
@@ -32,7 +36,11 @@ export default function ReportHero({ v, onCloseMonth }: { v: ReportView; onClose
   const pf = r.planFact;
   const fact = pf?.fact ?? null;
   if (r.saved === null) {
-    return <Text style={styles.hint}>Бюджет месяца не задан: потрачено {money(r.spent)}. Задайте бюджет в плане, чтобы видеть, сколько откладывается.</Text>;
+    return (
+      <Text style={styles.hint}>
+        Бюджет месяца не задан: потрачено {money(r.spent)}. Задайте бюджет в плане, чтобы видеть, сколько откладывается.
+      </Text>
+    );
   }
   if (r.saved < 0) {
     return (
@@ -42,18 +50,23 @@ export default function ReportHero({ v, onCloseMonth }: { v: ReportView; onClose
           {/* the overspend is «Отложено» below zero: in its currency, one amount */}
           {v.savedMoney(-r.saved)}
         </Text>
-        <Text style={styles.caption}>Потрачено {money(r.spent)} при бюджете {money(r.budget!)}</Text>
+        <Text style={styles.caption}>
+          Потрачено {money(r.spent)} при бюджете {money(r.budget!)}
+        </Text>
         <MonthNumbers v={v} />
       </View>
     );
   }
   return (
     <View style={styles.hero}>
-      <Text style={styles.caption}>{fact !== null || !r.toSavings ? 'Отложено' : r.ym >= currentYm() ? 'Пока в сбережения' : 'В сбережения'}</Text>
+      <Text style={styles.caption}>
+        {fact !== null || !r.toSavings ? 'Отложено' : r.ym >= currentYm() ? 'Пока в сбережения' : 'В сбережения'}
+      </Text>
       <Masked style={styles.heroValue}>{v.savedMoney(fact ?? r.saved)}</Masked>
       {fact !== null ? (
         <Text style={styles.caption}>
-          по плану <Masked style={styles.caption}>{v.savedMoney(pf!.plan)}</Masked> · ≈ <Masked style={styles.caption}>{v.savedPerYear(fact)}</Masked> за год в таком темпе
+          по плану <Masked style={styles.caption}>{v.savedMoney(pf!.plan)}</Masked> · ≈{' '}
+          <Masked style={styles.caption}>{v.savedPerYear(fact)}</Masked> за год в таком темпе
         </Text>
       ) : r.average ? (
         <YearInfo info={v.averageInfo()}>
@@ -65,7 +78,8 @@ export default function ReportHero({ v, onCloseMonth }: { v: ReportView; onClose
       {v.ofIncome ? <Text style={styles.caption}>{v.ofIncome}</Text> : null}
       {r.previousSaved !== null && Math.round(r.saved) !== Math.round(r.previousSaved) ? (
         <Text style={[styles.caption, r.saved > r.previousSaved ? styles.good : styles.over]}>
-          На {v.savedMoney(Math.abs(r.saved - r.previousSaved))} {r.saved > r.previousSaved ? 'больше' : 'меньше'}, чем месяцем раньше
+          На {v.savedMoney(Math.abs(r.saved - r.previousSaved))} {r.saved > r.previousSaved ? 'больше' : 'меньше'}, чем
+          месяцем раньше
         </Text>
       ) : null}
       <MonthNumbers v={v} />
@@ -76,9 +90,18 @@ export default function ReportHero({ v, onCloseMonth }: { v: ReportView; onClose
           {r.savedFrom.locked > 0 ? <FromLine label="🔒 Отложено сразу" v={r.savedFrom.locked} money={money} /> : null}
           {/* not distributed is money the plan left without a purpose: worth planning, so red */}
           <FromLine label="Свободно в плане" v={r.savedFrom.undistributed} money={money} bad />
-          <FromLine label={r.savedFrom.plan >= 0 ? 'Категории плана потратили меньше' : 'Категории плана потратили больше'} v={r.savedFrom.plan} money={money} />
+          <FromLine
+            label={r.savedFrom.plan >= 0 ? 'Категории плана потратили меньше' : 'Категории плана потратили больше'}
+            v={r.savedFrom.plan}
+            money={money}
+          />
           {r.unplannedShare > 0 || r.savedFrom.unplanned !== 0 ? (
-            <FromLine label={r.savedFrom.unplanned >= 0 ? 'Не потрачено из доли вне плана' : 'Вне плана сверх доли'} v={r.savedFrom.unplanned} money={money} info={v.unplannedInfo} />
+            <FromLine
+              label={r.savedFrom.unplanned >= 0 ? 'Не потрачено из доли вне плана' : 'Вне плана сверх доли'}
+              v={r.savedFrom.unplanned}
+              money={money}
+              info={v.unplannedInfo}
+            />
           ) : null}
           {r.savedFrom.funds > 0 ? <FromLine label="Взносы в копилки" v={r.savedFrom.funds} money={money} /> : null}
         </View>

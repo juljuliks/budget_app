@@ -24,7 +24,9 @@ type Props = {
 export default function StoryPager({ visible, title, pages, onClose, start = 0, placeholder }: Props) {
   const [at, setAt] = useState(start);
   // opened again: from its start
-  useEffect(() => { if (visible) setAt(start); }, [visible, start]);
+  useEffect(() => {
+    if (visible) setAt(start);
+  }, [visible, start]);
   const n = pages.length;
   const i = Math.min(at, Math.max(0, n - 1));
   const back = () => setAt(Math.max(0, i - 1));
@@ -33,10 +35,14 @@ export default function StoryPager({ visible, title, pages, onClose, start = 0, 
     <Modal visible={visible} onRequestClose={onClose} animationType="slide" statusBarTranslucent={false}>
       <View style={styles.screen} testID="story">
         <View style={styles.bars}>
-          {pages.map((_, k) => <View key={k} style={[styles.bar, k <= i && styles.barOn]} />)}
+          {pages.map((_, k) => (
+            <View key={k} style={[styles.bar, k <= i && styles.barOn]} />
+          ))}
         </View>
         <View style={styles.head}>
-          <Text style={styles.title} numberOfLines={1}>{title}</Text>
+          <Text style={styles.title} numberOfLines={1}>
+            {title}
+          </Text>
           {n > 1 ? <Text style={styles.count}>{`${i + 1} из ${n}`}</Text> : null}
           <TouchableOpacity onPress={onClose} hitSlop={10} accessibilityLabel="Закрыть" style={styles.close}>
             <CloseIcon color={colors.muted} size={22} />
@@ -44,10 +50,24 @@ export default function StoryPager({ visible, title, pages, onClose, start = 0, 
         </View>
         {placeholder ?? (
           <View style={styles.body}>
-            <ScrollView key={i} contentContainerStyle={styles.content}>{pages[i]}</ScrollView>
+            <ScrollView key={i} contentContainerStyle={styles.content}>
+              {pages[i]}
+            </ScrollView>
             {/* the side edges page as the buttons do */}
-            {i > 0 ? <TouchableOpacity style={[styles.edge, styles.left]} onPress={back} accessibilityLabel="Предыдущий экран" testID="story-back-edge" /> : null}
-            <TouchableOpacity style={[styles.edge, styles.right]} onPress={next} accessibilityLabel="Следующий экран" testID="story-next-edge" />
+            {i > 0 ? (
+              <TouchableOpacity
+                style={[styles.edge, styles.left]}
+                onPress={back}
+                accessibilityLabel="Предыдущий экран"
+                testID="story-back-edge"
+              />
+            ) : null}
+            <TouchableOpacity
+              style={[styles.edge, styles.right]}
+              onPress={next}
+              accessibilityLabel="Следующий экран"
+              testID="story-next-edge"
+            />
           </View>
         )}
         {placeholder ? null : (

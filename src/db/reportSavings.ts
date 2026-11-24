@@ -21,7 +21,11 @@ export type SavingsPlanFact = {
 };
 
 /** null: the month isn't over, or had neither a budget nor a fund. In `currency`. */
-export async function savingsPlanFact(ym: string, currency: Currency, nowYm = currentYm()): Promise<SavingsPlanFact | null> {
+export async function savingsPlanFact(
+  ym: string,
+  currency: Currency,
+  nowYm = currentYm(),
+): Promise<SavingsPlanFact | null> {
   if (ym >= nowYm) return null;
   const c = await monthClose(ym, nowYm);
   if (!c.budget && !c.funds.length) return null;
@@ -33,18 +37,30 @@ export async function savingsPlanFact(ym: string, currency: Currency, nowYm = cu
   const choice = c.closed ? c.answers.rest_choice : null;
   // "Сколько удалось отложить?" laid out: the funds, 🔒, 💰
   const lockedFact = c.split?.locked ?? 0;
-  const locked = b && b.locked_minor > 0 ? { plan: to(b.locked_minor, b.currency), fact: closed ? to(lockedFact, b.currency) : null } : null;
-  const rest = b && b.rest_minor > 0 ? {
-    plan: to(b.rest_minor, b.currency), choice,
-    // "Оставить как есть" (no longer asked) of a month closed before: not savings
-    fact: closed && choice === 'savings' ? to(c.split?.rest ?? 0, b.currency) : null,
-  } : null;
+  const locked =
+    b && b.locked_minor > 0
+      ? { plan: to(b.locked_minor, b.currency), fact: closed ? to(lockedFact, b.currency) : null }
+      : null;
+  const rest =
+    b && b.rest_minor > 0
+      ? {
+          plan: to(b.rest_minor, b.currency),
+          choice,
+          // "Оставить как есть" (no longer asked) of a month closed before: not savings
+          fact: closed && choice === 'savings' ? to(c.split?.rest ?? 0, b.currency) : null,
+        }
+      : null;
   const funds = c.funds.map((f) => ({
-    category_id: f.category_id, name: f.name, emoji: f.emoji, plan: to(f.planned_minor, f.currency),
+    category_id: f.category_id,
+    name: f.name,
+    emoji: f.emoji,
+    plan: to(f.planned_minor, f.currency),
     fact: closed && f.confirmed_minor !== null ? to(f.confirmed_minor, f.currency) : null,
   }));
   const restIn = rest && (choice === null || choice === 'savings');
   const plan = (locked?.plan ?? 0) + (restIn ? rest!.plan : 0) + funds.reduce((a, f) => a + f.plan, 0);
-  const fact = !closed ? null : (locked?.fact ?? 0) + (restIn ? rest!.fact ?? 0 : 0) + funds.reduce((a, f) => a + (f.fact ?? 0), 0);
+  const fact = !closed
+    ? null
+    : (locked?.fact ?? 0) + (restIn ? (rest!.fact ?? 0) : 0) + funds.reduce((a, f) => a + (f.fact ?? 0), 0);
   return { closed, locked, rest, funds, plan, fact, fundsPlanned: funds.reduce((a, f) => a + f.plan, 0) };
 }

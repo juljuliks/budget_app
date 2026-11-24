@@ -27,11 +27,30 @@ export const styles = StyleSheet.create({
   budgetAmounts: { alignItems: 'flex-end' },
   budgetOriginal: { fontSize: 13, color: colors.muted, fontVariant: ['tabular-nums'] },
   barBox: { marginTop: 10 },
-  bar: { flexDirection: 'row', height: BAR_HEIGHT, borderRadius: 5, overflow: 'hidden', gap: 2, backgroundColor: chart.track },
-  lockBadgeBox: { position: 'absolute', top: (BAR_HEIGHT - LOCK_BADGE) / 2, height: LOCK_BADGE, alignItems: 'center', justifyContent: 'center' },
+  bar: {
+    flexDirection: 'row',
+    height: BAR_HEIGHT,
+    borderRadius: 5,
+    overflow: 'hidden',
+    gap: 2,
+    backgroundColor: chart.track,
+  },
+  lockBadgeBox: {
+    position: 'absolute',
+    top: (BAR_HEIGHT - LOCK_BADGE) / 2,
+    height: LOCK_BADGE,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   lockBadge: {
-    width: LOCK_BADGE, height: LOCK_BADGE, borderRadius: LOCK_BADGE / 2, backgroundColor: RING_LOCKED,
-    borderWidth: 2, borderColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center',
+    width: LOCK_BADGE,
+    height: LOCK_BADGE,
+    borderRadius: LOCK_BADGE / 2,
+    backgroundColor: RING_LOCKED,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   // the parts as a legend: a line each, the amounts and shares in columns
   parts: { gap: 6, marginTop: 10 },
@@ -58,7 +77,14 @@ export const styles = StyleSheet.create({
   lockedPart: { backgroundColor: RING_LOCKED, alignItems: 'center', justifyContent: 'center' },
   freeValue: { color: colors.income },
   // "Что значат значки" under every section
-  iconsLink: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingVertical: 4, marginTop: 16 },
+  iconsLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    paddingVertical: 4,
+    marginTop: 16,
+  },
   iconsLinkText: { fontSize: 14, color: colors.accent },
   caption: { fontSize: 13, color: colors.muted, textAlign: 'center' },
   hint: { color: colors.muted, fontSize: 14, textAlign: 'center', marginVertical: 12 },
@@ -72,8 +98,11 @@ export const styles = StyleSheet.create({
   // a row charged in a later month only: faded
   later: { opacity: 0.5 },
   row: {
-    flexDirection: 'row', alignItems: 'center', paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
   },
   // a row's icon in a column of one width
   pin: { width: 28, alignItems: 'center', marginRight: 10 },
@@ -92,4 +121,13 @@ export const styles = StyleSheet.create({
 });
 
 /** A part's amount colored by its tone. */
-export const toneStyle = (t?: Tone) => (t === 'over' ? styles.overText : t === 'savings' ? styles.savingsValue : t === 'locked' ? styles.lockedValue : t === 'free' ? styles.freeValue : undefined);
+export const toneStyle = (t?: Tone) =>
+  t === 'over'
+    ? styles.overText
+    : t === 'savings'
+      ? styles.savingsValue
+      : t === 'locked'
+        ? styles.lockedValue
+        : t === 'free'
+          ? styles.freeValue
+          : undefined;

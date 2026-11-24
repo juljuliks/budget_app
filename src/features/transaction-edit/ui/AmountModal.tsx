@@ -16,7 +16,9 @@ type Props = { visible: boolean; tx: Tx; onClose: () => void; onSaved: () => voi
 export default function AmountModal({ visible, tx, onClose, onSaved }: Props) {
   // the amount and its currency, from what is saved
   const form = useLoadedForm<{ value: string; currency: Currency }>(
-    visible ? { value: toInputValue(tx.amount_minor), currency: isCurrency(tx.currency) ? tx.currency : 'GEL' } : null, visible);
+    visible ? { value: toInputValue(tx.amount_minor), currency: isCurrency(tx.currency) ? tx.currency : 'GEL' } : null,
+    visible,
+  );
 
   async function save(text: string): Promise<string | null> {
     const minor = parseAmountInput(text);
@@ -37,7 +39,13 @@ export default function AmountModal({ visible, tx, onClose, onSaved }: Props) {
       maxLength={12}
       onSubmit={save}
       onClose={onClose}
-      inputAccessory={<Controller control={form.control} name="currency" render={({ field }) => <CurrencyButton value={field.value} onChange={field.onChange} />} />}
+      inputAccessory={
+        <Controller
+          control={form.control}
+          name="currency"
+          render={({ field }) => <CurrencyButton value={field.value} onChange={field.onChange} />}
+        />
+      }
     />
   );
 }

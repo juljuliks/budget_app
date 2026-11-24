@@ -30,10 +30,16 @@ describe('eslint-rules', () => {
         '<TouchableOpacity><Icon />{title}</TouchableOpacity>',
         '<TouchableOpacity><CategoryRow /></TouchableOpacity>',
       ],
-      invalid: [{ code: icon, errors: 1 }, { code: '<Pressable><View><Svg><Path /></Svg></View></Pressable>', errors: 1 }],
+      invalid: [
+        { code: icon, errors: 1 },
+        { code: '<Pressable><View><Svg><Path /></Svg></View></Pressable>', errors: 1 },
+      ],
     });
     tester.run('icon-touchable-hit-slop', app.rules['icon-touchable-hit-slop'], {
-      valid: ['<TouchableOpacity hitSlop={8}><CloseIcon /></TouchableOpacity>', '<TouchableOpacity><Text>Ок</Text></TouchableOpacity>'],
+      valid: [
+        '<TouchableOpacity hitSlop={8}><CloseIcon /></TouchableOpacity>',
+        '<TouchableOpacity><Text>Ок</Text></TouchableOpacity>',
+      ],
       invalid: [{ code: icon, errors: 1 }],
     });
   });
@@ -47,7 +53,11 @@ describe('eslint-rules', () => {
         { code: `function load() {\n${body(5)}\n}`, options: opts },
       ],
       invalid: [
-        { code: `function useA() {\n${body(2)}\n}`, options: opts, errors: [{ message: 'Hook useA has too many lines (4). Maximum allowed is 3.' }] },
+        {
+          code: `function useA() {\n${body(2)}\n}`,
+          options: opts,
+          errors: [{ message: 'Hook useA has too many lines (4). Maximum allowed is 3.' }],
+        },
         { code: `const useB = () => {\n${body(2)}\n};`, options: opts, errors: 1 },
       ],
     });

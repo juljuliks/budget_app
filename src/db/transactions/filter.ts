@@ -69,7 +69,10 @@ export function filterCondition(f: TxFilter, parts = false): { sql: string; para
   const params: Array<number | string> = [];
   if (f.category === 'none') where.push('t.category_id IS NULL');
   else if (f.category !== undefined) where.push(inCategories([f.category], params, parts));
-  if (f.merchant !== undefined) { where.push('t.merchant_key = ?'); params.push(f.merchant); }
+  if (f.merchant !== undefined) {
+    where.push('t.merchant_key = ?');
+    params.push(f.merchant);
+  }
   if (f.categories?.length) {
     const ids = f.categories.filter((c): c is number => c !== 'none');
     const any: string[] = [];
@@ -89,8 +92,14 @@ export function filterCondition(f: TxFilter, parts = false): { sql: string; para
     where.push(`t.merchant_key IN (${placeholders(f.merchants.length)})`);
     params.push(...f.merchants);
   }
-  if (f.from !== undefined) { where.push('t.occurred_at >= ?'); params.push(f.from); }
-  if (f.to !== undefined) { where.push('t.occurred_at < ?'); params.push(f.to); }
+  if (f.from !== undefined) {
+    where.push('t.occurred_at >= ?');
+    params.push(f.from);
+  }
+  if (f.to !== undefined) {
+    where.push('t.occurred_at < ?');
+    params.push(f.to);
+  }
   if (f.ids) {
     where.push(f.ids.length ? `t.id IN (${placeholders(f.ids.length)})` : '0');
     params.push(...f.ids);
@@ -117,7 +126,8 @@ export const searchTextOf = (r: { raw_sms: string | null; note: string | null; r
 async function fillSearchText(): Promise<void> {
   const db = await getDb();
   const rows = await db.all<{ id: number; raw_sms: string | null; note: string | null; raw_merchant: string | null }>(
-    'SELECT id, raw_sms, note, raw_merchant FROM transactions WHERE search_text IS NULL');
+    'SELECT id, raw_sms, note, raw_merchant FROM transactions WHERE search_text IS NULL',
+  );
   if (rows.length === 0) return;
   await db.transaction(async (tx) => {
     for (const r of rows) await tx.run('UPDATE transactions SET search_text = ? WHERE id = ?', [searchTextOf(r), r.id]);
@@ -129,14 +139,20 @@ async function fillSearchText(): Promise<void> {
  * query, among those matching the exact filters. Newest first, at most SEARCH_LIMIT rows. The words are matched in SQL
  * on search_text; the categories (renamed any time) by their names here, as a list of ids.
  */
-export async function searchTransactions(query: string, f: TxFilter = {}, limit = SEARCH_LIMIT): Promise<TransactionRow[]> {
+export async function searchTransactions(
+  query: string,
+  f: TxFilter = {},
+  limit = SEARCH_LIMIT,
+): Promise<TransactionRow[]> {
   const words = normalizeForSearch(query).split(' ').filter(Boolean);
   if (words.length === 0) return [];
   await fillSearchText();
   const db = await getDb();
-  const cats = (await db.all<{ id: number; name: string; type_name: string | null }>(
-    'SELECT c.id, c.name, ct.name AS type_name FROM categories c LEFT JOIN category_types ct ON ct.id = c.type_id'))
-    .map((c) => ({ id: c.id, text: normalizeForSearch(`${c.name} ${c.type_name ?? ''}`) }));
+  const cats = (
+    await db.all<{ id: number; name: string; type_name: string | null }>(
+      'SELECT c.id, c.name, ct.name AS type_name FROM categories c LEFT JOIN category_types ct ON ct.id = c.type_id',
+    )
+  ).map((c) => ({ id: c.id, text: normalizeForSearch(`${c.name} ${c.type_name ?? ''}`) }));
   const none = normalizeForSearch(UNCATEGORIZED);
   const { sql, params } = filterCondition(f);
   const conds: string[] = [];
@@ -149,21 +165,27 @@ export async function searchTransactions(query: string, f: TxFilter = {}, limit 
     if (none.includes(w)) any.push('t.category_id IS NULL');
     conds.push(`(${any.join(' OR ')})`);
   }
-  return db.all<TransactionRow>(
-    `${SELECT_TX} WHERE ${sql} AND ${conds.join(' AND ')} ${NEWEST_FIRST} LIMIT ?`, [...params, ...wordParams, limit]);
+  return db.all<TransactionRow>(`${SELECT_TX} WHERE ${sql} AND ${conds.join(' AND ')} ${NEWEST_FIRST} LIMIT ?`, [
+    ...params,
+    ...wordParams,
+    limit,
+  ]);
 }
 
 /** The banks whose operations there are (not the manual ones), with their counts, for the "Банк" filter. */
 export async function banksWithTransactions(): Promise<Array<{ bank: string; count: number }>> {
   const db = await getDb();
   return db.all<{ bank: string; count: number }>(
-    "SELECT bank, count(*) AS count FROM transactions WHERE bank != 'manual' GROUP BY bank ORDER BY count DESC");
+    "SELECT bank, count(*) AS count FROM transactions WHERE bank != 'manual' GROUP BY bank ORDER BY count DESC",
+  );
 }
 
 /** Kinds that occur, with their counts, for the "Тип" filter. */
 export async function kindsWithTransactions(): Promise<Array<{ kind: string; count: number }>> {
   const db = await getDb();
-  return db.all<{ kind: string; count: number }>('SELECT kind, count(*) AS count FROM transactions GROUP BY kind ORDER BY count DESC');
+  return db.all<{ kind: string; count: number }>(
+    'SELECT kind, count(*) AS count FROM transactions GROUP BY kind ORDER BY count DESC',
+  );
 }
 
 export type CategoryWithCount = {
@@ -178,16 +200,24 @@ export type CategoryWithCount = {
 /** Categories that have at least one transaction or a part of one (deleted ones too: they keep past transactions), plus "Без категории". */
 export async function categoriesWithTransactions(): Promise<CategoryWithCount[]> {
   const db = await getDb();
-  const rows = await db.all<{ category_id: number | null; name: string | null; emoji: string | null; type_name: string | null; deleted_at: number | null; n: number }>(
+  const rows = await db.all<{
+    category_id: number | null;
+    name: string | null;
+    emoji: string | null;
+    type_name: string | null;
+    deleted_at: number | null;
+    n: number;
+  }>(
     `SELECT t.category_id, c.name, c.emoji, ct.name AS type_name, c.deleted_at, count(*) AS n
       FROM spend_parts t
       LEFT JOIN categories c ON c.id = t.category_id
       LEFT JOIN category_types ct ON ct.id = c.type_id
       GROUP BY t.category_id
-      ORDER BY t.category_id IS NULL, c.deleted_at IS NOT NULL, ct.id IS NULL, ct.sort_order, c.sort_order, c.name`);
+      ORDER BY t.category_id IS NULL, c.deleted_at IS NOT NULL, ct.id IS NULL, ct.sort_order, c.sort_order, c.name`,
+  );
   return rows.map((r) => ({
     category: r.category_id ?? 'none',
-    name: r.category_id === null ? UNCATEGORIZED : r.name ?? '?',
+    name: r.category_id === null ? UNCATEGORIZED : (r.name ?? '?'),
     emoji: r.category_id === null ? NO_CATEGORY_EMOJI : r.emoji,
     type_name: r.type_name,
     deleted: r.deleted_at !== null,
@@ -206,6 +236,7 @@ export async function merchantsWithTransactions(): Promise<MerchantWithCount[]> 
         (SELECT raw_merchant FROM transactions x WHERE x.merchant_key = t.merchant_key ORDER BY x.occurred_at DESC LIMIT 1) AS name,
         count(*) AS n
       FROM transactions t WHERE t.merchant_key IS NOT NULL
-      GROUP BY mid ORDER BY n DESC, name`);
+      GROUP BY mid ORDER BY n DESC, name`,
+  );
   return rows.map((r) => ({ merchant: r.mid, name: r.name || r.mid, count: r.n }));
 }

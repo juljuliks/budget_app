@@ -14,7 +14,15 @@ export default function Masked({ style, children }: { style?: StyleProp<TextStyl
   const size = StyleSheet.flatten(style)?.fontSize ?? 14;
   return (
     <Text
-      style={[style, { color: 'transparent', textShadowColor: color, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: Math.max(14, size) }]}
+      style={[
+        style,
+        {
+          color: 'transparent',
+          textShadowColor: color,
+          textShadowOffset: { width: 0, height: 0 },
+          textShadowRadius: Math.max(14, size),
+        },
+      ]}
       accessibilityLabel="Скрыто"
     >
       {children}
@@ -25,7 +33,11 @@ export default function Masked({ style, children }: { style?: StyleProp<TextStyl
 /**
  * A section header's "spent / plan (%)": "Скрыть суммы" leaves it out (not blurred).
  */
-export function MaskedTotal({ style, hiddenText, children }: {
+export function MaskedTotal({
+  style,
+  hiddenText,
+  children,
+}: {
   style?: StyleProp<TextStyle>;
   /** shown instead when hidden: what tells nothing of the amounts, e.g. the section's share of the spending "34%" */
   hiddenText?: string;

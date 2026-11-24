@@ -19,25 +19,41 @@ export default function SavingFields({ s, amount, currency, due }: Props) {
   const money = (minor: number) => formatWithCurrency(minor, currency);
   const ym = due?.slice(0, 7);
   const options = [
-    ['yes', s.contribution !== null ? `Да, по ${money(s.contribution)} в месяц` : 'Да, каждый месяц',
-      due && amount !== null ? `Как копилка: к ${longDayYear(due)} будет ${money(amount)}, списание не ударит по бюджету ${monthGenYear(ym!)}.` : undefined],
-    ['no', ym ? `Нет, весь платёж ${inMonthYear(ym)}` : 'Нет, весь платёж в месяц списания',
-      ym && amount !== null ? `${money(amount)} встанут в план ${monthGenYear(ym)}.` : undefined],
+    [
+      'yes',
+      s.contribution !== null ? `Да, по ${money(s.contribution)} в месяц` : 'Да, каждый месяц',
+      due && amount !== null
+        ? `Как копилка: к ${longDayYear(due)} будет ${money(amount)}, списание не ударит по бюджету ${monthGenYear(ym!)}.`
+        : undefined,
+    ],
+    [
+      'no',
+      ym ? `Нет, весь платёж ${inMonthYear(ym)}` : 'Нет, весь платёж в месяц списания',
+      ym && amount !== null ? `${money(amount)} встанут в план ${monthGenYear(ym)}.` : undefined,
+    ],
   ] as const;
   return (
     <>
       <Text style={formStyles.label}>Откладывать каждый месяц?</Text>
       <RadioGroup options={options} value={s.save ? 'yes' : 'no'} onChange={(v) => s.setSave(v === 'yes')} />
       {s.save && s.had?.saving ? (
-        <Text style={formStyles.hint}>{`Отложено ${money(s.had.balance)}${amount !== null ? ` из ${money(amount)}` : ''}.`}</Text>
+        <Text
+          style={formStyles.hint}
+        >{`Отложено ${money(s.had.balance)}${amount !== null ? ` из ${money(amount)}` : ''}.`}</Text>
       ) : null}
       {s.save && s.had && !s.had.saving ? (
         <>
           <Text style={formStyles.label}>Уже отложено (необязательно)</Text>
           <View style={[formStyles.input, styles.amountRow]}>
             <TextInput
-              style={styles.amountInput} value={s.start} onChangeText={s.setStart} placeholder="0.00" placeholderTextColor={colors.muted}
-              keyboardType="decimal-pad" maxLength={12} accessibilityLabel="Уже отложено"
+              style={styles.amountInput}
+              value={s.start}
+              onChangeText={s.setStart}
+              placeholder="0.00"
+              placeholderTextColor={colors.muted}
+              keyboardType="decimal-pad"
+              maxLength={12}
+              accessibilityLabel="Уже отложено"
             />
             <Text style={styles.muted}>{currencySymbol(currency)}</Text>
           </View>

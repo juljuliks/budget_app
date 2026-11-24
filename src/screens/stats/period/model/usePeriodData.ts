@@ -36,18 +36,32 @@ export function usePeriodData(range: DayRange, currency: Currency, off = false) 
     if (pace) {
       // a day / week / 2-week limit not touched in the period but spent earlier in the month is listed too (0 ₾):
       // to see its limit grow after a day without spending
-      loadNorms(range, currency).then((n) => {
-        const planned = [...n.byCategory].filter(([id, p]) => p.kind === 'limit' && p.rhythm !== 'month' && p.periodNorm > 0
-          && (n.monthToDate.get(id) ?? 0) > 0).map(([id]) => id);
-        return Promise.all([periodStats(from, to, currency, planned), unplannedMonth(n, currency)])
-          .then(keep(([s, u]: [PeriodStats, UnplannedMonth]) => { setNorms(n); setMonth(u); setStats(s); }));
-      }).catch(keep(fail));
+      loadNorms(range, currency)
+        .then((n) => {
+          const planned = [...n.byCategory]
+            .filter(
+              ([id, p]) =>
+                p.kind === 'limit' && p.rhythm !== 'month' && p.periodNorm > 0 && (n.monthToDate.get(id) ?? 0) > 0,
+            )
+            .map(([id]) => id);
+          return Promise.all([periodStats(from, to, currency, planned), unplannedMonth(n, currency)]).then(
+            keep(([s, u]: [PeriodStats, UnplannedMonth]) => {
+              setNorms(n);
+              setMonth(u);
+              setStats(s);
+            }),
+          );
+        })
+        .catch(keep(fail));
     } else {
       setNorms(null);
       setMonth(null);
       periodStats(from, to, currency).then(keep(setStats)).catch(keep(fail));
     }
-    if (!pace) averageFullMonths(range.from, range.to, currency).then(keep(setAverage)).catch((e) => console.error('load average failed', e));
+    if (!pace)
+      averageFullMonths(range.from, range.to, currency)
+        .then(keep(setAverage))
+        .catch((e) => console.error('load average failed', e));
   }, [range, currency, pace, off, latest, started, fail]);
   useEffect(load, [load]);
   useEffect(() => onTransactionsChanged(load), [load]);

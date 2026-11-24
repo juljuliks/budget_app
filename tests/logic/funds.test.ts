@@ -2,7 +2,20 @@
 import { freshDb } from '../helpers';
 import { getDb } from '../../src/db';
 import {
-  answerFund, contributionOf, deleteFund, fundLedger, getFund, listPlan, monthStats, monthsBetween, planHistory, restoreFund, setFund, setLockedPct, setPlanBudget, storedBudget,
+  answerFund,
+  contributionOf,
+  deleteFund,
+  fundLedger,
+  getFund,
+  listPlan,
+  monthStats,
+  monthsBetween,
+  planHistory,
+  restoreFund,
+  setFund,
+  setLockedPct,
+  setPlanBudget,
+  storedBudget,
 } from '../../src/db/plans';
 import { createCategory } from '../../src/db/categories';
 import { addManualTransaction } from '../../src/db/transactions';
@@ -40,7 +53,7 @@ test('made: its plan item is the contribution, "Уже отложено" lowers 
   expect(nov).toMatchObject({ kind: 'fund', limit_minor: 24500 });
 });
 
-describe('the contribution fits the month\'s budget, nothing asked', () => {
+describe("the contribution fits the month's budget, nothing asked", () => {
   // October: budget 1 000, 0% outside the plan, 🔒 100 — 900 to plan; Еда 800 planned — 100 free
   async function month(locked = 10000) {
     const { setPlanAmount } = require('../../src/db/plans');
@@ -48,10 +61,15 @@ describe('the contribution fits the month\'s budget, nothing asked', () => {
     await setPlanBudget('2026-10', 100000, 'GEL', 0, true, locked);
     await setPlanAmount('2026-10', food, 80000, 'limit');
   }
-  const item = async (id: number) => (await getDb()).get('SELECT limit_minor, cap_minor, taken_minor FROM plan_items WHERE ym = ? AND category_id = ?', ['2026-10', id]);
-  const locked = async () => (await (await getDb()).get<{ l: number }>("SELECT locked_minor AS l FROM plan_months WHERE ym = '2026-10'"))!.l;
+  const item = async (id: number) =>
+    (await getDb()).get('SELECT limit_minor, cap_minor, taken_minor FROM plan_items WHERE ym = ? AND category_id = ?', [
+      '2026-10',
+      id,
+    ]);
+  const locked = async () =>
+    (await (await getDb()).get<{ l: number }>("SELECT locked_minor AS l FROM plan_months WHERE ym = '2026-10'"))!.l;
 
-  test('free first, then 🔒 — part of it too; refitted, 🔒 isn\'t taken twice; turned off — 🔒 gets it back', async () => {
+  test("free first, then 🔒 — part of it too; refitted, 🔒 isn't taken twice; turned off — 🔒 gets it back", async () => {
     await month();
     const id = await createCategory('Отпуск', '🏖');
     // 1 500 by January: 375 a month — 100 free, 100 of 🔒 (all it has), 175 not this month
@@ -97,13 +115,19 @@ describe('the contribution fits the month\'s budget, nothing asked', () => {
   });
 });
 
-test('the months: contributions in, spending out; past what is saved — a shortage, the month\'s', async () => {
+test("the months: contributions in, spending out; past what is saved — a shortage, the month's", async () => {
   const id = await createCategory('Страховка', '📄');
   const db = await getDb();
   // made in August, the past months' contributions as they were planned, confirmed in their closes
-  await db.run("INSERT INTO funds (category_id, target_minor, currency, due, start_minor, since_ym) VALUES (?, 60000, 'GEL', '2027-03-15', 0, '2026-08')", [id]);
+  await db.run(
+    "INSERT INTO funds (category_id, target_minor, currency, due, start_minor, since_ym) VALUES (?, 60000, 'GEL', '2027-03-15', 0, '2026-08')",
+    [id],
+  );
   for (const ym of ['2026-08', '2026-09']) {
-    await db.run("INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency) VALUES (?, ?, 5000, 'fund', 'GEL')", [ym, id]);
+    await db.run(
+      "INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency) VALUES (?, ?, 5000, 'fund', 'GEL')",
+      [ym, id],
+    );
     await answerFund(ym, id, 5000);
   }
   await spend(4000, id, '2026-09-20T12:00:00');
@@ -120,9 +144,15 @@ test('the months: contributions in, spending out; past what is saved — a short
 test('deleted: what it saved up to last month goes to this month\'s savings, its items from now on go; "Отменить" puts them back', async () => {
   const id = await createCategory('Ноутбук', '💻');
   const db = await getDb();
-  await db.run("INSERT INTO funds (category_id, target_minor, currency, due, start_minor, since_ym) VALUES (?, 150000, 'GEL', '2027-01-31', 10000, '2026-09')", [id]);
+  await db.run(
+    "INSERT INTO funds (category_id, target_minor, currency, due, start_minor, since_ym) VALUES (?, 150000, 'GEL', '2027-01-31', 10000, '2026-09')",
+    [id],
+  );
   await db.run("INSERT INTO plan_months (ym) VALUES ('2026-09')");
-  await db.run("INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency) VALUES ('2026-09', ?, 35000, 'fund', 'GEL')", [id]);
+  await db.run(
+    "INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency) VALUES ('2026-09', ?, 35000, 'fund', 'GEL')",
+    [id],
+  );
   await answerFund('2026-09', id, 35000);
   await setPlanBudget('2026-10', 500000);
   await listPlan('2026-10');
@@ -131,30 +161,51 @@ test('deleted: what it saved up to last month goes to this month\'s savings, its
   expect(deleted).toMatchObject({ released: 45000 });
   expect(await getFund(id)).toMatchObject({ closed_ym: '2026-10', released_minor: 45000 });
   expect((await listPlan('2026-10')).map((i) => i.category_id)).not.toContain(id);
-  expect(await db.all('SELECT ym FROM plan_items WHERE category_id = ? ORDER BY ym', [id])).toEqual([{ ym: '2026-09' }]);
+  expect(await db.all('SELECT ym FROM plan_items WHERE category_id = ? ORDER BY ym', [id])).toEqual([
+    { ym: '2026-09' },
+  ]);
 
   await restoreFund(deleted!);
   expect(await getFund(id)).toMatchObject({ closed_ym: null, released_minor: null });
-  expect((await db.all<{ ym: string }>('SELECT ym FROM plan_items WHERE category_id = ? ORDER BY ym', [id])).map((r) => r.ym)).toEqual(['2026-09', '2026-10', '2026-11']);
+  expect(
+    (await db.all<{ ym: string }>('SELECT ym FROM plan_items WHERE category_id = ? ORDER BY ym', [id])).map(
+      (r) => r.ym,
+    ),
+  ).toEqual(['2026-09', '2026-10', '2026-11']);
 });
 
-test('the month\'s stats: a fund\'s spending apart, not in the totals but its shortage; the history spends its contribution', async () => {
+test("the month's stats: a fund's spending apart, not in the totals but its shortage; the history spends its contribution", async () => {
   const fund = await createCategory('Отпуск', '🏖');
   const food = await createCategory('Еда', '🛒');
   const db = await getDb();
-  await db.run("INSERT INTO funds (category_id, target_minor, currency, due, start_minor, since_ym) VALUES (?, 300000, 'GEL', '2027-07-31', 100000, '2026-09')", [fund]);
+  await db.run(
+    "INSERT INTO funds (category_id, target_minor, currency, due, start_minor, since_ym) VALUES (?, 300000, 'GEL', '2027-07-31', 100000, '2026-09')",
+    [fund],
+  );
   await db.run("INSERT INTO plan_months (ym, budget_minor) VALUES ('2026-09', 500000)");
-  await db.run("INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency) VALUES ('2026-09', ?, 20000, 'fund', 'GEL')", [fund]);
+  await db.run(
+    "INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency) VALUES ('2026-09', ?, 20000, 'fund', 'GEL')",
+    [fund],
+  );
   await answerFund('2026-09', fund, 20000);
-  await db.run("INSERT INTO plan_items (ym, category_id, limit_minor, currency) VALUES ('2026-09', ?, 50000, 'GEL')", [food]);
+  await db.run("INSERT INTO plan_items (ym, category_id, limit_minor, currency) VALUES ('2026-09', ?, 50000, 'GEL')", [
+    food,
+  ]);
   await spend(30000, food, '2026-09-05T12:00:00');
   await spend(130000, fund, '2026-09-20T12:00:00');
 
   const stats = await monthStats(2026, 8);
   expect(stats.categories.map((c) => c.category_id)).toEqual([food]);
-  expect(stats.funds).toEqual([expect.objectContaining({
-    category_id: fund, spent_minor: 130000, available_minor: 120000, shortage_minor: 10000, left_minor: 0, contribution_minor: 20000,
-  })]);
+  expect(stats.funds).toEqual([
+    expect.objectContaining({
+      category_id: fund,
+      spent_minor: 130000,
+      available_minor: 120000,
+      shortage_minor: 10000,
+      left_minor: 0,
+      contribution_minor: 20000,
+    }),
+  ]);
   // the food and what the fund lacked
   expect(stats.spent_minor).toBe(40000);
   expect(stats.planned_minor).toBe(50000);
@@ -164,12 +215,18 @@ test('the month\'s stats: a fund\'s spending apart, not in the totals but its sh
   expect(sep).toMatchObject({ spent_minor: 60000, planned_minor: 70000, funds_minor: 20000 });
 });
 
-test('deleted this month: the history gives what it saved to this month\'s savings', async () => {
+test("deleted this month: the history gives what it saved to this month's savings", async () => {
   const id = await createCategory('Ноутбук', '💻');
   const db = await getDb();
-  await db.run("INSERT INTO funds (category_id, target_minor, currency, due, start_minor, since_ym) VALUES (?, 150000, 'GEL', '2027-01-31', 10000, '2026-09')", [id]);
+  await db.run(
+    "INSERT INTO funds (category_id, target_minor, currency, due, start_minor, since_ym) VALUES (?, 150000, 'GEL', '2027-01-31', 10000, '2026-09')",
+    [id],
+  );
   await db.run("INSERT INTO plan_months (ym) VALUES ('2026-09')");
-  await db.run("INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency) VALUES ('2026-09', ?, 35000, 'fund', 'GEL')", [id]);
+  await db.run(
+    "INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency) VALUES ('2026-09', ?, 35000, 'fund', 'GEL')",
+    [id],
+  );
   await answerFund('2026-09', id, 35000);
   await setPlanBudget('2026-10', 500000);
   await deleteFund(id);
@@ -177,21 +234,33 @@ test('deleted this month: the history gives what it saved to this month\'s savin
   expect(oct).toMatchObject({ ym: '2026-10', released: [{ name: 'Ноутбук', emoji: '💻', minor: 45000 }] });
 });
 
-test('a fund is in each coming month\'s plan: one made after the next month was planned, by hand too', async () => {
+test("a fund is in each coming month's plan: one made after the next month was planned, by hand too", async () => {
   await setPlanBudget('2026-10', 500000);
   await setPlanBudget('2026-11', 500000);
   const id = await createCategory('Отпуск', '🏖');
   await setFund('2026-10', id, HOLIDAY);
-  expect((await listPlan('2026-11')).find((i) => i.category_id === id)).toMatchObject({ kind: 'fund', limit_minor: 30000 });
+  expect((await listPlan('2026-11')).find((i) => i.category_id === id)).toMatchObject({
+    kind: 'fund',
+    limit_minor: 30000,
+  });
 });
 
-test('deleting from a past month removes that month\'s plan item and closes the fund from it', async () => {
+test("deleting from a past month removes that month's plan item and closes the fund from it", async () => {
   const id = await createCategory('Отпуск', '🏖');
   const db = await getDb();
   // fund since September (past), with plan items in Sep (past) and Oct (current)
-  await db.run("INSERT INTO funds (category_id, target_minor, currency, due, start_minor, since_ym) VALUES (?, 300000, 'GEL', '2027-07-31', 0, '2026-09')", [id]);
-  await db.run("INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency) VALUES ('2026-09', ?, 30000, 'fund', 'GEL')", [id]);
-  await db.run("INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency) VALUES ('2026-10', ?, 30000, 'fund', 'GEL')", [id]);
+  await db.run(
+    "INSERT INTO funds (category_id, target_minor, currency, due, start_minor, since_ym) VALUES (?, 300000, 'GEL', '2027-07-31', 0, '2026-09')",
+    [id],
+  );
+  await db.run(
+    "INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency) VALUES ('2026-09', ?, 30000, 'fund', 'GEL')",
+    [id],
+  );
+  await db.run(
+    "INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency) VALUES ('2026-10', ?, 30000, 'fund', 'GEL')",
+    [id],
+  );
 
   await deleteFund(id, '2026-09');
 
@@ -213,11 +282,23 @@ test('"Отложить сразу" by %: the funds come first — what is free,
   const id = await createCategory('Отпуск', '🏖');
   // 1 500 by January: 375 a month — 100 free in the plan, 275 of 🔒
   await setFund('2026-10', id, { ...HOLIDAY, target_minor: 150000, due: '2027-01-31' });
-  expect(await db.get("SELECT limit_minor, cap_minor, taken_minor FROM plan_items WHERE ym = '2026-10' AND category_id = ?", [id]))
-    .toEqual({ limit_minor: 37500, cap_minor: null, taken_minor: 27500 });
-  expect(await storedBudget('2026-10')).toEqual(expect.objectContaining({
-    locked_minor: 2500, locked_pct: 30, locked_taken_minor: 27500, locked_funds_minor: 27500 }));
+  expect(
+    await db.get(
+      "SELECT limit_minor, cap_minor, taken_minor FROM plan_items WHERE ym = '2026-10' AND category_id = ?",
+      [id],
+    ),
+  ).toEqual({ limit_minor: 37500, cap_minor: null, taken_minor: 27500 });
+  expect(await storedBudget('2026-10')).toEqual(
+    expect.objectContaining({
+      locked_minor: 2500,
+      locked_pct: 30,
+      locked_taken_minor: 27500,
+      locked_funds_minor: 27500,
+    }),
+  );
   // 20%: the funds fitted again — 200 free in the plan now, 175 of 🔒: what 🔒 keeps is the same
   await setLockedPct(20, '2026-10');
-  expect(await storedBudget('2026-10')).toEqual(expect.objectContaining({ locked_minor: 2500, locked_taken_minor: 17500 }));
+  expect(await storedBudget('2026-10')).toEqual(
+    expect.objectContaining({ locked_minor: 2500, locked_taken_minor: 17500 }),
+  );
 });

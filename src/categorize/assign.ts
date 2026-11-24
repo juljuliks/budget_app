@@ -22,12 +22,17 @@ export type MerchantChoice = 'merchant' | 'only';
 export async function assignCategory(txId: number, categoryId: number | null, choice?: MerchantChoice) {
   const db = await getDb();
   const tx = await db.get<{ kind: string; merchant_key: string | null }>(
-    'SELECT kind, merchant_key FROM transactions WHERE id = ?', [txId]);
+    'SELECT kind, merchant_key FROM transactions WHERE id = ?',
+    [txId],
+  );
   // only purchases / payments are remembered: a transfer or deposit "merchant" is a person or the card
   // a merchant of different categories keeps its primary one and its list: a pick is always this operation's only
-  const key = tx?.merchant_key && isRememberable(tx.kind) && !(await isMixedMerchant(tx.merchant_key)) ? tx.merchant_key : null;
-  const forMerchant = categoryId !== null && key !== null
-    && (choice === 'merchant' || (choice === undefined && !(await findCategoryForMerchant(key))));
+  const key =
+    tx?.merchant_key && isRememberable(tx.kind) && !(await isMixedMerchant(tx.merchant_key)) ? tx.merchant_key : null;
+  const forMerchant =
+    categoryId !== null &&
+    key !== null &&
+    (choice === 'merchant' || (choice === undefined && !(await findCategoryForMerchant(key))));
 
   // the writes all or none: a rule without its operations moved (or the other way) would split the merchant
   await db.transaction(async (t) => {
@@ -65,7 +70,9 @@ export async function merchantChangePreview(txId: number, categoryId: number | n
   if (categoryId === null) return null;
   const db = await getDb();
   const tx = await db.get<{ kind: string; merchant_key: string | null; raw_merchant: string | null }>(
-    'SELECT kind, merchant_key, raw_merchant FROM transactions WHERE id = ?', [txId]);
+    'SELECT kind, merchant_key, raw_merchant FROM transactions WHERE id = ?',
+    [txId],
+  );
   if (!tx?.merchant_key || !isRememberable(tx.kind)) return null;
   // of different categories: nothing to ask, the pick is this operation's
   if (await isMixedMerchant(tx.merchant_key)) return null;
@@ -93,21 +100,34 @@ export async function categoryChangeTotals(merchantKey: string, categoryId: numb
         AND (id = ? OR category_source IS NULL OR category_source = 'rule')
         AND (category_id IS NULL OR category_id != ?)
       GROUP BY currency ORDER BY sum(${signedSpendSql()}) DESC`,
-    [merchantKey, alsoTxId, categoryId]);
+    [merchantKey, alsoTxId, categoryId],
+  );
 }
 
 /**
  * The merchants of these transactions (purchases / payments) whose category `categoryId` would change: with another
  * category (`withoutToo`: or none yet). A merchant of different categories has none to change.
  */
-async function merchantsToChange(txIds: number[], categoryId: number, withoutToo = false): Promise<Array<{ key: string; name: string }>> {
+async function merchantsToChange(
+  txIds: number[],
+  categoryId: number,
+  withoutToo = false,
+): Promise<Array<{ key: string; name: string }>> {
   if (txIds.length === 0) return [];
   const db = await getDb();
   const rows = await db.all<{ kind: string; merchant_key: string | null; raw_merchant: string | null }>(
-    `SELECT kind, merchant_key, raw_merchant FROM transactions WHERE id IN (${placeholders(txIds.length)})`, txIds);
+    `SELECT kind, merchant_key, raw_merchant FROM transactions WHERE id IN (${placeholders(txIds.length)})`,
+    txIds,
+  );
   const out = new Map<string, string>();
   for (const r of rows) {
-    if (!r.merchant_key || !isRememberable(r.kind) || out.has(r.merchant_key) || await isMixedMerchant(r.merchant_key)) continue;
+    if (
+      !r.merchant_key ||
+      !isRememberable(r.kind) ||
+      out.has(r.merchant_key) ||
+      (await isMixedMerchant(r.merchant_key))
+    )
+      continue;
     const rule = await findCategoryForMerchant(r.merchant_key);
     if (rule ? rule.category_id !== categoryId : withoutToo) out.set(r.merchant_key, r.raw_merchant || r.merchant_key);
   }
@@ -125,7 +145,10 @@ export type MerchantsChange = {
  * Bulk edit: what making `categoryId` the category of the selected transactions' merchants would change — asked
  * like for one transaction (these only or the merchants too). null = nothing to ask (no merchant to change).
  */
-export async function merchantsChangePreview(txIds: number[], categoryId: number | null): Promise<MerchantsChange | null> {
+export async function merchantsChangePreview(
+  txIds: number[],
+  categoryId: number | null,
+): Promise<MerchantsChange | null> {
   if (categoryId === null) return null;
   const merchants = await merchantsToChange(txIds, categoryId);
   if (merchants.length === 0) return null;
@@ -140,7 +163,9 @@ export async function merchantsChangePreview(txIds: number[], categoryId: number
   return {
     merchants: merchants.map((m) => m.name),
     count,
-    totals: [...sums].map(([currency, amount_minor]) => ({ currency, amount_minor })).sort((a, b) => b.amount_minor - a.amount_minor),
+    totals: [...sums]
+      .map(([currency, amount_minor]) => ({ currency, amount_minor }))
+      .sort((a, b) => b.amount_minor - a.amount_minor),
   };
 }
 
@@ -150,7 +175,9 @@ export async function merchantsChangePreview(txIds: number[], categoryId: number
  * the selected ones of those merchants then follow it too. Returns how many merchants got it.
  */
 export async function assignCategoryToMany(
-  txIds: number[], categoryId: number | null, choice?: MerchantChoice,
+  txIds: number[],
+  categoryId: number | null,
+  choice?: MerchantChoice,
   /** sorting out a category being deleted: the merchants moved keep their past operations in it (only this month's move) */
   keepPastIn?: number,
 ): Promise<number> {
@@ -164,8 +191,16 @@ export async function assignCategoryToMany(
     merchants = choice === 'merchant' ? all : all.filter((m) => !withOther.has(m.key));
   }
   // the writes all or none (see assignCategory)
-  await (await getDb()).transaction(async (t) => {
-    if (keepPastIn !== undefined) await freezePastOfCategory(keepPastIn, merchants.map((m) => m.key), currentYm(), t);
+  await (
+    await getDb()
+  ).transaction(async (t) => {
+    if (keepPastIn !== undefined)
+      await freezePastOfCategory(
+        keepPastIn,
+        merchants.map((m) => m.key),
+        currentYm(),
+        t,
+      );
     await setCategoryForTransactions(txIds, categoryId, t, keepPastIn);
     for (const m of merchants) {
       await createRule('exact', m.key, categoryId!, t);
@@ -176,7 +211,8 @@ export async function assignCategoryToMany(
       await t.run(
         `UPDATE transactions SET category_source = 'rule' WHERE id IN (${placeholders(txIds.length)})
           AND merchant_key IN (${placeholders(merchants.length)}) AND kind IN (${placeholders(REMEMBERABLE_KINDS.length)})`,
-        [...txIds, ...merchants.map((m) => m.key), ...REMEMBERABLE_KINDS]);
+        [...txIds, ...merchants.map((m) => m.key), ...REMEMBERABLE_KINDS],
+      );
     }
     if (categoryId !== null) await incrementCategoryUsage(categoryId, 1, t);
   });

@@ -32,27 +32,60 @@ export type PaymentInput = {
 export async function savePayment(input: PaymentInput, id?: number): Promise<number> {
   const db = await getDb();
   // the merchant's one, or the category's own: changed, not another made
-  const own = id ?? (input.merchant_key
-    ? (await db.get<{ id: number }>('SELECT id FROM recurring_payments WHERE merchant_key = ? AND deleted_at IS NULL', [input.merchant_key]))?.id
-    : input.category_id ? (await db.get<{ id: number }>('SELECT id FROM recurring_payments WHERE category_id = ? AND merchant_key IS NULL AND deleted_at IS NULL', [input.category_id]))?.id : undefined);
-  const category = input.category_id
-    ?? (own !== undefined ? (await db.get<{ c: number | null }>('SELECT category_id AS c FROM recurring_payments WHERE id = ?', [own]))?.c : null)
-    ?? await subscriptionsCategoryId(db);
-  const values = [category, input.merchant_key, input.name.trim(), input.amount_minor, input.currency, ...periodColumns(input.period), input.due, input.until ?? null];
+  const own =
+    id ??
+    (input.merchant_key
+      ? (
+          await db.get<{ id: number }>(
+            'SELECT id FROM recurring_payments WHERE merchant_key = ? AND deleted_at IS NULL',
+            [input.merchant_key],
+          )
+        )?.id
+      : input.category_id
+        ? (
+            await db.get<{ id: number }>(
+              'SELECT id FROM recurring_payments WHERE category_id = ? AND merchant_key IS NULL AND deleted_at IS NULL',
+              [input.category_id],
+            )
+          )?.id
+        : undefined);
+  const category =
+    input.category_id ??
+    (own !== undefined
+      ? (await db.get<{ c: number | null }>('SELECT category_id AS c FROM recurring_payments WHERE id = ?', [own]))?.c
+      : null) ??
+    (await subscriptionsCategoryId(db));
+  const values = [
+    category,
+    input.merchant_key,
+    input.name.trim(),
+    input.amount_minor,
+    input.currency,
+    ...periodColumns(input.period),
+    input.due,
+    input.until ?? null,
+  ];
   let out: number;
   if (own !== undefined) {
-    await db.run('UPDATE recurring_payments SET category_id = ?, merchant_key = ?, name = ?, amount_minor = ?, currency = ?, period_months = ?, period_unit = ?, due = ?, until = ? WHERE id = ?', [...values, own]);
+    await db.run(
+      'UPDATE recurring_payments SET category_id = ?, merchant_key = ?, name = ?, amount_minor = ?, currency = ?, period_months = ?, period_unit = ?, due = ?, until = ? WHERE id = ?',
+      [...values, own],
+    );
     out = own;
   } else {
     const r = await db.run(
       'INSERT INTO recurring_payments (category_id, merchant_key, name, amount_minor, currency, period_months, period_unit, due, until, since_ym, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [...values, currentYm(), Math.floor(Date.now() / 1000)]);
+      [...values, currentYm(), Math.floor(Date.now() / 1000)],
+    );
     out = r.lastInsertRowid;
   }
   // a subscription ("📺 Подписки"): its own payment (if it had one) goes now, not when the operation was only being
   // picked (cancelled, it stays)
   if (typeof category === 'number' && input.merchant_key) {
-    const owns = await db.all<{ id: number }>('SELECT id FROM recurring_payments WHERE category_id = ? AND merchant_key IS NULL AND deleted_at IS NULL', [category]);
+    const owns = await db.all<{ id: number }>(
+      'SELECT id FROM recurring_payments WHERE category_id = ? AND merchant_key IS NULL AND deleted_at IS NULL',
+      [category],
+    );
     for (const o of owns) await deletePayment(o.id);
   }
   if (typeof category === 'number') await turnRecurring(category, true);
@@ -71,10 +104,20 @@ export type DeletedPayment = { saving: { released: number; undo: SavingUndo } | 
 export async function deletePayment(id: number): Promise<DeletedPayment> {
   const saving = await stopSaving(id);
   const db = await getDb();
-  await db.run('UPDATE recurring_payments SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL', [Math.floor(Date.now() / 1000), id]);
-  const c = (await db.get<{ c: number | null }>('SELECT category_id AS c FROM recurring_payments WHERE id = ?', [id]))?.c ?? null;
-  const left = c === null ? null : await db.get('SELECT 1 FROM recurring_payments WHERE category_id = ? AND deleted_at IS NULL', [c]);
-  const on = c !== null && !!(await db.get("SELECT 1 FROM categories WHERE id = ? AND recurring = 1 AND system IS NOT 'subs'", [c]));
+  await db.run('UPDATE recurring_payments SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL', [
+    Math.floor(Date.now() / 1000),
+    id,
+  ]);
+  const c =
+    (await db.get<{ c: number | null }>('SELECT category_id AS c FROM recurring_payments WHERE id = ?', [id]))?.c ??
+    null;
+  const left =
+    c === null
+      ? null
+      : await db.get('SELECT 1 FROM recurring_payments WHERE category_id = ? AND deleted_at IS NULL', [c]);
+  const on =
+    c !== null &&
+    !!(await db.get("SELECT 1 FROM categories WHERE id = ? AND recurring = 1 AND system IS NOT 'subs'", [c]));
   if (c !== null && on && !left) return { saving, off: await turnRecurring(c, false) };
   await refreshRecurringItems();
   return { saving, off: null };
@@ -87,4 +130,3 @@ export async function restorePayment(id: number, deleted?: DeletedPayment | null
   if (deleted?.saving) await undoSaving(deleted.saving.undo);
   else await refreshRecurringItems();
 }
-

@@ -20,6 +20,14 @@ export const detailStyles = StyleSheet.create({
   /** «Месяц | Год | Всё время» over the merchants */
   periods: { marginTop: 8, marginBottom: 4 },
   /** «Мало данных»: too few months to tell frequent from rare */
-  few: { fontSize: 14, color: colors.warn, backgroundColor: colors.warnBg, borderRadius: 10, padding: 12, marginTop: 16, lineHeight: 19 },
+  few: {
+    fontSize: 14,
+    color: colors.warn,
+    backgroundColor: colors.warnBg,
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 16,
+    lineHeight: 19,
+  },
   operations: { paddingVertical: 14, borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
 });

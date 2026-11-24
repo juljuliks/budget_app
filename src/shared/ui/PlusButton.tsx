@@ -47,12 +47,24 @@ function Plus({ size, stroke, color = '#FFFFFF' }: { size: number; stroke: numbe
  * The other "create" button: "+ Создать" — a small primary `Button` with the drawn plus, where a word fits better than
  * a bare plus (a screen header). The circle above is the app's only button of its own; everything else is `Button`.
  */
-export function CreateButton({ onPress, accessibilityLabel, title = 'Создать', style }: {
-  onPress: () => void; accessibilityLabel: string; title?: string; style?: StyleProp<ViewStyle>;
+export function CreateButton({
+  onPress,
+  accessibilityLabel,
+  title = 'Создать',
+  style,
+}: {
+  onPress: () => void;
+  accessibilityLabel: string;
+  title?: string;
+  style?: StyleProp<ViewStyle>;
 }) {
   return (
     <Button
-      title={title} onPress={onPress} size="small" accessibilityLabel={accessibilityLabel} style={style}
+      title={title}
+      onPress={onPress}
+      size="small"
+      accessibilityLabel={accessibilityLabel}
+      style={style}
       icon={(c) => <Plus size={12} stroke={2.2} color={c} />}
     />
   );

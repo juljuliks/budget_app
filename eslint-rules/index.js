@@ -4,19 +4,20 @@ const TOUCHABLE = /^(Pressable|Touchable(Opacity|Highlight|WithoutFeedback|Nativ
 /** what an icon is drawn with: a touchable of only these has no text a screen reader could read */
 const ICON = /(Icon|Svg|Image|Path|Circle|Rect|Line|^G|^View)$/;
 
-const nameOf = (el) => (el.name.type === 'JSXIdentifier' ? el.name.name
-  : el.name.type === 'JSXMemberExpression' ? el.name.property.name : '');
-const attr = (el, name) => el.attributes.some((a) => a.type === 'JSXSpreadAttribute'
-  || (a.type === 'JSXAttribute' && a.name.name === name));
+const nameOf = (el) =>
+  el.name.type === 'JSXIdentifier' ? el.name.name : el.name.type === 'JSXMemberExpression' ? el.name.property.name : '';
+const attr = (el, name) =>
+  el.attributes.some((a) => a.type === 'JSXSpreadAttribute' || (a.type === 'JSXAttribute' && a.name.name === name));
 
 /** no text inside: only icon elements, no words and no {expressions} (they may be a text or a component with one) */
-const iconOnly = (children) => children.every((c) => {
-  if (c.type === 'JSXText') return !c.value.trim();
-  if (c.type === 'JSXExpressionContainer') return c.expression.type === 'JSXEmptyExpression';
-  if (c.type === 'JSXFragment') return iconOnly(c.children);
-  if (c.type === 'JSXElement') return ICON.test(nameOf(c.openingElement)) && iconOnly(c.children);
-  return true;
-});
+const iconOnly = (children) =>
+  children.every((c) => {
+    if (c.type === 'JSXText') return !c.value.trim();
+    if (c.type === 'JSXExpressionContainer') return c.expression.type === 'JSXEmptyExpression';
+    if (c.type === 'JSXFragment') return iconOnly(c.children);
+    if (c.type === 'JSXElement') return ICON.test(nameOf(c.openingElement)) && iconOnly(c.children);
+    return true;
+  });
 
 const touchableRule = (description, check) => ({
   meta: { type: 'suggestion', docs: { description }, schema: [] },
@@ -49,14 +50,20 @@ const hookName = (node) => {
 module.exports = {
   rules: {
     'touchable-role': touchableRule('A touchable says what it is (accessibilityRole)', (el) =>
-      (attr(el, 'accessibilityRole') || attr(el, 'role') ? null
-        : 'A touchable needs accessibilityRole ("button", "link", "checkbox", …): a screen reader says what it is.')),
+      attr(el, 'accessibilityRole') || attr(el, 'role')
+        ? null
+        : 'A touchable needs accessibilityRole ("button", "link", "checkbox", …): a screen reader says what it is.',
+    ),
     'icon-touchable-label': touchableRule('A touchable of only an icon has a label', (el, node) =>
-      (!iconOnly(node.children) || attr(el, 'accessibilityLabel') || attr(el, 'aria-label') ? null
-        : 'A touchable of only an icon needs accessibilityLabel: there is no text for a screen reader to read.')),
+      !iconOnly(node.children) || attr(el, 'accessibilityLabel') || attr(el, 'aria-label')
+        ? null
+        : 'A touchable of only an icon needs accessibilityLabel: there is no text for a screen reader to read.',
+    ),
     'icon-touchable-hit-slop': touchableRule('A touchable of only an icon is easy to hit', (el, node) =>
-      (!iconOnly(node.children) || attr(el, 'hitSlop') ? null
-        : 'A touchable of only an icon needs hitSlop: the area to press is at least 44 pt.')),
+      !iconOnly(node.children) || attr(el, 'hitSlop')
+        ? null
+        : 'A touchable of only an icon needs hitSlop: the area to press is at least 44 pt.',
+    ),
     'max-hook-lines': {
       meta: {
         type: 'suggestion',
@@ -70,7 +77,10 @@ module.exports = {
           if (!name || !HOOK.test(name)) return;
           const n = codeLines(context.sourceCode, node);
           if (n > max) {
-            context.report({ node: node.id ?? node.parent, message: `Hook ${name} has too many lines (${n}). Maximum allowed is ${max}.` });
+            context.report({
+              node: node.id ?? node.parent,
+              message: `Hook ${name} has too many lines (${n}). Maximum allowed is ${max}.`,
+            });
           }
         };
         return { FunctionDeclaration: check, FunctionExpression: check, ArrowFunctionExpression: check };

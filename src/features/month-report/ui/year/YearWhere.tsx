@@ -13,11 +13,15 @@ export default function YearWhere({ r }: { r: YearReport }) {
   return (
     <View style={y.gap}>
       <Text style={y.title}>Траты по категориям</Text>
-      <Text style={y.caption}>{`Потрачено ${money(r.spent)}${r.average ? ` · в среднем ${money(Math.round(r.average.minor / 100) * 100)} в месяц (${r.average.months} ${plural(r.average.months, ['полный месяц', 'полных месяца', 'полных месяцев'])})` : ''}`}</Text>
+      <Text
+        style={y.caption}
+      >{`Потрачено ${money(r.spent)}${r.average ? ` · в среднем ${money(Math.round(r.average.minor / 100) * 100)} в месяц (${r.average.months} ${plural(r.average.months, ['полный месяц', 'полных месяца', 'полных месяцев'])})` : ''}`}</Text>
       {r.top.map((c) => (
         <View key={c.id} style={y.row}>
           <View style={y.rowText}>
-            <Text style={y.name} numberOfLines={1}>{c.label}</Text>
+            <Text style={y.name} numberOfLines={1}>
+              {c.label}
+            </Text>
             <Text style={y.caption}>{topNote(c, money)}</Text>
           </View>
           <Masked style={y.value}>{money(c.sum)}</Masked>

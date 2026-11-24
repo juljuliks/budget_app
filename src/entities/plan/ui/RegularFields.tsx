@@ -14,13 +14,21 @@ import { RepeatForm, UntilField } from './UntilField';
 export type RegularEvery = 'day' | 'week' | 'month';
 export type RegularForm = RepeatForm & { every: RegularEvery; period: number; weekdays: number; next: string | null };
 const EVERY: Array<[RegularEvery, number, string]> = [
-  ['day', 0, 'Каждый день'], ['week', 0, 'Каждую неделю'], ['month', 1, 'Каждый месяц'], ['month', 3, 'Раз в 3 месяца'],
-  ['month', 6, 'Раз в полгода'], ['month', 12, 'Раз в год'],
+  ['day', 0, 'Каждый день'],
+  ['week', 0, 'Каждую неделю'],
+  ['month', 1, 'Каждый месяц'],
+  ['month', 3, 'Раз в 3 месяца'],
+  ['month', 6, 'Раз в полгода'],
+  ['month', 12, 'Раз в год'],
 ];
 // Monday first: bit i is WEEKDAYS[(i + 1) % 7]
 const DAYS = [0, 1, 2, 3, 4, 5, 6];
 
-type Props = { ym: string; categoryId: number; form: UseFormReturn<RegularForm & { value: string; currency: Currency }> };
+type Props = {
+  ym: string;
+  categoryId: number;
+  form: UseFormReturn<RegularForm & { value: string; currency: Currency }>;
+};
 
 /**
  * «Настроить» of "Регулярный платёж" on its category's page: how often — within the month (the weekdays, the times, its
@@ -28,7 +36,10 @@ type Props = { ym: string; categoryId: number; form: UseFormReturn<RegularForm &
  * the plan's (RegularPlanFields); rarer — asked here. Only the plan: nothing is matched with operations.
  */
 export default function RegularFields({ ym, categoryId, form }: Props) {
-  const [every, period, weekdays, until] = useWatch({ control: form.control, name: ['every', 'period', 'weekdays', 'until'] });
+  const [every, period, weekdays, until] = useWatch({
+    control: form.control,
+    name: ['every', 'period', 'weekdays', 'until'],
+  });
   const times = every === 'month' ? 0 : timesInMonth(ym, every, weekdays, until);
   const pickEvery = (e: RegularEvery, p: number) => {
     form.setValue('every', e, { shouldDirty: true });
@@ -39,27 +50,52 @@ export default function RegularFields({ ym, categoryId, form }: Props) {
       <Text style={formStyles.label}>Как часто</Text>
       <View style={styles.chips}>
         {EVERY.map(([e, p, label]) => (
-          <Chip key={label} label={label} selected={every === e && (e !== 'month' || period === p)} onPress={() => pickEvery(e, p)} />
+          <Chip
+            key={label}
+            label={label}
+            selected={every === e && (e !== 'month' || period === p)}
+            onPress={() => pickEvery(e, p)}
+          />
         ))}
       </View>
       {every === 'week' ? (
-        <Controller control={form.control} name="weekdays" render={({ field }) => (
-          <View style={[styles.chips, styles.days]}>
-            {DAYS.map((i) => <Chip key={i} label={WEEKDAYS[(i + 1) % 7]} compact selected={(field.value & (1 << i)) !== 0} onPress={() => field.onChange(field.value ^ (1 << i))} />)}
-          </View>
-        )} />
+        <Controller
+          control={form.control}
+          name="weekdays"
+          render={({ field }) => (
+            <View style={[styles.chips, styles.days]}>
+              {DAYS.map((i) => (
+                <Chip
+                  key={i}
+                  label={WEEKDAYS[(i + 1) % 7]}
+                  compact
+                  selected={(field.value & (1 << i)) !== 0}
+                  onPress={() => field.onChange(field.value ^ (1 << i))}
+                />
+              ))}
+            </View>
+          )}
+        />
       ) : null}
       {every !== 'month' ? (
         <>
           <Text style={formStyles.hint}>
-            {times ? `${times} ${plural(times, ['раз', 'раза', 'раз'])} в ${MONTHS_PREP[Number(ym.slice(5)) - 1]}` : 'Выберите дни недели'}
+            {times
+              ? `${times} ${plural(times, ['раз', 'раза', 'раз'])} в ${MONTHS_PREP[Number(ym.slice(5)) - 1]}`
+              : 'Выберите дни недели'}
           </Text>
           {/* always carried over: its end — the times in this month are counted up to it too */}
           <UntilField ym={ym} form={form as unknown as UseFormReturn<RepeatForm>} />
           <Text style={formStyles.hint}>Повторяется каждый месяц, пока не задана дата окончания.</Text>
         </>
       ) : null}
-      {every === 'month' ? <CategoryPaymentFields ym={ym} categoryId={categoryId} form={form as unknown as UseFormReturn<CategoryPaymentForm>} /> : null}
+      {every === 'month' ? (
+        <CategoryPaymentFields
+          ym={ym}
+          categoryId={categoryId}
+          form={form as unknown as UseFormReturn<CategoryPaymentForm>}
+        />
+      ) : null}
     </View>
   );
 }

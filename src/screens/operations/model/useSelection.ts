@@ -17,7 +17,10 @@ export function useSelection({ rows, viewRef, groupIds, setGroupIds }: List, loc
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const selecting = selectMode || locked;
 
-  const clear = useCallback(() => { setSelectMode(false); setSelected(new Set()); }, []);
+  const clear = useCallback(() => {
+    setSelectMode(false);
+    setSelected(new Set());
+  }, []);
 
   // a long press on a row starts selecting several, with that row selected
   function start(id: number) {
@@ -35,7 +38,8 @@ export function useSelection({ rows, viewRef, groupIds, setGroupIds }: List, loc
 
   function toggle(id: number) {
     const next = new Set(selected);
-    if (next.has(id)) next.delete(id); else next.add(id);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
     apply(next);
   }
 
@@ -46,14 +50,20 @@ export function useSelection({ rows, viewRef, groupIds, setGroupIds }: List, loc
       const v = viewRef.current;
       if (dayStart !== undefined) {
         const d = new Date(dayStart * 1000);
-        ids = await transactionDayIds(v.filter, dayStart, new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).getTime() / 1000);
+        ids = await transactionDayIds(
+          v.filter,
+          dayStart,
+          new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).getTime() / 1000,
+        );
       } else ids = await transactionGroupIds(v.filter, v.groupBy as GroupKind, key);
       const got = ids;
       setGroupIds((m) => new Map(m).set(key, got));
     }
     const all = ids.every((id) => selected.has(id));
     const next = new Set(selected);
-    for (const id of ids) if (all) next.delete(id); else next.add(id);
+    for (const id of ids)
+      if (all) next.delete(id);
+      else next.add(id);
     apply(next);
   }
 

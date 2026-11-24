@@ -44,7 +44,11 @@ export function useCategoryChoose(p: ChooseProps) {
 
   const load = useCallback(() => {
     Promise.all([listCategories(), categoryColors(), p.transferFirst ? getTransferTypeId() : Promise.resolve(null)])
-      .then(([list, colors, typeId]) => { setCats(list); setColorOf(colors); setTransferTypeId(typeId); })
+      .then(([list, colors, typeId]) => {
+        setCats(list);
+        setColorOf(colors);
+        setTransferTypeId(typeId);
+      })
       .catch(toastFailure('load categories', LOAD_FAILED));
   }, [p.transferFirst]);
 
@@ -62,18 +66,38 @@ export function useCategoryChoose(p: ChooseProps) {
   }, [p.visible, load]);
 
   const min = p.severalMin ?? (openedMany ? 1 : 2);
-  const toggle = (id: number) => setPicked((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  const toggle = (id: number) =>
+    setPicked((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 
   return {
-    query, setQuery, colorOf, transferTypeId, creating, setCreating,
-    many, picked, draft, min,
-    sections: orderedSections(cats, { query, excludeIds: p.excludeIds, deposit: p.deposit, transferFirst: p.transferFirst }),
+    query,
+    setQuery,
+    colorOf,
+    transferTypeId,
+    creating,
+    setCreating,
+    many,
+    picked,
+    draft,
+    min,
+    sections: orderedSections(cats, {
+      query,
+      excludeIds: p.excludeIds,
+      deposit: p.deposit,
+      transferFirst: p.transferFirst,
+    }),
     none: showNone(query, !!p.allowNone),
     current: p.saveTitle ? draft : p.selectedId,
     hint: !!p.onSeveral && !p.saveTitle && !many,
     press(id: number) {
-      if (many) { toggle(id); return; }
-      if (p.saveTitle) { setDraft(id); return; }
+      if (many) {
+        toggle(id);
+        return;
+      }
+      if (p.saveTitle) {
+        setDraft(id);
+        return;
+      }
       p.onPick(id);
       p.onClose();
     },
@@ -89,13 +113,19 @@ export function useCategoryChoose(p: ChooseProps) {
     },
     pressNone() {
       if (many) return;
-      if (p.saveTitle) { setDraft(null); return; }
+      if (p.saveTitle) {
+        setDraft(null);
+        return;
+      }
       p.onPick(null);
       p.onClose();
     },
     cancelMany() {
       if (openedMany) p.onClose();
-      else { setMany(false); setPicked([]); }
+      else {
+        setMany(false);
+        setPicked([]);
+      }
     },
     done() {
       if (picked.length < min) return;
@@ -106,7 +136,10 @@ export function useCategoryChoose(p: ChooseProps) {
       load();
       if (many) setPicked((prev) => (prev.includes(id) ? prev : [...prev, id]));
       else if (p.saveTitle) setDraft(id);
-      else { p.onPick(id); p.onClose(); }
+      else {
+        p.onPick(id);
+        p.onClose();
+      }
     },
   };
 }

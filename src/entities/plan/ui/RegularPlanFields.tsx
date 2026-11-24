@@ -19,12 +19,17 @@ type Props = { ym: string; form: UseFormReturn<RegularForm & { value: string; cu
  * day (set on its category's page): «каждый месяц · 20-го».
  */
 export default function RegularPlanFields({ ym, form }: Props) {
-  const [every, weekdays, until, value, currency, next] = useWatch({ control: form.control, name: ['every', 'weekdays', 'until', 'value', 'currency', 'next'] });
+  const [every, weekdays, until, value, currency, next] = useWatch({
+    control: form.control,
+    name: ['every', 'weekdays', 'until', 'value', 'currency', 'next'],
+  });
   const unit = parseAmountOrZero(value ?? '') ?? 0;
   const times = every === 'month' ? 0 : timesInMonth(ym, every, weekdays, until);
   return (
     <View>
-      <Text style={styles.schedule}>{`${everyText(every, weekdays)}${every === 'month' && next ? ` · ${Number(next.slice(8))}-го` : ''}${until ? ` · до ${longDay(until)}` : ''}`}</Text>
+      <Text
+        style={styles.schedule}
+      >{`${everyText(every, weekdays)}${every === 'month' && next ? ` · ${Number(next.slice(8))}-го` : ''}${until ? ` · до ${longDay(until)}` : ''}`}</Text>
       {every !== 'month' ? (
         <Text style={formStyles.hint}>
           {`${times} ${plural(times, ['раз', 'раза', 'раз'])} в ${MONTHS_PREP[Number(ym.slice(5)) - 1]}${unit ? ` — ${formatWithCurrency(unit * times, currency)}` : ''}`}

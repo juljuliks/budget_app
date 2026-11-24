@@ -21,15 +21,25 @@ export default function LockedPctSetting() {
     <View style={styles.block}>
       <View style={styles.titleRow}>
         <Text style={[styles.label, styles.flex]}>🔒 Отложить сразу</Text>
-        <Text style={[styles.value, { color: pct === null ? colors.muted : LOCKED }]}>{pct === null ? 'не задано' : `${pct}% бюджета`}</Text>
+        <Text style={[styles.value, { color: pct === null ? colors.muted : LOCKED }]}>
+          {pct === null ? 'не задано' : `${pct}% бюджета`}
+        </Text>
       </View>
-      <Text style={styles.hint}>Каждый месяц столько от бюджета месяца сразу в сбережения: план и траты вне плана их не займут.</Text>
+      <Text style={styles.hint}>
+        Каждый месяц столько от бюджета месяца сразу в сбережения: план и траты вне плана их не займут.
+      </Text>
       <StepSlider
-        values={STOPS} value={pct ?? -1} label={(v) => `${v}%`} color={LOCKED}
-        onChange={(v) => { saveLockedPct(v).catch(toastFailure('save locked pct', SAVE_FAILED)); }}
+        values={STOPS}
+        value={pct ?? -1}
+        label={(v) => `${v}%`}
+        color={LOCKED}
+        onChange={(v) => {
+          saveLockedPct(v).catch(toastFailure('save locked pct', SAVE_FAILED));
+        }}
       />
       <Text style={[styles.hint, styles.after]}>
-        Что план не распределит или категории не потратят — тоже в сбережения, как «💰 Сэкономлено». Новый процент — с этого месяца.
+        Что план не распределит или категории не потратят — тоже в сбережения, как «💰 Сэкономлено». Новый процент — с
+        этого месяца.
       </Text>
     </View>
   );

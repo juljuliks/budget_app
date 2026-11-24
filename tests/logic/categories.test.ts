@@ -4,12 +4,27 @@ import { getDb } from '../../src/db';
 import { openDatabase } from '../../src/db/driver';
 import { migrate, MIGRATIONS } from '../../src/db/migrations';
 import {
-  categoryLabel, countPastTransactionsOfCategory, createCategory, currentTransactionsOfCategory, deleteCategory,
-  findCategoryByName, getCategory, isTransferCategory, listCategories, moveTransactionsOutOfCategory, topCategories, updateCategory,
+  categoryLabel,
+  countPastTransactionsOfCategory,
+  createCategory,
+  currentTransactionsOfCategory,
+  deleteCategory,
+  findCategoryByName,
+  getCategory,
+  isTransferCategory,
+  listCategories,
+  moveTransactionsOutOfCategory,
+  topCategories,
+  updateCategory,
 } from '../../src/db/categories';
 import {
-  countCategoriesOfType, createCategoryType, deleteCategoryType, findCategoryTypeByName, getTransferTypeId,
-  listCategoryTypes, renameCategoryType,
+  countCategoriesOfType,
+  createCategoryType,
+  deleteCategoryType,
+  findCategoryTypeByName,
+  getTransferTypeId,
+  listCategoryTypes,
+  renameCategoryType,
 } from '../../src/db/categoryTypes';
 import { createRule } from '../../src/categorize/rules';
 import { monthStats, ymOf } from '../../src/db/plans';
@@ -22,7 +37,9 @@ async function tx(categoryId: number | null, occurredAt: number, amount = 100) {
   const db = await getDb();
   const { lastInsertRowid } = await db.run(
     `INSERT INTO transactions (bank, kind, amount_minor, currency, category_id, category_source, occurred_at, raw_sms, sms_hash)
-      VALUES ('tbc', 'purchase', ?, 'GEL', ?, 'user', ?, '', ?)`, [amount, categoryId, occurredAt, `h${seq++}`]);
+      VALUES ('tbc', 'purchase', ?, 'GEL', ?, 'user', ?, '', ?)`,
+    [amount, categoryId, occurredAt, `h${seq++}`],
+  );
   return lastInsertRowid;
 }
 
@@ -31,11 +48,22 @@ beforeEach(() => freshDb());
 describe('types', () => {
   test('fresh DB has the transfer type with only "Между своими картами" (its seeded "Прочие" went: deposits are "Пополнение счёта"), and the system ones', async () => {
     const transfer = await getTransferTypeId();
-    expect(await listCategoryTypes()).toEqual([{ id: transfer, name: 'Переводы', is_transfer: 1, sort_order: 100, palette: null }]);
+    expect(await listCategoryTypes()).toEqual([
+      { id: transfer, name: 'Переводы', is_transfer: 1, sort_order: 100, palette: null },
+    ]);
     expect((await listCategories()).filter(isTransferCategory).map((c) => c.system)).toEqual(['own']);
-    expect((await listCategories()).filter((c) => c.system).map((c) => [categoryLabel(c), c.system]).sort()).toEqual([
-      ['💳 Пополнение счёта', 'topup'], ['🔁 Переводы: Между своими картами', 'own'], ['📺 Подписки', 'subs'],
-    ].sort());
+    expect(
+      (await listCategories())
+        .filter((c) => c.system)
+        .map((c) => [categoryLabel(c), c.system])
+        .sort(),
+    ).toEqual(
+      [
+        ['💳 Пополнение счёта', 'topup'],
+        ['🔁 Переводы: Между своими картами', 'own'],
+        ['📺 Подписки', 'subs'],
+      ].sort(),
+    );
   });
 
   test('label: emoji + type prefix', () => {
@@ -58,7 +86,10 @@ describe('types', () => {
   });
 
   test('the transfer type cannot be deleted', async () => {
-    await expect(deleteCategoryType((await getTransferTypeId())!)).rejects.toHaveProperty('message', expect.stringContaining('transfer'));
+    await expect(deleteCategoryType((await getTransferTypeId())!)).rejects.toHaveProperty(
+      'message',
+      expect.stringContaining('transfer'),
+    );
   });
 
   test('categories are listed by type order, untyped last', async () => {
@@ -94,7 +125,7 @@ describe('names', () => {
 });
 
 describe('moveTransactionsOutOfCategory (deleting a category step by step)', () => {
-  test('moved transactions take the new category, their merchants\' rules follow; others stay', async () => {
+  test("moved transactions take the new category, their merchants' rules follow; others stay", async () => {
     const db = await getDb();
     const a = await tx(1, at(2026, 9, 2));
     const b = await tx(1, at(2026, 9, 3));
@@ -115,12 +146,15 @@ describe('moveTransactionsOutOfCategory (deleting a category step by step)', () 
       { id: c, category_id: 1, category_source: 'user' },
     ]);
     const rules = await db.all('SELECT pattern, category_id FROM merchant_rules ORDER BY pattern');
-    expect(rules).toEqual([{ pattern: 'IKEA', category_id: 1 }, { pattern: 'SPAR', category_id: 2 }]);
+    expect(rules).toEqual([
+      { pattern: 'IKEA', category_id: 1 },
+      { pattern: 'SPAR', category_id: 2 },
+    ]);
   });
 });
 
 describe('deleteCategory', () => {
-  test('moves this month\'s transactions and rules to the target, past months keep the category', async () => {
+  test("moves this month's transactions and rules to the target, past months keep the category", async () => {
     const past = await tx(1, at(2026, 8));
     const current = await tx(1, at(2026, 9, 2));
     await createRule('exact', 'SPAR', 1);
@@ -137,7 +171,9 @@ describe('deleteCategory', () => {
     expect((await listCategories()).map((c) => c.id)).not.toContain(1);
     expect((await topCategories(100)).map((c) => c.id)).not.toContain(1);
     expect((await getCategory(1))!.deleted_at).not.toBeNull();
-    expect((await monthStats(2026, 8)).categories).toEqual([expect.objectContaining({ category_id: 1, name: 'Продукты', spent_minor: 100 })]);
+    expect((await monthStats(2026, 8)).categories).toEqual([
+      expect.objectContaining({ category_id: 1, name: 'Продукты', spent_minor: 100 }),
+    ]);
   });
 
   test('moved to another category, a rule-picked transaction keeps following its merchant, a hand-picked one stays hand-picked', async () => {
@@ -146,16 +182,25 @@ describe('deleteCategory', () => {
     const db = await getDb();
     await db.run("UPDATE transactions SET category_source = 'rule' WHERE id = ?", [byRule]);
     await deleteCategory(1, 2, NOW);
-    expect(await db.get('SELECT category_id, category_source FROM transactions WHERE id = ?', [byRule])).toEqual({ category_id: 2, category_source: 'rule' });
-    expect(await db.get('SELECT category_id, category_source FROM transactions WHERE id = ?', [byHand])).toEqual({ category_id: 2, category_source: 'user' });
+    expect(await db.get('SELECT category_id, category_source FROM transactions WHERE id = ?', [byRule])).toEqual({
+      category_id: 2,
+      category_source: 'rule',
+    });
+    expect(await db.get('SELECT category_id, category_source FROM transactions WHERE id = ?', [byHand])).toEqual({
+      category_id: 2,
+      category_source: 'user',
+    });
   });
 
-  test('without a target this month\'s transactions become uncategorized and rules are removed', async () => {
+  test("without a target this month's transactions become uncategorized and rules are removed", async () => {
     const current = await tx(1, at(2026, 9, 2));
     await createRule('exact', 'SPAR', 1);
     await deleteCategory(1, null, NOW);
     const db = await getDb();
-    expect(await db.get('SELECT category_id, category_source FROM transactions WHERE id = ?', [current])).toEqual({ category_id: null, category_source: null });
+    expect(await db.get('SELECT category_id, category_source FROM transactions WHERE id = ?', [current])).toEqual({
+      category_id: null,
+      category_source: null,
+    });
     expect(await db.get('SELECT * FROM merchant_rules')).toBeUndefined();
   });
 
@@ -185,7 +230,10 @@ test('stats are grouped by type: types first, then untyped, then uncategorized',
   await tx(null, at(2026, 9), 50);
   const s = await monthStats(2026, 9);
   expect(s.groups.map((g) => [g.title, g.spent_minor])).toEqual([
-    ['Хобби', 300], ['Переводы', 500], ['Без раздела', 200], ['Без категории', 50],
+    ['Хобби', 300],
+    ['Переводы', 500],
+    ['Без раздела', 200],
+    ['Без категории', 50],
   ]);
   expect(ymOf(2026, 9)).toBe(NOW);
 });
@@ -193,10 +241,13 @@ test('stats are grouped by type: types first, then untyped, then uncategorized',
 test('migration 4 types existing "Перевод…" categories and turns archived into deleted', async () => {
   const db = openDatabase(':memory:');
   await migrate(db, MIGRATIONS.slice(0, 3));
-  await db.run("INSERT INTO categories (name, emoji, is_archived) VALUES ('Перевод маме', '👩', 0), ('Старое', NULL, 1)");
+  await db.run(
+    "INSERT INTO categories (name, emoji, is_archived) VALUES ('Перевод маме', '👩', 0), ('Старое', NULL, 1)",
+  );
   await migrate(db);
   const rows = await db.all<{ name: string; type_id: number | null; deleted_at: number | null }>(
-    "SELECT name, type_id, deleted_at FROM categories WHERE name IN ('Перевод маме', 'Старое', 'Прочие') ORDER BY name");
+    "SELECT name, type_id, deleted_at FROM categories WHERE name IN ('Перевод маме', 'Старое', 'Прочие') ORDER BY name",
+  );
   // the seeded "Переводы" became "Прочие" there, and went with migration 27
   expect(rows).toEqual([
     { name: 'Перевод маме', type_id: 1, deleted_at: null },

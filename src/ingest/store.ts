@@ -47,7 +47,11 @@ const sameLocalDay = (a: Date, b: Date) =>
  * (TBC dates a late transfer the next day: "13/10/2026" came 12.10 at 19:30) — now: the receive
  * time, else the current one.
  */
-export function resolveOccurredAt(parsed: Pick<ParsedTx, 'occurred_at' | 'has_time'>, smsTimestampMs?: number, nowMs = Date.now()): number {
+export function resolveOccurredAt(
+  parsed: Pick<ParsedTx, 'occurred_at' | 'has_time'>,
+  smsTimestampMs?: number,
+  nowMs = Date.now(),
+): number {
   const received = smsTimestampMs ? new Date(smsTimestampMs) : null;
   if (parsed.occurred_at) {
     const fromText = new Date(parsed.occurred_at); // no zone -> local time
@@ -61,33 +65,58 @@ export function resolveOccurredAt(parsed: Pick<ParsedTx, 'occurred_at' | 'has_ti
 }
 
 /** Stores a parsed operation (unless its SMS / push twin or the same SMS is there), inside `db`'s transaction. */
-export async function store(sms: IncomingSms, parsed: ParsedTx, balance: { minor: number; currency: string } | null, db: Db): Promise<IngestResult> {
+export async function store(
+  sms: IncomingSms,
+  parsed: ParsedTx,
+  balance: { minor: number; currency: string } | null,
+  db: Db,
+): Promise<IngestResult> {
   const hash = sms.hash ?? smsHash(sms);
 
   // Only purchases / payments: a transfer or deposit "merchant" is a person (or nothing), the same person can
   // send money for different things, so those always ask for a category.
   const source = sms.source ?? 'sms';
   const occurredAt = resolveOccurredAt(parsed, sms.timestamp);
-  const rule = parsed.merchant_key && isRememberable(parsed.kind) ? await findCategoryForMerchant(parsed.merchant_key, db) : null;
+  const rule =
+    parsed.merchant_key && isRememberable(parsed.kind) ? await findCategoryForMerchant(parsed.merchant_key, db) : null;
   // its merchant's subscription, of its amount: "📺 Подписки" (a merchant of several categories — its other amounts aren't)
-  const sub = parsed.merchant_key && isRememberable(parsed.kind)
-    ? await subscriptionCategoryOf(parsed.merchant_key, parsed.amount_minor, parsed.currency, dateKey(occurredAt), db) : null;
+  const sub =
+    parsed.merchant_key && isRememberable(parsed.kind)
+      ? await subscriptionCategoryOf(parsed.merchant_key, parsed.amount_minor, parsed.currency, dateKey(occurredAt), db)
+      : null;
   // a refund is subtracted from its merchant's category right away (see refundCategory); settling it on the purchase is optional
   // a deposit: "Пополнение счёта" (money that came to the card); moved by hand when it was a person paying back
-  const categoryId = parsed.kind === 'refund' ? await refundCategory(parsed.merchant_key, occurredAt, db)
-    : parsed.kind === 'deposit' ? await topUpCategoryId(db)
-    : sub ?? rule?.category_id ?? null;
+  const categoryId =
+    parsed.kind === 'refund'
+      ? await refundCategory(parsed.merchant_key, occurredAt, db)
+      : parsed.kind === 'deposit'
+        ? await topUpCategoryId(db)
+        : (sub ?? rule?.category_id ?? null);
   // the bank may report one operation both by SMS and by push: keep the first
   const twin = await db.get<{ id: number; occurred_at: number }>(
     `SELECT id, occurred_at FROM transactions
       WHERE merchant_key IS ? AND occurred_at BETWEEN ? AND ?
         AND source != ? AND kind = ? AND amount_minor = ? AND currency = ? AND bank = ?
       LIMIT 1`,
-    [parsed.merchant_key || null, occurredAt - CROSS_SOURCE_WINDOW_S, occurredAt + CROSS_SOURCE_WINDOW_S,
-      source, parsed.kind, parsed.amount_minor, parsed.currency, parsed.bank]);
+    [
+      parsed.merchant_key || null,
+      occurredAt - CROSS_SOURCE_WINDOW_S,
+      occurredAt + CROSS_SOURCE_WINDOW_S,
+      source,
+      parsed.kind,
+      parsed.amount_minor,
+      parsed.currency,
+      parsed.bank,
+    ],
+  );
   if (twin) {
     // the push came first without a balance, the SMS has it
-    if (balance) await recordBalance({ minor: balance.minor, currency: balance.currency, at: twin.occurred_at, txId: twin.id }, db, parsed.bank);
+    if (balance)
+      await recordBalance(
+        { minor: balance.minor, currency: balance.currency, at: twin.occurred_at, txId: twin.id },
+        db,
+        parsed.bank,
+      );
     return { status: 'duplicate', txId: twin.id };
   }
 
@@ -110,18 +139,23 @@ export async function store(sms: IncomingSms, parsed: ParsedTx, balance: { minor
       sms.body,
       hash,
       source,
-    ]
+    ],
   );
   if (changes === 0) {
     const existing = await db.get<{ id: number }>('SELECT id FROM transactions WHERE sms_hash = ?', [hash]);
     return { status: 'duplicate', txId: existing!.id };
   }
   // the balance after this operation, as the bank reports it
-  if (balance) await recordBalance({ minor: balance.minor, currency: balance.currency, at: occurredAt, txId: lastInsertRowid }, db, parsed.bank);
+  if (balance)
+    await recordBalance(
+      { minor: balance.minor, currency: balance.currency, at: occurredAt, txId: lastInsertRowid },
+      db,
+      parsed.bank,
+    );
   // only a date: maybe a balance the bank reported already had it in (it came before that SMS)
   if (!parsed.has_time) await placeByBalances(lastInsertRowid, db);
-  if (categoryId && parsed.kind !== 'refund' && parsed.kind !== 'deposit') await incrementCategoryUsage(categoryId, 1, db);
+  if (categoryId && parsed.kind !== 'refund' && parsed.kind !== 'deposit')
+    await incrementCategoryUsage(categoryId, 1, db);
 
   return { status: 'inserted', txId: lastInsertRowid, categoryId, kind: parsed.kind };
 }
-

@@ -10,11 +10,28 @@ import { parseAmountInput } from '@/shared/lib/money';
 import { submitForm } from '@/shared/ui/form';
 import { toast, toastError } from '@/shared/ui/toast';
 
-export const KINDS = [['purchase', 'Расход'], ['deposit', 'Пополнение']] as const;
-type Kind = typeof KINDS[number][0];
-export type AddForm = { amount: string; kind: Kind; currency: Currency; description: string; date: DayKey; categoryId: number | null };
+export const KINDS = [
+  ['purchase', 'Расход'],
+  ['deposit', 'Пополнение'],
+] as const;
+type Kind = (typeof KINDS)[number][0];
+export type AddForm = {
+  amount: string;
+  kind: Kind;
+  currency: Currency;
+  description: string;
+  date: DayKey;
+  categoryId: number | null;
+};
 
-const empty = (): AddForm => ({ amount: '', kind: 'purchase', currency: 'GEL', description: '', date: dayKeyOf(new Date()), categoryId: null });
+const empty = (): AddForm => ({
+  amount: '',
+  kind: 'purchase',
+  currency: 'GEL',
+  description: '',
+  date: dayKeyOf(new Date()),
+  categoryId: null,
+});
 
 export function useAddForm(visible: boolean, onClose: () => void) {
   // a new operation: "Добавить" is always there (it creates one), the amount is checked on submit
@@ -29,13 +46,17 @@ export function useAddForm(visible: boolean, onClose: () => void) {
   const kind = useWatch({ control: form.control, name: 'kind' });
   useEffect(() => {
     let live = true;
-    topUpCategoryId().then((topUp) => {
-      if (!live || topUp === null) return;
-      const current = form.getValues('categoryId');
-      if (kind === 'deposit' && current === null) form.setValue('categoryId', topUp);
-      if (kind !== 'deposit' && current === topUp) form.setValue('categoryId', null);
-    }).catch((e) => console.error('top-up category failed', e));
-    return () => { live = false; };
+    topUpCategoryId()
+      .then((topUp) => {
+        if (!live || topUp === null) return;
+        const current = form.getValues('categoryId');
+        if (kind === 'deposit' && current === null) form.setValue('categoryId', topUp);
+        if (kind !== 'deposit' && current === topUp) form.setValue('categoryId', null);
+      })
+      .catch((e) => console.error('top-up category failed', e));
+    return () => {
+      live = false;
+    };
   }, [kind, form]);
 
   const save = submitForm(form, async ({ amount, kind: k, currency, description, date: day, categoryId }) => {
@@ -45,7 +66,11 @@ export function useAddForm(visible: boolean, onClose: () => void) {
       const at = parseDayKey(day);
       at.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), 0);
       await addTransaction({
-        amount_minor: parseAmountInput(amount)!, currency, kind: k, description, category_id: categoryId,
+        amount_minor: parseAmountInput(amount)!,
+        currency,
+        kind: k,
+        description,
+        category_id: categoryId,
         occurred_at: Math.floor(at.getTime() / 1000),
       });
       showLimitAlert(categoryId);

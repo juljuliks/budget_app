@@ -16,7 +16,15 @@ export function useOperationsRoute(resetFilters: () => void) {
   const { from } = params;
 
   function clearParams() {
-    tabNavigation.setParams({ from: undefined, category: undefined, query: undefined, range: undefined, kinds: undefined, sortOut: undefined, unanswered: undefined });
+    tabNavigation.setParams({
+      from: undefined,
+      category: undefined,
+      query: undefined,
+      range: undefined,
+      kinds: undefined,
+      sortOut: undefined,
+      unanswered: undefined,
+    });
     resetFilters();
   }
 
@@ -35,8 +43,20 @@ export function useOperationsRoute(resetFilters: () => void) {
 
 /** Opened with a filter (the stats: a category; a merchant's card: its name): only what was asked for is shown. */
 export function useIncomingFilters(
-  { category, query, range, kinds, unanswered, nonce }: {
-    category?: number | 'none'; query?: string; range?: Filter['range']; kinds?: string[]; unanswered?: boolean; nonce?: number;
+  {
+    category,
+    query,
+    range,
+    kinds,
+    unanswered,
+    nonce,
+  }: {
+    category?: number | 'none';
+    query?: string;
+    range?: Filter['range'];
+    kinds?: string[];
+    unanswered?: boolean;
+    nonce?: number;
   },
   setOnly: (f: Partial<Filter>) => void,
   dropSortOut: () => void,
@@ -44,7 +64,12 @@ export function useIncomingFilters(
   useEffect(() => {
     if (category === undefined && !unanswered) return;
     dropSortOut(); // another way in ends a sort-out left going on
-    setOnly({ categories: category === undefined ? [] : [category], range: range ?? null, kinds: kinds ?? [], unanswered: !!unanswered });
+    setOnly({
+      categories: category === undefined ? [] : [category],
+      range: range ?? null,
+      kinds: kinds ?? [],
+      unanswered: !!unanswered,
+    });
   }, [category, range, kinds, unanswered, nonce, setOnly, dropSortOut]);
   // its name in the search field, as if typed
   useEffect(() => {

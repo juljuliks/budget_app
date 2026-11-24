@@ -13,25 +13,32 @@ const SECONDS_TAIL = /\s*:\s*\d{2}$/;
  */
 function merchantWithoutSeconds(raw: string, sms: string): { name: string; key: string } {
   const stripped = raw.replace(SECONDS_TAIL, '').trim();
-  const parsedName = (sms ? parseTbc(sms)?.raw_merchant ?? '' : '').trim();
+  const parsedName = (sms ? (parseTbc(sms)?.raw_merchant ?? '') : '').trim();
   const name = parsedName && normalizeMerchant(parsedName) === normalizeMerchant(stripped) ? parsedName : stripped;
   return { name, key: normalizeMerchant(name) };
 }
 
 /** A category remembered for the split shop follows the joined one; the joined one's own wins. */
 async function moveRule(db: Db, from: string, to: string) {
-  const rules = await db.all<{ match_type: string }>(
-    'SELECT match_type FROM merchant_rules WHERE pattern = ?', [from]);
+  const rules = await db.all<{ match_type: string }>('SELECT match_type FROM merchant_rules WHERE pattern = ?', [from]);
   for (const rule of rules) {
-    const taken = await db.get('SELECT 1 FROM merchant_rules WHERE match_type = ? AND pattern = ?', [rule.match_type, to]);
+    const taken = await db.get('SELECT 1 FROM merchant_rules WHERE match_type = ? AND pattern = ?', [
+      rule.match_type,
+      to,
+    ]);
     if (taken) await db.run('DELETE FROM merchant_rules WHERE match_type = ? AND pattern = ?', [rule.match_type, from]);
-    else await db.run('UPDATE merchant_rules SET pattern = ? WHERE match_type = ? AND pattern = ?', [to, rule.match_type, from]);
+    else
+      await db.run('UPDATE merchant_rules SET pattern = ? WHERE match_type = ? AND pattern = ?', [
+        to,
+        rule.match_type,
+        from,
+      ]);
   }
 }
 
 /** Its "разные категории" mark follows too, when the joined shop isn't already marked. */
 async function moveMixed(db: Db, from: string, to: string) {
-  if (!await db.get('SELECT 1 FROM mixed_merchants WHERE merchant_key = ?', [from])) return;
+  if (!(await db.get('SELECT 1 FROM mixed_merchants WHERE merchant_key = ?', [from]))) return;
   if (await db.get('SELECT 1 FROM mixed_merchants WHERE merchant_key = ?', [to])) {
     await db.run('DELETE FROM mixed_merchants WHERE merchant_key = ?', [from]);
   } else {
@@ -42,18 +49,32 @@ async function moveMixed(db: Db, from: string, to: string) {
 /** Its category list follows. A list already there keeps its order; the rest are appended. */
 async function moveCategories(db: Db, from: string, to: string) {
   const rows = await db.all<{ category_id: number }>(
-    'SELECT category_id FROM merchant_categories WHERE merchant_key = ? ORDER BY position, category_id', [from]);
+    'SELECT category_id FROM merchant_categories WHERE merchant_key = ? ORDER BY position, category_id',
+    [from],
+  );
   if (rows.length === 0) return;
-  const taken = new Set((await db.all<{ category_id: number }>(
-    'SELECT category_id FROM merchant_categories WHERE merchant_key = ?', [to])).map((r) => r.category_id));
+  const taken = new Set(
+    (
+      await db.all<{ category_id: number }>('SELECT category_id FROM merchant_categories WHERE merchant_key = ?', [to])
+    ).map((r) => r.category_id),
+  );
   if (taken.size === 0) {
     await db.run('UPDATE merchant_categories SET merchant_key = ? WHERE merchant_key = ?', [to, from]);
     return;
   }
-  let pos = (await db.get<{ m: number | null }>('SELECT max(position) AS m FROM merchant_categories WHERE merchant_key = ?', [to]))?.m ?? -1;
+  let pos =
+    (
+      await db.get<{ m: number | null }>('SELECT max(position) AS m FROM merchant_categories WHERE merchant_key = ?', [
+        to,
+      ])
+    )?.m ?? -1;
   for (const r of rows) {
     if (taken.has(r.category_id)) continue;
-    await db.run('INSERT INTO merchant_categories (merchant_key, category_id, position) VALUES (?, ?, ?)', [to, r.category_id, ++pos]);
+    await db.run('INSERT INTO merchant_categories (merchant_key, category_id, position) VALUES (?, ?, ?)', [
+      to,
+      r.category_id,
+      ++pos,
+    ]);
   }
   await db.run('DELETE FROM merchant_categories WHERE merchant_key = ?', [from]);
 }
@@ -66,7 +87,7 @@ async function movePayment(db: Db, from: string, to: string) {
 
 /** Rules, lists and payments of a shop that no longer has operations move onto the one it joined. */
 async function retarget(db: Db, from: string, to: string) {
-  if (!to || await db.get('SELECT 1 FROM transactions WHERE merchant_key = ?', [from])) return;
+  if (!to || (await db.get('SELECT 1 FROM transactions WHERE merchant_key = ?', [from]))) return;
   await moveRule(db, from, to);
   await moveMixed(db, from, to);
   await moveCategories(db, from, to);
@@ -80,14 +101,18 @@ async function retarget(db: Db, from: string, to: string) {
 async function glueSecondMerchants(db: Db) {
   const rows = await db.all<{ id: number; raw_sms: string; raw_merchant: string; merchant_key: string | null }>(
     `SELECT id, raw_sms, raw_merchant, merchant_key FROM transactions
-      WHERE raw_merchant GLOB '*:[0-9][0-9]' OR raw_merchant GLOB '*: [0-9][0-9]'`);
+      WHERE raw_merchant GLOB '*:[0-9][0-9]' OR raw_merchant GLOB '*: [0-9][0-9]'`,
+  );
   const joined = new Map<string, string>();
   for (const r of rows) {
     if (!SECONDS_TAIL.test(r.raw_merchant)) continue;
     const { name, key } = merchantWithoutSeconds(r.raw_merchant, r.raw_sms ?? '');
     if (name === r.raw_merchant && key === (r.merchant_key ?? '')) continue;
-    await db.run('UPDATE transactions SET raw_merchant = ?, merchant_key = ?, search_text = NULL WHERE id = ?',
-      [name || null, key || null, r.id]);
+    await db.run('UPDATE transactions SET raw_merchant = ?, merchant_key = ?, search_text = NULL WHERE id = ?', [
+      name || null,
+      key || null,
+      r.id,
+    ]);
     if (r.merchant_key && r.merchant_key !== key) joined.set(r.merchant_key, key);
   }
   for (const [from, to] of joined) await retarget(db, from, to);
@@ -103,11 +128,27 @@ async function lockedMaxAgain(db: Db) {
   const p2 = (n: number) => String(n).padStart(2, '0');
   const ym = `${now.getFullYear()}-${p2(now.getMonth() + 1)}`;
   const today = `${ym}-${p2(now.getDate())}`;
-  const rate = async (currency: string) => (currency === 'GEL' ? 1 : (await db.get<{ g: number }>(
-    'SELECT gel_per_unit AS g FROM fx_rates WHERE currency = ? AND date <= ? ORDER BY date DESC LIMIT 1', [currency, today]))?.g ?? null);
-  const months = await db.all<{ ym: string; budget: number; currency: string; pct: number; own: number | null; locked: number }>(
+  const rate = async (currency: string) =>
+    currency === 'GEL'
+      ? 1
+      : ((
+          await db.get<{ g: number }>(
+            'SELECT gel_per_unit AS g FROM fx_rates WHERE currency = ? AND date <= ? ORDER BY date DESC LIMIT 1',
+            [currency, today],
+          )
+        )?.g ?? null);
+  const months = await db.all<{
+    ym: string;
+    budget: number;
+    currency: string;
+    pct: number;
+    own: number | null;
+    locked: number;
+  }>(
     `SELECT ym, budget_minor AS budget, budget_currency AS currency, unplanned_pct AS pct, unplanned_minor AS own, locked_minor AS locked
-      FROM plan_months WHERE ym >= ? AND budget_minor IS NOT NULL AND locked_minor > 0 AND locked_is_max = 0`, [ym]);
+      FROM plan_months WHERE ym >= ? AND budget_minor IS NOT NULL AND locked_minor > 0 AND locked_is_max = 0`,
+    [ym],
+  );
   for (const m of months) {
     const to = await rate(m.currency);
     if (!to) continue;
@@ -116,16 +157,24 @@ async function lockedMaxAgain(db: Db) {
       return from === null ? null : (minor * from) / to;
     };
     let planned = 0;
-    for (const i of await db.all<{ v: number; c: string }>('SELECT limit_minor AS v, currency AS c FROM plan_items WHERE ym = ?', [m.ym])) {
+    for (const i of await db.all<{ v: number; c: string }>(
+      'SELECT limit_minor AS v, currency AS c FROM plan_items WHERE ym = ?',
+      [m.ym],
+    )) {
       const v = await inBudget(i.v, i.c);
-      if (v === null) { planned = NaN; break; }
+      if (v === null) {
+        planned = NaN;
+        break;
+      }
       planned += v;
     }
     const [y, mo] = m.ym.split('-').map(Number);
     const before = mo === 1 ? `${y - 1}-12` : `${y}-${p2(mo - 1)}`;
     const carry = await db.get<{ debt: number; plus: number; c: string }>(
       `SELECT carry_debt_minor AS debt, carry_plus_minor AS plus, carry_currency AS c FROM month_closes
-        WHERE ym = ? AND closed_at IS NOT NULL AND carry_currency IS NOT NULL`, [before]);
+        WHERE ym = ? AND closed_at IS NOT NULL AND carry_currency IS NOT NULL`,
+      [before],
+    );
     const carryDelta = carry ? await inBudget(carry.plus - carry.debt, carry.c) : 0;
     const share = m.own ?? m.budget - Math.round((m.budget * (100 - m.pct)) / 100);
     const free = m.budget - share - planned + (carryDelta ?? NaN);
@@ -143,8 +192,16 @@ async function lockedMaxAgain(db: Db) {
 async function followingMonths(db: Db) {
   const now = new Date();
   const nowYm = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  type Month = { ym: string; budget_minor: number | null; budget_currency: string; unplanned_pct: number; to_savings: number; locked_minor: number;
-    unplanned_minor: number | null; locked_is_max: number };
+  type Month = {
+    ym: string;
+    budget_minor: number | null;
+    budget_currency: string;
+    unplanned_pct: number;
+    to_savings: number;
+    locked_minor: number;
+    unplanned_minor: number | null;
+    locked_is_max: number;
+  };
   const all = await db.all<Month>('SELECT * FROM plan_months ORDER BY ym');
   for (let i = 1; i < all.length; i++) {
     const [before, m] = [all[i - 1], all[i]];
@@ -155,7 +212,17 @@ async function followingMonths(db: Db) {
       await db.run(
         `UPDATE plan_months SET budget_minor = ?, budget_currency = ?, unplanned_pct = ?, to_savings = ?, locked_minor = ?, unplanned_minor = ?,
           locked_is_max = ? WHERE ym = ?`,
-        [m.budget_minor, m.budget_currency, m.unplanned_pct, m.to_savings, m.locked_minor, m.unplanned_minor, m.locked_is_max, m.ym]);
+        [
+          m.budget_minor,
+          m.budget_currency,
+          m.unplanned_pct,
+          m.to_savings,
+          m.locked_minor,
+          m.unplanned_minor,
+          m.locked_is_max,
+          m.ym,
+        ],
+      );
     } else if (m.budget_minor === before.budget_minor && m.budget_currency !== before.budget_currency) {
       m.budget_currency = before.budget_currency;
       await db.run('UPDATE plan_months SET budget_currency = ? WHERE ym = ?', [m.budget_currency, m.ym]);
@@ -175,19 +242,39 @@ async function subscriptionsSystem(db: Db) {
   const rows = await db.all<{ id: number; name: string; by_merchant: number; n: number }>(
     `SELECT c.id, c.name, c.by_merchant, (SELECT count(*) FROM recurring_payments r
         WHERE r.category_id = c.id AND r.merchant_key IS NOT NULL AND r.deleted_at IS NULL) AS n
-      FROM categories c WHERE c.deleted_at IS NULL AND (c.system IS NULL OR c.system = 'subs') ORDER BY c.id`);
+      FROM categories c WHERE c.deleted_at IS NULL AND (c.system IS NULL OR c.system = 'subs') ORDER BY c.id`,
+  );
   // by name in JS: SQLite's lower() leaves Cyrillic as it is
   const named = (r: { name: string }) => r.name.trim().toLowerCase() === 'подписки';
   const on = rows.filter((r) => r.by_merchant);
-  const target = [...on].sort((a, b) => b.n - a.n || Number(named(b)) - Number(named(a)) || a.id - b.id)[0] ?? rows.find(named);
+  const target =
+    [...on].sort((a, b) => b.n - a.n || Number(named(b)) - Number(named(a)) || a.id - b.id)[0] ?? rows.find(named);
   let id = target?.id;
-  if (id === undefined) id = (await db.run("INSERT INTO categories (name, emoji, system, sort_order, by_merchant) VALUES ('Подписки', '📺', 'subs', 7, 1)")).lastInsertRowid;
+  if (id === undefined)
+    id = (
+      await db.run(
+        "INSERT INTO categories (name, emoji, system, sort_order, by_merchant) VALUES ('Подписки', '📺', 'subs', 7, 1)",
+      )
+    ).lastInsertRowid;
   await db.run("UPDATE categories SET system = 'subs', by_merchant = 1, impulse = 0 WHERE id = ?", [id]);
   for (const o of on.filter((r) => r.id !== id)) {
-    const keys = await db.all<{ k: string }>('SELECT merchant_key AS k FROM recurring_payments WHERE category_id = ? AND merchant_key IS NOT NULL AND deleted_at IS NULL', [o.id]);
-    await db.run('UPDATE recurring_payments SET category_id = ? WHERE category_id = ? AND merchant_key IS NOT NULL', [id, o.id]);
-    for (const { k } of keys) await db.run("UPDATE merchant_rules SET category_id = ? WHERE match_type = 'exact' AND pattern = ? AND category_id = ?", [id, k, o.id]);
-    await db.run("UPDATE plan_items SET kind = 'fixed' WHERE category_id = ? AND ym >= ? AND kind = 'subs'", [o.id, ym]);
+    const keys = await db.all<{ k: string }>(
+      'SELECT merchant_key AS k FROM recurring_payments WHERE category_id = ? AND merchant_key IS NOT NULL AND deleted_at IS NULL',
+      [o.id],
+    );
+    await db.run('UPDATE recurring_payments SET category_id = ? WHERE category_id = ? AND merchant_key IS NOT NULL', [
+      id,
+      o.id,
+    ]);
+    for (const { k } of keys)
+      await db.run(
+        "UPDATE merchant_rules SET category_id = ? WHERE match_type = 'exact' AND pattern = ? AND category_id = ?",
+        [id, k, o.id],
+      );
+    await db.run("UPDATE plan_items SET kind = 'fixed' WHERE category_id = ? AND ym >= ? AND kind = 'subs'", [
+      o.id,
+      ym,
+    ]);
     await db.run('UPDATE categories SET by_merchant = 0 WHERE id = ?', [o.id]);
   }
   await db.run('UPDATE funds SET closed_ym = ? WHERE category_id = ? AND closed_ym IS NULL', [ym, id]);

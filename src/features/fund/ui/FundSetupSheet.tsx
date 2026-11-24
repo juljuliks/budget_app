@@ -37,27 +37,55 @@ export default function FundSetupSheet({ categoryId, label, onClose, onSaved }: 
   const [estimate, setEstimate] = useState<number | null>(null);
   useEffect(() => {
     if (categoryId === null) return;
-    getFund(categoryId).then((f) => {
-      const open = f && !f.closed_ym ? f : null;
-      setDraft(open ? { target: toInputValue(open.target_minor), currency: open.currency, due: open.due, start: open.start_minor ? toInputValue(open.start_minor) : '' }
-        : { target: '', currency: shown, due: null, start: '' });
-    }).catch((e) => console.error('load fund failed', e));
+    getFund(categoryId)
+      .then((f) => {
+        const open = f && !f.closed_ym ? f : null;
+        setDraft(
+          open
+            ? {
+                target: toInputValue(open.target_minor),
+                currency: open.currency,
+                due: open.due,
+                start: open.start_minor ? toInputValue(open.start_minor) : '',
+              }
+            : { target: '', currency: shown, due: null, start: '' },
+        );
+      })
+      .catch((e) => console.error('load fund failed', e));
   }, [categoryId, shown]);
   const target = parseAmountOrZero(draft.target);
   const start = parseAmountOrZero(draft.start) ?? 0;
   const ym = currentYm();
   useEffect(() => {
-    if (categoryId === null || !target || !draft.due) { setEstimate(null); return; }
+    if (categoryId === null || !target || !draft.due) {
+      setEstimate(null);
+      return;
+    }
     let live = true;
-    fundContribution(ym, categoryId, { target_minor: target, currency: draft.currency, due: draft.due, start_minor: start })
-      .then((c) => { if (live) setEstimate(c); }).catch((e) => console.error('fund contribution failed', e));
-    return () => { live = false; };
+    fundContribution(ym, categoryId, {
+      target_minor: target,
+      currency: draft.currency,
+      due: draft.due,
+      start_minor: start,
+    })
+      .then((c) => {
+        if (live) setEstimate(c);
+      })
+      .catch((e) => console.error('fund contribution failed', e));
+    return () => {
+      live = false;
+    };
   }, [target, start, draft.due, draft.currency, categoryId, ym]);
   const count = draft.due ? monthsBetween(ym, draft.due.slice(0, 7)) : 0;
   const set = (p: Partial<Draft>) => setDraft((d) => ({ ...d, ...p }));
   const save = () => {
     if (categoryId === null || !target || !draft.due) return;
-    saveCategoryFund(categoryId, label, { target_minor: target, currency: draft.currency, due: draft.due, start_minor: start }, onSaved);
+    saveCategoryFund(
+      categoryId,
+      label,
+      { target_minor: target, currency: draft.currency, due: draft.due, start_minor: start },
+      onSaved,
+    );
   };
   return (
     <BottomSheet visible={categoryId !== null} onClose={onClose} title={FUND_SWITCH}>
@@ -66,23 +94,47 @@ export default function FundSetupSheet({ categoryId, label, onClose, onSaved }: 
         <Text style={formStyles.label}>Сколько накопить</Text>
         <View style={styles.amountRow}>
           <TextInput
-            style={[formStyles.input, styles.amount]} value={draft.target} onChangeText={(t) => set({ target: t })} placeholder="0.00"
-            placeholderTextColor={colors.muted} keyboardType="decimal-pad" maxLength={12} accessibilityLabel="Сколько накопить"
+            style={[formStyles.input, styles.amount]}
+            value={draft.target}
+            onChangeText={(t) => set({ target: t })}
+            placeholder="0.00"
+            placeholderTextColor={colors.muted}
+            keyboardType="decimal-pad"
+            maxLength={12}
+            accessibilityLabel="Сколько накопить"
           />
           <CurrencyButton value={draft.currency} onChange={(c) => set({ currency: c })} />
         </View>
         <DateField
-          label="К какой дате" value={draft.due} format={dayTitle} suffix={draft.due && count ? ` · через ${months(count)}` : null}
-          sheetTitle="К какой дате накопить" minDay={dayKeyOf(new Date())} onChange={(d) => set({ due: d })}
+          label="К какой дате"
+          value={draft.due}
+          format={dayTitle}
+          suffix={draft.due && count ? ` · через ${months(count)}` : null}
+          sheetTitle="К какой дате накопить"
+          minDay={dayKeyOf(new Date())}
+          onChange={(d) => set({ due: d })}
         />
         <Text style={formStyles.label}>Уже отложено (необязательно)</Text>
         <TextInput
-          style={formStyles.input} value={draft.start} onChangeText={(t) => set({ start: t })} placeholder="0.00"
-          placeholderTextColor={colors.muted} keyboardType="decimal-pad" maxLength={12} accessibilityLabel="Уже отложено"
+          style={formStyles.input}
+          value={draft.start}
+          onChangeText={(t) => set({ start: t })}
+          placeholder="0.00"
+          placeholderTextColor={colors.muted}
+          keyboardType="decimal-pad"
+          maxLength={12}
+          accessibilityLabel="Уже отложено"
         />
         <View style={styles.plate}>
-          {estimate !== null ? <Text style={styles.plateTitle}>{`${formatWithCurrency(estimate, draft.currency)} в месяц · ${months(count)}`}</Text>
-            : <Text style={[styles.plateTitle, styles.muted]}>{draft.due ? 'Введите, сколько накопить' : 'Выберите дату — посчитаем взнос в месяц'}</Text>}
+          {estimate !== null ? (
+            <Text
+              style={styles.plateTitle}
+            >{`${formatWithCurrency(estimate, draft.currency)} в месяц · ${months(count)}`}</Text>
+          ) : (
+            <Text style={[styles.plateTitle, styles.muted]}>
+              {draft.due ? 'Введите, сколько накопить' : 'Выберите дату — посчитаем взнос в месяц'}
+            </Text>
+          )}
         </View>
         <SheetActions submit={{ title: SAVE_FUND, onPress: save, disabled: !target || !draft.due }} />
       </SheetScrollView>

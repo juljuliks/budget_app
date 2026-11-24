@@ -1,24 +1,31 @@
 // Integration: headless SMS task -> DB insert -> notification -> action press -> category + rule.
 const displayNotification = jest.fn();
 const cancelNotification = jest.fn();
-jest.mock('@notifee/react-native', () => ({
-  __esModule: true,
-  default: {
-    displayNotification: (...a: any[]) => displayNotification(...a),
-    cancelNotification: (...a: any[]) => cancelNotification(...a),
-    createChannel: jest.fn(),
-    onBackgroundEvent: jest.fn(),
-    // the month's report on the 1st (scheduled after every new operation)
-    createTriggerNotification: jest.fn(),
-    cancelTriggerNotification: jest.fn(),
-  },
-  TriggerType: { TIMESTAMP: 0 },
-  AndroidImportance: { HIGH: 4 },
-  EventType: { ACTION_PRESS: 2 },
-}), { virtual: true });
+jest.mock(
+  '@notifee/react-native',
+  () => ({
+    __esModule: true,
+    default: {
+      displayNotification: (...a: any[]) => displayNotification(...a),
+      cancelNotification: (...a: any[]) => cancelNotification(...a),
+      createChannel: jest.fn(),
+      onBackgroundEvent: jest.fn(),
+      // the month's report on the 1st (scheduled after every new operation)
+      createTriggerNotification: jest.fn(),
+      cancelTriggerNotification: jest.fn(),
+    },
+    TriggerType: { TIMESTAMP: 0 },
+    AndroidImportance: { HIGH: 4 },
+    EventType: { ACTION_PRESS: 2 },
+  }),
+  { virtual: true },
+);
 // notification actions open pages (an operation)
 const openTransaction = jest.fn();
-jest.mock('../../src/shared/navigation/navigation', () => ({ navigateWhenReady: jest.fn(), openTransaction: (id: number) => openTransaction(id) }));
+jest.mock('../../src/shared/navigation/navigation', () => ({
+  navigateWhenReady: jest.fn(),
+  openTransaction: (id: number) => openTransaction(id),
+}));
 // "Скрывать суммы в уведомлениях" is native (react-native isn't loaded here): off
 jest.mock('../../src/native/appLock', () => ({ hideNotificationAmounts: async () => false }));
 
@@ -31,7 +38,11 @@ import { getTransferTypeId } from '../../src/db/categoryTypes';
 import { getDb } from '../../src/db';
 import { freshDb } from '../helpers';
 
-const SPAR_1 = { sender: 'TBC SMS', body: '12.50GEL\n(*XXXX)\nSPAR\nBalance: 100.00GEL\n28/09/26 14:00', timestamp: 1759060800000 };
+const SPAR_1 = {
+  sender: 'TBC SMS',
+  body: '12.50GEL\n(*XXXX)\nSPAR\nBalance: 100.00GEL\n28/09/26 14:00',
+  timestamp: 1759060800000,
+};
 const SPAR_2 = { ...SPAR_1, body: SPAR_1.body.replace('12.50', '7.00'), timestamp: 1759064400000 };
 
 const tx = async (sql: string, params: any[] = []) => (await getDb()).get(sql, params);
@@ -74,12 +85,15 @@ test('non-transaction SMS is ignored', async () => {
 test('merchant rule categorizes on arrival, no notification', async () => {
   await createRule('prefix', 'SP', 3);
   await SmsBackgroundTask(SPAR_1);
-  expect(await tx('SELECT category_id, category_source FROM transactions')).toEqual({ category_id: 3, category_source: 'rule' });
+  expect(await tx('SELECT category_id, category_source FROM transactions')).toEqual({
+    category_id: 3,
+    category_source: 'rule',
+  });
   expect((await tx('SELECT usage_count FROM category_usage WHERE category_id = 3')).usage_count).toBe(1);
   expect(displayNotification).not.toHaveBeenCalled();
 });
 
-test('an SMS that brings its merchant\'s category over the month\'s plan: a limit notification; tapping it opens the stats', async () => {
+test("an SMS that brings its merchant's category over the month's plan: a limit notification; tapping it opens the stats", async () => {
   const { currentYm, setPlanAmount } = require('../../src/db/plans');
   const { navigateWhenReady } = require('../../src/shared/navigation/navigation');
   const d = new Date(Date.now() - 60_000);
@@ -87,7 +101,11 @@ test('an SMS that brings its merchant\'s category over the month\'s plan: a limi
   const when = `${p2(d.getDate())}/${p2(d.getMonth() + 1)}/${String(d.getFullYear()).slice(2)} ${p2(d.getHours())}:${p2(d.getMinutes())}`;
   await setPlanAmount(currentYm(), 3, 1000, 'limit', 'GEL', 'month');
   await createRule('prefix', 'SP', 3);
-  await SmsBackgroundTask({ sender: 'TBC SMS', body: `12.50GEL\n(*XXXX)\nSPAR\nBalance: 100.00GEL\n${when}`, timestamp: d.getTime() });
+  await SmsBackgroundTask({
+    sender: 'TBC SMS',
+    body: `12.50GEL\n(*XXXX)\nSPAR\nBalance: 100.00GEL\n${when}`,
+    timestamp: d.getTime(),
+  });
 
   expect(displayNotification).toHaveBeenCalledTimes(1);
   const n = displayNotification.mock.calls[0][0];
@@ -112,7 +130,9 @@ test('picking a suggestion assigns the category, creates a rule and backfills sa
     { category_id: 2, category_source: 'rule' },
     { category_id: 2, category_source: 'rule' },
   ]);
-  expect(await tx("SELECT category_id FROM merchant_rules WHERE match_type = 'exact' AND pattern = 'SPAR'")).toEqual({ category_id: 2 });
+  expect(await tx("SELECT category_id FROM merchant_rules WHERE match_type = 'exact' AND pattern = 'SPAR'")).toEqual({
+    category_id: 2,
+  });
   expect((await tx('SELECT usage_count FROM category_usage WHERE category_id = 2')).usage_count).toBe(1);
   expect(cancelNotification).toHaveBeenCalledWith(first.id);
 
@@ -186,7 +206,11 @@ test('an SMS and a push of one purchase arriving together: stored once (the seco
 });
 
 test('a refund without a category: just news (no buttons), tapping it opens the operation', async () => {
-  await SmsBackgroundTask({ sender: 'TBC SMS', body: 'A refund of 94.78 GEL has been initiated by TEMU.COM to your MC GOLD (*1834). The amount will be credited to your account within 2–5 days.', timestamp: 1 });
+  await SmsBackgroundTask({
+    sender: 'TBC SMS',
+    body: 'A refund of 94.78 GEL has been initiated by TEMU.COM to your MC GOLD (*1834). The amount will be credited to your account within 2–5 days.',
+    timestamp: 1,
+  });
   const n = displayNotification.mock.calls[0][0];
   expect(n.title).toBe('Возврат — 94.78\u00a0₾');
   expect(n.body).toBe('TEMU.COM · без категории');
@@ -201,37 +225,54 @@ test('the merchant has a category: another one for this transaction only leaves 
   const id = (await tx('SELECT id FROM transactions')).id;
   await assignCategory(id, 2, 'only');
   expect(await tx('SELECT pattern, category_id FROM merchant_rules')).toEqual({ pattern: 'SPAR', category_id: 3 });
-  expect(await tx('SELECT category_id, category_source FROM transactions')).toEqual({ category_id: 2, category_source: 'user' });
+  expect(await tx('SELECT category_id, category_source FROM transactions')).toEqual({
+    category_id: 2,
+    category_source: 'user',
+  });
 });
 
-test('without a choice the first category becomes the merchant\'s, a later different one is for the transaction only', async () => {
+test("without a choice the first category becomes the merchant's, a later different one is for the transaction only", async () => {
   await SmsBackgroundTask(SPAR_1);
   await SmsBackgroundTask(SPAR_2);
-  const [a, b] = (await (await getDb()).all<{ id: number }>('SELECT id FROM transactions ORDER BY id')).map((r) => r.id);
+  const [a, b] = (await (await getDb()).all<{ id: number }>('SELECT id FROM transactions ORDER BY id')).map(
+    (r) => r.id,
+  );
   await assignCategory(a, 3); // e.g. a notification button: SPAR had no category
   expect(await tx('SELECT category_id FROM merchant_rules')).toEqual({ category_id: 3 });
   // the other SPAR one followed the new rule
-  expect(await tx('SELECT category_id, category_source FROM transactions WHERE id = ?', [b])).toEqual({ category_id: 3, category_source: 'rule' });
+  expect(await tx('SELECT category_id, category_source FROM transactions WHERE id = ?', [b])).toEqual({
+    category_id: 3,
+    category_source: 'rule',
+  });
   await assignCategory(b, 2);
   expect(await tx('SELECT category_id FROM merchant_rules')).toEqual({ category_id: 3 });
 });
 
-test('preview of making a category the merchant\'s: count and sum of what changes; saving changes them', async () => {
+test("preview of making a category the merchant's: count and sum of what changes; saving changes them", async () => {
   await createRule('exact', 'SPAR', 3);
   await SmsBackgroundTask(SPAR_1); // 12.50, by the rule
   await SmsBackgroundTask(SPAR_2); // 7.00, by the rule
   await SmsBackgroundTask({ ...SPAR_1, body: SPAR_1.body.replace('12.50', '1.00'), timestamp: SPAR_1.timestamp + 10 });
-  const [a, b, manual] = (await (await getDb()).all<{ id: number }>('SELECT id FROM transactions ORDER BY id')).map((r) => r.id);
+  const [a, b, manual] = (await (await getDb()).all<{ id: number }>('SELECT id FROM transactions ORDER BY id')).map(
+    (r) => r.id,
+  );
   await assignCategory(manual, 4, 'only'); // a manual choice: saving for the merchant won't touch it
   expect(await merchantChangePreview(a, 3)).toBeNull(); // already the merchant's category
   expect(await merchantChangePreview(a, null)).toBeNull();
   expect(await merchantChangePreview(a, 2)).toEqual({
-    merchant: 'SPAR', fromCategoryId: 3, count: 2, totals: [{ currency: 'GEL', amount_minor: 1950 }],
+    merchant: 'SPAR',
+    fromCategoryId: 3,
+    count: 2,
+    totals: [{ currency: 'GEL', amount_minor: 1950 }],
   });
   await assignCategory(a, 2, 'merchant');
   expect(await tx('SELECT category_id FROM merchant_rules')).toEqual({ category_id: 2 });
   const rows = await (await getDb()).all('SELECT id, category_id FROM transactions ORDER BY id');
-  expect(rows).toEqual([{ id: a, category_id: 2 }, { id: b, category_id: 2 }, { id: manual, category_id: 4 }]);
+  expect(rows).toEqual([
+    { id: a, category_id: 2 },
+    { id: b, category_id: 2 },
+    { id: manual, category_id: 4 },
+  ]);
 });
 
 test('a merchant rule never categorizes a money transfer: every transfer asks for a category', async () => {
@@ -255,7 +296,9 @@ test('picking a category for a money transfer creates no merchant rule', async (
   const db = await getDb();
   expect(await db.get('SELECT * FROM merchant_rules')).toBeUndefined();
   // the other transfer to the same person stays uncategorized
-  expect((await db.all('SELECT category_id FROM transactions ORDER BY id')).map((r) => r.category_id === null)).toEqual([false, true]);
+  expect((await db.all('SELECT category_id FROM transactions ORDER BY id')).map((r) => r.category_id === null)).toEqual(
+    [false, true],
+  );
 });
 
 test('money transfer with no transfer categories still offers "new category"', async () => {

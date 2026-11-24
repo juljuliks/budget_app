@@ -4,7 +4,15 @@ import { SearchIcon } from './icons';
 import { colors } from '../theme/theme';
 
 /** The text search: a field with ✕ to clear it. */
-export default function SearchBar({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
+export default function SearchBar({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+}) {
   return (
     <View style={styles.search}>
       <SearchIcon color={colors.muted} />
@@ -28,8 +36,12 @@ export default function SearchBar({ value, onChange, placeholder }: { value: str
 
 const styles = StyleSheet.create({
   search: {
-    flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.surface,
-    borderRadius: 10, paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.surface,
+    borderRadius: 10,
+    paddingHorizontal: 12,
   },
   input: { flex: 1, fontSize: 16, color: colors.text, paddingVertical: 8 },
   clear: { fontSize: 16, color: colors.muted },

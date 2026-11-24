@@ -13,7 +13,14 @@ export default function KindSheet({ visible, tx, onClose }: Props) {
   return (
     <BottomSheet visible={visible} onClose={onClose} title="Тип операции">
       <View style={styles.content}>
-        <RadioGroup options={KIND_CHOICES} value={tx.kind as IncomeKind} onChange={(k) => { onClose(); pickKind(tx, k); }} />
+        <RadioGroup
+          options={KIND_CHOICES}
+          value={tx.kind as IncomeKind}
+          onChange={(k) => {
+            onClose();
+            pickKind(tx, k);
+          }}
+        />
       </View>
     </BottomSheet>
   );

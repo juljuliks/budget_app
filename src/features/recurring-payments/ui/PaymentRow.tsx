@@ -25,10 +25,19 @@ export default function PaymentRow({ name, label, note, tone, amount, amountNote
   const last = note[note.length - 1];
   const head = note.slice(0, -1);
   return (
-    <TouchableOpacity style={styles.row} onPress={onPress} accessibilityRole="button" accessibilityLabel={`${label}: ${name}`}>
-      {ring !== undefined ? <ProgressRing ratio={ring} color={ring >= 1 ? colors.income : colors.fund} track={colors.fundTrack} size={22} /> : null}
+    <TouchableOpacity
+      style={styles.row}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${label}: ${name}`}
+    >
+      {ring !== undefined ? (
+        <ProgressRing ratio={ring} color={ring >= 1 ? colors.income : colors.fund} track={colors.fundTrack} size={22} />
+      ) : null}
       <View style={styles.body}>
-        <Text style={styles.name} numberOfLines={1}>{name}</Text>
+        <Text style={styles.name} numberOfLines={1}>
+          {name}
+        </Text>
         <Text style={styles.note} numberOfLines={2}>
           {head.length ? `${head.join(' · ')} · ` : ''}
           <Text style={tone === 'ok' ? styles.ok : tone === 'warn' ? styles.warn : null}>{last}</Text>
@@ -45,7 +54,14 @@ export default function PaymentRow({ name, label, note, tone, amount, amountNote
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+  },
   body: { flex: 1, minWidth: 0 },
   name: { fontSize: 16, color: colors.text },
   note: { fontSize: 13, color: colors.muted, marginTop: 2 },

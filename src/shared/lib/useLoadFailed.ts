@@ -10,9 +10,12 @@ import { useCallback, useState } from 'react';
 export function useLoadFailed(what: string) {
   const [failed, setFailed] = useState(false);
   const started = useCallback(() => setFailed(false), []);
-  const fail = useCallback((e: unknown) => {
-    console.error(`${what} failed`, e);
-    setFailed(true);
-  }, [what]);
+  const fail = useCallback(
+    (e: unknown) => {
+      console.error(`${what} failed`, e);
+      setFailed(true);
+    },
+    [what],
+  );
   return { failed, started, fail };
 }

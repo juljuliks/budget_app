@@ -16,10 +16,17 @@ export function LockHost() {
 
   useEffect(() => {
     attachPinHost(setAsk);
-    const stop = watchAppState(() => { if (isLocked()) setUnlockAsk({ kind: 'unlock' }); });
-    return () => { detachPinHost(); stop(); };
+    const stop = watchAppState(() => {
+      if (isLocked()) setUnlockAsk({ kind: 'unlock' });
+    });
+    return () => {
+      detachPinHost();
+      stop();
+    };
   }, []);
-  useEffect(() => { setUnlockAsk(locked ? { kind: 'unlock' } : null); }, [locked]);
+  useEffect(() => {
+    setUnlockAsk(locked ? { kind: 'unlock' } : null);
+  }, [locked]);
 
   const asked = usePinFlow(ask, () => setAsk(null));
   const lockScreen = usePinFlow(unlockAsk, unlock);

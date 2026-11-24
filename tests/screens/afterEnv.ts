@@ -14,5 +14,6 @@ beforeEach(() => {
 });
 afterEach(() => {
   (console.error as jest.Mock).mockRestore();
-  if (errors.length) throw new Error(`console.error during the test:\n${errors.map((a) => a.map(String).join(' ')).join('\n')}`);
+  if (errors.length)
+    throw new Error(`console.error during the test:\n${errors.map((a) => a.map(String).join(' ')).join('\n')}`);
 });

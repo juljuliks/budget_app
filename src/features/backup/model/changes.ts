@@ -4,7 +4,9 @@ const listeners = new Set<Listener>();
 
 export function onBackupSettingsChanged(fn: Listener): () => void {
   listeners.add(fn);
-  return () => { listeners.delete(fn); };
+  return () => {
+    listeners.delete(fn);
+  };
 }
 
 export function backupSettingsChanged() {

@@ -2,7 +2,20 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import type { Currency } from '@/db/fx';
-import { averageIncome, ensureMonthPlan, getPlanBudget, listPlan, monthIncome, monthStats, parseYm, PlanBudget, planConverter, planCurrency, PlanItem, unplannedSpent } from '@/db/plans';
+import {
+  averageIncome,
+  ensureMonthPlan,
+  getPlanBudget,
+  listPlan,
+  monthIncome,
+  monthStats,
+  parseYm,
+  PlanBudget,
+  planConverter,
+  planCurrency,
+  PlanItem,
+  unplannedSpent,
+} from '@/db/plans';
 import { onTransactionsChanged } from '@/domain/events';
 import { useLatestRequest } from '@/shared/lib/useLatestRequest';
 import { useLoadFailed } from '@/shared/lib/useLoadFailed';
@@ -36,19 +49,42 @@ export function usePlanData(ym: string, currency: Currency) {
     const keep = latest();
     started();
     const { year, month } = parseYm(ym);
-    Promise.all([listPlan(ym, currency), getPlanBudget(ym), monthIncome(ym, currency), planConverter(ym), monthStats(year, month, currency), ensureMonthPlan(ym).then(() => planCurrency(ym)),
-      averageIncome(ym, currency)])
-      .then(keep(([plan, b, inc, conv, stats, pc, avg]) => {
-        setItems(plan); setBudget(b); setIncome(inc); setAvgIncome(avg); setUnplannedSpent(unplannedSpent(stats));
-        // a fund takes its contribution, and what was spent past what it saved
-        const funds = stats.funds.map((f): [number, number] => [f.category_id, f.contribution_minor + f.shortage_minor]);
-        setSpentBy({ byCategory: new Map([...stats.categories.filter((c) => c.category_id !== null).map((c): [number, number] => [c.category_id!, c.spent_minor]), ...funds]),
-          total: stats.spent_minor + stats.funds.reduce((a, f) => a + f.contribution_minor, 0) });
-        setToShown(() => (minor: number, from: Currency) => conv(minor, from, currency));
-        setFromShown(() => (minor: number, to: Currency) => conv(minor, currency, to));
-        setStoredCurrency(pc);
-        setLoadedCurrency(currency);
-      }))
+    Promise.all([
+      listPlan(ym, currency),
+      getPlanBudget(ym),
+      monthIncome(ym, currency),
+      planConverter(ym),
+      monthStats(year, month, currency),
+      ensureMonthPlan(ym).then(() => planCurrency(ym)),
+      averageIncome(ym, currency),
+    ])
+      .then(
+        keep(([plan, b, inc, conv, stats, pc, avg]) => {
+          setItems(plan);
+          setBudget(b);
+          setIncome(inc);
+          setAvgIncome(avg);
+          setUnplannedSpent(unplannedSpent(stats));
+          // a fund takes its contribution, and what was spent past what it saved
+          const funds = stats.funds.map((f): [number, number] => [
+            f.category_id,
+            f.contribution_minor + f.shortage_minor,
+          ]);
+          setSpentBy({
+            byCategory: new Map([
+              ...stats.categories
+                .filter((c) => c.category_id !== null)
+                .map((c): [number, number] => [c.category_id!, c.spent_minor]),
+              ...funds,
+            ]),
+            total: stats.spent_minor + stats.funds.reduce((a, f) => a + f.contribution_minor, 0),
+          });
+          setToShown(() => (minor: number, from: Currency) => conv(minor, from, currency));
+          setFromShown(() => (minor: number, to: Currency) => conv(minor, currency, to));
+          setStoredCurrency(pc);
+          setLoadedCurrency(currency);
+        }),
+      )
       .catch(keep(fail));
   }, [ym, currency, latest, started, fail]);
 
@@ -57,5 +93,18 @@ export function usePlanData(ym: string, currency: Currency) {
   // a sheet over it changed the month (the month before's "Итоги": what it sends here)
   useEffect(() => onTransactionsChanged(load), [load]);
 
-  return { items, budget, toShown, fromShown, income, avgIncome, unplannedSpentMinor, spentBy, load, failed, storedCurrency, loadedCurrency };
+  return {
+    items,
+    budget,
+    toShown,
+    fromShown,
+    income,
+    avgIncome,
+    unplannedSpentMinor,
+    spentBy,
+    load,
+    failed,
+    storedCurrency,
+    loadedCurrency,
+  };
 }

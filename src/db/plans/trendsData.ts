@@ -7,19 +7,30 @@ import { currentYm, monthStart, ymOf } from './months';
 import { convertSpending, spendRows } from './spend';
 
 export type TrendCategory = {
-  id: number; name: string; emoji: string | null; type_name: string | null; color: string;
+  id: number;
+  name: string;
+  emoji: string | null;
+  type_name: string | null;
+  color: string;
   /**
    * its spending is put against its usual one: not a regular payment, a subscription, a fund or "крупно, раз в месяц"
    * (this month's plan) — paid on a day, they'd be "+100%" before it and "−100%" after — and not a transfer
    */
   compared: boolean;
   /** what its «Динамика» is (stats/trendKind.ts): a transfer one has none; one with a fund, with «Подписки» on have their own */
-  transfer: boolean; fund: boolean; subs: boolean;
+  transfer: boolean;
+  fund: boolean;
+  subs: boolean;
 };
 
 /** One operation's spending (a refund or money back: negative), converted. */
 export type TrendSpend = {
-  category: number; day: string; value: number; merchantKey: string | null; merchant: string | null; tx?: number;
+  category: number;
+  day: string;
+  value: number;
+  merchantKey: string | null;
+  merchant: string | null;
+  tx?: number;
   /** an operation in another currency: its own amount (signed as `value`) */
   own?: { minor: number; currency: string };
 };
@@ -42,25 +53,54 @@ export async function trendsData(currency: Currency, months = 12, now = new Date
   for (const { row, value } of items) {
     if (row.category_id === null) continue;
     spends.push({
-      category: row.category_id, day: dateKey(row.occurred_at), value, merchantKey: row.merchant_key ?? null, merchant: row.raw_merchant ?? null, tx: row.id,
-      ...(row.currency !== currency ? { own: { minor: Math.sign(value) * row.amount_minor, currency: row.currency } } : {}),
+      category: row.category_id,
+      day: dateKey(row.occurred_at),
+      value,
+      merchantKey: row.merchant_key ?? null,
+      merchant: row.raw_merchant ?? null,
+      tx: row.id,
+      ...(row.currency !== currency
+        ? { own: { minor: Math.sign(value) * row.amount_minor, currency: row.currency } }
+        : {}),
     });
   }
 
-  const rows = await db.all<{ id: number; name: string; emoji: string | null; type_name: string | null; transfer: number; recurring: number; subs: number; fund: number }>(
+  const rows = await db.all<{
+    id: number;
+    name: string;
+    emoji: string | null;
+    type_name: string | null;
+    transfer: number;
+    recurring: number;
+    subs: number;
+    fund: number;
+  }>(
     `SELECT c.id, c.name, c.emoji, t.name AS type_name, coalesce(t.is_transfer, 0) AS transfer, c.recurring, coalesce(c.system = 'subs', 0) AS subs,
         EXISTS (SELECT 1 FROM funds f WHERE f.category_id = c.id AND f.closed_ym IS NULL) AS fund
       FROM categories c LEFT JOIN category_types t ON t.id = c.type_id
-      WHERE c.deleted_at IS NULL ORDER BY t.id IS NULL, t.sort_order, t.name, c.sort_order, c.name`);
+      WHERE c.deleted_at IS NULL ORDER BY t.id IS NULL, t.sort_order, t.name, c.sort_order, c.name`,
+  );
   // paid once in a while: compared by whole months only, not by the days so far
-  const once = new Set((await db.all<{ category_id: number }>(
-    `SELECT category_id FROM plan_items WHERE ym = ?
-      AND (kind IN ('fixed', 'subs', 'fund') OR (kind = 'limit' AND norm_period = 'month'))`, [currentYm(now)])).map((r) => r.category_id));
+  const once = new Set(
+    (
+      await db.all<{ category_id: number }>(
+        `SELECT category_id FROM plan_items WHERE ym = ?
+      AND (kind IN ('fixed', 'subs', 'fund') OR (kind = 'limit' AND norm_period = 'month'))`,
+        [currentYm(now)],
+      )
+    ).map((r) => r.category_id),
+  );
   const colorOf = await categoryColors();
   const categories = rows.map((c) => ({
-    id: c.id, name: c.name, emoji: c.emoji, type_name: c.type_name, color: colorOf.get(c.id) ?? NEUTRAL_COLOR,
+    id: c.id,
+    name: c.name,
+    emoji: c.emoji,
+    type_name: c.type_name,
+    color: colorOf.get(c.id) ?? NEUTRAL_COLOR,
     compared: !c.transfer && !c.recurring && !once.has(c.id),
-    transfer: !!c.transfer, fund: !!c.fund, subs: !!c.subs,
+    transfer: !!c.transfer,
+    fund: !!c.fund,
+    subs: !!c.subs,
   }));
   const first = await db.get<{ at: number | null }>('SELECT min(occurred_at) AS at FROM transactions');
   return { categories, spends, since: first?.at == null ? null : dateKey(first.at) };

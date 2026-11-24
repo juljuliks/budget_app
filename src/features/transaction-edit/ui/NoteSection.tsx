@@ -9,7 +9,15 @@ import { colors } from '@/shared/theme/theme';
 
 /** The operation's note ("Описание"; a manual operation's is the one entered with it): shown with a pencil, or
  * "＋ Добавить описание"; edited in a sheet (empty removes it). */
-export default function NoteSection({ txId, note, onSaved }: { txId: number; note: string | null; onSaved: () => void }) {
+export default function NoteSection({
+  txId,
+  note,
+  onSaved,
+}: {
+  txId: number;
+  note: string | null;
+  onSaved: () => void;
+}) {
   const [open, setOpen] = useState(false);
 
   async function save(text: string): Promise<string | null> {
@@ -50,8 +58,12 @@ export default function NoteSection({ txId, note, onSaved }: { txId: number; not
 const styles = StyleSheet.create({
   link: { fontSize: 14, color: colors.accent },
   note: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 8,
-    backgroundColor: colors.surface, padding: 12, borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: colors.surface,
+    padding: 12,
+    borderRadius: 8,
   },
   noteText: { flex: 1, fontSize: 15, color: colors.text },
 });

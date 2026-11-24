@@ -31,17 +31,21 @@ export default function TransactionHeader({ tx, onEditAmount, onEditKind, mercha
         <PencilIcon color={colors.accent} size={18} />
       </TouchableOpacity>
       {/* a merchant of purchases / payments: its name opens its card (its category, its operations) */}
-      {merchantLinked && tx.merchant_key
-        ? <MerchantLink merchantKey={tx.merchant_key} label={merchantLabel(tx)} style={styles.merchant} />
-        : canChangeKind(tx) ? (
-          <View style={styles.kindRow}>
-            <Text style={[styles.merchant, styles.kindTitle]}>{merchantLabel(tx)}</Text>
-            <TouchableOpacity onPress={onEditKind} hitSlop={8} accessibilityLabel="Сменить тип">
-              <PencilIcon color={colors.accent} size={16} />
-            </TouchableOpacity>
-          </View>
-        ) : <Text style={styles.merchant}>{merchantLabel(tx)}</Text>}
-      <Text style={styles.meta}>{formatDay(tx.occurred_at)}, {formatTime(tx.occurred_at)}</Text>
+      {merchantLinked && tx.merchant_key ? (
+        <MerchantLink merchantKey={tx.merchant_key} label={merchantLabel(tx)} style={styles.merchant} />
+      ) : canChangeKind(tx) ? (
+        <View style={styles.kindRow}>
+          <Text style={[styles.merchant, styles.kindTitle]}>{merchantLabel(tx)}</Text>
+          <TouchableOpacity onPress={onEditKind} hitSlop={8} accessibilityLabel="Сменить тип">
+            <PencilIcon color={colors.accent} size={16} />
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <Text style={styles.merchant}>{merchantLabel(tx)}</Text>
+      )}
+      <Text style={styles.meta}>
+        {formatDay(tx.occurred_at)}, {formatTime(tx.occurred_at)}
+      </Text>
     </>
   );
 }

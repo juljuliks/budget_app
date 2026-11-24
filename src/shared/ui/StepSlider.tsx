@@ -43,14 +43,19 @@ export default function StepSlider({ values, value, onChange, max, label = Strin
     if (v !== cur) change(v);
   };
 
-  const responder = useRef(PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder: () => true,
-    // don't hand the drag over to the sheet's swipe-down
-    onPanResponderTerminationRequest: () => false,
-    onPanResponderGrant: (e) => { startX.current = e.nativeEvent.locationX; pick(startX.current); },
-    onPanResponderMove: (_, g) => pick(startX.current + g.dx),
-  })).current;
+  const responder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      // don't hand the drag over to the sheet's swipe-down
+      onPanResponderTerminationRequest: () => false,
+      onPanResponderGrant: (e) => {
+        startX.current = e.nativeEvent.locationX;
+        pick(startX.current);
+      },
+      onPanResponderMove: (_, g) => pick(startX.current + g.dx),
+    }),
+  ).current;
 
   return (
     <View>
@@ -67,26 +72,39 @@ export default function StepSlider({ values, value, onChange, max, label = Strin
         }}
       >
         <View style={styles.rail} pointerEvents="none">
-          {picked >= 0 ? <View style={[styles.fill, { width: index * step(values.length) + THUMB / 2, backgroundColor: color }]} /> : null}
+          {picked >= 0 ? (
+            <View style={[styles.fill, { width: index * step(values.length) + THUMB / 2, backgroundColor: color }]} />
+          ) : null}
         </View>
         {values.map((v, i) => (
           <View
             key={v}
             pointerEvents="none"
-            style={[styles.tick, { left: i * step(values.length) + THUMB / 2 - 3 }, max !== undefined && v > max && styles.faded,
-              picked >= 0 && i <= index && { backgroundColor: color }]}
+            style={[
+              styles.tick,
+              { left: i * step(values.length) + THUMB / 2 - 3 },
+              max !== undefined && v > max && styles.faded,
+              picked >= 0 && i <= index && { backgroundColor: color },
+            ]}
           />
         ))}
         {width > 0 && picked >= 0 ? (
-          <View pointerEvents="none" style={[styles.thumb, { left: index * step(values.length), borderColor: color }]} />
+          <View
+            pointerEvents="none"
+            style={[styles.thumb, { left: index * step(values.length), borderColor: color }]}
+          />
         ) : null}
       </View>
       <View style={styles.labels} pointerEvents="none">
         {values.map((v, i) => (
           <Text
             key={v}
-            style={[styles.label, { left: i * step(values.length) + THUMB / 2 - 20 }, v === value && styles.labelOn,
-              max !== undefined && v > max && styles.faded]}
+            style={[
+              styles.label,
+              { left: i * step(values.length) + THUMB / 2 - 20 },
+              v === value && styles.labelOn,
+              max !== undefined && v > max && styles.faded,
+            ]}
           >
             {label(v)}
           </Text>
@@ -102,7 +120,12 @@ const styles = StyleSheet.create({
   fill: { height: 4, borderRadius: 2 },
   tick: { position: 'absolute', width: 6, height: 6, borderRadius: 3, backgroundColor: colors.border },
   thumb: {
-    position: 'absolute', width: THUMB, height: THUMB, borderRadius: THUMB / 2, borderWidth: 3, backgroundColor: colors.bg,
+    position: 'absolute',
+    width: THUMB,
+    height: THUMB,
+    borderRadius: THUMB / 2,
+    borderWidth: 3,
+    backgroundColor: colors.bg,
   },
   labels: { height: 18 },
   label: { position: 'absolute', width: 40, textAlign: 'center', fontSize: 12, color: colors.muted },

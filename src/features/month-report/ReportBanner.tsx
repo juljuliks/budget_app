@@ -39,19 +39,35 @@ export default function ReportBanner() {
       {month && v ? (
         <Card
           title={`Отчёт за ${MONTHS_NOM[Number(month.ym.slice(5)) - 1]}`}
-          note={[r!.saved !== null && r!.saved >= 0 ? `${ongoing ? 'Пока отложено' : 'Отложено'} ${v.savedMoney(r!.saved)}` : '', days(month.daysLeft)].filter(Boolean).join(' · ')}
+          note={[
+            r!.saved !== null && r!.saved >= 0
+              ? `${ongoing ? 'Пока отложено' : 'Отложено'} ${v.savedMoney(r!.saved)}`
+              : '',
+            days(month.daysLeft),
+          ]
+            .filter(Boolean)
+            .join(' · ')}
           onPress={() => openMonthReport(month.ym)}
         />
       ) : null}
-      {year ? <Card title={`Итоги ${year.year}`} note={days(year.daysLeft)} onPress={() => openYearReport(year.year)} /> : null}
+      {year ? (
+        <Card title={`Итоги ${year.year}`} note={days(year.daysLeft)} onPress={() => openYearReport(year.year)} />
+      ) : null}
     </>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 16, marginTop: 10, paddingHorizontal: 14, paddingVertical: 12,
-    borderRadius: 14, backgroundColor: colors.accentBg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginHorizontal: 16,
+    marginTop: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 14,
+    backgroundColor: colors.accentBg,
   },
   text: { flex: 1 },
   title: { fontSize: 16, fontWeight: '600', color: colors.text },

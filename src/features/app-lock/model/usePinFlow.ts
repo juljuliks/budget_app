@@ -6,8 +6,22 @@ import type { PinScreenProps } from '../ui/PinScreen';
 import type { Ask } from './requests';
 import { biometricOn, pinLength as cachedPinLength } from './lockStore';
 import {
-  BIO_SUBTITLE, BY_FINGERPRINT, CLOSE, CONFIRM_PIN, CONFIRM_PIN_HINT, FORGOT, FORGOT_INFO, FORGOT_INFO_BIO, NEW_PIN_HINT,
-  PIN_MISMATCH, RESTART_PIN, UNLOCK_TITLE, USE_PIN, ENTER_PIN, waitPin, wrongPin,
+  BIO_SUBTITLE,
+  BY_FINGERPRINT,
+  CLOSE,
+  CONFIRM_PIN,
+  CONFIRM_PIN_HINT,
+  FORGOT,
+  FORGOT_INFO,
+  FORGOT_INFO_BIO,
+  NEW_PIN_HINT,
+  PIN_MISMATCH,
+  RESTART_PIN,
+  UNLOCK_TITLE,
+  USE_PIN,
+  ENTER_PIN,
+  waitPin,
+  wrongPin,
 } from '../texts';
 
 /**
@@ -32,14 +46,23 @@ export function usePinFlow(ask: Ask | null, done: () => void): (PinScreenProps &
     if (AppState.currentState === 'background') return;
     busy.current = true;
     const title = ask.kind === 'unlock' ? UNLOCK_TITLE : ask.title;
-    const r = await authenticate(title, BIO_SUBTITLE, USE_PIN).finally(() => { busy.current = false; });
+    const r = await authenticate(title, BIO_SUBTITLE, USE_PIN).finally(() => {
+      busy.current = false;
+    });
     if (r === 'ok') pass();
   };
 
   useEffect(() => {
-    setFirst(null); setError(undefined); setWait(0);
+    setFirst(null);
+    setError(undefined);
+    setWait(0);
     if (!ask || ask.kind === 'create') return;
-    lockState().then((s) => { setPinLength(s.pinLength); if (s.waitS > 0) setWait(s.waitS); }).catch(() => {});
+    lockState()
+      .then((s) => {
+        setPinLength(s.pinLength);
+        if (s.waitS > 0) setWait(s.waitS);
+      })
+      .catch(() => {});
     biometric().catch((e) => console.error('biometric failed', e));
   }, [ask]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -47,46 +70,107 @@ export function usePinFlow(ask: Ask | null, done: () => void): (PinScreenProps &
   useEffect(() => {
     if (wait <= 0) return;
     setError(waitPin(wait));
-    const t = setTimeout(() => { setWait(wait - 1); if (wait === 1) setError(undefined); }, 1000);
+    const t = setTimeout(() => {
+      setWait(wait - 1);
+      if (wait === 1) setError(undefined);
+    }, 1000);
     return () => clearTimeout(t);
   }, [wait]);
 
   if (!ask) return null;
-  const again = (message: string) => { setError(message); setResetKey((k) => k + 1); };
+  const again = (message: string) => {
+    setError(message);
+    setResetKey((k) => k + 1);
+  };
 
   if (ask.kind === 'create') {
-    const cancel = () => { ask.resolve(null); done(); };
+    const cancel = () => {
+      ask.resolve(null);
+      done();
+    };
     return {
-      visible: true, title: ask.title, resetKey, error,
+      visible: true,
+      title: ask.title,
+      resetKey,
+      error,
       heading: first === null ? ask.heading : CONFIRM_PIN,
       hint: first === null ? NEW_PIN_HINT : CONFIRM_PIN_HINT,
       length: first === null ? null : first.length,
       onCancel: cancel,
       onSubmit: (pin) => {
-        if (first === null) { setFirst(pin); setError(undefined); return; }
-        if (pin === first) { ask.resolve(pin); done(); return; }
+        if (first === null) {
+          setFirst(pin);
+          setError(undefined);
+          return;
+        }
+        if (pin === first) {
+          ask.resolve(pin);
+          done();
+          return;
+        }
         again(PIN_MISMATCH);
       },
-      link: first !== null && error ? { title: RESTART_PIN, onPress: () => { setFirst(null); setError(undefined); } } : undefined,
+      link:
+        first !== null && error
+          ? {
+              title: RESTART_PIN,
+              onPress: () => {
+                setFirst(null);
+                setError(undefined);
+              },
+            }
+          : undefined,
     };
   }
 
   const onSubmit = async (pin: string) => {
     const r = await checkPin(pin);
     if (r.ok) return pass();
-    if (r.waitS > 0) { setResetKey((k) => k + 1); setWait(r.waitS); } else again(wrongPin(r.left));
+    if (r.waitS > 0) {
+      setResetKey((k) => k + 1);
+      setWait(r.waitS);
+    } else again(wrongPin(r.left));
   };
-  const forgot = () => sheetAlert(FORGOT, biometricOn() ? FORGOT_INFO_BIO : FORGOT_INFO, biometricOn()
-    ? [{ text: BY_FINGERPRINT, onPress: () => { biometric().catch(() => {}); } }, { text: CLOSE, style: 'cancel' }]
-    : [{ text: CLOSE, style: 'cancel' }]);
+  const forgot = () =>
+    sheetAlert(
+      FORGOT,
+      biometricOn() ? FORGOT_INFO_BIO : FORGOT_INFO,
+      biometricOn()
+        ? [
+            {
+              text: BY_FINGERPRINT,
+              onPress: () => {
+                biometric().catch(() => {});
+              },
+            },
+            { text: CLOSE, style: 'cancel' },
+          ]
+        : [{ text: CLOSE, style: 'cancel' }],
+    );
   return {
-    visible: true, resetKey, error, length: pinLength, disabled: wait > 0,
+    visible: true,
+    resetKey,
+    error,
+    length: pinLength,
+    disabled: wait > 0,
     title: ask.kind === 'verify' ? ask.title : undefined,
     heading: ask.kind === 'verify' ? ask.heading : ENTER_PIN,
     hint: ask.kind === 'verify' ? ask.hint : undefined,
-    onSubmit: (pin) => { onSubmit(pin).catch((e) => console.error('PIN check failed', e)); },
-    onCancel: ask.kind === 'verify' ? () => { ask.resolve(false); done(); } : undefined,
-    onBiometric: biometricOn() ? () => { biometric().catch(() => {}); } : undefined,
+    onSubmit: (pin) => {
+      onSubmit(pin).catch((e) => console.error('PIN check failed', e));
+    },
+    onCancel:
+      ask.kind === 'verify'
+        ? () => {
+            ask.resolve(false);
+            done();
+          }
+        : undefined,
+    onBiometric: biometricOn()
+      ? () => {
+          biometric().catch(() => {});
+        }
+      : undefined,
     link: ask.kind === 'unlock' ? { title: FORGOT, onPress: forgot } : undefined,
   };
 }

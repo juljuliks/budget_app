@@ -27,7 +27,9 @@ export type PinScreenProps = {
 /** A full-screen window for the PIN: over every sheet (a Modal shown later is on top). */
 export default function PinScreen({ visible, ...p }: PinScreenProps & { visible: boolean }) {
   const [pin, setPinText] = useState('');
-  useEffect(() => { setPinText(''); }, [p.resetKey, p.heading, visible]);
+  useEffect(() => {
+    setPinText('');
+  }, [p.resetKey, p.heading, visible]);
 
   const type = (d: string) => {
     if (pin.length >= (p.length ?? MAX_PIN)) return;
@@ -48,13 +50,17 @@ export default function PinScreen({ visible, ...p }: PinScreenProps & { visible:
             <Text style={styles.title}>{p.title}</Text>
           </View>
         ) : (
-          <View style={styles.badge}><LockIcon color={colors.accent} size={30} /></View>
+          <View style={styles.badge}>
+            <LockIcon color={colors.accent} size={30} />
+          </View>
         )}
         <View style={styles.body}>
           <Text style={styles.heading}>{p.heading}</Text>
           {p.hint ? <Text style={styles.hint}>{p.hint}</Text> : null}
           <View style={styles.dots} accessibilityLabel={`Введено цифр: ${pin.length}`}>
-            {Array.from({ length: dots }, (_, i) => <View key={i} style={[styles.dot, i < pin.length && styles.dotOn]} />)}
+            {Array.from({ length: dots }, (_, i) => (
+              <View key={i} style={[styles.dot, i < pin.length && styles.dotOn]} />
+            ))}
           </View>
           <Text style={styles.error}>{p.error ?? ''}</Text>
           {p.link ? (
@@ -63,9 +69,16 @@ export default function PinScreen({ visible, ...p }: PinScreenProps & { visible:
             </TouchableOpacity>
           ) : null}
         </View>
-        <Keypad onDigit={type} onErase={() => setPinText(pin.slice(0, -1))} onBiometric={p.onBiometric} disabled={p.disabled} />
+        <Keypad
+          onDigit={type}
+          onErase={() => setPinText(pin.slice(0, -1))}
+          onBiometric={p.onBiometric}
+          disabled={p.disabled}
+        />
         <View style={styles.footer}>
-          {p.length === null ? <Button title={NEXT} onPress={() => p.onSubmit(pin)} disabled={pin.length < MIN_PIN} /> : null}
+          {p.length === null ? (
+            <Button title={NEXT} onPress={() => p.onSubmit(pin)} disabled={pin.length < MIN_PIN} />
+          ) : null}
         </View>
       </View>
     </Modal>
@@ -78,8 +91,14 @@ const styles = StyleSheet.create({
   close: { padding: 8 },
   title: { fontSize: 17, fontWeight: '600', color: colors.text },
   badge: {
-    alignSelf: 'center', marginTop: 48, width: 64, height: 64, borderRadius: 18, backgroundColor: '#EFF6FF',
-    alignItems: 'center', justifyContent: 'center',
+    alignSelf: 'center',
+    marginTop: 48,
+    width: 64,
+    height: 64,
+    borderRadius: 18,
+    backgroundColor: '#EFF6FF',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   body: { flex: 1, alignItems: 'center', paddingTop: 32, paddingHorizontal: 24, gap: 14 },
   heading: { fontSize: 22, fontWeight: '600', color: colors.text },

@@ -14,8 +14,15 @@ export default function HideAmountsButton({ confirmShow }: { confirmShow: () => 
   const hidden = useHideAmounts();
   const save = (v: boolean) => setHideAmounts(v).catch(toastFailure('save hide amounts', SAVE_FAILED));
   const press = () => {
-    if (!hidden) { save(true); return; }
-    confirmShow().then((ok) => { if (ok) save(false); }).catch(toastFailure('confirm show amounts', SAVE_FAILED));
+    if (!hidden) {
+      save(true);
+      return;
+    }
+    confirmShow()
+      .then((ok) => {
+        if (ok) save(false);
+      })
+      .catch(toastFailure('confirm show amounts', SAVE_FAILED));
   };
   return (
     <TouchableOpacity

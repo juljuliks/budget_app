@@ -1,7 +1,13 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { categoryLabel } from '@/db/categories';
-import { ActiveFilter, AllFiltersSheet, DateSheet, OptionsSheet, useTransactionFilters } from '@/features/operations-filters';
+import {
+  ActiveFilter,
+  AllFiltersSheet,
+  DateSheet,
+  OptionsSheet,
+  useTransactionFilters,
+} from '@/features/operations-filters';
 import BottomSheet from '@/shared/ui/BottomSheet';
 import RadioGroup from '@/shared/ui/RadioGroup';
 import { bankById } from '@/domain/banks';
@@ -28,7 +34,12 @@ export default function FilterSheets({ sheet, active, filters: f, groupBy, onGro
       <OptionsSheet
         visible={sheet === 'category'}
         title="Категории"
-        options={f.categoryOptions.map((c) => ({ key: c.category, label: `${categoryLabel(c)}${c.deleted ? ' (удалена)' : ''}`, count: c.count, muted: c.deleted }))}
+        options={f.categoryOptions.map((c) => ({
+          key: c.category,
+          label: `${categoryLabel(c)}${c.deleted ? ' (удалена)' : ''}`,
+          count: c.count,
+          muted: c.deleted,
+        }))}
         selected={f.categories}
         onToggle={(k) => f.setCategories((p) => toggleIn(p, k))}
         onClear={() => f.setCategories([])}
@@ -55,7 +66,14 @@ export default function FilterSheets({ sheet, active, filters: f, groupBy, onGro
       <DateSheet visible={sheet === 'date'} value={f.range} onChange={f.changeRange} onClose={onClose} />
       <BottomSheet visible={sheet === 'group'} onClose={onClose} title="Группировать">
         <View style={styles.groupSheet}>
-          <RadioGroup options={GROUP_BY} value={groupBy} onChange={(v) => { onGroupBy(v); onClose(); }} />
+          <RadioGroup
+            options={GROUP_BY}
+            value={groupBy}
+            onChange={(v) => {
+              onGroupBy(v);
+              onClose();
+            }}
+          />
         </View>
       </BottomSheet>
       <AllFiltersSheet visible={sheet === 'all'} filters={active} onReset={f.resetExtra} onClose={onClose} />

@@ -9,7 +9,13 @@ import { styles } from './styles';
 export function KindIcon({ item }: { item: PlanItem }) {
   return (
     <View style={styles.pin}>
-      {item.every ? <RepeatIcon color={colors.accent} size={20} /> : item.kind === 'fixed' ? <OneOffIcon color={colors.muted} /> : <LimitIcon color={colors.muted} />}
+      {item.every ? (
+        <RepeatIcon color={colors.accent} size={20} />
+      ) : item.kind === 'fixed' ? (
+        <OneOffIcon color={colors.muted} />
+      ) : (
+        <LimitIcon color={colors.muted} />
+      )}
     </View>
   );
 }

@@ -24,7 +24,9 @@ export default function DetailGroup({ title, planned, spent, categories, money, 
   return (
     <View>
       <View style={[styles.detailRow, styles.groupRow]}>
-        <Text style={[styles.detailName, styles.groupTitle]} numberOfLines={1}>{title}</Text>
+        <Text style={[styles.detailName, styles.groupTitle]} numberOfLines={1}>
+          {title}
+        </Text>
         <Text style={[styles.detailNum, styles.groupTitle]}>{planned ? money(planned) : '—'}</Text>
         <Text style={[styles.detailNum, styles.groupTitle, tone(planned, spent)]}>{money(spent)}</Text>
       </View>
@@ -32,9 +34,14 @@ export default function DetailGroup({ title, planned, spent, categories, money, 
         const over = !!c.limit_minor && c.spent_minor > c.limit_minor;
         return (
           <TouchableOpacity key={String(c.category_id)} style={styles.detailRow} onPress={() => onOpen(c)}>
-            <Text style={styles.detailName} numberOfLines={1}>{`${c.emoji || ''} ${c.name}`.trim()}</Text>
+            <Text style={styles.detailName} numberOfLines={1}>
+              {`${c.emoji || ''} ${c.name}`.trim()}
+            </Text>
             <Text style={styles.detailNum}>{c.limit_minor ? money(c.limit_minor) : '—'}</Text>
-            <Text style={[styles.detailNum, tone(c.limit_minor, c.spent_minor)]}>{over ? '⚠ ' : ''}{money(c.spent_minor)}</Text>
+            <Text style={[styles.detailNum, tone(c.limit_minor, c.spent_minor)]}>
+              {over ? '⚠ ' : ''}
+              {money(c.spent_minor)}
+            </Text>
           </TouchableOpacity>
         );
       })}

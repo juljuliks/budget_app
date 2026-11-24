@@ -14,7 +14,9 @@ export function confirmDeleteTransaction(
   sheetAlert('Удалить операцию?', `${merchantLabel(tx)}, ${formatAmount(tx.amount_minor, tx.currency, tx.kind)}`, [
     { text: 'Отмена', style: 'cancel' },
     {
-      text: 'Удалить', style: 'destructive', onPress: async () => {
+      text: 'Удалить',
+      style: 'destructive',
+      onPress: async () => {
         try {
           undoToast('Операция удалена', await removeTransactions([tx.id]));
           onDeleted?.();
@@ -33,11 +35,15 @@ export function confirmDeleteTransactions(
   onDeleted?: () => void,
 ) {
   const n = txs.length;
-  sheetAlert(`Удалить ${n} ${plural(n, ['операцию', 'операции', 'операций'])}?`,
-    'Они пропадут из истории и статистики.', [
+  sheetAlert(
+    `Удалить ${n} ${plural(n, ['операцию', 'операции', 'операций'])}?`,
+    'Они пропадут из истории и статистики.',
+    [
       { text: 'Отмена', style: 'cancel' },
       {
-        text: `Удалить (${n})`, style: 'destructive', onPress: async () => {
+        text: `Удалить (${n})`,
+        style: 'destructive',
+        onPress: async () => {
           try {
             undoToast(`Удалено операций: ${n}`, await removeTransactions(txs.map((t) => t.id)));
             onDeleted?.();
@@ -47,7 +53,8 @@ export function confirmDeleteTransactions(
           }
         },
       },
-    ]);
+    ],
+  );
 }
 
 /** What was deleted, with "Отменить": the operations come back as they were. */

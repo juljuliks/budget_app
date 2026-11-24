@@ -1,7 +1,20 @@
 import React, { useRef, useState } from 'react';
 import {
-  AccessibilityActionEvent, Animated, Easing, GestureResponderEvent, Modal, Pressable, StatusBar, StyleProp, StyleSheet, Text, TouchableOpacity,
-  useWindowDimensions, Vibration, View, ViewStyle,
+  AccessibilityActionEvent,
+  Animated,
+  Easing,
+  GestureResponderEvent,
+  Modal,
+  Pressable,
+  StatusBar,
+  StyleProp,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  Vibration,
+  View,
+  ViewStyle,
 } from 'react-native';
 import { BUTTON_RADIUS, buttonAt, menuLayout, movedFrom, Point } from '../lib/pressMenu';
 import { colors } from '../theme/theme';
@@ -47,23 +60,46 @@ export default function PressMenu({ actions, style, accessibilityHint, testID, c
   const hoverRef = useRef<number | null>(null);
   const scale = useRef(new Animated.Value(1)).current;
 
-  const shrink = () => Animated.timing(scale, {
-    toValue: HELD_SCALE, duration: LONG_PRESS - PRESS_DELAY, easing: Easing.out(Easing.quad), useNativeDriver: true,
-  }).start();
+  const shrink = () =>
+    Animated.timing(scale, {
+      toValue: HELD_SCALE,
+      duration: LONG_PRESS - PRESS_DELAY,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: true,
+    }).start();
   // a tap's pulse isn't cut short by its own press-out
   const pulsing = useRef(false);
-  const restore = () => { if (!pulsing.current) Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start(); };
+  const restore = () => {
+    if (!pulsing.current) Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start();
+  };
   const pulse = () => {
     pulsing.current = true;
     Animated.sequence([
-      Animated.timing(scale, { toValue: HELD_SCALE, duration: TAP_SHRINK, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+      Animated.timing(scale, {
+        toValue: HELD_SCALE,
+        duration: TAP_SHRINK,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
       Animated.spring(scale, { toValue: 1, useNativeDriver: true }),
-    ]).start(() => { pulsing.current = false; });
+    ]).start(() => {
+      pulsing.current = false;
+    });
   };
 
-  const close = () => { ref.current = null; hoverRef.current = null; setOpen(null); setHover(null); lockScroll(false); };
+  const close = () => {
+    ref.current = null;
+    hoverRef.current = null;
+    setOpen(null);
+    setHover(null);
+    lockScroll(false);
+  };
   // used once: the stats' hint «Зажмите категорию — …» isn't needed any more
-  const run = (i: number) => { close(); setRowMenuUsed().catch((e) => console.error('save row menu used failed', e)); actions[i].onPress(); };
+  const run = (i: number) => {
+    close();
+    setRowMenuUsed().catch((e) => console.error('save row menu used failed', e));
+    actions[i].onPress();
+  };
   const point = (e: GestureResponderEvent): Point => ({ x: e.nativeEvent.pageX, y: e.nativeEvent.pageY });
 
   function onLongPress(e: GestureResponderEvent) {
@@ -103,12 +139,29 @@ export default function PressMenu({ actions, style, accessibilityHint, testID, c
   };
 
   return (
-    <Animated.View style={{ transform: [{ scale }] }} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onTouchCancel={onTouchEnd}>
+    <Animated.View
+      style={{ transform: [{ scale }] }}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+      onTouchCancel={onTouchEnd}
+    >
       <TouchableOpacity
-        style={style} activeOpacity={1} disabled={!actions.length} testID={testID}
-        onPress={() => { if (actions.length === 1) { actions[0].onPress(); } else { pulse(); } }}
-        onLongPress={onLongPress} delayPressIn={PRESS_DELAY} delayLongPress={LONG_PRESS}
-        onPressIn={shrink} onPressOut={restore}
+        style={style}
+        activeOpacity={1}
+        disabled={!actions.length}
+        testID={testID}
+        onPress={() => {
+          if (actions.length === 1) {
+            actions[0].onPress();
+          } else {
+            pulse();
+          }
+        }}
+        onLongPress={onLongPress}
+        delayPressIn={PRESS_DELAY}
+        delayLongPress={LONG_PRESS}
+        onPressIn={shrink}
+        onPressOut={restore}
         accessibilityHint={accessibilityHint}
         accessibilityActions={actions.map((a) => ({ name: a.key, label: a.label }))}
         onAccessibilityAction={onAccessibilityAction}
@@ -120,21 +173,26 @@ export default function PressMenu({ actions, style, accessibilityHint, testID, c
         {/* four: a cross close around the finger, on a plate of its shape; two or three: round buttons in an arc */}
         {open?.buttons.length === 4 ? (
           <DPad actions={actions} buttons={open.buttons} hover={hover} top={TOP_INSET} onPress={run} />
-        ) : open?.buttons.map((b, i) => {
-          const on = hover === i;
-          const r = on ? BUTTON_RADIUS * 1.3 : BUTTON_RADIUS;
-          return (
-            <TouchableOpacity
-              key={actions[i].key} onPress={() => run(i)} accessibilityRole="button" accessibilityLabel={actions[i].label}
-              style={[styles.button, { left: b.x - 40, top: b.y + TOP_INSET - r }]}
-            >
-              <View style={[styles.circle, { width: r * 2, height: r * 2, borderRadius: r }, on && styles.circleOn]}>
-                {actions[i].icon(on ? colors.onAccent : colors.accent)}
-              </View>
-              <Text style={[styles.label, on && styles.labelOn]}>{actions[i].label}</Text>
-            </TouchableOpacity>
-          );
-        })}
+        ) : (
+          open?.buttons.map((b, i) => {
+            const on = hover === i;
+            const r = on ? BUTTON_RADIUS * 1.3 : BUTTON_RADIUS;
+            return (
+              <TouchableOpacity
+                key={actions[i].key}
+                onPress={() => run(i)}
+                accessibilityRole="button"
+                accessibilityLabel={actions[i].label}
+                style={[styles.button, { left: b.x - 40, top: b.y + TOP_INSET - r }]}
+              >
+                <View style={[styles.circle, { width: r * 2, height: r * 2, borderRadius: r }, on && styles.circleOn]}>
+                  {actions[i].icon(on ? colors.onAccent : colors.accent)}
+                </View>
+                <Text style={[styles.label, on && styles.labelOn]}>{actions[i].label}</Text>
+              </TouchableOpacity>
+            );
+          })
+        )}
       </Modal>
     </Animated.View>
   );
@@ -145,10 +203,22 @@ const styles = StyleSheet.create({
   // 80 wide: the label fits under the circle
   button: { position: 'absolute', width: 80, alignItems: 'center', gap: 4 },
   circle: {
-    backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center',
-    elevation: 6, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 4 },
+    backgroundColor: colors.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
   },
   circleOn: { backgroundColor: colors.accent },
-  label: { fontSize: 13, fontWeight: '600', color: colors.onAccent, textShadowColor: 'rgba(0,0,0,0.5)', textShadowRadius: 3 },
+  label: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.onAccent,
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowRadius: 3,
+  },
   labelOn: { fontSize: 14, fontWeight: '700' },
 });

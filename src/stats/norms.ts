@@ -1,6 +1,16 @@
 import type { Currency } from '../db/fx';
 import { NormPeriod, NormPlanItem, NormsData, normsData, parseYm, PlanKind, regularDays, ymOf } from '../db/plans';
-import { DayKey, dayKeyOf, DayRange, daysByMonth, daysInMonth, normWindow, parseDayKey, rangeDays, rangeToUnix } from '@/shared/lib/dateRange';
+import {
+  DayKey,
+  dayKeyOf,
+  DayRange,
+  daysByMonth,
+  daysInMonth,
+  normWindow,
+  parseDayKey,
+  rangeDays,
+  rangeToUnix,
+} from '@/shared/lib/dateRange';
 import { RHYTHM_DAYS } from '@/shared/lib/dates';
 
 /**
@@ -9,7 +19,10 @@ import { RHYTHM_DAYS } from '@/shared/lib/dates';
  * lowers it, spending less raises it; 0 when the month has no plan (or nothing is left).
  */
 export type NormPart = {
-  ym: string; days: number; dim: number; limit: number;
+  ym: string;
+  days: number;
+  dim: number;
+  limit: number;
   /** spent in this month before these days */
   spentBefore: number;
   /** days of the month from the first of these days to its end */
@@ -33,30 +46,39 @@ export type Norms = {
   flexSpent: number;
   /** those categories, for the explanation */
   flex: Array<{ id: number; name: string; parts: NormPart[]; norm: number; spent: number }>;
-  byCategory: Map<number, {
-    name: string;
-    kind: PlanKind;
-    /** the plan for the month the period ends in (0 if none) */
-    monthLimit: number;
-    /** spending in the period's part in that month (for the share of the month's plan) */
-    spent: number;
-    /**
-     * the norm checked over the category's own rhythm window (see normWindow), across months if it spans two; the
-     * window's spending is net: below 0 when more came back than was spent
-     */
-    rhythm: NormPeriod; window: DayRange; windowParts: NormPart[]; windowNorm: number; windowSpent: number;
-    /**
-     * The limit for the viewed days themselves, as it was at their start (a share of the rhythm's limit when the period is
-     * shorter: a day of a weekly limit is 1/7 of it), and the spending in them. Empty / 0 for fixed and month-rhythm ones.
-     */
-    periodParts: NormPart[]; periodNorm: number; periodSpent: number;
-    /**
-     * How the period moved the limit per the category's rhythm (a day / week / 2 weeks) in the month it ends in:
-     * what's left of the month's plan over the days left, at the period's start and after its end. null for a
-     * month rhythm; `after` null on the month's last day (no days left).
-     */
-    effect: { before: number; after: number | null } | null;
-  }>;
+  byCategory: Map<
+    number,
+    {
+      name: string;
+      kind: PlanKind;
+      /** the plan for the month the period ends in (0 if none) */
+      monthLimit: number;
+      /** spending in the period's part in that month (for the share of the month's plan) */
+      spent: number;
+      /**
+       * the norm checked over the category's own rhythm window (see normWindow), across months if it spans two; the
+       * window's spending is net: below 0 when more came back than was spent
+       */
+      rhythm: NormPeriod;
+      window: DayRange;
+      windowParts: NormPart[];
+      windowNorm: number;
+      windowSpent: number;
+      /**
+       * The limit for the viewed days themselves, as it was at their start (a share of the rhythm's limit when the period is
+       * shorter: a day of a weekly limit is 1/7 of it), and the spending in them. Empty / 0 for fixed and month-rhythm ones.
+       */
+      periodParts: NormPart[];
+      periodNorm: number;
+      periodSpent: number;
+      /**
+       * How the period moved the limit per the category's rhythm (a day / week / 2 weeks) in the month it ends in:
+       * what's left of the month's plan over the days left, at the period's start and after its end. null for a
+       * month rhythm; `after` null on the month's last day (no days left).
+       */
+      effect: { before: number; after: number | null } | null;
+    }
+  >;
   /** spending from the 1st of the month up to the period's end: can a period's overspend still fit the month? */
   monthToDate: Map<number | null, number>;
 };
@@ -64,13 +86,14 @@ export type Norms = {
 /** One category's limit in `Norms`. */
 export type CategoryNorm = Norms['byCategory'] extends Map<number, infer V> ? V : never;
 
-
 /** The viewed period is a part of a rhythm window (a day of a weekly limit): it is measured as the whole window. */
-export const isPartOfWindow = (window: DayRange, range: DayRange) => window.from !== range.from || window.to !== range.to;
+export const isPartOfWindow = (window: DayRange, range: DayRange) =>
+  window.from !== range.from || window.to !== range.to;
 
 /** The months a period's norms may look at: its own, and one on each side (a rhythm window reaches into them). */
 function monthsAround(range: DayRange): string[] {
-  const f = parseYm(range.from.slice(0, 7)), t = parseYm(range.to.slice(0, 7));
+  const f = parseYm(range.from.slice(0, 7)),
+    t = parseYm(range.to.slice(0, 7));
   const last = ymOf(t.year, t.month + 1);
   const out: string[] = [];
   for (let i = -1, m = ymOf(f.year, f.month - 1); m <= last; m = ymOf(f.year, f.month + ++i)) out.push(m);
@@ -103,7 +126,10 @@ export async function loadNorms(range: DayRange, currency: Currency, clipFrom?: 
     return spentCache.get(key)!;
   };
   const planOf = (m: string): Map<number, NormPlanItem> => data.plans.get(m) ?? new Map();
-  const dayBefore = (k: DayKey) => { const d = parseDayKey(k); return dayKeyOf(new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1)); };
+  const dayBefore = (k: DayKey) => {
+    const d = parseDayKey(k);
+    return dayKeyOf(new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1));
+  };
   const partsOf = (id: number, r: DayRange): NormPart[] => {
     const out: NormPart[] = [];
     for (const [m, days] of daysByMonth(r)) {
@@ -120,7 +146,7 @@ export async function loadNorms(range: DayRange, currency: Currency, clipFrom?: 
       // the first of these days in this month, and what was spent in the month before it
       const first = r.from > `${m}-01` ? r.from : `${m}-01`;
       const firstDay = Number(first.slice(8, 10));
-      const spentBefore = firstDay > 1 ? spentOver({ from: `${m}-01`, to: dayBefore(first) }).get(id) ?? 0 : 0;
+      const spentBefore = firstDay > 1 ? (spentOver({ from: `${m}-01`, to: dayBefore(first) }).get(id) ?? 0) : 0;
       const daysLeft = dim - firstDay + 1;
       const norm = limit > 0 ? (Math.max(0, limit - spentBefore) * days) / daysLeft : 0;
       out.push({ ym: m, days, dim, limit, spentBefore, daysLeft, norm, flat: (limit * days) / dim });
@@ -138,10 +164,17 @@ export async function loadNorms(range: DayRange, currency: Currency, clipFrom?: 
   const periodSpent = spentOver(range);
   // spent in the month before the period (the part of it in the month it ends in)
   const periodStartInMonth = range.from > monthStart ? range.from : monthStart;
-  const beforePeriod = periodStartInMonth > monthStart ? spentOver({ from: monthStart, to: dayBefore(periodStartInMonth) }) : new Map<number | null, number>();
+  const beforePeriod =
+    periodStartInMonth > monthStart
+      ? spentOver({ from: monthStart, to: dayBefore(periodStartInMonth) })
+      : new Map<number | null, number>();
   const partSpent = spentOver({ from: range.from > monthStart ? range.from : monthStart, to: range.to });
   const norms: Norms = {
-    ym, total: 0, flexSpent: 0, flex: [], byCategory: new Map(),
+    ym,
+    total: 0,
+    flexSpent: 0,
+    flex: [],
+    byCategory: new Map(),
     monthToDate: spentOver({ from: monthStart, to: range.to }),
   };
   for (const [id, { name, kind, rhythm }] of items) {
@@ -159,19 +192,32 @@ export async function loadNorms(range: DayRange, currency: Currency, clipFrom?: 
     const windowParts = rhythm === 'month' ? [] : partsOf(id, win);
     // the limit per rhythm at the period's start and after it: what's left of the plan / days left × rhythm days
     const dim = daysInMonth(ym);
-    const perRhythm = (spentSoFar: number, firstDay: number) => (Math.max(0, monthLimit - spentSoFar) / (dim - firstDay + 1)) * RHYTHM_DAYS[rhythm as Exclude<NormPeriod, 'month'>];
+    const perRhythm = (spentSoFar: number, firstDay: number) =>
+      (Math.max(0, monthLimit - spentSoFar) / (dim - firstDay + 1)) *
+      RHYTHM_DAYS[rhythm as Exclude<NormPeriod, 'month'>];
     const lastDay = Number(range.to.slice(8, 10));
     // a regular payment within the month: its days, not a limit moved by spending
-    const effect = rhythm === 'month' || monthLimit <= 0 || lastPlan.get(id)?.regular ? null : {
-      before: perRhythm(beforePeriod.get(id) ?? 0, Number(periodStartInMonth.slice(8, 10))),
-      after: lastDay < dim ? perRhythm(norms.monthToDate.get(id) ?? 0, lastDay + 1) : null,
-    };
+    const effect =
+      rhythm === 'month' || monthLimit <= 0 || lastPlan.get(id)?.regular
+        ? null
+        : {
+            before: perRhythm(beforePeriod.get(id) ?? 0, Number(periodStartInMonth.slice(8, 10))),
+            after: lastDay < dim ? perRhythm(norms.monthToDate.get(id) ?? 0, lastDay + 1) : null,
+          };
     norms.byCategory.set(id, {
-      name, kind, monthLimit, spent: partSpent.get(id) ?? 0, rhythm, window: win, windowParts,
+      name,
+      kind,
+      monthLimit,
+      spent: partSpent.get(id) ?? 0,
+      rhythm,
+      window: win,
+      windowParts,
       windowNorm: rhythm === 'month' ? monthLimit : sum(windowParts),
       // a refund in the window gives its money back to it: more came back than was spent — more left this week
-      windowSpent: rhythm === 'month' ? spentOver(win).get(id) ?? 0 : netIn(data, win).get(id) ?? 0,
-      periodParts, periodNorm: sum(periodParts), periodSpent: periodSpent.get(id) ?? 0,
+      windowSpent: rhythm === 'month' ? (spentOver(win).get(id) ?? 0) : (netIn(data, win).get(id) ?? 0),
+      periodParts,
+      periodNorm: sum(periodParts),
+      periodSpent: periodSpent.get(id) ?? 0,
       effect,
     });
   }
@@ -197,13 +243,15 @@ export function paceOf(spent: number, norm: number, monthToDate: number, monthLi
  */
 export function rhythmBar(
   plan: { rhythm: NormPeriod; window: DayRange; windowNorm: number; windowSpent: number },
-  viewed: DayRange, viewedSpent: number,
+  viewed: DayRange,
+  viewedSpent: number,
 ): { ratio: number; base: number; marker?: number; end?: DayKey } {
   const { rhythm, window: win, windowNorm: norm, windowSpent: spent } = plan;
   // a month's norm is the whole month, its window only the days so far
-  const span: DayRange = rhythm === 'month'
-    ? { from: win.from, to: `${win.from.slice(0, 7)}-${String(daysInMonth(win.from.slice(0, 7))).padStart(2, '0')}` }
-    : win;
+  const span: DayRange =
+    rhythm === 'month'
+      ? { from: win.from, to: `${win.from.slice(0, 7)}-${String(daysInMonth(win.from.slice(0, 7))).padStart(2, '0')}` }
+      : win;
   const total = rangeDays(span);
   const passed = rangeDays({ from: span.from, to: viewed.to < span.to ? viewed.to : span.to });
   const of = (v: number) => (norm > 0 ? v / norm : v > 0 ? 1 : 0);

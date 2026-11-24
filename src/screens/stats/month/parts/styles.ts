@@ -15,14 +15,26 @@ export const styles = StyleSheet.create({
   donutSide: { flex: 1, minWidth: 0 },
   donutCuts: { marginBottom: 10 },
   cutTabs: { flexDirection: 'row', gap: 16, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
-  cutTab: { paddingBottom: 6, marginBottom: -StyleSheet.hairlineWidth, borderBottomWidth: 2, borderColor: 'transparent' },
+  cutTab: {
+    paddingBottom: 6,
+    marginBottom: -StyleSheet.hairlineWidth,
+    borderBottomWidth: 2,
+    borderColor: 'transparent',
+  },
   cutTabOn: { borderColor: colors.accent },
   cutTabText: { fontSize: 14, color: colors.muted },
   cutTabTextOn: { color: colors.accent, fontWeight: '600' },
   donutNames: { gap: 6 },
   donutName: { flexDirection: 'row', alignItems: 'center' },
   donutNameText: { flexShrink: 1, fontSize: 13, color: colors.text },
-  donutNameShare: { marginLeft: 'auto', paddingLeft: 6, fontSize: 13, fontWeight: '700', color: colors.text, fontVariant: ['tabular-nums'] },
+  donutNameShare: {
+    marginLeft: 'auto',
+    paddingLeft: 6,
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.text,
+    fontVariant: ['tabular-nums'],
+  },
   donutRest: { color: colors.muted },
   donutRestRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginLeft: 13 },
   donutMore: { fontSize: 13 },
@@ -56,8 +68,13 @@ export const styles = StyleSheet.create({
   dot: { width: 10, height: 10, borderRadius: 5, marginRight: 8 },
   rowName: { flexShrink: 1, fontSize: 15, color: colors.text },
   addToPlan: {
-    marginLeft: 8, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10,
-    borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed',
+    marginLeft: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
   },
   addToPlanText: { fontSize: 12, color: colors.accent },
   // a planned row's right: what is left, big, and what it is under it
@@ -73,7 +90,13 @@ export const styles = StyleSheet.create({
   rowStatusMuted: { color: colors.muted },
   paceLine: { fontWeight: '600' },
   // an overspend, the same on every screen: bold orange, no ⚠
-  sectionBand: { marginHorizontal: -16, paddingHorizontal: 16, paddingTop: 2, paddingBottom: 10, backgroundColor: colors.surface },
+  sectionBand: {
+    marginHorizontal: -16,
+    paddingHorizontal: 16,
+    paddingTop: 2,
+    paddingBottom: 10,
+    backgroundColor: colors.surface,
+  },
   overLine: { color: colors.warn, fontWeight: '600' },
   overNum: { color: colors.warn },
   paceOk: { color: colors.income },
@@ -93,4 +116,5 @@ export const styles = StyleSheet.create({
 });
 
 /** "spent" and its "(%)" in a "spent / limit (%)" turn orange once over the limit (the limit itself stays muted) */
-export const overStyle = (spent: number, limit: number) => (limit > 0 && spent > Math.round(limit) ? styles.overNum : undefined);
+export const overStyle = (spent: number, limit: number) =>
+  limit > 0 && spent > Math.round(limit) ? styles.overNum : undefined;

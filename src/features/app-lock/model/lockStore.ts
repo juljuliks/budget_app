@@ -5,7 +5,6 @@ import { AppState } from 'react-native';
 import { shouldLock } from './lockTiming';
 import { biometricOnStart, DEFAULT_DELAY_S, isOutside, lockedOnStart, lockState } from '@/native/appLock';
 
-
 const cache = { pin: lockedOnStart(), delayS: DEFAULT_DELAY_S, biometric: biometricOnStart(), pinLength: 4 };
 let locked = cache.pin;
 let backgroundAt: number | null = null;
@@ -53,7 +52,9 @@ export function useLocked(): boolean {
   useEffect(() => {
     listeners.add(setV);
     setV(locked);
-    return () => { listeners.delete(setV); };
+    return () => {
+      listeners.delete(setV);
+    };
   }, []);
   return v;
 }

@@ -14,7 +14,12 @@ export async function saveMixed(merchantId: string, list: number[]) {
  * One category (or none): new operations get it; the past ones that followed the old one change with it or keep it.
  * Of different categories and none picked: just not different any more.
  */
-export async function saveSingle(merchantId: string, categoryId: number | null, wasMixed: boolean, past: 'change' | 'keep') {
+export async function saveSingle(
+  merchantId: string,
+  categoryId: number | null,
+  wasMixed: boolean,
+  past: 'change' | 'keep',
+) {
   if (categoryId === null && wasMixed) await setMerchantMixed(merchantId, false);
   else await setMerchantCategory(merchantId, categoryId, past);
   emitTransactionsChanged();

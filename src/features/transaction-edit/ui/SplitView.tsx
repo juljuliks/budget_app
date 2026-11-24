@@ -21,7 +21,9 @@ export default function SplitView({ parts, total, currency, onEdit }: Props) {
   return (
     <>
       <View style={styles.head}>
-        <Text style={styles.title}>Разделена · {parts.length} {plural(parts.length, ['категория', 'категории', 'категорий'])}</Text>
+        <Text style={styles.title}>
+          Разделена · {parts.length} {plural(parts.length, ['категория', 'категории', 'категорий'])}
+        </Text>
         <TouchableOpacity style={styles.edit} onPress={onEdit} hitSlop={8} accessibilityLabel="Изменить разделение">
           <PencilIcon color={colors.accent} size={16} />
           <Text style={styles.editText}>Изменить</Text>
@@ -41,7 +43,13 @@ export default function SplitView({ parts, total, currency, onEdit }: Props) {
 }
 
 const styles = StyleSheet.create({
-  head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 24, marginBottom: 10 },
+  head: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 24,
+    marginBottom: 10,
+  },
   title: { fontSize: 13, fontWeight: '600', color: colors.muted, textTransform: 'uppercase' },
   edit: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   editText: { fontSize: 15, color: colors.accent },

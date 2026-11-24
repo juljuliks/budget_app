@@ -29,23 +29,39 @@ export function useMonthSavings(ym: string, shown: Currency, hidden: boolean) {
   const latest = useLatestRequest();
   const load = useCallback(() => {
     const keep = latest();
-    ensureMonthPlan(ym).then(() => planCurrency(ym)).then(keep(setBudgetCurrency)).catch((e) => console.error('load budget currency failed', e));
-    if (ym === currentYm()) fundForecasts(ym).then(keep(setForecasts)).catch((e) => console.error('load fund forecasts failed', e));
+    ensureMonthPlan(ym)
+      .then(() => planCurrency(ym))
+      .then(keep(setBudgetCurrency))
+      .catch((e) => console.error('load budget currency failed', e));
+    if (ym === currentYm())
+      fundForecasts(ym)
+        .then(keep(setForecasts))
+        .catch((e) => console.error('load fund forecasts failed', e));
     if (!past) return;
-    savingsPlanFact(ym, currency).then(keep((f) => setFact({ fact: f, currency }))).catch((e) => console.error('load month savings failed', e));
+    savingsPlanFact(ym, currency)
+      .then(keep((f) => setFact({ fact: f, currency })))
+      .catch((e) => console.error('load month savings failed', e));
   }, [ym, currency, past, latest]);
   useFocusEffect(load);
   useEffect(() => onTransactionsChanged(load), [load]);
 
   const money = (minor: number) => formatWithCurrency(minor, currency);
-  if (past) return { section: fact?.currency === currency ? pastSavings(fact.fact, ym, money, hidden) : null, view: null, currency };
-  if (!data.items || data.loadedCurrency !== currency || ym > currentYm()) return { section: null, view: null, currency };
+  if (past)
+    return {
+      section: fact?.currency === currency ? pastSavings(fact.fact, ym, money, hidden) : null,
+      view: null,
+      currency,
+    };
+  if (!data.items || data.loadedCurrency !== currency || ym > currentYm())
+    return { section: null, view: null, currency };
   const view = planView({ ...data, items: data.items, ym, currency, hidden });
   return { section: currentSavings(view, money, hidden, ym, paymentWords, forecasts), view, currency };
 }
 
 /** A category of «Сбережения меньше на …»: its plan amount to change. null — not in the plan. */
 export function lessTarget(view: PlanView | null, id: number): PlanAmountTarget | null {
-  const item = view?.groups.flatMap((g) => g.items).find((i) => i.category_id === id) ?? view?.funds.find((i) => i.category_id === id);
+  const item =
+    view?.groups.flatMap((g) => g.items).find((i) => i.category_id === id) ??
+    view?.funds.find((i) => i.category_id === id);
   return item ? { ...item, label: categoryLabel(item) } : null;
 }

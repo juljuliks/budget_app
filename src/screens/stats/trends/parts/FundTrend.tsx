@@ -22,14 +22,27 @@ const months = (n: number) => `${n} ${plural(n, ['месяц', 'месяца', '
  * month — a month without a plan dashed; the pace to its date, the months without a contribution, what was short, on what
  * it was spent; its card (contributions and spending, «Изменить», «Удалить копилку»).
  */
-export default function FundTrend({ f, categoryId, label, money }: { f: Fund; categoryId: number; label: string; money: (minor: number) => string }) {
+export default function FundTrend({
+  f,
+  categoryId,
+  label,
+  money,
+}: {
+  f: Fund;
+  categoryId: number;
+  label: string;
+  money: (minor: number) => string;
+}) {
   const [picked, setPicked] = useState<number | null>(null);
   const [card, setCard] = useState(false);
   const max = Math.max(1, ...f.bars.map((b) => Math.max(b.saved, b.spent)));
   const bar = picked === null ? null : f.bars[picked];
   const offset = f.forecast?.offset ?? 0;
   const cell = (title: string, value: string, warn?: boolean) => (
-    <View style={s.cell}><Text style={s.label}>{title}</Text><Masked style={[s.value, warn && { color: colors.warn }]}>{value}</Masked></View>
+    <View style={s.cell}>
+      <Text style={s.label}>{title}</Text>
+      <Masked style={[s.value, warn && { color: colors.warn }]}>{value}</Masked>
+    </View>
   );
   return (
     <>
@@ -39,23 +52,43 @@ export default function FundTrend({ f, categoryId, label, money }: { f: Fund; ca
           <Text style={s.spentWhen}>{` из ${money(f.target)} · ${byMonth(f.due.slice(0, 7))}`}</Text>
         </Text>
       </View>
-      <View style={styles.track}><View style={[styles.fill, { width: `${Math.min(100, (f.balance / Math.max(1, f.target)) * 100)}%` }]} /></View>
+      <View style={styles.track}>
+        <View style={[styles.fill, { width: `${Math.min(100, (f.balance / Math.max(1, f.target)) * 100)}%` }]} />
+      </View>
       <Text style={s.line}>
-        {f.left > 0 ? `взнос ${money(f.contribution)} в месяц · осталось ${money(f.left)} за ${months(f.monthsLeft)}` : 'Накоплено всё'}
+        {f.left > 0
+          ? `взнос ${money(f.contribution)} в месяц · осталось ${money(f.left)} за ${months(f.monthsLeft)}`
+          : 'Накоплено всё'}
       </Text>
       <View style={styles.chart} accessibilityLabel="Отложено и потрачено по месяцам">
         {f.bars.map((b, i) => (
-          <TouchableOpacity key={b.ym} style={styles.col} onPress={() => setPicked(i)} accessibilityLabel={MONTHS_NOM[Number(b.ym.slice(5)) - 1]}>
+          <TouchableOpacity
+            key={b.ym}
+            style={styles.col}
+            onPress={() => setPicked(i)}
+            accessibilityLabel={MONTHS_NOM[Number(b.ym.slice(5)) - 1]}
+          >
             <View style={styles.up}>
-              {b.planned ? <View style={[styles.saved, { height: Math.round((b.saved / max) * UP) }, b.current && styles.now]} /> : <View style={styles.none} />}
+              {b.planned ? (
+                <View style={[styles.saved, { height: Math.round((b.saved / max) * UP) }, b.current && styles.now]} />
+              ) : (
+                <View style={styles.none} />
+              )}
             </View>
-            <View style={styles.down}>{b.spent > 0 ? <View style={[styles.spent, { height: Math.max(2, Math.round((b.spent / max) * DOWN)) }]} /> : null}</View>
-            <Text style={[styles.month, b.current && styles.monthNow]}>{MONTHS_NOM[Number(b.ym.slice(5)) - 1].slice(0, 1)}</Text>
+            <View style={styles.down}>
+              {b.spent > 0 ? (
+                <View style={[styles.spent, { height: Math.max(2, Math.round((b.spent / max) * DOWN)) }]} />
+              ) : null}
+            </View>
+            <Text style={[styles.month, b.current && styles.monthNow]}>
+              {MONTHS_NOM[Number(b.ym.slice(5)) - 1].slice(0, 1)}
+            </Text>
           </TouchableOpacity>
         ))}
       </View>
       <Text style={s.point}>
-        {bar ? `${monthYear(bar.ym)}: +${money(bar.saved)}${bar.spent ? ` · потрачено ${money(bar.spent)}` : ''}`
+        {bar
+          ? `${monthYear(bar.ym)}: +${money(bar.saved)}${bar.spent ? ` · потрачено ${money(bar.spent)}` : ''}`
           : 'Вверх — отложено, вниз — потрачено из копилки'}
       </Text>
       {f.forecast && f.left > 0 ? (
@@ -70,15 +103,26 @@ export default function FundTrend({ f, categoryId, label, money }: { f: Fund; ca
       <View style={[s.block, s.grid]}>
         {cell('Отложено за всё время', money(f.savedAll))}
         {cell('Потрачено из копилки', money(f.spentAll))}
-        {f.skipped.length ? cell('Месяцев без взноса', `${f.skipped.length} · ${MONTHS_NOM[Number(f.skipped[f.skipped.length - 1].slice(5)) - 1]}`) : null}
-        {f.shortage ? cell('Не хватило', `${money(f.shortage.total)} · ${MONTHS_PREP[Number(f.shortage.ym.slice(5)) - 1]}`, true) : null}
+        {f.skipped.length
+          ? cell(
+              'Месяцев без взноса',
+              `${f.skipped.length} · ${MONTHS_NOM[Number(f.skipped[f.skipped.length - 1].slice(5)) - 1]}`,
+            )
+          : null}
+        {f.shortage
+          ? cell('Не хватило', `${money(f.shortage.total)} · ${MONTHS_PREP[Number(f.shortage.ym.slice(5)) - 1]}`, true)
+          : null}
       </View>
       {f.merchants.length ? (
         <View style={s.block}>
           <Text style={s.label}>На что тратили</Text>
           {f.merchants.map((m) => (
             <View key={m.key ?? m.name} style={s.merchant}>
-              {m.key ? <MerchantLink merchantKey={m.key} label={m.name} containerStyle={s.merchantName} /> : <Text style={[s.value, s.merchantName]}>{m.name}</Text>}
+              {m.key ? (
+                <MerchantLink merchantKey={m.key} label={m.name} containerStyle={s.merchantName} />
+              ) : (
+                <Text style={[s.value, s.merchantName]}>{m.name}</Text>
+              )}
               <Masked style={s.value}>{money(m.value)}</Masked>
             </View>
           ))}
@@ -87,7 +131,15 @@ export default function FundTrend({ f, categoryId, label, money }: { f: Fund; ca
       <View style={s.operations}>
         <TextLink label="Копилка: взносы и траты" onPress={() => setCard(true)} />
       </View>
-      <FundSheet categoryId={card ? categoryId : null} label={label} onClose={() => setCard(false)} onEdit={() => { setCard(false); openCategory(categoryId); }} />
+      <FundSheet
+        categoryId={card ? categoryId : null}
+        label={label}
+        onClose={() => setCard(false)}
+        onEdit={() => {
+          setCard(false);
+          openCategory(categoryId);
+        }}
+      />
     </>
   );
 }

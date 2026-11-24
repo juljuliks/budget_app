@@ -18,8 +18,15 @@ import { dateNeeded, UNTIL_BEFORE } from './sheetOptions';
 import type { PlanAmountTarget } from './PlanAmountModal';
 
 export type PlanSheetValues = {
-  kind: PlanKind; currency: Currency; norm: NormPeriod;
-  pinned: boolean; until: string | null; every: RegularEvery; weekdays: number; period: number; next: string | null;
+  kind: PlanKind;
+  currency: Currency;
+  norm: NormPeriod;
+  pinned: boolean;
+  until: string | null;
+  every: RegularEvery;
+  weekdays: number;
+  period: number;
+  next: string | null;
   /** a one-off payment's day in the month (optional) */
   due?: string | null;
   /** "Откладывать каждый месяц?" of a regular payment rarer than monthly; `startBad` — "Уже отложено" not an amount */
@@ -27,16 +34,33 @@ export type PlanSheetValues = {
 };
 
 type Args = {
-  ym: string; target: PlanAmountTarget; text: string; v: PlanSheetValues; adding: boolean;
+  ym: string;
+  target: PlanAmountTarget;
+  text: string;
+  v: PlanSheetValues;
+  adding: boolean;
   /** what 🔒 has, in the budget's currency; what is free (for the error) */
-  locked: number; free: { minor: number; currency: Currency } | null;
-  onSaved: () => void; onClose: () => void;
+  locked: number;
+  free: { minor: number; currency: Currency } | null;
+  onSaved: () => void;
+  onClose: () => void;
   /** «Настроить» of a payment every day, week or month: no amount asked — the one it had, 0 is fine */
   noAmount?: boolean;
 };
 
 /** An error to show, null — saved, false — asked over the sheet (it stays open). */
-export async function submitPlanSheet({ ym, target, text, v, adding, locked, free, onSaved, onClose, noAmount }: Args): Promise<string | null | false> {
+export async function submitPlanSheet({
+  ym,
+  target,
+  text,
+  v,
+  adding,
+  locked,
+  free,
+  onSaved,
+  onClose,
+  noAmount,
+}: Args): Promise<string | null | false> {
   const minor = parseAmountOrZero(text);
   if (minor === null) return AMOUNT_HINT;
   const k = v.kind;
@@ -49,8 +73,15 @@ export async function submitPlanSheet({ ym, target, text, v, adding, locked, fre
   if (own && !minor && !noAmount) return 'Введите сумму платежа';
   // monthly: the day is optional (none — the amount in each month's plan); picked in a coming month's plan — the same day
   // of this month (it repeats each month: this month keeps its charge)
-  const months = (d: string) => (Number(d.slice(0, 4)) - Number(currentYm().slice(0, 4))) * 12 + Number(d.slice(5, 7)) - Number(currentYm().slice(5, 7));
-  const due = own ? (v.period === 1 && v.next && months(v.next) > 0 ? addMonths(v.next, -months(v.next)) : v.next) : null;
+  const months = (d: string) =>
+    (Number(d.slice(0, 4)) - Number(currentYm().slice(0, 4))) * 12 +
+    Number(d.slice(5, 7)) -
+    Number(currentYm().slice(5, 7));
+  const due = own
+    ? v.period === 1 && v.next && months(v.next) > 0
+      ? addMonths(v.next, -months(v.next))
+      : v.next
+    : null;
   if (own && !due && v.period !== 1) return dateNeeded();
   if (own && v.until && due && v.until < due) return UNTIL_BEFORE;
   if (own && v.saving?.startBad) return AMOUNT_HINT;
@@ -58,14 +89,48 @@ export async function submitPlanSheet({ ym, target, text, v, adding, locked, fre
   // first (asked if they saved something)
   const off = !!target.recurring && (k !== 'subs' || regular);
   if (off && !(await turnOffRecurring(target.category_id))) return false;
-  const saved = (taken?: string) => { toast(savedText(k, target.label, adding, off, taken)); onSaved(); };
-  if (own) return submitCategoryPayment(ym, target, { amount_minor: minor, currency: v.currency, period: v.period, due, until: v.until, saving: v.period > 1 ? v.saving : null }, adding, saved, onClose, free);
+  const saved = (taken?: string) => {
+    toast(savedText(k, target.label, adding, off, taken));
+    onSaved();
+  };
+  if (own)
+    return submitCategoryPayment(
+      ym,
+      target,
+      {
+        amount_minor: minor,
+        currency: v.currency,
+        period: v.period,
+        due,
+        until: v.until,
+        saving: v.period > 1 ? v.saving : null,
+      },
+      adding,
+      saved,
+      onClose,
+      free,
+    );
   const write = async (takeLocked: boolean | 'all') => {
     if (regular) {
-      return saveRegular(ym, target.category_id, { every: v.every as 'day' | 'week', weekdays: v.weekdays, unit_minor: minor, until: v.until }, v.currency, takeLocked);
+      return saveRegular(
+        ym,
+        target.category_id,
+        { every: v.every as 'day' | 'week', weekdays: v.weekdays, unit_minor: minor, until: v.until },
+        v.currency,
+        takeLocked,
+      );
     }
     // what a new month gets of it is its category's kind (a limit: this amount and «Как тратите»)
-    await savePlanAmount(ym, target.category_id, minor, byHand ? 'fixed' : k, v.currency, v.norm, takeLocked === true, k === 'fixed' && !byHand ? v.due ?? null : undefined);
+    await savePlanAmount(
+      ym,
+      target.category_id,
+      minor,
+      byHand ? 'fixed' : k,
+      v.currency,
+      v.norm,
+      takeLocked === true,
+      k === 'fixed' && !byHand ? (v.due ?? null) : undefined,
+    );
   };
   try {
     await write(false);
@@ -76,10 +141,17 @@ export async function submitPlanSheet({ ym, target, text, v, adding, locked, fre
     // obligation, as a subscription) — whatever 🔒 has, the plan over its budget by the rest
     if (short <= locked || (regular && locked > 0)) {
       askTakeLocked({
-        short, locked, currency: e.currency, adding,
-        onYes: (take) => write(regular ? 'all' : true)
-          .then(() => { saved(formatWithCurrency(take, e.currency)); onClose(); })
-          .catch(toastFailure('save plan amount from savings', SAVE_FAILED)),
+        short,
+        locked,
+        currency: e.currency,
+        adding,
+        onYes: (take) =>
+          write(regular ? 'all' : true)
+            .then(() => {
+              saved(formatWithCurrency(take, e.currency));
+              onClose();
+            })
+            .catch(toastFailure('save plan amount from savings', SAVE_FAILED)),
       });
       return false;
     }
@@ -89,7 +161,9 @@ export async function submitPlanSheet({ ym, target, text, v, adding, locked, fre
   saved();
   // a limit cut: what it frees may go to the spending outside the plan past its share
   if (k === 'limit' && !adding && v.currency === target.currency && minor < target.limit_minor) {
-    offerCover(ym, target.limit_minor - minor, target.currency).catch(toastFailure('offer unplanned cover', SAVE_FAILED));
+    offerCover(ym, target.limit_minor - minor, target.currency).catch(
+      toastFailure('offer unplanned cover', SAVE_FAILED),
+    );
   }
   return null;
 }

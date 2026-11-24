@@ -11,6 +11,9 @@ export function useLatestRequest() {
   const id = useRef(0);
   return useCallback(() => {
     const mine = ++id.current;
-    return <T,>(set: (value: T) => void) => (value: T) => { if (mine === id.current) set(value); };
+    return <T>(set: (value: T) => void) =>
+      (value: T) => {
+        if (mine === id.current) set(value);
+      };
   }, []);
 }

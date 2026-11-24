@@ -33,7 +33,11 @@ export default function App() {
         <Stack.Screen name="Merchants" component={MerchantsScreen} options={{ title: 'Мерчанты' }} />
         <Stack.Screen name="Unparsed" component={UnparsedScreen} options={{ title: 'Не распознано' }} />
         <Stack.Screen name="UnparsedMessage" component={UnparsedMessageScreen} options={{ title: '' }} />
-        <Stack.Screen name="MessageTemplates" component={MessageTemplatesScreen} options={{ title: 'Шаблоны сообщений' }} />
+        <Stack.Screen
+          name="MessageTemplates"
+          component={MessageTemplatesScreen}
+          options={{ title: 'Шаблоны сообщений' }}
+        />
         <Stack.Screen name="Banks" component={BanksScreen} options={{ title: 'Банки' }} />
         {/* the budget's things: pages over each other, back walks the chain */}
         <Stack.Screen name="Operation" component={OperationScreen} options={{ title: 'Операция' }} />

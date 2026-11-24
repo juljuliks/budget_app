@@ -16,7 +16,12 @@ async function draftFund(ym: string, categoryId: number, input: FundInput): Prom
 }
 
 /** The month's contribution `input` would make: what is left to save over the months left, from what it has at the month's start. */
-export async function fundContribution(ym: string, categoryId: number, input: FundInput, nowYm = currentYm()): Promise<number> {
+export async function fundContribution(
+  ym: string,
+  categoryId: number,
+  input: FundInput,
+  nowYm = currentYm(),
+): Promise<number> {
   const fund = await draftFund(ym, categoryId, input);
   const saved = fund.since_ym < ym ? (await fundLedger(fund, ymBefore(ym), nowYm)).balance : fund.start_minor;
   return contributionOf(fund, ym, saved);
@@ -35,21 +40,30 @@ export async function setFund(ym: string, categoryId: number, input: FundInput, 
       `INSERT INTO funds (category_id, target_minor, currency, due, start_minor, since_ym, closed_ym, released_minor) VALUES (?, ?, ?, ?, ?, ?, NULL, NULL)
         ON CONFLICT(category_id) DO UPDATE SET target_minor = excluded.target_minor, currency = excluded.currency, due = excluded.due,
           start_minor = excluded.start_minor, since_ym = excluded.since_ym, closed_ym = NULL, released_minor = NULL`,
-      [categoryId, input.target_minor, input.currency, input.due, input.start_minor, fund.since_ym]);
+      [categoryId, input.target_minor, input.currency, input.due, input.start_minor, fund.since_ym],
+    );
     await t.run("UPDATE categories SET impulse = 0, plan_kind = 'fund' WHERE id = ?", [categoryId]);
     await ownMonth(ym, t);
     await t.run(
       `INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency) VALUES (?, ?, 0, 'fund', ?)
         ON CONFLICT(ym, category_id) DO UPDATE SET kind = 'fund', currency = excluded.currency, pinned = 0`,
-      [ym, categoryId, input.currency]);
+      [ym, categoryId, input.currency],
+    );
   });
   // this month and the coming ones already planned: counted from the new target and date, fitted again
-  const later = await db.all<{ ym: string }>("SELECT ym FROM plan_items WHERE category_id = ? AND kind = 'fund' AND ym >= ? ORDER BY ym DESC LIMIT 1", [categoryId, ym]);
+  const later = await db.all<{ ym: string }>(
+    "SELECT ym FROM plan_items WHERE category_id = ? AND kind = 'fund' AND ym >= ? ORDER BY ym DESC LIMIT 1",
+    [categoryId, ym],
+  );
   await refreshFundItems(later[0]?.ym ?? ym, nowYm);
 }
 
 /** What a fund's deletion took: "Отменить" puts it back. */
-export type DeletedFund = { fund: Fund; items: Array<{ ym: string; limit_minor: number; currency: string; taken_minor: number }>; released: number };
+export type DeletedFund = {
+  fund: Fund;
+  items: Array<{ ym: string; limit_minor: number; currency: string; taken_minor: number }>;
+  released: number;
+};
 
 /**
  * Deletes the fund in the current month: what it saved up to the month before goes to this month's savings, its
@@ -62,13 +76,19 @@ export async function deleteFund(categoryId: number, nowYm = currentYm()): Promi
   const db = await getDb();
   return db.transaction(async (t) => {
     const items = await t.all<{ ym: string; limit_minor: number; currency: string; taken_minor: number }>(
-      'SELECT ym, limit_minor, currency, taken_minor FROM plan_items WHERE category_id = ? AND ym >= ?', [categoryId, nowYm]);
+      'SELECT ym, limit_minor, currency, taken_minor FROM plan_items WHERE category_id = ? AND ym >= ?',
+      [categoryId, nowYm],
+    );
     // what its contributions took from 🔒 goes back there
     for (const i of items.filter((x) => x.taken_minor > 0)) {
       await t.run('UPDATE plan_months SET locked_minor = locked_minor + ? WHERE ym = ?', [i.taken_minor, i.ym]);
     }
     await t.run('DELETE FROM plan_items WHERE category_id = ? AND ym >= ?', [categoryId, nowYm]);
-    await t.run('UPDATE funds SET closed_ym = ?, released_minor = ? WHERE category_id = ?', [nowYm, balance, categoryId]);
+    await t.run('UPDATE funds SET closed_ym = ?, released_minor = ? WHERE category_id = ?', [
+      nowYm,
+      balance,
+      categoryId,
+    ]);
     // no kind of its own any more: added to a plan again — a one-off payment
     await t.run("UPDATE categories SET plan_kind = NULL WHERE id = ? AND plan_kind = 'fund'", [categoryId]);
     return { fund, items, released: balance };
@@ -82,8 +102,10 @@ export async function restoreFund(d: DeletedFund): Promise<void> {
     await t.run('UPDATE funds SET closed_ym = NULL, released_minor = NULL WHERE category_id = ?', [d.fund.category_id]);
     await t.run("UPDATE categories SET plan_kind = 'fund' WHERE id = ?", [d.fund.category_id]);
     for (const i of d.items) {
-      await t.run("INSERT OR REPLACE INTO plan_items (ym, category_id, limit_minor, kind, currency) VALUES (?, ?, ?, 'fund', ?)",
-        [i.ym, d.fund.category_id, i.limit_minor, i.currency]);
+      await t.run(
+        "INSERT OR REPLACE INTO plan_items (ym, category_id, limit_minor, kind, currency) VALUES (?, ?, ?, 'fund', ?)",
+        [i.ym, d.fund.category_id, i.limit_minor, i.currency],
+      );
     }
   });
   // fitted again (🔒 got back what they took)

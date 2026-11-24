@@ -17,8 +17,16 @@ export type CategorySchedule = RegularItem & { category_id: number; currency: Cu
 
 export async function categorySchedule(categoryId: number, db?: Db): Promise<CategorySchedule | null> {
   db ??= await getDb();
-  const r = await db.get<{ category_id: number; every: Every; weekdays: number | null; unit_minor: number; currency: string; until: string | null }>(
-    'SELECT category_id, every, weekdays, unit_minor, currency, until FROM category_schedules WHERE category_id = ?', [categoryId]);
+  const r = await db.get<{
+    category_id: number;
+    every: Every;
+    weekdays: number | null;
+    unit_minor: number;
+    currency: string;
+    until: string | null;
+  }>('SELECT category_id, every, weekdays, unit_minor, currency, until FROM category_schedules WHERE category_id = ?', [
+    categoryId,
+  ]);
   return r ? { ...r, weekdays: r.weekdays ?? 0, currency: asCurrency(r.currency) } : null;
 }
 
@@ -26,18 +34,34 @@ export async function categorySchedule(categoryId: number, db?: Db): Promise<Cat
  * The category's regular payment within the month set (its schedule), its item in `ym` counted from it, and in the
  * coming months planned already; throws OverBudgetError past the budget, as setPlanAmount (`takeLocked` too).
  */
-export async function setRegularItem(ym: string, categoryId: number, r: RegularItem, currency: Currency, takeLocked: boolean | 'all' = false): Promise<void> {
+export async function setRegularItem(
+  ym: string,
+  categoryId: number,
+  r: RegularItem,
+  currency: Currency,
+  takeLocked: boolean | 'all' = false,
+): Promise<void> {
   const db = await getDb();
   const before = await itemShape(ym, categoryId, db);
-  await setPlanAmount(ym, categoryId, r.unit_minor * timesInMonth(ym, r.every, r.weekdays, r.until), 'fixed', currency, undefined, takeLocked);
+  await setPlanAmount(
+    ym,
+    categoryId,
+    r.unit_minor * timesInMonth(ym, r.every, r.weekdays, r.until),
+    'fixed',
+    currency,
+    undefined,
+    takeLocked,
+  );
   await db.run(
     `INSERT INTO category_schedules (category_id, every, weekdays, unit_minor, currency, until) VALUES (?, ?, ?, ?, ?, ?)
       ON CONFLICT(category_id) DO UPDATE SET every = excluded.every, weekdays = excluded.weekdays, unit_minor = excluded.unit_minor,
         currency = excluded.currency, until = excluded.until`,
-    [categoryId, r.every, r.every === 'week' ? r.weekdays : null, r.unit_minor, currency, r.until]);
+    [categoryId, r.every, r.every === 'week' ? r.weekdays : null, r.unit_minor, currency, r.until],
+  );
   await db.run(
     'UPDATE plan_items SET every = ?, weekdays = ?, unit_minor = ?, until = ?, pinned = 1 WHERE ym = ? AND category_id = ?',
-    [r.every, r.every === 'week' ? r.weekdays : null, r.unit_minor, r.until, ym, categoryId]);
+    [r.every, r.every === 'week' ? r.weekdays : null, r.unit_minor, r.until, ym, categoryId],
+  );
   await kindFromItem(ym, categoryId, db);
   await followItem(ym, categoryId, before, db);
 }
@@ -55,12 +79,24 @@ export async function countRegularItems(ym: string, db: Db, categoryId?: number)
         AND s.category_id IS coalesce(?, s.category_id)
       ON CONFLICT(ym, category_id) DO UPDATE SET kind = 'fixed', currency = excluded.currency, every = excluded.every,
         weekdays = excluded.weekdays, unit_minor = excluded.unit_minor, until = excluded.until, pinned = 1`,
-    [ym, `${ym}-01`, categoryId ?? null]);
-  const rows = await db.all<{ category_id: number; every: Every; weekdays: number | null; unit_minor: number; until: string | null }>(
-    "SELECT category_id, every, weekdays, unit_minor, until FROM plan_items WHERE ym = ? AND kind = 'fixed' AND every IS NOT NULL", [ym]);
+    [ym, `${ym}-01`, categoryId ?? null],
+  );
+  const rows = await db.all<{
+    category_id: number;
+    every: Every;
+    weekdays: number | null;
+    unit_minor: number;
+    until: string | null;
+  }>(
+    "SELECT category_id, every, weekdays, unit_minor, until FROM plan_items WHERE ym = ? AND kind = 'fixed' AND every IS NOT NULL",
+    [ym],
+  );
   for (const r of rows) {
-    await db.run('UPDATE plan_items SET limit_minor = ? WHERE ym = ? AND category_id = ?',
-      [r.unit_minor * timesInMonth(ym, r.every, r.weekdays ?? 0, r.until), ym, r.category_id]);
+    await db.run('UPDATE plan_items SET limit_minor = ? WHERE ym = ? AND category_id = ?', [
+      r.unit_minor * timesInMonth(ym, r.every, r.weekdays ?? 0, r.until),
+      ym,
+      r.category_id,
+    ]);
   }
 }
 
@@ -75,7 +111,10 @@ export async function stopSchedule(ym: string, categoryId: number): Promise<Stop
   const db = await getDb();
   return db.transaction(async (t) => {
     const schedule = await categorySchedule(categoryId, t);
-    const items = await t.all<Record<string, SqlParam>>('SELECT * FROM plan_items WHERE category_id = ? AND ym >= ?', [categoryId, ym]);
+    const items = await t.all<Record<string, SqlParam>>('SELECT * FROM plan_items WHERE category_id = ? AND ym >= ?', [
+      categoryId,
+      ym,
+    ]);
     await t.run('DELETE FROM plan_items WHERE category_id = ? AND ym >= ?', [categoryId, ym]);
     await t.run('DELETE FROM category_schedules WHERE category_id = ?', [categoryId]);
     await t.run("UPDATE categories SET plan_kind = NULL WHERE id = ? AND plan_kind = 'regular'", [categoryId]);
@@ -89,13 +128,18 @@ export async function restoreSchedule(s: StoppedSchedule): Promise<void> {
   await db.transaction(async (t) => {
     if (s.schedule) {
       const r = s.schedule;
-      await t.run('INSERT OR REPLACE INTO category_schedules (category_id, every, weekdays, unit_minor, currency, until) VALUES (?, ?, ?, ?, ?, ?)',
-        [r.category_id, r.every, r.every === 'week' ? r.weekdays : null, r.unit_minor, r.currency, r.until]);
+      await t.run(
+        'INSERT OR REPLACE INTO category_schedules (category_id, every, weekdays, unit_minor, currency, until) VALUES (?, ?, ?, ?, ?, ?)',
+        [r.category_id, r.every, r.every === 'week' ? r.weekdays : null, r.unit_minor, r.currency, r.until],
+      );
       await t.run("UPDATE categories SET plan_kind = 'regular' WHERE id = ?", [r.category_id]);
     }
     for (const row of s.items) {
       const cols = Object.keys(row);
-      await t.run(`INSERT OR IGNORE INTO plan_items (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`, cols.map((c) => row[c]));
+      await t.run(
+        `INSERT OR IGNORE INTO plan_items (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`,
+        cols.map((c) => row[c]),
+      );
     }
   });
 }
@@ -104,7 +148,16 @@ export async function restoreSchedule(s: StoppedSchedule): Promise<void> {
  * A monthly regular payment saved without a day: the months after `ym` whose item was counted from its charges ('subs')
  * get its amount by hand, as `ym`'s.
  */
-export async function setUndatedAhead(ym: string, categoryId: number, amountMinor: number, currency: string): Promise<void> {
-  await (await getDb()).run("UPDATE plan_items SET kind = 'fixed', limit_minor = ?, currency = ? WHERE category_id = ? AND ym > ? AND kind = 'subs'",
-    [amountMinor, currency, categoryId, ym]);
+export async function setUndatedAhead(
+  ym: string,
+  categoryId: number,
+  amountMinor: number,
+  currency: string,
+): Promise<void> {
+  await (
+    await getDb()
+  ).run(
+    "UPDATE plan_items SET kind = 'fixed', limit_minor = ?, currency = ? WHERE category_id = ? AND ym > ? AND kind = 'subs'",
+    [amountMinor, currency, categoryId, ym],
+  );
 }

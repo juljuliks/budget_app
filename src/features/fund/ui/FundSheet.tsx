@@ -44,17 +44,35 @@ export default function FundSheet({ categoryId, label, onClose, onEdit, ym }: Pr
   const money = (minor: number) => formatWithCurrency(minor, card?.fund.currency);
   const saved = card ? isSaved(card.saved, card.fund.target_minor) : false;
   return (
-    <BottomSheet visible={categoryId !== null} onClose={onClose} title={label} onTitlePress={categoryId !== null ? () => { onClose(); openCategory(categoryId); } : undefined}>
-      {!card ? <Loading inline failed={failed} onRetry={load} /> : (
+    <BottomSheet
+      visible={categoryId !== null}
+      onClose={onClose}
+      title={label}
+      onTitlePress={
+        categoryId !== null
+          ? () => {
+              onClose();
+              openCategory(categoryId);
+            }
+          : undefined
+      }
+    >
+      {!card ? (
+        <Loading inline failed={failed} onRetry={load} />
+      ) : (
         <SheetScrollView contentContainerStyle={styles.body}>
           <View style={styles.amounts}>
             <Text style={styles.saved}>{money(card.saved)}</Text>
             <Text style={styles.of}>из {money(card.fund.target_minor)}</Text>
           </View>
-          <View style={styles.track}><View style={[styles.fill, { flex: Math.min(1, card.saved / card.fund.target_minor) }]} /></View>
+          <View style={styles.track}>
+            <View style={[styles.fill, { flex: Math.min(1, card.saved / card.fund.target_minor) }]} />
+          </View>
           <View style={styles.line}>
             <Text style={styles.lineText}>
-              {saved ? 'Накоплено — можно тратить' : [`К ${dayTitle(card.fund.due)}`, contributionsLeft(card.left)].filter(Boolean).join(' · ')}
+              {saved
+                ? 'Накоплено — можно тратить'
+                : [`К ${dayTitle(card.fund.due)}`, contributionsLeft(card.left)].filter(Boolean).join(' · ')}
             </Text>
             {card.contribution > 0 ? <Text style={styles.lineValue}>{money(card.contribution)} в месяц</Text> : null}
           </View>
@@ -64,17 +82,31 @@ export default function FundSheet({ categoryId, label, onClose, onEdit, ym }: Pr
             const out = e.type === 'spend';
             return (
               <View key={`${e.type}-${e.ym}-${e.type === 'spend' ? e.id : i}`} style={styles.entry}>
-                <Text style={styles.entryText} numberOfLines={1}>{month}<Text style={styles.entryWhat}> · {what}</Text></Text>
-                <Text style={[styles.entryAmount, !out && styles.in]}>{out ? `−${money(e.minor)}` : `+${money(e.minor)}`}</Text>
+                <Text style={styles.entryText} numberOfLines={1}>
+                  {month}
+                  <Text style={styles.entryWhat}> · {what}</Text>
+                </Text>
+                <Text style={[styles.entryAmount, !out && styles.in]}>
+                  {out ? `−${money(e.minor)}` : `+${money(e.minor)}`}
+                </Text>
               </View>
             );
           })}
-          <Text style={[formStyles.hint, styles.note]}>Траты категории «{label}» берутся из копилки и не тратят бюджет месяца.</Text>
+          <Text style={[formStyles.hint, styles.note]}>
+            Траты категории «{label}» берутся из копилки и не тратят бюджет месяца.
+          </Text>
           <View style={styles.actions}>
             <Button title="Изменить" onPress={onEdit} />
             {/* what it had at the month's start goes to the savings, this month's contribution back to the budget and its
                 spending to the month's: the savings get what it has now */}
-            <Button title="Выключить копилку" danger variant="secondary" onPress={() => confirmDeleteFund(card.fund.category_id, label, card.saved, card.fund.currency, onClose, ym)} />
+            <Button
+              title="Выключить копилку"
+              danger
+              variant="secondary"
+              onPress={() =>
+                confirmDeleteFund(card.fund.category_id, label, card.saved, card.fund.currency, onClose, ym)
+              }
+            />
           </View>
         </SheetScrollView>
       )}
@@ -87,12 +119,26 @@ const styles = StyleSheet.create({
   amounts: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
   saved: { fontSize: 28, fontWeight: '700', color: colors.text, fontVariant: ['tabular-nums'] },
   of: { fontSize: 16, color: colors.muted, fontVariant: ['tabular-nums'] },
-  track: { flexDirection: 'row', height: 10, borderRadius: 5, backgroundColor: colors.fundTrack, overflow: 'hidden', marginTop: 10 },
+  track: {
+    flexDirection: 'row',
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.fundTrack,
+    overflow: 'hidden',
+    marginTop: 10,
+  },
   fill: { backgroundColor: colors.fund, borderRadius: 5 },
   line: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, marginTop: 10 },
   lineText: { flex: 1, fontSize: 14, color: colors.muted },
   lineValue: { fontSize: 14, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
-  entry: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
+  entry: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+    paddingVertical: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+  },
   entryText: { flex: 1, fontSize: 15, color: colors.text },
   entryWhat: { fontSize: 13, color: colors.muted },
   entryAmount: { fontSize: 15, color: colors.text, fontVariant: ['tabular-nums'] },

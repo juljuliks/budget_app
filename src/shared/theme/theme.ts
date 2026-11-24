@@ -38,7 +38,11 @@ export const chart = {
   meterTrack: '#cde2fb',
   critical: '#d03b3b',
   /** spent / limit meter: green while far from the limit, turning red towards it (see meterColor) */
-  meterStops: [[0, '#1baf7a'], [0.6, '#eda100'], [1, '#d03b3b']] as Array<[number, string]>,
+  meterStops: [
+    [0, '#1baf7a'],
+    [0.6, '#eda100'],
+    [1, '#d03b3b'],
+  ] as Array<[number, string]>,
 };
 
 const rgb = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
@@ -53,5 +57,11 @@ export function meterColor(ratio: number): string {
   const [b, cb] = stops[i];
   const t = (ratio - a) / (b - a);
   const [x, y] = [rgb(ca), rgb(cb)];
-  return `#${x.map((v, k) => Math.round(v + (y[k] - v) * t).toString(16).padStart(2, '0')).join('')}`;
+  return `#${x
+    .map((v, k) =>
+      Math.round(v + (y[k] - v) * t)
+        .toString(16)
+        .padStart(2, '0'),
+    )
+    .join('')}`;
 }

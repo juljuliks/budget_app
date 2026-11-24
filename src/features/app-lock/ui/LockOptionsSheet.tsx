@@ -29,7 +29,10 @@ export default function LockOptionsSheet({ visible, onClose }: { visible: boolea
             <Segmented
               options={DELAYS}
               value={String(s.delayS)}
-              onChange={(v) => { set({ delayS: Number(v) }); run(saveLockDelay(Number(v))); }}
+              onChange={(v) => {
+                set({ delayS: Number(v) });
+                run(saveLockDelay(Number(v)));
+              }}
             />
           </View>
           <View style={styles.row}>
@@ -40,10 +43,18 @@ export default function LockOptionsSheet({ visible, onClose }: { visible: boolea
             <Toggle
               label={HIDE_NOTIFICATIONS}
               value={s.hideNotifications}
-              onChange={(on) => { set({ hideNotifications: on }); run(saveHideNotifications(on)); }}
+              onChange={(on) => {
+                set({ hideNotifications: on });
+                run(saveHideNotifications(on));
+              }}
             />
           </View>
-          <TouchableOpacity onPress={() => run(changePin())} hitSlop={8} accessibilityRole="button" style={styles.linkWrap}>
+          <TouchableOpacity
+            onPress={() => run(changePin())}
+            hitSlop={8}
+            accessibilityRole="button"
+            style={styles.linkWrap}
+          >
             <Text style={styles.link}>{CHANGE_PIN}</Text>
           </TouchableOpacity>
         </View>
@@ -54,8 +65,12 @@ export default function LockOptionsSheet({ visible, onClose }: { visible: boolea
 
 const styles = StyleSheet.create({
   body: {
-    gap: 18, paddingHorizontal: 20, paddingTop: 14, paddingBottom: 28,
-    borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
+    gap: 18,
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    paddingBottom: 28,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
   },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   flex: { flex: 1 },

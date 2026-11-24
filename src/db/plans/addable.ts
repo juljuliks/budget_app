@@ -26,22 +26,28 @@ export async function addableCategories(ym: string, currency: Currency): Promise
   const [planned, last, cats, rows] = await Promise.all([
     db.all<{ category_id: number }>('SELECT category_id FROM plan_items WHERE ym = ?', [ym]),
     db.all<{ category_id: number; limit_minor: number; currency: string }>(
-      'SELECT category_id, limit_minor, currency FROM plan_items WHERE ym = ? AND limit_minor > 0', [ymOf(year, month - 1)]),
+      'SELECT category_id, limit_minor, currency FROM plan_items WHERE ym = ? AND limit_minor > 0',
+      [ymOf(year, month - 1)],
+    ),
     listCategories(),
     spendRows(...monthRange(year, month)),
   ]);
   const inPlan = new Set(planned.map((p) => p.category_id));
-  const lastOf = new Map(last.map((l) => [l.category_id, { limit_minor: l.limit_minor, currency: asCurrency(l.currency) }]));
+  const lastOf = new Map(
+    last.map((l) => [l.category_id, { limit_minor: l.limit_minor, currency: asCurrency(l.currency) }]),
+  );
   const spent = sumBy((await convertSpending(rows, currency)).items, categoryKey);
   const order: AddableGroup[] = ['last', 'spent', 'other'];
-  return cats
-    // the system ones aren't planned, but "Подписки"
-    .filter((c) => !inPlan.has(c.id) && (!isSystemCategory(c) || isSubscriptions(c)))
-    .map((c): AddableCategory => {
-      const spentMinor = Math.max(0, spent.get(c.id) ?? 0);
-      const l = lastOf.get(c.id) ?? null;
-      return { ...c, last: l, spent_minor: spentMinor, group: l ? 'last' : spentMinor > 0 ? 'spent' : 'other' };
-    })
-    // stable: the categories' order inside a group
-    .sort((a, b) => order.indexOf(a.group) - order.indexOf(b.group));
+  return (
+    cats
+      // the system ones aren't planned, but "Подписки"
+      .filter((c) => !inPlan.has(c.id) && (!isSystemCategory(c) || isSubscriptions(c)))
+      .map((c): AddableCategory => {
+        const spentMinor = Math.max(0, spent.get(c.id) ?? 0);
+        const l = lastOf.get(c.id) ?? null;
+        return { ...c, last: l, spent_minor: spentMinor, group: l ? 'last' : spentMinor > 0 ? 'spent' : 'other' };
+      })
+      // stable: the categories' order inside a group
+      .sort((a, b) => order.indexOf(a.group) - order.indexOf(b.group))
+  );
 }

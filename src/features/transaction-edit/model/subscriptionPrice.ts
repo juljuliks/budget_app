@@ -16,20 +16,33 @@ export async function askSubscriptionPrice(tx: Tx, previousCategoryId: number | 
   if (!tx.merchant_key) return false;
   const card = await paymentCard(tx.merchant_key);
   if (!card) return false;
-  if (await subscriptionCategoryOf(tx.merchant_key, tx.amount_minor, tx.currency, dateKey(tx.occurred_at))) return false;
+  if (await subscriptionCategoryOf(tx.merchant_key, tx.amount_minor, tx.currency, dateKey(tx.occurred_at)))
+    return false;
   const { sub } = card;
-  const t = subscriptionPriceText(sub.name, formatWithCurrency(sub.amount_minor, sub.currency), formatWithCurrency(tx.amount_minor, tx.currency),
-    tx.currency !== sub.currency ? null : tx.amount_minor > sub.amount_minor);
+  const t = subscriptionPriceText(
+    sub.name,
+    formatWithCurrency(sub.amount_minor, sub.currency),
+    formatWithCurrency(tx.amount_minor, tx.currency),
+    tx.currency !== sub.currency ? null : tx.amount_minor > sub.amount_minor,
+  );
   sheetAlert(t.title, t.message, [
     {
-      text: 'Отмена', style: 'cancel',
-      onPress: () => { assignCategory(tx.id, previousCategoryId, 'only').then(emitTransactionsChanged).catch(toastFailure('revert category', SAVE_FAILED)); },
+      text: 'Отмена',
+      style: 'cancel',
+      onPress: () => {
+        assignCategory(tx.id, previousCategoryId, 'only')
+          .then(emitTransactionsChanged)
+          .catch(toastFailure('revert category', SAVE_FAILED));
+      },
     },
     {
       text: 'Обновить подписку',
       onPress: () => {
         savePayment({ ...sub, amount_minor: tx.amount_minor, currency: tx.currency as Currency }, sub.id)
-          .then(() => { emitTransactionsChanged(); toast(`${sub.name} — ${formatWithCurrency(tx.amount_minor, tx.currency)}`); })
+          .then(() => {
+            emitTransactionsChanged();
+            toast(`${sub.name} — ${formatWithCurrency(tx.amount_minor, tx.currency)}`);
+          })
           .catch(toastFailure('update payment', SAVE_FAILED));
       },
     },

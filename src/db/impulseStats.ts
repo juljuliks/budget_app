@@ -25,7 +25,12 @@ export type ImpulseRow = {
 type Raw = SpendRow & { impulse: number | null; mood: string | null };
 
 /** The purchases of [from, to) asked about or answered, `category`'s only when given, in `currency`. */
-export async function impulseRows(from: number, to: number, currency: Currency, category?: number): Promise<ImpulseRow[]> {
+export async function impulseRows(
+  from: number,
+  to: number,
+  currency: Currency,
+  category?: number,
+): Promise<ImpulseRow[]> {
   const db = await getDb();
   const rows = await db.all<Raw>(
     `SELECT s.id, s.category_id, s.kind, s.amount_minor, s.currency, s.occurred_at, s.refund_settled_at, s.merchant_key,
@@ -33,13 +38,20 @@ export async function impulseRows(from: number, to: number, currency: Currency, 
       FROM spend_parts s JOIN transactions t ON t.id = s.id
       WHERE s.occurred_at >= ? AND s.occurred_at < ? AND s.kind IN (${sqlList(REMEMBERABLE_KINDS)})
         AND (t.impulse IS NOT NULL OR s.id IN (${UNANSWERED_SQL}))${category === undefined ? '' : ' AND s.category_id = ?'}`,
-    category === undefined ? [from, to] : [from, to, category]);
+    category === undefined ? [from, to] : [from, to, category],
+  );
   const { items } = await convertSpending(rows, currency);
   return items.map(({ row, value }) => {
     const r = row as Raw;
     return {
-      tx: r.id, category: r.category_id, day: dateKey(r.occurred_at), value,
-      impulse: r.impulse === null ? null : r.impulse === 1, mood: r.mood, merchantKey: r.merchant_key ?? null, merchant: r.raw_merchant ?? null,
+      tx: r.id,
+      category: r.category_id,
+      day: dateKey(r.occurred_at),
+      value,
+      impulse: r.impulse === null ? null : r.impulse === 1,
+      mood: r.mood,
+      merchantKey: r.merchant_key ?? null,
+      merchant: r.raw_merchant ?? null,
     };
   });
 }

@@ -32,20 +32,38 @@ type Props = {
  * A category's page: its operations (a link to them), its dynamics, section, emoji and name, color, "Подписки", its latest operations;
  * "Сохранить" and "Удалить категорию" pinned at the bottom.
  */
-export default function CategoryView({ categoryId, onClose, onShowOperations, onDelete, links, extra, recent, submit }: Props) {
+export default function CategoryView({
+  categoryId,
+  onClose,
+  onShowOperations,
+  onDelete,
+  links,
+  extra,
+  recent,
+  submit,
+}: Props) {
   const f = useCategoryForm({ visible: true, categoryId, onClose });
   if (!f.summary) return <Loading />;
   const system = f.systemKind !== null;
   return (
-    <Page contentStyle={styles.content} footer={(
-      <SheetActions
-        style={styles.actions}
-        submit={submit
-          ? { title: submit.title, onPress: () => submit.onPress(f.isDirty ? f.save : null), disabled: f.isSubmitting }
-          : { title: 'Сохранить', onPress: f.save, disabled: f.isSubmitting || !f.isDirty }}
-        extra={system || !onDelete ? undefined : [{ title: 'Удалить категорию', onPress: onDelete, danger: true }]}
-      />
-    )}>
+    <Page
+      contentStyle={styles.content}
+      footer={
+        <SheetActions
+          style={styles.actions}
+          submit={
+            submit
+              ? {
+                  title: submit.title,
+                  onPress: () => submit.onPress(f.isDirty ? f.save : null),
+                  disabled: f.isSubmitting,
+                }
+              : { title: 'Сохранить', onPress: f.save, disabled: f.isSubmitting || !f.isDirty }
+          }
+          extra={system || !onDelete ? undefined : [{ title: 'Удалить категорию', onPress: onDelete, danger: true }]}
+        />
+      }
+    >
       <CategorySummaryRow summary={f.summary} onShow={onShowOperations} />
       {links}
       <CategoryFields f={f} />

@@ -1,5 +1,13 @@
 import React, { useCallback } from 'react';
-import { ActivityIndicator, type NativeScrollEvent, type NativeSyntheticEvent, SectionList, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  SectionList,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import type { Currency } from '@/db/fx';
 import type { TransactionRow } from '@/db/transactions';
 import { bankById } from '@/domain/banks';
@@ -42,16 +50,19 @@ export default function OperationsList(p: Props) {
   // several banks read: each row says whose it is
   const { several } = useBanks();
   // the rows are memoized: a selection or a page loaded redraws only the rows whose props changed
-  const renderItem = useCallback(({ item }: { item: Row }) => (
-    <TransactionItem
-      tx={item}
-      bankLabel={several && item.bank !== 'manual' ? bankById(item.bank)?.short : undefined}
-      onPress={onPressRow}
-      onLongPress={onLongPressRow}
-      selectable={selecting}
-      selected={selected.has(item.id)}
-    />
-  ), [onPressRow, onLongPressRow, selecting, selected, several]);
+  const renderItem = useCallback(
+    ({ item }: { item: Row }) => (
+      <TransactionItem
+        tx={item}
+        bankLabel={several && item.bank !== 'manual' ? bankById(item.bank)?.short : undefined}
+        onPress={onPressRow}
+        onLongPress={onLongPressRow}
+        selectable={selecting}
+        selected={selected.has(item.id)}
+      />
+    ),
+    [onPressRow, onLongPressRow, selecting, selected, several],
+  );
   return (
     <SectionList
       // a new filter remounts the list: Android sticky headers keep their old offsets when the sections
@@ -79,7 +90,9 @@ export default function OperationsList(p: Props) {
       renderItem={renderItem}
       onScroll={p.onScroll}
       scrollEventThrottle={100}
-      onEndReached={() => { p.loadMore().catch(toastFailure('load more', LOAD_FAILED)); }}
+      onEndReached={() => {
+        p.loadMore().catch(toastFailure('load more', LOAD_FAILED));
+      }}
       // the next page is read a screen before the end; rows are drawn a batch at a time, the ones far off-screen dropped
       onEndReachedThreshold={1}
       initialNumToRender={20}
@@ -87,7 +100,13 @@ export default function OperationsList(p: Props) {
       windowSize={11}
       refreshing={p.refreshing}
       onRefresh={p.onRefresh}
-      ListFooterComponent={p.loadingMore ? <ActivityIndicator style={styles.footer} /> : <View style={[styles.footer, p.tallFooter && styles.footerTall]} />}
+      ListFooterComponent={
+        p.loadingMore ? (
+          <ActivityIndicator style={styles.footer} />
+        ) : (
+          <View style={[styles.footer, p.tallFooter && styles.footerTall]} />
+        )
+      }
       ListEmptyComponent={<Text style={styles.empty}>{p.emptyText}</Text>}
     />
   );

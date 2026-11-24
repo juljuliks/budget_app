@@ -10,9 +10,13 @@ import { navigationRef } from '../../src/shared/navigation/navigation';
 const PUSH = (amount: string, cur: string, merchant: string, day: string) =>
   `TBC Bank\nPayment · ${amount} ${cur}, ${merchant}, ${day}.10.2026 10:00. Card *1234. Balance: 2 843.17 GEL`;
 const push = (body: string, minutesAgo = 0) =>
-  act(async () => { await ingestSms({ sender: 'push:ge.tbcbank', body, timestamp: Date.now() - minutesAgo * 60000, source: 'push' }); });
-const ops = async () => (await getDb()).all<{ m: string; a: number; c: string; kind: string }>(
-  'SELECT raw_merchant AS m, amount_minor AS a, currency AS c, kind FROM transactions WHERE source = \'push\' ORDER BY occurred_at');
+  act(async () => {
+    await ingestSms({ sender: 'push:ge.tbcbank', body, timestamp: Date.now() - minutesAgo * 60000, source: 'push' });
+  });
+const ops = async () =>
+  (await getDb()).all<{ m: string; a: number; c: string; kind: string }>(
+    "SELECT raw_merchant AS m, amount_minor AS a, currency AS c, kind FROM transactions WHERE source = 'push' ORDER BY occurred_at",
+  );
 
 /** The app with two pushes nothing read and an offer, "Не распознано" opened, the first push to mark */
 async function openFabrika() {
@@ -21,7 +25,11 @@ async function openFabrika() {
   await push('TBC Bank\nNew offer: cashback 5%', 30);
   await push(PUSH('45.00', 'GEL', 'FABRIKA', '15'));
   await tap('Не распознано: 3');
-  expect(await screen.findByText('Сообщения банка, из которых не получилась операция. Отметьте в тексте сумму и валюту — такие будут разбираться сами. Хранятся 30 дней.')).toBeTruthy();
+  expect(
+    await screen.findByText(
+      'Сообщения банка, из которых не получилась операция. Отметьте в тексте сумму и валюту — такие будут разбираться сами. Хранятся 30 дней.',
+    ),
+  ).toBeTruthy();
   await tap(/FABRIKA/);
   await screen.findByText('1 · Выберите, что отмечаете');
 }
@@ -37,7 +45,20 @@ test('1.7.1: a push nothing read: "Не распознано: N" over the operat
   // the words: no punctuation, each once ("GEL" twice in the text), "2 843.17" one
   const t = texts();
   const from = t.indexOf('2 · Нажмите на слова в тексте');
-  expect(t.slice(from + 1, from + 13)).toEqual(['TBC', 'Bank', 'Payment', '45.00', 'GEL', 'FABRIKA', '15.10.2026', '10:00', 'Card', '1234', 'Balance', '2 843.17']);
+  expect(t.slice(from + 1, from + 13)).toEqual([
+    'TBC',
+    'Bank',
+    'Payment',
+    '45.00',
+    'GEL',
+    'FABRIKA',
+    '15.10.2026',
+    '10:00',
+    'Card',
+    '1234',
+    'Balance',
+    '2 843.17',
+  ]);
   expect(screen.getByText('Отметьте сумму и валюту')).toBeTruthy();
 });
 
@@ -56,7 +77,10 @@ test('1.7.2: marked → the result as a row of the list; the template takes the 
   expect(screen.getByText('WOLT GEORGIA')).toBeTruthy();
   await tap('Сохранить и разобрать 2');
   expect(await screen.findByText('Шаблон сохранён, разобрано: 2')).toBeTruthy();
-  expect(await ops()).toEqual([{ m: 'WOLT GEORGIA', a: 1250, c: 'USD', kind: 'purchase' }, { m: 'FABRIKA', a: 4500, c: 'GEL', kind: 'purchase' }]);
+  expect(await ops()).toEqual([
+    { m: 'WOLT GEORGIA', a: 1250, c: 'USD', kind: 'purchase' },
+    { m: 'FABRIKA', a: 4500, c: 'GEL', kind: 'purchase' },
+  ]);
   expect((await listUnparsed()).map((m) => m.body)).toEqual(['TBC Bank\nNew offer: cashback 5%']);
   // a new push like it: an operation right away
   await push(PUSH('7.00', 'GEL', 'SPAR', '15'));

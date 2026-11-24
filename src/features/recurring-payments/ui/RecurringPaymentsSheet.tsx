@@ -34,18 +34,28 @@ type Props = {
   onEditAmount: () => void;
 };
 
-const savingSum = (m: { saving: Array<{ converted_minor: number | null }> }) => m.saving.reduce((a, v) => a + (v.converted_minor ?? 0), 0);
+const savingSum = (m: { saving: Array<{ converted_minor: number | null }> }) =>
+  m.saving.reduce((a, v) => a + (v.converted_minor ?? 0), 0);
 
 /**
  * A category's repeating payments in the plan's month, two views: the month's ("Подписки": its charges, those without a
  * day — its merchants without one too: a tap makes one) and the coming ones ("Предстоящие подписки": saved up for, and later). A tap opens a payment.
  */
-export default function RecurringPaymentsSheet({ ym, category, currency, view: initial = 'month', onClose, onEditAmount }: Props) {
+export default function RecurringPaymentsSheet({
+  ym,
+  category,
+  currency,
+  view: initial = 'month',
+  onClose,
+  onEditAmount,
+}: Props) {
   const { data, failed, load } = useRecurringPayments(ym, currency, category.id);
   const targetOf = (s: RecurringPayment): PaymentTarget => ({ ...s, category });
   const [view, setView] = useState<PaymentsView>(initial);
   // kept mounted (the stats): opened again — with the view asked for
-  useEffect(() => { if (ym) setView(initial); }, [ym, initial]);
+  useEffect(() => {
+    if (ym) setView(initial);
+  }, [ym, initial]);
   const [open, setOpen] = useState<PaymentTarget | null>(null);
   const money = (minor: number, cur: string = currency) => formatWithCurrency(minor, cur);
   const month = ym ? monthGen(ym) : '';
@@ -55,44 +65,102 @@ export default function RecurringPaymentsSheet({ ym, category, currency, view: i
   const charges = data ? data.total_minor - saving : 0;
   const upcoming = data ? upcomingOf(data) : null;
   const upcomingCount = upcoming ? upcoming.saving.length + upcoming.plain.length : 0;
-  const title = view === 'month' ? `${category.emoji ?? '🔁'} ${category.name}` : `${category.emoji ?? '🔁'} ${w.upcoming}`;
+  const title =
+    view === 'month' ? `${category.emoji ?? '🔁'} ${category.name}` : `${category.emoji ?? '🔁'} ${w.upcoming}`;
   return (
     <>
-    <BottomSheet
-      visible={ym !== null} onClose={onClose} title={title} style={styles.root}
-      onTitlePress={view === 'month' ? () => { onClose(); openCategory(category.id); } : undefined}
-    >
-      {!data || !ym ? <Loading inline failed={failed} onRetry={load} /> : (
-        <SheetScrollView contentContainerStyle={styles.body}>
-          <View style={styles.fact}>
-            <Text style={styles.factLabel}>{view === 'month' ? `В плане ${month}` : `Копим ${inMonth(ym)}`}</Text>
-            <Text style={styles.factValue}>
-              {view === 'upcoming' ? money(saving) : data.planned_minor === null ? '—' : money(data.by_hand ? data.planned_minor : charges)}
-            </Text>
-          </View>
-          {view === 'month' && data.by_hand ? (
-            <TouchableOpacity onPress={onEditAmount} accessibilityRole="button">
-              <Text style={formStyles.hint}>{`Сумма введена вручную — пока ${w.noneHas} нет даты.`} <Text style={styles.link}>Изменить сумму</Text></Text>
-            </TouchableOpacity>
-          ) : view === 'month' ? <TextLink label="Изменить в плане" onPress={onEditAmount} style={styles.planLink} containerStyle={styles.planLinkBox} /> : null}
-          {view === 'month' ? (
-            <MonthPaymentsView
-              ym={ym} data={data} w={w} money={money} shareOf={shareOf} chargesMinor={charges} open={setOpen} targetOf={targetOf}
-              upcoming={upcomingCount ? { savingMinor: saving, count: upcomingCount } : null}
-              merchantTarget={(m) => ({ category, merchant_key: m.merchant_key, name: m.name, amount_minor: m.amount_minor, currency: m.currency, period: 1, due: null, last_day: m.day })}
-              onUpcoming={() => setView('upcoming')}
-            />
-          ) : (
-            <UpcomingPaymentsView
-              ym={ym} data={data} w={w} money={money} shareOf={shareOf} savingMinor={saving} chargesMinor={charges}
-              open={setOpen} targetOf={targetOf} onMonth={() => setView('month')}
-            />
-          )}
-        </SheetScrollView>
-      )}
-    </BottomSheet>
-    {/* over it: siblings, not inside (each sheet its own window; the topmost draws the toast) */}
-    <PaymentSheet target={open} onClose={() => setOpen(null)} onLeave={() => { setOpen(null); onClose(); }} />
+      <BottomSheet
+        visible={ym !== null}
+        onClose={onClose}
+        title={title}
+        style={styles.root}
+        onTitlePress={
+          view === 'month'
+            ? () => {
+                onClose();
+                openCategory(category.id);
+              }
+            : undefined
+        }
+      >
+        {!data || !ym ? (
+          <Loading inline failed={failed} onRetry={load} />
+        ) : (
+          <SheetScrollView contentContainerStyle={styles.body}>
+            <View style={styles.fact}>
+              <Text style={styles.factLabel}>{view === 'month' ? `В плане ${month}` : `Копим ${inMonth(ym)}`}</Text>
+              <Text style={styles.factValue}>
+                {view === 'upcoming'
+                  ? money(saving)
+                  : data.planned_minor === null
+                    ? '—'
+                    : money(data.by_hand ? data.planned_minor : charges)}
+              </Text>
+            </View>
+            {view === 'month' && data.by_hand ? (
+              <TouchableOpacity onPress={onEditAmount} accessibilityRole="button">
+                <Text style={formStyles.hint}>
+                  {`Сумма введена вручную — пока ${w.noneHas} нет даты.`}{' '}
+                  <Text style={styles.link}>Изменить сумму</Text>
+                </Text>
+              </TouchableOpacity>
+            ) : view === 'month' ? (
+              <TextLink
+                label="Изменить в плане"
+                onPress={onEditAmount}
+                style={styles.planLink}
+                containerStyle={styles.planLinkBox}
+              />
+            ) : null}
+            {view === 'month' ? (
+              <MonthPaymentsView
+                ym={ym}
+                data={data}
+                w={w}
+                money={money}
+                shareOf={shareOf}
+                chargesMinor={charges}
+                open={setOpen}
+                targetOf={targetOf}
+                upcoming={upcomingCount ? { savingMinor: saving, count: upcomingCount } : null}
+                merchantTarget={(m) => ({
+                  category,
+                  merchant_key: m.merchant_key,
+                  name: m.name,
+                  amount_minor: m.amount_minor,
+                  currency: m.currency,
+                  period: 1,
+                  due: null,
+                  last_day: m.day,
+                })}
+                onUpcoming={() => setView('upcoming')}
+              />
+            ) : (
+              <UpcomingPaymentsView
+                ym={ym}
+                data={data}
+                w={w}
+                money={money}
+                shareOf={shareOf}
+                savingMinor={saving}
+                chargesMinor={charges}
+                open={setOpen}
+                targetOf={targetOf}
+                onMonth={() => setView('month')}
+              />
+            )}
+          </SheetScrollView>
+        )}
+      </BottomSheet>
+      {/* over it: siblings, not inside (each sheet its own window; the topmost draws the toast) */}
+      <PaymentSheet
+        target={open}
+        onClose={() => setOpen(null)}
+        onLeave={() => {
+          setOpen(null);
+          onClose();
+        }}
+      />
     </>
   );
 }

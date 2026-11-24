@@ -25,13 +25,27 @@ type Props = {
 };
 
 /** "Сменить" or "Добавить", right of the title. */
-function SideButton({ label, accessibilityLabel, disabled, plus, onPress }: {
-  label: string; accessibilityLabel: string; disabled: boolean; plus?: boolean; onPress: () => void;
+function SideButton({
+  label,
+  accessibilityLabel,
+  disabled,
+  plus,
+  onPress,
+}: {
+  label: string;
+  accessibilityLabel: string;
+  disabled: boolean;
+  plus?: boolean;
+  onPress: () => void;
 }) {
   return (
     <Button
-      title={label} onPress={onPress} disabled={disabled} accessibilityLabel={accessibilityLabel}
-      variant="secondary" size="small"
+      title={label}
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityLabel={accessibilityLabel}
+      variant="secondary"
+      size="small"
       icon={(c) => (plus ? <Text style={[styles.plus, { color: c }]}>＋</Text> : <PencilIcon color={c} size={16} />)}
     />
   );
@@ -50,7 +64,10 @@ export default function MerchantCategories(p: Props) {
   const ids = p.mixed && p.list.length ? p.list : p.single !== null ? [p.single] : [];
   const several = ids.length > 1;
   const onOrderingChange = p.onOrderingChange;
-  const setMode = (on: boolean) => { setOrdering(on); onOrderingChange(on); };
+  const setMode = (on: boolean) => {
+    setOrdering(on);
+    onOrderingChange(on);
+  };
   useEffect(() => {
     setOrdering(false);
     onOrderingChange(false);
@@ -65,19 +82,35 @@ export default function MerchantCategories(p: Props) {
 
   const label = (id: number) => p.categories.get(id)?.label ?? '…';
   const color = (id: number) => p.categories.get(id)?.color ?? colors.border;
-  const close = () => { setChanging(false); setAdding(false); };
+  const close = () => {
+    setChanging(false);
+    setAdding(false);
+  };
 
   return (
     <View style={styles.pickerTop}>
       <SectionHeading
         title="Категория"
-        right={ordering
-          ? (
+        right={
+          ordering ? (
             <Button title="Готово" onPress={() => setMode(false)} size="small" />
+          ) : several ? (
+            <SideButton
+              label="Добавить"
+              accessibilityLabel="Добавить категорию"
+              disabled={p.saving}
+              plus
+              onPress={() => setAdding(true)}
+            />
+          ) : (
+            <SideButton
+              label="Сменить"
+              accessibilityLabel="Сменить категорию"
+              disabled={p.saving}
+              onPress={() => setChanging(true)}
+            />
           )
-          : several
-            ? <SideButton label="Добавить" accessibilityLabel="Добавить категорию" disabled={p.saving} plus onPress={() => setAdding(true)} />
-            : <SideButton label="Сменить" accessibilityLabel="Сменить категорию" disabled={p.saving} onPress={() => setChanging(true)} />}
+        }
       />
       {several && !ordering ? <Text style={styles.hint}>Зажмите, чтобы сменить порядок.</Text> : null}
       {ids.length ? (
@@ -86,7 +119,9 @@ export default function MerchantCategories(p: Props) {
           label={label}
           color={color}
           ordering={ordering}
-          onLongPress={() => { if (several) setMode(true); }}
+          onLongPress={() => {
+            if (several) setMode(true);
+          }}
           onReorder={p.moveCategory}
           onRemove={p.removeCategory}
         />
@@ -100,8 +135,17 @@ export default function MerchantCategories(p: Props) {
         keepSelected={!adding && ids.length === 1}
         excludeIds={adding ? ids : undefined}
         allowNone={!adding}
-        onPick={(id) => { if (adding) { if (id !== null) p.addIds([id]); } else p.chooseOne(id); close(); }}
-        onSeveral={(picked) => { if (adding) p.addIds(picked); else p.chooseSeveral(picked); close(); }}
+        onPick={(id) => {
+          if (adding) {
+            if (id !== null) p.addIds([id]);
+          } else p.chooseOne(id);
+          close();
+        }}
+        onSeveral={(picked) => {
+          if (adding) p.addIds(picked);
+          else p.chooseSeveral(picked);
+          close();
+        }}
         onClose={close}
       />
     </View>

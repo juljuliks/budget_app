@@ -23,61 +23,78 @@ export default function AddTransactionSheet({ visible, onClose }: { visible: boo
   const { form, saving, date, kind, save } = useAddForm(visible, onClose);
   return (
     <BottomSheet visible={visible} onClose={onClose} title="Новая операция" style={styles.root}>
-    <SheetScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      <Controller control={form.control} name="kind" render={({ field }) => <Segmented options={KINDS} value={field.value} onChange={field.onChange} />} />
-
-      <Text style={formStyles.label}>Сумма</Text>
-      {/* the currency right of the amount, as in the plan */}
-      <View style={styles.amountRow}>
+      <SheetScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Controller
           control={form.control}
-          name="amount"
-          rules={{ validate: (v) => (!v.trim() ? 'Введите сумму' : parseAmountInput(v) !== null || AMOUNT_HINT) }}
+          name="kind"
+          render={({ field }) => <Segmented options={KINDS} value={field.value} onChange={field.onChange} />}
+        />
+
+        <Text style={formStyles.label}>Сумма</Text>
+        {/* the currency right of the amount, as in the plan */}
+        <View style={styles.amountRow}>
+          <Controller
+            control={form.control}
+            name="amount"
+            rules={{ validate: (v) => (!v.trim() ? 'Введите сумму' : parseAmountInput(v) !== null || AMOUNT_HINT) }}
+            render={({ field }) => (
+              <TextInput
+                style={[formStyles.input, styles.amount]}
+                value={field.value}
+                onChangeText={field.onChange}
+                placeholder="0.00"
+                placeholderTextColor={colors.muted}
+                keyboardType="decimal-pad"
+                maxLength={12}
+              />
+            )}
+          />
+          <Controller
+            control={form.control}
+            name="currency"
+            render={({ field }) => <CurrencyButton value={field.value} onChange={field.onChange} />}
+          />
+        </View>
+
+        <Text style={formStyles.label}>Описание (необязательно)</Text>
+        <Controller
+          control={form.control}
+          name="description"
           render={({ field }) => (
             <TextInput
-              style={[formStyles.input, styles.amount]}
+              style={formStyles.input}
               value={field.value}
               onChangeText={field.onChange}
-              placeholder="0.00"
+              placeholder="Например, рынок"
               placeholderTextColor={colors.muted}
-              keyboardType="decimal-pad"
-              maxLength={12}
+              maxLength={60}
             />
           )}
         />
-        <Controller control={form.control} name="currency" render={({ field }) => <CurrencyButton value={field.value} onChange={field.onChange} />} />
-      </View>
 
-      <Text style={formStyles.label}>Описание (необязательно)</Text>
-      <Controller
-        control={form.control}
-        name="description"
-        render={({ field }) => (
-          <TextInput
-            style={formStyles.input}
-            value={field.value}
-            onChangeText={field.onChange}
-            placeholder="Например, рынок"
-            placeholderTextColor={colors.muted}
-            maxLength={60}
-          />
-        )}
-      />
+        <DateField
+          label="Дата"
+          value={date}
+          format={dayLabel}
+          sheetTitle="Дата операции"
+          maxDay={dayKeyOf(new Date())}
+          onChange={(d) => form.setValue('date', d, { shouldDirty: true })}
+        />
 
-      <DateField
-        label="Дата" value={date} format={dayLabel} sheetTitle="Дата операции" maxDay={dayKeyOf(new Date())}
-        onChange={(d) => form.setValue('date', d, { shouldDirty: true })}
-      />
-
-      <Controller
-        control={form.control}
-        name="categoryId"
-        render={({ field }) => (
-          <CategoryField value={field.value} onChange={field.onChange} deposit={kind === 'deposit'} disabled={saving} />
-        )}
-      />
-      <SheetActions submit={{ title: 'Добавить', onPress: save, disabled: saving }} onCancel={onClose} />
-    </SheetScrollView>
+        <Controller
+          control={form.control}
+          name="categoryId"
+          render={({ field }) => (
+            <CategoryField
+              value={field.value}
+              onChange={field.onChange}
+              deposit={kind === 'deposit'}
+              disabled={saving}
+            />
+          )}
+        />
+        <SheetActions submit={{ title: 'Добавить', onPress: save, disabled: saving }} onCancel={onClose} />
+      </SheetScrollView>
     </BottomSheet>
   );
 }
@@ -91,7 +108,12 @@ const styles = StyleSheet.create({
 });
 
 /** The new operation's category: a field, a tap opens the shared list. */
-function CategoryField({ value, onChange, deposit, disabled }: {
+function CategoryField({
+  value,
+  onChange,
+  deposit,
+  disabled,
+}: {
   value: number | null;
   onChange: (id: number | null) => void;
   deposit: boolean;
@@ -100,20 +122,36 @@ function CategoryField({ value, onChange, deposit, disabled }: {
   const [open, setOpen] = useState(false);
   const [label, setLabel] = useState(NO_CATEGORY);
   useEffect(() => {
-    if (value == null) { setLabel(NO_CATEGORY); return; }
-    getCategory(value).then((c) => { if (c) setLabel(categoryLabel(c)); }).catch(() => undefined);
+    if (value == null) {
+      setLabel(NO_CATEGORY);
+      return;
+    }
+    getCategory(value)
+      .then((c) => {
+        if (c) setLabel(categoryLabel(c));
+      })
+      .catch(() => undefined);
   }, [value]);
   return (
     <>
       <SectionHeading title="Категория" />
-      <SelectField value={label} onPress={() => setOpen(true)} accessibilityLabel="Сменить категорию" disabled={disabled} testID="add-category" />
+      <SelectField
+        value={label}
+        onPress={() => setOpen(true)}
+        accessibilityLabel="Сменить категорию"
+        disabled={disabled}
+        testID="add-category"
+      />
       <CategoryPickerModal
         visible={open}
         title="Категория"
         selectedId={value}
         allowNone
         deposit={deposit}
-        onPick={(id) => { onChange(id); setOpen(false); }}
+        onPick={(id) => {
+          onChange(id);
+          setOpen(false);
+        }}
         onClose={() => setOpen(false)}
       />
     </>

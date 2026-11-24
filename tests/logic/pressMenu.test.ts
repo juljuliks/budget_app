@@ -4,11 +4,20 @@ import { buttonAt, menuLayout, movedFrom } from '../../src/shared/lib/pressMenu'
 const round = (ps: Array<{ x: number; y: number }>) => ps.map((p) => [Math.round(p.x), Math.round(p.y)]);
 
 test('three buttons in an arc over the finger: left, straight up, right', () => {
-  expect(round(menuLayout({ x: 200, y: 500 }, 3, 412))).toEqual([[120, 433], [200, 396], [280, 433]]);
+  expect(round(menuLayout({ x: 200, y: 500 }, 3, 412))).toEqual([
+    [120, 433],
+    [200, 396],
+    [280, 433],
+  ]);
 });
 
 test('four buttons: a cross close around the finger — left, top, right, bottom; with its labels inside the screen', () => {
-  expect(round(menuLayout({ x: 200, y: 500 }, 4, 412, 892))).toEqual([[150, 500], [200, 450], [250, 500], [200, 550]]);
+  expect(round(menuLayout({ x: 200, y: 500 }, 4, 412, 892))).toEqual([
+    [150, 500],
+    [200, 450],
+    [250, 500],
+    [200, 550],
+  ]);
   // under the header: moved down (the top label under it); over the tab bar: up; at a side: in, the label outside kept
   expect(round(menuLayout({ x: 200, y: 150 }, 4, 412, 892))[1]).toEqual([200, 158]);
   expect(round(menuLayout({ x: 200, y: 800 }, 4, 412, 892))[3]).toEqual([200, 734]);
@@ -20,7 +29,11 @@ test('four buttons: a cross close around the finger — left, top, right, bottom
 });
 
 test('no room over it (the header): under the finger', () => {
-  expect(round(menuLayout({ x: 200, y: 180 }, 3, 412))).toEqual([[120, 247], [200, 284], [280, 247]]);
+  expect(round(menuLayout({ x: 200, y: 180 }, 3, 412))).toEqual([
+    [120, 247],
+    [200, 284],
+    [280, 247],
+  ]);
 });
 
 test('at a side: the arc pushed inwards, none crossing the edge', () => {

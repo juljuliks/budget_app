@@ -11,7 +11,11 @@ import { UNPARSED } from './texts';
 export default function UnparsedBanner() {
   const navigation = useRootNavigation();
   const [n, setN] = useState(0);
-  const load = useCallback(() => { countUnparsed().then(setN).catch((e) => console.error('count unparsed failed', e)); }, []);
+  const load = useCallback(() => {
+    countUnparsed()
+      .then(setN)
+      .catch((e) => console.error('count unparsed failed', e));
+  }, []);
   useFocusEffect(load);
   useEffect(() => onTransactionsChanged(load), [load]);
 
@@ -19,7 +23,9 @@ export default function UnparsedBanner() {
   return (
     <TouchableOpacity style={styles.box} onPress={() => navigation.navigate('Unparsed')} accessibilityRole="button">
       <View style={styles.flex}>
-        <Text style={styles.title}>{UNPARSED}: {n}</Text>
+        <Text style={styles.title}>
+          {UNPARSED}: {n}
+        </Text>
         <Text style={styles.text}>Сообщения банка без операции — отметьте в них сумму</Text>
       </View>
       <Text style={styles.chevron}>›</Text>
@@ -28,7 +34,15 @@ export default function UnparsedBanner() {
 }
 
 const styles = StyleSheet.create({
-  box: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.warnBg, borderRadius: 10, padding: 12, marginBottom: 8 },
+  box: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: colors.warnBg,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 8,
+  },
   flex: { flex: 1 },
   title: { fontSize: 15, fontWeight: '600', color: '#92400E' },
   text: { fontSize: 13, color: '#92400E', marginTop: 2 },

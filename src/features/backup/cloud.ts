@@ -59,7 +59,9 @@ export async function pickCloudCopy(name: string): Promise<boolean> {
   }
   const picked = await new Promise<string | null>((resolve) => {
     sheetAlert(PICK_CLOUD_COPY, account, [
-      ...copies.slice(0, CLOUD_BACKUP_KEEP).map((c) => ({ text: copyLabel(c.createdTime), onPress: () => resolve(c.id) })),
+      ...copies
+        .slice(0, CLOUD_BACKUP_KEEP)
+        .map((c) => ({ text: copyLabel(c.createdTime), onPress: () => resolve(c.id) })),
       { text: CANCEL, style: 'cancel' as const, onPress: () => resolve(null) },
     ]);
   });

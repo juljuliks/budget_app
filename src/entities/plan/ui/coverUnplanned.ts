@@ -15,11 +15,20 @@ const NOISE = 100;
  * Covers up to `minor` (the budget's `currency`) of `over`; `from` — the limit it is taken of (it gives what is left of
  * it at most). The toast says what is left of the overspend, with "Отменить".
  */
-export async function coverWithUndo(ym: string, minor: number, over: number, currency: Currency, from?: { label: string; category_id: number }) {
+export async function coverWithUndo(
+  ym: string,
+  minor: number,
+  over: number,
+  currency: Currency,
+  from?: { label: string; category_id: number },
+) {
   const money = (v: number) => formatWithCurrency(v, currency);
   try {
     const cut = from ? await coverFromPlan(ym, from.category_id, minor) : null;
-    if (from && !cut) { toast(`В «${from.label}» ничего не осталось`); return; }
+    if (from && !cut) {
+      toast(`В «${from.label}» ничего не осталось`);
+      return;
+    }
     if (!from) await coverUnplanned(ym, minor);
     const covered = cut?.covered ?? minor;
     const what = covered >= over ? 'Перерасход вне плана покрыт' : `Перерасход вне плана меньше на ${money(covered)}`;
@@ -50,9 +59,19 @@ export async function offerCover(ym: string, freed: number, currency: string): P
   const money = (v: number) => formatWithCurrency(v, budget.currency);
   sheetAlert(
     'Покрыть перерасход вне плана?',
-    `Траты вне плана больше доли на ${money(over)}. `
-      + (take < inBudget ? `Из освободившихся ${money(inBudget)} им можно отдать ${money(take)}` : `Освободившиеся ${money(take)} можно отдать им`)
-      + ' — иначе всё уйдёт в сбережения.',
-    [{ text: `Покрыть ${money(take)}`, onPress: () => { coverWithUndo(ym, take, over, budget.currency); } }, { text: 'В сбережения', style: 'cancel' }],
+    `Траты вне плана больше доли на ${money(over)}. ` +
+      (take < inBudget
+        ? `Из освободившихся ${money(inBudget)} им можно отдать ${money(take)}`
+        : `Освободившиеся ${money(take)} можно отдать им`) +
+      ' — иначе всё уйдёт в сбережения.',
+    [
+      {
+        text: `Покрыть ${money(take)}`,
+        onPress: () => {
+          coverWithUndo(ym, take, over, budget.currency);
+        },
+      },
+      { text: 'В сбережения', style: 'cancel' },
+    ],
   );
 }

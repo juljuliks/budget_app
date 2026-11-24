@@ -13,15 +13,20 @@ export function confirmUnsplit(tx: Split) {
   sheetAlert('Убрать разделение?', `Вся сумма вернётся в «${txCategoryLabel(tx) ?? ''}».`, [
     { text: 'Отмена', style: 'cancel' },
     {
-      text: 'Убрать', onPress: () => {
+      text: 'Убрать',
+      onPress: () => {
         unsplitOperation(tx.id)
-          .then((parts) => toast('Разделение убрано', {
-            label: UNDO,
-            onPress: () => {
-              if (own === null) return;
-              splitOperation(tx.id, own, parts).catch(toastFailure('split transaction', 'Не удалось вернуть разделение'));
-            },
-          }))
+          .then((parts) =>
+            toast('Разделение убрано', {
+              label: UNDO,
+              onPress: () => {
+                if (own === null) return;
+                splitOperation(tx.id, own, parts).catch(
+                  toastFailure('split transaction', 'Не удалось вернуть разделение'),
+                );
+              },
+            }),
+          )
           .catch(toastFailure('unsplit transaction', 'Не удалось убрать разделение'));
       },
     },

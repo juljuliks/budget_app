@@ -12,8 +12,12 @@ export type Ask =
 
 let show: ((a: Ask) => void) | null = null;
 
-export function attachPinHost(fn: (a: Ask) => void) { show = fn; }
-export function detachPinHost() { show = null; }
+export function attachPinHost(fn: (a: Ask) => void) {
+  show = fn;
+}
+export function detachPinHost() {
+  show = null;
+}
 
 /** The PIN (or the fingerprint) of the one using the app; true at once when the lock is off. */
 export function verifyUser(title: string, heading: string, hint?: string): Promise<boolean> {

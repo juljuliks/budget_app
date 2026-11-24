@@ -10,7 +10,10 @@ type Change = NonNullable<Awaited<ReturnType<typeof merchantsChangePreview>>>;
 
 /** A category for the selected operations, some of whose merchants have another: for them only, or their merchants too. */
 export function bulkMerchantText(change: Change, toLabel: string, selected: number) {
-  const names = change.merchants.length > 3 ? `${change.merchants.slice(0, 2).join(', ')} и ещё ${change.merchants.length - 2}` : change.merchants.join(', ');
+  const names =
+    change.merchants.length > 3
+      ? `${change.merchants.slice(0, 2).join(', ')} и ещё ${change.merchants.length - 2}`
+      : change.merchants.join(', ');
   const sum = change.totals.map((t) => formatMoneyWithCurrency(t.amount_minor, t.currency)).join(' + ');
   const one = change.merchants.length === 1;
   return {
@@ -29,7 +32,10 @@ export const EMPTY = 'Операций пока нет. Они появятся 
 /** A category for the selected operations, some of them split: they go whole into it. */
 export function bulkSplitText(split: number, toLabel: string | null) {
   return {
-    title: split === 1 ? 'Одна из операций разделена' : `${split} ${plural(split, ['операция разделена', 'операции разделены', 'операций разделены'])}`,
+    title:
+      split === 1
+        ? 'Одна из операций разделена'
+        : `${split} ${plural(split, ['операция разделена', 'операции разделены', 'операций разделены'])}`,
     message: toLabel
       ? `Разделение уберётся: вся сумма перейдёт в «${toLabel}».`
       : 'Разделение уберётся: операции останутся без категории.',

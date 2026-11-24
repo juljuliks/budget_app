@@ -4,7 +4,15 @@ import { categoryLabel } from '@/db/categories';
 import type { TrendsData } from '@/db/plans';
 import { MONTHS_NOM } from '@/shared/lib/dates';
 import type { DayKey } from '@/shared/lib/dateRange';
-import { monthBars, monthsSummary, spentThisMonth, thisWeek, trendOf, trendWindows, weekdayHabits } from '@/stats/trends';
+import {
+  monthBars,
+  monthsSummary,
+  spentThisMonth,
+  thisWeek,
+  trendOf,
+  trendWindows,
+  weekdayHabits,
+} from '@/stats/trends';
 import { trendKind } from '@/stats/trendKind';
 import { Bar, barsOf, MONDAY_FIRST, spendsByCategory } from './trendsView';
 
@@ -22,10 +30,21 @@ export function categoryTrendView(data: TrendsData, id: number, today: DayKey) {
 
   const habits = weekdayHabits(spends, today, data.since);
   const week = habits.reduce((a, b) => a + b, 0);
-  const top = habits.map((v, i) => ({ v, i })).filter((d) => d.v > 0).sort((a, b) => b.v - a.v).slice(0, TOP_DAYS).map((d) => d.i);
+  const top = habits
+    .map((v, i) => ({ v, i }))
+    .filter((d) => d.v > 0)
+    .sort((a, b) => b.v - a.v)
+    .slice(0, TOP_DAYS)
+    .map((d) => d.i);
   // this week's days over the usual ones (grey under): what goes on now against the habit
   const days = thisWeek(spends, today);
-  const habitBars: Bar[] = habits.map((v, i) => ({ key: MONDAY_FIRST[i], label: MONDAY_FIRST[i], value: days[i], usual: v, tone: 'now' }));
+  const habitBars: Bar[] = habits.map((v, i) => ({
+    key: MONDAY_FIRST[i],
+    label: MONDAY_FIRST[i],
+    value: days[i],
+    usual: v,
+    tone: 'now',
+  }));
   // today's place in the week, Monday first: the week so far against the usual by the same days
   const at = days.findIndex((d) => d === null);
   const upTo = at < 0 ? 6 : at - 1;
@@ -46,15 +65,24 @@ export function categoryTrendView(data: TrendsData, id: number, today: DayKey) {
     spent: spentThisMonth(spends, today),
     bars: barsOf(spends, today),
     window: trendWindows(today).cur,
-    habits: week > 0 ? {
-      bars: habitBars,
-      /** "Эта неделя: 120 ₾ · обычно 90 ₾ к четвергу": this week so far and the average weekdays up to today */
-      week: { cur: sumTo(days), usual: sumTo(habits), upTo },
-      /** "Больше всего — пт и сб · 50% трат недели" */
-      top: top.map((i) => MONDAY_FIRST[i]).join(' и '),
-      share: Math.round((top.reduce((a, i) => a + habits[i], 0) / week) * 100),
-    } : null,
-    summary: summary ? { ...summary, least: { ...summary.least, name: monthName(summary.least.ym) }, most: { ...summary.most, name: monthName(summary.most.ym) } } : null,
+    habits:
+      week > 0
+        ? {
+            bars: habitBars,
+            /** "Эта неделя: 120 ₾ · обычно 90 ₾ к четвергу": this week so far and the average weekdays up to today */
+            week: { cur: sumTo(days), usual: sumTo(habits), upTo },
+            /** "Больше всего — пт и сб · 50% трат недели" */
+            top: top.map((i) => MONDAY_FIRST[i]).join(' и '),
+            share: Math.round((top.reduce((a, i) => a + habits[i], 0) / week) * 100),
+          }
+        : null,
+    summary: summary
+      ? {
+          ...summary,
+          least: { ...summary.least, name: monthName(summary.least.ym) },
+          most: { ...summary.most, name: monthName(summary.most.ym) },
+        }
+      : null,
     /** operations of the period: its "N операций · X ₾ ›" */
     count: spends.filter((s) => s.value > 0 && s.day >= trendWindows(today).cur.from).length,
   };

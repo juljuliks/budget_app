@@ -6,7 +6,13 @@ import { formatWithCurrency } from '@/shared/lib/money';
 import ProgressRing from '@/shared/ui/ProgressRing';
 import { colors } from '@/shared/theme/theme';
 
-type Props = { txId: number; categoryId: number | null; merchantKey: string | null; occurredAt: number; amount: number };
+type Props = {
+  txId: number;
+  categoryId: number | null;
+  merchantKey: string | null;
+  occurredAt: number;
+  amount: number;
+};
 
 type At = { before: number; after: number; currency: string; saving?: string };
 
@@ -23,8 +29,14 @@ export default function FundNote({ txId, categoryId, merchantKey, occurredAt, am
       if (fund) return fund;
       const saving = await savingOfTransaction(txId, merchantKey, occurredAt);
       return saving ? { ...saving, saving: saving.name } : null;
-    })().then((r) => { if (live) setAt(r); }).catch((e) => console.error('fund of transaction failed', e));
-    return () => { live = false; };
+    })()
+      .then((r) => {
+        if (live) setAt(r);
+      })
+      .catch((e) => console.error('fund of transaction failed', e));
+    return () => {
+      live = false;
+    };
     // the amount changed: the fund's before / after too
   }, [txId, categoryId, merchantKey, occurredAt, amount]);
   if (!at) return null;
@@ -33,7 +45,9 @@ export default function FundNote({ txId, categoryId, merchantKey, occurredAt, am
     <View style={styles.box}>
       <ProgressRing ratio={at.before ? at.after / at.before : 0} color={colors.fund} track={colors.fundTrack} />
       <View style={styles.text}>
-        <Text style={styles.title}>{at.saving ? 'Из отложенного — не из бюджета месяца' : 'Из копилки — не из бюджета месяца'}</Text>
+        <Text style={styles.title}>
+          {at.saving ? 'Из отложенного — не из бюджета месяца' : 'Из копилки — не из бюджета месяца'}
+        </Text>
         <Text style={styles.note}>
           {`${at.saving ? `на ${at.saving} было отложено` : 'в копилке было'} ${money(at.before)} → осталось ${money(at.after)}`}
         </Text>
@@ -43,7 +57,15 @@ export default function FundNote({ txId, categoryId, merchantKey, occurredAt, am
 }
 
 const styles = StyleSheet.create({
-  box: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12, padding: 12, borderRadius: 10, backgroundColor: colors.fundBg },
+  box: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: colors.fundBg,
+  },
   text: { flex: 1, gap: 2 },
   title: { fontSize: 15, color: colors.text },
   note: { fontSize: 13, color: colors.muted },

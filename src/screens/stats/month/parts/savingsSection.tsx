@@ -36,10 +36,14 @@ function nowOfPlan(now: number | null, plan: number, currency: string) {
   const pct = now === null ? '?' : formatPercent(Math.max(0, now), plan);
   return (
     <MaskedTotal style={styles.rowAmount} hiddenText={pct}>
-      <Text style={now !== null && now < plan ? styles.overNum : undefined}>{now === null ? '?' : formatShort(Math.max(0, now))}</Text>
+      <Text style={now !== null && now < plan ? styles.overNum : undefined}>
+        {now === null ? '?' : formatShort(Math.max(0, now))}
+      </Text>
       <Text style={styles.rowLimit}>{` / ${formatWithCurrency(plan, currency)}`}</Text>
       {/* "· 76%" as a category's: of its plan, orange while short of it */}
-      {now !== null && plan > 0 ? <Text style={[styles.rowLimit, now < plan && styles.overNum]}>{` · ${pct}`}</Text> : null}
+      {now !== null && plan > 0 ? (
+        <Text style={[styles.rowLimit, now < plan && styles.overNum]}>{` · ${pct}`}</Text>
+      ) : null}
     </MaskedTotal>
   );
 }
@@ -50,7 +54,12 @@ function nowOfPlan(now: number | null, plan: number, currency: string) {
  */
 function savingsHeaderTotal(now: number | null, plan: number, currency: string) {
   const isOver = now !== null && now < plan;
-  if (!isOver) return <MaskedTotal style={styles.groupTotal} hiddenText="">{formatWithCurrency(plan, currency)}</MaskedTotal>;
+  if (!isOver)
+    return (
+      <MaskedTotal style={styles.groupTotal} hiddenText="">
+        {formatWithCurrency(plan, currency)}
+      </MaskedTotal>
+    );
   const pct = formatPercent(Math.max(0, now!), plan);
   return (
     <MaskedTotal style={styles.groupTotal} hiddenText={pct}>
@@ -61,41 +70,80 @@ function savingsHeaderTotal(now: number | null, plan: number, currency: string) 
   );
 }
 
-function Part({ x, currency, onLess, onLongPress, spent, actions, onLate }: {
-  x: SavingsPart; currency: string; onLess: () => void; onLongPress?: () => void; spent?: React.ReactNode;
+function Part({
+  x,
+  currency,
+  onLess,
+  onLongPress,
+  spent,
+  actions,
+  onLate,
+}: {
+  x: SavingsPart;
+  currency: string;
+  onLess: () => void;
+  onLongPress?: () => void;
+  spent?: React.ReactNode;
   /** a fund not making it: its status opens its category's page */
   onLate?: (id: number) => void;
   /** a fund's: the menu of a tap or a long press instead of onLongPress */
   actions?: PressAction[];
 }) {
   const status = (
-    <Text style={[styles.rowStatus, x.status.tone === 'warn' && styles.overLine, x.status.tone === 'ok' && styles.paceOk]}>
-      {x.status.text}{x.fund ? ` · ${fundProgress(x.fund.saved, x.fund.target, x.fund.due, x.fund.currency)}` : ''}{x.status.info ? ' ' : ''}
+    <Text
+      style={[styles.rowStatus, x.status.tone === 'warn' && styles.overLine, x.status.tone === 'ok' && styles.paceOk]}
+    >
+      {x.status.text}
+      {x.fund ? ` · ${fundProgress(x.fund.saved, x.fund.target, x.fund.due, x.fund.currency)}` : ''}
+      {x.status.info ? ' ' : ''}
     </Text>
   );
   const body = (
     <>
       <View style={styles.rowTop}>
         <View style={[styles.dot, { backgroundColor: x.color }]} />
-        <Text style={styles.rowName} numberOfLines={1}>{x.name}</Text>
+        <Text style={styles.rowName} numberOfLines={1}>
+          {x.name}
+        </Text>
         {nowOfPlan(x.now, x.plan, currency)}
       </View>
-      {x.plan > 0 && x.now !== null ? <Meter ratio={Math.max(0, x.now) / x.plan} height={6} color={x.late ? colors.warn : x.color} /> : null}
+      {x.plan > 0 && x.now !== null ? (
+        <Meter ratio={Math.max(0, x.now) / x.plan} height={6} color={x.late ? colors.warn : x.color} />
+      ) : null}
       {x.late && onLate && x.categoryId !== undefined ? (
-        <TouchableOpacity onPress={() => onLate(x.categoryId!)} hitSlop={8} accessibilityRole="button">{status}</TouchableOpacity>
-      ) : x.status.info ? (
-        <TouchableOpacity style={styles.rowTop} onPress={onLess} hitSlop={8} accessibilityRole="button" accessibilityLabel={`${x.name}: что съело сбережения`}>
-          {status}<InfoIcon color={colors.accent} size={13} />
+        <TouchableOpacity onPress={() => onLate(x.categoryId!)} hitSlop={8} accessibilityRole="button">
+          {status}
         </TouchableOpacity>
-      ) : status}
+      ) : x.status.info ? (
+        <TouchableOpacity
+          style={styles.rowTop}
+          onPress={onLess}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={`${x.name}: что съело сбережения`}
+        >
+          {status}
+          <InfoIcon color={colors.accent} size={13} />
+        </TouchableOpacity>
+      ) : (
+        status
+      )}
       {spent}
     </>
   );
   return actions ? (
-    <PressMenu style={styles.row} actions={actions} accessibilityHint="Операции, план, динамика">{body}</PressMenu>
+    <PressMenu style={styles.row} actions={actions} accessibilityHint="Операции, план, динамика">
+      {body}
+    </PressMenu>
   ) : (
     // what is saved up for the payments: a tap opens them too (the coming ones)
-    <TouchableOpacity style={styles.row} onPress={x.key.startsWith('saving-') ? onLongPress : undefined} onLongPress={onLongPress} disabled={!onLongPress} accessibilityLabel={x.name}>
+    <TouchableOpacity
+      style={styles.row}
+      onPress={x.key.startsWith('saving-') ? onLongPress : undefined}
+      onLongPress={onLongPress}
+      disabled={!onLongPress}
+      accessibilityLabel={x.name}
+    >
       {body}
     </TouchableOpacity>
   );
@@ -111,32 +159,59 @@ export function savingsSection(s: SavingsSection | null, currency: string, open:
   const money = (minor: number) => formatWithCurrency(minor, currency);
   return (
     <>
-      {header('Сбережения', savingsHeaderTotal(s.now, s.plan, currency), undefined, s.budget ? `${formatPercent(s.plan, s.budget)} бюджета` : undefined)}
+      {header(
+        'Сбережения',
+        savingsHeaderTotal(s.now, s.plan, currency),
+        undefined,
+        s.budget ? `${formatPercent(s.plan, s.budget)} бюджета` : undefined,
+      )}
       <View>
         {s.caption ? <Text style={styles.savingsCaption}>{s.caption}</Text> : null}
         {s.parts.map((x) => {
           // the funds in the queue they get the budget in
           const caption = x.fundsFirst ? <Text style={styles.savingsCaption}>Копилки · ближайшие выше</Text> : null;
           const kind = x.key.startsWith('fund-') ? 'fund' : x.key.startsWith('saving-') ? 'saving' : null;
-          const lp = x.key === 'locked' && open.onLongPressLocked
-            ? open.onLongPressLocked
-            : (kind === 'saving' && x.categoryId !== undefined && open.longPressCategory ? () => open.longPressCategory!(x.categoryId!, x.name, kind) : undefined);
-          const actions = kind === 'fund' && x.categoryId !== undefined ? open.fundActions?.(x.categoryId, x.name) : undefined;
+          const lp =
+            x.key === 'locked' && open.onLongPressLocked
+              ? open.onLongPressLocked
+              : kind === 'saving' && x.categoryId !== undefined && open.longPressCategory
+                ? () => open.longPressCategory!(x.categoryId!, x.name, kind)
+                : undefined;
+          const actions =
+            kind === 'fund' && x.categoryId !== undefined ? open.fundActions?.(x.categoryId, x.name) : undefined;
           const spent = kind === 'fund' && x.categoryId !== undefined ? open.fundSpent?.(x.categoryId) : undefined;
           return (
             <React.Fragment key={x.key}>
               {caption}
-              <Part x={x} currency={currency} onLess={open.less} onLongPress={lp} spent={spent} actions={actions} onLate={open.openCategory} />
+              <Part
+                x={x}
+                currency={currency}
+                onLess={open.less}
+                onLongPress={lp}
+                spent={spent}
+                actions={actions}
+                onLate={open.openCategory}
+              />
             </React.Fragment>
           );
         })}
         {s.past > 0 ? (
-          <TouchableOpacity style={styles.row} onPress={open.less} accessibilityRole="button" accessibilityLabel="Из прошлых сбережений: что съело сбережения">
+          <TouchableOpacity
+            style={styles.row}
+            onPress={open.less}
+            accessibilityRole="button"
+            accessibilityLabel="Из прошлых сбережений: что съело сбережения"
+          >
             <View style={styles.rowTop}>
               <View style={[styles.dot, { backgroundColor: colors.danger }]} />
               <Text style={styles.rowName}>Из прошлых сбережений</Text>
-              <MaskedTotal style={[styles.rowAmount, styles.dangerText]} hiddenText="">{`−${money(s.past)}`}</MaskedTotal>
-              <View style={styles.infoGap}><InfoIcon color={colors.accent} size={13} /></View>
+              <MaskedTotal
+                style={[styles.rowAmount, styles.dangerText]}
+                hiddenText=""
+              >{`−${money(s.past)}`}</MaskedTotal>
+              <View style={styles.infoGap}>
+                <InfoIcon color={colors.accent} size={13} />
+              </View>
             </View>
           </TouchableOpacity>
         ) : null}

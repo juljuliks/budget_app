@@ -31,24 +31,69 @@ type Props = {
  * Each button opens its picker in a sheet; all the filters set apply together. Merchants are found by the text search
  * (it matches the merchant name); a merchant card still opens the list filtered by its merchant, shown as a chip.
  */
-export default function FiltersBar({ categories, kinds, banks, dated, unanswered, groupBy, categoryLocked, applied, onOpen, onReset, children }: Props) {
+export default function FiltersBar({
+  categories,
+  kinds,
+  banks,
+  dated,
+  unanswered,
+  groupBy,
+  categoryLocked,
+  applied,
+  onOpen,
+  onReset,
+  children,
+}: Props) {
   const { several } = useBanks();
   return (
     <>
       <View style={styles.buttons}>
-        <FilterButton label="Категория" count={categories} active={categories > 0} disabled={categoryLocked} onPress={() => onOpen('category')} testID="filter-category" />
-        <FilterButton label="Тип" count={kinds} active={kinds > 0} onPress={() => onOpen('kind')} testID="filter-kind" />
- {several || banks > 0 ? <FilterButton label="Банк" count={banks} active={banks > 0} onPress={() => onOpen('bank')} testID="filter-bank" /> : null}
+        <FilterButton
+          label="Категория"
+          count={categories}
+          active={categories > 0}
+          disabled={categoryLocked}
+          onPress={() => onOpen('category')}
+          testID="filter-category"
+        />
+        <FilterButton
+          label="Тип"
+          count={kinds}
+          active={kinds > 0}
+          onPress={() => onOpen('kind')}
+          testID="filter-kind"
+        />
+        {several || banks > 0 ? (
+          <FilterButton
+            label="Банк"
+            count={banks}
+            active={banks > 0}
+            onPress={() => onOpen('bank')}
+            testID="filter-bank"
+          />
+        ) : null}
         <FilterButton label="Дата" active={dated} onPress={() => onOpen('date')} testID="filter-date" />
-        <FilterButton label={GROUP_BY.find(([k]) => k === groupBy)![1]} active={groupBy !== 'day'} onPress={() => onOpen('group')} testID="filter-group" />
+        <FilterButton
+          label={GROUP_BY.find(([k]) => k === groupBy)![1]}
+          active={groupBy !== 'day'}
+          onPress={() => onOpen('group')}
+          testID="filter-group"
+        />
         {/* set only from a link ("Отметить N покупок ›"): shown so the short list is explained; tap — the list with ✕ */}
-        {unanswered ? <FilterButton label={UNANSWERED_CHIP} active onPress={() => onOpen('all')} testID="filter-unanswered" /> : null}
+        {unanswered ? (
+          <FilterButton label={UNANSWERED_CHIP} active onPress={() => onOpen('all')} testID="filter-unanswered" />
+        ) : null}
       </View>
       {children}
       {applied > 0 ? (
         // how many filters are set (tap: the list of them, each with ✕) and "Сбросить все"
         <View style={styles.appliedRow}>
-          <TouchableOpacity onPress={() => onOpen('all')} hitSlop={8} accessibilityRole="button" accessibilityHint="Показать фильтры">
+          <TouchableOpacity
+            onPress={() => onOpen('all')}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityHint="Показать фильтры"
+          >
             <Text style={styles.appliedText}>Применено фильтров: {applied}</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={onReset} hitSlop={8} accessibilityRole="button">

@@ -29,8 +29,18 @@ export default function AmountAnswer({ asked, currency, answered, onAnswer, onRe
   if (answered !== null) {
     return (
       <View style={styles.row}>
-        <Text style={[styles.done, answered === 0 && styles.none]}>{answered > 0 ? `✓ Отложено ${money(answered)}` : '✕ Не отложено'}</Text>
-        <TouchableOpacity onPress={() => { setOther(null); onReset(); }} hitSlop={8} accessibilityRole="button" accessibilityLabel={`Изменить: ${label}`}>
+        <Text style={[styles.done, answered === 0 && styles.none]}>
+          {answered > 0 ? `✓ Отложено ${money(answered)}` : '✕ Не отложено'}
+        </Text>
+        <TouchableOpacity
+          onPress={() => {
+            setOther(null);
+            onReset();
+          }}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={`Изменить: ${label}`}
+        >
           <Text style={styles.link}>Изменить</Text>
         </TouchableOpacity>
       </View>
@@ -39,14 +49,26 @@ export default function AmountAnswer({ asked, currency, answered, onAnswer, onRe
   if (other !== null) {
     const done = () => {
       const minor = parseAmountOrZero(other);
-      if (minor === null) { toastError('Введите сумму'); return; }
+      if (minor === null) {
+        toastError('Введите сумму');
+        return;
+      }
       onAnswer(minor, minor === 0 ? 'no' : 'other');
     };
     return (
       <View style={styles.row}>
         <View style={styles.field}>
-          <TextInput style={styles.input} value={other} onChangeText={setOther} keyboardType="decimal-pad" maxLength={12} autoFocus
-            placeholder="0.00" placeholderTextColor={colors.muted} accessibilityLabel={label} />
+          <TextInput
+            style={styles.input}
+            value={other}
+            onChangeText={setOther}
+            keyboardType="decimal-pad"
+            maxLength={12}
+            autoFocus
+            placeholder="0.00"
+            placeholderTextColor={colors.muted}
+            accessibilityLabel={label}
+          />
           <Text style={styles.cur}>{currencySymbol(currency)}</Text>
         </View>
         <Button title="Готово" onPress={done} size="small" />
@@ -68,7 +90,17 @@ const styles = StyleSheet.create({
   done: { fontSize: 15, fontWeight: '500', color: colors.income, flexShrink: 1 },
   none: { color: colors.muted },
   link: { fontSize: 15, color: colors.accent },
-  field: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 10, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.bg, paddingHorizontal: 12 },
+  field: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.bg,
+    paddingHorizontal: 12,
+  },
   input: { flex: 1, fontSize: 16, color: colors.text, paddingVertical: 8 },
   cur: { fontSize: 15, color: colors.muted },
 });

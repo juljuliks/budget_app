@@ -19,13 +19,22 @@ beforeEach(async () => {
   jest.useFakeTimers({ now: new Date('2026-10-15T12:00:00'), advanceTimers: true });
   await freshDb();
   const db = await getDb();
-  for (let d = 1; d <= 15; d++) await db.run("INSERT INTO fx_rates (date, currency, gel_per_unit) VALUES (?, 'USD', 2.7)", [`2026-10-${String(d).padStart(2, '0')}`]);
+  for (let d = 1; d <= 15; d++)
+    await db.run("INSERT INTO fx_rates (date, currency, gel_per_unit) VALUES (?, 'USD', 2.7)", [
+      `2026-10-${String(d).padStart(2, '0')}`,
+    ]);
   const rhythms = ['day', 'week', '2weeks', 'month'] as const;
   for (let i = 0; i < 8; i++) {
     const id = await createCategory(`Категория ${i}`);
     await setPlanAmount('2026-10', id, 50000, 'limit', 'GEL', rhythms[i % 4]);
     for (let d = 1; d <= 15; d += 2) {
-      await addManualTransaction({ amount_minor: 1000 + i, category_id: id, occurred_at: at(`2026-10-${String(d).padStart(2, '0')}`), kind: 'purchase', currency: i % 3 ? 'GEL' : 'USD' });
+      await addManualTransaction({
+        amount_minor: 1000 + i,
+        category_id: id,
+        occurred_at: at(`2026-10-${String(d).padStart(2, '0')}`),
+        kind: 'purchase',
+        currency: i % 3 ? 'GEL' : 'USD',
+      });
     }
   }
 });
@@ -48,7 +57,7 @@ test('a day of stats against the plan: the norms, the day, the month outside the
   expect(n).toBeLessThanOrEqual(20);
 });
 
-test('a month of stats: the month and today\'s norms', async () => {
+test("a month of stats: the month and today's norms", async () => {
   const n = await count(async () => {
     await monthStats(2026, 9, 'GEL');
     await loadNorms({ from: '2026-10-15', to: '2026-10-15' }, 'GEL');
@@ -57,7 +66,7 @@ test('a month of stats: the month and today\'s norms', async () => {
   expect(n).toBeLessThanOrEqual(19);
 });
 
-test('«Итоги года»: the year\'s spending read once, not a month at a time', async () => {
+test("«Итоги года»: the year's spending read once, not a month at a time", async () => {
   const { yearReport } = require('../../src/db/yearReport');
   const n = await count(() => yearReport(2026, 'GEL', '2026-10'));
   // 22 for a month of plan and spending: the history, the year's spending, the plans, the impulses at once

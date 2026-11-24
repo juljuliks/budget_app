@@ -15,22 +15,49 @@ import { askTakeLocked } from './askTakeLocked';
 import type { PlanAmountTarget } from './PlanAmountModal';
 
 /** `due` null — a monthly one without a day: the amount by hand in each month's plan */
-type Payment = { amount_minor: number; currency: Currency; period: number; due: string | null; until: string | null; saving?: SavingChoice | null };
+type Payment = {
+  amount_minor: number;
+  currency: Currency;
+  period: number;
+  due: string | null;
+  until: string | null;
+  saving?: SavingChoice | null;
+};
 type Free = { minor: number; currency: Currency } | null;
 
 /** An error to show, null — saved, false — asked over the sheet (it stays open; the answer saves and closes it). */
 export async function submitCategoryPayment(
-  ym: string, target: PlanAmountTarget, p: Payment, adding: boolean, saved: (taken?: string) => void, onClose: () => void, free: Free,
+  ym: string,
+  target: PlanAmountTarget,
+  p: Payment,
+  adding: boolean,
+  saved: (taken?: string) => void,
+  onClose: () => void,
+  free: Free,
 ): Promise<string | null | false> {
   const s = p.saving;
   if (s?.had && !(s.on && p.due) && s.balance > 0) {
     sheetAlert(
       `Не откладывать на «${target.label}»?`,
       `Уже отложено ${formatWithCurrency(s.balance, p.currency)}. Они уйдут в сбережения ${monthGen(currentYm())} — как при удалении копилки.`,
-      [{ text: 'Отмена', style: 'cancel' }, { text: 'Не откладывать', style: 'destructive', onPress: () => {
-        checkAndSave(ym, target.category_id, p, adding, free, (taken) => { saved(taken); onClose(); })
-          .then((err) => { if (err) toastError(err); }).catch(toastFailure('save category payment', SAVE_FAILED));
-      } }]);
+      [
+        { text: 'Отмена', style: 'cancel' },
+        {
+          text: 'Не откладывать',
+          style: 'destructive',
+          onPress: () => {
+            checkAndSave(ym, target.category_id, p, adding, free, (taken) => {
+              saved(taken);
+              onClose();
+            })
+              .then((err) => {
+                if (err) toastError(err);
+              })
+              .catch(toastFailure('save category payment', SAVE_FAILED));
+          },
+        },
+      ],
+    );
     return false;
   }
   return checkAndSave(ym, target.category_id, p, adding, free, (taken) => saved(taken), onClose);
@@ -49,17 +76,39 @@ async function shortOf(ym: string, categoryId: number, p: Payment) {
   // saving up for it from now: its contribution in this month's plan too
   const s = p.saving;
   const contribution = s?.on && !s.had ? { minor: s.contribution, currency: p.currency } : undefined;
-  return effect ? paymentShort(ym, categoryId, now ? effect.delta_minor : 0, { minor: now ? effect.after_minor : 0, currency: effect.currency }, contribution) : null;
+  return effect
+    ? paymentShort(
+        ym,
+        categoryId,
+        now ? effect.delta_minor : 0,
+        { minor: now ? effect.after_minor : 0, currency: effect.currency },
+        contribution,
+      )
+    : null;
 }
 
-async function checkAndSave(ym: string, categoryId: number, p: Payment, adding: boolean, free: Free, done: (taken?: string) => void, onClose?: () => void): Promise<string | null | false> {
+async function checkAndSave(
+  ym: string,
+  categoryId: number,
+  p: Payment,
+  adding: boolean,
+  free: Free,
+  done: (taken?: string) => void,
+  onClose?: () => void,
+): Promise<string | null | false> {
   const over = await shortOf(ym, categoryId, p);
   if (over && over.locked > 0) {
     askTakeLocked({
-      ...over, adding,
-      onYes: (take) => takeLocked(ym, take).then(() => saveCategoryPayment(ym, categoryId, p))
-        .then(() => { done(formatWithCurrency(take, over.currency)); onClose?.(); })
-        .catch(toastFailure('save category payment from savings', SAVE_FAILED)),
+      ...over,
+      adding,
+      onYes: (take) =>
+        takeLocked(ym, take)
+          .then(() => saveCategoryPayment(ym, categoryId, p))
+          .then(() => {
+            done(formatWithCurrency(take, over.currency));
+            onClose?.();
+          })
+          .catch(toastFailure('save category payment from savings', SAVE_FAILED)),
     });
     return false;
   }

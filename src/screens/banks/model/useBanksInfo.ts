@@ -17,13 +17,17 @@ export function useBanksInfo() {
     (async () => {
       const on = await enabledBanks();
       const [templates, unparsed] = await Promise.all([listTemplates(), listUnparsed()]);
-      setInfo(await Promise.all(BANKS.map(async (bank) => ({
-        bank,
-        on: on.includes(bank.id),
-        balance: await cardBalance(bank.id),
-        templates: templates.filter((t) => t.bank === bank.id).length,
-        unparsed: unparsed.filter((m) => bankOfSender(m.sender).id === bank.id).length,
-      }))));
+      setInfo(
+        await Promise.all(
+          BANKS.map(async (bank) => ({
+            bank,
+            on: on.includes(bank.id),
+            balance: await cardBalance(bank.id),
+            templates: templates.filter((t) => t.bank === bank.id).length,
+            unparsed: unparsed.filter((m) => bankOfSender(m.sender).id === bank.id).length,
+          })),
+        ),
+      );
     })().catch(fail);
   }, [started, fail]);
   useEffect(load, [load]);

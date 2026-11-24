@@ -19,7 +19,8 @@ export function monthWords(ym: string) {
 export function stepAnswered(c: MonthClose, step: CloseStep): boolean {
   const b = c.budget;
   if (step === 'payments') return c.payments.every((p) => p.choice !== null);
-  if (step === 'over') return !b || (c.answers.over_cover !== null && (b.over_rest_minor === 0 || c.answers.over_rest_cover !== null));
+  if (step === 'over')
+    return !b || (c.answers.over_cover !== null && (b.over_rest_minor === 0 || c.answers.over_rest_cover !== null));
   return c.ask_minor <= 0 || c.put_minor !== null;
 }
 

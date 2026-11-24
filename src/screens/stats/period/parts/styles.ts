@@ -11,8 +11,22 @@ export const styles = StyleSheet.create({
   content: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 32 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
   donutWrap: { alignItems: 'center', marginBottom: 8 },
-  calcTitle: { fontSize: 13, fontWeight: '600', color: colors.muted, textTransform: 'uppercase', marginTop: 4, marginBottom: 6 },
-  summaryRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 8, paddingHorizontal: 8 },
+  calcTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.muted,
+    textTransform: 'uppercase',
+    marginTop: 4,
+    marginBottom: 6,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 8,
+    paddingHorizontal: 8,
+  },
   summary: { flexShrink: 1, fontSize: 14, color: colors.text, textAlign: 'center' },
   hint: { color: colors.muted, fontSize: 14, textAlign: 'center', marginVertical: 12 },
   group: { marginTop: 16 },
@@ -30,11 +44,26 @@ export const styles = StyleSheet.create({
   paceAhead: { color: colors.warn },
   paceOver: { color: colors.danger },
   // the section's total under its title, on the same grey band: apart from the category rows below
-  limitSummary: { gap: 2, marginHorizontal: -16, paddingHorizontal: 16, paddingTop: 2, paddingBottom: 10, backgroundColor: colors.surface },
+  limitSummary: {
+    gap: 2,
+    marginHorizontal: -16,
+    paddingHorizontal: 16,
+    paddingTop: 2,
+    paddingBottom: 10,
+    backgroundColor: colors.surface,
+  },
   stackWrap: { marginTop: 6, marginBottom: 4 },
   stack: { flexDirection: 'row', height: 8, borderRadius: 4, overflow: 'hidden', gap: 1 },
   stackRest: { backgroundColor: chart.meterTrack },
-  stackTick: { position: 'absolute', top: -4, bottom: -4, width: 2, marginLeft: -1, borderRadius: 1, backgroundColor: colors.text },
+  stackTick: {
+    position: 'absolute',
+    top: -4,
+    bottom: -4,
+    width: 2,
+    marginLeft: -1,
+    borderRadius: 1,
+    backgroundColor: colors.text,
+  },
   paceRow: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' },
   paceText: { flexShrink: 1 },
   share: { fontSize: 13, color: colors.muted, marginTop: 4, fontVariant: ['tabular-nums'] },
@@ -53,13 +82,19 @@ export const styles = StyleSheet.create({
   infoBold: { fontWeight: '600' },
   crossed: { textDecorationLine: 'line-through' },
   calcToggle: { fontSize: 15, color: colors.accent, fontWeight: '600', paddingVertical: 4 },
-  code: { fontFamily: Platform.select({ ios: 'Menlo', default: 'monospace' }), fontSize: 13, backgroundColor: colors.surface, color: colors.text },
+  code: {
+    fontFamily: Platform.select({ ios: 'Menlo', default: 'monospace' }),
+    fontSize: 13,
+    backgroundColor: colors.surface,
+    color: colors.text,
+  },
   infoSheet: { maxHeight: '85%' },
   infoScroll: { flexGrow: 0, flexShrink: 1 },
   infoButton: { marginTop: 12, marginHorizontal: 20 },
 });
 
 /** "spent" and its "(%)" in a "spent / limit (%)" turn orange once over the limit (the limit itself stays muted) */
-export const overStyle = (spent: number, limit: number) => (limit > 0 && spent > Math.round(limit) ? styles.overNum : undefined);
+export const overStyle = (spent: number, limit: number) =>
+  limit > 0 && spent > Math.round(limit) ? styles.overNum : undefined;
 export const paceStyle = (p: Pace) => (p === 'ok' ? styles.paceOk : p === 'ahead' ? styles.paceAhead : styles.paceOver);
 export const paceName = (p: Pace) => (p === 'ok' ? 'зелёный' : p === 'ahead' ? 'оранжевый' : 'красный');

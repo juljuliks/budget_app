@@ -39,7 +39,8 @@ export type MerchantActivity = {
 };
 
 /** Every merchant_key, or only `key`: a condition on `t` and its params. */
-const onlyKey = (key?: string) => (key === undefined ? { sql: 't.merchant_key IS NOT NULL', params: [] } : { sql: 't.merchant_key = ?', params: [key] });
+const onlyKey = (key?: string) =>
+  key === undefined ? { sql: 't.merchant_key IS NOT NULL', params: [] } : { sql: 't.merchant_key = ?', params: [key] };
 
 /** The newest SMS spelling of each merchant_key (or of `key`). */
 async function namesByKey(key?: string): Promise<Map<string, string>> {
@@ -48,7 +49,9 @@ async function namesByKey(key?: string): Promise<Map<string, string>> {
   const rows = await db.all<{ k: string; name: string | null }>(
     `SELECT merchant_key AS k, (SELECT raw_merchant FROM transactions x WHERE x.merchant_key = t.merchant_key
         ORDER BY x.occurred_at DESC LIMIT 1) AS name
-      FROM transactions t WHERE ${w.sql} GROUP BY merchant_key`, w.params);
+      FROM transactions t WHERE ${w.sql} GROUP BY merchant_key`,
+    w.params,
+  );
   return new Map(rows.map((r) => [r.k, r.name || r.k]));
 }
 
@@ -64,17 +67,33 @@ async function merchantRows(key?: string): Promise<MerchantRow[]> {
   const names = await namesByKey(key);
   const counts = await db.all<{ mid: string; n: number }>(
     `SELECT t.merchant_key AS mid, count(*) AS n FROM transactions t
-      WHERE ${w.sql} AND t.kind IN ${KINDS} GROUP BY mid`, w.params);
+      WHERE ${w.sql} AND t.kind IN ${KINDS} GROUP BY mid`,
+    w.params,
+  );
   const activityOf = await merchantActivity(key);
   const rules = await db.all<{ pattern: string; category_id: number }>(
-    `SELECT pattern, category_id FROM merchant_rules WHERE match_type = 'exact'${key === undefined ? '' : ' AND pattern = ?'}`, w.params);
+    `SELECT pattern, category_id FROM merchant_rules WHERE match_type = 'exact'${key === undefined ? '' : ' AND pattern = ?'}`,
+    w.params,
+  );
   const ruleOf = new Map(rules.map((r) => [r.pattern, r.category_id]));
-  const mixed = new Set((await db.all<{ k: string }>(
-    `SELECT merchant_key AS k FROM mixed_merchants${key === undefined ? '' : ' WHERE merchant_key = ?'}`, w.params)).map((r) => r.k));
-  return counts.map(({ mid, n }) => ({
-    id: mid, name: names.get(mid) ?? mid, count: n, category_id: mixed.has(mid) ? null : ruleOf.get(mid) ?? null, mixed: mixed.has(mid),
-    activity: activityOf.get(mid) ?? NO_ACTIVITY,
-  })).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  const mixed = new Set(
+    (
+      await db.all<{ k: string }>(
+        `SELECT merchant_key AS k FROM mixed_merchants${key === undefined ? '' : ' WHERE merchant_key = ?'}`,
+        w.params,
+      )
+    ).map((r) => r.k),
+  );
+  return counts
+    .map(({ mid, n }) => ({
+      id: mid,
+      name: names.get(mid) ?? mid,
+      count: n,
+      category_id: mixed.has(mid) ? null : (ruleOf.get(mid) ?? null),
+      mixed: mixed.has(mid),
+      activity: activityOf.get(mid) ?? NO_ACTIVITY,
+    }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 }
 
 const NO_ACTIVITY: MerchantActivity = { recent: false, count: 0, totals: [], from: 0, to: 0 };
@@ -84,12 +103,23 @@ async function merchantActivity(key?: string, now = Date.now()): Promise<Map<str
   const db = await getDb();
   const w = onlyKey(key);
   const since = Math.floor(now / 1000) - RECENT_DAYS * 86400;
-  const rows = await db.all<{ mid: string; currency: string; recent: number; n: number; amount: number; recent_amount: number; first: number; last: number; recent_first: number | null }>(
+  const rows = await db.all<{
+    mid: string;
+    currency: string;
+    recent: number;
+    n: number;
+    amount: number;
+    recent_amount: number;
+    first: number;
+    last: number;
+    recent_first: number | null;
+  }>(
     `SELECT t.merchant_key AS mid, currency, count(*) AS n, sum(amount_minor) AS amount,
         sum(occurred_at >= ?) AS recent, sum(CASE WHEN occurred_at >= ? THEN amount_minor ELSE 0 END) AS recent_amount,
         min(occurred_at) AS first, max(occurred_at) AS last, min(CASE WHEN occurred_at >= ? THEN occurred_at END) AS recent_first
       FROM transactions t WHERE ${w.sql} AND t.kind IN ${KINDS} GROUP BY mid, currency`,
-    [since, since, since, ...w.params]);
+    [since, since, since, ...w.params],
+  );
   const byMid = new Map<string, typeof rows>();
   for (const r of rows) byMid.set(r.mid, [...(byMid.get(r.mid) ?? []), r]);
   const out = new Map<string, MerchantActivity>();
@@ -99,7 +129,8 @@ async function merchantActivity(key?: string, now = Date.now()): Promise<Map<str
     out.set(mid, {
       recent,
       count: used.reduce((a, r) => a + (recent ? r.recent : r.n), 0),
-      totals: used.map((r) => ({ currency: r.currency, amount_minor: recent ? r.recent_amount : r.amount }))
+      totals: used
+        .map((r) => ({ currency: r.currency, amount_minor: recent ? r.recent_amount : r.amount }))
         .sort((a, b) => b.amount_minor - a.amount_minor),
       from: Math.min(...used.map((r) => (recent ? r.recent_first! : r.first))),
       to: Math.max(...used.map((r) => r.last)),
@@ -121,7 +152,9 @@ export async function getMerchant(id: string): Promise<MerchantDetails | null> {
     `SELECT currency, sum(${signedSpendSql('t')}) AS amount_minor FROM transactions t
       WHERE t.merchant_key = ? AND ${merchantSpendingSql('t')}
       GROUP BY currency HAVING sum(${signedSpendSql('t')}) != 0
-      ORDER BY amount_minor DESC`, [id]);
+      ORDER BY amount_minor DESC`,
+    [id],
+  );
   return { ...row, totals };
 }
 
@@ -139,12 +172,19 @@ export async function setMerchantCategory(id: string, categoryId: number | null,
 async function writeMerchantCategory(db: Db, id: string, categoryId: number | null, past: 'change' | 'keep') {
   // one category of its own: no longer of different ones
   await db.run('DELETE FROM mixed_merchants WHERE merchant_key = ?', [id]);
-  if (past === 'keep') await db.run(`UPDATE transactions SET category_source = 'user' WHERE merchant_key = ? AND category_source = 'rule'`, [id]);
+  if (past === 'keep')
+    await db.run(
+      `UPDATE transactions SET category_source = 'user' WHERE merchant_key = ? AND category_source = 'rule'`,
+      [id],
+    );
   if (categoryId === null) {
     await db.run("DELETE FROM merchant_rules WHERE match_type = 'exact' AND pattern = ?", [id]);
     if (past === 'change') {
-      await db.run(`UPDATE transactions SET category_id = NULL, category_source = NULL WHERE merchant_key = ? AND category_source = 'rule'
-        AND ${merchantSpendingSql()}`, [id]);
+      await db.run(
+        `UPDATE transactions SET category_id = NULL, category_source = NULL WHERE merchant_key = ? AND category_source = 'rule'
+        AND ${merchantSpendingSql()}`,
+        [id],
+      );
     }
     return;
   }
@@ -153,14 +193,21 @@ async function writeMerchantCategory(db: Db, id: string, categoryId: number | nu
 }
 
 /** A merchant's operations that follow its category (not the manual choices): how many, per currency how much. */
-export async function merchantFollowers(id: string): Promise<{ count: number; totals: Array<{ currency: string; amount_minor: number }> }> {
+export async function merchantFollowers(
+  id: string,
+): Promise<{ count: number; totals: Array<{ currency: string; amount_minor: number }> }> {
   const db = await getDb();
   const rows = await db.all<{ currency: string; amount_minor: number; n: number }>(
     `SELECT currency, sum(${signedSpendSql()}) AS amount_minor, count(*) AS n FROM transactions
       WHERE merchant_key = ? AND category_source = 'rule' AND category_id IS NOT NULL
         AND ${merchantSpendingSql()}
-      GROUP BY currency ORDER BY amount_minor DESC`, [id]);
-  return { count: rows.reduce((a, r) => a + r.n, 0), totals: rows.map(({ currency, amount_minor }) => ({ currency, amount_minor })) };
+      GROUP BY currency ORDER BY amount_minor DESC`,
+    [id],
+  );
+  return {
+    count: rows.reduce((a, r) => a + r.n, 0),
+    totals: rows.map(({ currency, amount_minor }) => ({ currency, amount_minor })),
+  };
 }
 
 /**
@@ -172,18 +219,33 @@ export async function merchantFollowers(id: string): Promise<{ count: number; to
 export async function setMerchantMixed(id: string, on: boolean) {
   const db = await getDb();
   await db.transaction(async (tx) => {
-    if (!on) { await tx.run('DELETE FROM mixed_merchants WHERE merchant_key = ?', [id]); return; }
+    if (!on) {
+      await tx.run('DELETE FROM mixed_merchants WHERE merchant_key = ?', [id]);
+      return;
+    }
     const already = await tx.get('SELECT 1 FROM mixed_merchants WHERE merchant_key = ?', [id]);
-    await tx.run('INSERT OR IGNORE INTO mixed_merchants (merchant_key, created_at) VALUES (?, ?)', [id, Math.floor(Date.now() / 1000)]);
+    await tx.run('INSERT OR IGNORE INTO mixed_merchants (merchant_key, created_at) VALUES (?, ?)', [
+      id,
+      Math.floor(Date.now() / 1000),
+    ]);
     if (already) return;
     const rows = await tx.all<{ category_id: number }>(
       `SELECT category_id FROM transactions WHERE merchant_key = ? AND category_id IS NOT NULL AND kind IN ${KINDS}
-        GROUP BY category_id ORDER BY count(*) DESC, category_id`, [id]);
+        GROUP BY category_id ORDER BY count(*) DESC, category_id`,
+      [id],
+    );
     for (let i = 0; i < rows.length; i++) {
-      await tx.run('INSERT OR IGNORE INTO merchant_categories (merchant_key, category_id, position) VALUES (?, ?, ?)', [id, rows[i].category_id, i]);
+      await tx.run('INSERT OR IGNORE INTO merchant_categories (merchant_key, category_id, position) VALUES (?, ?, ?)', [
+        id,
+        rows[i].category_id,
+        i,
+      ]);
     }
     await tx.run("DELETE FROM merchant_rules WHERE match_type = 'exact' AND pattern = ?", [id]);
-    await tx.run("UPDATE transactions SET category_source = 'user' WHERE merchant_key = ? AND category_source = 'rule'", [id]);
+    await tx.run(
+      "UPDATE transactions SET category_source = 'user' WHERE merchant_key = ? AND category_source = 'rule'",
+      [id],
+    );
   });
 }
 
@@ -191,7 +253,10 @@ export async function setMerchantMixed(id: string, on: boolean) {
  * A merchant of different categories: its categories (live ones) in the saved order — the first is the primary one —
  * with how many of its purchases / payments each has. What its page, its operations and its notifications show.
  */
-export async function merchantCategories(id: string, limit = 10): Promise<Array<{ id: number; name: string; emoji: string | null; type_name: string | null; n: number }>> {
+export async function merchantCategories(
+  id: string,
+  limit = 10,
+): Promise<Array<{ id: number; name: string; emoji: string | null; type_name: string | null; n: number }>> {
   const db = await getDb();
   return db.all(
     `SELECT c.id, c.name, c.emoji, ct.name AS type_name,
@@ -200,7 +265,9 @@ export async function merchantCategories(id: string, limit = 10): Promise<Array<
       JOIN categories c ON c.id = mc.category_id AND c.deleted_at IS NULL
       LEFT JOIN category_types ct ON ct.id = c.type_id
       WHERE mc.merchant_key = ?
-      ORDER BY mc.position, c.id LIMIT ?`, [id, limit]);
+      ORDER BY mc.position, c.id LIMIT ?`,
+    [id, limit],
+  );
 }
 
 /** The list, in this order: position 0 is the primary category. Replaces whatever the list was. */
@@ -209,7 +276,11 @@ export async function replaceMerchantCategories(id: string, ids: number[]) {
   await db.transaction(async (tx) => {
     await tx.run('DELETE FROM merchant_categories WHERE merchant_key = ?', [id]);
     for (let i = 0; i < ids.length; i++) {
-      await tx.run('INSERT INTO merchant_categories (merchant_key, category_id, position) VALUES (?, ?, ?)', [id, ids[i], i]);
+      await tx.run('INSERT INTO merchant_categories (merchant_key, category_id, position) VALUES (?, ?, ?)', [
+        id,
+        ids[i],
+        i,
+      ]);
     }
   });
 }
@@ -220,7 +291,8 @@ export async function addMerchantCategory(id: string, categoryId: number) {
   await db.run(
     `INSERT OR IGNORE INTO merchant_categories (merchant_key, category_id, position)
       VALUES (?, ?, (SELECT coalesce(max(position), -1) + 1 FROM merchant_categories WHERE merchant_key = ?))`,
-    [id, categoryId, id]);
+    [id, categoryId, id],
+  );
 }
 
 /** Takes a category off a merchant's list: no longer offered (until picked for one of its operations again). */
@@ -233,7 +305,10 @@ export async function removeMerchantCategory(id: string, categoryId: number) {
  * What giving several merchants one category changes: their operations that follow them (not the manual choices)
  * whose category isn't it yet — count, and per currency the total, the biggest first.
  */
-export async function merchantsCategoryPreview(keys: string[], categoryId: number): Promise<{ count: number; totals: Array<{ currency: string; amount_minor: number }> }> {
+export async function merchantsCategoryPreview(
+  keys: string[],
+  categoryId: number,
+): Promise<{ count: number; totals: Array<{ currency: string; amount_minor: number }> }> {
   const sums = new Map<string, number>();
   let count = 0;
   for (const k of keys) {
@@ -244,13 +319,17 @@ export async function merchantsCategoryPreview(keys: string[], categoryId: numbe
   }
   return {
     count,
-    totals: [...sums].map(([currency, amount_minor]) => ({ currency, amount_minor })).sort((a, b) => b.amount_minor - a.amount_minor),
+    totals: [...sums]
+      .map(([currency, amount_minor]) => ({ currency, amount_minor }))
+      .sort((a, b) => b.amount_minor - a.amount_minor),
   };
 }
 
 /** One category for several merchants (see setMerchantCategory): their new and following operations get it. */
 export async function setMerchantsCategory(keys: string[], categoryId: number) {
-  await (await getDb()).transaction(async (db) => {
+  await (
+    await getDb()
+  ).transaction(async (db) => {
     for (const k of keys) await writeMerchantCategory(db, k, categoryId, 'change');
   });
 }
@@ -269,7 +348,9 @@ export async function deleteMerchants(keys: string[]): Promise<number> {
       const res = await tx.run(
         `UPDATE transactions SET merchant_key = NULL, raw_merchant = NULL, search_text = NULL,
             category_source = CASE WHEN category_id IS NULL THEN NULL ELSE 'user' END
-          WHERE merchant_key = ?`, [key]);
+          WHERE merchant_key = ?`,
+        [key],
+      );
       changed += res.changes;
       await tx.run("DELETE FROM merchant_rules WHERE match_type = 'exact' AND pattern = ?", [key]);
       await tx.run('DELETE FROM mixed_merchants WHERE merchant_key = ?', [key]);
@@ -279,4 +360,17 @@ export async function deleteMerchants(keys: string[]): Promise<number> {
   return changed;
 }
 
-export default { listMerchants, getMerchant, setMerchantCategory, merchantFollowers, setMerchantMixed, merchantCategories, replaceMerchantCategories, addMerchantCategory, removeMerchantCategory, setMerchantsCategory, merchantsCategoryPreview, deleteMerchants };
+export default {
+  listMerchants,
+  getMerchant,
+  setMerchantCategory,
+  merchantFollowers,
+  setMerchantMixed,
+  merchantCategories,
+  replaceMerchantCategories,
+  addMerchantCategory,
+  removeMerchantCategory,
+  setMerchantsCategory,
+  merchantsCategoryPreview,
+  deleteMerchants,
+};

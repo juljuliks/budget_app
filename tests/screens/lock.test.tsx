@@ -12,7 +12,9 @@ const listeners = AppState.addEventListener as jest.Mock;
 async function appState(s: 'background' | 'active', afterS = 0) {
   const now = Date.now();
   const spy = jest.spyOn(Date, 'now').mockReturnValue(now + afterS * 1000);
-  await act(async () => { listeners.mock.calls.forEach(([type, fn]) => type === 'change' && fn(s)); });
+  await act(async () => {
+    listeners.mock.calls.forEach(([type, fn]) => type === 'change' && fn(s));
+  });
   spy.mockRestore();
 }
 async function leaveAndReturn(afterS: number) {
@@ -26,7 +28,9 @@ const hidden = (text: string) => expect(screen.queryByText(text)).toBeNull();
 /** a switch of the settings by its name */
 const toggle = async (label: string, on: boolean) => {
   const sw = await screen.findByLabelText(label);
-  await act(async () => { fireEvent(sw, 'valueChange', on); });
+  await act(async () => {
+    fireEvent(sw, 'valueChange', on);
+  });
 };
 
 beforeEach(async () => {
@@ -79,7 +83,8 @@ test('9.11.1: on — a PIN, "Дальше", the same PIN again; no sensor: on at
   expect(await screen.findByText('Вход по PIN-коду')).toBeTruthy();
   // its settings in a sheet of their own: "Настроить" under the switch
   await openOptions();
-  for (const t of ['Спрашивать после сворачивания', 'Скрывать суммы в уведомлениях', 'Сменить PIN-код']) expect(screen.getByText(t)).toBeTruthy();
+  for (const t of ['Спрашивать после сворачивания', 'Скрывать суммы в уведомлениях', 'Сменить PIN-код'])
+    expect(screen.getByText(t)).toBeTruthy();
   // no sensor: no fingerprint switch
   hidden('Отпечаток или лицо');
 });
@@ -94,7 +99,9 @@ test('9.11.2: ✕ while making the PIN — the lock stays off', async () => {
 
 test('9.11.3: with a sensor — "Входить по отпечатку?" → "Включить отпечаток" (the system window) → PIN or fingerprint', async () => {
   await lockOn({ bio: true });
-  await typePin('1234'); await tap('Дальше'); await typePin('1234');
+  await typePin('1234');
+  await tap('Дальше');
+  await typePin('1234');
   expect(await screen.findByText('Входить по отпечатку?')).toBeTruthy();
   await tap('Включить отпечаток');
   expect(await screen.findByText('Блокировка включена')).toBeTruthy();
@@ -188,7 +195,9 @@ test('9.11.7: "Сменить PIN-код" — the current one, then a new one tw
   expect(await screen.findByText('Текущий PIN-код')).toBeTruthy();
   await typePin('1234');
   expect(await screen.findByText('Новый PIN-код')).toBeTruthy();
-  await typePin('98765'); await tap('Дальше'); await typePin('98765');
+  await typePin('98765');
+  await tap('Дальше');
+  await typePin('98765');
   expect(await screen.findByText('PIN-код изменён')).toBeTruthy();
   expect(memoryLock.pin).toBe('98765');
 });

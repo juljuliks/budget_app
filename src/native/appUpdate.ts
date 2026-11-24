@@ -18,7 +18,10 @@ export const canSelfUpdate = () => native != null;
 /** The APK into the app's cache; `onProgress` 0..100 (-1: the size isn't known). Resolves with the file's path. */
 export async function downloadApk(url: string, onProgress: (percent: number) => void): Promise<string> {
   if (!native) throw new Error('AppUpdate native module is missing');
-  const sub = new NativeEventEmitter(NativeModules.AppUpdate).addListener('AppUpdateProgress', (e: { percent: number }) => onProgress(e.percent));
+  const sub = new NativeEventEmitter(NativeModules.AppUpdate).addListener(
+    'AppUpdateProgress',
+    (e: { percent: number }) => onProgress(e.percent),
+  );
   try {
     return await native.download(url);
   } finally {

@@ -13,8 +13,15 @@ export default function ProgressRing({ ratio, color, track, size = 26, thickness
       <Circle cx={size / 2} cy={size / 2} r={r} stroke={track} strokeWidth={thickness} fill="none" />
       {filled > 0 ? (
         <Circle
-          cx={size / 2} cy={size / 2} r={r} stroke={color} strokeWidth={thickness} fill="none" strokeLinecap="round"
-          strokeDasharray={`${filled} ${length}`} transform={`rotate(-90 ${size / 2} ${size / 2})`}
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          stroke={color}
+          strokeWidth={thickness}
+          fill="none"
+          strokeLinecap="round"
+          strokeDasharray={`${filled} ${length}`}
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
         />
       ) : null}
     </Svg>

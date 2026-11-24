@@ -17,7 +17,10 @@ export function useLoadedForm<V extends FieldValues>(defaults: V | null, open = 
   const key = defaults === null ? null : JSON.stringify(defaults);
   const last = useRef<string | null>(null);
   useEffect(() => {
-    if (!open) { last.current = null; return; }
+    if (!open) {
+      last.current = null;
+      return;
+    }
     if (key === null || key === last.current) return;
     last.current = key;
     form.reset(JSON.parse(key) as V);

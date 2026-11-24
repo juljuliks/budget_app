@@ -11,8 +11,20 @@ import { turnCloudOn } from '../cloud';
 import { choosePassword } from '../password';
 import { run } from '../run';
 import {
-  AUTO, AUTO_OFF_QUESTION, autoOffInfo, CHANGE_ACCOUNT, CHANGE_FOLDER, CHANGE_PASSWORD, CLOUD, CLOUD_OFF_HINT, cloudHint, LOCAL,
-  LOCAL_HINT, SAVE, SET_PASSWORD, TURN_OFF,
+  AUTO,
+  AUTO_OFF_QUESTION,
+  autoOffInfo,
+  CHANGE_ACCOUNT,
+  CHANGE_FOLDER,
+  CHANGE_PASSWORD,
+  CLOUD,
+  CLOUD_OFF_HINT,
+  cloudHint,
+  LOCAL,
+  LOCAL_HINT,
+  SAVE,
+  SET_PASSWORD,
+  TURN_OFF,
 } from '../texts';
 
 type Where = 'cloud' | 'local';
@@ -32,26 +44,42 @@ export default function AutoBackupSection({ auto, password }: { auto: AutoState;
   // the switch turned on, nothing saved yet: the choice and «Сохранить»
   const [choosing, setChoosing] = useState(false);
   const [picked, setPicked] = useState<Where>('local');
-  useEffect(() => { if (auto.on) setChoosing(false); }, [auto.on]);
+  useEffect(() => {
+    if (auto.on) setChoosing(false);
+  }, [auto.on]);
 
   const flip = (on: boolean) => {
-    if (on) { setPicked('local'); setChoosing(true); return; }
-    if (!auto.on) { setChoosing(false); return; }
+    if (on) {
+      setPicked('local');
+      setChoosing(true);
+      return;
+    }
+    if (!auto.on) {
+      setChoosing(false);
+      return;
+    }
     sheetAlert(AUTO_OFF_QUESTION, autoOffInfo(!!auto.cloud), [
       { text: TURN_OFF, style: 'destructive', onPress: run('auto backup off', turnAutoBackupOff) },
       { text: CANCEL, style: 'cancel' },
     ]);
   };
   const pick = (w: Where) => {
-    if (!auto.on) { setPicked(w); return; }
+    if (!auto.on) {
+      setPicked(w);
+      return;
+    }
     // on already: the other place at once, nothing to save
     if (w !== current) (w === 'cloud' ? toCloud : toFolder)();
   };
-  const links = auto.on ? [
-    auto.cloud ? { title: CHANGE_ACCOUNT, onPress: toCloud } : { title: CHANGE_FOLDER, onPress: run('auto backup folder', pickAutoBackupFolder) },
-    // a folder's copies without a password: «Задать пароль» (Google Drive has one always)
-    { title: password ? CHANGE_PASSWORD : SET_PASSWORD, onPress: run('password', async () => choosePassword()) },
-  ] : [];
+  const links = auto.on
+    ? [
+        auto.cloud
+          ? { title: CHANGE_ACCOUNT, onPress: toCloud }
+          : { title: CHANGE_FOLDER, onPress: run('auto backup folder', pickAutoBackupFolder) },
+        // a folder's copies without a password: «Задать пароль» (Google Drive has one always)
+        { title: password ? CHANGE_PASSWORD : SET_PASSWORD, onPress: run('password', async () => choosePassword()) },
+      ]
+    : [];
 
   return (
     <View>
@@ -66,7 +94,9 @@ export default function AutoBackupSection({ auto, password }: { auto: AutoState;
               ['local', LOCAL, LOCAL_HINT],
             ]}
           />
-          {!auto.on ? <Button title={SAVE} onPress={picked === 'cloud' ? toCloud : toFolder} style={styles.save} /> : null}
+          {!auto.on ? (
+            <Button title={SAVE} onPress={picked === 'cloud' ? toCloud : toFolder} style={styles.save} />
+          ) : null}
           {links.length ? (
             <View style={styles.links}>
               {links.map((l) => (

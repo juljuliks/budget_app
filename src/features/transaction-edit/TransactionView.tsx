@@ -41,7 +41,9 @@ export default function TransactionView({ txId, onClose }: Props) {
   const chooseRef = useRef(choose);
   chooseRef.current = choose;
   const savedChip = useRef<number | null>(null);
-  useEffect(() => { savedChip.current = null; }, [txId]);
+  useEffect(() => {
+    savedChip.current = null;
+  }, [txId]);
   const lone = showChips && picked.length === 1 ? picked[0] : null;
   // one chip: save it and stay. Two or more add "Разделить"
   useEffect(() => {
@@ -55,9 +57,11 @@ export default function TransactionView({ txId, onClose }: Props) {
   const [kindOpen, setKindOpen] = useState(false);
 
   if (!tx) {
-    return tx === null
-      ? <Text style={styles.gone}>Операция не найдена: возможно, её удалили.</Text>
-      : <Loading failed={failed} onRetry={reload} />;
+    return tx === null ? (
+      <Text style={styles.gone}>Операция не найдена: возможно, её удалили.</Text>
+    ) : (
+      <Loading failed={failed} onRetry={reload} />
+    );
   }
   const merchantName = tx.raw_merchant || tx.merchant_key;
   // only purchases / payments are remembered for their merchant (see assignCategory)
@@ -65,26 +69,57 @@ export default function TransactionView({ txId, onClose }: Props) {
   const distribute = showChips && picked.length >= 2;
 
   return (
-    <Page contentStyle={styles.content} footer={(
-      <SheetActions
-        submit={distribute ? { title: 'Разделить', onPress: () => { setSplitSeed(picked); setSplitOpen(true); } } : null}
-        style={styles.actions}
-        extra={[
-          ...(split ? [{ title: 'Убрать разделение', onPress: () => confirmUnsplit(tx) }] : []),
-          { title: 'Удалить операцию', danger: true, onPress: () => confirmDeleteTransaction(tx, onClose) },
-        ]}
+    <Page
+      contentStyle={styles.content}
+      footer={
+        <SheetActions
+          submit={
+            distribute
+              ? {
+                  title: 'Разделить',
+                  onPress: () => {
+                    setSplitSeed(picked);
+                    setSplitOpen(true);
+                  },
+                }
+              : null
+          }
+          style={styles.actions}
+          extra={[
+            ...(split ? [{ title: 'Убрать разделение', onPress: () => confirmUnsplit(tx) }] : []),
+            { title: 'Удалить операцию', danger: true, onPress: () => confirmDeleteTransaction(tx, onClose) },
+          ]}
+        />
+      }
+    >
+      <TransactionHeader
+        tx={tx}
+        onEditAmount={() => setAmountOpen(true)}
+        onEditKind={() => setKindOpen(true)}
+        merchantLinked={rememberable}
       />
-    )}>
-      <TransactionHeader tx={tx} onEditAmount={() => setAmountOpen(true)} onEditKind={() => setKindOpen(true)} merchantLinked={rememberable} />
       <TransactionCategory
-        tx={tx} mixedCats={showChips ? mixedCats : null} picked={picked} saving={saving} onToggle={toggle}
-        choose={(id) => { choose(id, () => { savedChip.current = id; select(listed(id)); }); }}
-        onSplit={(ids) => { setSplitSeed(ids ?? null); setSplitOpen(true); }}
+        tx={tx}
+        mixedCats={showChips ? mixedCats : null}
+        picked={picked}
+        saving={saving}
+        onToggle={toggle}
+        choose={(id) => {
+          choose(id, () => {
+            savedChip.current = id;
+            select(listed(id));
+          });
+        }}
+        onSplit={(ids) => {
+          setSplitSeed(ids ?? null);
+          setSplitOpen(true);
+        }}
       />
 
       {(rememberable || tx.kind === 'refund') && mixedCats?.length ? (
         <Text style={styles.merchantInfo}>
-          Основная — «{merchantCategory ?? mixedCats[0].label}»: новые операции получают её, если в уведомлении не выбрать другую.
+          Основная — «{merchantCategory ?? mixedCats[0].label}»: новые операции получают её, если в уведомлении не
+          выбрать другую.
         </Text>
       ) : null}
       {rememberable && merchantCategory && !mixedCats ? (
@@ -99,14 +134,24 @@ export default function TransactionView({ txId, onClose }: Props) {
       {tx.raw_sms ? (
         <>
           <Text style={styles.heading}>SMS</Text>
-          <Text style={styles.sms} selectable>{tx.raw_sms}</Text>
+          <Text style={styles.sms} selectable>
+            {tx.raw_sms}
+          </Text>
         </>
       ) : null}
 
       <NoteSection txId={tx.id} note={tx.note} onSaved={reload} />
       <AmountModal visible={amountOpen} tx={tx} onClose={() => setAmountOpen(false)} onSaved={reload} />
       <KindSheet visible={kindOpen} tx={tx} onClose={() => setKindOpen(false)} />
-      <SplitSheet visible={splitOpen} tx={tx} seed={splitSeed} onClose={() => { setSplitOpen(false); setSplitSeed(null); }} />
+      <SplitSheet
+        visible={splitOpen}
+        tx={tx}
+        seed={splitSeed}
+        onClose={() => {
+          setSplitOpen(false);
+          setSplitSeed(null);
+        }}
+      />
     </Page>
   );
 }
@@ -115,7 +160,14 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 20, paddingTop: 16 },
   actions: { marginTop: 0 },
   gone: { fontSize: 15, color: colors.muted, textAlign: 'center', paddingHorizontal: 20, paddingVertical: 48 },
-  heading: { fontSize: 13, fontWeight: '600', color: colors.muted, marginTop: 24, marginBottom: 8, textTransform: 'uppercase' },
+  heading: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.muted,
+    marginTop: 24,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+  },
   merchantInfo: { fontSize: 13, color: colors.muted, marginTop: 10 },
   sms: { fontSize: 13, color: colors.muted, backgroundColor: colors.surface, padding: 12, borderRadius: 8 },
 });

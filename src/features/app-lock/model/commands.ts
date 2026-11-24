@@ -7,8 +7,25 @@ import { scheduleMonthReports } from '@/notifications/monthReportNotice';
 import { askNewPin, verifyUser } from './requests';
 import { refreshLock } from './lockStore';
 import {
-  BIO_SUBTITLE, BIOMETRIC, CHANGE_PIN, CURRENT_PIN, ENTER_PIN, LOCK, LOCK_OFF, LOCK_ON, NEW_PIN, NEW_PIN_CHANGE,
-  OFFER_INFO, OFFER_NO, SHOW_AMOUNTS, OFFER_TITLE, OFFER_YES, PIN_CHANGED, TURN_OFF, TURN_OFF_HINT, USE_PIN,
+  BIO_SUBTITLE,
+  BIOMETRIC,
+  CHANGE_PIN,
+  CURRENT_PIN,
+  ENTER_PIN,
+  LOCK,
+  LOCK_OFF,
+  LOCK_ON,
+  NEW_PIN,
+  NEW_PIN_CHANGE,
+  OFFER_INFO,
+  OFFER_NO,
+  SHOW_AMOUNTS,
+  OFFER_TITLE,
+  OFFER_YES,
+  PIN_CHANGED,
+  TURN_OFF,
+  TURN_OFF_HINT,
+  USE_PIN,
 } from '../texts';
 
 /** The fingerprint window to confirm it works; then it is on. */
@@ -26,10 +43,19 @@ export async function enableLock(): Promise<boolean> {
   await setPin(pin);
   await refreshLock();
   if ((await lockState()).biometricAvailable) {
-    await new Promise<void>((resolve) => sheetAlert(OFFER_TITLE, OFFER_INFO, [
-      { text: OFFER_YES, onPress: () => { turnBiometricOn().catch(() => false).finally(resolve); } },
-      { text: OFFER_NO, style: 'cancel', onPress: resolve },
-    ]));
+    await new Promise<void>((resolve) =>
+      sheetAlert(OFFER_TITLE, OFFER_INFO, [
+        {
+          text: OFFER_YES,
+          onPress: () => {
+            turnBiometricOn()
+              .catch(() => false)
+              .finally(resolve);
+          },
+        },
+        { text: OFFER_NO, style: 'cancel', onPress: resolve },
+      ]),
+    );
   }
   toast(LOCK_ON);
   return true;

@@ -17,9 +17,13 @@ import { INFO_SIZE, styles } from './styles';
 import type { Handlers } from './types';
 
 type Props = {
-  v: PeriodView; h: Handlers; r: YearReport;
+  v: PeriodView;
+  h: Handlers;
+  r: YearReport;
   segments: Array<{ key: string; value: number; color: string }>;
-  picked: CategoryStat | undefined; selected: string | null; onSelect: (k: string | null) => void;
+  picked: CategoryStat | undefined;
+  selected: string | null;
+  onSelect: (k: string | null) => void;
   onRefunds: () => void;
 };
 
@@ -30,7 +34,10 @@ type Props = {
  */
 export function yearSpending({ v, h, r, segments, picked, selected, onSelect, onRefunds }: Props) {
   const money = (minor: number) => formatWithCurrency(Math.round(minor), r.currency);
-  const noteOf = (id: number | null) => { const c = id === null ? undefined : r.byCategory.get(id); return c ? topNote(c, money) : null; };
+  const noteOf = (id: number | null) => {
+    const c = id === null ? undefined : r.byCategory.get(id);
+    return c ? topNote(c, money) : null;
+  };
   const hh: Handlers = { ...h, noteOf };
   return (
     <>
@@ -44,7 +51,11 @@ export function yearSpending({ v, h, r, segments, picked, selected, onSelect, on
         </Donut>
       </View>
       {v.summary ? (
-        <TouchableOpacity style={styles.summaryRow} onPress={() => h.openInfo('summary')} accessibilityLabel="Как считаются траты">
+        <TouchableOpacity
+          style={styles.summaryRow}
+          onPress={() => h.openInfo('summary')}
+          accessibilityLabel="Как считаются траты"
+        >
           <Text style={styles.summary}>{v.summary}</Text>
           <InfoIcon color={colors.accent} size={INFO_SIZE} />
         </TouchableOpacity>

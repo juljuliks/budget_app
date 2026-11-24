@@ -23,12 +23,21 @@ export default function CategoryNameField({ form, emoji, locked, onPickEmoji, on
       <Text style={formStyles.label}>Название</Text>
       <View style={styles.nameRow}>
         <View>
-          <TouchableOpacity style={[formStyles.input, styles.emoji]} onPress={onPickEmoji} accessibilityLabel={emoji ? `Эмодзи ${emoji}, изменить` : 'Выбрать эмодзи'}>
+          <TouchableOpacity
+            style={[formStyles.input, styles.emoji]}
+            onPress={onPickEmoji}
+            accessibilityLabel={emoji ? `Эмодзи ${emoji}, изменить` : 'Выбрать эмодзи'}
+          >
             <Text style={emoji ? styles.emojiText : styles.emojiPlaceholder}>{emoji || '＋'}</Text>
           </TouchableOpacity>
           {/* without an emoji */}
           {emoji ? (
-            <TouchableOpacity style={styles.emojiClear} onPress={onClearEmoji} hitSlop={8} accessibilityLabel="Убрать эмодзи">
+            <TouchableOpacity
+              style={styles.emojiClear}
+              onPress={onClearEmoji}
+              hitSlop={8}
+              accessibilityLabel="Убрать эмодзи"
+            >
               <Text style={styles.emojiClearText}>✕</Text>
             </TouchableOpacity>
           ) : null}
@@ -63,8 +72,15 @@ const styles = StyleSheet.create({
   emojiText: { fontSize: 24, color: '#000000' },
   emojiPlaceholder: { fontSize: 22, color: colors.muted },
   emojiClear: {
-    position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: 10,
-    backgroundColor: colors.muted, alignItems: 'center', justifyContent: 'center',
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.muted,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emojiClearText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
 });

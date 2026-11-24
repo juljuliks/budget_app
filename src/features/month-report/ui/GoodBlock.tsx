@@ -9,11 +9,21 @@ import { styles } from './styles';
 export default function GoodBlock({ v, page }: { v: ReportView; page?: boolean }) {
   const { r, money, plus, perYear } = v;
   return (
-    <ReportBlock page={page} good title="Что уже хорошо" right={v.goodMonth > 0 ? (
-      <YearInfo style={[styles.blockValue, styles.good]} info={v.yearInfo(v.goodParts, '+', 'Столько это даст за год, если так будет каждый месяц.')}>
-        ≈ +{perYear(v.goodMonth)} в год
-      </YearInfo>
-    ) : null}>
+    <ReportBlock
+      page={page}
+      good
+      title="Что уже хорошо"
+      right={
+        v.goodMonth > 0 ? (
+          <YearInfo
+            style={[styles.blockValue, styles.good]}
+            info={v.yearInfo(v.goodParts, '+', 'Столько это даст за год, если так будет каждый месяц.')}
+          >
+            ≈ +{perYear(v.goodMonth)} в год
+          </YearInfo>
+        ) : null
+      }
+    >
       {r.locked > 0 && r.lockedTouched === 0 ? <Line label={`✓ Отложенное не тронуто: 🔒 ${money(r.locked)}`} /> : null}
       {r.overLimits.length === 0 && r.saved !== null ? <Line label="✓ Лимиты категорий соблюдены" /> : null}
       {r.unplannedSpent > 0 && r.unplannedOver === 0 && !r.review ? (
@@ -23,11 +33,19 @@ export default function GoodBlock({ v, page }: { v: ReportView; page?: boolean }
         <>
           <Line label="Сэкономлено в плане" value={plus(r.savedInPlan)} strong valueStyle={styles.good} />
           {r.underPlan.map((c) => (
-            <CategoryLine key={String(c.id)} c={c} note={`план ${money(c.limit)}, факт ${money(c.spent)}`} value={plus(c.limit - c.spent)} valueStyle={styles.good} />
+            <CategoryLine
+              key={String(c.id)}
+              c={c}
+              note={`план ${money(c.limit)}, факт ${money(c.spent)}`}
+              value={plus(c.limit - c.spent)}
+              valueStyle={styles.good}
+            />
           ))}
         </>
       ) : null}
-      {v.better > 0 ? <Line label="Отложено больше, чем месяцем раньше" value={plus(v.better)} strong valueStyle={styles.good} /> : null}
+      {v.better > 0 ? (
+        <Line label="Отложено больше, чем месяцем раньше" value={plus(v.better)} strong valueStyle={styles.good} />
+      ) : null}
     </ReportBlock>
   );
 }

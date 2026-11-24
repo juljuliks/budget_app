@@ -24,7 +24,16 @@ type Props = {
 };
 
 /** A section's header in the operations list: a group's title, count and total, or a day's with its spending. */
-export default function OperationsSectionHeader({ section, selecting, ids, selected, spent, currency, onToggle, onOpenDay }: Props) {
+export default function OperationsSectionHeader({
+  section,
+  selecting,
+  ids,
+  selected,
+  spent,
+  currency,
+  onToggle,
+  onOpenDay,
+}: Props) {
   const g = section.group;
   if (g) {
     const checked = !!ids && ids.every((id) => selected.has(id));
@@ -33,11 +42,19 @@ export default function OperationsSectionHeader({ section, selecting, ids, selec
       <View style={[formStyles.sectionHeader, styles.header]}>
         {/* one operation: its own checkbox picks it, the header's would repeat it */}
         {selecting && n > 1 ? (
-          <TouchableOpacity testID={`group-checkbox-${section.title}`} onPress={onToggle} hitSlop={10} accessibilityRole="checkbox" accessibilityState={{ checked }}>
+          <TouchableOpacity
+            testID={`group-checkbox-${section.title}`}
+            onPress={onToggle}
+            hitSlop={10}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked }}
+          >
             <Checkbox checked={checked} size={18} />
           </TouchableOpacity>
         ) : null}
-        <Text style={styles.title} numberOfLines={1}>{section.title} · {n} {plural(n, ['операция', 'операции', 'операций'])}</Text>
+        <Text style={styles.title} numberOfLines={1}>
+          {section.title} · {n} {plural(n, ['операция', 'операции', 'операций'])}
+        </Text>
         <Text style={styles.amount}>{groupTotal(g)}</Text>
       </View>
     );
@@ -48,14 +65,23 @@ export default function OperationsSectionHeader({ section, selecting, ids, selec
     <View style={[formStyles.sectionHeader, styles.header]}>
       {/* selecting: the day's operations at once (as a group's; one operation has its own) */}
       {selecting && count > 1 ? (
-        <TouchableOpacity testID={`day-checkbox-${section.key}`} onPress={onToggle} hitSlop={10} accessibilityRole="checkbox" accessibilityState={{ checked }}>
+        <TouchableOpacity
+          testID={`day-checkbox-${section.key}`}
+          onPress={onToggle}
+          hitSlop={10}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked }}
+        >
           <Checkbox checked={checked} size={18} />
         </TouchableOpacity>
       ) : null}
       <Text style={styles.title}>{section.title}</Text>
       {/* more came back (refunds) than was spent: "+", green; a day of deposits only has no spending — nothing */}
-      {spent > 0 ? <Text style={styles.amount}>−{formatWithCurrency(spent, currency)}</Text>
-        : spent < 0 ? <Text style={[styles.amount, styles.cameBack]}>+{formatWithCurrency(-spent, currency)}</Text> : null}
+      {spent > 0 ? (
+        <Text style={styles.amount}>−{formatWithCurrency(spent, currency)}</Text>
+      ) : spent < 0 ? (
+        <Text style={[styles.amount, styles.cameBack]}>+{formatWithCurrency(-spent, currency)}</Text>
+      ) : null}
       <TouchableOpacity onPress={onOpenDay} hitSlop={10} accessibilityLabel={`Траты за день: ${section.title}`}>
         <ChevronRightIcon color={colors.accent} />
       </TouchableOpacity>

@@ -4,7 +4,14 @@
 import { contributionOf } from '../plans/funds';
 import { monthRange, parseYm, ymOf } from '../plans/months';
 
-export type SavingMonth = { ym: string; start: number; contribution: number; spent: number; shortage: number; end: number };
+export type SavingMonth = {
+  ym: string;
+  start: number;
+  contribution: number;
+  spent: number;
+  shortage: number;
+  end: number;
+};
 
 /** An operation of the repeating payment's merchant in "Подписки": its id, moment and value in the repeating payment's currency. */
 export type SavingSpend = { id: number; at: number; value: number };
@@ -28,10 +35,20 @@ export type SavingInput = {
   spends: SavingSpend[];
 };
 
-export type SavingResult = { months: SavingMonth[]; balance: number; byTx: Map<number, { before: number; after: number }> };
+export type SavingResult = {
+  months: SavingMonth[];
+  balance: number;
+  byTx: Map<number, { before: number; after: number }>;
+};
 
-export const nextYm = (ym: string) => { const { year, month } = parseYm(ym); return ymOf(year, month + 1); };
-export const ymBefore = (ym: string) => { const { year, month } = parseYm(ym); return ymOf(year, month - 1); };
+export const nextYm = (ym: string) => {
+  const { year, month } = parseYm(ym);
+  return ymOf(year, month + 1);
+};
+export const ymBefore = (ym: string) => {
+  const { year, month } = parseYm(ym);
+  return ymOf(year, month - 1);
+};
 
 /**
  * The months from `since` to `last`. A past month's contribution is the stored one (none stored: counted as the current
@@ -47,7 +64,7 @@ export function savingMonths(p: SavingInput): SavingResult {
     const start = balance;
     const due = p.dueOf(ym);
     const counted = !p.planned(ym) || !due ? 0 : contributionOf({ target_minor: p.amount, due }, ym, balance);
-    const contribution = ym < p.nowYm ? p.stored.get(ym) ?? counted : counted;
+    const contribution = ym < p.nowYm ? (p.stored.get(ym) ?? counted) : counted;
     balance += contribution;
     const [, end] = monthRange(parseYm(ym).year, parseYm(ym).month);
     let spent = 0;
@@ -56,7 +73,10 @@ export function savingMonths(p: SavingInput): SavingResult {
       const v = p.spends[i].value;
       const before = balance;
       spent += v;
-      if (v > balance) { shortage += v - balance; balance = 0; } else balance -= v;
+      if (v > balance) {
+        shortage += v - balance;
+        balance = 0;
+      } else balance -= v;
       byTx.set(p.spends[i].id, { before, after: balance });
     }
     months.push({ ym, start, contribution, spent, shortage, end: balance });

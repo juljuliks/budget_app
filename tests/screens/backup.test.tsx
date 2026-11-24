@@ -15,7 +15,10 @@ const mockNative = {
   saveFile: jest.fn(async () => true),
   saveText: jest.fn(async () => true),
   pickFile: jest.fn(async () => true),
-  deleteFile: jest.fn(async (name: string) => { fs.rmSync(path.join(mockDir, name), { force: true }); return true; }),
+  deleteFile: jest.fn(async (name: string) => {
+    fs.rmSync(path.join(mockDir, name), { force: true });
+    return true;
+  }),
   replaceDatabase: jest.fn(async () => true),
   pickFolder: jest.fn(async (): Promise<string | null> => 'content://tree/Download'),
   folderName: jest.fn(async (): Promise<string | null> => 'Download'),
@@ -72,11 +75,11 @@ jest.mock('../../src/backup/database', () => ({
 
 afterAll(() => fs.rmSync(mockDir, { recursive: true, force: true }));
 
-
 /** The switch of the backup sheet («Автокопия») by its label, turned on or off. */
 const flip = async (label: string, on: boolean) => fireEvent(await screen.findByLabelText(label), 'valueChange', on);
 
-const type = (placeholder: string, text: string) => fireEvent.changeText(screen.getByPlaceholderText(placeholder), text);
+const type = (placeholder: string, text: string) =>
+  fireEvent.changeText(screen.getByPlaceholderText(placeholder), text);
 
 async function openBackup() {
   await openApp(ops);
@@ -104,7 +107,11 @@ test('9.9.2 «Экспорт копии»: the password offered («Пропус�
   await screen.findByPlaceholderText('Повторите пароль');
   await tap('Пропустить');
   expect(await screen.findByText('Копия сохранена')).toBeTruthy();
-  expect(mockNative.saveFile).toHaveBeenCalledWith('backup-copy.db', expect.stringMatching(/^budget-\d{4}-\d{2}-\d{2}\.db$/), 'application/octet-stream');
+  expect(mockNative.saveFile).toHaveBeenCalledWith(
+    'backup-copy.db',
+    expect.stringMatching(/^budget-\d{4}-\d{2}-\d{2}\.db$/),
+    'application/octet-stream',
+  );
   // the copy was written where the dialog takes it from
   expect(fs.statSync(path.join(mockDir, 'backup-copy.db')).size).toBeGreaterThan(0);
 });
@@ -122,7 +129,7 @@ test('9.9.3 "Восстановить из копии": asked first, then the fi
   expect(mockNative.replaceDatabase).toHaveBeenCalledWith('restore-check.db');
 });
 
-test('9.9.4 a file that isn\'t a backup of this app: said why, nothing replaced', async () => {
+test("9.9.4 a file that isn't a backup of this app: said why, nothing replaced", async () => {
   mockCheck.mockResolvedValueOnce('newer');
   await openBackup();
   await tap('Восстановить из копии');
@@ -158,9 +165,16 @@ test('9.9.6 «Автокопия» on: «Локально» by default, «Сох
   expect(await screen.findByText('Автокопия включена')).toBeTruthy();
   expect(mockNative.setPassword).not.toHaveBeenCalled();
   expect(mockNative.saveToFolder).toHaveBeenCalledWith(
-    'content://tree/Download', 'auto-copy.db', expect.stringMatching(/^budget-auto-\d{4}-\d{2}-\d{2}-\d{4}\.db$/), 'budget-auto-', 2);
+    'content://tree/Download',
+    'auto-copy.db',
+    expect.stringMatching(/^budget-auto-\d{4}-\d{2}-\d{2}-\d{4}\.db$/),
+    'budget-auto-',
+    2,
+  );
   // the sheet shows it on, with its folder and the date
-  expect(await screen.findByText('Раз в неделю в папку «Download», хранятся две последние. Последняя — сегодня.')).toBeTruthy();
+  expect(
+    await screen.findByText('Раз в неделю в папку «Download», хранятся две последние. Последняя — сегодня.'),
+  ).toBeTruthy();
   expect(radio('Локально')).toBe(true);
   expect(screen.queryByText('Сохранить')).toBeNull();
   expect(screen.getByText('Сменить папку')).toBeTruthy();
@@ -223,7 +237,11 @@ test('9.9.9 with the password set: the copy saved encrypted', async () => {
   await tap('Экспорт копии');
   await screen.findAllByText('Копия сохранена');
   expect(mockNative.encryptFile).toHaveBeenCalledWith('backup-copy.db', 'backup-copy.db.enc');
-  expect(mockNative.saveFile).toHaveBeenCalledWith('backup-copy.db.enc', expect.stringMatching(/^budget-.*\.db$/), 'application/octet-stream');
+  expect(mockNative.saveFile).toHaveBeenCalledWith(
+    'backup-copy.db.enc',
+    expect.stringMatching(/^budget-.*\.db$/),
+    'application/octet-stream',
+  );
   mockNative.hasPassword.mockResolvedValue(false);
 });
 
@@ -255,7 +273,12 @@ test('9.9.11 with the password set: the automatic copy goes to the folder encryp
   await runAutoBackupIfDue(Math.floor(Date.now() / 1000));
   expect(mockNative.encryptFile).toHaveBeenCalledWith('auto-copy.db', 'auto-copy.db.enc');
   expect(mockNative.saveToFolder).toHaveBeenCalledWith(
-    'content://tree/Documents', 'auto-copy.db.enc', expect.stringMatching(/^budget-auto-.*\.db$/), 'budget-auto-', 2);
+    'content://tree/Documents',
+    'auto-copy.db.enc',
+    expect.stringMatching(/^budget-auto-.*\.db$/),
+    'budget-auto-',
+    2,
+  );
   mockNative.hasPassword.mockResolvedValue(false);
 });
 
@@ -280,7 +303,13 @@ test('9.9.13 "Сменить папку": another folder, the old one given back
   await tap('Сменить папку');
   expect(await screen.findByText('Автокопия включена')).toBeTruthy();
   expect(mockNative.releaseFolder).toHaveBeenCalledWith('content://tree/Documents');
-  expect(mockNative.saveToFolder).toHaveBeenCalledWith('content://tree/Download', 'auto-copy.db', expect.any(String), 'budget-auto-', 2);
+  expect(mockNative.saveToFolder).toHaveBeenCalledWith(
+    'content://tree/Download',
+    'auto-copy.db',
+    expect.any(String),
+    'budget-auto-',
+    2,
+  );
 });
 
 test('9.9.14 "Сменить пароль" (by «Сменить папку», while a password is set) asks a new one twice', async () => {
@@ -320,15 +349,22 @@ test('9.9.14a «Локально» without a password: «Задать парол
 });
 
 /** A radio button of the sheet by its label: checked or not. */
-const radio = (label: string) => screen.getAllByRole('radio').find((r) => within(r).queryByText(label))!.props.accessibilityState.checked;
+const radio = (label: string) =>
+  screen.getAllByRole('radio').find((r) => within(r).queryByText(label))!.props.accessibilityState.checked;
 
 /** The password the native side keeps: set by «Задать пароль», as the module would. */
 const passwordKept = () => {
   let kept = false;
   mockNative.hasPassword.mockImplementation(async () => kept);
-  mockNative.setPassword.mockImplementation(async (password) => { kept = password !== null; return true; });
+  mockNative.setPassword.mockImplementation(async (password) => {
+    kept = password !== null;
+    return true;
+  });
 };
-afterEach(() => { mockNative.hasPassword.mockImplementation(async () => false); mockNative.setPassword.mockImplementation(async () => true); });
+afterEach(() => {
+  mockNative.hasPassword.mockImplementation(async () => false);
+  mockNative.setPassword.mockImplementation(async () => true);
+});
 
 test('9.9.15 «На Google Диске»: the account, then the password (a must), the first copy encrypted to Drive', async () => {
   passwordKept();
@@ -345,13 +381,19 @@ test('9.9.15 «На Google Диске»: the account, then the password (a must)
   await tap('Задать пароль');
   expect(await screen.findByText('Автокопия — на Google Диске')).toBeTruthy();
   expect(mockNative.encryptFile).toHaveBeenCalledWith('cloud-copy.db', 'cloud-copy.db.enc');
-  expect(mockDrive.upload).toHaveBeenCalledWith('cloud-copy.db.enc', expect.stringMatching(/^budget-auto-\d{4}-\d{2}-\d{2}-\d{4}\.db\.enc$/), 4);
+  expect(mockDrive.upload).toHaveBeenCalledWith(
+    'cloud-copy.db.enc',
+    expect.stringMatching(/^budget-auto-\d{4}-\d{2}-\d{2}-\d{4}\.db\.enc$/),
+    4,
+  );
   expect(await screen.findByText('Аккаунт julia@example.com; пароль обязателен.')).toBeTruthy();
   expect(radio('Google Диск')).toBe(true);
   // the password: only changed
   expect(screen.getByText('Сменить пароль')).toBeTruthy();
   expect(screen.getByText('Сменить аккаунт')).toBeTruthy();
-  expect(screen.getByText(/^Раз в неделю на Google Диск \(julia@example\.com\), хранятся четыре последние\./)).toBeTruthy();
+  expect(
+    screen.getByText(/^Раз в неделю на Google Диск \(julia@example\.com\), хранятся четыре последние\./),
+  ).toBeTruthy();
 });
 
 test('9.9.16 the password not given: Drive stays off, nothing sent', async () => {
@@ -439,7 +481,13 @@ test('9.9.22 «Локально»: the password set right after the folder — t
   await tap('Задать пароль');
   expect(await screen.findByText('Автокопия включена')).toBeTruthy();
   expect(mockNative.setPassword).toHaveBeenCalledWith('синий кит 42');
-  expect(mockNative.saveToFolder).toHaveBeenCalledWith('content://tree/Download', 'auto-copy.db.enc', expect.any(String), 'budget-auto-', 2);
+  expect(mockNative.saveToFolder).toHaveBeenCalledWith(
+    'content://tree/Download',
+    'auto-copy.db.enc',
+    expect.any(String),
+    'budget-auto-',
+    2,
+  );
 });
 
 test('9.9.23 «Google Диск»: the password after signing in has no «Пропустить» — only «Отмена»', async () => {
@@ -463,7 +511,11 @@ test('9.9.24 «Экспорт копии» with a password set in its window: th
   await tap('Задать пароль');
   expect(await screen.findByText('Копия сохранена')).toBeTruthy();
   expect(mockNative.setPassword).toHaveBeenCalledWith('синий кит 42');
-  expect(mockNative.saveFile).toHaveBeenCalledWith('backup-copy.db.enc', expect.stringMatching(/^budget-.*\.db$/), 'application/octet-stream');
+  expect(mockNative.saveFile).toHaveBeenCalledWith(
+    'backup-copy.db.enc',
+    expect.stringMatching(/^budget-.*\.db$/),
+    'application/octet-stream',
+  );
 });
 
 test('9.9.25 turning «Автокопия» off — «Отмена» keeps it on; switched on but nothing saved — off again at once', async () => {

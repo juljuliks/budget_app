@@ -18,8 +18,11 @@ export async function setCategoryImpulse(id: number, on: boolean, db?: Db): Prom
  */
 export async function setTransactionImpulse(id: number, impulse: boolean | null, db?: Db): Promise<void> {
   db ??= await getDb();
-  await db.run('UPDATE transactions SET impulse = ?, mood = CASE WHEN ? = 1 THEN mood END WHERE id = ?',
-    [impulse === null ? null : impulse ? 1 : 0, impulse ? 1 : 0, id]);
+  await db.run('UPDATE transactions SET impulse = ?, mood = CASE WHEN ? = 1 THEN mood END WHERE id = ?', [
+    impulse === null ? null : impulse ? 1 : 0,
+    impulse ? 1 : 0,
+    id,
+  ]);
 }
 
 /** "Что подтолкнуло?": a mood of domain/moods.ts, null — none (the chip tapped again). */

@@ -21,7 +21,14 @@ export function lockedOfForm(budget: PlanBudget | null, setting: number | null, 
   if (pct !== null) {
     const full = Math.round((amount * pct) / 100);
     const taken = budget?.locked_taken_minor ?? 0;
-    return { kind: 'pct', pct, full, taken, funds: !!budget && budget.locked_funds_minor >= taken, locked: Math.max(0, full - taken) };
+    return {
+      kind: 'pct',
+      pct,
+      full,
+      taken,
+      funds: !!budget && budget.locked_funds_minor >= taken,
+      locked: Math.max(0, full - taken),
+    };
   }
   if (budget && budget.locked_minor > 0) return { kind: 'amount', locked: budget.locked_minor };
   return { kind: 'none', locked: 0 };

@@ -15,7 +15,9 @@ module.exports = {
       testMatch: ['<rootDir>/tests/screens/**/*.test.tsx'],
       setupFiles: ['<rootDir>/tests/screens/setup.ts'],
       setupFilesAfterEnv: ['<rootDir>/tests/screens/afterEnv.ts'],
-      transformIgnorePatterns: ['node_modules/(?!((jest-)?react-native|@react-native|@react-navigation|react-native-.*|@notifee)/)'],
+      transformIgnorePatterns: [
+        'node_modules/(?!((jest-)?react-native|@react-native|@react-navigation|react-native-.*|@notifee)/)',
+      ],
       // the Node SQLite driver instead of the device's one (the preset would pick driver.native.ts)
       moduleNameMapper: {
         '^(\\.{1,2}/)+((src/)?db/)?driver$': '<rootDir>/src/db/driver.ts',

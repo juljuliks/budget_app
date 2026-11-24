@@ -18,7 +18,8 @@ import PlanAddModal from './PlanAddModal';
 import type { ShareBase } from './sections';
 
 /** «📺 Подписки» with subscriptions: always in the plan, not removed from it. */
-const fixedSubs = (items: PlanItem[], id?: number) => items.some((i) => i.category_id === id && !!i.by_merchant && !!i.subs && !i.subs.empty);
+const fixedSubs = (items: PlanItem[], id?: number) =>
+  items.some((i) => i.category_id === id && !!i.by_merchant && !!i.subs && !i.subs.empty);
 
 export function usePlanSheets(ym: string, currency: Currency) {
   const hidden = useHideAmounts();
@@ -41,25 +42,62 @@ export function usePlanSheets(ym: string, currency: Currency) {
     <>
       {p ? (
         <BudgetSheet
-          visible={budgetOpen} budget={budget} currency={currency} defaultCurrency={storedCurrency}
-          planned={p.claimed} hint={p.budgetHint} toShown={toShown}
-          onSubmit={actions.saveBudget} onClose={() => setBudgetOpen(false)}
+          visible={budgetOpen}
+          budget={budget}
+          currency={currency}
+          defaultCurrency={storedCurrency}
+          planned={p.claimed}
+          hint={p.budgetHint}
+          toShown={toShown}
+          onSubmit={actions.saveBudget}
+          onClose={() => setBudgetOpen(false)}
         />
       ) : null}
-      <PlanAddModal ym={ym} currency={currency} visible={addOpen} onClose={() => setAddOpen(false)}
-        onPick={(t) => { setAddOpen(false); setAdding(true); setTarget(t); }} />
+      <PlanAddModal
+        ym={ym}
+        currency={currency}
+        visible={addOpen}
+        onClose={() => setAddOpen(false)}
+        onPick={(t) => {
+          setAddOpen(false);
+          setAdding(true);
+          setTarget(t);
+        }}
+      />
       <PlanAmountModal
         ym={ym}
         currency={currency}
         target={target}
-        onClose={() => { setTarget(null); setAdding(false); }}
+        onClose={() => {
+          setTarget(null);
+          setAdding(false);
+        }}
         onSaved={reload}
-        adding={adding ? { onBack: () => { setTarget(null); setAdding(false); setAddOpen(true); } } : undefined}
+        adding={
+          adding
+            ? {
+                onBack: () => {
+                  setTarget(null);
+                  setAdding(false);
+                  setAddOpen(true);
+                },
+              }
+            : undefined
+        }
         // a fund is deleted from its card; «📺 Подписки» with subscriptions is always in the plan
-        onDelete={adding || !item || item.kind === 'fund' || fixedSubs(items ?? [], item.category_id) ? undefined
-          : () => { actions.removeItem(item).catch((e) => console.error('remove plan item failed', e)); }}
+        onDelete={
+          adding || !item || item.kind === 'fund' || fixedSubs(items ?? [], item.category_id)
+            ? undefined
+            : () => {
+                actions.removeItem(item).catch((e) => console.error('remove plan item failed', e));
+              }
+        }
       />
-      <CarrySheet fromYm={carry ? budget?.carry?.from_ym ?? null : null} kind={carry ?? 'debt'} onClose={() => setCarry(null)} />
+      <CarrySheet
+        fromYm={carry ? (budget?.carry?.from_ym ?? null) : null}
+        kind={carry ?? 'debt'}
+        onClose={() => setCarry(null)}
+      />
     </>
   );
 
@@ -72,12 +110,19 @@ export function usePlanSheets(ym: string, currency: Currency) {
     /** an amount in the screen's currency (null — no rate) */
     toShown,
     /** under a category with repeating payments: what they are */
-    notes: p ? recurringNotes(p.recurring, currency, p.timing === 'current', { words: paymentWords, shortDay: (d) => shortDay(d), inTime }) : new Map<number, string>(),
+    notes: p
+      ? recurringNotes(p.recurring, currency, p.timing === 'current', {
+          words: paymentWords,
+          shortDay: (d) => shortDay(d),
+          inTime,
+        })
+      : new Map<number, string>(),
     /** a category's payments charged this month and how many are done */
     charges: new Map((p?.recurring ?? []).filter((i) => i.subs?.charges).map((i) => [i.category_id, i.subs!.charges!])),
     sheets,
     /** what a section's share is of: the budget («35% бюджета»), without one — the whole plan («· 45% плана») */
-    shareBase: (plannedAll: number): ShareBase => (p?.shownBudget ? { minor: p.shownBudget, word: 'бюджета' } : { minor: plannedAll, word: 'плана' }),
+    shareBase: (plannedAll: number): ShareBase =>
+      p?.shownBudget ? { minor: p.shownBudget, word: 'бюджета' } : { minor: plannedAll, word: 'плана' },
     openBudget: () => setBudgetOpen(true),
     openAdd: () => setAddOpen(true),
     openAmount: setTarget,
@@ -85,7 +130,10 @@ export function usePlanSheets(ym: string, currency: Currency) {
     /** a category's amount in the plan, from a sheet over the stats (`close` it first) */
     openItem: async (id: number, label: string, close: () => void) => {
       const basics = await getPlanItemBasics(ym, id);
-      if (basics) { close(); setTarget({ category_id: id, label, ...basics }); }
+      if (basics) {
+        close();
+        setTarget({ category_id: id, label, ...basics });
+      }
     },
   };
 }

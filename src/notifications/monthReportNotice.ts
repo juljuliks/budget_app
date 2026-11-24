@@ -15,7 +15,6 @@ export const AMOUNTS_HIDDEN = 'Суммы — в приложении';
 /** the hour of the 1st the report comes at */
 const REPORT_HOUR = 10;
 
-
 /**
  * "Итоги сентября — удалось отложить?": what the month asks — the overspend to cover, or what goes to savings and the
  * funds as planned (in the budget's currency).
@@ -29,7 +28,9 @@ async function closeBody(c: MonthClose): Promise<string> {
   const funds = c.funds.reduce((a, f) => a + (conv(f.planned_minor, f.currency, cur) ?? 0), 0);
   const savings = b ? b.kept_locked_minor + b.rest_minor : 0;
   return [savings > 0 ? `В сбережения по плану ${money(savings)}` : '', funds > 0 ? `в копилки ${money(funds)}` : '']
-    .filter(Boolean).join(', ').replace(/^в/, 'В');
+    .filter(Boolean)
+    .join(', ')
+    .replace(/^в/, 'В');
 }
 
 /** 10:00 on the 1st after the month `ym`. */
@@ -58,40 +59,56 @@ export async function scheduleMonthReports(now = new Date()) {
       const { year: y, month: m } = parseYm(ym);
       const close = await monthClose(ym, ymOf(y, m + 1));
       if (close.steps.length && !close.closed) {
-        await notifee.createTriggerNotification({
-          id: `report_${ym}`,
-          title: `Итоги ${MONTHS_GEN[m]} — удалось отложить?`,
-          body: hide ? AMOUNTS_HIDDEN : await closeBody(close),
-          android: {
-            channelId: REPORTS_CHANNEL_ID, smallIcon: 'ic_notification', importance: AndroidImportance.DEFAULT,
-            pressAction: { id: REPORT_ACTION, launchActivity: 'default' },
+        await notifee.createTriggerNotification(
+          {
+            id: `report_${ym}`,
+            title: `Итоги ${MONTHS_GEN[m]} — удалось отложить?`,
+            body: hide ? AMOUNTS_HIDDEN : await closeBody(close),
+            android: {
+              channelId: REPORTS_CHANNEL_ID,
+              smallIcon: 'ic_notification',
+              importance: AndroidImportance.DEFAULT,
+              pressAction: { id: REPORT_ACTION, launchActivity: 'default' },
+            },
+            data: { kind: 'close', ym },
           },
-          data: { kind: 'close', ym },
-        }, { type: TriggerType.TIMESTAMP, timestamp: at });
+          { type: TriggerType.TIMESTAMP, timestamp: at },
+        );
         continue;
       }
       const r = await monthReport(ym, currency);
       // no plan that month (or it was removed since): no report
-      if (!r.hasPlan) { await notifee.cancelTriggerNotification(`report_${ym}`); continue; }
+      if (!r.hasPlan) {
+        await notifee.cancelTriggerNotification(`report_${ym}`);
+        continue;
+      }
       const money = (v: number) => formatWithCurrency(Math.round(v), r.currency);
       // «Отложено» in the month's budget currency
-      const saved = (v: number) => formatWithCurrency(Math.round(r.savedIn ? v * r.savedIn.rate : v), r.savedIn?.currency ?? r.currency);
-      const body = hide ? AMOUNTS_HIDDEN : r.saved === null ? `Потрачено ${money(r.spent)}`
-        : r.saved < 0 ? `Бюджет превышен на ${saved(-r.saved)}`
-          : `Отложено ${saved(r.saved)} (≈ ${saved(yearly(r.saved))} за год)${r.couldSaveMore > 0 ? `. Могли ещё ${money(r.couldSaveMore)}` : ''}`;
-      await notifee.createTriggerNotification({
-        // one per month: re-scheduling replaces it
-        id: `report_${ym}`,
-        title: `Отчёт за ${MONTHS_NOM[parseYm(ym).month]}`,
-        body,
-        android: {
-          channelId: REPORTS_CHANNEL_ID,
-          smallIcon: 'ic_notification',
-          importance: AndroidImportance.DEFAULT,
-          pressAction: { id: REPORT_ACTION, launchActivity: 'default' },
+      const saved = (v: number) =>
+        formatWithCurrency(Math.round(r.savedIn ? v * r.savedIn.rate : v), r.savedIn?.currency ?? r.currency);
+      const body = hide
+        ? AMOUNTS_HIDDEN
+        : r.saved === null
+          ? `Потрачено ${money(r.spent)}`
+          : r.saved < 0
+            ? `Бюджет превышен на ${saved(-r.saved)}`
+            : `Отложено ${saved(r.saved)} (≈ ${saved(yearly(r.saved))} за год)${r.couldSaveMore > 0 ? `. Могли ещё ${money(r.couldSaveMore)}` : ''}`;
+      await notifee.createTriggerNotification(
+        {
+          // one per month: re-scheduling replaces it
+          id: `report_${ym}`,
+          title: `Отчёт за ${MONTHS_NOM[parseYm(ym).month]}`,
+          body,
+          android: {
+            channelId: REPORTS_CHANNEL_ID,
+            smallIcon: 'ic_notification',
+            importance: AndroidImportance.DEFAULT,
+            pressAction: { id: REPORT_ACTION, launchActivity: 'default' },
+          },
+          data: { kind: 'report', ym },
         },
-        data: { kind: 'report', ym },
-      }, { type: TriggerType.TIMESTAMP, timestamp: at });
+        { type: TriggerType.TIMESTAMP, timestamp: at },
+      );
     }
     // «Итоги года» on 1 January
     const { scheduleYearReport } = require('./yearReportNotice') as typeof import('./yearReportNotice');

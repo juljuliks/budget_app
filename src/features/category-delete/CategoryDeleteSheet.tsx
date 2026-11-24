@@ -40,7 +40,10 @@ export default function CategoryDeleteSheet({ categoryId: openId, onClose }: Pro
     setPicking(false);
     setSaving(false);
     Promise.all([getCategory(categoryId), categoryDeletePreview(categoryId)])
-      .then(([c, p]) => { setCategory(c ?? null); setPreview(p); })
+      .then(([c, p]) => {
+        setCategory(c ?? null);
+        setPreview(p);
+      })
       .catch(toastFailure('load category to delete', LOAD_FAILED));
   }, [visible, categoryId]);
 
@@ -54,7 +57,13 @@ export default function CategoryDeleteSheet({ categoryId: openId, onClose }: Pro
     const t = moveAllText(label, to ? categoryLabel(to) : null, preview);
     sheetAlert(t.title, t.message, [
       { text: 'Отмена', style: 'cancel' },
-      { text: target === null ? 'Удалить' : 'Перенести и удалить', style: 'destructive', onPress: () => { remove(target).catch(() => undefined); } },
+      {
+        text: target === null ? 'Удалить' : 'Перенести и удалить',
+        style: 'destructive',
+        onPress: () => {
+          remove(target).catch(() => undefined);
+        },
+      },
     ]);
   }
 
@@ -76,7 +85,10 @@ export default function CategoryDeleteSheet({ categoryId: openId, onClose }: Pro
   function sortOut() {
     onClose();
     if (!navigationRef.isReady()) return;
-    navigationRef.navigate('Main', { screen: 'Transactions', params: { sortOut: categoryId, nonce: Date.now(), from: 'Categories' } } as never);
+    navigationRef.navigate('Main', {
+      screen: 'Transactions',
+      params: { sortOut: categoryId, nonce: Date.now(), from: 'Categories' },
+    } as never);
   }
 
   const n = preview?.current.n ?? 0;
@@ -84,10 +96,25 @@ export default function CategoryDeleteSheet({ categoryId: openId, onClose }: Pro
     <>
       <BottomSheet visible={visible && !picking} onClose={onClose} title={`Удалить «${label}»`} style={styles.sheet}>
         <SheetScrollView contentContainerStyle={styles.content}>
-          <Text style={styles.text} testID="delete-category-text">{preview ? deleteStartText(preview, label) : ''}</Text>
+          <Text style={styles.text} testID="delete-category-text">
+            {preview ? deleteStartText(preview, label) : ''}
+          </Text>
           <View style={styles.buttons}>
-            <Button title={n === 1 ? "Перенести в другую категорию" : "Перенести всё в одну категорию"} onPress={() => setPicking(true)} disabled={!preview || saving} testID="delete-move-all" />
-            {n > 1 ? <Button title="Разложить по разным категориям" variant="secondary" onPress={sortOut} disabled={saving} testID="delete-sort-out" /> : null}
+            <Button
+              title={n === 1 ? 'Перенести в другую категорию' : 'Перенести всё в одну категорию'}
+              onPress={() => setPicking(true)}
+              disabled={!preview || saving}
+              testID="delete-move-all"
+            />
+            {n > 1 ? (
+              <Button
+                title="Разложить по разным категориям"
+                variant="secondary"
+                onPress={sortOut}
+                disabled={saving}
+                testID="delete-sort-out"
+              />
+            ) : null}
           </View>
           <SheetActions submit={null} onCancel={onClose} />
         </SheetScrollView>
@@ -98,7 +125,9 @@ export default function CategoryDeleteSheet({ categoryId: openId, onClose }: Pro
         allowNone
         excludeIds={[categoryId]}
         saveTitle="Сохранить"
-        onPick={(id) => { confirmMoveAll(id).catch(toastFailure('confirm move', SAVE_FAILED)); }}
+        onPick={(id) => {
+          confirmMoveAll(id).catch(toastFailure('confirm move', SAVE_FAILED));
+        }}
         onClose={() => setPicking(false)}
       />
     </>

@@ -33,8 +33,13 @@ export default function LockSettings({ open, onOptions }: { open: boolean; onOpt
 // as the backup's switches (features/backup SwitchRow)
 const styles = StyleSheet.create({
   row: {
-    flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingVertical: 14,
-    borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
   },
   text: { flex: 1, gap: 2 },
   label: { fontSize: 16, color: colors.text },

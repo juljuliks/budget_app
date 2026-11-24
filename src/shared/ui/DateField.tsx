@@ -29,7 +29,17 @@ type Props = {
  * A day in a form, one look across the app: the day as text with "Изменить" on the right (none yet — "Не выбрана",
  * "Выбрать"); a tap opens the calendar in a sheet, "Выбрать" sets it.
  */
-export default function DateField({ label, value, onChange, format, suffix, sheetTitle, minDay, maxDay, onClear }: Props) {
+export default function DateField({
+  label,
+  value,
+  onChange,
+  format,
+  suffix,
+  sheetTitle,
+  minDay,
+  maxDay,
+  onClear,
+}: Props) {
   const [open, setOpen] = useState(false);
   // the day being picked in the calendar
   const [draft, setDraft] = useState<DayKey | null>(null);
@@ -42,19 +52,45 @@ export default function DateField({ label, value, onChange, format, suffix, shee
           {value && suffix ? <Text style={styles.muted}>{suffix}</Text> : null}
         </Text>
         {value && onClear ? (
-          <TouchableOpacity onPress={onClear} hitSlop={8} accessibilityRole="button" accessibilityLabel={`Убрать: ${label}`}>
+          <TouchableOpacity
+            onPress={onClear}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={`Убрать: ${label}`}
+          >
             <Text style={styles.clear}>Убрать</Text>
           </TouchableOpacity>
         ) : null}
-        <TouchableOpacity onPress={() => { setDraft(value); setOpen(true); }} hitSlop={8} accessibilityRole="button" accessibilityLabel={value ? 'Изменить дату' : 'Выбрать дату'}>
+        <TouchableOpacity
+          onPress={() => {
+            setDraft(value);
+            setOpen(true);
+          }}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={value ? 'Изменить дату' : 'Выбрать дату'}
+        >
           <Text style={styles.change}>{value ? 'Изменить' : 'Выбрать'}</Text>
         </TouchableOpacity>
       </View>
       <BottomSheet visible={open} onClose={() => setOpen(false)} title={sheetTitle}>
         <View style={styles.sheet}>
-          <RangeCalendar value={draft ? { from: draft, to: draft } : null} onChange={(r) => setDraft(r.from)} single minDay={minDay} maxDay={maxDay} />
+          <RangeCalendar
+            value={draft ? { from: draft, to: draft } : null}
+            onChange={(r) => setDraft(r.from)}
+            single
+            minDay={minDay}
+            maxDay={maxDay}
+          />
           <SheetActions
-            submit={{ title: 'Выбрать', disabled: !draft, onPress: () => { if (draft) onChange(draft); setOpen(false); } }}
+            submit={{
+              title: 'Выбрать',
+              disabled: !draft,
+              onPress: () => {
+                if (draft) onChange(draft);
+                setOpen(false);
+              },
+            }}
             onCancel={() => setOpen(false)}
           />
         </View>

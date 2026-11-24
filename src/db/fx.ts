@@ -8,7 +8,7 @@ import { emitTransactionsChanged } from '../domain/events';
 // in fx_rates. Only the dates and currency codes are requested — nothing about the user leaves the phone.
 
 export const CURRENCIES = ['GEL', 'USD', 'EUR'] as const;
-export type Currency = typeof CURRENCIES[number];
+export type Currency = (typeof CURRENCIES)[number];
 
 export const CURRENCY_SYMBOLS: Record<Currency, string> = { GEL: '₾', USD: '$', EUR: '€' };
 
@@ -47,10 +47,21 @@ async function missingRates(dates: Iterable<string>): Promise<string[]> {
   const today = dateKey(Date.now() / 1000);
   const wanted = [...new Set([...dates].map((d) => (d > today ? today : d)))];
   if (wanted.length === 0) return [];
-  const have = new Set((await (await getDb()).all<{ date: string }>(
-    `SELECT date FROM fx_rates WHERE currency = ? AND date IN (${placeholders(wanted.length)})`,
-    [FOREIGN[0], ...wanted])).map((r) => r.date));
-  return wanted.filter((d) => !have.has(d) && !failedRecently(d)).sort().reverse().slice(0, MAX_FETCH);
+  const have = new Set(
+    (
+      await (
+        await getDb()
+      ).all<{ date: string }>(
+        `SELECT date FROM fx_rates WHERE currency = ? AND date IN (${placeholders(wanted.length)})`,
+        [FOREIGN[0], ...wanted],
+      )
+    ).map((r) => r.date),
+  );
+  return wanted
+    .filter((d) => !have.has(d) && !failedRecently(d))
+    .sort()
+    .reverse()
+    .slice(0, MAX_FETCH);
 }
 
 /**
@@ -62,20 +73,26 @@ async function fetchDays(days: string[]): Promise<number> {
   let came = 0;
   for (let i = 0; i < days.length; i += PARALLEL) {
     const batch = days.slice(i, i + PARALLEL);
-    const failed = await Promise.all(batch.map(async (date) => {
-      try {
-        const rates = (await fetchRates(date, FOREIGN)).filter((r) => isCurrency(r.code));
-        for (const r of rates) {
-          await db.run('INSERT OR REPLACE INTO fx_rates (date, currency, gel_per_unit) VALUES (?, ?, ?)', [date, r.code, r.gelPerUnit]);
+    const failed = await Promise.all(
+      batch.map(async (date) => {
+        try {
+          const rates = (await fetchRates(date, FOREIGN)).filter((r) => isCurrency(r.code));
+          for (const r of rates) {
+            await db.run('INSERT OR REPLACE INTO fx_rates (date, currency, gel_per_unit) VALUES (?, ?, ?)', [
+              date,
+              r.code,
+              r.gelPerUnit,
+            ]);
+          }
+          if (rates.length > 0) came++;
+          return false;
+        } catch (e) {
+          console.warn('rates for', date, 'not loaded', e);
+          failedAt.set(date, Date.now());
+          return true;
         }
-        if (rates.length > 0) came++;
-        return false;
-      } catch (e) {
-        console.warn('rates for', date, 'not loaded', e);
-        failedAt.set(date, Date.now());
-        return true;
-      }
-    }));
+      }),
+    );
     if (failed.every(Boolean)) {
       days.slice(i + PARALLEL).forEach((d) => failedAt.set(d, Date.now()));
       break;
@@ -99,12 +116,17 @@ const fetching = new Set<string>();
  * The stats' way: they are counted on the cached rates (a missing day takes its neighbour's) and don't wait for the
  * network. The missing days are fetched in the background; once some came, `onFetched` — the screens count again.
  */
-export async function ensureRatesLater(dates: Iterable<string>, onFetched: () => void = emitTransactionsChanged): Promise<void> {
+export async function ensureRatesLater(
+  dates: Iterable<string>,
+  onFetched: () => void = emitTransactionsChanged,
+): Promise<void> {
   const days = (await missingRates(dates)).filter((d) => !fetching.has(d));
   if (days.length === 0) return;
   days.forEach((d) => fetching.add(d));
   fetchDays(days)
-    .then((came) => { if (came > 0) onFetched(); })
+    .then((came) => {
+      if (came > 0) onFetched();
+    })
     .catch((e) => console.warn('rates not loaded', e))
     .finally(() => days.forEach((d) => fetching.delete(d)));
 }
@@ -132,7 +154,8 @@ let cached: { db: Db; stamp: string; conv: Converter } | null = null;
 
 async function buildConverter(db: Db): Promise<Converter> {
   const rows = await db.all<{ date: string; currency: string; gel_per_unit: number }>(
-    'SELECT date, currency, gel_per_unit FROM fx_rates ORDER BY date');
+    'SELECT date, currency, gel_per_unit FROM fx_rates ORDER BY date',
+  );
   const byCurrency = new Map<string, Array<[string, number]>>();
   for (const r of rows) {
     if (!byCurrency.has(r.currency)) byCurrency.set(r.currency, []);
@@ -142,16 +165,22 @@ async function buildConverter(db: Db): Promise<Converter> {
     if (currency === 'GEL') return 1;
     const list = byCurrency.get(currency);
     if (!list || list.length === 0) return null;
-    let lo = 0, hi = list.length - 1, best = -1;
+    let lo = 0,
+      hi = list.length - 1,
+      best = -1;
     while (lo <= hi) {
       const mid = (lo + hi) >> 1;
-      if (list[mid][0] <= date) { best = mid; lo = mid + 1; } else hi = mid - 1;
+      if (list[mid][0] <= date) {
+        best = mid;
+        lo = mid + 1;
+      } else hi = mid - 1;
     }
     return list[best >= 0 ? best : 0][1];
   };
   return (amount, from, to, date) => {
     if (from === to) return amount;
-    const a = rate(from, date), b = rate(to, date);
+    const a = rate(from, date),
+      b = rate(to, date);
     if (a === null || b === null) return null;
     return Math.round((amount * a) / b);
   };

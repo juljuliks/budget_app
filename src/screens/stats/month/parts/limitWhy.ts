@@ -11,16 +11,30 @@ type Rhythm = 'day' | 'week' | '2weeks';
 const BEFORE = { day: 'До сегодня', week: 'До этой недели', '2weeks': 'До этих 2 недель' } as const;
 
 /** The limit's window in this month: its share of the plan, what was spent before it, the days left. */
-export function limitWhyText(rhythm: Rhythm, now: CategoryNorm, ym: string, flat: number, value: number, scale: number, currency: Currency): string {
+export function limitWhyText(
+  rhythm: Rhythm,
+  now: CategoryNorm,
+  ym: string,
+  flat: number,
+  value: number,
+  scale: number,
+  currency: Currency,
+): string {
   const money = (minor: number) => formatWithCurrency(Math.round(minor), currency);
   const part = now.windowParts.find((p) => p.ym === ym) ?? now.windowParts[0];
   const per = PER_PERIOD[rhythm];
-  const lines = [`По плану — ${money(flat)} ${per}: ${money(part.limit * scale)} на ${part.dim} ${plural(part.dim, ['день', 'дня', 'дней'])}.`];
-  lines.push(`${BEFORE[rhythm]} потрачено ${money(part.spentBefore * scale)}, осталось ${money(Math.max(0, part.limit - part.spentBefore) * scale)} `
-    + `на ${part.daysLeft} ${plural(part.daysLeft, ['день', 'дня', 'дней'])} — это ${money(value)} ${per}.`);
-  lines.push(value < flat
-    ? 'Раньше в этом месяце тратили больше плана — лимит меньше, чтобы месяц уложился в план.'
-    : 'Раньше в этом месяце тратили меньше плана — лимит больше.');
+  const lines = [
+    `По плану — ${money(flat)} ${per}: ${money(part.limit * scale)} на ${part.dim} ${plural(part.dim, ['день', 'дня', 'дней'])}.`,
+  ];
+  lines.push(
+    `${BEFORE[rhythm]} потрачено ${money(part.spentBefore * scale)}, осталось ${money(Math.max(0, part.limit - part.spentBefore) * scale)} ` +
+      `на ${part.daysLeft} ${plural(part.daysLeft, ['день', 'дня', 'дней'])} — это ${money(value)} ${per}.`,
+  );
+  lines.push(
+    value < flat
+      ? 'Раньше в этом месяце тратили больше плана — лимит меньше, чтобы месяц уложился в план.'
+      : 'Раньше в этом месяце тратили меньше плана — лимит больше.',
+  );
   return lines.join('\n\n');
 }
 

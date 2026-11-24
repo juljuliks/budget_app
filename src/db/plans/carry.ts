@@ -28,7 +28,8 @@ export async function carryItems(db: Db, from: string, to: string, categoryId?: 
         AND NOT (${repeats} AND ${ended})
         -- a regular payment within the month goes on only repeated each month (or by the kind), till its end
         AND NOT (p.kind = 'fixed' AND p.every IS NOT NULL AND ((p.pinned = 0 AND NOT ${repeats}) OR ${ended}))`,
-    [to, from, categoryId ?? null]);
+    [to, from, categoryId ?? null],
+  );
   // the regular payments within the month: from their categories' schedules
   await countRegularItems(to, db, categoryId);
 }
@@ -39,9 +40,17 @@ export type ItemShape = { repeats: boolean; oneOff: boolean; fund: boolean } | n
 /** The item's shape in `ym` (null — none). */
 export async function itemShape(ym: string, categoryId: number, db?: Db): Promise<ItemShape> {
   db ??= await getDb();
-  const r = await db.get<{ pinned: number; kind: string; every: string | null; recurring: number; plan_kind: string | null }>(
+  const r = await db.get<{
+    pinned: number;
+    kind: string;
+    every: string | null;
+    recurring: number;
+    plan_kind: string | null;
+  }>(
     `SELECT p.pinned, p.kind, p.every, c.recurring, c.plan_kind FROM plan_items p JOIN categories c ON c.id = p.category_id
-      WHERE p.ym = ? AND p.category_id = ?`, [ym, categoryId]);
+      WHERE p.ym = ? AND p.category_id = ?`,
+    [ym, categoryId],
+  );
   if (!r) return null;
   const fund = r.kind === 'fund';
   // by the category's kind; none yet — by the item

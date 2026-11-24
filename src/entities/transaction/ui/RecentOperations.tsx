@@ -29,7 +29,8 @@ export default function RecentOperations({ rows, count, of, onShowAll }: Props) 
   return (
     <View>
       <SectionBand
-        title="Последние операции" inset={20}
+        title="Последние операции"
+        inset={20}
         right={count > RECENT_COUNT ? <TextLink label="Показать все" onPress={onShowAll} style={styles.all} /> : null}
       />
       {rows.map((tx) => {
@@ -37,12 +38,23 @@ export default function RecentOperations({ rows, count, of, onShowAll }: Props) 
         const title = of === 'merchant' ? formatDay(tx.occurred_at) : rowTitle(tx);
         const meta = of === 'merchant' ? `${txCategoryLabel(tx) ?? NO_CATEGORY} · ${formatTime(tx.occurred_at)}` : when;
         return (
-          <TouchableOpacity key={tx.id} style={styles.row} onPress={() => openTransaction(tx.id)} accessibilityRole="button">
+          <TouchableOpacity
+            key={tx.id}
+            style={styles.row}
+            onPress={() => openTransaction(tx.id)}
+            accessibilityRole="button"
+          >
             <View style={styles.main}>
-              <Text style={styles.title} numberOfLines={1}>{title}</Text>
-              <Text style={styles.meta} numberOfLines={1}>{meta}</Text>
+              <Text style={styles.title} numberOfLines={1}>
+                {title}
+              </Text>
+              <Text style={styles.meta} numberOfLines={1}>
+                {meta}
+              </Text>
             </View>
-            <Text style={[styles.amount, isIncome(tx.kind) && styles.income]}>{formatAmount(tx.amount_minor, tx.currency, tx.kind)}</Text>
+            <Text style={[styles.amount, isIncome(tx.kind) && styles.income]}>
+              {formatAmount(tx.amount_minor, tx.currency, tx.kind)}
+            </Text>
           </TouchableOpacity>
         );
       })}
@@ -54,8 +66,14 @@ export default function RecentOperations({ rows, count, of, onShowAll }: Props) 
 const styles = StyleSheet.create({
   all: { fontSize: 13, fontWeight: '600' },
   row: {
-    flexDirection: 'row', alignItems: 'center', gap: 12, marginHorizontal: -20, paddingHorizontal: 20, paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginHorizontal: -20,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
   },
   main: { flex: 1, minWidth: 0 },
   title: { fontSize: 16, color: colors.text },

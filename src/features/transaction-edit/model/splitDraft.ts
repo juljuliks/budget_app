@@ -26,8 +26,12 @@ export function splitState(total: number, currency: string, d: SplitDraft): Spli
     return v !== null && v > 0 ? v : null;
   });
   const rest = total - amounts.reduce<number>((a, v) => a + (v ?? 0), 0);
-  const error = rest < 0 ? `Части больше суммы операции на ${formatMoneyWithCurrency(-rest, currency)}`
-    : rest === 0 ? 'Первой категории ничего не остаётся' : null;
+  const error =
+    rest < 0
+      ? `Части больше суммы операции на ${formatMoneyWithCurrency(-rest, currency)}`
+      : rest === 0
+        ? 'Первой категории ничего не остаётся'
+        : null;
   const complete = d.own !== null && d.parts.length > 0 && amounts.every((v) => v !== null);
   return { rest, amounts, error, canSave: complete && error === null };
 }
@@ -53,9 +57,12 @@ export function withPartCategory(d: SplitDraft, index: number, id: number): Spli
  * stays first when it is among them; an amount already typed for a category that remains is kept.
  */
 export function draftFromIds(currentId: number | null, ids: number[], prev?: SplitDraft): SplitDraft {
-  const own = currentId !== null && ids.includes(currentId) ? currentId
-    : prev?.own != null && ids.includes(prev.own) ? prev.own
-    : ids[0] ?? null;
+  const own =
+    currentId !== null && ids.includes(currentId)
+      ? currentId
+      : prev?.own != null && ids.includes(prev.own)
+        ? prev.own
+        : (ids[0] ?? null);
   const texts = new Map((prev?.parts ?? []).map((p) => [p.category_id, p.text]));
   return { own, parts: ids.filter((id) => id !== own).map((id) => ({ category_id: id, text: texts.get(id) ?? '' })) };
 }

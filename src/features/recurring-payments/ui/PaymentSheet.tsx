@@ -47,61 +47,141 @@ export default function PaymentSheet({ target, onClose, onSaved, onLeave }: Prop
   const amountBad = f.amount.trim() !== '' && f.input === null && !!f.name.trim();
   // its end before the next charge: no charge at all
   const endBad = f.period !== ONCE && !!f.until && !!f.due && f.until < f.due;
-  const save = () => { if (f.input) submitPayment(f.input, target?.id, () => { onClose(); onSaved?.(); }, saving.choice); };
-  const skip = () => { if (f.input) submitPayment({ ...f.input, due: null }, target?.id, onClose); else onClose(); };
+  const save = () => {
+    if (f.input)
+      submitPayment(
+        f.input,
+        target?.id,
+        () => {
+          onClose();
+          onSaved?.();
+        },
+        saving.choice,
+      );
+  };
+  const skip = () => {
+    if (f.input) submitPayment({ ...f.input, due: null }, target?.id, onClose);
+    else onClose();
+  };
   const icon = target?.category.emoji ?? '🔁';
   const dueLabel = f.period === ONCE ? 'Дата списания' : 'Следующее списание';
-  const title = target?.id !== undefined ? `${icon} ${target.name}` : target?.merchant_key ? `${icon} ${w.One} «${target.merchant_key}»` : target ? `${icon} ${target.name}` : '';
+  const title =
+    target?.id !== undefined
+      ? `${icon} ${target.name}`
+      : target?.merchant_key
+        ? `${icon} ${w.One} «${target.merchant_key}»`
+        : target
+          ? `${icon} ${target.name}`
+          : '';
   return (
     <BottomSheet
-      visible={target !== null} onClose={onClose} title={title} style={styles.root}
-      headerRight={target?.id !== undefined ? (
-        <TouchableOpacity onPress={() => { confirmDeletePayment(target.id!, target.name, target.currency, target.category, onClose); }} hitSlop={8} accessibilityRole="button" accessibilityLabel={`Удалить ${w.acc}`}>
-          <TrashIcon color={colors.danger} size={22} />
-        </TouchableOpacity>
-      ) : null}
+      visible={target !== null}
+      onClose={onClose}
+      title={title}
+      style={styles.root}
+      headerRight={
+        target?.id !== undefined ? (
+          <TouchableOpacity
+            onPress={() => {
+              confirmDeletePayment(target.id!, target.name, target.currency, target.category, onClose);
+            }}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={`Удалить ${w.acc}`}
+          >
+            <TrashIcon color={colors.danger} size={22} />
+          </TouchableOpacity>
+        ) : null
+      }
     >
       <SheetScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {/* like a merchant's and a category's page: how many operations and how much — a link to them */}
-        {ops ? <CategorySummaryRow summary={ops.summary} onShow={() => { (onLeave ?? onClose)(); showOperationsFrom(ops.filter); }} /> : null}
+        {ops ? (
+          <CategorySummaryRow
+            summary={ops.summary}
+            onShow={() => {
+              (onLeave ?? onClose)();
+              showOperationsFrom(ops.filter);
+            }}
+          />
+        ) : null}
         {target?.from_operation ? (
-          <Text style={[formStyles.hint, styles.lead]}>Запомним, когда спишется следующая, — она встанет в план своего месяца.</Text>
+          <Text style={[formStyles.hint, styles.lead]}>
+            Запомним, когда спишется следующая, — она встанет в план своего месяца.
+          </Text>
         ) : null}
         <Text style={formStyles.label}>Название</Text>
-        <TextInput style={formStyles.input} value={f.name} onChangeText={f.setName} placeholder="Например, Netflix" placeholderTextColor={colors.muted} maxLength={40} accessibilityLabel="Название" />
+        <TextInput
+          style={formStyles.input}
+          value={f.name}
+          onChangeText={f.setName}
+          placeholder="Например, Netflix"
+          placeholderTextColor={colors.muted}
+          maxLength={40}
+          accessibilityLabel="Название"
+        />
         <Text style={formStyles.label}>Сумма</Text>
         <View style={styles.amountRow}>
           <TextInput
-            style={[formStyles.input, styles.amount]} value={f.amount} onChangeText={f.setAmount} placeholder="0.00"
-            placeholderTextColor={colors.muted} keyboardType="decimal-pad" maxLength={12} accessibilityLabel="Сумма"
+            style={[formStyles.input, styles.amount]}
+            value={f.amount}
+            onChangeText={f.setAmount}
+            placeholder="0.00"
+            placeholderTextColor={colors.muted}
+            keyboardType="decimal-pad"
+            maxLength={12}
+            accessibilityLabel="Сумма"
           />
           <CurrencyButton value={f.currency} onChange={f.setCurrency} />
         </View>
         {amountBad ? <Text style={[formStyles.hint, styles.error]}>{AMOUNT_HINT}</Text> : null}
         <Text style={formStyles.label}>Как часто</Text>
         <View style={styles.chips}>
-          {periods.map(([m, label]) => <Chip key={m} label={label} selected={f.period === m} onPress={() => f.setPeriod(m)} />)}
-          <Chip label={custom ? periodText(f.period) : 'Другое…'} selected={custom} action={!custom} onPress={() => setOtherOpen(true)} />
+          {periods.map(([m, label]) => (
+            <Chip key={m} label={label} selected={f.period === m} onPress={() => f.setPeriod(m)} />
+          ))}
+          <Chip
+            label={custom ? periodText(f.period) : 'Другое…'}
+            selected={custom}
+            action={!custom}
+            onPress={() => setOtherOpen(true)}
+          />
         </View>
         <DateField
-          label={dueLabel} value={f.due} format={dayTitle} sheetTitle={dueLabel} minDay={todayKey()}
-          suffix={f.due ? (inTime(f.due, todayKey()) ? ` · ${inTime(f.due, todayKey())}` : null) : null} onChange={f.setDue}
+          label={dueLabel}
+          value={f.due}
+          format={dayTitle}
+          sheetTitle={dueLabel}
+          minDay={todayKey()}
+          suffix={f.due ? (inTime(f.due, todayKey()) ? ` · ${inTime(f.due, todayKey())}` : null) : null}
+          onChange={f.setDue}
         />
         <Text style={formStyles.hint}>
-          {f.period === ONCE ? 'Списание одно: после него в план больше не встанет.' : 'После списания дата сдвинется сама: пришла операция мерчанта — следующая через период.'}
+          {f.period === ONCE
+            ? 'Списание одно: после него в план больше не встанет.'
+            : 'После списания дата сдвинется сама: пришла операция мерчанта — следующая через период.'}
         </Text>
         {f.period === ONCE ? null : (
           <DateField
-            label="Дата окончания (необязательно)" value={f.until} format={dayTitle} sheetTitle="Дата окончания" minDay={f.due ?? todayKey()}
-            onChange={f.setUntil} onClear={() => f.setUntil(null)}
+            label="Дата окончания (необязательно)"
+            value={f.until}
+            format={dayTitle}
+            sheetTitle="Дата окончания"
+            minDay={f.due ?? todayKey()}
+            onChange={f.setUntil}
+            onClear={() => f.setUntil(null)}
           />
         )}
         {endBad ? <Text style={[formStyles.hint, styles.error]}>Дата окончания раньше следующего списания</Text> : null}
         <SavingFields s={saving} amount={f.input?.amount_minor ?? null} currency={f.currency} due={f.due} />
         {saving.contribution !== null ? (
           <View style={styles.plate}>
-            <Text style={styles.plateTitle}>{`В план ${monthGenYear(currentYm())} +${formatWithCurrency(saving.contribution, f.currency)}`}</Text>
-            <Text style={styles.plateText}>{`Взнос каждый месяц до ${monthGenYear(f.due!.slice(0, 7))}; списание — из отложенного.`}</Text>
+            <Text
+              style={styles.plateTitle}
+            >{`В план ${monthGenYear(currentYm())} +${formatWithCurrency(saving.contribution, f.currency)}`}</Text>
+            <Text
+              style={styles.plateText}
+            >{`Взнос каждый месяц до ${monthGenYear(f.due!.slice(0, 7))}; списание — из отложенного.`}</Text>
           </View>
         ) : f.effect && f.effect.delta_minor !== 0 ? (
           <View style={styles.plate}>
@@ -112,13 +192,23 @@ export default function PaymentSheet({ target, onClose, onSaved, onLeave }: Prop
           </View>
         ) : null}
         <SheetActions
-          submit={{ title: 'Сохранить', onPress: save, disabled: !f.input || !f.due || endBad || saving.startBad || !saving.choice }}
-          onCancel={target?.from_operation ? skip : onClose} cancelTitle={target?.from_operation ? 'Пропустить' : 'Отмена'}
+          submit={{
+            title: 'Сохранить',
+            onPress: save,
+            disabled: !f.input || !f.due || endBad || saving.startBad || !saving.choice,
+          }}
+          onCancel={target?.from_operation ? skip : onClose}
+          cancelTitle={target?.from_operation ? 'Пропустить' : 'Отмена'}
         />
       </SheetScrollView>
       <TextInputModal
-        visible={otherOpen} title="Раз в сколько месяцев" initialValue={custom && f.period > 0 ? String(f.period) : ''} keyboardType="number-pad"
-        placeholder="Например, 2" submitLabel="Готово" onClose={() => setOtherOpen(false)}
+        visible={otherOpen}
+        title="Раз в сколько месяцев"
+        initialValue={custom && f.period > 0 ? String(f.period) : ''}
+        keyboardType="number-pad"
+        placeholder="Например, 2"
+        submitLabel="Готово"
+        onClose={() => setOtherOpen(false)}
         onSubmit={async (v) => {
           const n = Number(v.trim());
           if (!Number.isInteger(n) || n < 1 || n > 36) return 'Введите число месяцев, от 1 до 36';

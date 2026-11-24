@@ -54,35 +54,76 @@ export function usePaymentForm(target: PaymentTarget | null) {
     if (target.id === undefined || !target.due || target.last_day) return undefined;
     // its stored day may be long past: the next charge from its operations (a one-off one past — its day)
     let live = true;
-    paymentNext(target.id).then((next) => {
-      if (!live) return;
-      if (next) setDueState(next);
-      setLastCharge(next ? chargeBefore(next, target.period) : target.due);
-    }).catch((e) => console.error('payment next failed', e));
-    return () => { live = false; };
+    paymentNext(target.id)
+      .then((next) => {
+        if (!live) return;
+        if (next) setDueState(next);
+        setLastCharge(next ? chargeBefore(next, target.period) : target.due);
+      })
+      .catch((e) => console.error('payment next failed', e));
+    return () => {
+      live = false;
+    };
   }, [target]);
 
   const setPeriod = (p: Period) => {
     setPeriodState(p);
     if (!dueByHand && lastCharge) setDueState(offeredDue(lastCharge, p, todayKey()));
   };
-  const setDue = (day: string) => { setDueState(day); setDueByHand(true); };
+  const setDue = (day: string) => {
+    setDueState(day);
+    setDueByHand(true);
+  };
 
   const minor = parseAmountInput(amount);
-  const input = target && minor !== null && name.trim()
-    ? { category_id: target.category.id, merchant_key: target.merchant_key, name: name.trim(), amount_minor: minor, currency, period, due, until: period === 0 ? null : until }
-    : null;
+  const input =
+    target && minor !== null && name.trim()
+      ? {
+          category_id: target.category.id,
+          merchant_key: target.merchant_key,
+          name: name.trim(),
+          amount_minor: minor,
+          currency,
+          period,
+          due,
+          until: period === 0 ? null : until,
+        }
+      : null;
 
   // "В план октября +30 ₾": counted again as the form changes
   const key = input ? JSON.stringify(input) : '';
   useEffect(() => {
-    if (!input || !input.due) { setEffect(null); return undefined; }
+    if (!input || !input.due) {
+      setEffect(null);
+      return undefined;
+    }
     let live = true;
-    planEffect(input, target?.id).then((e) => { if (live) setEffect(e); }).catch((e) => console.error('plan effect failed', e));
-    return () => { live = false; };
+    planEffect(input, target?.id)
+      .then((e) => {
+        if (live) setEffect(e);
+      })
+      .catch((e) => console.error('plan effect failed', e));
+    return () => {
+      live = false;
+    };
     // the input as a whole, by its key
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, target?.id]);
 
-  return { name, setName, amount, setAmount, currency, setCurrency, period, setPeriod, due, setDue, until, setUntil, input, effect };
+  return {
+    name,
+    setName,
+    amount,
+    setAmount,
+    currency,
+    setCurrency,
+    period,
+    setPeriod,
+    due,
+    setDue,
+    until,
+    setUntil,
+    input,
+    effect,
+  };
 }

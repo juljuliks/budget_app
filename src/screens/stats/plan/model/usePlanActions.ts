@@ -1,7 +1,15 @@
 // The plan's changes from its screen: the month's budget, an item removed.
 import type { UseFormReturn } from 'react-hook-form';
 import { categoryLabel } from '@/db/categories';
-import { OverBudgetError, PlanItem, removePlanItem, restorePlanItem, restoreSchedule, setPlanBudget, stopSchedule } from '@/db/plans';
+import {
+  OverBudgetError,
+  PlanItem,
+  removePlanItem,
+  restorePlanItem,
+  restoreSchedule,
+  setPlanBudget,
+  stopSchedule,
+} from '@/db/plans';
 import { removeRecurringFrom, restoreRecurring, savedInCategory } from '@/db/recurring';
 import { emitTransactionsChanged } from '@/domain/events';
 import { MONTHS_GEN } from '@/shared/lib/dates';
@@ -29,7 +37,11 @@ async function removeRepeating<T>(item: PlanItem, r: Repeating<T>, load: () => v
     toast(`«${label}» убрана из плана, ${r.off}`, {
       label: UNDO,
       onPress: () => {
-        r.restore(stopped).then(() => { emitTransactionsChanged(); toast(`«${label}» снова в плане`); })
+        r.restore(stopped)
+          .then(() => {
+            emitTransactionsChanged();
+            toast(`«${label}» снова в плане`);
+          })
           .catch(toastFailure(r.restoreFailed, 'Не удалось восстановить'));
       },
     });
@@ -64,11 +76,23 @@ export function usePlanActions(ym: string, load: () => void) {
     const pct = SHARE_STOPS.find((p) => Math.round((minor * p) / 100) === shareMinor);
     try {
       // 🔒 — by the month's % of the new amount
-      await setPlanBudget(ym, minor === 0 ? null : minor, cur, pct ?? 0, undefined, undefined, pct === undefined ? shareMinor : null);
+      await setPlanBudget(
+        ym,
+        minor === 0 ? null : minor,
+        cur,
+        pct ?? 0,
+        undefined,
+        undefined,
+        pct === undefined ? shareMinor : null,
+      );
     } catch (e) {
       if (!(e instanceof OverBudgetError)) throw e;
-      return `По категориям уже запланировано ${formatWithCurrency(e.planned_minor, e.currency)} — `
-        + (e.budget_minor < minor ? 'вместе с отложенным и долей вне плана это больше бюджета.' : 'бюджет не может быть меньше.');
+      return (
+        `По категориям уже запланировано ${formatWithCurrency(e.planned_minor, e.currency)} — ` +
+        (e.budget_minor < minor
+          ? 'вместе с отложенным и долей вне плана это больше бюджета.'
+          : 'бюджет не может быть меньше.')
+      );
     }
     toast(minor === 0 ? 'Бюджет месяца убран' : 'Бюджет месяца сохранён');
     load();
@@ -80,13 +104,22 @@ export function usePlanActions(ym: string, load: () => void) {
     const label = categoryLabel(item);
     try {
       const row = await removePlanItem(ym, item.category_id);
-      toast(`«${label}» убрана из плана`, row ? {
-        label: UNDO,
-        onPress: () => {
-          restorePlanItem(row).then(() => { toast(`«${label}» снова в плане`); load(); })
-            .catch(toastFailure('restore plan item', 'Не удалось восстановить'));
-        },
-      } : undefined);
+      toast(
+        `«${label}» убрана из плана`,
+        row
+          ? {
+              label: UNDO,
+              onPress: () => {
+                restorePlanItem(row)
+                  .then(() => {
+                    toast(`«${label}» снова в плане`);
+                    load();
+                  })
+                  .catch(toastFailure('restore plan item', 'Не удалось восстановить'));
+              },
+            }
+          : undefined,
+      );
     } catch (e) {
       console.error('remove plan item failed', e);
       toastError(SAVE_FAILED);
@@ -95,30 +128,55 @@ export function usePlanActions(ym: string, load: () => void) {
   }
 
   /** A category with repeating payments: out of this month's plan and the next ones', its payments off. */
-  const removeRecurring = (item: PlanItem) => removeRepeating(item, {
-    stop: () => removeRecurringFrom(ym, item.category_id), restore: restoreRecurring,
-    off: 'регулярные платежи выключены', failed: 'remove recurring item failed', restoreFailed: 'restore recurring item',
-  }, load);
+  const removeRecurring = (item: PlanItem) =>
+    removeRepeating(
+      item,
+      {
+        stop: () => removeRecurringFrom(ym, item.category_id),
+        restore: restoreRecurring,
+        off: 'регулярные платежи выключены',
+        failed: 'remove recurring item failed',
+        restoreFailed: 'restore recurring item',
+      },
+      load,
+    );
 
   /** A regular payment within the month: its schedule off, gone from this month's plan and the next ones'. */
-  const removeSchedule = (item: PlanItem) => removeRepeating(item, {
-    stop: () => stopSchedule(ym, item.category_id), restore: restoreSchedule,
-    off: 'регулярный платёж выключен', failed: 'stop schedule failed', restoreFailed: 'restore schedule',
-  }, load);
+  const removeSchedule = (item: PlanItem) =>
+    removeRepeating(
+      item,
+      {
+        stop: () => stopSchedule(ym, item.category_id),
+        restore: restoreSchedule,
+        off: 'регулярный платёж выключен',
+        failed: 'stop schedule failed',
+        restoreFailed: 'restore schedule',
+      },
+      load,
+    );
 
   // a category repeated every month is asked about: removing it also stops it carrying over; one with repeating
   // payments — they'd count it again next month: they are turned off, it is gone from the next months too
   async function removeItem(item: PlanItem) {
     if (item.recurring) {
       const saved = await savedInCategory(item.category_id).catch(() => []);
-      const kept = saved.length ? ` На платежи уже отложено: ${saved.map((x) => `${x.name} — ${formatWithCurrency(x.minor, x.currency)}`).join(', ')} — это уйдёт в сбережения месяца.` : '';
+      const kept = saved.length
+        ? ` На платежи уже отложено: ${saved.map((x) => `${x.name} — ${formatWithCurrency(x.minor, x.currency)}`).join(', ')} — это уйдёт в сбережения месяца.`
+        : '';
       sheetAlert(
         `Убрать «${categoryLabel(item)}» из плана?`,
         `У категории регулярные платежи — они выключатся, а категория пропадёт из плана с ${MONTHS_GEN[Number(ym.slice(5)) - 1]}. Операции не изменятся.${kept}`,
         [
           { text: 'Отмена', style: 'cancel' },
-          { text: 'Убрать из плана', style: 'destructive', onPress: () => { removeRecurring(item); } },
-        ]);
+          {
+            text: 'Убрать из плана',
+            style: 'destructive',
+            onPress: () => {
+              removeRecurring(item);
+            },
+          },
+        ],
+      );
       return;
     }
     if (item.every) {
@@ -127,8 +185,15 @@ export function usePlanActions(ym: string, load: () => void) {
         `У категории регулярный платёж — он выключится, а категория пропадёт из плана с ${MONTHS_GEN[Number(ym.slice(5)) - 1]}. Операции не изменятся.`,
         [
           { text: 'Отмена', style: 'cancel' },
-          { text: 'Убрать из плана', style: 'destructive', onPress: () => { removeSchedule(item); } },
-        ]);
+          {
+            text: 'Убрать из плана',
+            style: 'destructive',
+            onPress: () => {
+              removeSchedule(item);
+            },
+          },
+        ],
+      );
       return;
     }
     remove(item);

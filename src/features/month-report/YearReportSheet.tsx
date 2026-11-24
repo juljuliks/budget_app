@@ -24,23 +24,45 @@ export default function YearReportSheet({ year, onClose }: { year: number | null
   const markImpulse = () => {
     if (year === null) return;
     onClose();
-    navigateWhenReady({ name: 'Main', params: { screen: 'Transactions', params: {
-      unanswered: true, range: { from: `${year}-01-01`, to: `${year}-12-31` }, nonce: Date.now(), from: 'Stats' } } } as never);
+    navigateWhenReady({
+      name: 'Main',
+      params: {
+        screen: 'Transactions',
+        params: {
+          unanswered: true,
+          range: { from: `${year}-01-01`, to: `${year}-12-31` },
+          nonce: Date.now(),
+          from: 'Stats',
+        },
+      },
+    } as never);
   };
   const money = (v: number) => formatWithCurrency(Math.round(v), r?.currency ?? 'GEL');
-  const pages = !r ? [] : r.count === 0 ? [<Text key="none" style={styles.hint}>{`Данных за ${r.year} пока нет.`}</Text>] : [
-    <YearNumbers key="numbers" r={r} />,
-    <YearBars key="bars" r={r} onMonth={openReport} />,
-    <YearTable key="table" r={r} onMonth={openReport} />,
-    ...(r.savings || r.fundsNow.length ? [<YearSavings key="savings" r={r} />] : []),
-    ...(r.impulse ? [<View key="impulse"><ImpulseBlock m={{ ...r.impulse, categories: [] }} money={money} onMark={markImpulse} /></View>] : []),
-    ...(r.top.length ? [<YearWhere key="where" r={r} />] : []),
-  ];
+  const pages = !r
+    ? []
+    : r.count === 0
+      ? [<Text key="none" style={styles.hint}>{`Данных за ${r.year} пока нет.`}</Text>]
+      : [
+          <YearNumbers key="numbers" r={r} />,
+          <YearBars key="bars" r={r} onMonth={openReport} />,
+          <YearTable key="table" r={r} onMonth={openReport} />,
+          ...(r.savings || r.fundsNow.length ? [<YearSavings key="savings" r={r} />] : []),
+          ...(r.impulse
+            ? [
+                <View key="impulse">
+                  <ImpulseBlock m={{ ...r.impulse, categories: [] }} money={money} onMark={markImpulse} />
+                </View>,
+              ]
+            : []),
+          ...(r.top.length ? [<YearWhere key="where" r={r} />] : []),
+        ];
   return (
     <StoryPager
-      visible={year !== null} onClose={onClose} title={year !== null ? `Итоги ${year}` : ''} pages={pages}
+      visible={year !== null}
+      onClose={onClose}
+      title={year !== null ? `Итоги ${year}` : ''}
+      pages={pages}
       placeholder={!r ? <Loading inline style={styles.loading} failed={failed} onRetry={load} /> : undefined}
     />
   );
 }
-

@@ -40,22 +40,47 @@ export default function CarrySheet({ fromYm, kind, onClose }: Props) {
   const money = (minor: number) => formatWithCurrency(minor, b?.currency);
 
   // the overspend 🔒 covered in part (a month closed before): only what it didn't cover is asked again
-  const field: keyof CloseAnswers = kind === 'plus' ? 'rest_choice' : c?.answers.over_cover === 'savings' ? 'over_rest_cover' : 'over_cover';
-  const options: Option[] = !c || !b || !m || !next ? [] : kind === 'plus' ? [
-    { value: 'next', title: `Перенести на ${next.nom}`, note: `как сейчас: бюджет ${next.gen} + ${money(b.rest_minor)}` },
-    { value: 'savings', title: 'В сбережения', note: `💰 «Сэкономлено» ${m.gen} — спросим, удалось ли отложить` },
-  ] : [
-    { value: 'next', title: `Из бюджета ${next.gen}`, note: `как сейчас: вычтен из бюджета ${next.gen}` },
-    // 🔒 first, then the funds' contributions, then the savings from before
-    ...(field === 'over_cover' ? [{ value: 'savings', title: `Из сбережений ${m.gen}`, note: coverNote(b, money) }] : []),
-    { value: 'covered', title: 'Уже покрыт', note: 'со стороны — перерасход останется только в «Истории»' },
-  ];
+  const field: keyof CloseAnswers =
+    kind === 'plus' ? 'rest_choice' : c?.answers.over_cover === 'savings' ? 'over_rest_cover' : 'over_cover';
+  const options: Option[] =
+    !c || !b || !m || !next
+      ? []
+      : kind === 'plus'
+        ? [
+            {
+              value: 'next',
+              title: `Перенести на ${next.nom}`,
+              note: `как сейчас: бюджет ${next.gen} + ${money(b.rest_minor)}`,
+            },
+            {
+              value: 'savings',
+              title: 'В сбережения',
+              note: `💰 «Сэкономлено» ${m.gen} — спросим, удалось ли отложить`,
+            },
+          ]
+        : [
+            { value: 'next', title: `Из бюджета ${next.gen}`, note: `как сейчас: вычтен из бюджета ${next.gen}` },
+            // 🔒 first, then the funds' contributions, then the savings from before
+            ...(field === 'over_cover'
+              ? [{ value: 'savings', title: `Из сбережений ${m.gen}`, note: coverNote(b, money) }]
+              : []),
+            { value: 'covered', title: 'Уже покрыт', note: 'со стороны — перерасход останется только в «Истории»' },
+          ];
   const current = c ? (c.answers[field] as string | null) : null;
   const chosen = draft ?? current;
-  const amount = !b ? 0 : kind === 'plus' ? b.rest_minor : field === 'over_rest_cover' ? b.over_rest_minor : b.over_minor;
+  const amount = !b
+    ? 0
+    : kind === 'plus'
+      ? b.rest_minor
+      : field === 'over_rest_cover'
+        ? b.over_rest_minor
+        : b.over_minor;
 
   async function save() {
-    if (!fromYm || !draft || draft === current) { onClose(); return; }
+    if (!fromYm || !draft || draft === current) {
+      onClose();
+      return;
+    }
     await answer({ [field]: draft });
     onClose();
     // "В сбережения": "Удалось отложить?" is asked in the month's "Итоги"
@@ -63,21 +88,42 @@ export default function CarrySheet({ fromYm, kind, onClose }: Props) {
   }
 
   return (
-    <BottomSheet visible={fromYm !== null} onClose={onClose} title={m ? `${kind === 'plus' ? '➕ Остаток' : '⚠️ Перерасход'} ${m.gen}` : ''}>
-      {!c || !b || !m || !next ? <Loading inline failed={failed} onRetry={load} /> : (
+    <BottomSheet
+      visible={fromYm !== null}
+      onClose={onClose}
+      title={m ? `${kind === 'plus' ? '➕ Остаток' : '⚠️ Перерасход'} ${m.gen}` : ''}
+    >
+      {!c || !b || !m || !next ? (
+        <Loading inline failed={failed} onRetry={load} />
+      ) : (
         <View style={styles.content}>
           <View style={styles.line}>
-            <Text style={styles.lineText}>{kind === 'plus' ? `Добавлен к бюджету ${next.gen}` : `Вычтен из бюджета ${next.gen}`}</Text>
-            <Text style={[styles.lineValue, kind === 'plus' ? styles.headSaved : styles.headOver]}>{`${kind === 'plus' ? '+' : ''}${money(amount)}`}</Text>
+            <Text style={styles.lineText}>
+              {kind === 'plus' ? `Добавлен к бюджету ${next.gen}` : `Вычтен из бюджета ${next.gen}`}
+            </Text>
+            <Text
+              style={[styles.lineValue, kind === 'plus' ? styles.headSaved : styles.headOver]}
+            >{`${kind === 'plus' ? '+' : ''}${money(amount)}`}</Text>
           </View>
           <Text style={styles.muted}>
-            {kind === 'plus' ? `Не запланировано и не потрачено в ${m.prep}` : `В ${m.prep} потрачено ${money(b.spent_minor)} при бюджете ${money(b.amount_minor)}`}
+            {kind === 'plus'
+              ? `Не запланировано и не потрачено в ${m.prep}`
+              : `В ${m.prep} потрачено ${money(b.spent_minor)} при бюджете ${money(b.amount_minor)}`}
           </Text>
           <View style={styles.block}>
             <Text style={styles.question}>{kind === 'plus' ? 'Куда остаток?' : 'Покрыть иначе?'}</Text>
             <Choice options={options} value={chosen} onChange={setDraft} />
           </View>
-          <SheetActions submit={{ title: 'Сохранить', disabled: !draft || draft === current, onPress: () => { save(); } }} onCancel={onClose} />
+          <SheetActions
+            submit={{
+              title: 'Сохранить',
+              disabled: !draft || draft === current,
+              onPress: () => {
+                save();
+              },
+            }}
+            onCancel={onClose}
+          />
         </View>
       )}
     </BottomSheet>

@@ -5,13 +5,16 @@ function db() {
   return d.run('CREATE TABLE t (v INTEGER)').then(() => d);
 }
 
-const values = async (d: Awaited<ReturnType<typeof db>>) => (await d.all<{ v: number }>('SELECT v FROM t ORDER BY v')).map((r) => r.v);
+const values = async (d: Awaited<ReturnType<typeof db>>) =>
+  (await d.all<{ v: number }>('SELECT v FROM t ORDER BY v')).map((r) => r.v);
 
 describe('serialized connection', () => {
   it('a statement issued during a transaction runs after it and survives its rollback', async () => {
     const d = await db();
     let release!: () => void;
-    const paused = new Promise<void>((r) => { release = r; });
+    const paused = new Promise<void>((r) => {
+      release = r;
+    });
     const tx = d.transaction(async (t) => {
       await t.run('INSERT INTO t VALUES (1)');
       await paused;
@@ -27,7 +30,11 @@ describe('serialized connection', () => {
 
   it('commits the transaction writes and returns its result', async () => {
     const d = await db();
-    const r = await d.transaction(async (t) => { await t.run('INSERT INTO t VALUES (1)'); await t.transaction((u) => u.run('INSERT INTO t VALUES (3)')); return 'ok'; });
+    const r = await d.transaction(async (t) => {
+      await t.run('INSERT INTO t VALUES (1)');
+      await t.transaction((u) => u.run('INSERT INTO t VALUES (3)'));
+      return 'ok';
+    });
     expect(r).toBe('ok');
     expect(await values(d)).toEqual([1, 3]);
   });
@@ -36,7 +43,10 @@ describe('serialized connection', () => {
     const d = await db();
     // not rejects.toThrow(): better-sqlite3's SqliteError comes from another realm than the test's Error, and Jest's
     // instance check then sometimes reads the rejection as "did not throw"
-    const failed = await d.run('INSERT INTO missing VALUES (1)').then(() => null, (e: unknown) => String((e as Error)?.message ?? e));
+    const failed = await d.run('INSERT INTO missing VALUES (1)').then(
+      () => null,
+      (e: unknown) => String((e as Error)?.message ?? e),
+    );
     expect(failed).toMatch(/no such table/);
     await d.run('INSERT INTO t VALUES (4)');
     expect(await values(d)).toEqual([4]);

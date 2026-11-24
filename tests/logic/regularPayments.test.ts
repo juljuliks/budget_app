@@ -10,10 +10,11 @@ import { freshDb } from '../helpers';
 beforeEach(() => freshDb());
 
 // October 2026: the 1st a Thursday — 31 days, 4 Mondays (5, 12, 19, 26), 5 Thursdays
-const MON = 1, THU = 1 << 3;
+const MON = 1,
+  THU = 1 << 3;
 
 describe('the times in a month', () => {
-  test('every day — the month\'s days; on weekdays — those of them; none after the end', () => {
+  test("every day — the month's days; on weekdays — those of them; none after the end", () => {
     expect(timesInMonth('2026-10', 'day', 0)).toBe(31);
     expect(timesInMonth('2026-02', 'day', 0)).toBe(28);
     expect(timesInMonth('2026-10', 'week', MON)).toBe(4);
@@ -26,8 +27,8 @@ describe('the times in a month', () => {
   });
 });
 
-describe('the category\'s own payment: its calendar, not its operations', () => {
-  test('its charges up to yesterday are done; today\'s and later ones are waited for; none before its day or after its end', async () => {
+describe("the category's own payment: its calendar, not its operations", () => {
+  test("its charges up to yesterday are done; today's and later ones are waited for; none before its day or after its end", async () => {
     const own = { merchant_key: null, period: 1, due: '2026-08-05', until: null };
     const days = (await paymentDays([own], undefined, '2026-10-05'))(own);
     expect(days).toEqual(['2026-08-05', '2026-09-05']);
@@ -48,31 +49,51 @@ describe('a monthly regular payment saved without a day', () => {
       ('2099-01', 1, 80000, 'fixed', 'GEL'), ('2099-02', 1, 0, 'subs', 'GEL'), ('2099-03', 1, 5000, 'limit', 'GEL'), ('2098-12', 1, 0, 'subs', 'GEL')`);
     await setUndatedAhead('2099-01', 1, 80000, 'GEL');
     expect(await db.all('SELECT ym, kind, limit_minor FROM plan_items WHERE category_id = 1 ORDER BY ym')).toEqual([
-      { ym: '2098-12', kind: 'subs', limit_minor: 0 }, { ym: '2099-01', kind: 'fixed', limit_minor: 80000 },
-      { ym: '2099-02', kind: 'fixed', limit_minor: 80000 }, { ym: '2099-03', kind: 'limit', limit_minor: 5000 }]);
+      { ym: '2098-12', kind: 'subs', limit_minor: 0 },
+      { ym: '2099-01', kind: 'fixed', limit_minor: 80000 },
+      { ym: '2099-02', kind: 'fixed', limit_minor: 80000 },
+      { ym: '2099-03', kind: 'limit', limit_minor: 5000 },
+    ]);
   });
 });
 
 describe('carry-over', () => {
   // future months: ensureMonthPlan treats them as current or coming
-  const M1 = '2099-01', M2 = '2099-02', M3 = '2099-03';
+  const M1 = '2099-01',
+    M2 = '2099-02',
+    M3 = '2099-03';
 
   test('a regular payment: its month the times by the amount; always carried over — the next month its own days; its end ends it', async () => {
     await setRegularItem(M1, 1, { every: 'day', weekdays: 0, unit_minor: 500, until: null }, 'GEL');
     await setRegularItem(M1, 2, { every: 'week', weekdays: MON, unit_minor: 3000, until: `${M1}-31` }, 'GEL');
-    expect((await listPlan(M1)).map((i) => ({ id: i.category_id, limit: i.limit_minor, kind: i.kind, every: i.every }))).toEqual([
-      { id: 1, limit: 31 * 500, kind: 'fixed', every: 'day' }, { id: 2, limit: timesInMonth(M1, 'week', MON) * 3000, kind: 'fixed', every: 'week' }]);
+    expect(
+      (await listPlan(M1)).map((i) => ({ id: i.category_id, limit: i.limit_minor, kind: i.kind, every: i.every })),
+    ).toEqual([
+      { id: 1, limit: 31 * 500, kind: 'fixed', every: 'day' },
+      { id: 2, limit: timesInMonth(M1, 'week', MON) * 3000, kind: 'fixed', every: 'week' },
+    ]);
     // February 2099: 28 days; the weekly one ended with January — not there
-    expect((await listPlan(M2)).map((i) => ({ id: i.category_id, limit: i.limit_minor, every: i.every, unit: i.unit_minor }))).toEqual([
-      { id: 1, limit: 28 * 500, every: 'day', unit: 500 }]);
+    expect(
+      (await listPlan(M2)).map((i) => ({
+        id: i.category_id,
+        limit: i.limit_minor,
+        every: i.every,
+        unit: i.unit_minor,
+      })),
+    ).toEqual([{ id: 1, limit: 28 * 500, every: 'day', unit: 500 }]);
   });
 
   test('"Дата окончания": a regular payment counts its days up to it and isn\'t carried past it; a limit stops repeating', async () => {
     await setRegularItem(M1, 1, { every: 'day', weekdays: 0, unit_minor: 500, until: `${M2}-10` }, 'GEL');
-    await addPlanItem(M1, 2); await setPlanAmount(M1, 2, 30000); await setPlanPinned(M1, 2, true, `${M1}-31`);
-    expect((await listPlan(M2)).map((i) => ({ id: i.category_id, limit: i.limit_minor, pinned: i.pinned, until: i.until }))).toEqual([
+    await addPlanItem(M1, 2);
+    await setPlanAmount(M1, 2, 30000);
+    await setPlanPinned(M1, 2, true, `${M1}-31`);
+    expect(
+      (await listPlan(M2)).map((i) => ({ id: i.category_id, limit: i.limit_minor, pinned: i.pinned, until: i.until })),
+    ).toEqual([
       // February: up to the 10th; the limit — after its end: not carried any more
-      { id: 1, limit: 10 * 500, pinned: true, until: `${M2}-10` }]);
+      { id: 1, limit: 10 * 500, pinned: true, until: `${M2}-10` },
+    ]);
     expect((await listPlan(M3)).map((i) => i.category_id)).toEqual([]);
   });
 
@@ -83,12 +104,18 @@ describe('carry-over', () => {
   });
 });
 
-describe('a repeating payment\'s end', () => {
-  test('no charges after it: the month\'s, the next one, what is saved for', () => {
-    expect(monthCharges('2026-10-05', 1, '2026-11', [], '2026-10-01', '2026-11-30')).toEqual([{ day: '2026-11-05', done: false }]);
+describe("a repeating payment's end", () => {
+  test("no charges after it: the month's, the next one, what is saved for", () => {
+    expect(monthCharges('2026-10-05', 1, '2026-11', [], '2026-10-01', '2026-11-30')).toEqual([
+      { day: '2026-11-05', done: false },
+    ]);
     expect(monthCharges('2026-10-05', 1, '2026-12', [], '2026-10-01', '2026-11-30')).toEqual([]);
     // weekly: the month's charges up to the 15th
-    expect(monthCharges('2026-10-01', -1, '2026-10', [], '2026-10-01', '2026-10-15').map((c) => c.day)).toEqual(['2026-10-01', '2026-10-08', '2026-10-15']);
+    expect(monthCharges('2026-10-01', -1, '2026-10', [], '2026-10-01', '2026-10-15').map((c) => c.day)).toEqual([
+      '2026-10-01',
+      '2026-10-08',
+      '2026-10-15',
+    ]);
     expect(nextCharge('2026-10-05', 1, [], '2026-10-20', '2026-10-31')).toBeNull();
     expect(nextCharge('2026-10-05', 1, [], '2026-10-20', '2026-12-31')).toBe('2026-11-05');
     expect(savingFor('2026-10-05', 12, '2026-11', [], '', '2027-06-30')).toBeNull();

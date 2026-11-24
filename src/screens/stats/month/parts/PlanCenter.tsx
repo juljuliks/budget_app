@@ -13,7 +13,11 @@ import type { Slice } from '../model/donutSlices';
 import { SAVINGS_ID } from './sections';
 
 type Props = {
-  base: number; word: string; free: number; picked?: Slice; currency: Currency;
+  base: number;
+  word: string;
+  free: number;
+  picked?: Slice;
+  currency: Currency;
   /** the hole's width for the text */
   hole: number;
 };
@@ -27,7 +31,11 @@ export default function PlanCenter({ base, word, free, picked, currency, hole: W
         <Text style={cap}>{word === 'бюджета' ? 'Бюджет' : 'План'}</Text>
         <Masked style={[s.hero, { fontSize: fitSize(money(base), 28, W) }]}>{money(base)}</Masked>
         <View style={[s.ofRow, s.ofRowSmall, { maxWidth: W }]}>
-          {free > 0 ? <Masked style={cap}>{`свободно ${money(free)}`}</Masked> : <Text style={cap}>всё распределено</Text>}
+          {free > 0 ? (
+            <Masked style={cap}>{`свободно ${money(free)}`}</Masked>
+          ) : (
+            <Text style={cap}>всё распределено</Text>
+          )}
           <PencilIcon color={colors.accent} size={14} />
         </View>
       </>
@@ -36,11 +44,15 @@ export default function PlanCenter({ base, word, free, picked, currency, hole: W
   const done = picked.done ?? 0;
   return (
     <>
-      <Text style={[s.pickedName, s.pickedNameSmall, { maxWidth: W }]} numberOfLines={2}>{`${picked.emoji || ''} ${picked.title}`.trim()}</Text>
+      <Text style={[s.pickedName, s.pickedNameSmall, { maxWidth: W }]} numberOfLines={2}>
+        {`${picked.emoji || ''} ${picked.title}`.trim()}
+      </Text>
       <Masked style={[s.pickedAmount, { fontSize: fitSize(money(picked.value), 20, W) }]}>{money(picked.value)}</Masked>
       <Text style={cap}>{`${formatPercent(picked.value, base)} ${word}`}</Text>
       {picked.key !== 'free' ? (
-        <Text style={[...cap, done > 1.005 && s.over]}>{`${picked.key === SAVINGS_ID ? 'отложено' : 'потрачено'} ${formatPercent(done, 1)}`}</Text>
+        <Text
+          style={[...cap, done > 1.005 && s.over]}
+        >{`${picked.key === SAVINGS_ID ? 'отложено' : 'потрачено'} ${formatPercent(done, 1)}`}</Text>
       ) : null}
     </>
   );

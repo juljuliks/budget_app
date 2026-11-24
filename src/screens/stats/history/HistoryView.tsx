@@ -35,7 +35,10 @@ export default function HistoryView({ currency }: { currency: Currency }) {
     const keep = latest();
     started();
     // the months with nothing to ask are closed first: no "Итоги не подведены" on them
-    monthToClose().then(() => planHistory(undefined, currency)).then(keep(setMonths)).catch(keep(fail));
+    monthToClose()
+      .then(() => planHistory(undefined, currency))
+      .then(keep(setMonths))
+      .catch(keep(fail));
   }, [currency, latest, started, fail]);
   useFocusEffect(load);
   useEffect(() => onTransactionsChanged(load), [load]);
@@ -51,25 +54,37 @@ export default function HistoryView({ currency }: { currency: Currency }) {
       data={rows}
       keyExtractor={(r) => r.ym}
       contentContainerStyle={styles.content}
-      ListHeaderComponent={(
+      ListHeaderComponent={
         <>
           {/* the year's months; the arrows — the years before */}
           <PeriodNav
-            unit="год" label={String(shown)}
-            onPrev={() => setYear(shown - 1)} prevDisabled={shown <= years[years.length - 1]}
-            onNext={() => setYear(shown + 1)} nextDisabled={shown >= years[0]}
+            unit="год"
+            label={String(shown)}
+            onPrev={() => setYear(shown - 1)}
+            prevDisabled={shown <= years[years.length - 1]}
+            onNext={() => setYear(shown + 1)}
+            nextDisabled={shown >= years[0]}
           />
-          <LinkCard icon={<StatsIcon color={colors.accent} size={20} />} label={`Итоги ${shown} — статистика за год`} onPress={() => openYear(shown)} style={styles.yearLink} />
+          <LinkCard
+            icon={<StatsIcon color={colors.accent} size={20} />}
+            label={`Итоги ${shown} — статистика за год`}
+            onPress={() => openYear(shown)}
+            style={styles.yearLink}
+          />
         </>
-      )}
-      renderItem={({ item }) => (item.month ? (
-        <MonthRow
-          month={item.month}
-          currency={currency}
-          expanded={expanded === item.ym}
-          onToggle={() => setExpanded((cur) => (cur === item.ym ? null : item.ym))}
-        />
-      ) : <EmptyMonth ym={item.ym} future={item.state === 'future'} />)}
+      }
+      renderItem={({ item }) =>
+        item.month ? (
+          <MonthRow
+            month={item.month}
+            currency={currency}
+            expanded={expanded === item.ym}
+            onToggle={() => setExpanded((cur) => (cur === item.ym ? null : item.ym))}
+          />
+        ) : (
+          <EmptyMonth ym={item.ym} future={item.state === 'future'} />
+        )
+      }
     />
   );
 }

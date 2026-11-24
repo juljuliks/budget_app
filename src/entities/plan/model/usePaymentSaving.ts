@@ -13,7 +13,12 @@ import { parseAmountOrZero } from '@/shared/lib/money';
 export type SavingChoice = { on: boolean; start: number; had: boolean; balance: number; contribution: number };
 
 /** `target`: the payment (`id`; none — a new one), null — not yet known; another object — asked again from the start. */
-export function usePaymentSaving(target: { id?: number } | null, period: Period, amount: number | null, due: string | null) {
+export function usePaymentSaving(
+  target: { id?: number } | null,
+  period: Period,
+  amount: number | null,
+  due: string | null,
+) {
   const [save, setSave] = useState(false);
   const [start, setStart] = useState('');
   const [had, setHad] = useState<{ saving: boolean; balance: number } | null>(null);
@@ -21,20 +26,51 @@ export function usePaymentSaving(target: { id?: number } | null, period: Period,
   useEffect(() => {
     if (!target) return undefined;
     setStart('');
-    if (target.id === undefined) { setHad({ saving: false, balance: 0 }); setSave(true); return undefined; }
+    if (target.id === undefined) {
+      setHad({ saving: false, balance: 0 });
+      setSave(true);
+      return undefined;
+    }
     let live = true;
     Promise.all([openSaving(target.id), savedNow(target.id)])
-      .then(([open, balance]) => { if (live) { setHad({ saving: !!open, balance }); setSave(!!open); } })
+      .then(([open, balance]) => {
+        if (live) {
+          setHad({ saving: !!open, balance });
+          setSave(!!open);
+        }
+      })
       .catch((e) => console.error('payment saving failed', e));
-    return () => { live = false; };
+    return () => {
+      live = false;
+    };
   }, [target]);
 
   const offered = period > 1;
   const on = offered && save;
-  const startMinor = had?.saving ? had.balance : parseAmountOrZero(start) ?? 0;
+  const startMinor = had?.saving ? had.balance : (parseAmountOrZero(start) ?? 0);
   const nowYm = currentYm();
-  const contribution = on && due && amount !== null ? contributionOf({ target_minor: amount, due }, nowYm, startMinor) : null;
+  const contribution =
+    on && due && amount !== null ? contributionOf({ target_minor: amount, due }, nowYm, startMinor) : null;
   const months = due ? monthsBetween(nowYm, due.slice(0, 7)) : 0;
-  const choice: SavingChoice | null = had ? { on, start: startMinor, had: had.saving, balance: had.balance, contribution: had.saving ? 0 : contribution ?? 0 } : null;
-  return { offered, save, setSave, start, setStart, had, contribution, months, choice, startBad: !had?.saving && on && parseAmountOrZero(start) === null };
+  const choice: SavingChoice | null = had
+    ? {
+        on,
+        start: startMinor,
+        had: had.saving,
+        balance: had.balance,
+        contribution: had.saving ? 0 : (contribution ?? 0),
+      }
+    : null;
+  return {
+    offered,
+    save,
+    setSave,
+    start,
+    setStart,
+    had,
+    contribution,
+    months,
+    choice,
+    startBad: !had?.saving && on && parseAmountOrZero(start) === null,
+  };
 }

@@ -21,7 +21,17 @@ type Props = {
 };
 
 /** The categories, as on the categories page: a section band, a color dot, emoji and name. A tap picks. */
-export default function CategoryChooseList({ sections, colorOf, none, many, picked, current, onPress, onHold, onNone }: Props) {
+export default function CategoryChooseList({
+  sections,
+  colorOf,
+  none,
+  many,
+  picked,
+  current,
+  onPress,
+  onHold,
+  onNone,
+}: Props) {
   return (
     <View>
       {none ? (
@@ -54,7 +64,15 @@ export default function CategoryChooseList({ sections, colorOf, none, many, pick
   );
 }
 
-function Row({ label, color, box, dim, mark, onPress, onLongPress }: {
+function Row({
+  label,
+  color,
+  box,
+  dim,
+  mark,
+  onPress,
+  onLongPress,
+}: {
   label: string;
   color: string;
   /** a checkbox (several); undefined hides it. false is unchecked. */
@@ -66,9 +84,15 @@ function Row({ label, color, box, dim, mark, onPress, onLongPress }: {
 }) {
   return (
     <TouchableOpacity style={styles.row} onPress={onPress} onLongPress={onLongPress} accessibilityRole="button">
-      {box !== undefined ? <View style={[styles.check, dim && styles.dim]}><Checkbox checked={box} size={20} /></View> : null}
+      {box !== undefined ? (
+        <View style={[styles.check, dim && styles.dim]}>
+          <Checkbox checked={box} size={20} />
+        </View>
+      ) : null}
       <View style={[styles.dot, { backgroundColor: color }]} />
-      <Text style={styles.name} numberOfLines={1}>{label}</Text>
+      <Text style={styles.name} numberOfLines={1}>
+        {label}
+      </Text>
       {mark ? <Text style={styles.mark}>✓</Text> : null}
     </TouchableOpacity>
   );
@@ -76,8 +100,13 @@ function Row({ label, color, box, dim, mark, onPress, onLongPress }: {
 
 const styles = StyleSheet.create({
   row: {
-    flexDirection: 'row', alignItems: 'center', paddingLeft: 16, paddingRight: 16, paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: 16,
+    paddingRight: 16,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
   },
   check: { marginRight: 10 },
   dim: { opacity: 0.35 },

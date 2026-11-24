@@ -22,19 +22,31 @@ export function FundItemRow({ p, item, hidden, onOpen }: Props) {
   const f = item.fund;
   const saved = f ? isSaved(f.saved_minor, f.target_minor) : false;
   const value = item.converted_minor;
-  const own = item.currency !== p.currency && item.limit_minor ? formatWithCurrency(item.limit_minor, item.currency) : null;
+  const own =
+    item.currency !== p.currency && item.limit_minor ? formatWithCurrency(item.limit_minor, item.currency) : null;
   // what the budget fitted of its contribution (from 🔒, less, none)
   const fit = fundFitStatus(item, p.ym, hidden);
   return (
     <TouchableOpacity style={styles.row} onPress={onOpen} accessibilityLabel={`Копилка: ${categoryLabel(item)}`}>
       <View style={styles.pin}>
-        <ProgressRing ratio={f ? f.saved_minor / f.target_minor : 0} color={saved ? colors.income : colors.fund} track={colors.fundTrack} size={22} />
+        <ProgressRing
+          ratio={f ? f.saved_minor / f.target_minor : 0}
+          color={saved ? colors.income : colors.fund}
+          track={colors.fundTrack}
+          size={22}
+        />
       </View>
       <View style={styles.nameBox}>
-        <Text style={styles.name} numberOfLines={1}>{`${item.emoji || ''} ${item.name}`.trim()}</Text>
+        <Text style={styles.name} numberOfLines={1}>
+          {`${item.emoji || ''} ${item.name}`.trim()}
+        </Text>
         {f ? (
           <Text style={styles.percent}>
-            {hidden ? (saved ? 'накоплено' : `${Math.floor((f.saved_minor / f.target_minor) * 100)}%`) : fundProgress(f.saved_minor, f.target_minor, f.due, item.currency)}
+            {hidden
+              ? saved
+                ? 'накоплено'
+                : `${Math.floor((f.saved_minor / f.target_minor) * 100)}%`
+              : fundProgress(f.saved_minor, f.target_minor, f.due, item.currency)}
           </Text>
         ) : null}
         {fit ? <Text style={[styles.percent, fit.tone === 'warn' && { color: colors.warn }]}>{fit.text}</Text> : null}

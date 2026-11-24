@@ -24,6 +24,9 @@ export function useCategoryMerchants(id: number, currency: Currency, period: Mer
       .then(keep(setList))
       .catch(keep((e: unknown) => console.error('load category merchants failed', e)));
   }, [id, currency, period, latest]);
-  useEffect(() => { load(); return onTransactionsChanged(load); }, [load]);
+  useEffect(() => {
+    load();
+    return onTransactionsChanged(load);
+  }, [load]);
   return list;
 }

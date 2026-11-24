@@ -14,5 +14,13 @@ type Props = {
 
 /** A category's name as a link, as a merchant's (MerchantLink): "🛒 Продукты ›" opens its page over the current one. */
 export default function CategoryLink({ categoryId, label, style, containerStyle }: Props) {
-  return <TextLink label={label} onPress={() => openCategory(categoryId)} style={style} containerStyle={containerStyle} hint="Открыть категорию" />;
+  return (
+    <TextLink
+      label={label}
+      onPress={() => openCategory(categoryId)}
+      style={style}
+      containerStyle={containerStyle}
+      hint="Открыть категорию"
+    />
+  );
 }

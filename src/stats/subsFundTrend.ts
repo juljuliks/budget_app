@@ -13,13 +13,16 @@ const monthsOf = (period: number) => (period > 0 ? period : period < 0 ? (-perio
 const GONE_PERIODS = 2;
 
 export type SubTrend = {
-  id: number; name: string; merchantKey: string | null;
+  id: number;
+  name: string;
+  merchantKey: string | null;
   /** one charge (the latest's, as spent; else as set) in the screen's currency; null — set in another, no charge yet */
   amount: number | null;
   /** in its own currency, when not the screen's: one charge (the latest's in it; else as set) — "3 $ (7.79 ₾)" */
   own: { amount: number; currency: string } | null;
   /** a month's share and a year's; null — once */
-  perMonth: number | null; perYear: number | null;
+  perMonth: number | null;
+  perYear: number | null;
   /** charged once a year or rarer: "≈ 13 ₾ в месяц" rather than the charge */
   yearly: boolean;
   /** in its own currency (`own`'s, if any): a rate's move isn't «подорожал» */
@@ -37,21 +40,34 @@ export function subsTrend(payments: RecurringPayment[], spends: TrendSpend[], to
     const charges = paymentsOf(mine);
     const foreign = p.currency !== currency;
     // its charges in its own currency (the parts of one operation together; one in a third currency left out)
-    const ownCharges = !foreign ? [] : charges.map((c) => ({
-      day: c.day, value: mine.filter((s) => s.tx === c.tx && s.own?.currency === p.currency).reduce((a, s) => a + s.own!.minor, 0),
-    })).filter((c) => c.value > 0);
+    const ownCharges = !foreign
+      ? []
+      : charges
+          .map((c) => ({
+            day: c.day,
+            value: mine
+              .filter((s) => s.tx === c.tx && s.own?.currency === p.currency)
+              .reduce((a, s) => a + s.own!.minor, 0),
+          }))
+          .filter((c) => c.value > 0);
     const amount = charges[0]?.value ?? (foreign ? null : p.amount_minor);
     const months = monthsOf(p.period);
     const lastDay = charges[0]?.day ?? null;
-    const gone = (p.until !== null && p.until < today)
-      || (months !== null && lastDay !== null && daysBetween(lastDay, today) > months * 30.5 * GONE_PERIODS);
+    const gone =
+      (p.until !== null && p.until < today) ||
+      (months !== null && lastDay !== null && daysBetween(lastDay, today) > months * 30.5 * GONE_PERIODS);
     return {
-      id: p.id, name: p.name, merchantKey: p.merchant_key, amount,
+      id: p.id,
+      name: p.name,
+      merchantKey: p.merchant_key,
+      amount,
       own: foreign ? { amount: ownCharges[0]?.value ?? p.amount_minor, currency: p.currency } : null,
       perMonth: months === null || amount === null ? null : amount / months,
       perYear: months === null || amount === null ? null : (amount / months) * 12,
       yearly: months !== null && months >= 12,
-      change: lastChange(foreign ? ownCharges : charges), lastDay, gone,
+      change: lastChange(foreign ? ownCharges : charges),
+      lastDay,
+      gone,
     };
   });
   // the ones still charging first, the dearest a month first; the gone ones last
@@ -102,7 +118,10 @@ export function fundTrend(fund: Fund, months: FundMonth[], balance: number, spen
   }
   return {
     bars,
-    balance, target: fund.target_minor, left, due: fund.due,
+    balance,
+    target: fund.target_minor,
+    left,
+    due: fund.due,
     contribution: by.get(ym)?.contribution ?? 0,
     monthsLeft: Math.max(0, monthsFromTo(ym, dueYm)),
     pace,
@@ -112,7 +131,9 @@ export function fundTrend(fund: Fund, months: FundMonth[], balance: number, spen
     spentAll: months.reduce((a, m) => a + m.spent, 0),
     /** months since it was made with no contribution (a month without a plan) */
     skipped: months.filter((m) => m.ym < ym && m.contribution === 0).map((m) => m.ym),
-    shortage: short.length ? { total: short.reduce((a, m) => a + m.shortage, 0), ym: short[short.length - 1].ym } : null,
+    shortage: short.length
+      ? { total: short.reduce((a, m) => a + m.shortage, 0), ym: short[short.length - 1].ym }
+      : null,
     merchants: [...merchants.values()].sort((a, b) => b.value - a.value).slice(0, TOP_MERCHANTS),
   };
 }

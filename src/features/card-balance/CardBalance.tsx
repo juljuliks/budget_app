@@ -15,12 +15,18 @@ type Card = { bank: BankId; balance: Balance | null };
 /** "по SMS вчера 12:00", with the operations after it: "≈ по SMS вчера 12:00 + 3 операции после". */
 function noteOf(b: Balance): string {
   const when = `${formatDay(b.asOf).toLowerCase()} ${formatTime(b.asOf)}`;
-  return b.pending ? `≈ по SMS ${when} + ${b.pending} ${plural(b.pending, ['операция', 'операции', 'операций'])} после` : `по SMS ${when}`;
+  return b.pending
+    ? `≈ по SMS ${when} + ${b.pending} ${plural(b.pending, ['операция', 'операции', 'операций'])} после`
+    : `по SMS ${when}`;
 }
 const amountOf = (b: Balance) => `${b.pending ? '≈ ' : ''}${formatMoneyWithCurrency(b.minor, b.currency)}`;
-const explain = (b: Balance) => sheetAlert('Баланс карты', b.pending
-  ? 'Баланс из последнего SMS банка плюс операции после него: в SMS о пополнении баланса нет. Следующее SMS с балансом (например, о покупке) уточнит его.'
-  : 'Баланс, который банк прислал в последнем SMS.');
+const explain = (b: Balance) =>
+  sheetAlert(
+    'Баланс карты',
+    b.pending
+      ? 'Баланс из последнего SMS банка плюс операции после него: в SMS о пополнении баланса нет. Следующее SMS с балансом (например, о покупке) уточнит его.'
+      : 'Баланс, который банк прислал в последнем SMS.',
+  );
 
 /**
  * "Баланс карты 283.14 ₾" as the bank last reported it, plus the operations after that (a deposit has no balance). Several
@@ -46,10 +52,19 @@ export default function CardBalance() {
         {cards.map(({ bank, balance }) => {
           const b = bankById(bank)!;
           return (
-            <TouchableOpacity key={bank} style={styles.line} disabled={!balance} onPress={() => balance && explain(balance)}
-              accessibilityLabel={`${b.name}: ${balance ? `${formatMoneyWithCurrency(balance.minor, balance.currency)}, ${noteOf(balance)}` : 'баланса пока нет'}`}>
-              <View style={[styles.badge, { backgroundColor: b.color }]}><Text style={styles.badgeText}>{b.short}</Text></View>
-              <Text style={[styles.note, styles.lineNote]} numberOfLines={1}>{balance ? noteOf(balance) : 'после SMS с балансом'}</Text>
+            <TouchableOpacity
+              key={bank}
+              style={styles.line}
+              disabled={!balance}
+              onPress={() => balance && explain(balance)}
+              accessibilityLabel={`${b.name}: ${balance ? `${formatMoneyWithCurrency(balance.minor, balance.currency)}, ${noteOf(balance)}` : 'баланса пока нет'}`}
+            >
+              <View style={[styles.badge, { backgroundColor: b.color }]}>
+                <Text style={styles.badgeText}>{b.short}</Text>
+              </View>
+              <Text style={[styles.note, styles.lineNote]} numberOfLines={1}>
+                {balance ? noteOf(balance) : 'после SMS с балансом'}
+              </Text>
               <Text style={[styles.lineAmount, !balance && styles.unknown]}>{balance ? amountOf(balance) : '—'}</Text>
             </TouchableOpacity>
           );
@@ -70,8 +85,11 @@ export default function CardBalance() {
     );
   }
   return (
-    <TouchableOpacity style={styles.box} onPress={() => explain(balance)}
-      accessibilityLabel={`Баланс карты ${formatMoneyWithCurrency(balance.minor, balance.currency)}, ${noteOf(balance)}`}>
+    <TouchableOpacity
+      style={styles.box}
+      onPress={() => explain(balance)}
+      accessibilityLabel={`Баланс карты ${formatMoneyWithCurrency(balance.minor, balance.currency)}, ${noteOf(balance)}`}
+    >
       <View style={styles.text}>
         <Text style={styles.label}>Баланс карты</Text>
         <Text style={styles.note}>{noteOf(balance)}</Text>
@@ -83,8 +101,14 @@ export default function CardBalance() {
 
 const styles = StyleSheet.create({
   box: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: colors.surface, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 8,
   },
   column: { flexDirection: 'column', alignItems: 'stretch' },
   text: { flex: 1, marginRight: 12 },

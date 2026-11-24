@@ -35,5 +35,12 @@ const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: colors.bg },
   scroll: { flex: 1 },
   content: { paddingBottom: 16 },
-  footer: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 16, borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border, backgroundColor: colors.bg },
+  footer: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 16,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    backgroundColor: colors.bg,
+  },
 });

@@ -18,8 +18,16 @@ type Props = {
  * "Авто" for colors and palettes (the category editor, the type dialog): the same look in both places.
  * `selected` (no color chosen yet) turns the dashed border solid.
  */
-export function AutoButton({ onPress, selected, style, accessibilityLabel }: {
-  onPress: () => void; selected?: boolean; style?: StyleProp<ViewStyle>; accessibilityLabel: string;
+export function AutoButton({
+  onPress,
+  selected,
+  style,
+  accessibilityLabel,
+}: {
+  onPress: () => void;
+  selected?: boolean;
+  style?: StyleProp<ViewStyle>;
+  accessibilityLabel: string;
 }) {
   return (
     <TouchableOpacity
@@ -62,7 +70,9 @@ export default function ColorSwatches({ options, value, onChange, onAuto, onCust
 export function PaletteStrip({ shades, size = 14 }: { shades: string[]; size?: number }) {
   return (
     <View style={styles.strip}>
-      {shades.map((c) => <View key={c} style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: c }} />)}
+      {shades.map((c) => (
+        <View key={c} style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: c }} />
+      ))}
     </View>
   );
 }
@@ -76,8 +86,14 @@ const styles = StyleSheet.create({
   // the size of a swatch with its ring
   plus: { margin: 2 },
   auto: {
-    alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10, height: 38,
-    borderRadius: 10, borderWidth: 2, borderColor: colors.border, borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+    height: 38,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
   },
   autoSelected: { borderColor: colors.accent, borderStyle: 'solid' },
   autoText: { fontSize: 14, fontWeight: '600', color: colors.accent },

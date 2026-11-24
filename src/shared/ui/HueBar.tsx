@@ -33,14 +33,19 @@ export default function HueBar({ hue, onChange }: { hue: number | null; onChange
         <Svg width={width} height={HEIGHT} pointerEvents="none">
           <Defs>
             <LinearGradient id="hue" x1="0" y1="0" x2="1" y2="0">
-              {STOPS.map((h) => <Stop key={h} offset={h / 360} stopColor={colorFromHue(h % 360)} />)}
+              {STOPS.map((h) => (
+                <Stop key={h} offset={h / 360} stopColor={colorFromHue(h % 360)} />
+              ))}
             </LinearGradient>
           </Defs>
           <Rect x={0} y={0} width={width} height={HEIGHT} rx={HEIGHT / 2} fill="url(#hue)" />
         </Svg>
       ) : null}
       {hue !== null && width > 0 ? (
-        <View pointerEvents="none" style={[styles.marker, { left: (hue / 359) * width - (HEIGHT + 6) / 2, backgroundColor: colorFromHue(hue) }]} />
+        <View
+          pointerEvents="none"
+          style={[styles.marker, { left: (hue / 359) * width - (HEIGHT + 6) / 2, backgroundColor: colorFromHue(hue) }]}
+        />
       ) : null}
     </View>
   );
@@ -49,7 +54,13 @@ export default function HueBar({ hue, onChange }: { hue: number | null; onChange
 const styles = StyleSheet.create({
   bar: { height: HEIGHT, marginVertical: 6 },
   marker: {
-    position: 'absolute', top: -3, width: HEIGHT + 6, height: HEIGHT + 6, borderRadius: (HEIGHT + 6) / 2,
-    borderWidth: 3, borderColor: colors.bg, elevation: 3,
+    position: 'absolute',
+    top: -3,
+    width: HEIGHT + 6,
+    height: HEIGHT + 6,
+    borderRadius: (HEIGHT + 6) / 2,
+    borderWidth: 3,
+    borderColor: colors.bg,
+    elevation: 3,
   },
 });

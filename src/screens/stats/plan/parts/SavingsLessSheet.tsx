@@ -21,18 +21,42 @@ type Props = {
   onOpen: (categoryId: number) => void;
 };
 
-function Row({ o, money, onOpen, onCover }: { o: Overspent; money: (minor: number) => string; onOpen?: () => void; onCover?: () => void }) {
+function Row({
+  o,
+  money,
+  onOpen,
+  onCover,
+}: {
+  o: Overspent;
+  money: (minor: number) => string;
+  onOpen?: () => void;
+  onCover?: () => void;
+}) {
   const body = (
     <>
       <Text style={styles.emoji}>{o.emoji ?? ''}</Text>
       <View style={styles.text}>
-        <Text style={styles.name} numberOfLines={1}>{o.name}</Text>
-        <Masked style={styles.note}>{`${o.category_id === null ? 'доля' : 'план'} ${money(o.plan)} · потрачено ${money(o.spent)}`}</Masked>
+        <Text style={styles.name} numberOfLines={1}>
+          {o.name}
+        </Text>
+        <Masked
+          style={styles.note}
+        >{`${o.category_id === null ? 'доля' : 'план'} ${money(o.plan)} · потрачено ${money(o.spent)}`}</Masked>
       </View>
       <Masked style={styles.over}>{`−${money(o.over)}`}</Masked>
     </>
   );
-  if (onOpen) return <TouchableOpacity style={styles.row} onPress={onOpen} accessibilityRole="button" accessibilityLabel={`План: ${o.name}`}>{body}</TouchableOpacity>;
+  if (onOpen)
+    return (
+      <TouchableOpacity
+        style={styles.row}
+        onPress={onOpen}
+        accessibilityRole="button"
+        accessibilityLabel={`План: ${o.name}`}
+      >
+        {body}
+      </TouchableOpacity>
+    );
   return (
     <View style={onCover ? undefined : styles.row}>
       <View style={onCover ? styles.rowTop : styles.inner}>{body}</View>
@@ -53,14 +77,20 @@ function Row({ o, money, onOpen, onCover }: { o: Overspent; money: (minor: numbe
  */
 export default function SavingsLessSheet({ ym, currency, less, visible, money, onClose, onOpen }: Props) {
   const [picking, setPicking] = useState(false);
-  useEffect(() => { if (!visible) setPicking(false); }, [visible]);
+  useEffect(() => {
+    if (!visible) setPicking(false);
+  }, [visible]);
   const over = less?.overs.find((o) => o.category_id === null)?.over ?? 0;
   const cover = (r: CoverRoom) => {
     onClose();
     coverWithUndo(ym, r.take, over, currency, { label: r.name, category_id: r.category_id });
   };
   return (
-    <BottomSheet visible={visible && !!less} onClose={onClose} title={!less ? '' : picking ? 'Покрыть из плана' : `Сбережения меньше на ${money(less.less)}`}>
+    <BottomSheet
+      visible={visible && !!less}
+      onClose={onClose}
+      title={!less ? '' : picking ? 'Покрыть из плана' : `Сбережения меньше на ${money(less.less)}`}
+    >
       {less && picking ? (
         <SheetScrollView contentContainerStyle={styles.content}>
           <CoverRooms rooms={less.rooms} over={over} money={money} onPick={cover} />
@@ -69,10 +99,24 @@ export default function SavingsLessSheet({ ym, currency, less, visible, money, o
       ) : less ? (
         <SheetScrollView contentContainerStyle={styles.content}>
           <Text style={styles.lead}>Эти категории потратили больше плана. Если дальше тратить по плану:</Text>
-          {lessLines(less, money).map((l) => <Masked key={l} style={styles.part}>{l}</Masked>)}
+          {lessLines(less, money).map((l) => (
+            <Masked key={l} style={styles.part}>
+              {l}
+            </Masked>
+          ))}
           {less.overs.map((o) => (
             <Row
-              key={o.key} o={o} money={money} onOpen={o.category_id === null ? undefined : () => { onClose(); onOpen(o.category_id!); }}
+              key={o.key}
+              o={o}
+              money={money}
+              onOpen={
+                o.category_id === null
+                  ? undefined
+                  : () => {
+                      onClose();
+                      onOpen(o.category_id!);
+                    }
+              }
               onCover={o.category_id === null && less.rooms.length ? () => setPicking(true) : undefined}
             />
           ))}
@@ -88,10 +132,23 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 20, paddingBottom: 16 },
   lead: { fontSize: 14, color: colors.muted, marginBottom: 6 },
   part: { fontSize: 15, color: colors.text, paddingVertical: 2 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+  },
   inner: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
   rowTop: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingTop: 12 },
-  coverLink: { paddingTop: 4, paddingBottom: 12, paddingLeft: 36, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
+  coverLink: {
+    paddingTop: 4,
+    paddingBottom: 12,
+    paddingLeft: 36,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+  },
   link: { fontSize: 14, color: colors.accent },
   emoji: { fontSize: 20, width: 26 },
   text: { flex: 1 },

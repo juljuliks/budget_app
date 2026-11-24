@@ -5,16 +5,48 @@ import { currentYm } from '../../src/db/plans';
 import type { PlanBudget, PlanItem } from '../../src/db/plans';
 
 const item = (p: Partial<PlanItem>): PlanItem => ({
-  category_id: 1, name: 'Продукты', emoji: '🛒', type_id: 1, type_name: 'Жизнь', limit_minor: 31000, currency: 'GEL',
-  converted_minor: 31000, kind: 'limit', norm_period: 'week', pinned: false, previous_minor: null, until: null, every: null, weekdays: null, unit_minor: null, ...p,
+  category_id: 1,
+  name: 'Продукты',
+  emoji: '🛒',
+  type_id: 1,
+  type_name: 'Жизнь',
+  limit_minor: 31000,
+  currency: 'GEL',
+  converted_minor: 31000,
+  kind: 'limit',
+  norm_period: 'week',
+  pinned: false,
+  previous_minor: null,
+  until: null,
+  every: null,
+  weekdays: null,
+  unit_minor: null,
+  ...p,
 });
-const budget = (p: Partial<PlanBudget>): PlanBudget => ({
-  amount_minor: 100000, currency: 'GEL', unplanned_pct: 0, to_savings: false, locked_minor: 0, unplanned_minor: null, carry: null, ...p,
-} as PlanBudget);
-const view = (items: PlanItem[], b: PlanBudget | null, ym = '2030-01') => planView({
-  ym, currency: 'GEL', items, budget: b, toShown: (m) => m, fromShown: (m) => m, income: 0, unplannedSpentMinor: 0,
-  spentBy: { byCategory: new Map(), total: 0 }, hidden: false,
-});
+const budget = (p: Partial<PlanBudget>): PlanBudget =>
+  ({
+    amount_minor: 100000,
+    currency: 'GEL',
+    unplanned_pct: 0,
+    to_savings: false,
+    locked_minor: 0,
+    unplanned_minor: null,
+    carry: null,
+    ...p,
+  }) as PlanBudget;
+const view = (items: PlanItem[], b: PlanBudget | null, ym = '2030-01') =>
+  planView({
+    ym,
+    currency: 'GEL',
+    items,
+    budget: b,
+    toShown: (m) => m,
+    fromShown: (m) => m,
+    income: 0,
+    unplannedSpentMinor: 0,
+    spentBy: { byCategory: new Map(), total: 0 },
+    hidden: false,
+  });
 
 test('a share of the budget: none for nothing, "<1%" for a sliver', () => {
   expect(percentOf(25000, 100000)).toBe('25%');
@@ -23,45 +55,81 @@ test('a share of the budget: none for nothing, "<1%" for a sliver', () => {
 });
 
 test('the items by type, in their order; totals of the converted amounts', () => {
-  const g = groupByType([item({}), item({ category_id: 2, converted_minor: 5000 }), item({ category_id: 3, type_name: null, converted_minor: null })]);
-  expect(g.map((x) => [x.title, x.planned, x.items.length])).toEqual([['Жизнь', 36000, 2], ['Без раздела', 0, 1]]);
+  const g = groupByType([
+    item({}),
+    item({ category_id: 2, converted_minor: 5000 }),
+    item({ category_id: 3, type_name: null, converted_minor: null }),
+  ]);
+  expect(g.map((x) => [x.title, x.planned, x.items.length])).toEqual([
+    ['Жизнь', 36000, 2],
+    ['Без раздела', 0, 1],
+  ]);
 });
 
 test('in a section, those charged in a later month only go last, the rest in their order', () => {
-  const later = { names: [], saving_names: [], upcoming: { amount_minor: 3000, currency: 'GEL' as const, ym: '2026-11' } } as unknown as PlanItem['subs'];
+  const later = {
+    names: [],
+    saving_names: [],
+    upcoming: { amount_minor: 3000, currency: 'GEL' as const, ym: '2026-11' },
+  } as unknown as PlanItem['subs'];
   const g = groupByType([item({}), item({ category_id: 2, recurring: true, subs: later }), item({ category_id: 3 })]);
   expect(g[0].items.map((x) => x.category_id)).toEqual([1, 3, 2]);
 });
 
 test('the budget\'s split: planned, outside the plan, savings (🔒 and what the plan leaves — "Итоги месяца" decide)', () => {
   const v = view([item({})], budget({ unplanned_pct: 20 } as Partial<PlanBudget>));
-  expect(v.parts.map((p) => [p.label, p.value, p.note])).toEqual([['План', 31000, '31%'], ['Вне плана', 20000, '20%'], ['Сбережения', 49000, '49%']]);
+  expect(v.parts.map((p) => [p.label, p.value, p.note])).toEqual([
+    ['План', 31000, '31%'],
+    ['Вне плана', 20000, '20%'],
+    ['Сбережения', 49000, '49%'],
+  ]);
   const s = view([item({})], budget({ locked_minor: 10000 }));
   expect(s.parts.find((p) => p.key === 'free')).toMatchObject({ label: 'Сбережения', value: 69000, note: '69%' });
-  expect(s.systemGroups.map((g) => [g.title, g.rows.map((r) => r.name)])).toEqual([['Сбережения', ['🔒 Отложено сразу', '💰 Сэкономлено']]]);
+  expect(s.systemGroups.map((g) => [g.title, g.rows.map((r) => r.name)])).toEqual([
+    ['Сбережения', ['🔒 Отложено сразу', '💰 Сэкономлено']],
+  ]);
   expect(s.systemGroups[0].rows[1].note).toBe('не запланировано — решите в итогах месяца');
 });
 
 test('the funds in "Сбережения": their contributions in its column and section, between 🔒 and 🌊; 🌊 none left — no row', () => {
   const fund = item({ category_id: 9, name: 'Отпуск', kind: 'fund', converted_minor: 20000, limit_minor: 20000 });
   const v = view([item({}), fund], budget({ locked_minor: 10000 }));
-  expect(v.parts.map((p) => [p.label, p.value])).toEqual([['План', 31000], ['Вне плана', 0], ['Сбережения', 69000]]);
-  expect(v.systemGroups[0]).toMatchObject({ title: 'Сбережения', funds: [expect.objectContaining({ name: 'Отпуск' })] });
+  expect(v.parts.map((p) => [p.label, p.value])).toEqual([
+    ['План', 31000],
+    ['Вне плана', 0],
+    ['Сбережения', 69000],
+  ]);
+  expect(v.systemGroups[0]).toMatchObject({
+    title: 'Сбережения',
+    funds: [expect.objectContaining({ name: 'Отпуск' })],
+  });
   // the plan takes the rest: no 🌊
   const full = view([item({ converted_minor: 70000 }), fund], budget({ locked_minor: 10000 }));
   expect(full.systemGroups[0].rows.map((r) => r.key)).toEqual(['locked']);
   // no budget: the funds still there
-  expect(view([fund], null).systemGroups).toEqual([expect.objectContaining({ title: 'Сбережения', rows: [], funds: [fund] })]);
+  expect(view([fund], null).systemGroups).toEqual([
+    expect.objectContaining({ title: 'Сбережения', rows: [], funds: [fund] }),
+  ]);
 });
 
 test('what the month before sent: owed — red first, out of what is left; moved in — on top of the budget, a line under it', () => {
   const debt = view([item({})], budget({ carry: { from_ym: '2029-12', debt_minor: 5000, plus_minor: 0 } }));
-  expect(debt.parts.map((p) => [p.label, p.value])).toEqual([['Перерасход декабря', 5000], ['План', 31000], ['Вне плана', 0], ['Сбережения', 64000]]);
-  expect(debt.systemGroups[0]).toMatchObject({ title: 'Перенос из декабря', rows: [{ name: '⚠️ Перерасход декабря', note: 'вычтен из бюджета января', carry: 'debt' }] });
+  expect(debt.parts.map((p) => [p.label, p.value])).toEqual([
+    ['Перерасход декабря', 5000],
+    ['План', 31000],
+    ['Вне плана', 0],
+    ['Сбережения', 64000],
+  ]);
+  expect(debt.systemGroups[0]).toMatchObject({
+    title: 'Перенос из декабря',
+    rows: [{ name: '⚠️ Перерасход декабря', note: 'вычтен из бюджета января', carry: 'debt' }],
+  });
   const plus = view([item({})], budget({ carry: { from_ym: '2029-12', debt_minor: 0, plus_minor: 20000 } }));
   expect(plus).toMatchObject({ shownBudget: 120000, budgetSub: '1\u00a0000\u00a0₾ + 200\u00a0₾ из декабря' });
   expect(plus.parts.map((p) => p.label)).toEqual(['План', 'Вне плана', 'Сбережения']);
-  expect(plus.systemGroups[0].rows).toEqual([expect.objectContaining({ name: '➕ Остаток декабря', value: 20000, carry: 'plus' })]);
+  expect(plus.systemGroups[0].rows).toEqual([
+    expect.objectContaining({ name: '➕ Остаток декабря', value: 20000, carry: 'plus' }),
+  ]);
 });
 
 test('no budget: no split, the hint asks for one', () => {
@@ -71,61 +139,153 @@ test('no budget: no split, the hint asks for one', () => {
 });
 
 test('the overspend takes the savings: 🌊 first, then 🔒; the biggest overspend first; under a unit — nothing', () => {
-  const items = [item({ category_id: 1, converted_minor: 30000 }), item({ category_id: 2, name: 'Такси', converted_minor: 10000 })];
-  const spentBy = (a: number, b: number) => ({ byCategory: new Map([[1, a], [2, b]]), total: a + b });
-  const l = savingsLess({ items, spentBy: spentBy(38050, 13529), unplanned: 5000, unplannedSpent: 4000, free: 25732, locked: 259940, funds: [] })!;
-  expect(l).toMatchObject({ less: 11579, was: 285672, now: 274093, free: { was: 25732, now: 14153 }, locked: { was: 259940, now: 259940 } });
-  expect(l.overs.map((o) => [o.name, o.over])).toEqual([['Продукты', 8050], ['Такси', 3529]]);
+  const items = [
+    item({ category_id: 1, converted_minor: 30000 }),
+    item({ category_id: 2, name: 'Такси', converted_minor: 10000 }),
+  ];
+  const spentBy = (a: number, b: number) => ({
+    byCategory: new Map([
+      [1, a],
+      [2, b],
+    ]),
+    total: a + b,
+  });
+  const l = savingsLess({
+    items,
+    spentBy: spentBy(38050, 13529),
+    unplanned: 5000,
+    unplannedSpent: 4000,
+    free: 25732,
+    locked: 259940,
+    funds: [],
+  })!;
+  expect(l).toMatchObject({
+    less: 11579,
+    was: 285672,
+    now: 274093,
+    free: { was: 25732, now: 14153 },
+    locked: { was: 259940, now: 259940 },
+  });
+  expect(l.overs.map((o) => [o.name, o.over])).toEqual([
+    ['Продукты', 8050],
+    ['Такси', 3529],
+  ]);
   // past the leftover: into 🔒; spending outside the plan past its share, a row of its own
-  const big = savingsLess({ items, spentBy: spentBy(60000, 10000), unplanned: 5000, unplannedSpent: 8000, free: 25000, locked: 100000, funds: [] })!;
+  const big = savingsLess({
+    items,
+    spentBy: spentBy(60000, 10000),
+    unplanned: 5000,
+    unplannedSpent: 8000,
+    free: 25000,
+    locked: 100000,
+    funds: [],
+  })!;
   expect(big).toMatchObject({ less: 33000, free: { now: 0 }, locked: { now: 92000 } });
   expect(big.overs.map((o) => o.key)).toEqual(['1', 'unplanned']);
-  expect(savingsLess({ items, spentBy: spentBy(30050, 0), unplanned: 0, unplannedSpent: 0, free: 1000, locked: 0, funds: [] })).toBeNull();
+  expect(
+    savingsLess({
+      items,
+      spentBy: spentBy(30050, 0),
+      unplanned: 0,
+      unplannedSpent: 0,
+      free: 1000,
+      locked: 0,
+      funds: [],
+    }),
+  ).toBeNull();
 });
 
-test('past 💰 and 🔒: the funds\' contributions, the farthest due first, then the savings from before', () => {
+test("past 💰 and 🔒: the funds' contributions, the farthest due first, then the savings from before", () => {
   const items = [item({ category_id: 1, converted_minor: 30000 })];
   const spent = (v: number) => ({ byCategory: new Map([[1, v]]), total: v });
-  const funds = [{ category_id: 7, value: 5000, due: '2026-12-31' }, { category_id: 8, value: 4000, due: '2027-07-31' }];
-  const l = savingsLess({ items, spentBy: spent(41000), unplanned: 0, unplannedSpent: 0, free: 1000, locked: 3000, funds })!;
+  const funds = [
+    { category_id: 7, value: 5000, due: '2026-12-31' },
+    { category_id: 8, value: 4000, due: '2027-07-31' },
+  ];
+  const l = savingsLess({
+    items,
+    spentBy: spent(41000),
+    unplanned: 0,
+    unplannedSpent: 0,
+    free: 1000,
+    locked: 3000,
+    funds,
+  })!;
   // 11 000 over: 💰 1 000, 🔒 3 000, the farthest fund 4 000, the nearest 3 000
   expect(l).toMatchObject({ less: 11000, now: 0, past: 0, funds: { less: 7000 } });
-  expect([...l.funds.cut]).toEqual([[8, 4000], [7, 3000]]);
-  const all = savingsLess({ items, spentBy: spent(45000), unplanned: 0, unplannedSpent: 0, free: 1000, locked: 3000, funds })!;
+  expect([...l.funds.cut]).toEqual([
+    [8, 4000],
+    [7, 3000],
+  ]);
+  const all = savingsLess({
+    items,
+    spentBy: spent(45000),
+    unplanned: 0,
+    unplannedSpent: 0,
+    free: 1000,
+    locked: 3000,
+    funds,
+  })!;
   expect(all).toMatchObject({ funds: { less: 9000 }, past: 2000 });
 });
 
-test('the overspend took part of 🔒: the row as planned, no mark (the stats tell it); `less` for the stats\' «Сбережения»', () => {
+test("the overspend took part of 🔒: the row as planned, no mark (the stats tell it); `less` for the stats' «Сбережения»", () => {
   // budget 3000 ₾, plan 1000 ₾, locked 500 ₾ → free 1500 ₾; spent 2600 ₾ (1600 ₾ over): 1500 from free, 100 from locked
   const v = planView({
-    ym: currentYm(), currency: 'GEL', items: [item({ converted_minor: 100000 })],
+    ym: currentYm(),
+    currency: 'GEL',
+    items: [item({ converted_minor: 100000 })],
     budget: budget({ amount_minor: 300000, locked_minor: 50000 }),
-    toShown: (m) => m, fromShown: (m) => m, income: 0, unplannedSpentMinor: 0,
-    spentBy: { byCategory: new Map([[1, 260000]]), total: 260000 }, hidden: false,
+    toShown: (m) => m,
+    fromShown: (m) => m,
+    income: 0,
+    unplannedSpentMinor: 0,
+    spentBy: { byCategory: new Map([[1, 260000]]), total: 260000 },
+    hidden: false,
   });
   const row = v.systemGroups.find((g) => g.title === 'Сбережения')!.rows.find((r) => r.key === 'locked')!;
-  expect(row).toEqual({ key: 'locked', name: '🔒 Отложено сразу', tone: 'locked', value: 50000, note: 'заблокировано в начале месяца' });
+  expect(row).toEqual({
+    key: 'locked',
+    name: '🔒 Отложено сразу',
+    tone: 'locked',
+    value: 50000,
+    note: 'заблокировано в начале месяца',
+  });
   expect(v.savingsPlanned).toBe(200000);
   expect(v.less).toMatchObject({ locked: { was: 50000, now: 40000 }, free: { was: 150000, now: 0 } });
 });
 
-test('what the budget sheet\'s parts can\'t take: the plan, the funds, what the month before owes, less what it moved in', () => {
+test("what the budget sheet's parts can't take: the plan, the funds, what the month before owes, less what it moved in", () => {
   const fund = item({ category_id: 3, kind: 'fund', converted_minor: 5000 });
   expect(view([item({}), fund], budget({})).claimed).toBe(36000);
-  expect(view([item({})], budget({ carry: { from_ym: '2029-12', debt_minor: 4000, plus_minor: 0 } })).claimed).toBe(35000);
-  expect(view([item({})], budget({ carry: { from_ym: '2029-12', debt_minor: 0, plus_minor: 10000 } })).claimed).toBe(21000);
+  expect(view([item({})], budget({ carry: { from_ym: '2029-12', debt_minor: 4000, plus_minor: 0 } })).claimed).toBe(
+    35000,
+  );
+  expect(view([item({})], budget({ carry: { from_ym: '2029-12', debt_minor: 0, plus_minor: 10000 } })).claimed).toBe(
+    21000,
+  );
 });
 
-test('the savings in the screen\'s currency, "(N ₾)" before them in the budget\'s one (🔒 as typed), the funds and the section\'s total too', () => {
+test("the savings in the screen's currency, \"(N ₾)\" before them in the budget's one (🔒 as typed), the funds and the section's total too", () => {
   // 1 $ = 2.5 ₾: the budget 1 000 ₾ = 400 $, 🔒 250 ₾ = 100 $, the plan 500 ₾ = 200 $, a fund 40 $ (100 ₾), what is left 60 $ = 150 ₾
   const fund = item({ category_id: 3, kind: 'fund', converted_minor: 4000, limit_minor: 10000, currency: 'GEL' });
   const p = planView({
-    ym: '2030-01', currency: 'USD', items: [item({ converted_minor: 20000 }), fund], budget: budget({ locked_minor: 25000 }),
-    toShown: (m) => Math.round(m / 2.5), fromShown: (m) => Math.round(m * 2.5), income: 0, unplannedSpentMinor: 0,
-    spentBy: { byCategory: new Map(), total: 0 }, hidden: false,
+    ym: '2030-01',
+    currency: 'USD',
+    items: [item({ converted_minor: 20000 }), fund],
+    budget: budget({ locked_minor: 25000 }),
+    toShown: (m) => Math.round(m / 2.5),
+    fromShown: (m) => Math.round(m * 2.5),
+    income: 0,
+    unplannedSpentMinor: 0,
+    spentBy: { byCategory: new Map(), total: 0 },
+    hidden: false,
   });
   const g = p.systemGroups.find((x) => x.title === 'Сбережения')!;
-  expect(g.rows.map((r) => [r.key, r.value, r.inBudget])).toEqual([['locked', 10000, 25000], ['floating', 6000, 15000]]);
+  expect(g.rows.map((r) => [r.key, r.value, r.inBudget])).toEqual([
+    ['locked', 10000, 25000],
+    ['floating', 6000, 15000],
+  ]);
   // the fund's own amount (it's in the budget's currency); the section: all of them
   expect(p.fundInBudget(fund)).toBe(10000);
   expect(g.inBudget).toBe(50000);
@@ -133,17 +293,36 @@ test('the savings in the screen\'s currency, "(N ₾)" before them in the budget
   // the screen in the budget's currency: nothing in brackets
   const same = view([item({})], budget({ locked_minor: 25000 }));
   expect(same.budgetMoney).toBeNull();
-  expect(same.systemGroups[0].rows.every((r) => r.inBudget === undefined) && same.systemGroups[0].inBudget === undefined).toBe(true);
+  expect(
+    same.systemGroups[0].rows.every((r) => r.inBudget === undefined) && same.systemGroups[0].inBudget === undefined,
+  ).toBe(true);
 });
 
 test('what "Подписки" saves up for: in "Сбережения" (as a fund\'s contribution), its row in its section — the charges only', () => {
   const subs = item({
-    category_id: 7, name: 'Подписки', emoji: '📺', type_name: null, kind: 'subs', recurring: true, limit_minor: 4000, converted_minor: 4000,
-    subs: { names: ['Netflix'], saving_names: ['Bitwarden'], saving_minor: 1000, saving_end_minor: 3000, saving_amount_minor: 4500 },
+    category_id: 7,
+    name: 'Подписки',
+    emoji: '📺',
+    type_name: null,
+    kind: 'subs',
+    recurring: true,
+    limit_minor: 4000,
+    converted_minor: 4000,
+    subs: {
+      names: ['Netflix'],
+      saving_names: ['Bitwarden'],
+      saving_minor: 1000,
+      saving_end_minor: 3000,
+      saving_amount_minor: 4500,
+    },
   });
   const v = view([item({}), subs], budget({}));
   // 310 + 30 ₾ planned; 10 ₾ saved up — in the savings with what the plan leaves (1 000 − 340 − 10 = 650)
-  expect(v.parts.map((p) => [p.key, p.value])).toEqual([['planned', 34000], ['unplanned', 0], ['free', 66000]]);
+  expect(v.parts.map((p) => [p.key, p.value])).toEqual([
+    ['planned', 34000],
+    ['unplanned', 0],
+    ['free', 66000],
+  ]);
   expect(v.groups.find((g) => g.title === 'Без раздела')!.items[0].converted_minor).toBe(3000);
   const savings = v.systemGroups.find((g) => g.title === 'Сбережения')!;
   expect(savings.saving!.map((i) => i.category_id)).toEqual([7]);
@@ -154,13 +333,33 @@ test('what "Подписки" saves up for: in "Сбережения" (as a fund
 
 test('the overspend of a category saving up for its payments: its plan and spending without the contribution, as its row', () => {
   const subs = item({
-    category_id: 7, name: 'Подписки', emoji: '📺', kind: 'subs', recurring: true, limit_minor: 4000, converted_minor: 4000,
-    subs: { names: ['Netflix'], saving_names: ['Bitwarden'], saving_minor: 1000, saving_end_minor: 1000, saving_amount_minor: 4500 },
+    category_id: 7,
+    name: 'Подписки',
+    emoji: '📺',
+    kind: 'subs',
+    recurring: true,
+    limit_minor: 4000,
+    converted_minor: 4000,
+    subs: {
+      names: ['Netflix'],
+      saving_names: ['Bitwarden'],
+      saving_minor: 1000,
+      saving_end_minor: 1000,
+      saving_amount_minor: 4500,
+    },
   });
   // the current month: 45 ₾ spent, the contribution (10 ₾) in it — 35 ₾ of charges against 30 ₾ planned
   const v = planView({
-    ym: currentYm(), currency: 'GEL', items: [subs], budget: budget({}), toShown: (m) => m, fromShown: (m) => m, income: 0,
-    unplannedSpentMinor: 0, spentBy: { byCategory: new Map([[7, 4500]]), total: 4500 }, hidden: false,
+    ym: currentYm(),
+    currency: 'GEL',
+    items: [subs],
+    budget: budget({}),
+    toShown: (m) => m,
+    fromShown: (m) => m,
+    income: 0,
+    unplannedSpentMinor: 0,
+    spentBy: { byCategory: new Map([[7, 4500]]), total: 4500 },
+    hidden: false,
   });
   expect(v.less!.overs.map((o) => [o.name, o.plan, o.spent, o.over])).toEqual([['Подписки', 3000, 3500, 500]]);
 });

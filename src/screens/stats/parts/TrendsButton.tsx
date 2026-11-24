@@ -7,7 +7,13 @@ import { TrendsIcon } from '@/shared/ui/icons';
 /** By the eye in the stats header: «Динамика трат». */
 export default function TrendsButton() {
   return (
-    <TouchableOpacity onPress={openTrends} hitSlop={10} style={styles.button} accessibilityRole="button" accessibilityLabel="Динамика трат">
+    <TouchableOpacity
+      onPress={openTrends}
+      hitSlop={10}
+      style={styles.button}
+      accessibilityRole="button"
+      accessibilityLabel="Динамика трат"
+    >
       <TrendsIcon color={colors.accent} />
     </TouchableOpacity>
   );

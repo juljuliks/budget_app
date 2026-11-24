@@ -11,9 +11,10 @@ export function fundLateNotice(label: string, f: FundForecast, hide: boolean): {
   const got = formatWithCurrency(f.fromFree + f.fromLocked, f.currency);
   return {
     title: `${label} не успевает к ${dayTitle(f.due)}`,
-    body: hide || f.status === 'full'
-      ? 'Бюджет расписан: сдвиньте дату или сумму копилки'
-      : `Копилке остаётся ${got} в месяц из ${formatWithCurrency(f.asked, f.currency)} — сдвиньте дату или сумму`,
+    body:
+      hide || f.status === 'full'
+        ? 'Бюджет расписан: сдвиньте дату или сумму копилки'
+        : `Копилке остаётся ${got} в месяц из ${formatWithCurrency(f.asked, f.currency)} — сдвиньте дату или сумму`,
   };
 }
 
@@ -25,4 +26,3 @@ export async function newlyLate(): Promise<Map<number, FundForecast>> {
   await setSetting(KEY, JSON.stringify(late.map((f) => f.category_id)));
   return new Map(late.filter((f) => !was.has(f.category_id)).map((f) => [f.category_id, f]));
 }
-

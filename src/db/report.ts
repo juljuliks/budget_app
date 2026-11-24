@@ -1,6 +1,17 @@
 import { getDb } from './index';
 import { Currency } from './fx';
-import { getPlanBudget, lockedPctSetting, monthIncome, monthRange, monthStats, parseYm, planConverter, unplannedOf, unplannedSpent, ymOf } from './plans';
+import {
+  getPlanBudget,
+  lockedPctSetting,
+  monthIncome,
+  monthRange,
+  monthStats,
+  parseYm,
+  planConverter,
+  unplannedOf,
+  unplannedSpent,
+  ymOf,
+} from './plans';
 import { EXPENSE_KINDS } from './spending';
 import { SavingsPlanFact, savingsPlanFact } from './reportSavings';
 import { MonthImpulse, monthImpulse } from './reportImpulse';
@@ -23,7 +34,14 @@ const DATA_FROM_DAY = 15;
 const TOP_UNPLANNED = 3;
 
 /** type_name: the report's blocks aren't by type, so a category is named with it ("Жизнь: Покупки") */
-export type ReportCategory = { id: number | null; name: string; emoji: string | null; spent: number; limit: number; type_name: string | null };
+export type ReportCategory = {
+  id: number | null;
+  name: string;
+  emoji: string | null;
+  spent: number;
+  limit: number;
+  type_name: string | null;
+};
 
 export type MonthReport = {
   ym: string;
@@ -96,7 +114,11 @@ export type MonthReport = {
 
 /** What a month's report is in: its budget's currency; no budget — `fallback` (the app's). */
 export async function reportCurrency(ym: string, fallback: Currency): Promise<Currency> {
-  const c = (await (await getDb()).get<{ c: string }>('SELECT budget_currency AS c FROM plan_months WHERE ym = ? AND budget_minor IS NOT NULL', [ym]))?.c;
+  const c = (
+    await (
+      await getDb()
+    ).get<{ c: string }>('SELECT budget_currency AS c FROM plan_months WHERE ym = ? AND budget_minor IS NOT NULL', [ym])
+  )?.c;
   return c === 'GEL' || c === 'USD' || c === 'EUR' ? c : fallback;
 }
 
@@ -109,9 +131,16 @@ const previousYm = (ym: string) => {
 };
 
 /** What was put aside in `ym` (budget − spending), in `currency`; null without a budget. */
-async function savedIn(ym: string, currency: Currency): Promise<{ budget: number | null; saved: number | null; stats: Awaited<ReturnType<typeof monthStats>> }> {
+async function savedIn(
+  ym: string,
+  currency: Currency,
+): Promise<{ budget: number | null; saved: number | null; stats: Awaited<ReturnType<typeof monthStats>> }> {
   const { year, month } = parseYm(ym);
-  const [stats, budget, conv] = await Promise.all([monthStats(year, month, currency), getPlanBudget(ym), planConverter(ym)]);
+  const [stats, budget, conv] = await Promise.all([
+    monthStats(year, month, currency),
+    getPlanBudget(ym),
+    planConverter(ym),
+  ]);
   const amount = budget ? conv(budget.amount_minor, budget.currency, currency) : null;
   return { budget: amount, saved: amount === null ? null : amount - stats.spent_minor, stats };
 }
@@ -124,7 +153,9 @@ export async function hasMonthPlan(ym: string): Promise<boolean> {
   const db = await getDb();
   return !!(await db.get(
     `SELECT 1 FROM plan_months WHERE ym = ? AND budget_minor IS NOT NULL
-      UNION ALL SELECT 1 FROM plan_items WHERE ym = ? AND limit_minor > 0 LIMIT 1`, [ym, ym]));
+      UNION ALL SELECT 1 FROM plan_items WHERE ym = ? AND limit_minor > 0 LIMIT 1`,
+    [ym, ym],
+  ));
 }
 
 /** Whether `ym` has operations from its first half on (DATA_FROM_DAY). */
@@ -132,7 +163,12 @@ async function hasDataIn(ym: string): Promise<boolean> {
   const { year, month } = parseYm(ym);
   const [from, to] = monthRange(year, month);
   const db = await getDb();
-  const first = (await db.get<{ at: number | null }>('SELECT min(occurred_at) AS at FROM transactions WHERE occurred_at >= ? AND occurred_at < ?', [from, to]))?.at;
+  const first = (
+    await db.get<{ at: number | null }>(
+      'SELECT min(occurred_at) AS at FROM transactions WHERE occurred_at >= ? AND occurred_at < ?',
+      [from, to],
+    )
+  )?.at;
   return first != null && new Date(first * 1000).getDate() <= DATA_FROM_DAY;
 }
 
@@ -141,7 +177,13 @@ export async function monthReport(ym: string, currency: Currency): Promise<Month
   // before getPlanBudget below, which creates the current month's plan
   const hasPlan = await hasMonthPlan(ym);
   const [{ budget, saved, stats }, previous, planBudget, conv, hasData, previousHasData] = await Promise.all([
-    savedIn(ym, currency), savedIn(prevYm, currency), getPlanBudget(ym), planConverter(ym), hasDataIn(ym), hasDataIn(prevYm)]);
+    savedIn(ym, currency),
+    savedIn(prevYm, currency),
+    getPlanBudget(ym),
+    planConverter(ym),
+    hasDataIn(ym),
+    hasDataIn(prevYm),
+  ]);
   // the year's estimate: the average of this month and the ones before it that have a budget and data
   const months: Array<{ ym: string; saved: number }> = [];
   if (saved !== null && hasData) months.push({ ym, saved });
@@ -151,16 +193,23 @@ export async function monthReport(ym: string, currency: Currency): Promise<Month
     const [t, tData] = await Promise.all([savedIn(third, currency), hasDataIn(third)]);
     if (t.saved !== null && tData) months.push({ ym: third, saved: t.saved });
   }
-  const cat = (c: typeof stats.categories[number]): ReportCategory => ({
-    id: c.category_id, name: c.name, emoji: c.emoji, spent: c.spent_minor, limit: c.limit_minor ?? 0, type_name: c.type_name,
+  const cat = (c: (typeof stats.categories)[number]): ReportCategory => ({
+    id: c.category_id,
+    name: c.name,
+    emoji: c.emoji,
+    spent: c.spent_minor,
+    limit: c.limit_minor ?? 0,
+    type_name: c.type_name,
   });
 
-  const overLimits = stats.categories.filter((c) => c.limit_minor !== null && c.spent_minor > c.limit_minor * (1 + OVER_TOLERANCE))
-    .map(cat).sort((a, b) => (b.spent - b.limit) - (a.spent - a.limit));
+  const overLimits = stats.categories
+    .filter((c) => c.limit_minor !== null && c.spent_minor > c.limit_minor * (1 + OVER_TOLERANCE))
+    .map(cat)
+    .sort((a, b) => b.spent - b.limit - (a.spent - a.limit));
   const overLimitsTotal = overLimits.reduce((a, c) => a + c.spent - c.limit, 0);
 
-  const share = planBudget ? conv(unplannedOf(planBudget), planBudget.currency, currency) ?? 0 : 0;
-  const locked = planBudget ? conv(planBudget.locked_minor, planBudget.currency, currency) ?? 0 : 0;
+  const share = planBudget ? (conv(unplannedOf(planBudget), planBudget.currency, currency) ?? 0) : 0;
+  const locked = planBudget ? (conv(planBudget.locked_minor, planBudget.currency, currency) ?? 0) : 0;
   const outside = unplannedSpent(stats);
   // within 5% of the share: not an overspend either
   const unplannedOver = outside > share * (1 + OVER_TOLERANCE) ? outside - share : 0;
@@ -169,51 +218,90 @@ export async function monthReport(ym: string, currency: Currency): Promise<Month
   const { year, month } = parseYm(ym);
   const [from, to] = monthRange(year, month);
   const db = await getDb();
-  const uncategorizedCount = (await db.get<{ n: number }>(
-    `SELECT count(*) AS n FROM transactions WHERE occurred_at >= ? AND occurred_at < ? AND category_id IS NULL
-      AND kind IN (${sqlList(EXPENSE_KINDS)})`, [from, to]))?.n ?? 0;
+  const uncategorizedCount =
+    (
+      await db.get<{ n: number }>(
+        `SELECT count(*) AS n FROM transactions WHERE occurred_at >= ? AND occurred_at < ? AND category_id IS NULL
+      AND kind IN (${sqlList(EXPENSE_KINDS)})`,
+        [from, to],
+      )
+    )?.n ?? 0;
 
-  const underPlan = stats.categories.filter((c) => c.plan_kind === 'limit' && c.limit_minor !== null && c.spent_minor < c.limit_minor)
-    .map(cat).sort((a, b) => (b.limit - b.spent) - (a.limit - a.spent));
+  const underPlan = stats.categories
+    .filter((c) => c.plan_kind === 'limit' && c.limit_minor !== null && c.spent_minor < c.limit_minor)
+    .map(cat)
+    .sort((a, b) => b.limit - b.spent - (a.limit - a.spent));
 
   const planFact = await savingsPlanFact(ym, currency);
-  const isOver = (c: typeof stats.categories[number]) => c.limit_minor !== null && c.spent_minor > c.limit_minor * (1 + OVER_TOLERANCE);
-  const impulse = await monthImpulse(ym, currency, stats.categories, (c) => (isOver(c) ? c.spent_minor - c.limit_minor! : 0));
+  const isOver = (c: (typeof stats.categories)[number]) =>
+    c.limit_minor !== null && c.spent_minor > c.limit_minor * (1 + OVER_TOLERANCE);
+  const impulse = await monthImpulse(ym, currency, stats.categories, (c) =>
+    isOver(c) ? c.spent_minor - c.limit_minor! : 0,
+  );
   // the funds' contributions: part of what is put aside, not of what the plan left
   const funds = planFact ? planFact.fundsPlanned : stats.funds.reduce((a, f) => a + f.contribution_minor, 0);
 
   return {
-    ym, currency, hasPlan, budget, spent: stats.spent_minor, saved, planned: stats.planned_minor,
-    income: await monthIncome(ym, currency), goalPct: planBudget?.locked_pct ?? await lockedPctSetting(),
+    ym,
+    currency,
+    hasPlan,
+    budget,
+    spent: stats.spent_minor,
+    saved,
+    planned: stats.planned_minor,
+    income: await monthIncome(ym, currency),
+    goalPct: planBudget?.locked_pct ?? (await lockedPctSetting()),
     previousSaved: hasData && previousHasData ? previous.saved : null,
     average: months.length ? { saved: months.reduce((a, m) => a + m.saved, 0) / months.length, months } : null,
     hasData,
-    overLimits, overLimitsTotal,
-    unplannedShare: share, unplannedSpent: outside, unplannedOver,
+    overLimits,
+    overLimitsTotal,
+    unplannedShare: share,
+    unplannedSpent: outside,
+    unplannedOver,
     couldSaveMore: overLimitsTotal + unplannedOver,
     unplannedOfSpending,
-    review: outside > 0 && (unplannedOfSpending > REVIEW_SHARE_OF_SPENDING || (share > 0 && outside > share * (1 + REVIEW_SHARE_EXCEEDED))),
-    topUnplanned: stats.categories.filter((c) => c.limit_minor === null && c.category_id !== null && !c.deleted && c.spent_minor > 0)
-      .slice(0, TOP_UNPLANNED).map(cat),
+    review:
+      outside > 0 &&
+      (unplannedOfSpending > REVIEW_SHARE_OF_SPENDING || (share > 0 && outside > share * (1 + REVIEW_SHARE_EXCEEDED))),
+    topUnplanned: stats.categories
+      .filter((c) => c.limit_minor === null && c.category_id !== null && !c.deleted && c.spent_minor > 0)
+      .slice(0, TOP_UNPLANNED)
+      .map(cat),
     uncategorizedCount,
     savedInPlan: underPlan.reduce((a, c) => a + c.limit - c.spent, 0),
     underPlan,
     // without data for the month a payment may just not be in the app yet
     unpaid: hasData ? stats.categories.filter((c) => c.plan_kind === 'fixed' && c.spent_minor <= 0).map(cat) : [],
     // as its "Итоги месяца" said (not closed yet: as going there)
-    toSavings: (await db.get<{ r: string | null }>('SELECT rest_choice AS r FROM month_closes WHERE ym = ? AND closed_at IS NOT NULL', [ym]))?.r !== 'keep',
+    toSavings:
+      (
+        await db.get<{ r: string | null }>(
+          'SELECT rest_choice AS r FROM month_closes WHERE ym = ? AND closed_at IS NOT NULL',
+          [ym],
+        )
+      )?.r !== 'keep',
     locked,
     lockedTouched: budget === null || locked <= 0 ? 0 : Math.max(0, stats.spent_minor - (budget - locked)),
-    savedFrom: budget === null ? null : {
-      locked,
-      undistributed: budget - stats.planned_minor - share - locked - funds,
-      plan: stats.categories.filter((c) => c.limit_minor !== null).reduce((a, c) => a + c.limit_minor! - c.spent_minor, 0),
-      unplanned: share - outside,
-      funds,
-    },
+    savedFrom:
+      budget === null
+        ? null
+        : {
+            locked,
+            undistributed: budget - stats.planned_minor - share - locked - funds,
+            plan: stats.categories
+              .filter((c) => c.limit_minor !== null)
+              .reduce((a, c) => a + c.limit_minor! - c.spent_minor, 0),
+            unplanned: share - outside,
+            funds,
+          },
     planFact,
     impulse,
-    savedIn: !planBudget || planBudget.currency === currency ? null
-      : ((rate) => (rate === null ? null : { currency: planBudget.currency, rate: rate / 1000000 }))(conv(1000000, currency, planBudget.currency)),
+    savedIn:
+      !planBudget || planBudget.currency === currency
+        ? null
+        : ((rate) => (rate === null ? null : { currency: planBudget.currency, rate: rate / 1000000 }))(
+            conv(1000000, currency, planBudget.currency),
+          ),
   };
 }

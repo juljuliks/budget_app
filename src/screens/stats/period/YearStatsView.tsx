@@ -2,7 +2,16 @@ import React, { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import type { Currency } from '@/db/fx';
 import { yearCurrency } from '@/db/yearReport';
-import { CurrencyChoice, ImpulseBlock, useReportCurrency, useYearReport, YearBars, YearNumbers, YearSavings, YearTable } from '@/features/month-report';
+import {
+  CurrencyChoice,
+  ImpulseBlock,
+  useReportCurrency,
+  useYearReport,
+  YearBars,
+  YearNumbers,
+  YearSavings,
+  YearTable,
+} from '@/features/month-report';
 import { DayRange, dayKeyOf } from '@/shared/lib/dateRange';
 import { formatWithCurrency } from '@/shared/lib/money';
 import { navigateWhenReady, openMonthReportPage, useOpenCategoryTransactions } from '@/shared/navigation/navigation';
@@ -43,24 +52,71 @@ export default function YearStatsView({ range }: { range: DayRange }) {
   const openTransactions = useOpenCategoryTransactions();
   const hidden = useHideAmounts();
   const { stats } = data;
-  const segments = useMemo(() => (stats?.groups ?? []).flatMap((g) => g.categories)
-    .map((c) => ({ key: String(c.category_id), value: c.spent_minor, color: c.color })), [stats]);
-  if (!r || !stats || !cur.shown) return <Loading failed={failed || data.failed} onRetry={() => { load(); data.load(); }} />;
+  const segments = useMemo(
+    () =>
+      (stats?.groups ?? [])
+        .flatMap((g) => g.categories)
+        .map((c) => ({ key: String(c.category_id), value: c.spent_minor, color: c.color })),
+    [stats],
+  );
+  if (!r || !stats || !cur.shown)
+    return (
+      <Loading
+        failed={failed || data.failed}
+        onRetry={() => {
+          load();
+          data.load();
+        }}
+      />
+    );
   const v = periodView({ ...data, stats, range, today: dayKeyOf(new Date()) });
   const money = (m: number) => formatWithCurrency(Math.round(m), r.currency);
   const picked = selected === null ? undefined : stats.categories.find((c) => String(c.category_id) === selected);
   // the year's purchases with no answer to "Обдуманная" / "Импульсивная", on the operations page
-  const markImpulse = () => navigateWhenReady({ name: 'Main', params: { screen: 'Transactions', params: {
-    unanswered: true, range: { from: `${year}-01-01`, to: `${year}-12-31` }, nonce: Date.now(), from: 'Stats' } } } as never);
+  const markImpulse = () =>
+    navigateWhenReady({
+      name: 'Main',
+      params: {
+        screen: 'Transactions',
+        params: {
+          unanswered: true,
+          range: { from: `${year}-01-01`, to: `${year}-12-31` },
+          nonce: Date.now(),
+          from: 'Stats',
+        },
+      },
+    } as never);
   return (
     <StickyScrollView style={styles.screen} contentContainerStyle={[styles.content, own.content]} testID="year-stats">
-      {cur.budget ? <CurrencyChoice budget={cur.budget} system={cur.system} value={cur.shown} onChange={cur.pick} style={own.choice} /> : null}
+      {cur.budget ? (
+        <CurrencyChoice
+          budget={cur.budget}
+          system={cur.system}
+          value={cur.shown}
+          onChange={cur.pick}
+          style={own.choice}
+        />
+      ) : null}
       {r.count ? <YearNumbers r={r} page /> : null}
-      {r.count ? <View><YearBars r={r} onMonth={openMonthReportPage} page table={<YearTable r={r} onMonth={openMonthReportPage} page />} /></View> : null}
+      {r.count ? (
+        <View>
+          <YearBars
+            r={r}
+            onMonth={openMonthReportPage}
+            page
+            table={<YearTable r={r} onMonth={openMonthReportPage} page />}
+          />
+        </View>
+      ) : null}
       {r.savings || r.fundsNow.length ? <YearSavings r={r} page /> : null}
       {r.impulse ? <ImpulseBlock m={{ ...r.impulse, categories: [] }} money={money} onMark={markImpulse} page /> : null}
       {yearSpending({
-        v, r, segments, picked, selected, onSelect: setSelected,
+        v,
+        r,
+        segments,
+        picked,
+        selected,
+        onSelect: setSelected,
         h: { hidden, openInfo: setInfo, openTransactions: (id) => openTransactions(id, range) },
         onRefunds: () => openTransactions(null, range, ['refund']),
       })}

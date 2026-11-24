@@ -29,12 +29,17 @@ export default function RangeCalendar({ value, onChange, single, maxDay, minDay 
   // waiting for the second tap of a range
   const [anchor, setAnchor] = useState<DayKey | null>(null);
   // dates cleared ("Сбросить даты"): the next tap starts a new range, not the end of the one begun before
-  useEffect(() => { if (value === null) setAnchor(null); }, [value]);
+  useEffect(() => {
+    if (value === null) setAnchor(null);
+  }, [value]);
 
   const weeks = useMemo(() => monthWeeks(month), [month]);
 
   function tap(day: DayKey) {
-    if (single) { onChange({ from: day, to: day }); return; }
+    if (single) {
+      onChange({ from: day, to: day });
+      return;
+    }
     if (anchor === null) {
       setAnchor(day);
       onChange({ from: day, to: day });
@@ -55,8 +60,23 @@ export default function RangeCalendar({ value, onChange, single, maxDay, minDay 
             const isEdge = value !== null && (day === value.from || day === value.to);
             const off = (maxDay !== undefined && day > maxDay) || (minDay !== undefined && day < minDay);
             return (
-              <TouchableOpacity key={day} testID={`day-${day}`} style={[gridStyles.cell, inRange && styles.inRange, isEdge && styles.edge]} onPress={() => tap(day)} disabled={off}>
-                <Text style={[gridStyles.day, day === today && gridStyles.today, isEdge && styles.edgeText, off && gridStyles.off]}>{Number(day.slice(8))}</Text>
+              <TouchableOpacity
+                key={day}
+                testID={`day-${day}`}
+                style={[gridStyles.cell, inRange && styles.inRange, isEdge && styles.edge]}
+                onPress={() => tap(day)}
+                disabled={off}
+              >
+                <Text
+                  style={[
+                    gridStyles.day,
+                    day === today && gridStyles.today,
+                    isEdge && styles.edgeText,
+                    off && gridStyles.off,
+                  ]}
+                >
+                  {Number(day.slice(8))}
+                </Text>
               </TouchableOpacity>
             );
           })}

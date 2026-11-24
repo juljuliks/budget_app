@@ -18,7 +18,13 @@ function monthName(ym: string): string {
  * Over a plan amount's field, what helps to pick it: the room in the budget, what the month spent so far (this month and
  * the ones before; the plan's list has none of that), the last plan, the usual spending.
  */
-export default function PlanFacts({ free, spent, previous, average, shown }: {
+export default function PlanFacts({
+  free,
+  spent,
+  previous,
+  average,
+  shown,
+}: {
   free: Money | null;
   /** the month's spending so far, in `shown`; null — a coming month */
   spent: { minor: number; ym: string } | null;
@@ -30,8 +36,16 @@ export default function PlanFacts({ free, spent, previous, average, shown }: {
   const facts: Array<{ label: string; value: string }> = [];
   // the month's budget minus the other categories' plans: not about what is spent
   if (free) facts.push({ label: 'Можно запланировать', value: `до ${formatWithCurrency(free.minor, free.currency)}` });
-  if (spent) facts.push({ label: `Потрачено в ${MONTHS_PREP[Number(spent.ym.slice(5)) - 1]}`, value: formatWithCurrency(spent.minor, shown) });
-  if (previous) facts.push({ label: `В плане на ${monthName(previous.ym)}`, value: formatWithCurrency(previous.minor, previous.currency) });
+  if (spent)
+    facts.push({
+      label: `Потрачено в ${MONTHS_PREP[Number(spent.ym.slice(5)) - 1]}`,
+      value: formatWithCurrency(spent.minor, shown),
+    });
+  if (previous)
+    facts.push({
+      label: `В плане на ${monthName(previous.ym)}`,
+      value: formatWithCurrency(previous.minor, previous.currency),
+    });
   if (average) {
     facts.push({
       label: `В среднем в месяц (${average.months} ${plural(average.months, ['полный месяц', 'полных месяца', 'полных месяцев'])})`,

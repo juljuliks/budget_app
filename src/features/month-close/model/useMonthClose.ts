@@ -1,7 +1,16 @@
 // "Итоги месяца" of `ym`: its steps, sums and answers, loaded when opened and again after each answer (an answer
 // changes the sums: the overspend's cover changes what 🔒 keeps, the leftover moved isn't asked about).
 import { useCallback, useEffect, useState } from 'react';
-import { answerClose, answerClosePayment, CloseAnswers, finishClose, MonthClose, monthClose, PaymentChoice, setSplit } from '@/db/plans';
+import {
+  answerClose,
+  answerClosePayment,
+  CloseAnswers,
+  finishClose,
+  MonthClose,
+  monthClose,
+  PaymentChoice,
+  setSplit,
+} from '@/db/plans';
 import { emitTransactionsChanged, onTransactionsChanged } from '@/domain/events';
 import { SAVE_FAILED } from '@/shared/lib/strings';
 import { useLatestRequest } from '@/shared/lib/useLatestRequest';
@@ -18,19 +27,24 @@ export function useMonthClose(ym: string | null) {
     started();
     monthClose(ym).then(keep(setClose)).catch(keep(fail));
   }, [ym, latest, started, fail]);
-  useEffect(() => { setClose(null); load(); }, [load]);
+  useEffect(() => {
+    setClose(null);
+    load();
+  }, [load]);
   useEffect(() => (ym ? onTransactionsChanged(load) : undefined), [ym, load]);
 
   // an answer changes the plan's months too (the funds, the carry): every screen counts again
   const saved = () => emitTransactionsChanged();
   /** "Изменить распределение": the funds' parts by hand */
-  const split = (parts: Array<{ category_id: number; minor: number }>): Promise<void> => (ym
-    ? setSplit(ym, parts).then(saved).catch(toastFailure('set split', SAVE_FAILED)) : Promise.resolve());
-  const answer = (patch: Partial<CloseAnswers>): Promise<void> => (ym
-    ? answerClose(ym, patch).then(saved).catch(toastFailure('answer close', SAVE_FAILED)) : Promise.resolve());
+  const split = (parts: Array<{ category_id: number; minor: number }>): Promise<void> =>
+    ym ? setSplit(ym, parts).then(saved).catch(toastFailure('set split', SAVE_FAILED)) : Promise.resolve();
+  const answer = (patch: Partial<CloseAnswers>): Promise<void> =>
+    ym ? answerClose(ym, patch).then(saved).catch(toastFailure('answer close', SAVE_FAILED)) : Promise.resolve();
   /** «Перенести на …» / «Не нужен» of a payment not paid */
-  const pay = (categoryId: number, choice: PaymentChoice): Promise<void> => (ym
-    ? answerClosePayment(ym, categoryId, choice).then(saved).catch(toastFailure('answer close payment', SAVE_FAILED)) : Promise.resolve());
+  const pay = (categoryId: number, choice: PaymentChoice): Promise<void> =>
+    ym
+      ? answerClosePayment(ym, categoryId, choice).then(saved).catch(toastFailure('answer close payment', SAVE_FAILED))
+      : Promise.resolve();
   /** closes the month; true — closed (every question answered) */
   const finish = async (): Promise<boolean> => {
     if (!ym) return false;

@@ -8,7 +8,11 @@ import { savePayment } from '../../src/db/recurring';
 import { getDb } from '../../src/db';
 
 const id = async (name: string) => (await findCategoryByName(name, null))!.id;
-const after = (label: string, n: number) => { const t = texts(); const i = t.lastIndexOf(label); return t.slice(i + 1, i + 1 + n); };
+const after = (label: string, n: number) => {
+  const t = texts();
+  const i = t.lastIndexOf(label);
+  return t.slice(i + 1, i + 1 + n);
+};
 
 async function openTrendOf(name: string) {
   await openMenu('Категории');
@@ -40,9 +44,18 @@ test('5.8.8 subscriptions: one in $ — its own amount, lari in brackets; a mont
     await planned();
     const subs = await id('Подписки');
     await buy('ICLOUD', 3, on(5, 12, 1), subs, { currency: 'USD' });
-    await (await getDb()).run("INSERT OR REPLACE INTO fx_rates (date, currency, gel_per_unit) VALUES ('2026-09-05', 'USD', 2.5)");
+    await (
+      await getDb()
+    ).run("INSERT OR REPLACE INTO fx_rates (date, currency, gel_per_unit) VALUES ('2026-09-05', 'USD', 2.5)");
     await buy('NETFLIX.COM', 30, on(3, 12, 10), subs);
-    await savePayment({ merchant_key: 'ICLOUD', name: 'iCloud', amount_minor: 300, currency: 'USD', period: 1, due: '2026-11-05' });
+    await savePayment({
+      merchant_key: 'ICLOUD',
+      name: 'iCloud',
+      amount_minor: 300,
+      currency: 'USD',
+      period: 1,
+      due: '2026-11-05',
+    });
   });
   await openTrendOf('📺 Подписки');
   expect(await screen.findByText('3 $ (7.50 ₾)')).toBeTruthy();
@@ -56,7 +69,12 @@ test('5.8.8 subscriptions: one in $ — its own amount, lari in brackets; a mont
 test('5.8.8 a fund: how much of its target by when, the pace, its card', async () => {
   await openApp(async () => {
     await planned();
-    await setFund('2026-10', await id('Развлечения'), { target_minor: 60000, currency: 'GEL', due: '2027-01-31', start_minor: 30000 });
+    await setFund('2026-10', await id('Развлечения'), {
+      target_minor: 60000,
+      currency: 'GEL',
+      due: '2027-01-31',
+      start_minor: 30000,
+    });
   });
   await openTrendOf('🎮 Развлечения');
   expect(await screen.findByText('Вверх — отложено, вниз — потрачено из копилки')).toBeTruthy();

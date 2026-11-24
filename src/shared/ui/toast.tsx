@@ -32,10 +32,14 @@ function hide() {
 }
 
 /** What an action did, at the top of the screen: "Категория «☕ Кафе» создана"; with a button ("Отменить") if given. */
-export function toast(message: string, action?: ToastAction) { show(message, false, action); }
+export function toast(message: string, action?: ToastAction) {
+  show(message, false, action);
+}
 
 /** A problem, at the top of the screen in red: a form's rule on submit ("Введите сумму") or a failed save. */
-export function toastError(message: string) { show(message, true); }
+export function toastError(message: string) {
+  show(message, true);
+}
 
 /** A `.catch` for what the user did (a switch, a sheet's data, a page of the list): logged, and said in a red toast. */
 export const toastFailure = (what: string, message: string) => (e: unknown) => {
@@ -80,7 +84,9 @@ export function ToastHost({ inset = 0 }: { inset?: number }) {
       setShown(t);
       Animated.timing(anim, { toValue: 1, duration: 180, useNativeDriver: true }).start();
     } else {
-      Animated.timing(anim, { toValue: 0, duration: 180, useNativeDriver: true }).start(({ finished }) => { if (finished) setShown(null); });
+      Animated.timing(anim, { toValue: 0, duration: 180, useNativeDriver: true }).start(({ finished }) => {
+        if (finished) setShown(null);
+      });
     }
   }, [t?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -88,14 +94,32 @@ export function ToastHost({ inset = 0 }: { inset?: number }) {
   return (
     <Animated.View
       pointerEvents={shown.action ? 'box-none' : 'none'}
-      style={[styles.wrap, { top: inset + 8, opacity: anim, transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}
+      style={[
+        styles.wrap,
+        {
+          top: inset + 8,
+          opacity: anim,
+          transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }],
+        },
+      ]}
     >
-      <Animated.View style={[styles.toast, shown.error && styles.error, shown.action && styles.withAction]} accessibilityLiveRegion="polite">
+      <Animated.View
+        style={[styles.toast, shown.error && styles.error, shown.action && styles.withAction]}
+        accessibilityLiveRegion="polite"
+      >
         <Text style={[styles.text, shown.error && styles.errorText, shown.action && styles.textWithAction]}>
           {shown.error ? `⚠️  ${shown.message}` : shown.message}
         </Text>
         {shown.action ? (
-          <TouchableOpacity onPress={() => { const a = shown.action!; hide(); a.onPress(); }} hitSlop={8} accessibilityRole="button">
+          <TouchableOpacity
+            onPress={() => {
+              const a = shown.action!;
+              hide();
+              a.onPress();
+            }}
+            hitSlop={8}
+            accessibilityRole="button"
+          >
             <Text style={styles.action}>{shown.action.label}</Text>
           </TouchableOpacity>
         ) : null}
@@ -115,7 +139,12 @@ function TimeLeft({ toast: t }: { toast: Toast }) {
   // the bar slides out to the left (a transform: on the native driver, as the toast's own fade)
   const [width, setWidth] = useState(0);
   useEffect(() => {
-    const run = Animated.timing(part, { toValue: 0, duration: left * t.duration, easing: (x) => x, useNativeDriver: true });
+    const run = Animated.timing(part, {
+      toValue: 0,
+      duration: left * t.duration,
+      easing: (x) => x,
+      useNativeDriver: true,
+    });
     run.start();
     return () => run.stop();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -127,7 +156,12 @@ function TimeLeft({ toast: t }: { toast: Toast }) {
       importantForAccessibility="no-hide-descendants"
       testID="toast-time-left"
     >
-      <Animated.View style={[styles.timeLeftBar, { transform: [{ translateX: part.interpolate({ inputRange: [0, 1], outputRange: [-width, 0] }) }] }]} />
+      <Animated.View
+        style={[
+          styles.timeLeftBar,
+          { transform: [{ translateX: part.interpolate({ inputRange: [0, 1], outputRange: [-width, 0] }) }] },
+        ]}
+      />
     </View>
   );
 }
@@ -138,13 +172,28 @@ export const SHEET_INSET = StatusBar.currentHeight ?? 24;
 const styles = StyleSheet.create({
   wrap: { position: 'absolute', left: 16, right: 16, alignItems: 'center', zIndex: 1000, elevation: 1000 },
   toast: {
-    backgroundColor: '#1F2937', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12, maxWidth: '100%',
-    shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 6,
+    backgroundColor: '#1F2937',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    maxWidth: '100%',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 6,
   },
   error: { backgroundColor: '#FEF2F2', borderWidth: 2, borderColor: colors.danger },
   text: { color: '#FFFFFF', fontSize: 15, textAlign: 'center' },
   // the whole width: the text on the left, the button at the right edge
-  withAction: { flexDirection: 'row', alignItems: 'center', alignSelf: 'stretch', gap: 16, overflow: 'hidden', paddingBottom: 15 },
+  withAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    gap: 16,
+    overflow: 'hidden',
+    paddingBottom: 15,
+  },
   timeLeft: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 3, overflow: 'hidden' },
   timeLeftBar: { flex: 1, backgroundColor: '#93C5FD' },
   textWithAction: { flex: 1, textAlign: 'left' },

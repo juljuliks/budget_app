@@ -10,7 +10,10 @@ import { monthBars, Trend, trendOf, USUAL_MONTHS } from '@/stats/trends';
 export type Bar = {
   /** the day ('YYYY-MM-DD') or month ('YYYY-MM') it is */
   key: string;
-  label: string; value: number | null; usual?: number; tone: 'now' | 'base' | 'other';
+  label: string;
+  value: number | null;
+  usual?: number;
+  tone: 'now' | 'base' | 'other';
 };
 
 export type TrendRow = { category: TrendCategory; label: string; trend: Trend; bars: Bar[] };
@@ -22,7 +25,10 @@ export const LESS_COUNT = 2;
 /** Each category's spending, by its id. */
 export function spendsByCategory(spends: TrendSpend[]): Map<number, TrendSpend[]> {
   const by = new Map<number, TrendSpend[]>();
-  for (const s of spends) { if (!by.has(s.category)) by.set(s.category, []); by.get(s.category)!.push(s); }
+  for (const s of spends) {
+    if (!by.has(s.category)) by.set(s.category, []);
+    by.get(s.category)!.push(s);
+  }
   return by;
 }
 
@@ -44,7 +50,11 @@ export function barsOf(spends: TrendSpend[], today: DayKey): Bar[] {
  * The compared categories that moved off their usual: the most up first, the most down first; `max` of each (all of
  * them: Infinity) — MORE_COUNT / LESS_COUNT.
  */
-export function trendLists(data: TrendsData, today: DayKey, max?: number): { more: TrendRow[]; less: TrendRow[]; early: boolean } {
+export function trendLists(
+  data: TrendsData,
+  today: DayKey,
+  max?: number,
+): { more: TrendRow[]; less: TrendRow[]; early: boolean } {
   const by = spendsByCategory(data.spends);
   const rows: TrendRow[] = [];
   let early = true;
@@ -57,8 +67,14 @@ export function trendLists(data: TrendsData, today: DayKey, max?: number): { mor
     rows.push({ category: c, label: categoryLabel(c), trend, bars: barsOf(spends, today) });
   }
   return {
-    more: rows.filter((r) => r.trend.delta > 0).sort((a, b) => b.trend.delta - a.trend.delta).slice(0, max ?? MORE_COUNT),
-    less: rows.filter((r) => r.trend.delta < 0).sort((a, b) => a.trend.delta - b.trend.delta).slice(0, max ?? LESS_COUNT),
+    more: rows
+      .filter((r) => r.trend.delta > 0)
+      .sort((a, b) => b.trend.delta - a.trend.delta)
+      .slice(0, max ?? MORE_COUNT),
+    less: rows
+      .filter((r) => r.trend.delta < 0)
+      .sort((a, b) => a.trend.delta - b.trend.delta)
+      .slice(0, max ?? LESS_COUNT),
     early: data.categories.some((c) => c.compared) && early,
   };
 }

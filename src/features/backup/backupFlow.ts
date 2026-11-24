@@ -9,7 +9,19 @@ import { CANCEL } from '@/shared/lib/strings';
 import { choosePassword, makeCopy, openCopy } from './password';
 import { dateKey as today, run } from './run';
 import { pickCloudCopy } from './cloud';
-import { CSV_SAVED, FAILED, FROM_CLOUD, FROM_FILE, NOT_SUITABLE, PROBLEMS, RESTORE, RESTORE_FROM, RESTORE_INFO, RESTORE_QUESTION, SAVED } from './texts';
+import {
+  CSV_SAVED,
+  FAILED,
+  FROM_CLOUD,
+  FROM_FILE,
+  NOT_SUITABLE,
+  PROBLEMS,
+  RESTORE,
+  RESTORE_FROM,
+  RESTORE_INFO,
+  RESTORE_QUESTION,
+  SAVED,
+} from './texts';
 
 /** The copy written before "save as" offers it, and the picked file being checked: both in the app's files dir. */
 const COPY = 'backup-copy.db';
@@ -35,8 +47,18 @@ async function saveBackup() {
 export function restoreBackup(): Promise<void> {
   return new Promise((resolve) => {
     sheetAlert(RESTORE_FROM, undefined, [
-      { text: FROM_FILE, onPress: () => { restoreFrom(() => pickFile(PICKED)).then(resolve, resolve); } },
-      { text: FROM_CLOUD, onPress: () => { restoreFrom(() => pickCloudCopy(PICKED)).then(resolve, resolve); } },
+      {
+        text: FROM_FILE,
+        onPress: () => {
+          restoreFrom(() => pickFile(PICKED)).then(resolve, resolve);
+        },
+      },
+      {
+        text: FROM_CLOUD,
+        onPress: () => {
+          restoreFrom(() => pickCloudCopy(PICKED)).then(resolve, resolve);
+        },
+      },
       { text: CANCEL, style: 'cancel', onPress: () => resolve() },
     ]);
   });
@@ -67,8 +89,21 @@ async function restoreGot(get: () => Promise<boolean>) {
     return;
   }
   sheetAlert(RESTORE_QUESTION, RESTORE_INFO, [
-    { text: RESTORE, style: 'destructive', onPress: run('restore', async () => { await closeDb(); await replaceDatabase(file); }) },
-    { text: CANCEL, style: 'cancel', onPress: () => { deleteFile(file).catch(() => undefined); } },
+    {
+      text: RESTORE,
+      style: 'destructive',
+      onPress: run('restore', async () => {
+        await closeDb();
+        await replaceDatabase(file);
+      }),
+    },
+    {
+      text: CANCEL,
+      style: 'cancel',
+      onPress: () => {
+        deleteFile(file).catch(() => undefined);
+      },
+    },
   ]);
 }
 

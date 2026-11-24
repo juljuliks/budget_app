@@ -8,6 +8,14 @@ export const CURRENCY_ORDER: Currency[] = ['USD', 'GEL', 'EUR'];
 const OPTIONS = CURRENCY_ORDER.map((c) => [c, `${CURRENCY_SYMBOLS[c]} ${c}`] as const);
 
 /** GEL / USD / EUR switch: the currency of an amount being entered, or the one stats are shown in. */
-export default function CurrencyPicker({ value, onChange, style }: { value: Currency; onChange: (c: Currency) => void; style?: StyleProp<ViewStyle> }) {
+export default function CurrencyPicker({
+  value,
+  onChange,
+  style,
+}: {
+  value: Currency;
+  onChange: (c: Currency) => void;
+  style?: StyleProp<ViewStyle>;
+}) {
   return <Segmented options={OPTIONS} value={value} onChange={onChange} style={style} />;
 }

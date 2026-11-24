@@ -1,7 +1,6 @@
 // The SQL every operations query starts from: the columns, the join with the category, the newest first.
 import { periodSql } from '../recurring/period';
 
-
 export const CATEGORY_COLUMNS = 'c.name AS category_name, c.emoji AS category_emoji, ct.name AS category_type_name';
 
 /**

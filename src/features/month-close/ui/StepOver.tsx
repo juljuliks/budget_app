@@ -14,7 +14,9 @@ export function coverNote(b: NonNullable<MonthClose['budget']>, money: (minor: n
     b.cover.locked > 0 ? `🔒 ${money(b.locked_minor)} → ${money(b.locked_minor - b.cover.locked)}` : '',
     b.cover.funds > 0 ? `копилки −${money(b.cover.funds)}` : '',
     b.cover.past > 0 ? `прошлые сбережения −${money(b.cover.past)}` : '',
-  ].filter(Boolean).join(' · ');
+  ]
+    .filter(Boolean)
+    .join(' · ');
 }
 
 /**
@@ -35,14 +37,32 @@ export default function StepOver({ c, onAnswer }: Props) {
   const options: Array<{ value: OverCover; title: string; note: string }> = [
     {
       value: 'savings',
-      title: partial ? `Из сбережений ${m.gen} — ${money(b.locked_minor)} из ${money(b.over_minor)}` : `Из сбережений ${m.gen}`,
+      title: partial
+        ? `Из сбережений ${m.gen} — ${money(b.locked_minor)} из ${money(b.over_minor)}`
+        : `Из сбережений ${m.gen}`,
       note: partial ? `🔒 ${money(b.locked_minor)} → 0: больше сбережений в ${m.prep} нет` : coverNote(b, money),
     },
-    ...(carry ? [{ value: 'next' as const, title: `Из бюджета ${next.gen}${partial ? ` — все ${money(b.over_minor)}` : ''}`, note: `вычтем из бюджета ${next.gen} — красным в плане` }] : []),
+    ...(carry
+      ? [
+          {
+            value: 'next' as const,
+            title: `Из бюджета ${next.gen}${partial ? ` — все ${money(b.over_minor)}` : ''}`,
+            note: `вычтем из бюджета ${next.gen} — красным в плане`,
+          },
+        ]
+      : []),
     covered,
   ];
   const rest: Array<{ value: OverRestCover; title: string; note: string }> = [
-    ...(carry ? [{ value: 'next' as const, title: `Из бюджета ${next.gen}`, note: `вычтем из бюджета ${next.gen} — красным в плане` }] : []),
+    ...(carry
+      ? [
+          {
+            value: 'next' as const,
+            title: `Из бюджета ${next.gen}`,
+            note: `вычтем из бюджета ${next.gen} — красным в плане`,
+          },
+        ]
+      : []),
     { ...covered, note: 'только в «Истории»' },
   ];
   const spentFor = b.amount_minor - b.locked_minor;
@@ -53,7 +73,8 @@ export default function StepOver({ c, onAnswer }: Props) {
         <Text style={[styles.headText, styles.headOver]}>{money(b.over_minor)}</Text>
       </View>
       <Text style={styles.muted}>
-        {b.locked_minor > 0 ? `Потрачено ${money(b.spent_minor)}, а на траты было ${money(spentFor)} — бюджет без «🔒 Отложено сразу»`
+        {b.locked_minor > 0
+          ? `Потрачено ${money(b.spent_minor)}, а на траты было ${money(spentFor)} — бюджет без «🔒 Отложено сразу»`
           : `Потрачено ${money(b.spent_minor)} при бюджете ${money(b.amount_minor)}`}
       </Text>
       <Text style={styles.question}>Чем покрыть?</Text>

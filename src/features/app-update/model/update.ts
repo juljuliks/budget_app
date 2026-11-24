@@ -2,7 +2,16 @@
 // state for the whole app: the toast on start and the row in the settings show the same download.
 import { fetchLatestRelease, isNewer, parseVersion, type Release } from '@/update/releases';
 import { appVersion } from '@/native/appInfo';
-import { canInstallApps, canSelfUpdate, downloadApk, installApk, markUpdateOffered, notifiedVersion, openedForUpdate, openInstallSettings } from '@/native/appUpdate';
+import {
+  canInstallApps,
+  canSelfUpdate,
+  downloadApk,
+  installApk,
+  markUpdateOffered,
+  notifiedVersion,
+  openedForUpdate,
+  openInstallSettings,
+} from '@/native/appUpdate';
 import { getSetting, setSetting } from '@/db/settings';
 import { CANCEL } from '@/shared/lib/strings';
 import { sheetAlert } from '@/shared/ui/sheetAlert';
@@ -30,7 +39,9 @@ const listeners = new Set<() => void>();
 export const updateState = () => state;
 export function onUpdateState(l: () => void) {
   listeners.add(l);
-  return () => { listeners.delete(l); };
+  return () => {
+    listeners.delete(l);
+  };
 }
 function set(patch: Partial<UpdateState>) {
   state = { ...state, ...patch };
@@ -59,7 +70,9 @@ let offering: Promise<void> | null = null;
  * notification said isn't toasted, one the toast said isn't notified.
  */
 export function offerUpdate(): Promise<void> {
-  offering ??= offer().finally(() => { offering = null; });
+  offering ??= offer().finally(() => {
+    offering = null;
+  });
   return offering;
 }
 
@@ -75,10 +88,20 @@ async function offer(): Promise<void> {
       return;
     }
     const release = await checkForUpdate();
-    if (!release || (await getSetting(OFFERED_KEY)) === release.version || (await notifiedVersion()) === release.version) return;
+    if (
+      !release ||
+      (await getSetting(OFFERED_KEY)) === release.version ||
+      (await notifiedVersion()) === release.version
+    )
+      return;
     await setSetting(OFFERED_KEY, release.version);
     markUpdateOffered(release.version);
-    toast(updateAvailable(release.version), { label: UPDATE, onPress: () => { startUpdate(); } });
+    toast(updateAvailable(release.version), {
+      label: UPDATE,
+      onPress: () => {
+        startUpdate();
+      },
+    });
   } catch (e) {
     // no network: the settings show the version without «последняя»
     console.warn('update check failed', e);
@@ -90,7 +113,10 @@ export async function startUpdate(): Promise<void> {
   const release = state.latest;
   if (!release || state.progress != null) return;
   if (!(await canInstallApps())) {
-    sheetAlert(ALLOW_TITLE, ALLOW_TEXT, [{ text: OPEN_SETTINGS, onPress: openInstallSettings }, { text: CANCEL, style: 'cancel' }]);
+    sheetAlert(ALLOW_TITLE, ALLOW_TEXT, [
+      { text: OPEN_SETTINGS, onPress: openInstallSettings },
+      { text: CANCEL, style: 'cancel' },
+    ]);
     return;
   }
   set({ progress: -1 });

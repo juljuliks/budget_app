@@ -1,5 +1,13 @@
 // «В плане» saved: the category's kind (a limit or a one-off payment; a regular payment and a fund are saved by their setup).
-import { CategoryPlanKind, categorySchedule, currentYm, getPlanItemBasics, lastPlanItem, setCategoryPlanKind, setPlanAmount } from '@/db/plans';
+import {
+  CategoryPlanKind,
+  categorySchedule,
+  currentYm,
+  getPlanItemBasics,
+  lastPlanItem,
+  setCategoryPlanKind,
+  setPlanAmount,
+} from '@/db/plans';
 import { getCategory } from '@/db/categories';
 import { categoryPayment } from '@/db/recurring';
 import { emitTransactionsChanged } from '@/domain/events';
@@ -52,7 +60,11 @@ export async function leaveRegular(categoryId: number, recurring: boolean): Prom
 export async function keepLastAmount(categoryId: number): Promise<boolean> {
   const ym = currentYm();
   const [c, item, schedule, own] = await Promise.all([
-    getCategory(categoryId), getPlanItemBasics(ym, categoryId), categorySchedule(categoryId), categoryPayment(categoryId)]);
+    getCategory(categoryId),
+    getPlanItemBasics(ym, categoryId),
+    categorySchedule(categoryId),
+    categoryPayment(categoryId),
+  ]);
   if (!c || c.plan_kind === 'fund') return true;
   if (c.plan_kind === 'oneoff' || c.plan_kind === null) return false;
   if (c.plan_kind === 'regular' && schedule) return schedule.unit_minor > 0;
@@ -61,7 +73,14 @@ export async function keepLastAmount(categoryId: number): Promise<boolean> {
   const last = await lastPlanItem(ym, categoryId);
   if (!last) return false;
   try {
-    await setPlanAmount(ym, categoryId, last.limit_minor, item?.kind ?? (c.plan_kind === 'limit' ? 'limit' : 'fixed'), last.currency, last.norm_period);
+    await setPlanAmount(
+      ym,
+      categoryId,
+      last.limit_minor,
+      item?.kind ?? (c.plan_kind === 'limit' ? 'limit' : 'fixed'),
+      last.currency,
+      last.norm_period,
+    );
   } catch (e) {
     console.error('keep last amount failed', e);
     return false;

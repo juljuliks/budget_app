@@ -21,14 +21,31 @@ export const StatsIcon = ({ color, size = 24 }: P) => (
 
 /** A star (after Lucide "star", ISC license). Filled — the merchant's primary category. */
 export const StarIcon = ({ color, size = 16, filled = false }: P & { filled?: boolean }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill={filled ? color : 'none'} stroke={color} strokeWidth={2} strokeLinejoin="round">
+  <Svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill={filled ? color : 'none'}
+    stroke={color}
+    strokeWidth={2}
+    strokeLinejoin="round"
+  >
     <Path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z" />
   </Svg>
 );
 
 /** Pushpin (shape after Lucide "pin", ISC license). Filled when pinned. */
 export const PinIcon = ({ color, size = 20, filled = false }: P & { filled?: boolean }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round">
+  <Svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke={color}
+    strokeWidth={2}
+    strokeLinejoin="round"
+    strokeLinecap="round"
+  >
     <Path d="M12 17v5" />
     <Path
       d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"
@@ -39,21 +56,48 @@ export const PinIcon = ({ color, size = 20, filled = false }: P & { filled?: boo
 
 // Shapes after Lucide (ISC license): settings, pencil, trash-2
 export const GearIcon = ({ color, size = 20 }: P) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke={color}
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
     <Circle cx={12} cy={12} r={3} />
   </Svg>
 );
 
 export const PencilIcon = ({ color, size = 20 }: P) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke={color}
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z" />
     <Path d="m15 5 4 4" />
   </Svg>
 );
 
 export const TrashIcon = ({ color, size = 20 }: P) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke={color}
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2M10 11v6M14 11v6" />
   </Svg>
 );
@@ -74,7 +118,16 @@ export const MinusCircleIcon = ({ color, size = 20 }: P) => (
 );
 
 export const ChevronRightIcon = ({ color, size = 18 }: P) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke={color}
+    strokeWidth={2.4}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M9 5l7 7-7 7" />
   </Svg>
 );
@@ -88,14 +141,32 @@ export const InfoIcon = ({ color, size = 18 }: P) => (
 );
 
 export const ChevronDownIcon = ({ color, size = 18 }: P) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke={color}
+    strokeWidth={2.4}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M6 9l6 6 6-6" />
   </Svg>
 );
 
 /** "Show amounts" (after Lucide "eye", ISC license). */
 export const EyeIcon = ({ color, size = 22 }: P) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke={color}
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0" />
     <Circle cx={12} cy={12} r={3} />
   </Svg>
@@ -103,7 +174,16 @@ export const EyeIcon = ({ color, size = 22 }: P) => (
 
 /** "Hide amounts" (after Lucide "eye-off", ISC license). */
 export const EyeOffIcon = ({ color, size = 22 }: P) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke={color}
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c4.29 0 7.84 2.62 9.94 6.65a1 1 0 0 1 0 .7 10.74 10.74 0 0 1-1.44 2.49" />
     <Path d="M14.08 14.16a3 3 0 0 1-4.24-4.24" />
     <Path d="M17.48 17.5a10.75 10.75 0 0 1-15.42-5.15 1 1 0 0 1 0-.7 10.75 10.75 0 0 1 4.45-5.14" />
@@ -113,7 +193,16 @@ export const EyeOffIcon = ({ color, size = 22 }: P) => (
 
 /** Locked for savings (after Lucide "lock", ISC license). */
 export const LockIcon = ({ color, size = 14 }: P) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke={color}
+    strokeWidth={2.4}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M5 11h14v10H5z" />
     <Path d="M8 11V7a4 4 0 0 1 8 0v4" />
   </Svg>
@@ -137,7 +226,16 @@ export const FingerprintIcon = ({ color, size = 30 }: P) => (
 
 /** The PIN keypad's "erase" (after Lucide "delete", ISC license). */
 export const BackspaceIcon = ({ color, size = 26 }: P) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke={color}
+    strokeWidth={1.8}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M10 5h11v14H10l-7-7z" />
     <Path d="m18 9-6 6M12 9l6 6" />
   </Svg>
@@ -152,7 +250,16 @@ export const CloseIcon = ({ color, size = 22 }: P) => (
 
 /** An operation split between categories (after Lucide "split", ISC license). */
 export const SplitIcon = ({ color, size = 16 }: P) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke={color}
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M16 3h5v5M8 3H3v5" />
     <Path d="M12 22v-8.3a4 4 0 0 0-1.172-2.872L3 3M15 9l6-6" />
   </Svg>
@@ -160,14 +267,32 @@ export const SplitIcon = ({ color, size = 16 }: P) => (
 
 /** Charged again and again: a repeating payment (after Lucide "repeat", ISC license). */
 export const RepeatIcon = ({ color, size = 20 }: P) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke={color}
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="m17 2 4 4-4 4M3 11v-1a4 4 0 0 1 4-4h14M7 22l-4-4 4-4M21 13v1a4 4 0 0 1-4 4H3" />
   </Svg>
 );
 
 /** A plan item with a limit: bars under a thin ceiling line. */
 export const LimitIcon = ({ color, size = 22 }: P) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke={color}
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M3 5h18" strokeWidth={1.25} />
     <Path d="M6 20v-6M10 20v-9M14 20v-4M18 20v-7" />
   </Svg>
@@ -175,7 +300,16 @@ export const LimitIcon = ({ color, size = 22 }: P) => (
 
 /** A one-off payment in the plan: a price tag (after Lucide "tag", ISC license). */
 export const OneOffIcon = ({ color, size = 22 }: P) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke={color}
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M3 12V4h8l10 10-8 8z" />
     <Circle cx={7.5} cy={8} r={1.3} />
   </Svg>
@@ -183,7 +317,16 @@ export const OneOffIcon = ({ color, size = 22 }: P) => (
 
 /** «Динамика трат»: bars on a base line (by the eye in the stats, on a category's page). */
 export const TrendsIcon = ({ color, size = 22 }: P) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke={color}
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     {/* a line going up with its arrow: how the spending goes */}
     <Path d="M3 17l6-6 4 4 8-8" />
     <Path d="M15 7h6v6" />
@@ -191,7 +334,16 @@ export const TrendsIcon = ({ color, size = 22 }: P) => (
 );
 
 export const ListIcon = ({ color, size = 22 }: P) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke={color}
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01" />
   </Svg>
 );
@@ -213,7 +365,16 @@ export const MoreIcon = ({ color, size = 22 }: P) => (
 
 /** Four tiles — the categories. */
 export const GridIcon = ({ color, size = 22 }: P) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke={color}
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M5 3.5h4a1.5 1.5 0 0 1 1.5 1.5v4A1.5 1.5 0 0 1 9 10.5H5A1.5 1.5 0 0 1 3.5 9V5A1.5 1.5 0 0 1 5 3.5z" />
     <Path d="M15 3.5h4a1.5 1.5 0 0 1 1.5 1.5v4a1.5 1.5 0 0 1-1.5 1.5h-4A1.5 1.5 0 0 1 13.5 9V5A1.5 1.5 0 0 1 15 3.5z" />
     <Path d="M5 13.5h4a1.5 1.5 0 0 1 1.5 1.5v4A1.5 1.5 0 0 1 9 20.5H5A1.5 1.5 0 0 1 3.5 19v-4A1.5 1.5 0 0 1 5 13.5z" />
@@ -223,7 +384,16 @@ export const GridIcon = ({ color, size = 22 }: P) => (
 
 /** A shop front — the merchants. */
 export const StoreIcon = ({ color, size = 22 }: P) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke={color}
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M3.5 9.5L5 4h14l1.5 5.5" />
     <Path d="M3.5 9.5a2.8 2.8 0 0 0 5.6 0 2.9 2.9 0 0 0 5.8 0 2.8 2.8 0 0 0 5.6 0" />
     <Path d="M5 12v8h14v-8M10 20v-5h4v5" />

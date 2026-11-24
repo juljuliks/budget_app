@@ -9,7 +9,10 @@ export async function getSetting(key: string, db?: Db): Promise<string | null> {
 
 export async function setSetting(key: string, value: string | null, db?: Db) {
   db ??= await getDb();
-  await db.run('INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value', [key, value]);
+  await db.run(
+    'INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
+    [key, value],
+  );
 }
 
 /**

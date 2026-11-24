@@ -23,30 +23,53 @@ type Props = {
   /** the plan's slices of that cut */
   items: Slice[];
   /** the budget (else the whole plan) and its word, «бюджета» / «плана» */
-  base: number; word: string;
+  base: number;
+  word: string;
   currency: Currency;
   /** the pencil by the budget: its sheet (this one closed first) */
   onBudget: () => void;
 };
 
-export default function DistributionSheet({ visible, onClose, cut, onCut, items, base, word, currency, onBudget }: Props) {
+export default function DistributionSheet({
+  visible,
+  onClose,
+  cut,
+  onCut,
+  items,
+  base,
+  word,
+  currency,
+  onBudget,
+}: Props) {
   const free = items.find((s) => s.key === 'free');
   return (
     <BottomSheet visible={visible} onClose={onClose} title="Распределение бюджета">
       <View style={styles.splitBody}>
-      <TouchableOpacity style={styles.splitBudget} onPress={() => { onClose(); onBudget(); }} hitSlop={6} accessibilityRole="button">
-        <Text style={styles.rowStatus}>{word === 'бюджета' ? 'Бюджет месяца' : 'План месяца'} · </Text>
-        <Masked style={styles.rowStatus}>{formatWithCurrency(Math.round(base), currency)}</Masked>
-        <PencilIcon color={colors.accent} size={14} />
-      </TouchableOpacity>
-      <Segmented options={CUTS} value={cut} onChange={onCut} style={styles.splitCuts} />
-      <SheetScrollView>
-        {items.filter((s) => s.key !== 'free').map((s) => <Row key={s.key} s={s} base={base} currency={currency} />)}
-        <View style={styles.splitFree}>
-          <Text style={styles.rowName}>Свободно</Text>
-          <Masked style={styles.leftBig}>{formatWithCurrency(Math.round(free?.value ?? 0), currency)}</Masked>
-        </View>
-      </SheetScrollView>
+        <TouchableOpacity
+          style={styles.splitBudget}
+          onPress={() => {
+            onClose();
+            onBudget();
+          }}
+          hitSlop={6}
+          accessibilityRole="button"
+        >
+          <Text style={styles.rowStatus}>{word === 'бюджета' ? 'Бюджет месяца' : 'План месяца'} · </Text>
+          <Masked style={styles.rowStatus}>{formatWithCurrency(Math.round(base), currency)}</Masked>
+          <PencilIcon color={colors.accent} size={14} />
+        </TouchableOpacity>
+        <Segmented options={CUTS} value={cut} onChange={onCut} style={styles.splitCuts} />
+        <SheetScrollView>
+          {items
+            .filter((s) => s.key !== 'free')
+            .map((s) => (
+              <Row key={s.key} s={s} base={base} currency={currency} />
+            ))}
+          <View style={styles.splitFree}>
+            <Text style={styles.rowName}>Свободно</Text>
+            <Masked style={styles.leftBig}>{formatWithCurrency(Math.round(free?.value ?? 0), currency)}</Masked>
+          </View>
+        </SheetScrollView>
       </View>
     </BottomSheet>
   );
@@ -60,15 +83,20 @@ function Row({ s, base, currency }: { s: Slice; base: number; currency: Currency
     <View style={styles.row}>
       <View style={styles.rowTop}>
         <View style={[styles.dot, { backgroundColor: s.color ?? colors.faint }]} />
-        <Text style={styles.rowName} numberOfLines={1}>{`${s.emoji || ''} ${s.title}`.trim()}<Text style={styles.rowStatusMuted}>{` · ${formatPercent(s.value, base)}`}</Text></Text>
+        <Text style={styles.rowName} numberOfLines={1}>
+          {`${s.emoji || ''} ${s.title}`.trim()}
+          <Text style={styles.rowStatusMuted}>{` · ${formatPercent(s.value, base)}`}</Text>
+        </Text>
         <MaskedTotal style={styles.rowAmount} hiddenText={formatPercent(spent, plan)}>
           <Text style={s.key === SAVINGS_ID ? undefined : overStyle(spent, plan)}>{formatShort(spent)}</Text>
           <Text style={styles.rowLimit}>{` / ${formatWithCurrency(plan, currency)}`}</Text>
         </MaskedTotal>
       </View>
-      {spent > plan && s.key !== SAVINGS_ID
-        ? <Meter ratio={1} over={plan / spent} height={8} color={s.color ?? colors.faint} />
-        : <Meter ratio={plan ? spent / plan : 0} height={8} color={s.color ?? colors.faint} />}
+      {spent > plan && s.key !== SAVINGS_ID ? (
+        <Meter ratio={1} over={plan / spent} height={8} color={s.color ?? colors.faint} />
+      ) : (
+        <Meter ratio={plan ? spent / plan : 0} height={8} color={s.color ?? colors.faint} />
+      )}
     </View>
   );
 }

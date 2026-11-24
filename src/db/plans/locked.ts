@@ -20,7 +20,14 @@ export const lockedByPct = (budget: number, pct: number) => Math.round((budget *
 
 /** What the month's funds took from 🔒 this month, in the budget's currency. */
 export async function fundsTaken(ym: string, db: Db): Promise<number> {
-  return (await db.get<{ t: number | null }>("SELECT sum(taken_minor) AS t FROM plan_items WHERE ym = ? AND kind = 'fund'", [ym]))?.t ?? 0;
+  return (
+    (
+      await db.get<{ t: number | null }>(
+        "SELECT sum(taken_minor) AS t FROM plan_items WHERE ym = ? AND kind = 'fund'",
+        [ym],
+      )
+    )?.t ?? 0
+  );
 }
 
 /**
@@ -30,9 +37,11 @@ export async function fundsTaken(ym: string, db: Db): Promise<number> {
 export async function relockMonth(ym: string, db?: Db): Promise<number | null> {
   db ??= await getDb();
   const m = await db.get<{ budget: number | null; pct: number | null; taken: number }>(
-    'SELECT budget_minor AS budget, locked_pct AS pct, locked_taken_minor AS taken FROM plan_months WHERE ym = ?', [ym]);
+    'SELECT budget_minor AS budget, locked_pct AS pct, locked_taken_minor AS taken FROM plan_months WHERE ym = ?',
+    [ym],
+  );
   if (!m || m.budget === null || m.pct === null) return null;
-  const locked = Math.max(0, lockedByPct(m.budget, m.pct) - m.taken - await fundsTaken(ym, db));
+  const locked = Math.max(0, lockedByPct(m.budget, m.pct) - m.taken - (await fundsTaken(ym, db)));
   await db.run('UPDATE plan_months SET locked_minor = ? WHERE ym = ?', [locked, ym]);
   return locked;
 }

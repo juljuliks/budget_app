@@ -11,9 +11,10 @@ import { colors } from '@/shared/theme/theme';
 import { BankInfo, useBanksInfo } from './model/useBanksInfo';
 
 const parseOf = (i: BankInfo) => (i.bank.builtIn ? 'встроенный' : `шаблоны сообщений · ${i.templates}`);
-const balanceOf = (i: BankInfo) => (i.balance
-  ? `${i.balance.pending ? '≈ ' : ''}${formatMoneyWithCurrency(i.balance.minor, i.balance.currency)} · ${formatDay(i.balance.asOf).toLowerCase()} ${formatTime(i.balance.asOf)}`
-  : '—');
+const balanceOf = (i: BankInfo) =>
+  i.balance
+    ? `${i.balance.pending ? '≈ ' : ''}${formatMoneyWithCurrency(i.balance.minor, i.balance.currency)} · ${formatDay(i.balance.asOf).toLowerCase()} ${formatTime(i.balance.asOf)}`
+    : '—';
 
 /** Настройки → «Банки»: whose SMS and pushes are read, each bank on or off, how it is read, its card's balance. */
 export default function BanksScreen() {
@@ -24,37 +25,63 @@ export default function BanksScreen() {
   const toggle = (i: BankInfo, on: boolean) => {
     setInfo((list) => list && list.map((x) => (x.bank.id === i.bank.id ? { ...x, on } : x)));
     toggleBank(i.bank.id, on)
-      .then((ids) => { if (!on && ids.includes(i.bank.id)) { toast('Хотя бы один банк должен читаться'); load(); } })
-      .catch((e) => { load(); toastFailure('toggle bank', SAVE_FAILED)(e); });
+      .then((ids) => {
+        if (!on && ids.includes(i.bank.id)) {
+          toast('Хотя бы один банк должен читаться');
+          load();
+        }
+      })
+      .catch((e) => {
+        load();
+        toastFailure('toggle bank', SAVE_FAILED)(e);
+      });
   };
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.hint}>Откуда читаются операции: SMS от отправителя банка и уведомления его приложения. Остальные SMS приложение не видит.</Text>
+      <Text style={styles.hint}>
+        Откуда читаются операции: SMS от отправителя банка и уведомления его приложения. Остальные SMS приложение не
+        видит.
+      </Text>
       {info.map((i) => (
         <View key={i.bank.id} style={styles.card}>
           <View style={styles.head}>
-            <View style={[styles.badge, { backgroundColor: i.bank.color }]}><Text style={styles.badgeText}>{i.bank.short}</Text></View>
+            <View style={[styles.badge, { backgroundColor: i.bank.color }]}>
+              <Text style={styles.badgeText}>{i.bank.short}</Text>
+            </View>
             <Text style={styles.name}>{i.bank.name}</Text>
-            <Switch value={i.on} onValueChange={(on) => toggle(i, on)} trackColor={{ true: colors.accent, false: colors.border }}
-              thumbColor="#FFFFFF" accessibilityLabel={`Читать ${i.bank.name}`} />
+            <Switch
+              value={i.on}
+              onValueChange={(on) => toggle(i, on)}
+              trackColor={{ true: colors.accent, false: colors.border }}
+              thumbColor="#FFFFFF"
+              accessibilityLabel={`Читать ${i.bank.name}`}
+            />
           </View>
           <View style={styles.grid}>
-            <Text style={styles.key}>SMS от</Text><Text style={styles.value}>{i.bank.smsLabel}</Text>
-            <Text style={styles.key}>Уведомления</Text><Text style={styles.value}>приложение {i.bank.name}</Text>
-            <Text style={styles.key}>Разбор</Text><Text style={styles.value}>{parseOf(i)}</Text>
-            <Text style={styles.key}>Баланс карты</Text><Text style={styles.value}>{balanceOf(i)}</Text>
+            <Text style={styles.key}>SMS от</Text>
+            <Text style={styles.value}>{i.bank.smsLabel}</Text>
+            <Text style={styles.key}>Уведомления</Text>
+            <Text style={styles.value}>приложение {i.bank.name}</Text>
+            <Text style={styles.key}>Разбор</Text>
+            <Text style={styles.value}>{parseOf(i)}</Text>
+            <Text style={styles.key}>Баланс карты</Text>
+            <Text style={styles.value}>{balanceOf(i)}</Text>
           </View>
           {i.on && i.unparsed > 0 ? (
             <TouchableOpacity style={styles.unparsed} onPress={() => navigation.navigate('Unparsed')}>
               <Text style={styles.unparsedText}>
-                {i.unparsed} {plural(i.unparsed, ['сообщение', 'сообщения', 'сообщений'])} в «Не распознано» — отметьте одно, и такие начнут читаться
+                {i.unparsed} {plural(i.unparsed, ['сообщение', 'сообщения', 'сообщений'])} в «Не распознано» — отметьте
+                одно, и такие начнут читаться
               </Text>
             </TouchableOpacity>
           ) : null}
         </View>
       ))}
-      <Text style={styles.hint}>Выключенный банк не читается; его операции остаются. Переводы между своими картами — категория «🔁 Между своими картами»: не трата и не доход.</Text>
+      <Text style={styles.hint}>
+        Выключенный банк не читается; его операции остаются. Переводы между своими картами — категория «🔁 Между своими
+        картами»: не трата и не доход.
+      </Text>
     </ScrollView>
   );
 }

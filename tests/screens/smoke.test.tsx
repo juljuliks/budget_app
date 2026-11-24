@@ -10,7 +10,8 @@ test('9.5 the menu ⋮ in both tabs: Категории, Мерчанты, На�
   for (const tab of ['Операции', 'Статистика']) {
     if (tab === 'Статистика') await tap('Статистика');
     await tap('Меню');
-    for (const t of ['разделы, эмодзи, вид в плане', 'какая категория у какого магазина', 'бюджет, банки, приложение']) expect(screen.getByText(t)).toBeTruthy();
+    for (const t of ['разделы, эмодзи, вид в плане', 'какая категория у какого магазина', 'бюджет, банки, приложение'])
+      expect(screen.getByText(t)).toBeTruthy();
     await tap('Категории');
     expect(await screen.findByLabelText('Новая категория')).toBeTruthy();
     back();

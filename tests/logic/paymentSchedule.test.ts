@@ -1,5 +1,14 @@
 import {
-  addMonths, chargeBefore, chargesBetween, isDone, monthCharges, nextCharge, offeredDue, ONCE, savingFor, WEEKLY,
+  addMonths,
+  chargeBefore,
+  chargesBetween,
+  isDone,
+  monthCharges,
+  nextCharge,
+  offeredDue,
+  ONCE,
+  savingFor,
+  WEEKLY,
 } from '../../src/db/recurring/schedule';
 
 describe('subscription schedule', () => {
@@ -12,7 +21,12 @@ describe('subscription schedule', () => {
   });
 
   test('the charges between two days, back and forth from the set day', () => {
-    expect(chargesBetween('2026-11-18', 1, '2026-10-01', '2027-01-31')).toEqual(['2026-10-18', '2026-11-18', '2026-12-18', '2027-01-18']);
+    expect(chargesBetween('2026-11-18', 1, '2026-10-01', '2027-01-31')).toEqual([
+      '2026-10-18',
+      '2026-11-18',
+      '2026-12-18',
+      '2027-01-18',
+    ]);
     expect(chargesBetween('2027-03-12', 12, '2026-01-01', '2027-12-31')).toEqual(['2026-03-12', '2027-03-12']);
     expect(chargesBetween('2026-10-29', 3, '2026-11-01', '2026-12-31')).toEqual([]);
   });
@@ -36,8 +50,12 @@ describe('subscription schedule', () => {
 
   test("the month's charges: the done one before the set day counts, the plan's month from when it was made", () => {
     // made in October from the operation of 18 Oct, next set to 18 Nov
-    expect(monthCharges('2026-11-18', 1, '2026-10', ['2026-10-18'], '2026-10-01')).toEqual([{ day: '2026-10-18', done: true }]);
-    expect(monthCharges('2026-11-18', 1, '2026-11', ['2026-10-18'], '2026-10-01')).toEqual([{ day: '2026-11-18', done: false }]);
+    expect(monthCharges('2026-11-18', 1, '2026-10', ['2026-10-18'], '2026-10-01')).toEqual([
+      { day: '2026-10-18', done: true },
+    ]);
+    expect(monthCharges('2026-11-18', 1, '2026-11', ['2026-10-18'], '2026-10-01')).toEqual([
+      { day: '2026-11-18', done: false },
+    ]);
     // made in October with no operation: October has nothing
     expect(monthCharges('2026-11-18', 1, '2026-10', [], '2026-10-01')).toEqual([]);
     // a year one: only its month
@@ -53,8 +71,19 @@ describe('subscription schedule', () => {
   });
 
   test('every week: 4 or 5 charges a month, the window ± 3 days (one operation is one charge)', () => {
-    expect(chargesBetween('2026-10-06', WEEKLY, '2026-10-01', '2026-10-31')).toEqual(['2026-10-06', '2026-10-13', '2026-10-20', '2026-10-27']);
-    expect(chargesBetween('2026-10-06', WEEKLY, '2026-12-01', '2026-12-31')).toEqual(['2026-12-01', '2026-12-08', '2026-12-15', '2026-12-22', '2026-12-29']);
+    expect(chargesBetween('2026-10-06', WEEKLY, '2026-10-01', '2026-10-31')).toEqual([
+      '2026-10-06',
+      '2026-10-13',
+      '2026-10-20',
+      '2026-10-27',
+    ]);
+    expect(chargesBetween('2026-10-06', WEEKLY, '2026-12-01', '2026-12-31')).toEqual([
+      '2026-12-01',
+      '2026-12-08',
+      '2026-12-15',
+      '2026-12-22',
+      '2026-12-29',
+    ]);
     expect(chargesBetween('2026-10-06', -2, '2026-10-01', '2026-10-31')).toEqual(['2026-10-06', '2026-10-20']);
     expect(isDone('2026-10-13', ['2026-10-16'], WEEKLY)).toBe(true);
     expect(isDone('2026-10-13', ['2026-10-17'], WEEKLY)).toBe(false);
@@ -64,7 +93,9 @@ describe('subscription schedule', () => {
     expect(offeredDue('2026-10-06', WEEKLY, '2026-10-15')).toBe('2026-10-20');
     expect(chargeBefore('2026-10-20', WEEKLY)).toBe('2026-10-13');
     expect(monthCharges('2026-10-20', WEEKLY, '2026-10', ['2026-10-13'], '2026-10-01')).toEqual([
-      { day: '2026-10-13', done: true }, { day: '2026-10-20', done: false }, { day: '2026-10-27', done: false },
+      { day: '2026-10-13', done: true },
+      { day: '2026-10-20', done: false },
+      { day: '2026-10-27', done: false },
     ]);
   });
 

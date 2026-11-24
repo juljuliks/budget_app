@@ -10,7 +10,11 @@ export async function enabledBanks(db?: Db): Promise<BankId[]> {
   db ??= await getDb();
   const v = await getSetting(BANKS_SETTING, db);
   let ids: string[] = DEFAULT_BANKS;
-  try { if (v) ids = JSON.parse(v) as string[]; } catch { /* the default */ }
+  try {
+    if (v) ids = JSON.parse(v) as string[];
+  } catch {
+    /* the default */
+  }
   return BANKS.filter((b) => ids.includes(b.id)).map((b) => b.id);
 }
 

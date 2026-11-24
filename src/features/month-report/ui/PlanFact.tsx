@@ -11,16 +11,34 @@ import { styles as report } from './styles';
 type Props = { v: ReportView; pf: SavingsPlanFact; onCloseMonth: () => void };
 
 /** A row: the name, its plan, its fact ("—" until the month's "Итоги"); the fact red when less than planned. */
-function Row({ name, plan, fact, money, sub, strong }: {
-  name: string; plan: number; fact?: number | null; money: (v: number) => string; sub?: boolean; strong?: boolean;
+function Row({
+  name,
+  plan,
+  fact,
+  money,
+  sub,
+  strong,
+}: {
+  name: string;
+  plan: number;
+  fact?: number | null;
+  money: (v: number) => string;
+  sub?: boolean;
+  strong?: boolean;
 }) {
   const less = fact != null && fact < plan;
   return (
     <View style={styles.row}>
-      <Text style={[styles.name, sub && styles.sub, strong && styles.strong]} numberOfLines={2}>{name}</Text>
+      <Text style={[styles.name, sub && styles.sub, strong && styles.strong]} numberOfLines={2}>
+        {name}
+      </Text>
       <Masked style={[styles.num, sub ? styles.subNum : styles.plan, strong && styles.strong]}>{money(plan)}</Masked>
-      {sub ? <Text style={styles.num} /> : (
-        <Masked style={[styles.num, strong && styles.strong, fact == null ? report.muted : less ? report.bad : report.good]}>
+      {sub ? (
+        <Text style={styles.num} />
+      ) : (
+        <Masked
+          style={[styles.num, strong && styles.strong, fact == null ? report.muted : less ? report.bad : report.good]}
+        >
           {fact == null ? '—' : money(fact)}
         </Masked>
       )}
@@ -37,7 +55,7 @@ export default function PlanFact({ v, pf, onCloseMonth }: Props) {
   const { r, money } = v;
   const f = r.savedFrom;
   const restIn = pf.rest && (pf.rest.choice === null || pf.rest.choice === 'savings');
-  const next = MONTHS_NOM[(Number(r.ym.slice(5))) % 12];
+  const next = MONTHS_NOM[Number(r.ym.slice(5)) % 12];
   return (
     <View style={styles.box}>
       <View style={styles.row}>
@@ -52,20 +70,42 @@ export default function PlanFact({ v, pf, onCloseMonth }: Props) {
           {f ? (
             <>
               <Row sub name="Свободно в плане" plan={f.undistributed} money={money} />
-              <Row sub name={f.plan >= 0 ? 'Категории плана потратили меньше' : 'Категории плана потратили больше'} plan={f.plan} money={money} />
+              <Row
+                sub
+                name={f.plan >= 0 ? 'Категории плана потратили меньше' : 'Категории плана потратили больше'}
+                plan={f.plan}
+                money={money}
+              />
               {r.unplannedShare > 0 || f.unplanned !== 0 ? (
-                <Row sub name={f.unplanned >= 0 ? 'Не потрачено из доли вне плана' : 'Вне плана сверх доли'} plan={f.unplanned} money={money} />
+                <Row
+                  sub
+                  name={f.unplanned >= 0 ? 'Не потрачено из доли вне плана' : 'Вне плана сверх доли'}
+                  plan={f.unplanned}
+                  money={money}
+                />
               ) : null}
             </>
           ) : null}
         </>
       ) : null}
-      {pf.funds.map((x) => <Row key={x.category_id} name={`${`${x.emoji ?? ''} ${x.name}`.trim()} · взнос`} plan={x.plan} fact={x.fact} money={money} />)}
+      {pf.funds.map((x) => (
+        <Row
+          key={x.category_id}
+          name={`${`${x.emoji ?? ''} ${x.name}`.trim()} · взнос`}
+          plan={x.plan}
+          fact={x.fact}
+          money={money}
+        />
+      ))}
       <View style={styles.rule} />
       <Row strong name="Всего" plan={pf.plan} fact={pf.fact} money={money} />
       {pf.rest && !restIn ? (
         <View style={styles.apart}>
-          <Text style={styles.name}>{pf.rest.choice === 'next' ? `💰 Сэкономлено — перенесено на ${next}` : '💰 Сэкономлено — оставлено как есть, не отложено'}</Text>
+          <Text style={styles.name}>
+            {pf.rest.choice === 'next'
+              ? `💰 Сэкономлено — перенесено на ${next}`
+              : '💰 Сэкономлено — оставлено как есть, не отложено'}
+          </Text>
           <Masked style={styles.num}>{money(pf.rest.plan)}</Masked>
         </View>
       ) : null}
@@ -93,6 +133,13 @@ const styles = StyleSheet.create({
   strong: { fontWeight: '600', color: colors.text },
   rule: { height: 1, backgroundColor: colors.border, marginVertical: 2 },
   apart: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 },
-  open: { marginTop: 8, gap: 4, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: colors.warnBg },
+  open: {
+    marginTop: 8,
+    gap: 4,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: colors.warnBg,
+  },
   openText: { fontSize: 14, color: colors.warn },
 });

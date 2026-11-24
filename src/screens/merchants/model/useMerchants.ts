@@ -29,29 +29,48 @@ export function useMerchants() {
   const [staleOpen, setStaleOpen] = useState(false);
 
   const load = useCallback(() => {
-    Promise.all([listMerchants(), listCategories(), categoryColors()]).then(([m, cats, colorOf]) => {
-      setMerchants(m);
-      setOrder(cats.map((c) => c.id));
-      setCategories(new Map(cats.map((c) => [c.id, { label: categoryLabel(c), color: colorOf.get(c.id) ?? colors.border }])));
-    }).catch(toastFailure('load merchants', LOAD_FAILED));
+    Promise.all([listMerchants(), listCategories(), categoryColors()])
+      .then(([m, cats, colorOf]) => {
+        setMerchants(m);
+        setOrder(cats.map((c) => c.id));
+        setCategories(
+          new Map(cats.map((c) => [c.id, { label: categoryLabel(c), color: colorOf.get(c.id) ?? colors.border }])),
+        );
+      })
+      .catch(toastFailure('load merchants', LOAD_FAILED));
   }, []);
   useFocusEffect(load);
   useEffect(() => onTransactionsChanged(load), [load]);
 
   const words = normalizeForSearch(query);
   // a merchant whose category is gone counts as without one; of different categories: a group of its own
-  const catOf = useCallback((m: MerchantRow): CategoryKey => (m.mixed ? 'mixed'
-    : m.category_id !== null && categories.has(m.category_id) ? m.category_id : 'none'), [categories]);
-  const shown = useMemo(() => merchants.filter((m) => (!words || normalizeForSearch(m.name).includes(words))
-    && (catFilter.length === 0 || catFilter.includes(catOf(m)))), [merchants, words, catFilter, catOf]);
+  const catOf = useCallback(
+    (m: MerchantRow): CategoryKey =>
+      m.mixed ? 'mixed' : m.category_id !== null && categories.has(m.category_id) ? m.category_id : 'none',
+    [categories],
+  );
+  const shown = useMemo(
+    () =>
+      merchants.filter(
+        (m) =>
+          (!words || normalizeForSearch(m.name).includes(words)) &&
+          (catFilter.length === 0 || catFilter.includes(catOf(m))),
+      ),
+    [merchants, words, catFilter, catOf],
+  );
   // a search or a filter shows the long-unvisited ones too, in their categories
   const filtering = !!words || catFilter.length > 0;
   // the filter's options: "Без категории" first, then the categories in their order, each with its merchants
   const catOptions = useMemo(() => {
     const count = new Map<CategoryKey, number>();
     for (const m of merchants) count.set(catOf(m), (count.get(catOf(m)) ?? 0) + 1);
-    return (['none', 'mixed', ...order] as CategoryKey[]).filter((c) => count.has(c))
-      .map((c) => ({ key: c, label: c === 'none' ? NO_CATEGORY : c === 'mixed' ? MIXED : categories.get(c)!.label, count: count.get(c)! }));
+    return (['none', 'mixed', ...order] as CategoryKey[])
+      .filter((c) => count.has(c))
+      .map((c) => ({
+        key: c,
+        label: c === 'none' ? NO_CATEGORY : c === 'mixed' ? MIXED : categories.get(c)!.label,
+        count: count.get(c)!,
+      }));
   }, [merchants, order, categories, catOf]);
 
   // one section per category with merchants bought at in the last month (RECENT_DAYS). The others (a shop visited once
@@ -61,19 +80,43 @@ export function useMerchants() {
     const by = new Map<number | null | 'mixed', MerchantRow[]>();
     const stale: MerchantRow[] = [];
     for (const m of shown) {
-      if (!filtering && !m.activity.recent) { stale.push(m); continue; }
+      if (!filtering && !m.activity.recent) {
+        stale.push(m);
+        continue;
+      }
       const c = m.mixed ? 'mixed' : m.category_id !== null && categories.has(m.category_id) ? m.category_id : null;
       by.set(c, [...(by.get(c) ?? []), m]);
     }
-    const out: Section[] = ([null, 'mixed', ...order] as Array<number | null | 'mixed'>).filter((c) => by.has(c)).map((c) => ({
-      key: String(c),
-      title: c === null ? NO_CATEGORY : c === 'mixed' ? MIXED : categories.get(c)!.label,
-      count: by.get(c)!.length,
-      data: by.get(c)!,
-    }));
-    if (stale.length) out.push({ key: 'stale', title: 'Давно не было покупок', count: stale.length, stale: true, data: staleOpen ? stale : [] });
+    const out: Section[] = ([null, 'mixed', ...order] as Array<number | null | 'mixed'>)
+      .filter((c) => by.has(c))
+      .map((c) => ({
+        key: String(c),
+        title: c === null ? NO_CATEGORY : c === 'mixed' ? MIXED : categories.get(c)!.label,
+        count: by.get(c)!.length,
+        data: by.get(c)!,
+      }));
+    if (stale.length)
+      out.push({
+        key: 'stale',
+        title: 'Давно не было покупок',
+        count: stale.length,
+        stale: true,
+        data: staleOpen ? stale : [],
+      });
     return out;
   }, [shown, filtering, categories, order, staleOpen]);
 
-  return { merchants, categories, query, setQuery, catFilter, setCatFilter, catOptions, filtering, sections, staleOpen, setStaleOpen };
+  return {
+    merchants,
+    categories,
+    query,
+    setQuery,
+    catFilter,
+    setCatFilter,
+    catOptions,
+    filtering,
+    sections,
+    staleOpen,
+    setStaleOpen,
+  };
 }

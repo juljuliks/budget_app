@@ -38,14 +38,19 @@ function moveFirst(sections: ChooseSection[], title: string): ChooseSection[] {
  * Live categories left after the search and the exclusions. "Пополнение счёта" only for a deposit, and first there;
  * then the transfer section (also first for a transfer). A section with nothing left is absent.
  */
-export function orderedSections(cats: Category[], opts: {
-  query: string;
-  excludeIds?: number[];
-  deposit?: boolean;
-  transferFirst?: boolean;
-}): ChooseSection[] {
+export function orderedSections(
+  cats: Category[],
+  opts: {
+    query: string;
+    excludeIds?: number[];
+    deposit?: boolean;
+    transferFirst?: boolean;
+  },
+): ChooseSection[] {
   const excluded = new Set(opts.excludeIds ?? []);
-  const visible = cats.filter((c) => !excluded.has(c.id) && matchesQuery(c.name, opts.query) && (opts.deposit || !isTopUp(c)));
+  const visible = cats.filter(
+    (c) => !excluded.has(c.id) && matchesQuery(c.name, opts.query) && (opts.deposit || !isTopUp(c)),
+  );
   const lead = opts.deposit ? visible.filter(isTopUp) : [];
   const rest = lead.length ? visible.filter((c) => !isTopUp(c)) : visible;
   const transfer = rest.find(isTransferCategory)?.type_name;

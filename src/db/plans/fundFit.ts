@@ -14,7 +14,9 @@ import { fundOrder } from './fundForecast';
 export async function fitFunds(ym: string, nowYm: string): Promise<void> {
   const db = await getDb();
   const items = await db.all<{ category_id: number; taken_minor: number }>(
-    "SELECT category_id, taken_minor FROM plan_items WHERE ym = ? AND kind = 'fund'", [ym]);
+    "SELECT category_id, taken_minor FROM plan_items WHERE ym = ? AND kind = 'fund'",
+    [ym],
+  );
   if (!items.length) return;
   const before = items.reduce((a, i) => a + i.taken_minor, 0);
 
@@ -23,15 +25,20 @@ export async function fitFunds(ym: string, nowYm: string): Promise<void> {
   let free = Infinity;
   let locked = 0;
   if (budget) {
-    const others = (await db.all<{ limit_minor: number; currency: string }>(
-      "SELECT limit_minor, currency FROM plan_items WHERE ym = ? AND kind != 'fund'", [ym]))
-      .reduce((a, r) => a + (conv(r.limit_minor, r.currency, budget.currency) ?? 0), 0);
+    const others = (
+      await db.all<{ limit_minor: number; currency: string }>(
+        "SELECT limit_minor, currency FROM plan_items WHERE ym = ? AND kind != 'fund'",
+        [ym],
+      )
+    ).reduce((a, r) => a + (conv(r.limit_minor, r.currency, budget.currency) ?? 0), 0);
     // what the last fit took is 🔒's again (and not the plan's)
     free = Math.max(0, budget.plannable_minor - before - others);
     locked = budget.locked_minor + before;
   }
   // the nearest date first (one date — the smaller sum): the queue of fundOrder
-  const funds = (await activeFunds(ym, db)).filter((f) => items.some((i) => i.category_id === f.category_id)).sort(fundOrder);
+  const funds = (await activeFunds(ym, db))
+    .filter((f) => items.some((i) => i.category_id === f.category_id))
+    .sort(fundOrder);
   const writes: Array<{ id: number; put: number; cap: number | null; taken: number; currency: string }> = [];
   let taken = 0;
   for (const fund of funds) {
@@ -49,16 +56,32 @@ export async function fitFunds(ym: string, nowYm: string): Promise<void> {
       locked -= fromLocked;
       const got = give + fromLocked;
       // back in the fund's currency, whole units: never more than it asks
-      put = got >= need ? asked : Math.min(asked, Math.floor((conv(got, budget.currency, fund.currency) ?? got) / 100) * 100);
+      put =
+        got >= need
+          ? asked
+          : Math.min(asked, Math.floor((conv(got, budget.currency, fund.currency) ?? got) / 100) * 100);
     }
-    writes.push({ id: fund.category_id, put, cap: put < asked ? put : null, taken: fromLocked, currency: fund.currency });
+    writes.push({
+      id: fund.category_id,
+      put,
+      cap: put < asked ? put : null,
+      taken: fromLocked,
+      currency: fund.currency,
+    });
     taken += fromLocked;
   }
   await db.transaction(async (t) => {
     for (const w of writes) {
-      await t.run("UPDATE plan_items SET limit_minor = ?, currency = ?, cap_minor = ?, taken_minor = ? WHERE ym = ? AND category_id = ? AND kind = 'fund'",
-        [w.put, w.currency, w.cap, w.taken, ym, w.id]);
+      await t.run(
+        "UPDATE plan_items SET limit_minor = ?, currency = ?, cap_minor = ?, taken_minor = ? WHERE ym = ? AND category_id = ? AND kind = 'fund'",
+        [w.put, w.currency, w.cap, w.taken, ym, w.id],
+      );
     }
-    if (taken !== before) await t.run('UPDATE plan_months SET locked_minor = max(0, locked_minor + ? - ?) WHERE ym = ?', [before, taken, ym]);
+    if (taken !== before)
+      await t.run('UPDATE plan_months SET locked_minor = max(0, locked_minor + ? - ?) WHERE ym = ?', [
+        before,
+        taken,
+        ym,
+      ]);
   });
 }

@@ -7,7 +7,12 @@ import { onTransactionsChanged } from '@/domain/events';
 import { useLatestRequest } from '@/shared/lib/useLatestRequest';
 
 /** `forecast`: will it make it by its date (null — no budget this month) */
-export type CategoryFund = { allowed: boolean; label: string; month: FundThisMonth | null; forecast: FundForecast | null };
+export type CategoryFund = {
+  allowed: boolean;
+  label: string;
+  month: FundThisMonth | null;
+  forecast: FundForecast | null;
+};
 
 /** null while loading. */
 export function useCategoryFund(categoryId: number) {
@@ -16,14 +21,26 @@ export function useCategoryFund(categoryId: number) {
   const load = useCallback(() => {
     const keep = latest();
     Promise.all([getCategory(categoryId), fundThisMonth(categoryId), fundForecast(categoryId)])
-      .then(keep(([c, month, forecast]: [Awaited<ReturnType<typeof getCategory>>, FundThisMonth | null, FundForecast | null]) => setData({
-        allowed: !!c && !isSystemCategory(c) && !isTransferCategory(c),
-        label: c ? `${c.emoji || ''} ${c.name}`.trim() : '',
-        month,
-        forecast,
-      })))
+      .then(
+        keep(
+          ([c, month, forecast]: [
+            Awaited<ReturnType<typeof getCategory>>,
+            FundThisMonth | null,
+            FundForecast | null,
+          ]) =>
+            setData({
+              allowed: !!c && !isSystemCategory(c) && !isTransferCategory(c),
+              label: c ? `${c.emoji || ''} ${c.name}`.trim() : '',
+              month,
+              forecast,
+            }),
+        ),
+      )
       .catch(keep((e: unknown) => console.error('load category fund failed', e)));
   }, [categoryId, latest]);
-  useEffect(() => { load(); return onTransactionsChanged(load); }, [load]);
+  useEffect(() => {
+    load();
+    return onTransactionsChanged(load);
+  }, [load]);
   return data;
 }

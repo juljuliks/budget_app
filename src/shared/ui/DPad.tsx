@@ -41,8 +41,19 @@ export default function DPad({ actions, buttons, hover, top, onPress }: Props) {
       <View pointerEvents="none" style={StyleSheet.absoluteFill}>
         <Svg width="100%" height="100%">
           <Path
-            d={crossPath(c.x, c.y, { w: CROSS + HALF, h: HALF, up: HALF, down: HALF, vUp: CROSS + HALF, vDown: CROSS + HALF, r: HALF, ri: CROSS - HALF })}
-            fill={PLATE_FILL} stroke={PLATE_EDGE} strokeWidth={1}
+            d={crossPath(c.x, c.y, {
+              w: CROSS + HALF,
+              h: HALF,
+              up: HALF,
+              down: HALF,
+              vUp: CROSS + HALF,
+              vDown: CROSS + HALF,
+              r: HALF,
+              ri: CROSS - HALF,
+            })}
+            fill={PLATE_FILL}
+            stroke={PLATE_EDGE}
+            strokeWidth={1}
           />
         </Svg>
       </View>
@@ -51,8 +62,15 @@ export default function DPad({ actions, buttons, hover, top, onPress }: Props) {
         const r = on ? R * GROW : R;
         return (
           <TouchableOpacity
-            key={actions[i].key} onPress={() => onPress(i)} accessibilityRole="button" accessibilityLabel={actions[i].label}
-            style={[styles.circle, { left: b.x - r, top: b.y + top - r, width: r * 2, height: r * 2, borderRadius: r }, on && styles.circleOn]}
+            key={actions[i].key}
+            onPress={() => onPress(i)}
+            accessibilityRole="button"
+            accessibilityLabel={actions[i].label}
+            style={[
+              styles.circle,
+              { left: b.x - r, top: b.y + top - r, width: r * 2, height: r * 2, borderRadius: r },
+              on && styles.circleOn,
+            ]}
           >
             {actions[i].icon(on ? colors.onAccent : colors.accent)}
           </TouchableOpacity>
@@ -61,7 +79,11 @@ export default function DPad({ actions, buttons, hover, top, onPress }: Props) {
       {/* the labels don't take the touches: a tap there is outside (closes the menu) */}
       <View pointerEvents="none" style={StyleSheet.absoluteFill}>
         {buttons.map((b, i) => (
-          <Text key={`l-${actions[i].key}`} numberOfLines={1} style={[styles.label, hover === i && styles.labelOn, labelAt(i, b, top)]}>
+          <Text
+            key={`l-${actions[i].key}`}
+            numberOfLines={1}
+            style={[styles.label, hover === i && styles.labelOn, labelAt(i, b, top)]}
+          >
             {actions[i].label}
           </Text>
         ))}
@@ -76,19 +98,37 @@ function labelAt(i: number, b: Point, top: number) {
   const d = R + LABEL_GAP;
   if (i === 0) return { left: b.x - d - LABEL_W, top: y - LABEL_H / 2, width: LABEL_W, textAlign: 'right' as const };
   if (i === 2) return { left: b.x + d, top: y - LABEL_H / 2, width: LABEL_W, textAlign: 'left' as const };
-  return { left: b.x - LABEL_W, top: i === 1 ? y - d - LABEL_H : y + d, width: LABEL_W * 2, textAlign: 'center' as const };
+  return {
+    left: b.x - LABEL_W,
+    top: i === 1 ? y - d - LABEL_H : y + d,
+    width: LABEL_W * 2,
+    textAlign: 'center' as const,
+  };
 }
 
 const styles = StyleSheet.create({
   circle: {
-    position: 'absolute', backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center',
-    elevation: 6, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 4 },
+    position: 'absolute',
+    backgroundColor: colors.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
   },
   circleOn: { backgroundColor: colors.accent },
   // on the dimmed screen, outside the plate: white with a shadow, as the arc's labels
   label: {
-    position: 'absolute', height: LABEL_H, lineHeight: LABEL_H, fontSize: 13, fontWeight: '600', color: colors.onAccent,
-    textShadowColor: 'rgba(0,0,0,0.5)', textShadowRadius: 3,
+    position: 'absolute',
+    height: LABEL_H,
+    lineHeight: LABEL_H,
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.onAccent,
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowRadius: 3,
   },
   labelOn: { fontSize: 14, fontWeight: '700' },
 });

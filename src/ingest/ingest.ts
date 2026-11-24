@@ -15,7 +15,9 @@ export type { IncomingSms, IngestResult } from './store';
  */
 export async function ingestSms(sms: IncomingSms, opts: { quiet?: boolean; db?: Db } = {}): Promise<IngestResult> {
   // a batch import announces the change once at the end, not per SMS
-  const changed = () => { if (!opts.quiet) emitTransactionsChanged(); };
+  const changed = () => {
+    if (!opts.quiet) emitTransactionsChanged();
+  };
   // which bank's (by the sender): one without a parser of its own goes to its templates right away
   const bank = bankOfSender(sms.sender);
   const parsed = bank.builtIn ? parseTbc(sms.body) : null;
@@ -23,7 +25,11 @@ export async function ingestSms(sms: IncomingSms, opts: { quiet?: boolean; db?: 
   if (!parsed) {
     // a balance-only SMS ("Balance: 281.00GEL"): not a transaction, but keeps the card balance in sync
     if (balance) {
-      await recordBalance({ minor: balance.minor, currency: balance.currency, at: resolveOccurredAt(balance, sms.timestamp), txId: null }, opts.db, bank.id);
+      await recordBalance(
+        { minor: balance.minor, currency: balance.currency, at: resolveOccurredAt(balance, sms.timestamp), txId: null },
+        opts.db,
+        bank.id,
+      );
       changed();
       return { status: 'ignored' };
     }
@@ -37,7 +43,7 @@ export async function ingestSms(sms: IncomingSms, opts: { quiet?: boolean; db?: 
 
   // from the twin check to the balance in one transaction: an SMS and a push of one operation arriving together are
   // stored one after the other, so the second one sees the first as its twin (inside an import: its batch's)
-  const res = await (opts.db ?? await getDb()).transaction((tx) => store(sms, parsed, balance, tx));
+  const res = await (opts.db ?? (await getDb())).transaction((tx) => store(sms, parsed, balance, tx));
   if (res.status === 'inserted') changed();
   return res;
 }

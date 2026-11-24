@@ -17,7 +17,10 @@ import { SavingChoice, usePaymentSaving } from '../model/usePaymentSaving';
  * month's too; a monthly one's is optional — with it its charges are counted and marked on the stats' bar), its end.
  */
 export type CategoryPaymentForm = RepeatForm & {
-  period: number; next: string | null; value: string; currency: Currency;
+  period: number;
+  next: string | null;
+  value: string;
+  currency: Currency;
   /** "Откладывать каждый месяц?" (rarer than monthly), for "Сохранить" */
   saving: (SavingChoice & { startBad: boolean }) | null;
 };
@@ -30,16 +33,29 @@ type Props = { ym: string; categoryId: number; form: UseFormReturn<CategoryPayme
  * was made in), nothing is matched with operations.
  */
 export default function CategoryPaymentFields({ ym, categoryId, form }: Props) {
-  const [period, next, value, currency] = useWatch({ control: form.control, name: ['period', 'next', 'value', 'currency'] });
+  const [period, next, value, currency] = useWatch({
+    control: form.control,
+    name: ['period', 'next', 'value', 'currency'],
+  });
   // its saved payment (whether it is saved up for), or a new one; null — not known yet
   const [payment, setPayment] = useState<{ id?: number } | null>(null);
   const amount = parseAmountOrZero(value ?? '');
   const saving = usePaymentSaving(payment, period, amount || null, next);
   useEffect(() => {
-    categoryPayment(categoryId).then((own) => {
-      if (own) form.reset({ ...form.getValues(), value: toInputValue(own.amount_minor), currency: own.currency, period: own.period, next: own.due, until: own.until });
-      setPayment(own ? { id: own.id } : {});
-    }).catch((e) => console.error('category payment failed', e));
+    categoryPayment(categoryId)
+      .then((own) => {
+        if (own)
+          form.reset({
+            ...form.getValues(),
+            value: toInputValue(own.amount_minor),
+            currency: own.currency,
+            period: own.period,
+            next: own.due,
+            until: own.until,
+          });
+        setPayment(own ? { id: own.id } : {});
+      })
+      .catch((e) => console.error('category payment failed', e));
     // once per category
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categoryId]);
@@ -53,15 +69,28 @@ export default function CategoryPaymentFields({ ym, categoryId, form }: Props) {
   return (
     <View>
       {/* monthly: a day is optional — it puts the payment on the stats' bar, the month's pace counts it from that day */}
-      <Controller control={form.control} name="next" render={({ field }) => (
-        <DateField
-          label={period === 1 ? 'Дата списания (необязательно)' : 'Дата списания'} value={field.value} format={dayTitle} sheetTitle="Дата списания"
-          onChange={field.onChange} onClear={period === 1 ? () => field.onChange(null) : undefined}
-        />
-      )} />
+      <Controller
+        control={form.control}
+        name="next"
+        render={({ field }) => (
+          <DateField
+            label={period === 1 ? 'Дата списания (необязательно)' : 'Дата списания'}
+            value={field.value}
+            format={dayTitle}
+            sheetTitle="Дата списания"
+            onChange={field.onChange}
+            onClear={period === 1 ? () => field.onChange(null) : undefined}
+          />
+        )}
+      />
       <Text style={formStyles.hint}>
-        {period === 1 ? (next ? 'Сумма — в плане месяца, списание — в этот день каждого месяца.' : 'Сумма — в плане месяца. С датой платёж встанет на шкалу месяца в статистике.')
-          : next ? `Следующие — ${periodText(period)} от этой даты; списание встанет в план своего месяца.` : 'Выберите дату списания.'}
+        {period === 1
+          ? next
+            ? 'Сумма — в плане месяца, списание — в этот день каждого месяца.'
+            : 'Сумма — в плане месяца. С датой платёж встанет на шкалу месяца в статистике.'
+          : next
+            ? `Следующие — ${periodText(period)} от этой даты; списание встанет в план своего месяца.`
+            : 'Выберите дату списания.'}
       </Text>
       <UntilField ym={ym} form={form as unknown as UseFormReturn<RepeatForm>} />
       <SavingFields s={saving} amount={amount || null} currency={currency} due={next} />

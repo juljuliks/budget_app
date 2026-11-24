@@ -9,10 +9,16 @@ type Short = { short: number; locked: number; currency: Currency };
  * `delta` (in the budget's currency) more in `ym`'s plan, and a repeating payment's new contribution (in its own
  * currency): what it is short of the free part and what 🔒 has. null — it fits, or the month has no budget.
  */
-export async function recurringShort(ym: string, delta: number, contribution?: { minor: number; currency: Currency }): Promise<Short | null> {
+export async function recurringShort(
+  ym: string,
+  delta: number,
+  contribution?: { minor: number; currency: Currency },
+): Promise<Short | null> {
   const budget = await storedBudget(ym);
   if (!budget) return null;
-  const saving = contribution?.minor ? (await planConverter(ym))(contribution.minor, contribution.currency, budget.currency) ?? 0 : 0;
+  const saving = contribution?.minor
+    ? ((await planConverter(ym))(contribution.minor, contribution.currency, budget.currency) ?? 0)
+    : 0;
   if (delta + saving <= 0) return null;
   const short = (await plannedTotal(ym, undefined, budget.currency)) + delta + saving - budget.plannable_minor;
   return short > 0 ? { short, locked: budget.locked_minor, currency: budget.currency } : null;
@@ -24,16 +30,29 @@ export async function recurringShort(ym: string, delta: number, contribution?: {
  * charges (`after`, in `currency`). null — it fits, or the month has no budget.
  */
 export async function paymentShort(
-  ym: string, categoryId: number, change: number, after: { minor: number; currency: Currency }, contribution?: { minor: number; currency: Currency },
+  ym: string,
+  categoryId: number,
+  change: number,
+  after: { minor: number; currency: Currency },
+  contribution?: { minor: number; currency: Currency },
   replacing = false,
 ): Promise<Short | null> {
-  const kind = (await (await getDb()).get<{ kind: string }>('SELECT kind FROM plan_items WHERE ym = ? AND category_id = ?', [ym, categoryId]))?.kind;
+  const kind = (
+    await (
+      await getDb()
+    ).get<{ kind: string }>('SELECT kind FROM plan_items WHERE ym = ? AND category_id = ?', [ym, categoryId])
+  )?.kind;
   // `replacing`: the category's own payment goes with it — the item becomes its charges, as one by hand
   if (!kind || (kind === 'subs' && !replacing)) return recurringShort(ym, change, contribution);
   const budget = await storedBudget(ym);
   if (!budget) return null;
-  const was = (await plannedTotal(ym, undefined, budget.currency)) - (await plannedTotal(ym, categoryId, budget.currency));
-  return recurringShort(ym, ((await planConverter(ym))(after.minor, after.currency, budget.currency) ?? 0) - was, contribution);
+  const was =
+    (await plannedTotal(ym, undefined, budget.currency)) - (await plannedTotal(ym, categoryId, budget.currency));
+  return recurringShort(
+    ym,
+    ((await planConverter(ym))(after.minor, after.currency, budget.currency) ?? 0) - was,
+    contribution,
+  );
 }
 
 /** "Вычесть из сбережений": `short` less locked for savings in `ym`. */
@@ -43,7 +62,8 @@ export async function takeLocked(ym: string, short: number): Promise<void> {
     // what it had at most; remembered as taken this month (a new % keeps it taken)
     await t.run(
       'UPDATE plan_months SET locked_taken_minor = locked_taken_minor + min(?, locked_minor), locked_minor = max(0, locked_minor - ?) WHERE ym = ?',
-      [short, short, ym]);
+      [short, short, ym],
+    );
     await ownMonth(ym, t);
   });
 }

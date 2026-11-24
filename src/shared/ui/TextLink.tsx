@@ -23,7 +23,14 @@ type Props = {
  */
 export default function TextLink({ label, onPress, style, containerStyle, hint, accessibilityLabel, oneLine }: Props) {
   return (
-    <TouchableOpacity style={containerStyle} onPress={onPress} hitSlop={6} accessibilityRole="button" accessibilityHint={hint} accessibilityLabel={accessibilityLabel}>
+    <TouchableOpacity
+      style={containerStyle}
+      onPress={onPress}
+      hitSlop={6}
+      accessibilityRole="button"
+      accessibilityHint={hint}
+      accessibilityLabel={accessibilityLabel}
+    >
       <Text style={[styles.text, style, styles.link]} numberOfLines={oneLine ? 1 : undefined}>{`${label} ›`}</Text>
     </TouchableOpacity>
   );

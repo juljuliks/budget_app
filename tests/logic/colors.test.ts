@@ -1,4 +1,11 @@
-import { buildCategoryColors, freeCategoryColors, freePalettes, PALETTE_ORDER, PALETTES, UNTYPED_COLORS } from '../../src/domain/colors';
+import {
+  buildCategoryColors,
+  freeCategoryColors,
+  freePalettes,
+  PALETTE_ORDER,
+  PALETTES,
+  UNTYPED_COLORS,
+} from '../../src/domain/colors';
 
 test('a type colors its categories with its palette shades, in order; own color wins; untyped get base colors', () => {
   const colors = buildCategoryColors(
@@ -10,7 +17,10 @@ test('a type colors its categories with its palette shades, in order; own color 
       { id: 5, type_id: null, color: null },
       { id: 6, type_id: null, color: null },
     ],
-    [{ id: 10, palette: 'green' }, { id: 20, palette: null }],
+    [
+      { id: 10, palette: 'green' },
+      { id: 20, palette: null },
+    ],
   );
   expect(colors.get(1)).toBe(PALETTES.green.shades[0]);
   expect(colors.get(2)).toBe('#123456');
@@ -23,7 +33,11 @@ test('a type colors its categories with its palette shades, in order; own color 
 });
 
 test('a type is offered only palettes no other type uses (its own stays)', () => {
-  const types = [{ id: 1, palette: 'green' }, { id: 2, palette: null }, { id: 3, palette: 'blue' }];
+  const types = [
+    { id: 1, palette: 'green' },
+    { id: 2, palette: null },
+    { id: 3, palette: 'blue' },
+  ];
   // type 2 has no palette of its own: the 2nd in order (orange)
   expect(freePalettes(types, 3)).toEqual(['blue', 'amber', 'pink', 'purple', 'teal', 'red']);
   expect(freePalettes(types, 2)).toEqual(['orange', 'amber', 'pink', 'purple', 'teal', 'red']);
@@ -53,7 +67,7 @@ test('hex <-> HSL round trip; colors from a hue', () => {
   expect(Math.round(hexToHsl(colorFromHue(200))[0])).toBeGreaterThanOrEqual(199);
 });
 
-test('a custom palette: five shades of its base, used for its type\'s categories', () => {
+test("a custom palette: five shades of its base, used for its type's categories", () => {
   const { shadesFromBase, paletteShades, typePalette, hexToHsl } = require('../../src/domain/colors');
   const shades = shadesFromBase('#3a7bd5');
   expect(shades).toHaveLength(5);
@@ -62,13 +76,22 @@ test('a custom palette: five shades of its base, used for its type\'s categories
   for (const s of shades) expect(Math.abs(hexToHsl(s)[0] - hexToHsl('#3a7bd5')[0])).toBeLessThan(3);
   expect(typePalette({ palette: '#3a7bd5' }, 0)).toBe('#3a7bd5');
   expect(paletteShades('#3a7bd5')).toEqual(shades);
-  const colors = buildCategoryColors([{ id: 1, type_id: 9, color: null }, { id: 2, type_id: 9, color: null }], [{ id: 9, palette: '#3a7bd5' }]);
+  const colors = buildCategoryColors(
+    [
+      { id: 1, type_id: 9, color: null },
+      { id: 2, type_id: 9, color: null },
+    ],
+    [{ id: 9, palette: '#3a7bd5' }],
+  );
   expect([colors.get(1), colors.get(2)]).toEqual(shades.slice(0, 2));
 });
 
 test('a random hue: anywhere on the wheel, not on a color in use, away from the current one', () => {
   const { distinctHue, colorFromHue, hexToHsl } = require('../../src/domain/colors');
-  const gap = (a: number, b: number) => { const d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d; };
+  const gap = (a: number, b: number) => {
+    const d = Math.abs(a - b) % 360;
+    return d > 180 ? 360 - d : d;
+  };
   // a crowded wheel: a color every 30° still leaves every part of it reachable
   const taken = Array.from({ length: 12 }, (_, i) => colorFromHue(i * 30));
   const hues = new Set<number>();

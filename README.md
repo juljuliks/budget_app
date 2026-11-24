@@ -342,6 +342,7 @@ debug-ключом не обновит приложение на телефон�
 npm ci
 npm test                 # Jest: логика и тесты экранов (~30 с)
 npm run lint             # ESLint: размеры файлов и хуков, границы слоёв (ARCHITECTURE.md); предупреждения — строгий TS, доступность
+npm run format           # Prettier: формат кода (в CI — npm run format:check)
 npm run emulator         # release-сборка для эмулятора (читает SMS и от «TBC»: консоль не шлёт «TBC SMS») и установка на budget_pixel (создаётся при первом запуске)
 npm run release          # следующий budget-app-<версия>.apk на Рабочий стол и отдельная сборка на эмулятор
 npm run apk              # APK на Рабочий стол
@@ -353,7 +354,7 @@ scripts/demo/docs.sh     # скриншоты для документации: �
 Приложение не удалять с телефона: вместе с ним удаляются все операции. Обновлять только установкой поверх
 (`adb install -r`), APK подписан release-ключом.
 
-**GitHub Actions:** каждый пуш в `main` проверяет типы, архитектуру (`npm run lint`) и тесты (четыре части) и параллельно собирает
+**GitHub Actions:** каждый пуш в `main` проверяет типы, архитектуру (`npm run lint`), формат (Prettier) и тесты (четыре части) и параллельно собирает
 подписанный APK телефона; если прошло и то и другое, публикует релиз `1.0.N` ([android-release.yml](.github/workflows/android-release.yml)):
 `budget-app-1.0.N-arm64-v8a.apk`. Сборки для эмулятора в релизе нет. Скриншоты основных экранов на демо-базе —
 вручную, workflow «Screenshots» ([scripts/demo/](scripts/demo/)): он собирает x86_64 сам и прикрепляет только кадры.

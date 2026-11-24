@@ -9,7 +9,10 @@ import { y } from './styles';
 export default function YearNumbers({ r, page }: { r: YearReport; page?: boolean }) {
   const l = yearLines(r);
   const cells: Array<[string, string]> = [
-    ['Пришло', l.money(r.income)], ['Потрачено', l.money(r.spent)], ['В копилки', l.money(r.funds)], ['В плане', l.inPlan],
+    ['Пришло', l.money(r.income)],
+    ['Потрачено', l.money(r.spent)],
+    ['В копилки', l.money(r.funds)],
+    ['В плане', l.inPlan],
   ];
   return (
     <View style={y.gap}>

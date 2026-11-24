@@ -38,7 +38,10 @@ export default function CategoryFields({ f, quick }: Props) {
   // the type's shades first: a type reads as one color family on the charts; the current one always among them
   const offered = freeCategoryColors(types, typeId, taken, color).slice(0, COLORS_SHOWN);
   const colorOptions = color && !offered.includes(color) ? [color, ...offered.slice(0, COLORS_SHOWN - 1)] : offered;
-  const typeOptions: Array<[number | null, string]> = [[null, NO_SECTION], ...types.map((t): [number, string] => [t.id, t.name])];
+  const typeOptions: Array<[number | null, string]> = [
+    [null, NO_SECTION],
+    ...types.map((t): [number, string] => [t.id, t.name]),
+  ];
 
   return (
     <>
@@ -62,7 +65,8 @@ export default function CategoryFields({ f, quick }: Props) {
       {system ? <Text style={styles.hint}>{systemCategoryHint(systemKind)}</Text> : null}
       {name.trim() ? (
         <Text style={styles.preview}>
-          Будет выглядеть так: {categoryLabel({ emoji, name: name.trim(), type_name: types.find((t) => t.id === typeId)?.name })}
+          Будет выглядеть так:{' '}
+          {categoryLabel({ emoji, name: name.trim(), type_name: types.find((t) => t.id === typeId)?.name })}
         </Text>
       ) : null}
 
@@ -83,14 +87,28 @@ export default function CategoryFields({ f, quick }: Props) {
         </>
       )}
 
-      <EmojiPicker visible={emojiOpen} value={emoji} onPick={(e) => set('emoji', e)} onClose={() => setEmojiOpen(false)} />
-      <ColorPickerSheet visible={pickerOpen} value={color} onPick={(c) => set('color', c)} onClose={() => setPickerOpen(false)} />
+      <EmojiPicker
+        visible={emojiOpen}
+        value={emoji}
+        onPick={(e) => set('emoji', e)}
+        onClose={() => setEmojiOpen(false)}
+      />
+      <ColorPickerSheet
+        visible={pickerOpen}
+        value={color}
+        onPick={(c) => set('color', c)}
+        onClose={() => setPickerOpen(false)}
+      />
       <TypeEditModal
         visible={typeOpen}
         types={types}
         onClose={() => setTypeOpen(false)}
         // the new type is selected for this category
-        onSaved={(id) => { setTypeOpen(false); set('typeId', id); loadTypes(); }}
+        onSaved={(id) => {
+          setTypeOpen(false);
+          set('typeId', id);
+          loadTypes();
+        }}
       />
     </>
   );

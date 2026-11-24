@@ -29,7 +29,12 @@ export default function MerchantsScreen() {
       <View style={styles.header}>
         <SearchBar value={list.query} onChange={list.setQuery} placeholder="Найти мерчанта" />
         <View style={styles.filters}>
-          <FilterButton label="Категория" count={catFilter.length} active={catFilter.length > 0} onPress={() => setCatSheetOpen(true)} />
+          <FilterButton
+            label="Категория"
+            count={catFilter.length}
+            active={catFilter.length > 0}
+            onPress={() => setCatSheetOpen(true)}
+          />
         </View>
         {selectMode ? (
           <View style={styles.selectBar}>
@@ -55,23 +60,45 @@ export default function MerchantsScreen() {
         keyExtractor={(m) => m.id}
         keyboardShouldPersistTaps="handled"
         stickySectionHeadersEnabled
-        renderSectionHeader={({ section }) => <SectionBand section={section} staleOpen={list.staleOpen} onToggleStale={() => list.setStaleOpen((o) => !o)} />}
+        renderSectionHeader={({ section }) => (
+          <SectionBand
+            section={section}
+            staleOpen={list.staleOpen}
+            onToggleStale={() => list.setStaleOpen((o) => !o)}
+          />
+        )}
         renderItem={({ item, section }) => (
           <MerchantRowView
             m={item}
-            category={section.stale ? (item.mixed ? MIXED : item.category_id !== null ? categories.get(item.category_id)?.label : undefined) ?? NO_CATEGORY : null}
+            category={
+              section.stale
+                ? ((item.mixed
+                    ? MIXED
+                    : item.category_id !== null
+                      ? categories.get(item.category_id)?.label
+                      : undefined) ?? NO_CATEGORY)
+                : null
+            }
             selecting={selectMode}
             selected={selected.includes(item.id)}
             // a long press starts selecting (with this one); while selecting a tap toggles, otherwise opens the card
             onPress={() => {
-              if (bulk.longPressed.current) { bulk.longPressed.current = false; return; }
-              if (selectMode) bulk.toggle(item.id); else openMerchant(item.id);
+              if (bulk.longPressed.current) {
+                bulk.longPressed.current = false;
+                return;
+              }
+              if (selectMode) bulk.toggle(item.id);
+              else openMerchant(item.id);
             }}
             onLongPress={selectMode ? undefined : () => bulk.start(item.id)}
-            onPressIn={() => { bulk.longPressed.current = false; }}
+            onPressIn={() => {
+              bulk.longPressed.current = false;
+            }}
           />
         )}
-        ListEmptyComponent={<Text style={styles.empty}>{list.filtering ? 'Не найдено.' : 'Мерчанты появятся после первых покупок.'}</Text>}
+        ListEmptyComponent={
+          <Text style={styles.empty}>{list.filtering ? 'Не найдено.' : 'Мерчанты появятся после первых покупок.'}</Text>
+        }
         ListFooterComponent={<View style={styles.footer} />}
       />
 
@@ -79,8 +106,17 @@ export default function MerchantsScreen() {
         <View style={styles.bottomBar}>
           {selected.length === 0 ? null : (
             <View style={styles.bottomActions}>
-              <Button title={`Категория (${selected.length})`} onPress={() => bulk.setPickOpen(true)} style={styles.bottomButton} />
-              <Button title={`Удалить (${selected.length})`} danger onPress={bulk.confirmDelete} style={styles.bottomButton} />
+              <Button
+                title={`Категория (${selected.length})`}
+                onPress={() => bulk.setPickOpen(true)}
+                style={styles.bottomButton}
+              />
+              <Button
+                title={`Удалить (${selected.length})`}
+                danger
+                onPress={bulk.confirmDelete}
+                style={styles.bottomButton}
+              />
             </View>
           )}
         </View>
@@ -107,8 +143,14 @@ const styles = StyleSheet.create({
   empty: { padding: 32, textAlign: 'center', color: colors.muted },
   footer: { height: 88 },
   bottomBar: {
-    position: 'absolute', left: 0, right: 0, bottom: 0, padding: 12, backgroundColor: colors.bg,
-    borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    padding: 12,
+    backgroundColor: colors.bg,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
   },
   bottomActions: { flexDirection: 'row', gap: 10 },
   bottomButton: { flex: 1 },

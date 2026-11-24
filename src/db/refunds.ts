@@ -22,7 +22,9 @@ export async function getRefund(id: number): Promise<Refund | undefined> {
   const db = await getDb();
   return db.get<Refund>(
     `SELECT id, amount_minor, currency, raw_merchant, merchant_key, occurred_at, refund_settled_at, refund_target_id
-      FROM transactions WHERE id = ? AND kind = 'refund'`, [id]);
+      FROM transactions WHERE id = ? AND kind = 'refund'`,
+    [id],
+  );
 }
 
 /**
@@ -30,7 +32,11 @@ export async function getRefund(id: number): Promise<Refund | undefined> {
  * different categories), else the category of the latest purchase / payment at that merchant within
  * REFUND_LOOKBACK_DAYS before it; null when unknown (counted as "Возвраты без категории").
  */
-export async function refundCategory(merchantKey: string | null | undefined, occurredAt: number, db?: Db): Promise<number | null> {
+export async function refundCategory(
+  merchantKey: string | null | undefined,
+  occurredAt: number,
+  db?: Db,
+): Promise<number | null> {
   if (!merchantKey) return null;
   db ??= await getDb();
   const rule = await findCategoryForMerchant(merchantKey, db);
@@ -40,7 +46,8 @@ export async function refundCategory(merchantKey: string | null | undefined, occ
       WHERE merchant_key = ? AND kind IN (${sqlList(REMEMBERABLE_KINDS)})
         AND category_id IS NOT NULL AND occurred_at >= ? AND occurred_at <= ?
       ORDER BY occurred_at DESC, id DESC LIMIT 1`,
-    [merchantKey, occurredAt - REFUND_LOOKBACK_DAYS * 86400, occurredAt]);
+    [merchantKey, occurredAt - REFUND_LOOKBACK_DAYS * 86400, occurredAt],
+  );
   return last?.category_id ?? null;
 }
 
@@ -65,7 +72,8 @@ export async function autoCategorizeRefunds(): Promise<number> {
   const { changes } = await db.run(
     `UPDATE transactions SET category_id = ${REFUND_CATEGORY_SQL}, category_source = 'rule'
       WHERE kind = 'refund' AND category_id IS NULL AND category_source IS NULL AND refund_settled_at IS NULL
-        AND merchant_key IS NOT NULL AND ${REFUND_CATEGORY_SQL} IS NOT NULL`);
+        AND merchant_key IS NOT NULL AND ${REFUND_CATEGORY_SQL} IS NOT NULL`,
+  );
   return changes;
 }
 

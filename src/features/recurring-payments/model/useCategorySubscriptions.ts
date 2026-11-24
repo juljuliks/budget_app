@@ -4,7 +4,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { LastCharge, merchantsWithoutPayment, paymentNext, paymentsOfCategory, RecurringPayment } from '@/db/recurring';
 import { onTransactionsChanged } from '@/domain/events';
 
-export type CategorySubscriptions = { subs: Array<{ sub: RecurringPayment; next: string | null }>; merchants: LastCharge[] };
+export type CategorySubscriptions = {
+  subs: Array<{ sub: RecurringPayment; next: string | null }>;
+  merchants: LastCharge[];
+};
 
 export function useCategorySubscriptions(categoryId: number): CategorySubscriptions | null {
   const [data, setData] = useState<CategorySubscriptions | null>(null);
@@ -14,7 +17,9 @@ export function useCategorySubscriptions(categoryId: number): CategorySubscripti
       const own = all.filter((p) => p.merchant_key);
       const nexts = await Promise.all(own.map((p) => paymentNext(p.id)));
       return { subs: own.map((sub, i) => ({ sub, next: nexts[i] })), merchants };
-    })().then(setData).catch((e) => console.error('load category subscriptions failed', e));
+    })()
+      .then(setData)
+      .catch((e) => console.error('load category subscriptions failed', e));
   }, [categoryId]);
   useEffect(load, [load]);
   useEffect(() => onTransactionsChanged(load), [load]);

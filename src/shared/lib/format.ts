@@ -27,7 +27,6 @@ export function dayKey(unixSeconds: number): string {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 }
 
-
 // Hand-rolled: Hermes on RN 0.71 has limited Intl support
 export function formatDay(unixSeconds: number, now = new Date()): string {
   const d = new Date(unixSeconds * 1000);
@@ -46,7 +45,8 @@ export function formatTime(unixSeconds: number): string {
 
 /** Russian plural: plural(5, ['транзакция', 'транзакции', 'транзакций']) → 'транзакций'. */
 export function plural(n: number, [one, few, many]: [string, string, string]): string {
-  const d = n % 10, dd = n % 100;
+  const d = n % 10,
+    dd = n % 100;
   if (d === 1 && dd !== 11) return one;
   if (d >= 2 && d <= 4 && (dd < 12 || dd > 14)) return few;
   return many;
@@ -75,5 +75,10 @@ export function periodText(period: number): string {
 
 /** A repeating payment's period chips: periods as periodText has them and their names (another — "Другое…"). */
 export const PAYMENT_PERIODS: ReadonlyArray<readonly [number, string]> = [
-  [-1, 'Каждую неделю'], [1, 'Каждый месяц'], [3, 'Раз в 3 месяца'], [6, 'Раз в полгода'], [12, 'Раз в год'], [0, 'Один раз'],
+  [-1, 'Каждую неделю'],
+  [1, 'Каждый месяц'],
+  [3, 'Раз в 3 месяца'],
+  [6, 'Раз в полгода'],
+  [12, 'Раз в год'],
+  [0, 'Один раз'],
 ];

@@ -1,4 +1,3 @@
-
 describe('stats periods', () => {
   const { periodRange, shiftAnchor, periodLabel } = require('../../src/shared/lib/dateRange');
   test('day, week (Monday to Sunday), year around a date', () => {
@@ -21,7 +20,10 @@ describe('stats periods', () => {
 describe('period norms helpers', () => {
   const { daysByMonth, rangeDays, daysInMonth } = require('../../src/shared/lib/dateRange');
   test('a week across two months is split by month', () => {
-    expect([...daysByMonth({ from: '2026-09-28', to: '2026-10-04' })]).toEqual([['2026-09', 3], ['2026-10', 4]]);
+    expect([...daysByMonth({ from: '2026-09-28', to: '2026-10-04' })]).toEqual([
+      ['2026-09', 3],
+      ['2026-10', 4],
+    ]);
     expect(rangeDays({ from: '2026-10-04', to: '2026-10-04' })).toBe(1);
     expect(daysInMonth('2026-02')).toBe(28);
     expect(daysInMonth('2026-10')).toBe(31);

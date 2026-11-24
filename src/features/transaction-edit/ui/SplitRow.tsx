@@ -25,12 +25,16 @@ export default function SplitRow({ index, label, currency, text, rest, onText, o
       <View style={[styles.dot, { backgroundColor: SPLIT_COLORS[index % SPLIT_COLORS.length] }]} />
       <View style={styles.name}>
         <TouchableOpacity style={styles.chip} onPress={onPickCategory} accessibilityLabel={`Категория: ${label}`}>
-          <Text style={styles.chipText} numberOfLines={1}>{label}</Text>
+          <Text style={styles.chipText} numberOfLines={1}>
+            {label}
+          </Text>
         </TouchableOpacity>
         {own ? <Text style={styles.hint}>остальное</Text> : null}
       </View>
       {own ? (
-        <Text style={[styles.rest, (rest ?? 0) <= 0 && styles.danger]}>{formatMoneyWithCurrency(rest ?? 0, currency)}</Text>
+        <Text style={[styles.rest, (rest ?? 0) <= 0 && styles.danger]}>
+          {formatMoneyWithCurrency(rest ?? 0, currency)}
+        </Text>
       ) : (
         <View style={styles.input}>
           <TextInput
@@ -49,28 +53,52 @@ export default function SplitRow({ index, label, currency, text, rest, onText, o
         <TouchableOpacity style={styles.remove} onPress={onRemove} accessibilityLabel={`Убрать: ${label}`}>
           <CloseIcon color={colors.muted} size={18} />
         </TouchableOpacity>
-      ) : <View style={styles.remove} />}
+      ) : (
+        <View style={styles.remove} />
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   row: {
-    flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
   },
   dot: { width: 10, height: 10, borderRadius: 5 },
   name: { flex: 1, alignItems: 'flex-start', gap: 3 },
-  chip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16, backgroundColor: colors.surface, maxWidth: '100%' },
+  chip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    backgroundColor: colors.surface,
+    maxWidth: '100%',
+  },
   chipText: { fontSize: 15, color: colors.text },
   hint: { fontSize: 13, color: colors.muted, paddingLeft: 4 },
   rest: { fontSize: 16, color: colors.text, fontVariant: ['tabular-nums'] },
   danger: { color: colors.danger },
   input: {
-    flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1.5, borderColor: colors.accent,
-    borderRadius: 8, paddingHorizontal: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderWidth: 1.5,
+    borderColor: colors.accent,
+    borderRadius: 8,
+    paddingHorizontal: 10,
   },
-  inputText: { fontSize: 16, color: colors.text, minWidth: 48, textAlign: 'right', paddingVertical: 6, fontVariant: ['tabular-nums'] },
+  inputText: {
+    fontSize: 16,
+    color: colors.text,
+    minWidth: 48,
+    textAlign: 'right',
+    paddingVertical: 6,
+    fontVariant: ['tabular-nums'],
+  },
   symbol: { fontSize: 16, color: colors.text },
   remove: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
 });

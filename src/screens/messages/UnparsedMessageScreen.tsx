@@ -18,14 +18,20 @@ export default function UnparsedMessageScreen({ route, navigation }: Props) {
   const { failed, started, fail } = useLoadFailed('load unparsed message');
   const load = useCallback(() => {
     started();
-    getUnparsed(route.params.id).then((m) => setMessage(m ?? null)).catch(fail);
+    getUnparsed(route.params.id)
+      .then((m) => setMessage(m ?? null))
+      .catch(fail);
   }, [route.params.id, started, fail]);
   useEffect(load, [load]);
   useEffect(() => {
-    if (message) navigation.setOptions({ title: `${sourceLabel(message.source, bankOfSender(message.sender).name)} · ${formatDay(message.received_at)}, ${formatTime(message.received_at)}` });
+    if (message)
+      navigation.setOptions({
+        title: `${sourceLabel(message.source, bankOfSender(message.sender).name)} · ${formatDay(message.received_at)}, ${formatTime(message.received_at)}`,
+      });
   }, [message, navigation]);
 
-  if (message === null) return <Text style={styles.gone}>Этого сообщения уже нет: его разобрал шаблон или прошло 30 дней.</Text>;
+  if (message === null)
+    return <Text style={styles.gone}>Этого сообщения уже нет: его разобрал шаблон или прошло 30 дней.</Text>;
   if (!message) return <Loading failed={failed} onRetry={load} />;
   return <MarkMessage message={message} onDone={() => navigation.goBack()} />;
 }

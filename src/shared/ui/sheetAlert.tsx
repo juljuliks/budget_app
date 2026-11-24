@@ -8,7 +8,11 @@ import { colors } from '../theme/theme';
 // shows them.
 
 /** 'secondary': outlined, for the less usual choice next to a filled one */
-export type SheetButton = { text: string; style?: 'cancel' | 'destructive' | 'secondary' | 'default'; onPress?: () => void };
+export type SheetButton = {
+  text: string;
+  style?: 'cancel' | 'destructive' | 'secondary' | 'default';
+  onPress?: () => void;
+};
 /** under the message, above the buttons (e.g. a note with a link); `close` closes the sheet first */
 export type SheetExtra = (close: () => void) => ReactNode;
 type Request = { title: string; message?: string; buttons: SheetButton[]; question?: string; extra?: SheetExtra };
@@ -19,7 +23,13 @@ let show: ((r: Request) => void) | null = null;
  * Like Alert.alert(title, message, buttons): a sheet with the buttons stacked, the cancel one last. `question`: what
  * the buttons answer, in bold after the message; `extra`: something more under it.
  */
-export function sheetAlert(title: string, message?: string, buttons: SheetButton[] = [{ text: 'Понятно' }], question?: string, extra?: SheetExtra) {
+export function sheetAlert(
+  title: string,
+  message?: string,
+  buttons: SheetButton[] = [{ text: 'Понятно' }],
+  question?: string,
+  extra?: SheetExtra,
+) {
   show?.({ title, message, buttons, question, extra });
 }
 
@@ -28,8 +38,13 @@ export function SheetAlertHost() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    show = (r) => { setReq(r); setVisible(true); };
-    return () => { show = null; };
+    show = (r) => {
+      setReq(r);
+      setVisible(true);
+    };
+    return () => {
+      show = null;
+    };
   }, []);
 
   const close = () => setVisible(false);
@@ -37,12 +52,24 @@ export function SheetAlertHost() {
   const cancel = (req?.buttons ?? []).find((b) => b.style === 'cancel');
 
   return (
-    <BottomSheet visible={visible} onClose={() => { close(); cancel?.onPress?.(); }} title={req?.title}>
+    <BottomSheet
+      visible={visible}
+      onClose={() => {
+        close();
+        cancel?.onPress?.();
+      }}
+      title={req?.title}
+    >
       <View style={styles.body}>
         {req?.message || req?.question ? (
           <Text style={styles.message}>
             {req.message ?? ''}
-            {req.question ? <Text style={styles.question}>{req.message ? ' ' : ''}{req.question}</Text> : null}
+            {req.question ? (
+              <Text style={styles.question}>
+                {req.message ? ' ' : ''}
+                {req.question}
+              </Text>
+            ) : null}
           </Text>
         ) : null}
         {req?.extra?.(close)}
@@ -53,10 +80,23 @@ export function SheetAlertHost() {
             title={b.text}
             danger={b.style === 'destructive'}
             variant={b.style === 'secondary' ? 'secondary' : 'primary'}
-            onPress={() => { close(); b.onPress?.(); }}
+            onPress={() => {
+              close();
+              b.onPress?.();
+            }}
           />
         ))}
-        {cancel ? <SheetActions submit={null} cancelTitle={cancel.text} onCancel={() => { close(); cancel.onPress?.(); }} style={styles.cancelRow} /> : null}
+        {cancel ? (
+          <SheetActions
+            submit={null}
+            cancelTitle={cancel.text}
+            onCancel={() => {
+              close();
+              cancel.onPress?.();
+            }}
+            style={styles.cancelRow}
+          />
+        ) : null}
       </View>
     </BottomSheet>
   );

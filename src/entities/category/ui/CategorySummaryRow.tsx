@@ -13,7 +13,9 @@ export default function CategorySummaryRow({ summary, onShow }: { summary: Categ
   return (
     <TextLink
       label={`${summary.count} ${plural(summary.count, ['операция', 'операции', 'операций'])}${totals ? ` · ${totals}` : ''}`}
-      onPress={onShow} style={styles.link} containerStyle={styles.box}
+      onPress={onShow}
+      style={styles.link}
+      containerStyle={styles.box}
     />
   );
 }

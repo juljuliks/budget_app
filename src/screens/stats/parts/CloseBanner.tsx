@@ -24,7 +24,10 @@ export default function CloseBanner() {
   const [ym, setYm] = useState<string | null>(null);
   const load = useCallback(() => {
     const now = new Date();
-    if (now.getDate() > LAST_DAY) { setYm(null); return; }
+    if (now.getDate() > LAST_DAY) {
+      setYm(null);
+      return;
+    }
     Promise.all([monthToClose(), getSetting(HIDDEN_KEY)])
       .then(([open, hidden]) => setYm(open && hidden !== dayKeyOf(now) ? open : null))
       .catch((e) => console.error('load close banner failed', e));
@@ -44,8 +47,12 @@ export default function CloseBanner() {
         </TouchableOpacity>
       </View>
       <TouchableOpacity
-        onPress={() => { setYm(null); setSetting(HIDDEN_KEY, dayKeyOf(new Date())).catch(toastFailure('hide close banner', SAVE_FAILED)); }}
-        hitSlop={10} accessibilityLabel="Скрыть до завтра"
+        onPress={() => {
+          setYm(null);
+          setSetting(HIDDEN_KEY, dayKeyOf(new Date())).catch(toastFailure('hide close banner', SAVE_FAILED));
+        }}
+        hitSlop={10}
+        accessibilityLabel="Скрыть до завтра"
       >
         <Text style={styles.close}>✕</Text>
       </TouchableOpacity>
@@ -55,8 +62,15 @@ export default function CloseBanner() {
 
 const styles = StyleSheet.create({
   box: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginHorizontal: 16, marginBottom: 8,
-    paddingHorizontal: 14, paddingVertical: 12, borderRadius: 12, backgroundColor: colors.warnBg,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: colors.warnBg,
   },
   text: { flex: 1, gap: 2 },
   title: { fontSize: 16, fontWeight: '600', color: colors.warn },

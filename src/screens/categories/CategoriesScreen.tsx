@@ -45,15 +45,17 @@ export default function CategoriesScreen({ navigation }: Props) {
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      headerRight: () => (
-        <CreateButton onPress={() => setCreating(true)} accessibilityLabel="Новая категория" />
-      ),
+      headerRight: () => <CreateButton onPress={() => setCreating(true)} accessibilityLabel="Новая категория" />,
     });
   }, [navigation]);
 
   const load = useCallback(() => {
     Promise.all([listCategories(), categoryColors(), listCategoryTypes()])
-      .then(([c, colorMap, t]) => { setCats(c); setColorOf(colorMap); setTypes(t.map((x) => x.name)); })
+      .then(([c, colorMap, t]) => {
+        setCats(c);
+        setColorOf(colorMap);
+        setTypes(t.map((x) => x.name));
+      })
       .catch(toastFailure('load categories', LOAD_FAILED));
   }, []);
   useFocusEffect(load);
@@ -70,61 +72,84 @@ export default function CategoriesScreen({ navigation }: Props) {
 
   return (
     <View style={styles.screen}>
-    <SectionList
-      style={styles.list}
-      // room under the last rows for the merge button over them, from the first pick (no jump when it appears)
-      contentContainerStyle={picking ? styles.pickingContent : undefined}
-      sections={sections}
-      keyExtractor={(c) => String(c.id)}
-      renderSectionHeader={({ section }) => <Text style={formStyles.sectionHeader}>{section.title}</Text>}
-      renderItem={({ item }) => (
-        // like the merchants: the row opens the category in a sheet (name, section, color, operations, deleting)
-        // picking: a tap picks / unpicks
-        <TouchableOpacity
-          style={styles.row}
-          onPress={() => (picking ? pick(item) : openCategory(item.id))}
-          onLongPress={() => pick(item)}
-          accessibilityRole="button"
-          accessibilityState={picking ? { selected: picked.includes(item.id), disabled: isSystemCategory(item) } : undefined}
-        >
-          {picking ? <View style={[styles.check, isSystemCategory(item) && styles.off]}><Checkbox checked={picked.includes(item.id)} size={20} /></View> : null}
-          <View style={[styles.dot, { backgroundColor: colorOf.get(item.id) ?? colors.border }]} />
-          <Text style={styles.name} numberOfLines={1}>{`${item.emoji || ''} ${item.name}`.trim()}</Text>
-          {/* hidden, not removed, while picking: the "›" sets the row's height, the rows would shrink and the list jump */}
-          <Text style={[styles.chevron, picking && styles.invisible]}>›</Text>
-        </TouchableOpacity>
-      )}
-      ListHeaderComponent={(
-        <CategoriesHeader
-          picking={picking}
-          headerHeight={headerHeight}
-          picked={picked.length}
-          types={types}
-          query={query}
-          onQuery={setQuery}
-          onLayout={setHeaderHeight}
-          onCancel={() => setPicked([])}
-        />
-      )}
-      ListEmptyComponent={<Text style={styles.empty}>{cats.length === 0 ? 'Категорий нет. Нажмите «Создать».' : 'Не найдено.'}</Text>}
-    />
-    <NewCategorySheet visible={creating} onClose={() => setCreating(false)} onSaved={load} />
-    {picked.length > 1 ? (
-      <View style={styles.bottomBar}>
-        <Button title={`Объединить (${picked.length})`} onPress={() => setMerging(picked)} />
-      </View>
-    ) : null}
-    <MergeCategoriesSheet
-      ids={merging}
-      onClose={() => setMerging([])}
-      onMerged={() => { setMerging([]); setPicked([]); load(); }}
-    />
+      <SectionList
+        style={styles.list}
+        // room under the last rows for the merge button over them, from the first pick (no jump when it appears)
+        contentContainerStyle={picking ? styles.pickingContent : undefined}
+        sections={sections}
+        keyExtractor={(c) => String(c.id)}
+        renderSectionHeader={({ section }) => <Text style={formStyles.sectionHeader}>{section.title}</Text>}
+        renderItem={({ item }) => (
+          // like the merchants: the row opens the category in a sheet (name, section, color, operations, deleting)
+          // picking: a tap picks / unpicks
+          <TouchableOpacity
+            style={styles.row}
+            onPress={() => (picking ? pick(item) : openCategory(item.id))}
+            onLongPress={() => pick(item)}
+            accessibilityRole="button"
+            accessibilityState={
+              picking ? { selected: picked.includes(item.id), disabled: isSystemCategory(item) } : undefined
+            }
+          >
+            {picking ? (
+              <View style={[styles.check, isSystemCategory(item) && styles.off]}>
+                <Checkbox checked={picked.includes(item.id)} size={20} />
+              </View>
+            ) : null}
+            <View style={[styles.dot, { backgroundColor: colorOf.get(item.id) ?? colors.border }]} />
+            <Text style={styles.name} numberOfLines={1}>
+              {`${item.emoji || ''} ${item.name}`.trim()}
+            </Text>
+            {/* hidden, not removed, while picking: the "›" sets the row's height, the rows would shrink and the list jump */}
+            <Text style={[styles.chevron, picking && styles.invisible]}>›</Text>
+          </TouchableOpacity>
+        )}
+        ListHeaderComponent={
+          <CategoriesHeader
+            picking={picking}
+            headerHeight={headerHeight}
+            picked={picked.length}
+            types={types}
+            query={query}
+            onQuery={setQuery}
+            onLayout={setHeaderHeight}
+            onCancel={() => setPicked([])}
+          />
+        }
+        ListEmptyComponent={
+          <Text style={styles.empty}>{cats.length === 0 ? 'Категорий нет. Нажмите «Создать».' : 'Не найдено.'}</Text>
+        }
+      />
+      <NewCategorySheet visible={creating} onClose={() => setCreating(false)} onSaved={load} />
+      {picked.length > 1 ? (
+        <View style={styles.bottomBar}>
+          <Button title={`Объединить (${picked.length})`} onPress={() => setMerging(picked)} />
+        </View>
+      ) : null}
+      <MergeCategoriesSheet
+        ids={merging}
+        onClose={() => setMerging([])}
+        onMerged={() => {
+          setMerging([]);
+          setPicked([]);
+          load();
+        }}
+      />
     </View>
   );
 }
 
 /** "Разделы" (or the merge toolbar in its place) and the search under it. */
-function CategoriesHeader({ picking, headerHeight, picked, types, query, onQuery, onLayout, onCancel }: {
+function CategoriesHeader({
+  picking,
+  headerHeight,
+  picked,
+  types,
+  query,
+  onQuery,
+  onLayout,
+  onCancel,
+}: {
   picking: boolean;
   headerHeight: number;
   picked: number;
@@ -145,10 +170,17 @@ function CategoriesHeader({ picking, headerHeight, picked, types, query, onQuery
           </TouchableOpacity>
         </View>
       ) : (
-        <TouchableOpacity style={styles.typesRow} onPress={openCategoryTypes} accessibilityRole="button" onLayout={(e) => onLayout(e.nativeEvent.layout.height)}>
+        <TouchableOpacity
+          style={styles.typesRow}
+          onPress={openCategoryTypes}
+          accessibilityRole="button"
+          onLayout={(e) => onLayout(e.nativeEvent.layout.height)}
+        >
           <View style={styles.flex}>
             <Text style={styles.typesTitle}>Разделы</Text>
-            <Text style={styles.typesNote} numberOfLines={1}>{types.length ? types.join(', ') : 'Разделы объединяют категории и задают им цвета'}</Text>
+            <Text style={styles.typesNote} numberOfLines={1}>
+              {types.length ? types.join(', ') : 'Разделы объединяют категории и задают им цвета'}
+            </Text>
           </View>
           <Text style={styles.chevron}>›</Text>
         </TouchableOpacity>
@@ -163,15 +195,24 @@ function CategoriesHeader({ picking, headerHeight, picked, types, query, onQuery
 const styles = StyleSheet.create({
   list: { flex: 1, backgroundColor: colors.bg },
   row: {
-    flexDirection: 'row', alignItems: 'center', paddingLeft: 16, paddingRight: 8, paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: 16,
+    paddingRight: 8,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
   },
   dot: { width: 10, height: 10, borderRadius: 5, marginRight: 10 },
   name: { flex: 1, fontSize: 16, color: colors.text },
   empty: { padding: 32, textAlign: 'center', color: colors.muted },
   typesRow: {
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
   },
   flex: { flex: 1 },
   typesTitle: { fontSize: 16, color: colors.text, fontWeight: '600' },
@@ -182,17 +223,29 @@ const styles = StyleSheet.create({
   off: { opacity: 0.35 },
   invisible: { opacity: 0 },
   toolbar: {
-    flexDirection: 'row', alignItems: 'center', gap: 16, paddingHorizontal: 16, paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
   },
   pickLabel: { fontSize: 15, color: colors.text },
   screen: { flex: 1, backgroundColor: colors.bg },
   pickingContent: { paddingBottom: 88 },
   // fixed over the bottom of the list: its showing doesn't resize the list (that moved the scroll)
   bottomBar: {
-    position: 'absolute', left: 0, right: 0, bottom: 0,
-    paddingHorizontal: 16, paddingTop: 12, paddingBottom: 16, backgroundColor: colors.bg,
-    borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 16,
+    backgroundColor: colors.bg,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
   },
   toolbarCancel: { fontSize: 15, color: colors.muted },
 });

@@ -19,21 +19,34 @@ export function useStatsBack(reset: () => void) {
   const goBack = useCallback(() => {
     navigation.setParams({ from: undefined, day: undefined, year: undefined });
     cb.current.reset();
-    if (from === 'pages') { if (!backToPages()) navigation.navigate('Stats'); }
-    else if (from === 'Stats' || from === 'Transactions') navigation.navigate(from);
+    if (from === 'pages') {
+      if (!backToPages()) navigation.navigate('Stats');
+    } else if (from === 'Stats' || from === 'Transactions') navigation.navigate(from);
     else if (from) navigationRef.navigate(from as never);
   }, [navigation, from]);
 
-  useFocusEffect(useCallback(() => {
-    if (!from) return undefined;
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => { goBack(); return true; });
-    return () => sub.remove();
-  }, [from, goBack]));
+  useFocusEffect(
+    useCallback(() => {
+      if (!from) return undefined;
+      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+        goBack();
+        return true;
+      });
+      return () => sub.remove();
+    }, [from, goBack]),
+  );
 
   // the tab pressed: a normal visit, no way back
-  useEffect(() => navigation.addListener('tabPress', () => {
-    if (from) { navigation.setParams({ from: undefined }); forgetPages(); }
-  }), [navigation, from]);
+  useEffect(
+    () =>
+      navigation.addListener('tabPress', () => {
+        if (from) {
+          navigation.setParams({ from: undefined });
+          forgetPages();
+        }
+      }),
+    [navigation, from],
+  );
 
   useLayoutEffect(() => {
     navigation.setOptions({

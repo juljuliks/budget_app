@@ -31,13 +31,24 @@ export type PaymentOpen = {
   onSaved?: () => void;
 };
 
-export const CLOSED: SheetState = { addTransaction: false, categoryTypes: false, categoryDelete: null, monthReport: null, yearReport: null, monthClose: null, backup: false, lockOptions: false, payment: null };
+export const CLOSED: SheetState = {
+  addTransaction: false,
+  categoryTypes: false,
+  categoryDelete: null,
+  monthReport: null,
+  yearReport: null,
+  monthClose: null,
+  backup: false,
+  lockOptions: false,
+  payment: null,
+};
 
 let handler: ((patch: Partial<SheetState>) => void) | null = null;
 let pending: Partial<SheetState> = {};
 
 function open(patch: Partial<SheetState>) {
-  if (handler) handler(patch); else pending = { ...pending, ...patch };
+  if (handler) handler(patch);
+  else pending = { ...pending, ...patch };
 }
 
 export const openAddTransaction = () => open({ addTransaction: true });

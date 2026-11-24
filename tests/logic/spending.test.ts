@@ -14,12 +14,13 @@ async function add(kind: string, amount: number, categoryId: number | null, merc
   await db.run(
     `INSERT INTO transactions (bank, kind, amount_minor, currency, raw_merchant, merchant_key, category_id, category_source, occurred_at, raw_sms, sms_hash, refund_settled_at)
       VALUES ('tbc', ?, ?, 'GEL', ?, ?, ?, 'user', ?, '', ?, ?)`,
-    [kind, amount, merchant, merchant, categoryId, at, `s${seq++}`, settled ? at : null]);
+    [kind, amount, merchant, merchant, categoryId, at, `s${seq++}`, settled ? at : null],
+  );
 }
 
 beforeEach(() => freshDb());
 
-test('purchases and payments count, refunds and deposits in the category subtract, a settled refund doesn\'t count', async () => {
+test("purchases and payments count, refunds and deposits in the category subtract, a settled refund doesn't count", async () => {
   const cat = await createCategory('Одежда', '👕', null, null);
   await add('purchase', 10000, cat, 'ZARA');
   await add('payment', 2000, cat, 'ZARA');

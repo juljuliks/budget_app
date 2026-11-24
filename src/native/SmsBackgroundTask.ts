@@ -1,6 +1,11 @@
 import { ingestSms } from '../ingest/ingest';
 import { createNotificationChannel } from '../notifications/notifeeBootstrap';
-import { CHANNEL_ID, showDepositNotification, showLimitAlert, showUncategorizedTransactionNotification } from '../notifications/notifeeIntegration';
+import {
+  CHANNEL_ID,
+  showDepositNotification,
+  showLimitAlert,
+  showUncategorizedTransactionNotification,
+} from '../notifications/notifeeIntegration';
 import { showFundSpent } from '../notifications/fundNotice';
 import { scheduleMonthReports } from '../notifications/monthReportNotice';
 
@@ -15,7 +20,12 @@ export type SmsTaskData = {
 // Headless JS task started by SmsHeadlessService (android/.../sms). Registered in index.js.
 export default async function SmsBackgroundTask(data: SmsTaskData): Promise<void> {
   try {
-    const result = await ingestSms({ sender: data.sender, body: data.body, timestamp: data.timestamp, source: data.source });
+    const result = await ingestSms({
+      sender: data.sender,
+      body: data.body,
+      timestamp: data.timestamp,
+      source: data.source,
+    });
     console.log('SmsBackgroundTask:', result.status, 'txId' in result ? result.txId : '');
 
     if (result.status === 'inserted' && result.kind === 'deposit') {

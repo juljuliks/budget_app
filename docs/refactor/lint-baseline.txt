@@ -1,17 +1,20 @@
-# npm run lint — warnings at the start of the refactor (REFACTOR_PLAN.md, stage 0), 273 in all.
-# A rule becomes an error once its list is empty.
+# npm run lint — warnings at the start of the refactor (REFACTOR_PLAN.md, stage 0), 313 in all.
+# A rule becomes an error once its list is empty. Made by scripts/lint-baseline.js.
 
 82	app/touchable-role
 43	@typescript-eslint/no-floating-promises
 35	@typescript-eslint/no-unnecessary-type-assertion
 26	@typescript-eslint/no-misused-promises
+21	max-lines-per-function
 16	@typescript-eslint/no-unused-vars
 14	@typescript-eslint/no-unsafe-assignment
+12	max-lines
 11	@typescript-eslint/require-await
 10	app/icon-touchable-hit-slop
 9	@typescript-eslint/unbound-method
 7	@typescript-eslint/no-unsafe-return
 7	@typescript-eslint/no-require-imports
+7	app/max-hook-lines
 6	@typescript-eslint/no-explicit-any
 2	@typescript-eslint/no-unsafe-member-access
 2	@typescript-eslint/no-unsafe-argument
@@ -21,197 +24,220 @@
 
 app/touchable-role (82)
   src/entities/category/ui/CategoryNameField.tsx:26
-  src/entities/category/ui/CategoryNameField.tsx:31
-  src/entities/category/ui/TypeEditModal.tsx:88
-  src/entities/transaction/ui/ImpulseCalendar.tsx:56
+  src/entities/category/ui/CategoryNameField.tsx:35
+  src/entities/category/ui/TypeEditModal.tsx:116
+  src/entities/transaction/ui/ImpulseCalendar.tsx:79
   src/entities/transaction/ui/TransactionItem.tsx:41
-  src/features/app-lock/ui/Keypad.tsx:19
-  src/features/app-lock/ui/Keypad.tsx:28
-  src/features/app-lock/ui/Keypad.tsx:33
-  src/features/app-lock/ui/PinScreen.tsx:45
-  src/features/card-balance/CardBalance.tsx:49
-  src/features/card-balance/CardBalance.tsx:73
-  src/features/category-types/CategoryTypesSheet.tsx:54
+  src/features/app-lock/ui/Keypad.tsx:23
+  src/features/app-lock/ui/Keypad.tsx:42
+  src/features/app-lock/ui/Keypad.tsx:49
+  src/features/app-lock/ui/PinScreen.tsx:47
+  src/features/card-balance/CardBalance.tsx:55
+  src/features/card-balance/CardBalance.tsx:88
+  src/features/category-types/CategoryTypesSheet.tsx:63
   src/features/message-templates/ui/MarkSteps.tsx:28
-  src/features/message-templates/ui/MarkSteps.tsx:45
-  src/features/message-templates/ui/MarkSteps.tsx:61
-  src/features/month-report/MonthReportRow.tsx:23
-  src/features/month-report/ui/ImpulseBlock.tsx:74
-  src/features/month-report/ui/Lines.tsx:17
-  src/features/month-report/ui/Lines.tsx:56
-  src/features/month-report/ui/OutsideBlock.tsx:48
-  src/features/operations-filters/FilterSheets.tsx:73
-  src/features/operations-filters/FilterSheets.tsx:115
-  src/features/settings/MenuButton.tsx:29
-  src/features/sms-import/PushAccessBanner.tsx:37
-  src/features/sms-import/PushAccessBanner.tsx:40
-  src/features/transaction-edit/ui/NoteSection.tsx:26
-  src/features/transaction-edit/ui/NoteSection.tsx:31
+  src/features/message-templates/ui/MarkSteps.tsx:48
+  src/features/message-templates/ui/MarkSteps.tsx:69
+  src/features/month-report/MonthReportRow.tsx:24
+  src/features/month-report/ui/ImpulseBlock.tsx:91
+  src/features/month-report/ui/Lines.tsx:22
+  src/features/month-report/ui/Lines.tsx:108
+  src/features/month-report/ui/OutsideBlock.tsx:78
+  src/features/operations-filters/FilterSheets.tsx:97
+  src/features/operations-filters/FilterSheets.tsx:154
+  src/features/settings/MenuButton.tsx:44
+  src/features/sms-import/PushAccessBanner.tsx:39
+  src/features/sms-import/PushAccessBanner.tsx:49
+  src/features/transaction-edit/ui/NoteSection.tsx:34
+  src/features/transaction-edit/ui/NoteSection.tsx:39
   src/features/transaction-edit/ui/SplitRow.tsx:27
-  src/features/transaction-edit/ui/SplitRow.tsx:49
-  src/features/transaction-edit/ui/SplitSheet.tsx:79
-  src/features/transaction-edit/ui/SplitView.tsx:25
+  src/features/transaction-edit/ui/SplitRow.tsx:53
+  src/features/transaction-edit/ui/SplitSheet.tsx:93
+  src/features/transaction-edit/ui/SplitView.tsx:27
   src/features/transaction-edit/ui/TransactionHeader.tsx:27
   src/features/transaction-edit/ui/TransactionHeader.tsx:39
-  src/screens/banks/BanksScreen.tsx:49
+  src/screens/banks/BanksScreen.tsx:72
   src/screens/merchants/parts/MerchantRowView.tsx:22
-  src/screens/messages/MessageTemplatesScreen.tsx:53
-  src/screens/messages/UnparsedScreen.tsx:32
-  src/screens/operations/parts/SectionHeader.tsx:59
-  src/screens/stats/history/parts/DetailGroup.tsx:34
-  src/screens/stats/history/parts/MonthRow.tsx:44
-  src/screens/stats/history/parts/MonthRow.tsx:90
-  src/screens/stats/history/parts/MonthRow.tsx:94
-  src/screens/stats/month/parts/CategoryRow.tsx:76
-  src/screens/stats/month/parts/MonthDonut.tsx:114
-  src/screens/stats/month/parts/savingsSection.tsx:98
-  src/screens/stats/parts/CloseBanner.tsx:46
+  src/screens/messages/MessageTemplatesScreen.tsx:88
+  src/screens/messages/UnparsedScreen.tsx:35
+  src/screens/operations/parts/SectionHeader.tsx:85
+  src/screens/stats/history/parts/DetailGroup.tsx:36
+  src/screens/stats/history/parts/MonthRow.tsx:58
+  src/screens/stats/history/parts/MonthRow.tsx:104
+  src/screens/stats/history/parts/MonthRow.tsx:108
+  src/screens/stats/month/parts/CategoryRow.tsx:81
+  src/screens/stats/month/parts/MonthDonut.tsx:170
+  src/screens/stats/month/parts/savingsSection.tsx:140
+  src/screens/stats/parts/CloseBanner.tsx:49
   src/screens/stats/parts/PeriodNav.tsx:24
   src/screens/stats/parts/PeriodNav.tsx:34
-  src/screens/stats/parts/PeriodNav.tsx:36
+  src/screens/stats/parts/PeriodNav.tsx:38
   src/screens/stats/parts/PeriodSheet.tsx:25
-  src/screens/stats/parts/PlanAlert.tsx:100
-  src/screens/stats/parts/RefundsRow.tsx:11
-  src/screens/stats/period/PeriodStatsView.tsx:61
-  src/screens/stats/period/parts/CategoryRow.tsx:36
-  src/screens/stats/period/parts/CategoryRow.tsx:65
-  src/screens/stats/period/parts/LimitLines.tsx:23
-  src/screens/stats/period/parts/LimitSummary.tsx:46
-  src/screens/stats/period/parts/yearSpending.tsx:47
-  src/screens/stats/plan/parts/FundItemRow.tsx:29
-  src/screens/stats/plan/parts/PlanItemRow.tsx:46
-  src/screens/stats/plan/parts/PlanItemRow.tsx:84
-  src/screens/stats/plan/parts/RecurringItemRow.tsx:46
-  src/screens/stats/trends/parts/FundTrend.tsx:48
+  src/screens/stats/parts/PlanAlert.tsx:125
+  src/screens/stats/parts/RefundsRow.tsx:19
+  src/screens/stats/period/PeriodStatsView.tsx:66
+  src/screens/stats/period/parts/CategoryRow.tsx:37
+  src/screens/stats/period/parts/CategoryRow.tsx:98
+  src/screens/stats/period/parts/LimitLines.tsx:31
+  src/screens/stats/period/parts/LimitSummary.tsx:56
+  src/screens/stats/period/parts/yearSpending.tsx:54
+  src/screens/stats/plan/parts/FundItemRow.tsx:30
+  src/screens/stats/plan/parts/PlanItemRow.tsx:56
+  src/screens/stats/plan/parts/PlanItemRow.tsx:110
+  src/screens/stats/plan/parts/RecurringItemRow.tsx:66
+  src/screens/stats/trends/parts/FundTrend.tsx:65
   src/screens/stats/trends/parts/TrendRow.tsx:23
-  src/shared/ui/BottomSheet.tsx:128
-  src/shared/ui/Chip.tsx:38
-  src/shared/ui/ColorSwatches.tsx:25
-  src/shared/ui/ColorSwatches.tsx:46
-  src/shared/ui/EmojiPicker.tsx:114
-  src/shared/ui/EmojiPicker.tsx:122
-  src/shared/ui/EmojiPicker.tsx:152
-  src/shared/ui/PressMenu.tsx:107
-  src/shared/ui/PressMenu.tsx:119
-  src/shared/ui/RangeCalendar.tsx:58
+  src/shared/ui/BottomSheet.tsx:179
+  src/shared/ui/Chip.tsx:61
+  src/shared/ui/ColorSwatches.tsx:33
+  src/shared/ui/ColorSwatches.tsx:54
+  src/shared/ui/EmojiPicker.tsx:140
+  src/shared/ui/EmojiPicker.tsx:148
+  src/shared/ui/EmojiPicker.tsx:183
+  src/shared/ui/PressMenu.tsx:148
+  src/shared/ui/PressMenu.tsx:172
+  src/shared/ui/RangeCalendar.tsx:63
   src/shared/ui/RowActions.tsx:23
   src/shared/ui/RowActions.tsx:27
-  src/shared/ui/SearchBar.tsx:21
+  src/shared/ui/SearchBar.tsx:29
   src/shared/ui/SectionHeading.tsx:20
-  src/shared/ui/StickyScrollView.tsx:14
-  src/shared/ui/StoryPager.tsx:41
-  src/shared/ui/StoryPager.tsx:49
-  src/shared/ui/StoryPager.tsx:50
+  src/shared/ui/StickyScrollView.tsx:22
+  src/shared/ui/StoryPager.tsx:47
+  src/shared/ui/StoryPager.tsx:58
+  src/shared/ui/StoryPager.tsx:65
 
 @typescript-eslint/no-floating-promises (43)
-  src/app/useAppStartup.ts:39
-  src/app/useAppStartup.ts:60
-  src/app/useAppStartup.ts:62
-  src/app/useAppStartup.ts:64
-  src/app/useAppStartup.ts:64
-  src/app/useAppStartup.ts:67
-  src/app/useAppStartup.ts:69
+  src/app/useAppStartup.ts:40
+  src/app/useAppStartup.ts:66
+  src/app/useAppStartup.ts:68
   src/app/useAppStartup.ts:71
-  src/app/useAppStartup.ts:77
+  src/app/useAppStartup.ts:72
+  src/app/useAppStartup.ts:76
   src/app/useAppStartup.ts:78
-  src/db/balance.ts:77
-  src/entities/plan/ui/coverUnplanned.ts:56
-  src/features/add-transaction/model/useAddForm.ts:51
-  src/features/app-update/model/update.ts:81
-  src/features/app-update/ui/AppVersion.tsx:25
-  src/features/category-delete/deleteCategory.ts:17
-  src/features/category-kind/model/useCategoryKind.ts:54
-  src/features/category-kind/model/useCategoryKind.ts:64
-  src/features/fund/model/commands.ts:58
-  src/features/hide-amounts/HideAmountsButton.tsx:17
+  src/app/useAppStartup.ts:80
+  src/app/useAppStartup.ts:86
+  src/app/useAppStartup.ts:87
+  src/db/balance.ts:83
+  src/entities/plan/ui/coverUnplanned.ts:71
+  src/features/add-transaction/model/useAddForm.ts:76
+  src/features/app-update/model/update.ts:102
+  src/features/app-update/ui/AppVersion.tsx:29
+  src/features/category-delete/deleteCategory.ts:24
+  src/features/category-kind/model/useCategoryKind.ts:74
+  src/features/category-kind/model/useCategoryKind.ts:98
+  src/features/fund/model/commands.ts:85
   src/features/hide-amounts/HideAmountsButton.tsx:18
-  src/features/month-close/CarrySheet.tsx:80
-  src/features/month-close/MonthCloseSheet.tsx:51
-  src/features/month-close/MonthCloseSheet.tsx:61
-  src/features/month-close/MonthCloseSheet.tsx:75
-  src/features/recurring-payments/model/commands.ts:59
-  src/features/recurring-payments/model/commands.ts:62
-  src/features/recurring-payments/model/commands.ts:120
-  src/features/recurring-payments/ui/PaymentSheet.tsx:59
-  src/features/transaction-edit/TransactionView.tsx:50
-  src/features/transaction-edit/TransactionView.tsx:81
-  src/features/transaction-edit/model/useCategoryChoice.ts:25
-  src/features/transaction-edit/model/useCategoryChoice.ts:53
-  src/features/transaction-edit/model/useCategoryChoice.ts:54
-  src/features/transaction-edit/ui/PaymentNote.tsx:32
+  src/features/hide-amounts/HideAmountsButton.tsx:23
+  src/features/month-close/CarrySheet.tsx:122
+  src/features/month-close/MonthCloseSheet.tsx:65
+  src/features/month-close/MonthCloseSheet.tsx:85
+  src/features/month-close/MonthCloseSheet.tsx:113
+  src/features/recurring-payments/model/commands.ts:94
+  src/features/recurring-payments/model/commands.ts:101
+  src/features/recurring-payments/model/commands.ts:191
+  src/features/recurring-payments/ui/PaymentSheet.tsx:86
+  src/features/transaction-edit/TransactionView.tsx:52
+  src/features/transaction-edit/TransactionView.tsx:108
+  src/features/transaction-edit/model/useCategoryChoice.ts:27
+  src/features/transaction-edit/model/useCategoryChoice.ts:70
+  src/features/transaction-edit/model/useCategoryChoice.ts:77
+  src/features/transaction-edit/ui/PaymentNote.tsx:37
   src/screens/operations/model/useBulkCategory.ts:29
-  src/screens/operations/model/useBulkCategory.ts:52
   src/screens/operations/model/useBulkCategory.ts:65
-  src/screens/operations/model/useBulkCategory.ts:66
-  src/screens/stats/plan/model/usePlanActions.ts:120
-  src/screens/stats/plan/model/usePlanActions.ts:130
-  src/screens/stats/plan/model/usePlanActions.ts:134
-  src/screens/stats/plan/parts/SavingsLessSheet.tsx:60
+  src/screens/operations/model/useBulkCategory.ts:91
+  src/screens/operations/model/useBulkCategory.ts:98
+  src/screens/stats/plan/model/usePlanActions.ts:175
+  src/screens/stats/plan/model/usePlanActions.ts:192
+  src/screens/stats/plan/model/usePlanActions.ts:199
+  src/screens/stats/plan/parts/SavingsLessSheet.tsx:86
 
 @typescript-eslint/no-unnecessary-type-assertion (35)
-  src/categorize/assign.ts:35
-  src/categorize/assign.ts:35
-  src/categorize/assign.ts:38
-  src/categorize/assign.ts:38
-  src/db/plans/budget.ts:178
-  src/db/plans/budget.ts:178
-  src/db/reportSavings.ts:47
-  src/db/reportSavings.ts:48
-  src/entities/category/ui/TypeEditModal.tsx:62
-  src/entities/category/ui/TypeEditModal.tsx:62
-  src/entities/plan/model/commands.ts:66
-  src/entities/plan/model/commands.ts:66
-  src/entities/plan/ui/PlanAmountModal.tsx:181
-  src/features/recurring-payments/model/commands.ts:32
-  src/features/recurring-payments/model/commands.ts:32
+  src/categorize/assign.ts:40
+  src/categorize/assign.ts:40
+  src/categorize/assign.ts:43
+  src/categorize/assign.ts:43
+  src/db/plans/budget.ts:246
+  src/db/plans/budget.ts:246
+  src/db/reportSavings.ts:61
+  src/db/reportSavings.ts:64
+  src/entities/category/ui/TypeEditModal.tsx:86
+  src/entities/category/ui/TypeEditModal.tsx:86
+  src/entities/plan/model/commands.ts:98
+  src/entities/plan/model/commands.ts:98
+  src/entities/plan/ui/PlanAmountModal.tsx:248
+  src/features/recurring-payments/model/commands.ts:45
+  src/features/recurring-payments/model/commands.ts:45
   src/features/transaction-edit/TransactionView.tsx:38
-  src/parsers/remoteTemplates.ts:45
+  src/parsers/remoteTemplates.ts:46
   src/parsers/template.ts:38
   src/parsers/template.ts:38
-  src/parsers/template.ts:59
-  src/parsers/template.ts:60
-  src/screens/stats/month/model/useMonthData.ts:34
-  src/screens/stats/month/parts/savingsSection.tsx:54
-  src/screens/stats/month/parts/savingsSection.tsx:57
-  src/screens/stats/period/parts/sections.tsx:46
-  src/screens/stats/period/parts/sections.tsx:46
-  src/screens/stats/period/parts/sections.tsx:47
-  src/screens/stats/period/parts/sections.tsx:47
-  src/screens/stats/period/parts/sections.tsx:47
-  src/screens/stats/period/parts/sections.tsx:48
-  src/screens/stats/period/parts/sections.tsx:49
-  src/screens/stats/period/parts/sections.tsx:49
-  src/screens/stats/period/parts/sections.tsx:49
-  src/screens/stats/period/parts/sections.tsx:49
-  src/screens/stats/plan/model/planView.ts:188
+  src/parsers/template.ts:64
+  src/parsers/template.ts:65
+  src/screens/stats/month/model/useMonthData.ts:39
+  src/screens/stats/month/parts/savingsSection.tsx:63
+  src/screens/stats/month/parts/savingsSection.tsx:66
+  src/screens/stats/period/parts/sections.tsx:53
+  src/screens/stats/period/parts/sections.tsx:53
+  src/screens/stats/period/parts/sections.tsx:56
+  src/screens/stats/period/parts/sections.tsx:56
+  src/screens/stats/period/parts/sections.tsx:56
+  src/screens/stats/period/parts/sections.tsx:60
+  src/screens/stats/period/parts/sections.tsx:63
+  src/screens/stats/period/parts/sections.tsx:63
+  src/screens/stats/period/parts/sections.tsx:64
+  src/screens/stats/period/parts/sections.tsx:64
+  src/screens/stats/plan/model/planView.ts:326
 
 @typescript-eslint/no-misused-promises (26)
-  src/entities/category/ui/CategoryFields.tsx:60
+  src/entities/category/ui/CategoryFields.tsx:63
   src/entities/category/ui/CategorySheet.tsx:36
-  src/entities/category/ui/CategoryView.tsx:44
-  src/entities/category/ui/CategoryView.tsx:45
-  src/entities/plan/ui/submitCategoryPayment.ts:60
-  src/entities/plan/ui/submitPlanSheet.ts:80
-  src/entities/transaction/model/confirmDelete.ts:17
-  src/entities/transaction/model/confirmDelete.ts:40
-  src/features/add-transaction/AddTransactionSheet.tsx:79
-  src/features/category-merge/MergeCategoriesSheet.tsx:138
-  src/features/category-types/CategoryTypesSheet.tsx:35
-  src/features/category-types/CategoryTypesSheet.tsx:67
-  src/features/merchant-card/MerchantView.tsx:37
-  src/features/message-templates/TemplatePreviewSheet.tsx:56
-  src/features/month-close/MonthCloseSheet.tsx:52
-  src/features/month-close/MonthCloseSheet.tsx:53
-  src/features/transaction-edit/ui/PaymentNote.tsx:33
-  src/features/transaction-edit/ui/PaymentNote.tsx:70
-  src/screens/categories/parts/NewCategorySheet.tsx:42
-  src/screens/category/CategoryScreen.tsx:50
-  src/screens/merchants/MerchantsScreen.tsx:92
-  src/screens/operations/OperationsScreen.tsx:145
-  src/screens/operations/OperationsScreen.tsx:171
-  src/screens/stats/month/StatsView.tsx:169
-  src/shared/ui/TextInputModal.tsx:107
-  src/shared/ui/TextInputModal.tsx:118
+  src/entities/category/ui/CategoryView.tsx:58
+  src/entities/category/ui/CategoryView.tsx:61
+  src/entities/plan/ui/submitCategoryPayment.ts:104
+  src/entities/plan/ui/submitPlanSheet.ts:148
+  src/entities/transaction/model/confirmDelete.ts:19
+  src/entities/transaction/model/confirmDelete.ts:46
+  src/features/add-transaction/AddTransactionSheet.tsx:96
+  src/features/category-merge/MergeCategoriesSheet.tsx:198
+  src/features/category-types/CategoryTypesSheet.tsx:42
+  src/features/category-types/CategoryTypesSheet.tsx:76
+  src/features/merchant-card/MerchantView.tsx:40
+  src/features/message-templates/TemplatePreviewSheet.tsx:66
+  src/features/month-close/MonthCloseSheet.tsx:69
+  src/features/month-close/MonthCloseSheet.tsx:70
+  src/features/transaction-edit/ui/PaymentNote.tsx:38
+  src/features/transaction-edit/ui/PaymentNote.tsx:89
+  src/screens/categories/parts/NewCategorySheet.tsx:35
+  src/screens/category/CategoryScreen.tsx:74
+  src/screens/merchants/MerchantsScreen.tsx:128
+  src/screens/operations/OperationsScreen.tsx:198
+  src/screens/operations/OperationsScreen.tsx:234
+  src/screens/stats/month/StatsView.tsx:259
+  src/shared/ui/TextInputModal.tsx:136
+  src/shared/ui/TextInputModal.tsx:148
+
+max-lines-per-function (21)
+  src/db/mergeCategories.ts:39
+  src/db/plans/close.ts:183
+  src/db/plans/history.ts:121
+  src/db/report.ts:175
+  src/db/yearReport.ts:101
+  src/entities/plan/ui/PlanAmountModal.tsx:106
+  src/features/app-lock/model/usePinFlow.ts:31
+  src/features/category-delete/model/useSortOut.ts:38
+  src/features/category-merge/MergeCategoriesSheet.tsx:38
+  src/features/operations-filters/model/useTransactionFilters.ts:25
+  src/features/recurring-payments/ui/PaymentSheet.tsx:41
+  src/features/recurring-payments/ui/RecurringPaymentsSheet.tsx:44
+  src/screens/operations/OperationsScreen.tsx:43
+  src/screens/stats/StatsHome.tsx:45
+  src/screens/stats/month/StatsView.tsx:48
+  src/screens/stats/period/model/periodView.ts:28
+  src/screens/stats/period/parts/CategoryInfo.tsx:12
+  src/screens/stats/plan/model/planView.ts:102
+  src/screens/stats/plan/model/usePlanActions.ts:55
+  src/screens/stats/trends/parts/FundTrend.tsx:25
+  src/shared/ui/PressMenu.tsx:53
 
 @typescript-eslint/no-unused-vars (16)
   src/categorize/assign.ts:2
@@ -226,80 +252,103 @@ app/touchable-role (82)
   src/notifications/notifeeBootstrap.ts:23
   src/screens/operations/model/useOperationsRoute.ts:6
   src/screens/stats/history/HistoryView.tsx:2
-  src/screens/stats/plan/model/usePlanActions.ts:45
+  src/screens/stats/plan/model/usePlanActions.ts:57
   src/screens/stats/trends/TrendsScreen.tsx:23
   src/shared/ui/icons.tsx:2
-  src/stats/norms.ts:3
+  src/stats/norms.ts:12
 
 @typescript-eslint/no-unsafe-assignment (14)
-  src/db/categories.ts:204
-  src/db/categories.ts:206
-  src/db/categoryDeletion.ts:41
-  src/db/merchants.ts:176
-  src/db/messages.ts:66
-  src/db/messages.ts:108
-  src/db/migrations/steps-59-on.ts:26
-  src/db/plans/normsData.ts:59
-  src/db/recurring/writes.ts:76
-  src/db/yearReport.ts:174
+  src/db/categories.ts:243
+  src/db/categories.ts:246
+  src/db/categoryDeletion.ts:48
+  src/db/merchants.ts:226
+  src/db/messages.ts:80
+  src/db/messages.ts:142
+  src/db/migrations/steps-59-on.ts:25
+  src/db/plans/normsData.ts:81
+  src/db/recurring/writes.ts:114
+  src/db/yearReport.ts:316
   src/importer/smsImporter.ts:6
-  src/parsers/remoteTemplates.ts:45
-  src/parsers/remoteTemplates.ts:56
+  src/parsers/remoteTemplates.ts:46
+  src/parsers/remoteTemplates.ts:57
   src/shared/ui/MonthGrid.tsx:23
+
+max-lines (12)
+  src/db/categories.ts:331
+  src/db/merchants.ts:315
+  src/db/migrations/steps-43-on.ts:293
+  src/db/migrations/steps-59-on.ts:303
+  src/db/plans/close.ts:307
+  src/db/plans/items.ts:279
+  src/db/plans/stats.ts:323
+  src/db/yearReport.ts:281
+  src/entities/plan/ui/PlanAmountModal.tsx:313
+  src/screens/stats/month/StatsView.tsx:275
+  src/screens/stats/plan/model/planView.ts:307
+  src/shared/ui/icons.tsx:288
 
 @typescript-eslint/require-await (11)
   src/db/driver.ts:14
   src/db/driver.ts:21
   src/db/driver.ts:22
-  src/features/recurring-payments/ui/PaymentSheet.tsx:122
-  src/native/appLock.ts:56
-  src/native/appLock.ts:60
-  src/native/appLock.ts:65
-  src/native/appLock.ts:71
-  src/native/appLock.ts:72
-  src/native/appLock.ts:73
-  src/native/appLock.ts:74
+  src/features/recurring-payments/ui/PaymentSheet.tsx:212
+  src/native/appLock.ts:75
+  src/native/appLock.ts:84
+  src/native/appLock.ts:89
+  src/native/appLock.ts:101
+  src/native/appLock.ts:105
+  src/native/appLock.ts:109
+  src/native/appLock.ts:113
 
 app/icon-touchable-hit-slop (10)
-  src/features/app-lock/ui/Keypad.tsx:28
-  src/features/app-lock/ui/Keypad.tsx:33
-  src/features/transaction-edit/ui/SplitRow.tsx:49
-  src/screens/messages/MessageTemplatesScreen.tsx:53
-  src/shared/ui/BottomSheet.tsx:128
-  src/shared/ui/ColorSwatches.tsx:46
-  src/shared/ui/PressMenu.tsx:119
-  src/shared/ui/SelectField.tsx:33
-  src/shared/ui/StoryPager.tsx:49
-  src/shared/ui/StoryPager.tsx:50
+  src/features/app-lock/ui/Keypad.tsx:42
+  src/features/app-lock/ui/Keypad.tsx:49
+  src/features/transaction-edit/ui/SplitRow.tsx:53
+  src/screens/messages/MessageTemplatesScreen.tsx:88
+  src/shared/ui/BottomSheet.tsx:179
+  src/shared/ui/ColorSwatches.tsx:54
+  src/shared/ui/PressMenu.tsx:172
+  src/shared/ui/SelectField.tsx:42
+  src/shared/ui/StoryPager.tsx:58
+  src/shared/ui/StoryPager.tsx:65
 
 @typescript-eslint/unbound-method (9)
-  src/db/transaction.ts:22
-  src/db/transaction.ts:22
-  src/db/transaction.ts:22
-  src/db/transaction.ts:37
-  src/entities/category/ui/CategoryPickerModal.tsx:44
-  src/entities/category/ui/CategoryPickerModal.tsx:45
+  src/db/transaction.ts:27
+  src/db/transaction.ts:28
+  src/db/transaction.ts:29
+  src/db/transaction.ts:47
   src/entities/category/ui/CategoryPickerModal.tsx:46
-  src/entities/category/ui/CategoryPickerModal.tsx:52
-  src/entities/category/ui/CategoryPickerModal.tsx:53
+  src/entities/category/ui/CategoryPickerModal.tsx:47
+  src/entities/category/ui/CategoryPickerModal.tsx:48
+  src/entities/category/ui/CategoryPickerModal.tsx:54
+  src/entities/category/ui/CategoryPickerModal.tsx:55
 
 @typescript-eslint/no-unsafe-return (7)
-  src/app/MainTabs.tsx:56
+  src/app/MainTabs.tsx:68
   src/db/driver.native.ts:17
   src/db/driver.native.ts:23
   src/db/driver.ts:21
   src/db/driver.ts:22
   src/screens/stats/month/model/useMonthUsual.ts:14
-  src/stats/norms.ts:105
+  src/stats/norms.ts:128
 
 @typescript-eslint/no-require-imports (7)
-  src/db/migrations/steps-13-on.ts:163
-  src/notifications/monthReportNotice.ts:97
-  src/notifications/notifeeIntegration.ts:164
-  src/notifications/notifeeIntegration.ts:171
-  src/notifications/notifeeIntegration.ts:173
-  src/notifications/notifeeIntegration.ts:175
-  src/notifications/notifeeIntegration.ts:186
+  src/db/migrations/steps-13-on.ts:162
+  src/notifications/monthReportNotice.ts:114
+  src/notifications/notifeeIntegration.ts:191
+  src/notifications/notifeeIntegration.ts:199
+  src/notifications/notifeeIntegration.ts:201
+  src/notifications/notifeeIntegration.ts:203
+  src/notifications/notifeeIntegration.ts:219
+
+app/max-hook-lines (7)
+  src/entities/category/model/useCategoryChoose.ts:32
+  src/features/app-lock/model/usePinFlow.ts:31
+  src/features/category-delete/model/useSortOut.ts:38
+  src/features/merchant-card/model/useMerchantActions.ts:21
+  src/features/operations-filters/model/useTransactionFilters.ts:25
+  src/screens/stats/month/parts/usePlanSheets.tsx:24
+  src/screens/stats/plan/model/usePlanActions.ts:55
 
 @typescript-eslint/no-explicit-any (6)
   src/db/driver.ts:21
@@ -310,18 +359,18 @@ app/icon-touchable-hit-slop (10)
   src/db/types.ts:16
 
 @typescript-eslint/no-unsafe-member-access (2)
-  src/app/MainTabs.tsx:56
-  src/db/yearReport.ts:175
+  src/app/MainTabs.tsx:68
+  src/db/yearReport.ts:324
 
 @typescript-eslint/no-unsafe-argument (2)
   src/native/appUpdate.ts:21
   src/update/releases.ts:40
 
 @typescript-eslint/no-unsafe-call (1)
-  src/app/MainTabs.tsx:56
+  src/app/MainTabs.tsx:68
 
 prefer-const (1)
-  src/db/plans/history.ts:183
+  src/db/plans/history.ts:232
 
 @typescript-eslint/no-base-to-string (1)
-  src/notifications/notifeeIntegration.ts:170
+  src/notifications/notifeeIntegration.ts:197

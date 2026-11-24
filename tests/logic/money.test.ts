@@ -1,12 +1,25 @@
 import { formatAmount } from '../../src/shared/lib/format';
 import {
-  currencySymbol, formatMoney, formatMoneyWithCurrency, formatWithCurrency, parseAmountInput, toInputValue,
+  currencySymbol,
+  formatMoney,
+  formatMoneyWithCurrency,
+  formatWithCurrency,
+  parseAmountInput,
+  toInputValue,
 } from '../../src/shared/lib/money';
 import { meterColor } from '../../src/shared/theme/theme';
 
 test.each([
-  ['12', 1200], ['12.5', 1250], ['12,50', 1250], ['1 200', 120000], ['0.01', 1],
-  ['', null], ['0', null], ['abc', null], ['1.234', null], ['-5', null],
+  ['12', 1200],
+  ['12.5', 1250],
+  ['12,50', 1250],
+  ['1 200', 120000],
+  ['0.01', 1],
+  ['', null],
+  ['0', null],
+  ['abc', null],
+  ['1.234', null],
+  ['-5', null],
 ])('parseAmountInput(%j) = %p', (input, expected) => {
   expect(parseAmountInput(input)).toBe(expected);
 });

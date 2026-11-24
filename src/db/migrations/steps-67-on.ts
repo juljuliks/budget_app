@@ -10,7 +10,9 @@ import type { MigrationStep } from './step';
 async function categoryKinds(db: Db) {
   const now = new Date();
   const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const cats = await db.all<{ id: number; recurring: number }>('SELECT id, recurring FROM categories WHERE system IS NULL');
+  const cats = await db.all<{ id: number; recurring: number }>(
+    'SELECT id, recurring FROM categories WHERE system IS NULL',
+  );
   for (const c of cats) {
     let kind: string | null = null;
     if (await db.get('SELECT 1 FROM funds WHERE category_id = ? AND closed_ym IS NULL', [c.id])) kind = 'fund';
@@ -18,7 +20,8 @@ async function categoryKinds(db: Db) {
     else {
       const it = await db.get<{ kind: string; every: string | null }>(
         'SELECT kind, every FROM plan_items WHERE category_id = ? ORDER BY ym <= ? DESC, CASE WHEN ym <= ? THEN ym END DESC, ym LIMIT 1',
-        [c.id, ym, ym]);
+        [c.id, ym, ym],
+      );
       if (it?.kind === 'limit') kind = 'limit';
       else if (it?.kind === 'fixed') kind = it.every ? 'regular' : 'oneoff';
       else if (it?.kind === 'subs') kind = 'regular';
@@ -34,14 +37,26 @@ async function categoryKinds(db: Db) {
 async function categorySchedules(db: Db) {
   const now = new Date();
   const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const cats = await db.all<{ id: number }>("SELECT id FROM categories WHERE plan_kind = 'regular' AND recurring = 0 AND deleted_at IS NULL");
+  const cats = await db.all<{ id: number }>(
+    "SELECT id FROM categories WHERE plan_kind = 'regular' AND recurring = 0 AND deleted_at IS NULL",
+  );
   for (const c of cats) {
-    const it = await db.get<{ every: string; weekdays: number | null; unit_minor: number | null; currency: string; until: string | null }>(
+    const it = await db.get<{
+      every: string;
+      weekdays: number | null;
+      unit_minor: number | null;
+      currency: string;
+      until: string | null;
+    }>(
       `SELECT every, weekdays, unit_minor, currency, until FROM plan_items WHERE category_id = ? AND kind = 'fixed' AND every IS NOT NULL
-        ORDER BY ym <= ? DESC, CASE WHEN ym <= ? THEN ym END DESC, ym LIMIT 1`, [c.id, ym, ym]);
+        ORDER BY ym <= ? DESC, CASE WHEN ym <= ? THEN ym END DESC, ym LIMIT 1`,
+      [c.id, ym, ym],
+    );
     if (!it) continue;
-    await db.run('INSERT INTO category_schedules (category_id, every, weekdays, unit_minor, currency, until) VALUES (?, ?, ?, ?, ?, ?)',
-      [c.id, it.every, it.every === 'week' ? it.weekdays ?? 0 : null, it.unit_minor ?? 0, it.currency, it.until]);
+    await db.run(
+      'INSERT INTO category_schedules (category_id, every, weekdays, unit_minor, currency, until) VALUES (?, ?, ?, ?, ?, ?)',
+      [c.id, it.every, it.every === 'week' ? (it.weekdays ?? 0) : null, it.unit_minor ?? 0, it.currency, it.until],
+    );
   }
 }
 
@@ -55,11 +70,26 @@ async function lockedPct(db: Db) {
   const p2 = (n: number) => String(n).padStart(2, '0');
   const ym = `${now.getFullYear()}-${p2(now.getMonth() + 1)}`;
   const today = `${ym}-${p2(now.getDate())}`;
-  const rate = async (currency: string) => (currency === 'GEL' ? 1 : (await db.get<{ g: number }>(
-    'SELECT gel_per_unit AS g FROM fx_rates WHERE currency = ? AND date <= ? ORDER BY date DESC LIMIT 1', [currency, today]))?.g ?? null);
-  const months = await db.all<{ ym: string; budget: number; currency: string; pct: number; own: number | null; cover: number }>(
+  const rate = async (currency: string) =>
+    currency === 'GEL'
+      ? 1
+      : ((
+          await db.get<{ g: number }>(
+            'SELECT gel_per_unit AS g FROM fx_rates WHERE currency = ? AND date <= ? ORDER BY date DESC LIMIT 1',
+            [currency, today],
+          )
+        )?.g ?? null);
+  const months = await db.all<{
+    ym: string;
+    budget: number;
+    currency: string;
+    pct: number;
+    own: number | null;
+    cover: number;
+  }>(
     `SELECT ym, budget_minor AS budget, budget_currency AS currency, unplanned_pct AS pct, unplanned_minor AS own,
-      unplanned_cover_minor AS cover FROM plan_months WHERE budget_minor IS NOT NULL AND locked_is_max = 1`);
+      unplanned_cover_minor AS cover FROM plan_months WHERE budget_minor IS NOT NULL AND locked_is_max = 1`,
+  );
   for (const m of months) {
     const to = await rate(m.currency);
     const inBudget = async (minor: number, currency: string) => {
@@ -67,25 +97,37 @@ async function lockedPct(db: Db) {
       return from === null || to === null ? 0 : Math.round((minor * from) / to);
     };
     let planned = 0;
-    for (const i of await db.all<{ v: number; c: string }>('SELECT limit_minor AS v, currency AS c FROM plan_items WHERE ym = ?', [m.ym])) {
+    for (const i of await db.all<{ v: number; c: string }>(
+      'SELECT limit_minor AS v, currency AS c FROM plan_items WHERE ym = ?',
+      [m.ym],
+    )) {
       planned += await inBudget(i.v, i.c);
     }
     const [y, mo] = m.ym.split('-').map(Number);
     const before = mo === 1 ? `${y - 1}-12` : `${y}-${p2(mo - 1)}`;
     const carry = await db.get<{ debt: number; plus: number; c: string }>(
       `SELECT carry_debt_minor AS debt, carry_plus_minor AS plus, carry_currency AS c FROM month_closes
-        WHERE ym = ? AND closed_at IS NOT NULL AND carry_currency IS NOT NULL`, [before]);
+        WHERE ym = ? AND closed_at IS NOT NULL AND carry_currency IS NOT NULL`,
+      [before],
+    );
     const carryDelta = carry ? await inBudget(carry.plus - carry.debt, carry.c) : 0;
     const share = (m.own ?? m.budget - Math.round((m.budget * (100 - m.pct)) / 100)) + m.cover;
-    await db.run('UPDATE plan_months SET locked_minor = ?, locked_is_max = 0 WHERE ym = ?',
-      [Math.max(0, m.budget - share - planned + carryDelta), m.ym]);
+    await db.run('UPDATE plan_months SET locked_minor = ?, locked_is_max = 0 WHERE ym = ?', [
+      Math.max(0, m.budget - share - planned + carryDelta),
+      m.ym,
+    ]);
   }
   const last = await db.get<{ budget: number; locked: number }>(
     `SELECT budget_minor AS budget, locked_minor AS locked FROM plan_months WHERE budget_minor > 0
-      ORDER BY ym <= ? DESC, CASE WHEN ym <= ? THEN ym END DESC, ym LIMIT 1`, [ym, ym]);
+      ORDER BY ym <= ? DESC, CASE WHEN ym <= ? THEN ym END DESC, ym LIMIT 1`,
+    [ym, ym],
+  );
   if (!last || last.locked <= 0) return;
   const pct = Math.min(30, Math.max(5, Math.round((last.locked * 100) / last.budget / 5) * 5));
-  await db.run("INSERT INTO app_settings (key, value) VALUES ('locked_pct', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value", [String(pct)]);
+  await db.run(
+    "INSERT INTO app_settings (key, value) VALUES ('locked_pct', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+    [String(pct)],
+  );
   await db.run('UPDATE plan_months SET locked_pct = ? WHERE ym >= ?', [pct, ym]);
 }
 
@@ -123,7 +165,9 @@ export const STEPS_67_ON: MigrationStep[][] = [
   ],
   // 70: the spending outside the plan past its share covered by a cut of the plan ("Покрыть перерасход"): on top of the
   // share, in the budget's currency, this month only (a new month doesn't carry it over)
-  ['ALTER TABLE plan_months ADD COLUMN unplanned_cover_minor INTEGER NOT NULL DEFAULT 0 CHECK (unplanned_cover_minor >= 0)'],
+  [
+    'ALTER TABLE plan_months ADD COLUMN unplanned_cover_minor INTEGER NOT NULL DEFAULT 0 CHECK (unplanned_cover_minor >= 0)',
+  ],
   // 71: a one-off payment's day in its month ("Дата списания", optional; YYYY-MM-DD): its mark on the stats' bar, the
   // month's pace counts it from that day (none — spread evenly over the month)
   ['ALTER TABLE plan_items ADD COLUMN due TEXT'],

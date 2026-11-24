@@ -40,29 +40,61 @@ function TransactionItem({ tx, onPress, onLongPress, selectable, selected, bankL
   return (
     <TouchableOpacity
       style={[styles.row, selected && styles.rowSelected]}
-      onPress={() => { if (longPressed.current) longPressed.current = false; else onPress(tx); }}
-      onLongPress={onLongPress ? () => { longPressed.current = true; onLongPress(tx); } : undefined}
-      onPressIn={() => { longPressed.current = false; }}
+      onPress={() => {
+        if (longPressed.current) longPressed.current = false;
+        else onPress(tx);
+      }}
+      onLongPress={
+        onLongPress
+          ? () => {
+              longPressed.current = true;
+              onLongPress(tx);
+            }
+          : undefined
+      }
+      onPressIn={() => {
+        longPressed.current = false;
+      }}
     >
-      {selectable ? <View style={styles.checkbox}><Checkbox checked={!!selected} /></View> : null}
+      {selectable ? (
+        <View style={styles.checkbox}>
+          <Checkbox checked={!!selected} />
+        </View>
+      ) : null}
       <View style={styles.main}>
         <View style={styles.titleRow}>
           {unread ? <View style={styles.unreadDot} accessibilityLabel="Новая" /> : null}
-          <Text style={[styles.merchant, unread && styles.merchantUnread]} numberOfLines={1}>{rowTitle(tx)}</Text>
-          {bankLabel ? <Text style={styles.bank} accessibilityLabel={`Банк: ${bankLabel}`}>{bankLabel}</Text> : null}
-          {auto ? <Text style={styles.auto} accessibilityLabel="Категория мерчанта, назначена автоматически">🤖 авто</Text> : null}
+          <Text style={[styles.merchant, unread && styles.merchantUnread]} numberOfLines={1}>
+            {rowTitle(tx)}
+          </Text>
+          {bankLabel ? (
+            <Text style={styles.bank} accessibilityLabel={`Банк: ${bankLabel}`}>
+              {bankLabel}
+            </Text>
+          ) : null}
+          {auto ? (
+            <Text style={styles.auto} accessibilityLabel="Категория мерчанта, назначена автоматически">
+              🤖 авто
+            </Text>
+          ) : null}
         </View>
         {tx.refund_settled_at ? (
           // a refund settled on its purchase earlier: it no longer counts by itself
-          <Text style={styles.meta} numberOfLines={1}>✓ учтён в покупке · {formatTime(tx.occurred_at)}</Text>
+          <Text style={styles.meta} numberOfLines={1}>
+            ✓ учтён в покупке · {formatTime(tx.occurred_at)}
+          </Text>
         ) : split ? (
           <View style={styles.inline}>
             <SplitIcon color={colors.muted} size={13} />
-            <Text style={[styles.meta, styles.splitMeta]} numberOfLines={1}>{split.label}</Text>
+            <Text style={[styles.meta, styles.splitMeta]} numberOfLines={1}>
+              {split.label}
+            </Text>
             <Text style={[styles.meta, styles.splitTime]}> · {formatTime(tx.occurred_at)}</Text>
           </View>
         ) : category ? (
-          <Text style={styles.meta} numberOfLines={1}>{category} · {formatTime(tx.occurred_at)}</Text>
+          <Text style={styles.meta} numberOfLines={1}>
+            {category} · {formatTime(tx.occurred_at)}
+          </Text>
         ) : (
           <View style={styles.inline}>
             <Text style={styles.badge}>{NO_CATEGORY}</Text>
@@ -74,7 +106,9 @@ function TransactionItem({ tx, onPress, onLongPress, selectable, selected, bankL
         <Text style={[styles.amount, isIncome(tx.kind) && styles.income]}>
           {formatAmount(split?.amount_minor ?? tx.amount_minor, tx.currency, tx.kind)}
         </Text>
-        {split?.part ? <Text style={styles.whole}>из {formatMoneyWithCurrency(tx.amount_minor, tx.currency)}</Text> : null}
+        {split?.part ? (
+          <Text style={styles.whole}>из {formatMoneyWithCurrency(tx.amount_minor, tx.currency)}</Text>
+        ) : null}
         {tx.payment_period ? (
           <View style={styles.inline}>
             <RepeatIcon color={colors.muted} size={12} />
@@ -88,8 +122,12 @@ function TransactionItem({ tx, onPress, onLongPress, selectable, selected, bankL
 
 const styles = StyleSheet.create({
   row: {
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
   },
   rowSelected: { backgroundColor: '#EFF6FF' },
   checkbox: { marginRight: 12 },
@@ -99,22 +137,40 @@ const styles = StyleSheet.create({
   merchant: { flexShrink: 1, fontSize: 16, color: colors.text },
   merchantUnread: { fontWeight: '600' },
   auto: {
-    marginLeft: 8, fontSize: 11, color: colors.accent, backgroundColor: '#EFF6FF',
-    paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4, overflow: 'hidden',
+    marginLeft: 8,
+    fontSize: 11,
+    color: colors.accent,
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
+    overflow: 'hidden',
   },
   meta: { fontSize: 13, color: colors.muted, marginTop: 2 },
   inline: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
   badge: {
-    fontSize: 12, color: colors.warn, backgroundColor: colors.warnBg,
-    paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4, overflow: 'hidden',
+    fontSize: 12,
+    color: colors.warn,
+    backgroundColor: colors.warnBg,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
+    overflow: 'hidden',
   },
   splitMeta: { flexShrink: 1, marginTop: 0, marginLeft: 4 },
   splitTime: { flexShrink: 0, marginTop: 0 },
   amountBox: { alignItems: 'flex-end' },
   amount: { fontSize: 16, color: colors.text, fontVariant: ['tabular-nums'] },
   bank: {
-    marginLeft: 8, fontSize: 11, fontWeight: '700', color: colors.muted, borderWidth: 1, borderColor: colors.border,
-    paddingHorizontal: 5, borderRadius: 4, overflow: 'hidden',
+    marginLeft: 8,
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.muted,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 5,
+    borderRadius: 4,
+    overflow: 'hidden',
   },
   whole: { fontSize: 12, color: colors.muted, marginTop: 2, fontVariant: ['tabular-nums'] },
   income: { color: colors.income },

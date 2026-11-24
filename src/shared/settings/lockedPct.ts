@@ -40,7 +40,9 @@ export function useLockedPct(): number | null {
     listeners.add(setV);
     load().catch((e) => console.error('load locked pct failed', e));
     setV(current);
-    return () => { listeners.delete(setV); };
+    return () => {
+      listeners.delete(setV);
+    };
   }, []);
   return v;
 }

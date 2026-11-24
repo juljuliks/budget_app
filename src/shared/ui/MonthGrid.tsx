@@ -39,7 +39,13 @@ type HeaderProps = {
 /** "‹ Ноябрь 2026 ›" and the weekdays' row over a month's grid. */
 export function MonthHeader({ month, onShift, canPrev = true, canNext = true, subtitle }: HeaderProps) {
   const arrow = (delta: number, can: boolean, label: string) => (
-    <TouchableOpacity onPress={() => onShift(delta)} disabled={!can} hitSlop={12} accessibilityRole="button" accessibilityLabel={label}>
+    <TouchableOpacity
+      onPress={() => onShift(delta)}
+      disabled={!can}
+      hitSlop={12}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+    >
       <Text style={[styles.arrow, !can && styles.arrowOff]}>{delta < 0 ? '‹' : '›'}</Text>
     </TouchableOpacity>
   );
@@ -48,13 +54,19 @@ export function MonthHeader({ month, onShift, canPrev = true, canNext = true, su
       <View style={styles.header}>
         {arrow(-1, canPrev, 'Прошлый месяц')}
         <View style={styles.titles}>
-          <Text style={styles.title}>{MONTHS[month.m]} {month.y}</Text>
+          <Text style={styles.title}>
+            {MONTHS[month.m]} {month.y}
+          </Text>
           {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
         </View>
         {arrow(1, canNext, 'Следующий месяц')}
       </View>
       <View style={gridStyles.row}>
-        {HEADS.map((w) => <Text key={w} style={[gridStyles.cell, styles.weekday]}>{w}</Text>)}
+        {HEADS.map((w) => (
+          <Text key={w} style={[gridStyles.cell, styles.weekday]}>
+            {w}
+          </Text>
+        ))}
       </View>
     </>
   );
@@ -69,7 +81,13 @@ export const gridStyles = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 8, marginBottom: 4 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 8,
+    marginBottom: 4,
+  },
   titles: { alignItems: 'center' },
   arrow: { fontSize: 24, color: colors.accent, paddingHorizontal: 8 },
   arrowOff: { color: colors.border },

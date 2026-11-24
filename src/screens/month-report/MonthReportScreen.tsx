@@ -8,6 +8,8 @@ type Props = NativeStackScreenProps<RootStackParamList, 'MonthReport'>;
 /** «Отчёт · Октябрь 2026»: a month's report as a page. */
 export default function MonthReportScreen({ route, navigation }: Props) {
   const { ym } = route.params;
-  useLayoutEffect(() => { navigation.setOptions({ title: `Отчёт · ${reportTitle(ym)}` }); }, [navigation, ym]);
+  useLayoutEffect(() => {
+    navigation.setOptions({ title: `Отчёт · ${reportTitle(ym)}` });
+  }, [navigation, ym]);
   return <MonthReportPage ym={ym} />;
 }

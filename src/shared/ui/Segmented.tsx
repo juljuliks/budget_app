@@ -26,7 +26,9 @@ export default function Segmented<T extends string>({ options, value, onChange, 
             accessibilityRole="tab"
             accessibilityState={{ selected: value === key, disabled: off }}
           >
-            <Text style={[styles.text, value === key && styles.textOn, off && styles.textOff]} numberOfLines={1}>{label}</Text>
+            <Text style={[styles.text, value === key && styles.textOn, off && styles.textOff]} numberOfLines={1}>
+              {label}
+            </Text>
           </TouchableOpacity>
         );
       })}

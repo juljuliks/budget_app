@@ -25,7 +25,10 @@ export default function MarkMessage({ message, onDone }: { message: UnparsedMess
 
   function onlyThis() {
     addFromMessage(message, m.marks, m.kind)
-      .then(() => { toast('Операция добавлена'); onDone(); })
+      .then(() => {
+        toast('Операция добавлена');
+        onDone();
+      })
       .catch(toastFailure('add from message', SAVE_FAILED));
   }
 
@@ -34,9 +37,14 @@ export default function MarkMessage({ message, onDone }: { message: UnparsedMess
     sheetAlert(HIDE_QUESTION, hideInfo(Math.max(0, like.length - 1)), [
       { text: CANCEL, style: 'cancel' },
       {
-        text: HIDE, style: 'destructive', onPress: () => {
+        text: HIDE,
+        style: 'destructive',
+        onPress: () => {
           saveTemplate(message, {}, null)
-            .then((n) => { toast(`Скрыто сообщений: ${n}`); onDone(); })
+            .then((n) => {
+              toast(`Скрыто сообщений: ${n}`);
+              onDone();
+            })
             .catch(toastFailure('hide such', SAVE_FAILED));
         },
       },
@@ -46,7 +54,15 @@ export default function MarkMessage({ message, onDone }: { message: UnparsedMess
   return (
     <View style={styles.screen}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-        <MarkSteps words={m.words} role={m.role} onRole={m.setRole} marks={m.marks} onWord={m.toggle} kind={m.kind} onKind={m.setKind} />
+        <MarkSteps
+          words={m.words}
+          role={m.role}
+          onRole={m.setRole}
+          marks={m.marks}
+          onWord={m.toggle}
+          kind={m.kind}
+          onKind={m.setKind}
+        />
         <SectionHeading title={STEP_RESULT} />
         {/* the result as a row of the operations list, edge to edge */}
         <View style={styles.edge}>
@@ -57,7 +73,14 @@ export default function MarkMessage({ message, onDone }: { message: UnparsedMess
       <View style={styles.actions}>
         <Button title={NEXT} onPress={() => setPreview(true)} disabled={!m.result} />
         <Button title={ONLY_THIS} onPress={onlyThis} disabled={!m.result} variant="secondary" />
-        <Button title={HIDE_SUCH} onPress={() => { askHide().catch(() => undefined); }} variant="secondary" danger />
+        <Button
+          title={HIDE_SUCH}
+          onPress={() => {
+            askHide().catch(() => undefined);
+          }}
+          variant="secondary"
+          danger
+        />
       </View>
       <TemplatePreviewSheet
         message={message}
@@ -65,7 +88,10 @@ export default function MarkMessage({ message, onDone }: { message: UnparsedMess
         kind={m.kind}
         visible={preview}
         onClose={() => setPreview(false)}
-        onSaved={() => { setPreview(false); onDone(); }}
+        onSaved={() => {
+          setPreview(false);
+          onDone();
+        }}
       />
     </View>
   );

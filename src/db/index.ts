@@ -15,7 +15,9 @@ export function getDb(): Promise<Db> {
       return db;
     })();
     // allow a retry on the next call if opening/migrating failed
-    dbPromise.catch(() => { dbPromise = null; });
+    dbPromise.catch(() => {
+      dbPromise = null;
+    });
   }
   return dbPromise;
 }

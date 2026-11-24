@@ -23,25 +23,52 @@ const LIST = 5;
  * the same (rent) — «Подорожал», when it's charged, each payment against the one before; amounts apart (a dentist) —
  * how often, its merchants (this year first). No weeks, no weekdays, no «Почему».
  */
-export default function RareTrend({ r, bars, color, categoryId, currency, money }: {
-  r: Rare; bars: Bar[]; color: string; categoryId: number; currency: Currency; money: (minor: number) => string;
+export default function RareTrend({
+  r,
+  bars,
+  color,
+  categoryId,
+  currency,
+  money,
+}: {
+  r: Rare;
+  bars: Bar[];
+  color: string;
+  categoryId: number;
+  currency: Currency;
+  money: (minor: number) => string;
 }) {
   const [picked, setPicked] = useState<number | null>(null);
   const cur = r.bars[r.bars.length - 1];
   const last = r.payments[0];
   const word = r.stable ? 'платёж' : 'трата';
   const cell = (title: string, value: string) => (
-    <View style={s.cell}><Text style={s.label}>{title}</Text><Masked style={s.value}>{value}</Masked></View>
+    <View style={s.cell}>
+      <Text style={s.label}>{title}</Text>
+      <Masked style={s.value}>{value}</Masked>
+    </View>
   );
   const bar = picked === null ? null : r.bars[picked];
   return (
     <>
       <View style={s.head}>
-        <Text><Masked style={s.spent}>{money(cur.value)}</Masked><Text style={s.spentWhen}>{` в ${MONTHS_PREP[Number(cur.ym.slice(5)) - 1]}`}</Text></Text>
+        <Text>
+          <Masked style={s.spent}>{money(cur.value)}</Masked>
+          <Text style={s.spentWhen}>{` в ${MONTHS_PREP[Number(cur.ym.slice(5)) - 1]}`}</Text>
+        </Text>
       </View>
-      {last ? <Text style={s.line}>{`последн${r.stable ? 'ий' : 'яя'} ${word} ${shortDay(last.day)} · `}<Masked style={s.line}>{money(last.value)}</Masked></Text> : null}
-      <View style={s.chart}><TrendBars bars={bars} color={color} height={120} picked={picked} onPick={setPicked} /></View>
-      <Text style={s.point}>{bar ? `${monthYear(bar.ym)}: ${money(bar.value)}` : 'Нажмите на месяц, чтобы увидеть сумму'}</Text>
+      {last ? (
+        <Text style={s.line}>
+          {`последн${r.stable ? 'ий' : 'яя'} ${word} ${shortDay(last.day)} · `}
+          <Masked style={s.line}>{money(last.value)}</Masked>
+        </Text>
+      ) : null}
+      <View style={s.chart}>
+        <TrendBars bars={bars} color={color} height={120} picked={picked} onPick={setPicked} />
+      </View>
+      <Text style={s.point}>
+        {bar ? `${monthYear(bar.ym)}: ${money(bar.value)}` : 'Нажмите на месяц, чтобы увидеть сумму'}
+      </Text>
       {r.change ? (
         <View style={s.block}>
           <Text style={s.label}>{r.change.to > r.change.from ? 'Подорожал' : 'Подешевел'}</Text>
@@ -53,22 +80,42 @@ export default function RareTrend({ r, bars, color, categoryId, currency, money 
       <View style={[s.block, s.grid]}>
         {cell('В среднем в месяц', money(r.average))}
         {cell('За 12 месяцев', money(r.total))}
-        {r.stable ? cell('Платежей', `${r.paidMonths} из 12 месяцев`) : cell('Трат', `${r.payments.length} за 12 месяцев`)}
-        {r.stable && r.days ? cell('Обычно списывается', r.days.from === r.days.to ? `${r.days.from} числа` : `${r.days.from}–${r.days.to} числа`) : null}
-        {!r.stable && r.every ? cell('Обычно', r.every === 1 ? 'раз в месяц' : `раз в ${r.every} ${plural(r.every, ['месяц', 'месяца', 'месяцев'])}`) : null}
+        {r.stable
+          ? cell('Платежей', `${r.paidMonths} из 12 месяцев`)
+          : cell('Трат', `${r.payments.length} за 12 месяцев`)}
+        {r.stable && r.days
+          ? cell(
+              'Обычно списывается',
+              r.days.from === r.days.to ? `${r.days.from} числа` : `${r.days.from}–${r.days.to} числа`,
+            )
+          : null}
+        {!r.stable && r.every
+          ? cell(
+              'Обычно',
+              r.every === 1 ? 'раз в месяц' : `раз в ${r.every} ${plural(r.every, ['месяц', 'месяца', 'месяцев'])}`,
+            )
+          : null}
       </View>
       {r.payments.length ? (
         <View style={s.block}>
           <Text style={s.label}>{r.stable ? 'Платежи' : 'Траты'}</Text>
           {r.payments.slice(0, LIST).map((p, i) => {
             const prev = r.payments[i + 1];
-            const delta = r.stable && prev && Math.abs(p.value - prev.value) > prev.value * 0.02 ? p.value - prev.value : 0;
+            const delta =
+              r.stable && prev && Math.abs(p.value - prev.value) > prev.value * 0.02 ? p.value - prev.value : 0;
             return (
               <View key={p.tx ?? `${p.day}${i}`} style={s.merchant}>
-                <Text style={[s.value, s.merchantName]} numberOfLines={1}>{`${shortDay(p.day)} · ${p.merchant ?? '—'}`}</Text>
+                <Text
+                  style={[s.value, s.merchantName]}
+                  numberOfLines={1}
+                >{`${shortDay(p.day)} · ${p.merchant ?? '—'}`}</Text>
                 <Text style={s.value}>
                   <Masked style={s.value}>{money(p.value)}</Masked>
-                  {delta ? <Text style={{ color: delta > 0 ? colors.warn : colors.income }}>{` ${delta > 0 ? '+' : '−'}${money(Math.abs(delta))}`}</Text> : null}
+                  {delta ? (
+                    <Text
+                      style={{ color: delta > 0 ? colors.warn : colors.income }}
+                    >{` ${delta > 0 ? '+' : '−'}${money(Math.abs(delta))}`}</Text>
+                  ) : null}
                 </Text>
               </View>
             );
@@ -76,13 +123,20 @@ export default function RareTrend({ r, bars, color, categoryId, currency, money 
           {r.payments.length > LIST ? (
             <TextLink
               label={`Все ${r.payments.length} ${plural(r.payments.length, r.stable ? ['платёж', 'платежа', 'платежей'] : ['трата', 'траты', 'трат'])}`}
-              onPress={() => showOperationsFrom({ category: categoryId, range: { from: `${r.bars[0].ym}-01`, to: r.payments[0].day } })}
+              onPress={() =>
+                showOperationsFrom({
+                  category: categoryId,
+                  range: { from: `${r.bars[0].ym}-01`, to: r.payments[0].day },
+                })
+              }
               containerStyle={{ marginTop: 10 }}
             />
           ) : null}
         </View>
       ) : null}
-      {!r.stable ? <CategoryMerchants categoryId={categoryId} currency={currency} money={money} initial="year" /> : null}
+      {!r.stable ? (
+        <CategoryMerchants categoryId={categoryId} currency={currency} money={money} initial="year" />
+      ) : null}
     </>
   );
 }

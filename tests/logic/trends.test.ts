@@ -1,13 +1,27 @@
 import type { TrendSpend, TrendsData } from '../../src/db/plans';
-import { monthBars, monthsSummary, spentThisMonth, thisWeek, trendOf, trendWindows, weekdayHabits, weekStartOf } from '../../src/stats/trends';
+import {
+  monthBars,
+  monthsSummary,
+  spentThisMonth,
+  thisWeek,
+  trendOf,
+  trendWindows,
+  weekdayHabits,
+  weekStartOf,
+} from '../../src/stats/trends';
 import { pctText, trendLists, whyText } from '../../src/screens/stats/trends/model/trendsView';
 import { categoryTrendView } from '../../src/screens/stats/trends/model/categoryTrendView';
 
 // «Динамика трат»: this month so far against the usual one by the same days (the median of the past ones).
 // "Today" — Friday 30 October 2026.
 const TODAY = '2026-10-30';
-const spend = (day: string, value: number, merchant: string | null = null, category = 1): TrendSpend =>
-  ({ category, day, value, merchantKey: merchant, merchant });
+const spend = (day: string, value: number, merchant: string | null = null, category = 1): TrendSpend => ({
+  category,
+  day,
+  value,
+  merchantKey: merchant,
+  merchant,
+});
 
 describe('windows', () => {
   test('a month: the 1st to today, and the same days of the 6 months before (a shorter one — to its last day)', () => {
@@ -27,10 +41,13 @@ describe('windows', () => {
 describe('trendOf', () => {
   // by the 30th: July 250, August 250, September 399 (the median takes the middle), 360 this month; tracked since July
   const cafe = [
-    spend('2026-07-05', 23000), spend('2026-07-20', 2000),
+    spend('2026-07-05', 23000),
+    spend('2026-07-20', 2000),
     spend('2026-08-03', 25000),
-    spend('2026-09-10', 30000), spend('2026-09-30', 9900),
-    spend('2026-10-02', 18000), spend('2026-10-29', 18000),
+    spend('2026-09-10', 30000),
+    spend('2026-09-30', 9900),
+    spend('2026-10-02', 18000),
+    spend('2026-10-29', 18000),
   ];
 
   test('the month so far against the median of the tracked past months by the same days', () => {
@@ -58,17 +75,39 @@ describe('trendOf', () => {
     expect(trendOf(cafe, TODAY, '2026-08-01')).toBeNull();
   });
 
-  test('this month so far: known with no usual yet too (the page\'s head isn\'t 0)', () => {
-    const cafe = [spend('2026-09-20', 9000), spend('2026-10-03', 4000), spend('2026-10-29', 1500), spend('2026-10-29', -500)];
+  test("this month so far: known with no usual yet too (the page's head isn't 0)", () => {
+    const cafe = [
+      spend('2026-09-20', 9000),
+      spend('2026-10-03', 4000),
+      spend('2026-10-29', 1500),
+      spend('2026-10-29', -500),
+    ];
     expect(trendOf(cafe, TODAY, '2026-09-01')).toBeNull();
     expect(spentThisMonth(cafe, TODAY)).toBe(5000);
   });
 
   test('a small change, in % or in money, is not shown', () => {
     // +20%: under 30%
-    expect(trendOf([spend('2026-09-05', 10000), spend('2026-08-05', 10000), spend('2026-07-05', 10000), spend('2026-10-05', 12000)], TODAY, '2026-06-01')!.notable).toBe(false);
+    expect(
+      trendOf(
+        [
+          spend('2026-09-05', 10000),
+          spend('2026-08-05', 10000),
+          spend('2026-07-05', 10000),
+          spend('2026-10-05', 12000),
+        ],
+        TODAY,
+        '2026-06-01',
+      )!.notable,
+    ).toBe(false);
     // +200%, but 20 ₾: under 30 ₾
-    expect(trendOf([spend('2026-09-05', 1000), spend('2026-08-05', 1000), spend('2026-07-05', 1000), spend('2026-10-05', 3000)], TODAY, '2026-06-01')!.notable).toBe(false);
+    expect(
+      trendOf(
+        [spend('2026-09-05', 1000), spend('2026-08-05', 1000), spend('2026-07-05', 1000), spend('2026-10-05', 3000)],
+        TODAY,
+        '2026-06-01',
+      )!.notable,
+    ).toBe(false);
   });
 
   test('nothing usually: no %, "раньше не было"', () => {
@@ -79,7 +118,11 @@ describe('trendOf', () => {
   });
 
   test('nothing spent yet: "трат пока нет", not "−100%"', () => {
-    const t = trendOf([spend('2026-09-05', 10000), spend('2026-08-05', 10000), spend('2026-07-05', 10000)], TODAY, '2026-06-01')!;
+    const t = trendOf(
+      [spend('2026-09-05', 10000), spend('2026-08-05', 10000), spend('2026-07-05', 10000)],
+      TODAY,
+      '2026-06-01',
+    )!;
     expect(t.pct).toBe(-100);
     expect(pctText(t)).toBe('трат пока нет');
   });
@@ -91,8 +134,15 @@ describe('trendOf', () => {
 
 describe('why', () => {
   const money = (v: number) => `${Math.round(v / 100)} ₾`;
-  const t = (cur: number, count: number, usual: number, usualCount: number) =>
-    ({ cur, usual, delta: cur - usual, pct: null, count, usualCount, notable: true });
+  const t = (cur: number, count: number, usual: number, usualCount: number) => ({
+    cur,
+    usual,
+    delta: cur - usual,
+    pct: null,
+    count,
+    usualCount,
+    notable: true,
+  });
 
   test('more purchases at the same check: "Чаще"', () => {
     expect(whyText(t(10500, 7, 6000, 4), money)).toBe('Чаще: 7 покупок вместо 4, средний чек тот же ≈ 15 ₾');
@@ -115,7 +165,10 @@ describe('bars', () => {
   });
 
   test('12 months, the current one so far; their average, least and most over the full ones since tracking began', () => {
-    const bars = monthBars([spend('2026-10-02', 500), spend('2026-09-02', 300), spend('2026-08-02', 100), spend('2025-11-30', 700)], TODAY);
+    const bars = monthBars(
+      [spend('2026-10-02', 500), spend('2026-09-02', 300), spend('2026-08-02', 100), spend('2025-11-30', 700)],
+      TODAY,
+    );
     expect(bars).toHaveLength(12);
     expect(bars[0]).toEqual({ ym: '2025-11', value: 700 });
     expect(bars[11]).toEqual({ ym: '2026-10', value: 500 });
@@ -129,22 +182,40 @@ describe('bars', () => {
 
   test('the weekdays: the average of each over the full weeks before this one', () => {
     // Fridays of the 13 weeks before: 2 of them 1300
-    const h = weekdayHabits([spend('2026-10-23', 1300), spend('2026-10-16', 1300), spend('2026-10-28', 9999)], TODAY, '2025-01-01');
+    const h = weekdayHabits(
+      [spend('2026-10-23', 1300), spend('2026-10-16', 1300), spend('2026-10-28', 9999)],
+      TODAY,
+      '2025-01-01',
+    );
     expect(h[4]).toBe(200);
     expect(h[2]).toBe(0);
   });
-
 });
 
 describe('the lists and a category page', () => {
-  const category = (id: number, compared = true) => ({ id, name: `К${id}`, emoji: null, type_name: null, color: '#000000', compared, transfer: false, fund: false, subs: false });
-  const usual = (id: number, v: number) => ['2026-04-05', '2026-05-05', '2026-06-05', '2026-07-05', '2026-08-05', '2026-09-05'].map((d) => spend(d, v, null, id));
+  const category = (id: number, compared = true) => ({
+    id,
+    name: `К${id}`,
+    emoji: null,
+    type_name: null,
+    color: '#000000',
+    compared,
+    transfer: false,
+    fund: false,
+    subs: false,
+  });
+  const usual = (id: number, v: number) =>
+    ['2026-04-05', '2026-05-05', '2026-06-05', '2026-07-05', '2026-08-05', '2026-09-05'].map((d) =>
+      spend(d, v, null, id),
+    );
   const data: TrendsData = {
     since: '2026-01-01',
     categories: [category(1), category(2), category(3), category(4, false)],
     spends: [
-      ...usual(1, 10000), spend('2026-10-05', 30000, null, 1),
-      ...usual(2, 10000), spend('2026-10-05', 17000, null, 2),
+      ...usual(1, 10000),
+      spend('2026-10-05', 30000, null, 1),
+      ...usual(2, 10000),
+      spend('2026-10-05', 17000, null, 2),
       ...usual(3, 10000),
       // a regular payment, paid later this month: not compared
       ...usual(4, 150000),
@@ -172,10 +243,39 @@ describe('the lists and a category page', () => {
     expect(categoryTrendView(data, 99, TODAY)).toBeNull();
   });
 
-  test('a category page\'s weekdays: this week\'s days over the average ones, the week so far against them by the same days', () => {
+  test("a category page's weekdays: this week's days over the average ones, the week so far against them by the same days", () => {
     // the 13 Wednesdays before: 13 × 1300 → 1300 a Wednesday; this Wednesday 3000, Thursday 1000
-    const weds = Array.from({ length: 13 }, (_, i) => spend(['2026-10-21', '2026-10-14', '2026-10-07', '2026-09-30', '2026-09-23', '2026-09-16', '2026-09-09', '2026-09-02', '2026-08-26', '2026-08-19', '2026-08-12', '2026-08-05', '2026-07-29'][i], 1300, null, 5));
-    const v = categoryTrendView({ since: '2026-01-01', categories: [category(5)], spends: [...weds, spend('2026-10-28', 3000, null, 5), spend('2026-10-29', 1000, null, 5)] }, 5, TODAY)!;
+    const weds = Array.from({ length: 13 }, (_, i) =>
+      spend(
+        [
+          '2026-10-21',
+          '2026-10-14',
+          '2026-10-07',
+          '2026-09-30',
+          '2026-09-23',
+          '2026-09-16',
+          '2026-09-09',
+          '2026-09-02',
+          '2026-08-26',
+          '2026-08-19',
+          '2026-08-12',
+          '2026-08-05',
+          '2026-07-29',
+        ][i],
+        1300,
+        null,
+        5,
+      ),
+    );
+    const v = categoryTrendView(
+      {
+        since: '2026-01-01',
+        categories: [category(5)],
+        spends: [...weds, spend('2026-10-28', 3000, null, 5), spend('2026-10-29', 1000, null, 5)],
+      },
+      5,
+      TODAY,
+    )!;
     const h = v.habits!;
     expect(h.bars[2]).toMatchObject({ label: 'ср', value: 3000, usual: 1300 });
     expect(h.bars[5].value).toBeNull();

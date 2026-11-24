@@ -30,9 +30,17 @@ export function useListRefresh({ reload, alsoRefresh, clearSelection, query, vie
 
   const firstRun = useRef(true);
   useEffect(() => {
-    if (firstRun.current) { firstRun.current = false; return undefined; }
+    if (firstRun.current) {
+      firstRun.current = false;
+      return undefined;
+    }
     clearSelection();
-    const t = setTimeout(() => { reload(false).catch(toastFailure('filter', LOAD_FAILED)); }, query ? SEARCH_DEBOUNCE_MS : 0);
+    const t = setTimeout(
+      () => {
+        reload(false).catch(toastFailure('filter', LOAD_FAILED));
+      },
+      query ? SEARCH_DEBOUNCE_MS : 0,
+    );
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the view's parts, listed by the caller
   }, [query, ...view, reload, clearSelection]);

@@ -26,4 +26,7 @@ async function main(flow: string, out: string) {
   console.log(`e2e database for ${flow}: ${out}`);
 }
 
-main(process.argv[2] ?? 'base', process.argv[3] ?? 'e2e.db').catch((e) => { console.error(e); process.exit(1); });
+main(process.argv[2] ?? 'base', process.argv[3] ?? 'e2e.db').catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

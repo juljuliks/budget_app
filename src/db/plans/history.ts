@@ -13,8 +13,12 @@ import type { RestChoice } from './close';
  * Average spending per month over the full months of [fromKey, toKey] ('YYYY-MM-DD') that have data: not the
  * current month (not over yet) and not the first one if tracking started after its 1st. null = no such month yet.
  */
-export async function averageFullMonths(fromKey: string, toKey: string, currency: Currency = BUDGET_CURRENCY, now = new Date()):
-  Promise<{ average_minor: number; months: number } | null> {
+export async function averageFullMonths(
+  fromKey: string,
+  toKey: string,
+  currency: Currency = BUDGET_CURRENCY,
+  now = new Date(),
+): Promise<{ average_minor: number; months: number } | null> {
   const db = await getDb();
   const first = await db.get<{ at: number | null }>('SELECT min(occurred_at) AS at FROM transactions');
   if (first?.at == null) return null;
@@ -48,8 +52,12 @@ export const CATEGORY_AVERAGE_MONTHS = 3;
  * current month), at most CATEGORY_AVERAGE_MONTHS, counted from the first full month of tracking. `from` / `to`
  * name the months averaged ('YYYY-MM'). null = no such month yet.
  */
-export async function categoryMonthlyAverage(categoryId: number, ym: string, currency: Currency = BUDGET_CURRENCY, now = new Date()):
-  Promise<{ average_minor: number; months: number; from: string; to: string } | null> {
+export async function categoryMonthlyAverage(
+  categoryId: number,
+  ym: string,
+  currency: Currency = BUDGET_CURRENCY,
+  now = new Date(),
+): Promise<{ average_minor: number; months: number; from: string; to: string } | null> {
   const db = await getDb();
   const first = await db.get<{ at: number | null }>('SELECT min(occurred_at) AS at FROM transactions');
   if (first?.at == null) return null;
@@ -74,7 +82,11 @@ export async function categoryMonthlyAverage(categoryId: number, ym: string, cur
 }
 
 /** What a category has spent in `ym` so far, in `currency` (the plan sheet's «Потрачено в октябре»). */
-export async function categoryMonthSpent(categoryId: number, ym: string, currency: Currency = BUDGET_CURRENCY): Promise<number> {
+export async function categoryMonthSpent(
+  categoryId: number,
+  ym: string,
+  currency: Currency = BUDGET_CURRENCY,
+): Promise<number> {
   const { year, month } = parseYm(ym);
   const [fromSec, toSec] = monthRange(year, month);
   const rows = (await spendRows(fromSec, toSec)).filter((r) => r.category_id === categoryId);
@@ -111,38 +123,68 @@ export async function planHistory(nowYm = currentYm(), currency: Currency = BUDG
   const first = await db.get<{ ym: string | null }>(
     `SELECT min(ym) AS ym FROM (
       SELECT strftime('%Y-%m', min(occurred_at), 'unixepoch', 'localtime') AS ym FROM transactions
-      UNION ALL SELECT min(ym) FROM plan_months)`);
+      UNION ALL SELECT min(ym) FROM plan_months)`,
+  );
   if (!first?.ym) return [];
 
-  const items = await db.all<{ ym: string; limit_minor: number; currency: string }>('SELECT ym, limit_minor, currency FROM plan_items');
+  const items = await db.all<{ ym: string; limit_minor: number; currency: string }>(
+    'SELECT ym, limit_minor, currency FROM plan_items',
+  );
   const budgets = await db.all<{
-    ym: string; budget_minor: number; budget_currency: string; locked_minor: number; unplanned_pct: number; unplanned_minor: number | null;
+    ym: string;
+    budget_minor: number;
+    budget_currency: string;
+    locked_minor: number;
+    unplanned_pct: number;
+    unplanned_minor: number | null;
     unplanned_cover_minor: number;
-  }>('SELECT ym, budget_minor, budget_currency, locked_minor, unplanned_pct, unplanned_minor, unplanned_cover_minor FROM plan_months WHERE budget_minor IS NOT NULL');
+  }>(
+    'SELECT ym, budget_minor, budget_currency, locked_minor, unplanned_pct, unplanned_minor, unplanned_cover_minor FROM plan_months WHERE budget_minor IS NOT NULL',
+  );
   const planYms = [...new Set([...items.map((i) => i.ym), ...budgets.map((b) => b.ym)])];
   const { days, conv } = await spendByDay(0, Number.MAX_SAFE_INTEGER, currency, planYms.map(planRateDate));
   const spentBy = new Map<string, number>();
   for (const { day, value } of days) spentBy.set(day.slice(0, 7), (spentBy.get(day.slice(0, 7)) ?? 0) + value);
   const plannedBy = new Map<string, number>();
-  for (const i of items) plannedBy.set(i.ym, (plannedBy.get(i.ym) ?? 0) + (conv(i.limit_minor, i.currency, currency, planRateDate(i.ym)) ?? 0));
-  const budgetBy = new Map(budgets.map((b) => [b.ym, conv(b.budget_minor, b.budget_currency, currency, planRateDate(b.ym))]));
+  for (const i of items)
+    plannedBy.set(
+      i.ym,
+      (plannedBy.get(i.ym) ?? 0) + (conv(i.limit_minor, i.currency, currency, planRateDate(i.ym)) ?? 0),
+    );
+  const budgetBy = new Map(
+    budgets.map((b) => [b.ym, conv(b.budget_minor, b.budget_currency, currency, planRateDate(b.ym))]),
+  );
   const savingsBy = new Map<string, { locked_minor: number; unplanned_minor: number }>();
   for (const b of budgets) {
     const toShown = (v: number) => conv(v, b.budget_currency, currency, planRateDate(b.ym)) ?? 0;
-    const share = unplannedOf({ amount_minor: b.budget_minor, unplanned_pct: b.unplanned_pct, unplanned_minor: b.unplanned_minor, unplanned_cover_minor: b.unplanned_cover_minor });
+    const share = unplannedOf({
+      amount_minor: b.budget_minor,
+      unplanned_pct: b.unplanned_pct,
+      unplanned_minor: b.unplanned_minor,
+      unplanned_cover_minor: b.unplanned_cover_minor,
+    });
     savingsBy.set(b.ym, { locked_minor: toShown(b.locked_minor), unplanned_minor: toShown(share) });
   }
   // the months' "Итоги": what was put aside is in the budget's currency
-  const closes = new Map((await db.all<{ ym: string; closed_at: number | null; rest_choice: RestChoice | null; confirmed_minor: number | null }>(
-    'SELECT ym, closed_at, rest_choice, confirmed_minor FROM month_closes')).map((r) => [r.ym, r]));
+  const closes = new Map(
+    (
+      await db.all<{
+        ym: string;
+        closed_at: number | null;
+        rest_choice: RestChoice | null;
+        confirmed_minor: number | null;
+      }>('SELECT ym, closed_at, rest_choice, confirmed_minor FROM month_closes')
+    ).map((r) => [r.ym, r]),
+  );
   const closeOf = (ym: string): HistoryMonth['close'] => {
     if (ym >= nowYm || !planYms.includes(ym)) return null;
     const r = closes.get(ym);
     const b = budgets.find((x) => x.ym === ym);
     const saved = r?.confirmed_minor ?? null;
     return {
-      closed: r?.closed_at != null, rest_choice: r?.closed_at != null ? r.rest_choice : null,
-      saved_minor: saved === null || !b ? null : conv(saved, b.budget_currency, currency, planRateDate(ym)) ?? saved,
+      closed: r?.closed_at != null,
+      rest_choice: r?.closed_at != null ? r.rest_choice : null,
+      saved_minor: saved === null || !b ? null : (conv(saved, b.budget_currency, currency, planRateDate(ym)) ?? saved),
     };
   };
   // the current month: what the obligatory payments still need (each one's plan less what's paid of it)
@@ -150,7 +192,8 @@ export async function planHistory(nowYm = currentYm(), currency: Currency = BUDG
   if (budgetBy.has(nowYm)) {
     const { year: ny, month: nm } = parseYm(nowYm);
     const stats = await monthStats(ny, nm, currency);
-    unpaidFixed = stats.categories.filter((c) => c.plan_kind === 'fixed' && c.limit_minor)
+    unpaidFixed = stats.categories
+      .filter((c) => c.plan_kind === 'fixed' && c.limit_minor)
       .reduce((a, c) => a + leftToPay(spentOf(c), c.limit_minor!), 0);
   }
 
@@ -164,9 +207,14 @@ export async function planHistory(nowYm = currentYm(), currency: Currency = BUDG
       fundsBy.set(m.ym, (fundsBy.get(m.ym) ?? 0) + toShown(m.contribution, m.ym));
     }
     if (fund.closed_ym && fund.released_minor) {
-      const c = await db.get<{ name: string; emoji: string | null }>('SELECT name, emoji FROM categories WHERE id = ?', [fund.category_id]);
-      releasedBy.set(fund.closed_ym, [...releasedBy.get(fund.closed_ym) ?? [],
-        { name: c?.name ?? '', emoji: c?.emoji ?? null, minor: toShown(fund.released_minor, fund.closed_ym) }]);
+      const c = await db.get<{ name: string; emoji: string | null }>(
+        'SELECT name, emoji FROM categories WHERE id = ?',
+        [fund.category_id],
+      );
+      releasedBy.set(fund.closed_ym, [
+        ...(releasedBy.get(fund.closed_ym) ?? []),
+        { name: c?.name ?? '', emoji: c?.emoji ?? null, minor: toShown(fund.released_minor, fund.closed_ym) },
+      ]);
     }
   }
 
@@ -176,16 +224,25 @@ export async function planHistory(nowYm = currentYm(), currency: Currency = BUDG
     for (const m of (await savingLedger(v, nowYm, nowYm)).months) {
       spentBy.set(m.ym, (spentBy.get(m.ym) ?? 0) + toShown(m.contribution - (m.spent - m.shortage), m.ym));
     }
-    if (v.closed_ym && v.released_minor) spentBy.set(v.closed_ym, (spentBy.get(v.closed_ym) ?? 0) - toShown(v.released_minor, v.closed_ym));
+    if (v.closed_ym && v.released_minor)
+      spentBy.set(v.closed_ym, (spentBy.get(v.closed_ym) ?? 0) - toShown(v.released_minor, v.closed_ym));
   }
 
   const out: HistoryMonth[] = [];
   let { year, month } = parseYm(nowYm);
   for (let ym = nowYm; ym >= first.ym; ym = ymOf(year, --month)) {
     out.push({
-      ym, planned_minor: plannedBy.get(ym) ?? 0, spent_minor: spentBy.get(ym) ?? 0, budget_minor: budgetBy.get(ym) ?? null,
-      locked_minor: 0, unplanned_minor: 0, ...savingsBy.get(ym), close: closeOf(ym), unpaid_fixed_minor: ym === nowYm ? unpaidFixed : 0,
-      funds_minor: fundsBy.get(ym) ?? 0, released: releasedBy.get(ym) ?? [],
+      ym,
+      planned_minor: plannedBy.get(ym) ?? 0,
+      spent_minor: spentBy.get(ym) ?? 0,
+      budget_minor: budgetBy.get(ym) ?? null,
+      locked_minor: 0,
+      unplanned_minor: 0,
+      ...savingsBy.get(ym),
+      close: closeOf(ym),
+      unpaid_fixed_minor: ym === nowYm ? unpaidFixed : 0,
+      funds_minor: fundsBy.get(ym) ?? 0,
+      released: releasedBy.get(ym) ?? [],
     });
   }
   return out;

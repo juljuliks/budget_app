@@ -7,11 +7,17 @@ import { planConverter, plannedTotal, storedBudget } from './budget';
 import { activeFunds, contributionOf, Fund, fundLedger } from './funds';
 
 /** The queue of the funds: the nearest date first, one date — the smaller sum, then the older category. */
-export function fundOrder(a: Pick<Fund, 'due' | 'target_minor' | 'category_id'>, b: Pick<Fund, 'due' | 'target_minor' | 'category_id'>): number {
+export function fundOrder(
+  a: Pick<Fund, 'due' | 'target_minor' | 'category_id'>,
+  b: Pick<Fund, 'due' | 'target_minor' | 'category_id'>,
+): number {
   return a.due < b.due ? -1 : a.due > b.due ? 1 : a.target_minor - b.target_minor || a.category_id - b.category_id;
 }
 
-const nextYm = (ym: string) => { const { year, month } = parseYm(ym); return ymOf(year, month + 1); };
+const nextYm = (ym: string) => {
+  const { year, month } = parseYm(ym);
+  return ymOf(year, month + 1);
+};
 /** the last day of a month: «30 сентября 2027» */
 export const monthEnd = (ym: string) => {
   const { year, month } = parseYm(ym);
@@ -46,7 +52,9 @@ export function simulateFunds(funds: SimFund[], rooms: MonthRoom[], extend?: num
       const has = bal.get(f.id)!;
       const past = ym > f.dueYm;
       if (past && f.id !== extend) continue;
-      const asked = past ? Math.max(0, f.target - has) : contributionOf({ target_minor: f.target, due: f.dueYm }, ym, has);
+      const asked = past
+        ? Math.max(0, f.target - has)
+        : contributionOf({ target_minor: f.target, due: f.dueYm }, ym, has);
       const fromFree = Math.min(asked, free);
       const fromLocked = Math.min(asked - fromFree, locked);
       if (i === 0) now.set(f.id, { asked, fromFree, fromLocked, free, locked });
@@ -63,11 +71,19 @@ export function simulateFunds(funds: SimFund[], rooms: MonthRoom[], extend?: num
 export type FundStatus = 'ok' | 'late' | 'full';
 /** A fund's forecast, in its own currency. */
 export type FundForecast = {
-  category_id: number; currency: string; target: number; due: string; saved: number;
+  category_id: number;
+  currency: string;
+  target: number;
+  due: string;
+  saved: number;
   /** ok — it has its sum by its date; late — less; full — nothing is left for it this month */
   status: FundStatus;
   /** this month: what it asks, what it gets of the free part and of 🔒, what is left for it of each */
-  asked: number; fromFree: number; fromLocked: number; free: number; locked: number;
+  asked: number;
+  fromFree: number;
+  fromLocked: number;
+  free: number;
+  locked: number;
   /** what it has by its date in this pace (whole units) */
   forecast: number;
   /** late: the first month's end it has its sum by in this pace ('YYYY-MM-DD'; null — not within 10 years) */
@@ -83,24 +99,39 @@ export async function fundForecasts(nowYm = currentYm()): Promise<Map<number, Fu
   if (!budget || !funds.length) return out;
   const cur = budget.currency;
   const conv = await planConverter(nowYm);
-  const to = (v: number, from: string, into: string) => (from === into ? v : conv(v, from, into) ?? v);
+  const to = (v: number, from: string, into: string) => (from === into ? v : (conv(v, from, into) ?? v));
   // the months planned from this one on: what each leaves to the funds
-  const yms = (await db.all<{ ym: string }>('SELECT ym FROM plan_months WHERE ym >= ? AND budget_minor IS NOT NULL ORDER BY ym', [nowYm])).map((r) => r.ym);
+  const yms = (
+    await db.all<{ ym: string }>('SELECT ym FROM plan_months WHERE ym >= ? AND budget_minor IS NOT NULL ORDER BY ym', [
+      nowYm,
+    ])
+  ).map((r) => r.ym);
   const rooms: MonthRoom[] = [];
   for (let ym = nowYm; yms.includes(ym); ym = nextYm(ym)) {
     const b = (await storedBudget(ym))!;
     const fundItems = await db.all<{ v: number; c: string; t: number }>(
-      "SELECT limit_minor AS v, currency AS c, taken_minor AS t FROM plan_items WHERE ym = ? AND kind = 'fund'", [ym]);
+      "SELECT limit_minor AS v, currency AS c, taken_minor AS t FROM plan_items WHERE ym = ? AND kind = 'fund'",
+      [ym],
+    );
     const fundsPlanned = fundItems.reduce((a, i) => a + to(i.v, i.c, b.currency), 0);
     const taken = fundItems.reduce((a, i) => a + i.t, 0);
     const others = (await plannedTotal(ym, undefined, b.currency)) - fundsPlanned;
-    rooms.push({ ym, free: to(b.plannable_minor - others - taken, b.currency, cur), locked: to(b.locked_minor + taken, b.currency, cur) });
+    rooms.push({
+      ym,
+      free: to(b.plannable_minor - others - taken, b.currency, cur),
+      locked: to(b.locked_minor + taken, b.currency, cur),
+    });
   }
   const sims: SimFund[] = [];
   for (const f of funds) {
     const months = (await fundLedger(f, nowYm, nowYm)).months;
     const start = months[months.length - 1]?.start ?? f.start_minor;
-    sims.push({ id: f.category_id, target: to(f.target_minor, f.currency, cur), dueYm: f.due.slice(0, 7), saved: to(start, f.currency, cur) });
+    sims.push({
+      id: f.category_id,
+      target: to(f.target_minor, f.currency, cur),
+      dueYm: f.due.slice(0, 7),
+      saved: to(start, f.currency, cur),
+    });
   }
   const main = simulateFunds(sims, rooms);
   for (const [i, f] of funds.entries()) {
@@ -111,9 +142,17 @@ export async function fundForecasts(nowYm = currentYm()): Promise<Map<number, Fu
     const back = (v: number) => to(v, cur, f.currency);
     const moved = ok ? null : simulateFunds(sims, rooms, s.id).reached;
     out.set(f.category_id, {
-      category_id: f.category_id, currency: f.currency, target: f.target_minor, due: f.due,
-      saved: back(s.saved), status: ok ? 'ok' : n.free + n.locked <= 0 ? 'full' : 'late',
-      asked: back(n.asked), fromFree: back(n.fromFree), fromLocked: back(n.fromLocked), free: back(n.free), locked: back(n.locked),
+      category_id: f.category_id,
+      currency: f.currency,
+      target: f.target_minor,
+      due: f.due,
+      saved: back(s.saved),
+      status: ok ? 'ok' : n.free + n.locked <= 0 ? 'full' : 'late',
+      asked: back(n.asked),
+      fromFree: back(n.fromFree),
+      fromLocked: back(n.fromLocked),
+      free: back(n.free),
+      locked: back(n.locked),
       forecast: Math.min(f.target_minor, Math.floor(back(at) / 100) * 100),
       moveTo: moved ? monthEnd(moved) : null,
     });

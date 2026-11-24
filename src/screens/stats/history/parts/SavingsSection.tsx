@@ -34,7 +34,9 @@ export default function SavingsSection({ s, money }: Props) {
           <View style={styles.detailName}>
             <Text style={styles.detailText}>🔒 Отложено сразу</Text>
             <Text style={styles.detailHint}>
-              {s.locked.kept < s.locked.plan ? `${money(s.locked.plan - s.locked.kept)} ушло на траты` : 'в начале месяца'}
+              {s.locked.kept < s.locked.plan
+                ? `${money(s.locked.plan - s.locked.kept)} ушло на траты`
+                : 'в начале месяца'}
             </Text>
           </View>
           <Text style={[styles.detailNum, styles.muted]}>{money(s.locked.plan)}</Text>
@@ -45,11 +47,17 @@ export default function SavingsSection({ s, money }: Props) {
         <View style={styles.detailName}>
           <Text style={styles.detailText}>{over ? s.rest.label : `💰 ${s.rest.label}`}</Text>
           <Text style={styles.detailHint}>
-            {over ? 'потрачено больше бюджета' : s.pending ? 'без неоплаченных платежей' : 'не потрачено к концу месяца'}
+            {over
+              ? 'потрачено больше бюджета'
+              : s.pending
+                ? 'без неоплаченных платежей'
+                : 'не потрачено к концу месяца'}
           </Text>
         </View>
         <Text style={[styles.detailNum, styles.muted]}>{s.rest.plan !== null ? money(s.rest.plan) : '—'}</Text>
-        <Text style={[styles.detailNum, over ? styles.danger : s.rest.value > 0 && styles.good]}>{money(s.rest.value)}</Text>
+        <Text style={[styles.detailNum, over ? styles.danger : s.rest.value > 0 && styles.good]}>
+          {money(s.rest.value)}
+        </Text>
       </View>
       {s.released.map((r) => (
         <View key={r.name} style={styles.detailRow}>
@@ -63,8 +71,15 @@ export default function SavingsSection({ s, money }: Props) {
       ))}
       <View style={[styles.detailRow, styles.totalRow]}>
         <Text style={[styles.detailName, styles.strong]}>
-          {s.pending ? 'Пока в сбережения' : s.label === 'Перерасход бюджета' ? s.label : s.label === 'В сбережения' ? 'Всего в сбережения'
-            : s.label === 'Перенесено' ? 'Не потрачено' : 'Сэкономлено'}
+          {s.pending
+            ? 'Пока в сбережения'
+            : s.label === 'Перерасход бюджета'
+              ? s.label
+              : s.label === 'В сбережения'
+                ? 'Всего в сбережения'
+                : s.label === 'Перенесено'
+                  ? 'Не потрачено'
+                  : 'Сэкономлено'}
         </Text>
         <Text style={styles.detailNum} />
         <Text style={[styles.detailNum, styles.strong, over ? styles.danger : styles.good]}>{money(s.total)}</Text>
@@ -74,7 +89,8 @@ export default function SavingsSection({ s, money }: Props) {
       {s.saved !== null && s.saved !== s.total ? <Extra name="Удалось отложить" value={money(s.saved)} /> : null}
       {s.pending && s.unpaidFixed > 0 ? (
         <Text style={styles.note}>
-          Месяц идёт: из «Сэкономлено» вычтены платежи, которые ещё не оплачены ({money(s.unpaidFixed)}). Итог — в конце месяца.
+          Месяц идёт: из «Сэкономлено» вычтены платежи, которые ещё не оплачены ({money(s.unpaidFixed)}). Итог — в конце
+          месяца.
         </Text>
       ) : null}
     </View>

@@ -10,12 +10,23 @@ import { moveParts } from './parts';
 export type MergeRhythm = { kind: PlanKind; norm: NormPeriod; every?: Every | null; weekdays?: number | null };
 
 export class MergeNameTakenError extends Error {
-  constructor(public readonly name: string) { super(`a category named "${name}" already exists in this section`); }
+  constructor(public readonly name: string) {
+    super(`a category named "${name}" already exists in this section`);
+  }
 }
 
 type Item = {
-  ym: string; category_id: number; limit_minor: number; currency: string; kind: PlanKind; norm_period: NormPeriod; pinned: number;
-  every: Every | null; weekdays: number | null; unit_minor: number | null; until: string | null;
+  ym: string;
+  category_id: number;
+  limit_minor: number;
+  currency: string;
+  kind: PlanKind;
+  norm_period: NormPeriod;
+  pinned: number;
+  every: Every | null;
+  weekdays: number | null;
+  unit_minor: number | null;
+  until: string | null;
 };
 
 /**
@@ -25,7 +36,13 @@ type Item = {
  * summed (in the target's currency there, else the first one's, at that month's plan rate); `rhythm` — how the merged
  * item is planned — applies to every merged month, else the target's (or the first source's) kind and pattern stay.
  */
-export async function mergeCategories(targetId: number, sourceIds: number[], name: string, typeId: number | null, rhythm: MergeRhythm | null) {
+export async function mergeCategories(
+  targetId: number,
+  sourceIds: number[],
+  name: string,
+  typeId: number | null,
+  rhythm: MergeRhythm | null,
+) {
   const sources = sourceIds.filter((id) => id !== targetId);
   if (sources.length === 0) return;
   const all = [targetId, ...sources];
@@ -40,7 +57,9 @@ export async function mergeCategories(targetId: number, sourceIds: number[], nam
   const marks = placeholders(all.length);
   const items = await db.all<Item>(
     `SELECT ym, category_id, limit_minor, currency, kind, norm_period, pinned, CASE WHEN kind = 'fixed' THEN every END AS every, weekdays, unit_minor, until
-      FROM plan_items WHERE category_id IN (${marks}) ORDER BY ym`, all);
+      FROM plan_items WHERE category_id IN (${marks}) ORDER BY ym`,
+    all,
+  );
   // each month's merged item, computed before the transaction (the rates may need loading)
   const merged: Item[] = [];
   for (const ym of [...new Set(items.map((i) => i.ym))]) {
@@ -48,46 +67,101 @@ export async function mergeCategories(targetId: number, sourceIds: number[], nam
     const own = month.find((i) => i.category_id === targetId) ?? month[0];
     const conv = month.some((i) => i.currency !== own.currency) ? await planConverter(ym) : null;
     // without a rate an amount is taken as it is: better than dropping it from the plan
-    const sum = month.reduce((a, i) => a + (i.currency === own.currency ? i.limit_minor : conv?.(i.limit_minor, i.currency, own.currency) ?? i.limit_minor), 0);
+    const sum = month.reduce(
+      (a, i) =>
+        a +
+        (i.currency === own.currency
+          ? i.limit_minor
+          : (conv?.(i.limit_minor, i.currency, own.currency) ?? i.limit_minor)),
+      0,
+    );
     // a regular payment within the month picked: the one with those days keeps them and its amount each time (its
     // item the times by it, not the sum); another rhythm — none
-    const regular = rhythm ? (rhythm.every ? month.find((i) => i.every === rhythm.every && (i.weekdays ?? 0) === (rhythm.weekdays ?? 0)) : undefined)
-      : own.every ? own : undefined;
+    const regular = rhythm
+      ? rhythm.every
+        ? month.find((i) => i.every === rhythm.every && (i.weekdays ?? 0) === (rhythm.weekdays ?? 0))
+        : undefined
+      : own.every
+        ? own
+        : undefined;
     merged.push({
-      ym, category_id: targetId, currency: regular?.currency ?? own.currency,
-      limit_minor: regular?.every ? (regular.unit_minor ?? 0) * timesInMonth(ym, regular.every, regular.weekdays ?? 0, regular.until) : Math.round(sum),
-      kind: rhythm?.kind ?? own.kind, norm_period: rhythm?.norm ?? own.norm_period,
+      ym,
+      category_id: targetId,
+      currency: regular?.currency ?? own.currency,
+      limit_minor: regular?.every
+        ? (regular.unit_minor ?? 0) * timesInMonth(ym, regular.every, regular.weekdays ?? 0, regular.until)
+        : Math.round(sum),
+      kind: rhythm?.kind ?? own.kind,
+      norm_period: rhythm?.norm ?? own.norm_period,
       pinned: month.some((i) => i.pinned) ? 1 : 0,
-      every: regular?.every ?? null, weekdays: regular?.weekdays ?? null, unit_minor: regular?.unit_minor ?? null, until: regular?.until ?? null,
+      every: regular?.every ?? null,
+      weekdays: regular?.weekdays ?? null,
+      unit_minor: regular?.unit_minor ?? null,
+      until: regular?.until ?? null,
     });
   }
 
   const sourceMarks = placeholders(sources.length);
   await db.transaction(async (tx) => {
-    await tx.run(`UPDATE transactions SET category_id = ? WHERE category_id IN (${sourceMarks})`, [targetId, ...sources]);
+    await tx.run(`UPDATE transactions SET category_id = ? WHERE category_id IN (${sourceMarks})`, [
+      targetId,
+      ...sources,
+    ]);
     await moveParts(tx, sources, targetId);
-    await tx.run(`UPDATE merchant_rules SET category_id = ? WHERE category_id IN (${sourceMarks})`, [targetId, ...sources]);
+    await tx.run(`UPDATE merchant_rules SET category_id = ? WHERE category_id IN (${sourceMarks})`, [
+      targetId,
+      ...sources,
+    ]);
     // repeating payments go along: the merged one has them if any had
-    await tx.run(`UPDATE recurring_payments SET category_id = ? WHERE category_id IN (${sourceMarks})`, [targetId, ...sources]);
-    await tx.run(`UPDATE categories SET recurring = 1 WHERE id = ? AND EXISTS (SELECT 1 FROM categories WHERE recurring = 1 AND id IN (${sourceMarks}))`, [targetId, ...sources]);
-    await tx.run(`UPDATE OR IGNORE merchant_categories SET category_id = ? WHERE category_id IN (${sourceMarks})`, [targetId, ...sources]);
+    await tx.run(`UPDATE recurring_payments SET category_id = ? WHERE category_id IN (${sourceMarks})`, [
+      targetId,
+      ...sources,
+    ]);
+    await tx.run(
+      `UPDATE categories SET recurring = 1 WHERE id = ? AND EXISTS (SELECT 1 FROM categories WHERE recurring = 1 AND id IN (${sourceMarks}))`,
+      [targetId, ...sources],
+    );
+    await tx.run(`UPDATE OR IGNORE merchant_categories SET category_id = ? WHERE category_id IN (${sourceMarks})`, [
+      targetId,
+      ...sources,
+    ]);
     await tx.run(`DELETE FROM merchant_categories WHERE category_id IN (${sourceMarks})`, sources);
     // a merchant of different categories all merged into one: of that one category again — new operations go there
     const single = await tx.all<{ k: string }>(
       `SELECT m.merchant_key AS k FROM mixed_merchants m JOIN merchant_categories c ON c.merchant_key = m.merchant_key
-        GROUP BY m.merchant_key HAVING count(*) = 1 AND max(c.category_id) = ?`, [targetId]);
+        GROUP BY m.merchant_key HAVING count(*) = 1 AND max(c.category_id) = ?`,
+      [targetId],
+    );
     for (const { k } of single) {
       await tx.run('DELETE FROM mixed_merchants WHERE merchant_key = ?', [k]);
-      await tx.run("INSERT OR REPLACE INTO merchant_rules (match_type, pattern, category_id, created_at) VALUES ('exact', ?, ?, ?)",
-        [k, targetId, Math.floor(Date.now() / 1000)]);
+      await tx.run(
+        "INSERT OR REPLACE INTO merchant_rules (match_type, pattern, category_id, created_at) VALUES ('exact', ?, ?, ?)",
+        [k, targetId, Math.floor(Date.now() / 1000)],
+      );
     }
     await tx.run(`DELETE FROM plan_items WHERE category_id IN (${marks})`, all);
     for (const m of merged) {
       await tx.run(
         'INSERT INTO plan_items (ym, category_id, limit_minor, currency, kind, norm_period, pinned, every, weekdays, unit_minor, until) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [m.ym, m.category_id, m.limit_minor, m.currency, m.kind, m.norm_period, m.pinned, m.every, m.weekdays, m.unit_minor, m.until]);
+        [
+          m.ym,
+          m.category_id,
+          m.limit_minor,
+          m.currency,
+          m.kind,
+          m.norm_period,
+          m.pinned,
+          m.every,
+          m.weekdays,
+          m.unit_minor,
+          m.until,
+        ],
+      );
     }
-    const usage = await tx.get<{ n: number }>(`SELECT coalesce(sum(usage_count), 0) AS n FROM category_usage WHERE category_id IN (${marks})`, all);
+    const usage = await tx.get<{ n: number }>(
+      `SELECT coalesce(sum(usage_count), 0) AS n FROM category_usage WHERE category_id IN (${marks})`,
+      all,
+    );
     await tx.run(`DELETE FROM category_usage WHERE category_id IN (${marks})`, all);
     await tx.run('INSERT INTO category_usage (category_id, usage_count) VALUES (?, ?)', [targetId, usage?.n ?? 0]);
     await tx.run('UPDATE categories SET name = ?, type_id = ? WHERE id = ?', [name.trim(), typeId, targetId]);
@@ -100,10 +174,19 @@ export async function mergeCategories(targetId: number, sourceIds: number[], nam
 export async function mergePlanPreview(ids: number[], ym = currentYm()) {
   if (ids.length === 0) return [];
   const db = await getDb();
-  return db.all<{ category_id: number; limit_minor: number; currency: string; kind: PlanKind; norm_period: NormPeriod; every: Every | null; weekdays: number | null }>(
+  return db.all<{
+    category_id: number;
+    limit_minor: number;
+    currency: string;
+    kind: PlanKind;
+    norm_period: NormPeriod;
+    every: Every | null;
+    weekdays: number | null;
+  }>(
     `SELECT category_id, limit_minor, currency, kind, norm_period, CASE WHEN kind = 'fixed' THEN every END AS every, weekdays
       FROM plan_items WHERE ym = ? AND category_id IN (${placeholders(ids.length)})`,
-    [ym, ...ids]);
+    [ym, ...ids],
+  );
 }
 
 /** "Кафе & Рестораны": the default name of a merge, in the order picked. */

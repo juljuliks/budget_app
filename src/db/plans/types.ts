@@ -17,7 +17,8 @@ export type NormPeriod = 'day' | 'week' | '2weeks' | 'month';
 
 export const NORM_PERIODS: NormPeriod[] = ['day', 'week', '2weeks', 'month'];
 
-export const asNorm = (v: string | null | undefined): NormPeriod => (NORM_PERIODS.includes(v as NormPeriod) ? (v as NormPeriod) : 'day');
+export const asNorm = (v: string | null | undefined): NormPeriod =>
+  NORM_PERIODS.includes(v as NormPeriod) ? (v as NormPeriod) : 'day';
 
 export type PlanItem = {
   category_id: number;
@@ -49,9 +50,12 @@ export type PlanItem = {
   by_merchant?: boolean;
   /** with repeating payments: those charged by name, those saved up for, their contributions in the plan's currency */
   subs?: {
-    names: string[]; saving_names: string[];
+    names: string[];
+    saving_names: string[];
     /** the month's contributions (in "Сбережения" of the plan), what is saved by the month's end and for how much (its ring) */
-    saving_minor: number; saving_end_minor: number; saving_amount_minor: number;
+    saving_minor: number;
+    saving_end_minor: number;
+    saving_amount_minor: number;
     /** none at all ("Подписки" without subscriptions) */
     empty?: boolean;
     /** all its payments in one currency: the month's charges and contributions in it */
@@ -69,7 +73,10 @@ export type PlanItem = {
    * from 🔒 (`taken`, in the budget's currency), what the next month asks then; null — all of it, from the plan
    */
   fund?: {
-    target_minor: number; due: string; saved_minor: number; start_minor: number;
+    target_minor: number;
+    due: string;
+    saved_minor: number;
+    start_minor: number;
     fit?: { asked: number; taken: number; taken_currency: string | null; next: number } | null;
   };
 };

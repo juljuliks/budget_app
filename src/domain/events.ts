@@ -6,11 +6,17 @@ const listeners = new Set<Listener>();
 
 export function onTransactionsChanged(fn: Listener): () => void {
   listeners.add(fn);
-  return () => { listeners.delete(fn); };
+  return () => {
+    listeners.delete(fn);
+  };
 }
 
 export function emitTransactionsChanged() {
   listeners.forEach((fn) => {
-    try { fn(); } catch (e) { console.error('transactions listener failed', e); }
+    try {
+      fn();
+    } catch (e) {
+      console.error('transactions listener failed', e);
+    }
   });
 }

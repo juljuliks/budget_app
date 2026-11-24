@@ -4,19 +4,35 @@ import { getDb } from '../../src/db';
 import { ingestSms } from '../../src/ingest/ingest';
 import { assignCategory, categoryChangeTotals, merchantChangePreview } from '../../src/categorize/assign';
 import {
-  addMerchantCategory, deleteMerchants, listMerchants, merchantCategories, merchantFollowers, merchantsCategoryPreview, removeMerchantCategory, replaceMerchantCategories, setMerchantCategory, setMerchantMixed, setMerchantsCategory,
+  addMerchantCategory,
+  deleteMerchants,
+  listMerchants,
+  merchantCategories,
+  merchantFollowers,
+  merchantsCategoryPreview,
+  removeMerchantCategory,
+  replaceMerchantCategories,
+  setMerchantCategory,
+  setMerchantMixed,
+  setMerchantsCategory,
 } from '../../src/db/merchants';
 import { findCategoryForMerchant } from '../../src/categorize/rules';
 import { freshDb } from '../helpers';
 
 let ts = 1;
 async function sms(merchant: string, amount = '5.00') {
-  const r = await ingestSms({ sender: 'TBC SMS', body: `${amount}GEL\n(*XXXX)\n${merchant}\n03/10/26 12:00`, timestamp: ts++ });
+  const r = await ingestSms({
+    sender: 'TBC SMS',
+    body: `${amount}GEL\n(*XXXX)\n${merchant}\n03/10/26 12:00`,
+    timestamp: ts++,
+  });
   if (r.status !== 'inserted') throw new Error(`not inserted: ${r.status}`);
   return r.txId;
 }
 const categoryOf = async (id: number) =>
-  (await (await getDb()).get<{ category_id: number | null }>('SELECT category_id FROM transactions WHERE id = ?', [id]))!.category_id;
+  (await (
+    await getDb()
+  ).get<{ category_id: number | null }>('SELECT category_id FROM transactions WHERE id = ?', [id]))!.category_id;
 
 beforeEach(() => freshDb());
 
@@ -26,14 +42,17 @@ test('the list: merchants of purchases with their category, most frequent first'
   await sms('WOLT');
   await assignCategory(a, 1);
   const list = await listMerchants();
-  expect(list.map((m) => [m.id, m.name, m.count, m.category_id])).toEqual([['SPAR VAKE', 'SPAR VAKE', 2, 1], ['WOLT', 'WOLT', 1, null]]);
+  expect(list.map((m) => [m.id, m.name, m.count, m.category_id])).toEqual([
+    ['SPAR VAKE', 'SPAR VAKE', 2, 1],
+    ['WOLT', 'WOLT', 1, null],
+  ]);
 });
 
 test('setting / removing a merchant category: followers change, manual choices stay', async () => {
   const a = await sms('SPAR');
   const b = await sms('SPAR');
-  await assignCategory(a, 1);          // SPAR -> 1, b follows
-  await assignCategory(b, 3, 'only');  // b: a manual choice
+  await assignCategory(a, 1); // SPAR -> 1, b follows
+  await assignCategory(b, 3, 'only'); // b: a manual choice
   expect((await merchantFollowers('SPAR')).count).toBe(1);
   await setMerchantCategory('SPAR', 2);
   expect([await categoryOf(a), await categoryOf(b)]).toEqual([2, 3]);
@@ -62,20 +81,30 @@ test('one category for several merchants: their followers change, manual choices
   const own = await sms('SPAR SABURTALO', '2.00');
   await sms('WOLT');
   await assignCategory(own, 3, 'only'); // a manual choice
-  expect(await merchantsCategoryPreview(['SPAR VAKE', 'SPAR SABURTALO'], 2))
-    .toEqual({ count: 2, totals: [{ currency: 'GEL', amount_minor: 1400 }] });
+  expect(await merchantsCategoryPreview(['SPAR VAKE', 'SPAR SABURTALO'], 2)).toEqual({
+    count: 2,
+    totals: [{ currency: 'GEL', amount_minor: 1400 }],
+  });
 
   await setMerchantsCategory(['SPAR VAKE', 'SPAR SABURTALO'], 2);
   expect([await categoryOf(vake), await categoryOf(sab), await categoryOf(own)]).toEqual([2, 2, 3]);
   expect(await findCategoryForMerchant('SPAR VAKE')).toEqual({ category_id: 2, source: 'rule' });
   expect(await categoryOf(await sms('SPAR SABURTALO', '1.00'))).toBe(2);
-  expect((await listMerchants()).map((m) => [m.id, m.category_id]).sort()).toEqual([['SPAR SABURTALO', 2], ['SPAR VAKE', 2], ['WOLT', null]]);
+  expect((await listMerchants()).map((m) => [m.id, m.category_id]).sort()).toEqual([
+    ['SPAR SABURTALO', 2],
+    ['SPAR VAKE', 2],
+    ['WOLT', null],
+  ]);
 });
 
 test('category change totals: refunds subtract, ordered by the signed sum', async () => {
   await sms('SPAR', '10.00');
   const usd = async (amount: string) => {
-    const r = await ingestSms({ sender: 'TBC SMS', body: `${amount}USD\n(*XXXX)\nSPAR\n03/10/26 12:00`, timestamp: ts++ });
+    const r = await ingestSms({
+      sender: 'TBC SMS',
+      body: `${amount}USD\n(*XXXX)\nSPAR\n03/10/26 12:00`,
+      timestamp: ts++,
+    });
     if (r.status !== 'inserted') throw new Error(`not inserted: ${r.status}`);
     return r.txId;
   };
@@ -94,7 +123,11 @@ const daysAgo = (days: number) => {
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getFullYear()).slice(2)} 12:00`;
 };
 async function smsOn(merchant: string, amount: string, days: number) {
-  const r = await ingestSms({ sender: 'TBC SMS', body: `${amount}GEL\n(*XXXX)\n${merchant}\n${daysAgo(days)}`, timestamp: ts++ });
+  const r = await ingestSms({
+    sender: 'TBC SMS',
+    body: `${amount}GEL\n(*XXXX)\n${merchant}\n${daysAgo(days)}`,
+    timestamp: ts++,
+  });
   if (r.status !== 'inserted') throw new Error(`not inserted: ${r.status}`);
   return r.txId;
 }
@@ -106,9 +139,13 @@ test('activity: the last month if anything was bought then, otherwise everything
   await smsOn('WOLT', '7.00', 90);
   await smsOn('WOLT', '3.00', 45);
   const byId = new Map((await listMerchants()).map((m) => [m.id, m.activity]));
-  expect(byId.get('SPAR')).toEqual(expect.objectContaining({ recent: true, count: 2, totals: [{ currency: 'GEL', amount_minor: 1550 }] }));
+  expect(byId.get('SPAR')).toEqual(
+    expect.objectContaining({ recent: true, count: 2, totals: [{ currency: 'GEL', amount_minor: 1550 }] }),
+  );
   const wolt = byId.get('WOLT')!;
-  expect(wolt).toEqual(expect.objectContaining({ recent: false, count: 2, totals: [{ currency: 'GEL', amount_minor: 1000 }] }));
+  expect(wolt).toEqual(
+    expect.objectContaining({ recent: false, count: 2, totals: [{ currency: 'GEL', amount_minor: 1000 }] }),
+  );
   expect(wolt.to - wolt.from).toBeGreaterThan(40 * 86400);
 });
 
@@ -116,14 +153,17 @@ test('deleting merchants: operations keep their categories (as their own), lose 
   const w = await sms('WOLT');
   const w2 = await sms('WOLT');
   const keep = await sms('GLOVO');
-  await assignCategory(w, 1);          // WOLT -> 1, w2 follows
+  await assignCategory(w, 1); // WOLT -> 1, w2 follows
   await assignCategory(w2, 3, 'only'); // a manual choice
   await assignCategory(keep, 1);
   expect(await deleteMerchants(['WOLT'])).toBe(2);
 
   const db = await getDb();
-  const rows = await db.all<{ merchant_key: string | null; category_id: number | null; category_source: string | null }>(
-    'SELECT merchant_key, category_id, category_source FROM transactions WHERE id IN (?, ?) ORDER BY id', [w, w2]);
+  const rows = await db.all<{
+    merchant_key: string | null;
+    category_id: number | null;
+    category_source: string | null;
+  }>('SELECT merchant_key, category_id, category_source FROM transactions WHERE id IN (?, ?) ORDER BY id', [w, w2]);
   expect(rows).toEqual([
     { merchant_key: null, category_id: 1, category_source: 'user' },
     { merchant_key: null, category_id: 3, category_source: 'user' },
@@ -142,7 +182,9 @@ test('a merchant without a category: nothing asked, the pick becomes its categor
   await assignCategory(a, 1);
   expect(await findCategoryForMerchant('BOLT')).toEqual({ category_id: 1, source: 'rule' });
   expect(await categoryOf(b)).toBe(1);
-  expect(await merchantChangePreview(b, 2)).toEqual(expect.objectContaining({ merchant: 'BOLT', fromCategoryId: 1, count: 2 }));
+  expect(await merchantChangePreview(b, 2)).toEqual(
+    expect.objectContaining({ merchant: 'BOLT', fromCategoryId: 1, count: 2 }),
+  );
 });
 
 describe('bulk category change: the selected operations only, or their merchants too', () => {
@@ -160,7 +202,9 @@ describe('bulk category change: the selected operations only, or their merchants
     // a, b and c follow (manual stays)
     expect(preview?.count).toBe(3);
     expect(await assignCategoryToMany([a, c], 2, 'merchant')).toBe(2);
-    expect([await categoryOf(a), await categoryOf(b), await categoryOf(c), await categoryOf(manual)]).toEqual([2, 2, 2, 3]);
+    expect([await categoryOf(a), await categoryOf(b), await categoryOf(c), await categoryOf(manual)]).toEqual([
+      2, 2, 2, 3,
+    ]);
     expect((await findCategoryForMerchant('SPAR'))?.category_id).toBe(2);
     expect((await findCategoryForMerchant('WOLT'))?.category_id).toBe(2);
     // already their category: nothing to ask
@@ -197,7 +241,7 @@ describe('bulk category change: the selected operations only, or their merchants
 });
 
 describe('a merchant of different categories', () => {
-  test('its primary category is the first of the list: a new operation gets it, a pick stays that operation\'s', async () => {
+  test("its primary category is the first of the list: a new operation gets it, a pick stays that operation's", async () => {
     const first = await sms('WOLT');
     await assignCategory(first, 1); // the first pick became the merchant's
     const followed = await sms('WOLT');
@@ -206,7 +250,9 @@ describe('a merchant of different categories', () => {
     await setMerchantMixed('WOLT', true);
     // the most used category it had is the primary one; what followed it keeps the category, as its own
     expect(await findCategoryForMerchant('WOLT')).toEqual({ category_id: 1, source: 'rule' });
-    expect(await (await getDb()).get('SELECT category_id, category_source FROM transactions WHERE id = ?', [followed])).toEqual({ category_id: 1, category_source: 'user' });
+    expect(
+      await (await getDb()).get('SELECT category_id, category_source FROM transactions WHERE id = ?', [followed]),
+    ).toEqual({ category_id: 1, category_source: 'user' });
 
     const next = await sms('WOLT');
     expect(await categoryOf(next)).toBe(1);
@@ -236,10 +282,16 @@ describe('a merchant of different categories', () => {
     expect(await merchantCategories('WOLT')).toEqual([]);
     await addMerchantCategory('WOLT', 1);
     await addMerchantCategory('WOLT', 2);
-    expect((await merchantCategories('WOLT')).map((c) => [c.id, c.n])).toEqual([[1, 0], [2, 0]]);
+    expect((await merchantCategories('WOLT')).map((c) => [c.id, c.n])).toEqual([
+      [1, 0],
+      [2, 0],
+    ]);
     await assignCategory(op, 2);
     // a pick does not move the category up: the saved order stays
-    expect((await merchantCategories('WOLT')).map((c) => [c.id, c.n])).toEqual([[1, 0], [2, 1]]);
+    expect((await merchantCategories('WOLT')).map((c) => [c.id, c.n])).toEqual([
+      [1, 0],
+      [2, 1],
+    ]);
     await removeMerchantCategory('WOLT', 1);
     const another = await sms('WOLT');
     expect(await categoryOf(another)).toBe(2);
@@ -265,7 +317,14 @@ describe('a merchant with a subscription (Wolt+ among its deliveries)', () => {
     const { subscriptionsCategoryId } = await import('../../src/db/categories');
     const first = await sms('WOLT', '12.00');
     await assignCategory(first, 1);
-    await savePayment({ merchant_key: 'WOLT', name: 'Wolt+', amount_minor: 1499, currency: 'GEL', period: 1, due: '2026-11-03' });
+    await savePayment({
+      merchant_key: 'WOLT',
+      name: 'Wolt+',
+      amount_minor: 1499,
+      currency: 'GEL',
+      period: 1,
+      due: '2026-11-03',
+    });
     return subscriptionsCategoryId();
   }
 
@@ -286,10 +345,12 @@ describe('a merchant with a subscription (Wolt+ among its deliveries)', () => {
     expect((await lastCharge('WOLT'))?.amount_minor).toBe(1499);
   });
 
-  test('in another currency: its amount at the day\'s rate, within 5%', async () => {
+  test("in another currency: its amount at the day's rate, within 5%", async () => {
     const { subscriptionCategoryOf } = await import('../../src/db/recurring');
     const subs = await woltPlus();
-    await (await getDb()).run("INSERT OR REPLACE INTO fx_rates (date, currency, gel_per_unit) VALUES ('2026-10-03', 'USD', 2.7)");
+    await (
+      await getDb()
+    ).run("INSERT OR REPLACE INTO fx_rates (date, currency, gel_per_unit) VALUES ('2026-10-03', 'USD', 2.7)");
     // 14.99 ₾ ≈ 5.55 $
     expect(await subscriptionCategoryOf('WOLT', 560, 'USD', '2026-10-03')).toBe(subs);
     expect(await subscriptionCategoryOf('WOLT', 700, 'USD', '2026-10-03')).toBeNull();

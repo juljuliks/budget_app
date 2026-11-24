@@ -25,13 +25,19 @@ type BalanceRow = { by_balance: number; balance_minor: number | null; balance_op
 
 /** The month before's account balance, in `currency`. null — that month has none, or no rate to convert it. */
 async function priorBalance(
-  ym: string, currency: Currency, conv: (minor: number, from: string, to: string) => number | null,
+  ym: string,
+  currency: Currency,
+  conv: (minor: number, from: string, to: string) => number | null,
 ): Promise<number | null> {
   const { year, month } = parseYm(ym);
-  const row = await (await getDb()).get<{ minor: number; currency: string | null }>(
+  const row = await (
+    await getDb()
+  ).get<{ minor: number; currency: string | null }>(
     `SELECT c.balance_minor AS minor, coalesce(p.budget_currency, c.carry_currency) AS currency
        FROM month_closes c LEFT JOIN plan_months p ON p.ym = c.ym
-      WHERE c.ym = ? AND c.balance_minor IS NOT NULL`, [ymOf(year, month - 1)]);
+      WHERE c.ym = ? AND c.balance_minor IS NOT NULL`,
+    [ymOf(year, month - 1)],
+  );
   if (!row) return null;
   return conv(row.minor, row.currency ?? currency, currency);
 }
@@ -41,8 +47,11 @@ async function priorBalance(
  * known); null when the month is answered by "За месяц" — the caller keeps that answer.
  */
 export async function savingsBalance(
-  ym: string, currency: Currency, conv: (minor: number, from: string, to: string) => number | null,
-  row: BalanceRow | null, ask: number,
+  ym: string,
+  currency: Currency,
+  conv: (minor: number, from: string, to: string) => number | null,
+  row: BalanceRow | null,
+  ask: number,
 ): Promise<{ balance: SavingsBalance; put: number | null }> {
   const prior = await priorBalance(ym, currency, conv);
   const open = row?.balance_open_minor ?? null;

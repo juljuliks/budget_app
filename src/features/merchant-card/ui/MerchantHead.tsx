@@ -13,9 +13,13 @@ export default function MerchantHead({ m, onShowTransactions }: Props) {
   return m.count > 0 ? (
     <TextLink
       label={`${m.count} ${plural(m.count, ['операция', 'операции', 'операций'])}${m.totals.length ? ` · ${money(m.totals)}` : ''}`}
-      onPress={onShowTransactions} style={styles.summary} containerStyle={styles.summaryBox}
+      onPress={onShowTransactions}
+      style={styles.summary}
+      containerStyle={styles.summaryBox}
     />
-  ) : <Text style={styles.meta}>Операций нет</Text>;
+  ) : (
+    <Text style={styles.meta}>Операций нет</Text>
+  );
 }
 
 const styles = StyleSheet.create({

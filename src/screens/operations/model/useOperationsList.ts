@@ -30,30 +30,36 @@ export function useOperationsList(filterRef: MutableRefObject<Filter>, groupByRe
 
   // Reads the first page of the current filters and grouping; `keepDepth` (back from an operation, a change elsewhere)
   // re-reads as many as were loaded, so the list keeps its scroll depth instead of snapping back to one page
-  const reload = useCallback(async (keepDepth: boolean) => {
-    const id = ++requestId.current;
-    setFailed(false);
-    const groupBy = groupByRef.current;
-    let view: ListView, page: Awaited<ReturnType<typeof fetchPage>>, found: TransactionGroup[] | null;
-    try {
-      const filter = await resolveFilter(filterRef.current);
-      view = { filter, groupBy };
-      const limit = keepDepth ? Math.max(PAGE_SIZE, loadedCount.current) : PAGE_SIZE;
-      [page, found] = await Promise.all([fetchPage(view, null, limit), groupBy === 'day' ? null : listTransactionGroups(filter, groupBy)]);
-    } catch (e) {
-      if (id === requestId.current) setFailed(true);
-      throw e;
-    }
-    if (id !== requestId.current) return;
-    viewRef.current = view;
-    if (movedOut.current && page.rows.length < loadedCount.current) setRemount((n) => n + 1);
-    movedOut.current = false;
-    loadedCount.current = page.rows.length;
-    setLoaded({ rows: page.rows, groups: found });
-    setNext(page.next);
-    setGroupIds(new Map());
-    setLoading(false);
-  }, [filterRef, groupByRef]);
+  const reload = useCallback(
+    async (keepDepth: boolean) => {
+      const id = ++requestId.current;
+      setFailed(false);
+      const groupBy = groupByRef.current;
+      let view: ListView, page: Awaited<ReturnType<typeof fetchPage>>, found: TransactionGroup[] | null;
+      try {
+        const filter = await resolveFilter(filterRef.current);
+        view = { filter, groupBy };
+        const limit = keepDepth ? Math.max(PAGE_SIZE, loadedCount.current) : PAGE_SIZE;
+        [page, found] = await Promise.all([
+          fetchPage(view, null, limit),
+          groupBy === 'day' ? null : listTransactionGroups(filter, groupBy),
+        ]);
+      } catch (e) {
+        if (id === requestId.current) setFailed(true);
+        throw e;
+      }
+      if (id !== requestId.current) return;
+      viewRef.current = view;
+      if (movedOut.current && page.rows.length < loadedCount.current) setRemount((n) => n + 1);
+      movedOut.current = false;
+      loadedCount.current = page.rows.length;
+      setLoaded({ rows: page.rows, groups: found });
+      setNext(page.next);
+      setGroupIds(new Map());
+      setLoading(false);
+    },
+    [filterRef, groupByRef],
+  );
 
   const loadMore = useCallback(async () => {
     if (next === null || loadingMore || loading) return;
@@ -78,11 +84,33 @@ export function useOperationsList(filterRef: MutableRefObject<Filter>, groupByRe
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     loadedCount.current = 0; // pull-to-refresh goes back to the first page
-    try { await reload(true); } finally { setRefreshing(false); }
+    try {
+      await reload(true);
+    } finally {
+      setRefreshing(false);
+    }
   }, [reload]);
 
   const sections = useMemo(() => buildSections(rows, groups, viewRef.current.groupBy), [rows, groups]);
-  const markMovedOut = () => { movedOut.current = true; };
+  const markMovedOut = () => {
+    movedOut.current = true;
+  };
 
-  return { rows, groups, sections, viewRef, groupIds, setGroupIds, loading, failed, loadingMore, refreshing, remount, reload, loadMore, onRefresh, markMovedOut };
+  return {
+    rows,
+    groups,
+    sections,
+    viewRef,
+    groupIds,
+    setGroupIds,
+    loading,
+    failed,
+    loadingMore,
+    refreshing,
+    remount,
+    reload,
+    loadMore,
+    onRefresh,
+    markMovedOut,
+  };
 }

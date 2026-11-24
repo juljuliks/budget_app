@@ -25,13 +25,25 @@ type Props = {
 export default function SelectField({ value, onPress, accessibilityLabel, disabled, open, style, testID }: Props) {
   return (
     <View style={[styles.row, style]}>
-      <TouchableOpacity style={styles.field} onPress={onPress} disabled={disabled} accessibilityRole="button" accessibilityLabel={accessibilityLabel} testID={testID}>
-        <Text style={styles.value} numberOfLines={2}>{value}</Text>
+      <TouchableOpacity
+        style={styles.field}
+        onPress={onPress}
+        disabled={disabled}
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel}
+        testID={testID}
+      >
+        <Text style={styles.value} numberOfLines={2}>
+          {value}
+        </Text>
         <ChevronDownIcon color={colors.muted} size={18} />
       </TouchableOpacity>
       {open ? (
         <TouchableOpacity
-          style={styles.open} onPress={open.onPress} accessibilityRole="button" accessibilityLabel={open.accessibilityLabel}
+          style={styles.open}
+          onPress={open.onPress}
+          accessibilityRole="button"
+          accessibilityLabel={open.accessibilityLabel}
           testID={testID ? `${testID}-open` : undefined}
         >
           <ChevronRightIcon color={colors.accent} size={20} />
@@ -44,9 +56,23 @@ export default function SelectField({ value, onPress, accessibilityLabel, disabl
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'stretch', gap: 8 },
   field: {
-    flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingHorizontal: 14, paddingVertical: 12, borderRadius: 10, backgroundColor: colors.surface,
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: colors.surface,
   },
   value: { flex: 1, fontSize: 17, color: colors.text },
-  open: { width: 52, alignItems: 'center', justifyContent: 'center', borderRadius: 10, borderWidth: 1, borderColor: colors.border },
+  open: {
+    width: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
 });

@@ -3,7 +3,7 @@ import { freshMonth, freshYear, isMonthFresh, isYearFresh } from '../../src/stat
 
 const at = (s: string) => new Date(`${s}T12:00:00`);
 
-test('a month\'s report: its last 7 days and the first 7 of the next; between them — none', () => {
+test("a month's report: its last 7 days and the first 7 of the next; between them — none", () => {
   // 31 days: from the 25th
   expect(freshMonth(at('2026-10-24'))).toBeNull();
   expect(freshMonth(at('2026-10-25'))).toEqual({ ym: '2026-10', daysLeft: 13 });
@@ -21,7 +21,7 @@ test('a month\'s report: its last 7 days and the first 7 of the next; between th
   expect(isMonthFresh('2026-09', at('2026-11-03'))).toBe(false);
 });
 
-test('the year\'s: its last 7 days and the first 7 of January, 25 December — 7 January', () => {
+test("the year's: its last 7 days and the first 7 of January, 25 December — 7 January", () => {
   expect(freshYear(at('2026-12-24'))).toBeNull();
   expect(freshYear(at('2026-12-25'))).toEqual({ year: 2026, daysLeft: 13 });
   expect(freshYear(at('2027-01-07'))).toEqual({ year: 2026, daysLeft: 0 });

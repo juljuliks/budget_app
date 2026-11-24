@@ -9,7 +9,7 @@ const NUM = '(\\d{1,3}(?:[,\\u00a0\\u202f]\\d{3})+|\\d+)(?:[.,](\\d{1,2}))?';
 const CUR = '(GEL|USD|EUR|₾|\\$|€)';
 const AMOUNT_AFTER = new RegExp(`${NUM}\\s*${CUR}`, 'i');
 const AMOUNT_BEFORE = new RegExp(`${CUR}\\s*${NUM}`, 'i');
-const CURRENCY_CODES: Record<string, string> = { '₾': 'GEL', '$': 'USD', '€': 'EUR' };
+const CURRENCY_CODES: Record<string, string> = { '₾': 'GEL', $: 'USD', '€': 'EUR' };
 
 // "28/09/26", "28/09/26 14:08" and "28/09/26 14:08:52". Seconds are not stored, but they are part of the
 // time: a merchant sharing the line must not keep them ("Wolt 28/09/26 14:08:52" → "Wolt", not "Wolt :52").
@@ -110,7 +110,10 @@ export function parseTbc(raw_sms: string): ParsedTx | null {
   const text = raw_sms.replace(/\r\n?/g, '\n').trim();
   if (isNotOperation(text)) return null;
 
-  const lines = text.split(/\n+/).map((l) => l.trim()).filter(Boolean);
+  const lines = text
+    .split(/\n+/)
+    .map((l) => l.trim())
+    .filter(Boolean);
   // balance-only SMS end up here too: amounts on "Balance:" lines are skipped
   const amount = findAmount(lines);
   if (!amount || amount.minor === 0) return null;
@@ -118,9 +121,12 @@ export function parseTbc(raw_sms: string): ParsedTx | null {
   const kind = classify(text);
   if (!kind) return null;
 
-  const merchant = kind === 'refund' ? refundMerchant(text, lines)
-    : kind === 'deposit' || kind === 'transfer' ? counterparty(lines)
-      : extractMerchant(lines);
+  const merchant =
+    kind === 'refund'
+      ? refundMerchant(text, lines)
+      : kind === 'deposit' || kind === 'transfer'
+        ? counterparty(lines)
+        : extractMerchant(lines);
   const date = findDate(text);
   return {
     bank: 'tbc',
@@ -139,7 +145,10 @@ export function parseTbc(raw_sms: string): ParsedTx | null {
 // Payment gateways prefix the merchant: "LTD KEEPZ.ME*YANDEX GO" -> "YANDEX GO".
 // But some merchants append an order id instead: "AMZN Mktp US*2K3AB" -> "AMZN Mktp US".
 function stripGateway(line: string): string {
-  const parts = line.split('*').map((p) => p.trim()).filter(Boolean);
+  const parts = line
+    .split('*')
+    .map((p) => p.trim())
+    .filter(Boolean);
   if (parts.length < 2) return line;
   const last = parts[parts.length - 1];
   const looksLikeId = /^[A-Z0-9]{3,12}$/i.test(last) && /\d/.test(last);
@@ -159,7 +168,9 @@ function refundMerchant(text: string, lines: string[]): string {
 function counterparty(lines: string[]): string {
   const dateLine = lines.findIndex((l) => DATE_TIME.test(l));
   if (dateLine < 0) return '';
-  const after = lines.slice(dateLine + 1).find((l) => !BALANCE_LINE.test(l) && !CARD_NAME.test(l) && !/^https?:/i.test(l));
+  const after = lines
+    .slice(dateLine + 1)
+    .find((l) => !BALANCE_LINE.test(l) && !CARD_NAME.test(l) && !/^https?:/i.test(l));
   return after ?? '';
 }
 
@@ -181,8 +192,14 @@ function extractMerchant(lines: string[]): string {
  * purchase SMS, balance-only SMS and such deposits have it, "Deposit Money" ones don't. It is the balance after the
  * operation in the same SMS.
  */
-export function parseTbcBalance(raw_sms: string): { minor: number; currency: string; occurred_at?: string; has_time: boolean } | null {
-  const lines = raw_sms.replace(/\r\n?/g, '\n').split('\n').map((l) => l.trim()).filter(Boolean);
+export function parseTbcBalance(
+  raw_sms: string,
+): { minor: number; currency: string; occurred_at?: string; has_time: boolean } | null {
+  const lines = raw_sms
+    .replace(/\r\n?/g, '\n')
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean);
   const line = lines.find((l) => BALANCE_LINE.test(l));
   const amount = line ? parseAmountLine(line) : null;
   if (!amount) return null;

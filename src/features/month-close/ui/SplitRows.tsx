@@ -8,17 +8,35 @@ import { styles } from './styles';
 
 type Props = { c: MonthClose; onAnswer: (patch: Partial<CloseAnswers>) => void };
 
-function Row({ n, name, note, value, of, warn, action }: {
-  n: number; name: string; note: string; value: string; of?: string; warn?: boolean; action?: { title: string; onPress: () => void };
+function Row({
+  n,
+  name,
+  note,
+  value,
+  of,
+  warn,
+  action,
+}: {
+  n: number;
+  name: string;
+  note: string;
+  value: string;
+  of?: string;
+  warn?: boolean;
+  action?: { title: string; onPress: () => void };
 }) {
   return (
     <View style={styles.splitRow}>
       <Text style={styles.splitNum}>{n}</Text>
       <View style={styles.splitBody}>
-        <Text style={styles.splitName} numberOfLines={1}>{name}</Text>
+        <Text style={styles.splitName} numberOfLines={1}>
+          {name}
+        </Text>
         <Text style={[styles.splitNote, warn && styles.headOver]}>
           {note}
-          {action ? <Text style={styles.link} onPress={action.onPress} accessibilityRole="button">{` · ${action.title}`}</Text> : null}
+          {action ? (
+            <Text style={styles.link} onPress={action.onPress} accessibilityRole="button">{` · ${action.title}`}</Text>
+          ) : null}
         </Text>
       </View>
       <View style={styles.splitValueBox}>
@@ -49,28 +67,51 @@ export default function SplitRows({ c, onAnswer }: Props) {
         // the overspend took part of it ("Из сбережений")
         const cut = f.planned_minor - f.asked_minor;
         const short = answered && part.minor < f.asked_minor;
-        const note = short ? `не хватило ${money(f.asked_minor - part.minor, f.currency)} — следующие взносы станут больше`
-          : cut > 0 ? `перерасход −${money(cut, f.currency)} — следующие взносы станут больше` : `копилка · к ${dayTitle(f.due)}`;
+        const note = short
+          ? `не хватило ${money(f.asked_minor - part.minor, f.currency)} — следующие взносы станут больше`
+          : cut > 0
+            ? `перерасход −${money(cut, f.currency)} — следующие взносы станут больше`
+            : `копилка · к ${dayTitle(f.due)}`;
         return (
           <Row
-            key={f.category_id} n={++n} name={`${f.emoji ?? ''} ${f.name}`.trim()} warn={short || cut > 0} note={note}
+            key={f.category_id}
+            n={++n}
+            name={`${f.emoji ?? ''} ${f.name}`.trim()}
+            warn={short || cut > 0}
+            note={note}
             value={`${money(part.minor, f.currency)}${answered && !short ? ' ✓' : ''}`}
-            of={short ? `из ${money(f.asked_minor, f.currency)}` : cut > 0 ? `из ${money(f.planned_minor, f.currency)}` : undefined}
+            of={
+              short
+                ? `из ${money(f.asked_minor, f.currency)}`
+                : cut > 0
+                  ? `из ${money(f.planned_minor, f.currency)}`
+                  : undefined
+            }
           />
         );
       })}
       {b && b.kept_locked_minor > 0 ? (
         <Row
-          n={++n} name="🔒 Отложено сразу" note={answered && s.locked === 0 ? 'не отложено' : 'в начале месяца'}
-          value={money(s.locked)} of={answered && s.locked < b.kept_locked_minor ? `из ${money(b.kept_locked_minor)}` : undefined}
+          n={++n}
+          name="🔒 Отложено сразу"
+          note={answered && s.locked === 0 ? 'не отложено' : 'в начале месяца'}
+          value={money(s.locked)}
+          of={answered && s.locked < b.kept_locked_minor ? `из ${money(b.kept_locked_minor)}` : undefined}
         />
       ) : null}
       {b && (b.rest_minor > 0 || s.rest > 0) ? (
         <Row
-          n={++n} name="💰 Сэкономлено" value={money(moved ? b.rest_minor : s.rest)}
+          n={++n}
+          name="💰 Сэкономлено"
+          value={money(moved ? b.rest_minor : s.rest)}
           note={moved ? `перенесено на ${next.nom}` : 'в сбережения'}
-          action={moved ? { title: 'В сбережения', onPress: () => onAnswer({ rest_choice: 'savings' }) }
-            : c.can_carry && b.rest_minor > 0 ? { title: `Перенести на ${next.nom}`, onPress: () => onAnswer({ rest_choice: 'next' }) } : undefined}
+          action={
+            moved
+              ? { title: 'В сбережения', onPress: () => onAnswer({ rest_choice: 'savings' }) }
+              : c.can_carry && b.rest_minor > 0
+                ? { title: `Перенести на ${next.nom}`, onPress: () => onAnswer({ rest_choice: 'next' }) }
+                : undefined
+          }
         />
       ) : null}
     </>

@@ -52,7 +52,7 @@ test('9.10.3: an operation that is gone (an old notification): "Операция
   expect(await screen.findByText('Операция не найдена: возможно, её удалили.')).toBeTruthy();
 });
 
-test('9.10.4: a setting that didn\'t save: said in a red toast, the switch back as it was', async () => {
+test("9.10.4: a setting that didn't save: said in a red toast, the switch back as it was", async () => {
   await openApp(ops);
   await openMenu('Настройки');
   await screen.findByText('Уведомлять о лимитах');

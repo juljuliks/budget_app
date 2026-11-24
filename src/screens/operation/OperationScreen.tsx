@@ -7,5 +7,12 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Operation'>;
 
 /** An operation's page (its title "Операция" in the stack's header); deleted or a category picked — back. */
 export default function OperationScreen({ route, navigation }: Props) {
-  return <TransactionView txId={route.params.id} onClose={() => { if (navigation.canGoBack()) navigation.goBack(); }} />;
+  return (
+    <TransactionView
+      txId={route.params.id}
+      onClose={() => {
+        if (navigation.canGoBack()) navigation.goBack();
+      }}
+    />
+  );
 }

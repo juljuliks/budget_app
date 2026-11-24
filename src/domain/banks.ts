@@ -23,14 +23,24 @@ export type Bank = {
 
 export const BANKS: Bank[] = [
   {
-    id: 'tbc', name: 'TBC', short: 'TBC', color: '#00A3E0', smsLabel: '«TBC SMS»', builtIn: true,
+    id: 'tbc',
+    name: 'TBC',
+    short: 'TBC',
+    color: '#00A3E0',
+    smsLabel: '«TBC SMS»',
+    builtIn: true,
     // only "TBC SMS" reaches JS (the emulator's build lets "TBC" through too: the fallback below makes it TBC's)
     sms: /^TBC SMS$/i,
     // "ge.tbcbank…", "com.tbc…": matched loosely until the exact package is confirmed (IMPROVEMENTS)
     app: (pkg) => pkg.toLowerCase().includes('tbc'),
   },
   {
-    id: 'bog', name: 'Bank of Georgia', short: 'BoG', color: '#F26722', smsLabel: '«BOG»', builtIn: false,
+    id: 'bog',
+    name: 'Bank of Georgia',
+    short: 'BoG',
+    color: '#F26722',
+    smsLabel: '«BOG»',
+    builtIn: false,
     // not confirmed against a real SMS yet (IMPROVEMENTS)
     sms: /^(BOG|BANK ?OF ?GEORGIA)$/i,
     app: (pkg) => pkg.toLowerCase().startsWith('ge.bog'),

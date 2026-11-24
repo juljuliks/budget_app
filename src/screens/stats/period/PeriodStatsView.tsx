@@ -42,8 +42,13 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
   const [info, setInfo] = useState<Info | null>(null);
   const openTransactions = useOpenCategoryTransactions();
   const hidden = useHideAmounts();
-  const segments = useMemo(() => (stats?.groups ?? []).flatMap((g) => g.categories)
-    .map((c) => ({ key: String(c.category_id), value: c.spent_minor, color: c.color })), [stats]);
+  const segments = useMemo(
+    () =>
+      (stats?.groups ?? [])
+        .flatMap((g) => g.categories)
+        .map((c) => ({ key: String(c.category_id), value: c.spent_minor, color: c.color })),
+    [stats],
+  );
 
   if (!stats) return <Loading failed={data.failed} onRetry={data.load} />;
   const v = periodView({ ...data, stats, range, normLabel, today: dayKeyOf(new Date()) });
@@ -58,7 +63,11 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
         </Donut>
       </View>
       {v.byLimits || (!data.pace && data.days <= PACE_MAX_DAYS) || !v.summary ? null : (
-        <TouchableOpacity style={styles.summaryRow} onPress={() => setInfo('summary')} accessibilityLabel="Как считаются траты">
+        <TouchableOpacity
+          style={styles.summaryRow}
+          onPress={() => setInfo('summary')}
+          accessibilityLabel="Как считаются траты"
+        >
           <Text style={styles.summary}>{v.summary}</Text>
           <InfoIcon color={colors.accent} size={INFO_SIZE} />
         </TouchableOpacity>
@@ -68,7 +77,11 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
       {/* shorter than a month: the categories by their limit, each section with its total; longer: by their sections */}
       {v.byLimits ? limitSections(v, h) : typeSections(v, h)}
       {unplannedSection(v, h)}
-      <RefundsRow amount={stats.refunds_unassigned_minor} currency={stats.currency} onPress={() => openTransactions(null, range, ['refund'])} />
+      <RefundsRow
+        amount={stats.refunds_unassigned_minor}
+        currency={stats.currency}
+        onPress={() => openTransactions(null, range, ['refund'])}
+      />
       {stats.other_currencies.length > 0 ? (
         <Text style={styles.hint}>
           {NO_RATE} {stats.other_currencies.map((o) => formatWithCurrency(o.spent_minor, o.currency)).join(', ')}

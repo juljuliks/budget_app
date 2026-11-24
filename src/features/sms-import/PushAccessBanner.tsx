@@ -22,7 +22,9 @@ export default function PushAccessBanner() {
 
   useFocusEffect(check);
   useEffect(() => {
-    const sub = AppState.addEventListener('change', (s) => { if (s === 'active') check(); });
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s === 'active') check();
+    });
     return () => sub.remove();
   }, [check]);
 
@@ -34,7 +36,14 @@ export default function PushAccessBanner() {
         Тогда операции появятся, даже если SMS не пришло. Другие уведомления не читаются и не сохраняются.
       </Text>
       <View style={styles.buttons}>
-        <TouchableOpacity onPress={() => { setSetting(DISMISSED_KEY, '1').then(check).catch(() => {}); }} hitSlop={8}>
+        <TouchableOpacity
+          onPress={() => {
+            setSetting(DISMISSED_KEY, '1')
+              .then(check)
+              .catch(() => {});
+          }}
+          hitSlop={8}
+        >
           <Text style={styles.later}>Не сейчас</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={openPushAccessSettings} hitSlop={8}>

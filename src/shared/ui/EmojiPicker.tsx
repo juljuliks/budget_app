@@ -1,5 +1,14 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { FlatList, Platform, StyleSheet, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import {
+  FlatList,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import BottomSheet, { SheetFlatList } from './BottomSheet';
 import { SheetActions } from './Button';
 import { SearchIcon } from './icons';
@@ -82,20 +91,37 @@ export default function EmojiPicker({ visible, value, onPick, onClose }: Props) 
   const cell = Math.floor((width - 32) / COLUMNS);
 
   const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  const { rows, groupRow } = useMemo(() => (words.length
-    ? rowsOf(ALL.filter(([e]) => words.every((q) => WORDS.get(e)!.includes(` ${q}`))), false)
-    : rowsOf(ALL, true)), [words.join(' ')]); // eslint-disable-line react-hooks/exhaustive-deps
+  const search = words.join(' ');
+  const { rows, groupRow } = useMemo(() => {
+    const qs = search ? search.split(' ') : [];
+    return qs.length
+      ? rowsOf(
+          ALL.filter(([e]) => qs.every((q) => WORDS.get(e)!.includes(` ${q}`))),
+          false,
+        )
+      : rowsOf(ALL, true);
+  }, [search]);
 
   // fixed heights: a tab can jump straight to its group
   const offsets = useMemo(() => {
     const o: number[] = [];
     let y = 0;
-    for (const r of rows) { o.push(y); y += 'header' in r ? HEADER_HEIGHT : ROW_HEIGHT; }
+    for (const r of rows) {
+      o.push(y);
+      y += 'header' in r ? HEADER_HEIGHT : ROW_HEIGHT;
+    }
     return o;
   }, [rows]);
 
-  const pick = (e: string) => { onPick(e); setQuery(''); onClose(); };
-  const close = () => { setQuery(''); onClose(); };
+  const pick = (e: string) => {
+    onPick(e);
+    setQuery('');
+    onClose();
+  };
+  const close = () => {
+    setQuery('');
+    onClose();
+  };
 
   return (
     <BottomSheet visible={visible} onClose={close} title="Эмодзи" style={styles.sheet}>
@@ -139,22 +165,33 @@ export default function EmojiPicker({ visible, value, onPick, onClose }: Props) 
         data={rows}
         keyExtractor={(r) => r.key}
         keyboardShouldPersistTaps="handled"
-        getItemLayout={(_, i) => ({ length: 'header' in rows[i] ? HEADER_HEIGHT : ROW_HEIGHT, offset: offsets[i], index: i })}
+        getItemLayout={(_, i) => ({
+          length: 'header' in rows[i] ? HEADER_HEIGHT : ROW_HEIGHT,
+          offset: offsets[i],
+          index: i,
+        })}
         initialNumToRender={20}
         windowSize={7}
         contentContainerStyle={styles.content}
         ListEmptyComponent={<Text style={styles.empty}>Ничего не найдено</Text>}
-        renderItem={({ item }) => ('header' in item ? (
-          <Text style={styles.header}>{item.header}</Text>
-        ) : (
-          <View style={styles.row}>
-            {item.emoji.map((e) => (
-              <TouchableOpacity key={e} style={[styles.cell, { width: cell }, e === value && styles.selected]} onPress={() => pick(e)} accessibilityLabel={e}>
-                <Text style={styles.emoji}>{e}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        ))}
+        renderItem={({ item }) =>
+          'header' in item ? (
+            <Text style={styles.header}>{item.header}</Text>
+          ) : (
+            <View style={styles.row}>
+              {item.emoji.map((e) => (
+                <TouchableOpacity
+                  key={e}
+                  style={[styles.cell, { width: cell }, e === value && styles.selected]}
+                  onPress={() => pick(e)}
+                  accessibilityLabel={e}
+                >
+                  <Text style={styles.emoji}>{e}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )
+        }
       />
       {/* removing the emoji is the ✕ on its tile in the category sheet */}
       <SheetActions submit={null} onCancel={close} style={styles.actions} />
@@ -166,15 +203,35 @@ const styles = StyleSheet.create({
   // a fixed height: it doesn't jump while searching
   sheet: { height: '85%', maxHeight: '85%' },
   top: { paddingHorizontal: 16 },
-  search: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.surface, borderRadius: 10, paddingHorizontal: 12 },
+  search: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.surface,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+  },
   searchInput: { flex: 1, fontSize: 16, color: colors.text, paddingVertical: 8 },
   clear: { fontSize: 16, color: colors.muted },
-  tabs: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
+  tabs: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+  },
   tab: { paddingVertical: 8, paddingHorizontal: 4 },
   // an opaque color: Android draws color emoji with the text color's alpha (the default one is translucent)
   tabIcon: { fontSize: 20, color: '#000000' },
   content: { paddingHorizontal: 16, paddingBottom: 8 },
-  header: { height: HEADER_HEIGHT, paddingTop: 12, fontSize: 13, fontWeight: '600', color: colors.muted, textTransform: 'uppercase' },
+  header: {
+    height: HEADER_HEIGHT,
+    paddingTop: 12,
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.muted,
+    textTransform: 'uppercase',
+  },
   row: { height: ROW_HEIGHT, flexDirection: 'row' },
   cell: { height: ROW_HEIGHT, alignItems: 'center', justifyContent: 'center', borderRadius: 10 },
   selected: { backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.accent },

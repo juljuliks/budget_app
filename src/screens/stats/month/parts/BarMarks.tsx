@@ -13,7 +13,9 @@ const MAX_ICONS = 4;
 export const MARK_STATUS = { paid: 'оплачен', missed: 'не оплачен', ahead: 'впереди' } as const;
 
 /** centred on its place; at the bar's ends kept inside it */
-const edge = (at: number, width: number, w: number) => ({ marginLeft: width ? Math.min(Math.max(-w / 2, -at * width), (1 - at) * width - w) : -w / 2 });
+const edge = (at: number, width: number, w: number) => ({
+  marginLeft: width ? Math.min(Math.max(-w / 2, -at * width), (1 - at) * width - w) : -w / 2,
+});
 
 type Props = {
   marks: BarMark[];
@@ -43,17 +45,35 @@ export default function BarMarks({ marks, picked, onPick }: Props) {
         const on = m.key === picked;
         return (
           <TouchableOpacity
-            key={m.key} style={[s.mark, { left: `${Math.min(1, m.at) * 100}%`, width: w }, edge(m.at, width, w)]}
-            onPress={() => onPick?.(on ? null : m)} hitSlop={10} accessibilityRole="button"
-            accessibilityLabel={m.count > 1 ? `${m.count} платежа с ${day}` : `${m.name}, ${day}, ${MARK_STATUS[m.status]}`}
+            key={m.key}
+            style={[s.mark, { left: `${Math.min(1, m.at) * 100}%`, width: w }, edge(m.at, width, w)]}
+            onPress={() => onPick?.(on ? null : m)}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel={
+              m.count > 1 ? `${m.count} платежа с ${day}` : `${m.name}, ${day}, ${MARK_STATUS[m.status]}`
+            }
           >
             <View style={[s.stack, { width: w }]}>
               {icons.map((i, n) => (
-                <View key={i.key} style={[s.badge, s.stacked, { left: n * STEP }, i.status === 'ahead' && !on && s.ahead, on && s.picked]}>
+                <View
+                  key={i.key}
+                  style={[
+                    s.badge,
+                    s.stacked,
+                    { left: n * STEP },
+                    i.status === 'ahead' && !on && s.ahead,
+                    on && s.picked,
+                  ]}
+                >
                   <Text style={s.icon}>{i.emoji}</Text>
                 </View>
               ))}
-              {m.count > MAX_ICONS ? <View style={s.count}><Text style={s.countText}>{m.count}</Text></View> : null}
+              {m.count > MAX_ICONS ? (
+                <View style={s.count}>
+                  <Text style={s.countText}>{m.count}</Text>
+                </View>
+              ) : null}
               {/* only what is wrong: ✕ not paid; paid — no sign, ahead — faded */}
               {m.status === 'missed' ? (
                 <View style={[s.status, s.missed]}>

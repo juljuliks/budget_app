@@ -8,8 +8,12 @@ const SPAR = '17.69GEL\n(*1834)\nSPAR\nBalance: 91.14GEL\n\n03/10/26 15:19';
 const DEPOSIT = 'Deposit Money: 280.00 GEL\nMC GOLD\n03/10/2026';
 const BAR = '88.00GEL\n(*1834)\nPATARA BARI\nBalance: 283.14GEL\n\n03/10/26 17:19';
 const ms = (iso: string) => new Date(iso).getTime();
-const inbox = (body: string, iso: string, sentShift = 0) =>
-  ({ sender: 'TBC SMS', body, date: ms(iso) + 3000, dateSent: ms(iso) + sentShift });
+const inbox = (body: string, iso: string, sentShift = 0) => ({
+  sender: 'TBC SMS',
+  body,
+  date: ms(iso) + 3000,
+  dateSent: ms(iso) + sentShift,
+});
 const count = async () => (await (await getDb()).get<{ n: number }>('SELECT count(*) AS n FROM transactions'))!.n;
 
 beforeEach(() => freshDb());
@@ -27,7 +31,9 @@ test('past SMS become transactions; the card balance comes with them', async () 
   expect(await count()).toBe(3);
   expect(await cardBalance()).toMatchObject({ minor: 28314, pending: 0 });
   // imported ones are already read: no unread badge
-  expect((await (await getDb()).get<{ n: number }>('SELECT count(*) AS n FROM transactions WHERE seen_at IS NULL'))!.n).toBe(0);
+  expect(
+    (await (await getDb()).get<{ n: number }>('SELECT count(*) AS n FROM transactions WHERE seen_at IS NULL'))!.n,
+  ).toBe(0);
 });
 
 test('importing twice, or SMS already received live, adds nothing', async () => {
@@ -42,7 +48,12 @@ test('importing twice, or SMS already received live, adds nothing', async () => 
 });
 
 test('an operation stored first by push is not doubled by its SMS', async () => {
-  await ingestSms({ sender: 'push:ge.tbcbank', body: 'TBC Bank\n88.00GEL\n(*1834)\nPATARA BARI\n03/10/26 17:19', timestamp: ms('2026-10-03T17:19:30'), source: 'push' });
+  await ingestSms({
+    sender: 'push:ge.tbcbank',
+    body: 'TBC Bank\n88.00GEL\n(*1834)\nPATARA BARI\n03/10/26 17:19',
+    timestamp: ms('2026-10-03T17:19:30'),
+    source: 'push',
+  });
   const r = await importInboxSms([inbox(BAR, '2026-10-03T17:19:00')]);
   expect(r.inserted).toBe(0);
   expect(await count()).toBe(1);
@@ -51,7 +62,12 @@ test('an operation stored first by push is not doubled by its SMS', async () => 
 });
 
 test('a big inbox in batches: every SMS, an SMS repeated in the same batch stored once, a live one waits for its batch', async () => {
-  const shops = Array.from({ length: 120 }, (_, i) => inbox(`1.${String(i % 100).padStart(2, '0')}GEL\n(*1834)\nSHOP ${i}\n\n0${1 + (i % 9)}/10/26 1${i % 10}:${String(i % 60).padStart(2, '0')}`, `2026-10-0${1 + (i % 9)}T12:00:00`));
+  const shops = Array.from({ length: 120 }, (_, i) =>
+    inbox(
+      `1.${String(i % 100).padStart(2, '0')}GEL\n(*1834)\nSHOP ${i}\n\n0${1 + (i % 9)}/10/26 1${i % 10}:${String(i % 60).padStart(2, '0')}`,
+      `2026-10-0${1 + (i % 9)}T12:00:00`,
+    ),
+  );
   const [r] = await Promise.all([
     importInboxSms([...shops, shops[5]]),
     // a live SMS during the import: stored between the batches, not inside one (nor lost with it)

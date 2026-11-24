@@ -42,10 +42,12 @@ export function impulseSummary(rows: ImpulseRow[]): ImpulseSummary {
   for (const r of txs) {
     if (r.impulse === null) continue;
     const t = r.impulse ? impulsive : intentional;
-    t.count++; t.sum += r.value;
+    t.count++;
+    t.sum += r.value;
     if (r.impulse && r.mood) {
       const m = moods.get(r.mood) ?? tally();
-      m.count++; m.sum += r.value;
+      m.count++;
+      m.sum += r.value;
       moods.set(r.mood, m);
     }
   }
@@ -65,7 +67,10 @@ export function impulseByCategory(rows: ImpulseRow[]): Map<number, { answered: n
     if (r.category === null || r.impulse === null) continue;
     const c = m.get(r.category) ?? { answered: 0, impulsive: tally() };
     c.answered++;
-    if (r.impulse) { c.impulsive.count++; c.impulsive.sum += r.value; }
+    if (r.impulse) {
+      c.impulsive.count++;
+      c.impulsive.sum += r.value;
+    }
     m.set(r.category, c);
   }
   return m;
@@ -86,7 +91,9 @@ export function impulseByMonth(rows: ImpulseRow[]): Array<{ ym: string; share: n
 }
 
 /** "Где чаще импульсивно": the merchants with impulsive purchases, the biggest share first. */
-export function impulseMerchants(rows: ImpulseRow[]): Array<{ key: string | null; name: string; impulsive: number; answered: number }> {
+export function impulseMerchants(
+  rows: ImpulseRow[],
+): Array<{ key: string | null; name: string; impulsive: number; answered: number }> {
   const m = new Map<string, { key: string | null; name: string; impulsive: number; answered: number }>();
   for (const r of byTx(rows)) {
     if (r.impulse === null || !r.merchant) continue;

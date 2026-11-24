@@ -15,32 +15,57 @@ import TrendBars from './TrendBars';
  * week's days over the usual ones — a tap says a day's), its months (average, total, least, most), its merchants (this
  * month first).
  */
-export default function CategoryTrendDetails({ v, why, currency, money }: {
-  v: NonNullable<CategoryTrendView>; why: string | null; currency: Currency; money: (minor: number) => string;
+export default function CategoryTrendDetails({
+  v,
+  why,
+  currency,
+  money,
+}: {
+  v: NonNullable<CategoryTrendView>;
+  why: string | null;
+  currency: Currency;
+  money: (minor: number) => string;
 }) {
   const [day, setDay] = useState<number | null>(null);
   const hidden = useHideAmounts();
   const h = v.habits;
   const bar = h && day !== null ? h.bars[day] : null;
   const cell = (title: string, value: React.ReactNode) => (
-    <View style={s.cell}><Text style={s.label}>{title}</Text><Masked style={s.value}>{value}</Masked></View>
+    <View style={s.cell}>
+      <Text style={s.label}>{title}</Text>
+      <Masked style={s.value}>{value}</Masked>
+    </View>
   );
   return (
     <>
-      {why ? <View style={s.block}><Text style={s.label}>{WHY}</Text><Text style={s.value}>{why}</Text></View> : null}
+      {why ? (
+        <View style={s.block}>
+          <Text style={s.label}>{WHY}</Text>
+          <Text style={s.value}>{why}</Text>
+        </View>
+      ) : null}
       {h ? (
         <View style={s.block}>
           <Text style={s.label}>{BY_WEEKDAY}</Text>
           <Text style={s.value}>
-            {'Эта неделя: '}<Masked style={s.value}>{money(h.week.cur)}</Masked>
-            <Text style={s.label}>{' · обычно '}</Text><Masked style={s.label}>{money(h.week.usual)}</Masked>
-            <Text style={s.label}>{h.week.upTo === 6 ? ' за неделю' : ` к ${WEEKDAYS_DAT[(h.week.upTo + 1) % 7]}`}</Text>
+            {'Эта неделя: '}
+            <Masked style={s.value}>{money(h.week.cur)}</Masked>
+            <Text style={s.label}>{' · обычно '}</Text>
+            <Masked style={s.label}>{money(h.week.usual)}</Masked>
+            <Text style={s.label}>
+              {h.week.upTo === 6 ? ' за неделю' : ` к ${WEEKDAYS_DAT[(h.week.upTo + 1) % 7]}`}
+            </Text>
           </Text>
           <Text style={s.label}>{`Больше всего — ${h.top} · ${h.share}% трат недели`}</Text>
-          <View style={s.chart}><TrendBars bars={h.bars} color={v.category.color} height={80} picked={day} onPick={setDay} /></View>
+          <View style={s.chart}>
+            <TrendBars bars={h.bars} color={v.category.color} height={80} picked={day} onPick={setDay} />
+          </View>
           <Text style={s.label}>
-            {!bar ? WEEK_LEGEND : hidden ? bar.label
-              : `${bar.label}: ${bar.value === null ? 'ещё впереди' : money(bar.value)} · обычно ${money(bar.usual ?? 0)}`}
+            {!bar
+              ? WEEK_LEGEND
+              : hidden
+                ? bar.label
+                : `${bar.label}: ${bar.value === null ? 'ещё впереди' : money(bar.value)} · обычно ${money(bar.usual ?? 0)}`}
           </Text>
         </View>
       ) : null}

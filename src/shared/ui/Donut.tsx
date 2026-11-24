@@ -24,7 +24,16 @@ type Props = {
 const GAP = 2; // surface gap between segments, px along the ring
 
 /** Part-to-whole ring; segments with value <= 0 are skipped. Optionally a segment can be tapped to select it. */
-export default function Donut({ segments, size = 220, thickness = 22, children, selectedKey = null, onSelect, onCenterPress, testID }: Props) {
+export default function Donut({
+  segments,
+  size = 220,
+  thickness = 22,
+  children,
+  selectedKey = null,
+  onSelect,
+  onCenterPress,
+  testID,
+}: Props) {
   const r = (size - thickness) / 2;
   const c = 2 * Math.PI * r;
   const visible = segments.filter((s) => s.value > 0);
@@ -47,8 +56,14 @@ export default function Donut({ segments, size = 220, thickness = 22, children, 
     const dy = e.nativeEvent.locationY - size / 2;
     const dist = Math.hypot(dx, dy);
     // in the hole, nothing selected: the hole's own action
-    if (onCenterPress && selectedKey === null && dist < r - thickness / 2 - 10) { onCenterPress(); return; }
-    if (Math.abs(dist - r) > thickness / 2 + 10) { onSelect(null); return; }
+    if (onCenterPress && selectedKey === null && dist < r - thickness / 2 - 10) {
+      onCenterPress();
+      return;
+    }
+    if (Math.abs(dist - r) > thickness / 2 + 10) {
+      onSelect(null);
+      return;
+    }
     const angle = (Math.atan2(dx, -dy) + 2 * Math.PI) % (2 * Math.PI);
     const at = (angle / (2 * Math.PI)) * c;
     const hit = arcs.find((a) => at >= a.offset && at < a.offset + (a.value / total) * c);
@@ -77,7 +92,9 @@ export default function Donut({ segments, size = 220, thickness = 22, children, 
           ))}
         </G>
       </Svg>
-      <View style={[StyleSheet.absoluteFill, styles.center]} pointerEvents="none">{children}</View>
+      <View style={[StyleSheet.absoluteFill, styles.center]} pointerEvents="none">
+        {children}
+      </View>
       {/* a transparent layer on top takes the tap (the svg would swallow it), coordinates relative to the ring's box */}
       {onSelect ? (
         <View

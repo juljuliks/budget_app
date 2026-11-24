@@ -22,12 +22,15 @@ type Props = {
   stat: CategoryStat;
   /** the month's spending: a row's share of it when the amounts are hidden */
   total: number;
-  currency: Currency; evenPace?: number; dim: number;
+  currency: Currency;
+  evenPace?: number;
+  dim: number;
   /** the month shown: its operations open for this period */
   ym: string;
   openTransactions: ReturnType<typeof useOpenCategoryTransactions>;
   /** the current month only: the norm window around today */
-  now?: CategoryNorm; monthToDate: number;
+  now?: CategoryNorm;
+  monthToDate: number;
   onAddToPlan?: () => void;
   /** a tap or a long press: these as buttons over the finger (its operations, its plan, its dynamics) */
   actions?: PressAction[];
@@ -62,7 +65,7 @@ export default function CategoryRow(props: Props) {
 
   const lines = limit ? { ...props, spent, limit, currency, hidden, cameIn, scale } : null;
   // under the name: what was spent of the plan (a payment's note and charges first; a rhythm's limit after)
-  const sub = lines ? (fixed ? paymentSub(lines, note) : <LimitSub {...lines} />) : null;
+  const sub = lines ? fixed ? paymentSub(lines, note) : <LimitSub {...lines} /> : null;
 
   return (
     <PressMenu style={styles.row} actions={actions ?? []} accessibilityHint="Операции, план, динамика">
@@ -71,33 +74,60 @@ export default function CategoryRow(props: Props) {
         <View style={styles.rowMain}>
           <View style={styles.rowTop}>
             <View style={[styles.dot, { backgroundColor: stat.color }]} />
-            <Text style={styles.rowName} numberOfLines={1}>{withType ? categoryLabel(stat) : `${stat.emoji || ''} ${stat.name}`.trim()}</Text>
+            <Text style={styles.rowName} numberOfLines={1}>
+              {withType ? categoryLabel(stat) : `${stat.emoji || ''} ${stat.name}`.trim()}
+            </Text>
             {onAddToPlan ? (
-              <TouchableOpacity style={styles.addToPlan} onPress={onAddToPlan} hitSlop={8} accessibilityLabel={`Добавить в план: ${stat.name}`}>
+              <TouchableOpacity
+                style={styles.addToPlan}
+                onPress={onAddToPlan}
+                hitSlop={8}
+                accessibilityLabel={`Добавить в план: ${stat.name}`}
+              >
                 <Text style={styles.addToPlanText}>＋ В план</Text>
               </TouchableOpacity>
             ) : null}
           </View>
-          {sub ? <SubLine why={lines && !fixed ? limitWhy(lines) : undefined}>{sub}</SubLine> : note ? <Text style={styles.rowSub} numberOfLines={1}>{note}</Text> : null}
+          {sub ? (
+            <SubLine why={lines && !fixed ? limitWhy(lines) : undefined}>{sub}</SubLine>
+          ) : note ? (
+            <Text style={styles.rowSub} numberOfLines={1}>
+              {note}
+            </Text>
+          ) : null}
         </View>
-        {limit ? <RowLeft spent={spent} limit={limit} currency={currency} fixed={fixed} hidden={hidden} /> : (
+        {limit ? (
+          <RowLeft spent={spent} limit={limit} currency={currency} fixed={fixed} hidden={hidden} />
+        ) : (
           <Text style={styles.rowAmount}>
             {/* "Скрыть суммы": its share of all spending */}
-            {hidden ? `${formatPercent(spent, total)} трат`
-              : cameIn ? <Text style={styles.refundsAmount}>+{formatWithCurrency(cameIn, currency)}</Text>
-              // transfers carry their sign, as in the operations: what went out
-              : stat.transfer ? `−${formatWithCurrency(spent, currency)}`
-              : formatWithCurrency(spent, currency)}
+            {hidden ? (
+              `${formatPercent(spent, total)} трат`
+            ) : cameIn ? (
+              <Text style={styles.refundsAmount}>+{formatWithCurrency(cameIn, currency)}</Text>
+            ) : // transfers carry their sign, as in the operations: what went out
+            stat.transfer ? (
+              `−${formatWithCurrency(spent, currency)}`
+            ) : (
+              formatWithCurrency(spent, currency)
+            )}
           </Text>
         )}
       </View>
-      {lines ? (fixed ? <PaymentBar {...lines} /> : <LimitBar {...lines} />) : null}
+      {lines ? fixed ? <PaymentBar {...lines} /> : <LimitBar {...lines} /> : null}
       {usual ? <Text style={styles.rowStatus}>{usual}</Text> : null}
     </PressMenu>
   );
 }
 
-type Lines = Props & { spent: number; limit: number; currency: Currency; hidden: boolean; cameIn: number; scale: number };
+type Lines = Props & {
+  spent: number;
+  limit: number;
+  currency: Currency;
+  hidden: boolean;
+  cameIn: number;
+  scale: number;
+};
 
 /** the category's bars: thin, as the rows are */
 const BAR = 6;
@@ -107,9 +137,17 @@ const rhythmOf = (stat: CategoryStat) => (stat.plan_norm && stat.plan_norm !== '
 function SubLine({ why, children }: { why?: () => void; children: React.ReactNode }) {
   return (
     <View style={styles.rowSubLine}>
-      <Text style={styles.rowSubText} numberOfLines={1}>{children}</Text>
+      <Text style={styles.rowSubText} numberOfLines={1}>
+        {children}
+      </Text>
       {why ? (
-        <TouchableOpacity style={styles.infoGap} onPress={why} hitSlop={8} accessibilityRole="button" accessibilityLabel="Почему лимит изменился">
+        <TouchableOpacity
+          style={styles.infoGap}
+          onPress={why}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Почему лимит изменился"
+        >
           <InfoIcon color={colors.accent} size={13} />
         </TouchableOpacity>
       ) : null}
@@ -128,7 +166,9 @@ function limitWhy({ stat, spent, limit, dim, now, scale, ym, currency }: Lines):
 
 /** "665 из 900 ₾"; hidden — its share of the plan */
 function spentOfPlan(spent: number, limit: number, currency: Currency, hidden: boolean): string {
-  return hidden ? `${formatPercent(spent, limit)} плана` : `${formatShort(spent)} из ${formatWithCurrency(limit, currency)}`;
+  return hidden
+    ? `${formatPercent(spent, limit)} плана`
+    : `${formatShort(spent)} из ${formatWithCurrency(limit, currency)}`;
 }
 
 /** A limit under its name: "665 из 900 ₾" (what came back: "+50 из 900 ₾"), a rhythm's limit after it. */
@@ -139,7 +179,17 @@ function LimitSub({ stat, spent, limit, currency, hidden, cameIn, scale, dim, no
       {cameIn && !hidden ? <Text style={styles.paceOk}>+{formatShort(cameIn)}</Text> : null}
       {cameIn && !hidden ? ` из ${formatWithCurrency(limit, currency)}` : spentOfPlan(spent, limit, currency, hidden)}
       {/* the month's plan overspent: no limits any more, just the overspend */}
-      {rhythm && spent <= limit ? <RhythmLimit rhythm={rhythm} limit={limit} dim={dim} currency={currency} hidden={hidden} now={now} scale={scale} /> : null}
+      {rhythm && spent <= limit ? (
+        <RhythmLimit
+          rhythm={rhythm}
+          limit={limit}
+          dim={dim}
+          currency={currency}
+          hidden={hidden}
+          now={now}
+          scale={scale}
+        />
+      ) : null}
     </>
   );
 }
@@ -151,10 +201,21 @@ function LimitBar({ stat, spent, limit, currency, hidden, scale, evenPace, now, 
   return (
     <>
       {/* the category's own color, as its dot and the ring (an overspend is orange anyway) */}
-      {ratio > 1 ? <Meter ratio={1} over={limit / spent} height={BAR} marginTop={6} color={stat.color} />
-        : <Meter ratio={ratio} height={BAR} marginTop={6} color={stat.color} marker={rhythm ? evenPace : undefined} />}
-      {rhythm && ratio <= 1 && now && now.rhythm === rhythm
-        ? <RhythmNow rhythm={rhythm} currency={currency} hidden={hidden} now={now} scale={scale} monthToDate={monthToDate} /> : null}
+      {ratio > 1 ? (
+        <Meter ratio={1} over={limit / spent} height={BAR} marginTop={6} color={stat.color} />
+      ) : (
+        <Meter ratio={ratio} height={BAR} marginTop={6} color={stat.color} marker={rhythm ? evenPace : undefined} />
+      )}
+      {rhythm && ratio <= 1 && now && now.rhythm === rhythm ? (
+        <RhythmNow
+          rhythm={rhythm}
+          currency={currency}
+          hidden={hidden}
+          now={now}
+          scale={scale}
+          monthToDate={monthToDate}
+        />
+      ) : null}
     </>
   );
 }
@@ -163,15 +224,28 @@ function LimitBar({ stat, spent, limit, currency, hidden, scale, evenPace, now, 
 function paymentSub({ spent, limit, currency, hidden, charges }: Lines, note?: string): React.ReactNode {
   const several = charges && charges.total > 1 ? charges : null;
   const over = spent > Math.round(limit);
-  const amounts = isPaid(spent, limit) && !over ? (hidden ? '' : formatWithCurrency(limit, currency)) : spentOfPlan(spent, limit, currency, hidden);
+  const amounts =
+    isPaid(spent, limit) && !over
+      ? hidden
+        ? ''
+        : formatWithCurrency(limit, currency)
+      : spentOfPlan(spent, limit, currency, hidden);
   // the numbers first: a long note is what gets cut
   const numbers = [several ? `оплачено ${several.done} из ${several.total}` : '', amounts].filter(Boolean).join(' · ');
-  return <>{numbers}{numbers && note ? ' · ' : ''}{note ? <Text>{note}</Text> : null}</>;
+  return (
+    <>
+      {numbers}
+      {numbers && note ? ' · ' : ''}
+      {note ? <Text>{note}</Text> : null}
+    </>
+  );
 }
 
 /** A payment's bar: charged several times — a piece per charge; paid over the plan — the overspend's. */
 function PaymentBar({ stat, spent, limit, charges }: Lines) {
   const several = charges && charges.total > 1 ? charges : null;
   if (several) return <PaymentsBar total={several.total} done={several.done} color={stat.color} />;
-  return spent > Math.round(limit) ? <Meter ratio={1} over={limit / spent} height={BAR} marginTop={6} color={stat.color} /> : null;
+  return spent > Math.round(limit) ? (
+    <Meter ratio={1} over={limit / spent} height={BAR} marginTop={6} color={stat.color} />
+  ) : null;
 }

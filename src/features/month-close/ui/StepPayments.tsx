@@ -34,13 +34,20 @@ export default function StepPayments({ c, onAnswer }: Props) {
               <Text style={styles.question}>{label}</Text>
               <Text style={styles.question}>{money(p.unpaid_minor)}</Text>
             </View>
-            {p.paid_minor > 0 ? <Text style={styles.muted}>{`оплачено ${money(p.paid_minor)} из ${money(p.planned_minor)}`}</Text> : null}
+            {p.paid_minor > 0 ? (
+              <Text style={styles.muted}>{`оплачено ${money(p.paid_minor)} из ${money(p.planned_minor)}`}</Text>
+            ) : null}
             <Choice<PaymentChoice>
               options={[
-                { value: 'next', title: `Перенести на ${next.nom}`, note: `в плане ${next.gen} — ${money(p.unpaid_minor)}, в «Остатке ${m.gen}» +${money(p.unpaid_minor)}` },
+                {
+                  value: 'next',
+                  title: `Перенести на ${next.nom}`,
+                  note: `в плане ${next.gen} — ${money(p.unpaid_minor)}, в «Остатке ${m.gen}» +${money(p.unpaid_minor)}`,
+                },
                 { value: 'drop', title: 'Не нужен', note: `${money(p.unpaid_minor)} останутся в «Сэкономлено»` },
               ]}
-              value={p.choice} onChange={(v) => onAnswer(p.category_id, v)}
+              value={p.choice}
+              onChange={(v) => onAnswer(p.category_id, v)}
             />
           </View>
         );

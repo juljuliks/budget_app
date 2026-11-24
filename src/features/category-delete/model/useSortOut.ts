@@ -2,7 +2,13 @@
 // grouped by merchant, always selecting; when nothing of this month is left in it — where everything went, and the delete.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { categoryLabel, getCategory } from '@/db/categories';
-import { Bucket, categoryDeletePreview, currentIdsOfCategory, remainingInCategory, sortOutSummary } from '@/db/categoryDeletion';
+import {
+  Bucket,
+  categoryDeletePreview,
+  currentIdsOfCategory,
+  remainingInCategory,
+  sortOutSummary,
+} from '@/db/categoryDeletion';
 import { DayRange, dayKeyOf } from '@/shared/lib/dateRange';
 import { setLeaveGuard } from '@/shared/navigation/leaveGuard';
 import { sheetAlert } from '@/shared/ui/sheetAlert';
@@ -41,9 +47,14 @@ export function useSortOut<V>({ incoming, nonce, current, start, restore, clear,
 
   const refreshRemaining = useCallback(() => {
     const so = ref.current;
-    if (!so) { setRemaining(null); return; }
+    if (!so) {
+      setRemaining(null);
+      return;
+    }
     remainingInCategory(so.id)
-      .then((b) => { if (ref.current?.id === so.id) setRemaining(b); })
+      .then((b) => {
+        if (ref.current?.id === so.id) setRemaining(b);
+      })
       .catch((e) => console.error('remaining failed', e));
   }, []);
 
@@ -54,13 +65,18 @@ export function useSortOut<V>({ incoming, nonce, current, start, restore, clear,
       const [c, ids] = await Promise.all([getCategory(incoming), currentIdsOfCategory(incoming)]);
       if (!live || !c) return;
       const now = new Date();
-      const month: DayRange = { from: dayKeyOf(new Date(now.getFullYear(), now.getMonth(), 1)), to: dayKeyOf(new Date(now.getFullYear(), now.getMonth() + 1, 0)) };
+      const month: DayRange = {
+        from: dayKeyOf(new Date(now.getFullYear(), now.getMonth(), 1)),
+        to: dayKeyOf(new Date(now.getFullYear(), now.getMonth() + 1, 0)),
+      };
       doneShown.current = false;
       setRemaining(null);
       setSortOut({ id: c.id, label: categoryLabel(c), ids, month, before: cb.current.current() });
       cb.current.start(c.id, month);
     })().catch(toastFailure('start sort-out', LOAD_FAILED));
-    return () => { live = false; };
+    return () => {
+      live = false;
+    };
   }, [incoming, nonce]);
   useEffect(refreshRemaining, [sortOut, refreshRemaining]);
 
@@ -82,40 +98,73 @@ export function useSortOut<V>({ incoming, nonce, current, start, restore, clear,
     cb.current.clear();
   }, []);
 
-  const leave = useCallback(() => { abort(); cb.current.goBack(); }, [abort]);
+  const leave = useCallback(() => {
+    abort();
+    cb.current.goBack();
+  }, [abort]);
 
   // asks before leaving a sort-out; "Прервать" ends it and `proceed`s
   const askAbort = useCallback((proceed: () => void) => {
     const so = ref.current;
-    if (!so) { proceed(); return; }
+    if (!so) {
+      proceed();
+      return;
+    }
     const t = sortOutLeaveText(so.label);
-    sheetAlert(t.title, t.message, [{ text: 'Продолжить', style: 'cancel' }, { text: 'Прервать', style: 'destructive', onPress: proceed }]);
+    sheetAlert(t.title, t.message, [
+      { text: 'Продолжить', style: 'cancel' },
+      { text: 'Прервать', style: 'destructive', onPress: proceed },
+    ]);
   }, []);
 
   /** Back (the header arrow, the hardware back): without a sort-out — just back. */
   const askLeave = useCallback(() => {
-    if (!ref.current) { cb.current.goBack(); return; }
+    if (!ref.current) {
+      cb.current.goBack();
+      return;
+    }
     askAbort(leave);
   }, [askAbort, leave]);
 
   // any other way out during a sort-out (the tab bar, the menu ⋮, a day's stats) asks the same
-  useEffect(() => (sortOut ? setLeaveGuard((proceed) => askAbort(() => { abort(); proceed(); })) : undefined), [sortOut, askAbort, abort]);
+  useEffect(
+    () =>
+      sortOut
+        ? setLeaveGuard((proceed) =>
+            askAbort(() => {
+              abort();
+              proceed();
+            }),
+          )
+        : undefined,
+    [sortOut, askAbort, abort],
+  );
 
   // nothing left: where they went, and the delete
   useEffect(() => {
     if (!sortOut || !remaining || remaining.n > 0 || doneShown.current) return;
     doneShown.current = true;
     (async () => {
-      const [summary, p] = await Promise.all([sortOutSummary(sortOut.id, sortOut.ids), categoryDeletePreview(sortOut.id)]);
+      const [summary, p] = await Promise.all([
+        sortOutSummary(sortOut.id, sortOut.ids),
+        categoryDeletePreview(sortOut.id),
+      ]);
       const t = sortOutDoneText(sortOut.label, summary, p);
       sheetAlert(t.title, t.message, [
         { text: 'Не удалять', style: 'cancel', onPress: () => leave() },
         {
-          text: `Удалить «${sortOut.label}»`, style: 'destructive', onPress: () => {
-            removeCategory(sortOut.id, null).then(() => {
-              toast(`Категория «${sortOut.label}» удалена`);
-              leave();
-            }).catch((e) => { console.error('delete category failed', e); toastError('Не удалось удалить'); });
+          text: `Удалить «${sortOut.label}»`,
+          style: 'destructive',
+          onPress: () => {
+            removeCategory(sortOut.id, null)
+              .then(() => {
+                toast(`Категория «${sortOut.label}» удалена`);
+                leave();
+              })
+              .catch((e) => {
+                console.error('delete category failed', e);
+                toastError('Не удалось удалить');
+              });
           },
         },
       ]);

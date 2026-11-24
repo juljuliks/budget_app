@@ -34,10 +34,12 @@ export const DB_FILE = 'app.db';
 export const filePath = (name: string) => `${need().filesDir}/${name}`;
 
 /** "Save as": the file `name` of the files dir, offered as `title`; false if cancelled. The file is deleted. */
-export const saveFile = (name: string, title: string, mime: string) => whileOutside(() => need().saveFile(name, title, mime));
+export const saveFile = (name: string, title: string, mime: string) =>
+  whileOutside(() => need().saveFile(name, title, mime));
 
 /** "Save as" for a text; false if cancelled. */
-export const saveText = (text: string, title: string, mime: string) => whileOutside(() => need().saveText(text, title, mime));
+export const saveText = (text: string, title: string, mime: string) =>
+  whileOutside(() => need().saveText(text, title, mime));
 
 /** "Open": the picked file is copied to `name` in the files dir; false if cancelled. */
 export const pickFile = (name: string) => whileOutside(() => need().pickFile(name));
@@ -72,4 +74,5 @@ export const isEncrypted = (name: string) => need().isEncrypted(name);
 export const encryptFile = (source: string, target: string) => need().encryptFile(source, target);
 
 /** Decrypts `source` into `target`; false when the password is wrong. */
-export const decryptFile = (source: string, target: string, password: string) => need().decryptFile(source, target, password);
+export const decryptFile = (source: string, target: string, password: string) =>
+  need().decryptFile(source, target, password);

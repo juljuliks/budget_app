@@ -37,24 +37,42 @@ export default function PlanAddModal({ ym, currency, visible, onClose, onPick }:
   const [query, setQuery] = useState('');
 
   useEffect(() => {
-    if (!visible) { setQuery(''); return; }
+    if (!visible) {
+      setQuery('');
+      return;
+    }
     (async () => {
-      const [list, colorMap, budget] = await Promise.all([addableCategories(ym, currency), categoryColors(), getPlanBudget(ym)]);
+      const [list, colorMap, budget] = await Promise.all([
+        addableCategories(ym, currency),
+        categoryColors(),
+        getPlanBudget(ym),
+      ]);
       setRows(list);
       setColorOf(colorMap);
-      setFree(budget && { minor: Math.max(budget.plannable_minor - (await plannedTotal(ym, undefined, budget.currency)), 0), currency: budget.currency });
+      setFree(
+        budget && {
+          minor: Math.max(budget.plannable_minor - (await plannedTotal(ym, undefined, budget.currency)), 0),
+          currency: budget.currency,
+        },
+      );
     })().catch(toastFailure('load plan categories', LOAD_FAILED));
   }, [visible, ym, currency]);
 
   const { year, month } = parseYm(ym);
   const titles: Record<AddableGroup, string> = {
-    last: `В плане ${MONTHS_GEN[(month + 11) % 12]}`, spent: `С тратами в ${MONTHS_PREP[month]}`, other: 'Остальные',
+    last: `В плане ${MONTHS_GEN[(month + 11) % 12]}`,
+    spent: `С тратами в ${MONTHS_PREP[month]}`,
+    other: 'Остальные',
   };
   const money = (minor: number, c: Currency = currency) => formatWithCurrency(minor, c);
-  const note = (c: AddableCategory) => (c.last
-    ? `план ${money(c.last.limit_minor, c.last.currency)} · ${c.spent_minor > 0 ? `потрачено ${money(c.spent_minor)}` : 'трат нет'}`
-    : c.spent_minor > 0 ? `потрачено ${money(c.spent_minor)}` : null);
-  const pick = (c: AddableCategory) => onPick({ category_id: c.id, label: categoryLabel(c), limit_minor: 0, currency: c.last?.currency ?? currency });
+  const note = (c: AddableCategory) =>
+    c.last
+      ? `план ${money(c.last.limit_minor, c.last.currency)} · ${c.spent_minor > 0 ? `потрачено ${money(c.spent_minor)}` : 'трат нет'}`
+      : c.spent_minor > 0
+        ? `потрачено ${money(c.spent_minor)}`
+        : null;
+  const pick = (c: AddableCategory) =>
+    onPick({ category_id: c.id, label: categoryLabel(c), limit_minor: 0, currency: c.last?.currency ?? currency });
 
   const q = query.toLowerCase();
   const filtered = q ? (rows ?? []).filter((c) => categoryLabel(c).toLowerCase().includes(q)) : (rows ?? []);
@@ -71,11 +89,20 @@ export default function PlanAddModal({ ym, currency, visible, onClose, onPick }:
       <SheetScrollView keyboardShouldPersistTaps="handled">
         {filtered.map((c, i, all) => (
           <View key={c.id}>
-            {!q && (i === 0 || all[i - 1].group !== c.group) ? <Text style={formStyles.sectionHeader}>{titles[c.group]}</Text> : null}
-            <TouchableOpacity style={styles.row} onPress={() => pick(c)} accessibilityRole="button" accessibilityLabel={`Добавить в план: ${categoryLabel(c)}`}>
+            {!q && (i === 0 || all[i - 1].group !== c.group) ? (
+              <Text style={formStyles.sectionHeader}>{titles[c.group]}</Text>
+            ) : null}
+            <TouchableOpacity
+              style={styles.row}
+              onPress={() => pick(c)}
+              accessibilityRole="button"
+              accessibilityLabel={`Добавить в план: ${categoryLabel(c)}`}
+            >
               <View style={[styles.dot, { backgroundColor: colorOf.get(c.id) ?? colors.border }]} />
               <View style={styles.text}>
-                <Text style={styles.name} numberOfLines={1}>{categoryLabel(c)}</Text>
+                <Text style={styles.name} numberOfLines={1}>
+                  {categoryLabel(c)}
+                </Text>
                 {note(c) ? <Text style={styles.note}>{note(c)}</Text> : null}
               </View>
               <Text style={styles.chevron}>›</Text>
@@ -83,7 +110,9 @@ export default function PlanAddModal({ ym, currency, visible, onClose, onPick }:
           </View>
         ))}
         {rows?.length === 0 ? <Text style={styles.empty}>Все категории уже в плане.</Text> : null}
-        {rows !== null && rows.length > 0 && q && filtered.length === 0 ? <Text style={styles.empty}>Не найдено.</Text> : null}
+        {rows !== null && rows.length > 0 && q && filtered.length === 0 ? (
+          <Text style={styles.empty}>Не найдено.</Text>
+        ) : null}
       </SheetScrollView>
       <SheetActions submit={null} onCancel={onClose} style={styles.actions} />
     </BottomSheet>
@@ -97,8 +126,13 @@ const styles = StyleSheet.create({
   searchWrap: { paddingHorizontal: 16, paddingBottom: 8 },
   // as in "Настройки → Категории"
   row: {
-    flexDirection: 'row', alignItems: 'center', paddingLeft: 16, paddingRight: 8, paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: 16,
+    paddingRight: 8,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
   },
   dot: { width: 10, height: 10, borderRadius: 5, marginRight: 10 },
   text: { flex: 1, gap: 2 },

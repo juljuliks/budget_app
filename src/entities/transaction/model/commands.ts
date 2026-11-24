@@ -1,8 +1,16 @@
 // The operation's writes: each one tells the screens the data changed.
 import { incrementCategoryUsage } from '@/db/categories';
 import {
-  addManualTransaction, DeletedTransaction, deleteTransactions, IncomeKind, markTransactionSeen, markTransactionsSeen, restoreTransactions, setTransactionAmount,
-  setTransactionKind, setTransactionNote,
+  addManualTransaction,
+  DeletedTransaction,
+  deleteTransactions,
+  IncomeKind,
+  markTransactionSeen,
+  markTransactionsSeen,
+  restoreTransactions,
+  setTransactionAmount,
+  setTransactionKind,
+  setTransactionNote,
 } from '@/db/transactions';
 import { setTransactionImpulse, setTransactionMood } from '@/db/impulse';
 import type { Mood } from '@/domain/moods';

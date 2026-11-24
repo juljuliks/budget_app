@@ -55,20 +55,36 @@ export default function TransactionCategory({ tx, mixedCats, picked, saving, cho
         accessibilityLabel="Сменить категорию"
         testID="tx-category"
         disabled={saving}
-        open={tx.category_id !== null && category ? { onPress: () => openCategory(tx.category_id!), accessibilityLabel: 'Открыть категорию' } : undefined}
+        open={
+          tx.category_id !== null && category
+            ? { onPress: () => openCategory(tx.category_id!), accessibilityLabel: 'Открыть категорию' }
+            : undefined
+        }
       />
       {mixedCats?.length ? (
         <>
           <SectionHeading title={`Разные категории у «${merchantLabel(tx)}»`} />
           <View style={styles.chips}>
             {mixedCats.map((c) => (
-              <Chip key={c.id} label={c.label} selected={picked.includes(c.id)} disabled={saving} onPress={() => onToggle(c.id)} />
+              <Chip
+                key={c.id}
+                label={c.label}
+                selected={picked.includes(c.id)}
+                disabled={saving}
+                onPress={() => onToggle(c.id)}
+              />
             ))}
           </View>
         </>
       ) : null}
       {category || mixedCats?.length ? (
-        <FundNote txId={tx.id} categoryId={tx.category_id} merchantKey={tx.merchant_key} occurredAt={tx.occurred_at} amount={tx.amount_minor} />
+        <FundNote
+          txId={tx.id}
+          categoryId={tx.category_id}
+          merchantKey={tx.merchant_key}
+          occurredAt={tx.occurred_at}
+          amount={tx.amount_minor}
+        />
       ) : null}
       <CategoryPickerModal
         visible={pickerOpen}
@@ -77,8 +93,18 @@ export default function TransactionCategory({ tx, mixedCats, picked, saving, cho
         transferFirst={tx.kind === 'transfer'}
         deposit={tx.kind === 'deposit'}
         allowNone
-        onPick={(id) => { setPickerOpen(false); choose(id); }}
-        onSeveral={canSplit ? (ids) => { setPickerOpen(false); onSplit(ids); } : undefined}
+        onPick={(id) => {
+          setPickerOpen(false);
+          choose(id);
+        }}
+        onSeveral={
+          canSplit
+            ? (ids) => {
+                setPickerOpen(false);
+                onSplit(ids);
+              }
+            : undefined
+        }
         onClose={() => setPickerOpen(false)}
       />
     </>

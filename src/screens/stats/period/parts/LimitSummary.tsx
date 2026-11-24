@@ -35,35 +35,74 @@ export default function LimitSummary({ v, g, onInfo }: Props) {
       {/* the tick stands out of the bar like a category's: the bar clips its segments, not the tick */}
       <View style={styles.stackWrap}>
         <View style={styles.stack}>
-          {g.items.filter((i) => i.spent > 0).map((i) => (
-            <View key={i.id} style={{ flex: i.spent, backgroundColor: v.stats.categories.find((c) => c.category_id === i.id)?.color ?? colors.muted }} />
-          ))}
+          {g.items
+            .filter((i) => i.spent > 0)
+            .map((i) => (
+              <View
+                key={i.id}
+                style={{
+                  flex: i.spent,
+                  backgroundColor: v.stats.categories.find((c) => c.category_id === i.id)?.color ?? colors.muted,
+                }}
+              />
+            ))}
           {!over && limit - g.spent > 0 ? <View style={[styles.stackRest, { flex: limit - g.spent }]} /> : null}
         </View>
         {/* as on every bar: no tick at the very end */}
-        {over && limit / g.spent < 0.97 ? <View style={[styles.stackTick, { left: `${(limit / g.spent) * 100}%` }]} /> : null}
+        {over && limit / g.spent < 0.97 ? (
+          <View style={[styles.stackTick, { left: `${(limit / g.spent) * 100}%` }]} />
+        ) : null}
       </View>
       <TouchableOpacity style={styles.paceRow} onPress={onInfo} accessibilityLabel="Как считается раздел">
         <Text style={[styles.share, styles.paceText]}>
           {/* as in the category rows: the limit first, then what's left */}
-          {g.change && rhythm && hidden ? (moved && limitMove(g.change.before, g.change.after!) ? (
-            <>
-              <Text style={g.change.after! < g.change.before ? styles.paceAhead : styles.paceOk}>{`Лимит ${limitMove(g.change.before, g.change.after!)}`}</Text>{'\n'}
-            </>
-          ) : null) : g.change && rhythm ? (
+          {g.change && rhythm && hidden ? (
+            moved && limitMove(g.change.before, g.change.after!) ? (
+              <>
+                <Text
+                  style={g.change.after! < g.change.before ? styles.paceAhead : styles.paceOk}
+                >{`Лимит ${limitMove(g.change.before, g.change.after!)}`}</Text>
+                {'\n'}
+              </>
+            ) : null
+          ) : g.change && rhythm ? (
             <>
               {/* "старый → новый": no "Лимит" word, it's plain what it is */}
-              {moved ? <><Text style={styles.crossed}>{v.m(g.change.before)}</Text>{' → '}</> : 'Лимит '}
-              <Text style={moved ? (g.change.after! < g.change.before ? styles.paceAhead : styles.paceOk) : undefined}>{v.m(moved ? g.change.after! : g.change.before)}</Text>
-              {/* no "в неделю": the section says which limit it is */}{'\n'}
+              {moved ? (
+                <>
+                  <Text style={styles.crossed}>{v.m(g.change.before)}</Text>
+                  {' → '}
+                </>
+              ) : (
+                'Лимит '
+              )}
+              <Text style={moved ? (g.change.after! < g.change.before ? styles.paceAhead : styles.paceOk) : undefined}>
+                {v.m(moved ? g.change.after! : g.change.before)}
+              </Text>
+              {/* no "в неделю": the section says which limit it is */}
+              {'\n'}
             </>
           ) : null}
           {rhythm ? label : `${capitalize(v.monthIn)}: `}
           <Text style={[styles.pace, over ? styles.paceAhead : g.key === 'fixed' ? undefined : styles.paceOk]}>
-            {(hidden ? (g.key === 'fixed' ? (over ? 'перерасход' : left > 0 ? `осталось оплатить ${formatPercent(left, limit)}` : 'всё оплачено')
-              : hiddenLeft(left, limit, g.ongoing ? 'осталось' : 'сэкономлено'))
-              : over ? `перерасход ${v.money(-left)}` : g.key === 'fixed' ? (left > 0 ? `осталось оплатить ${v.money(left)}` : 'всё оплачено')
-              : g.ongoing ? `осталось ${v.money(left)}` : `сэкономлено ${v.money(left)}`).replace(/^./, (ch) => (label || !rhythm ? ch : ch.toUpperCase()))}
+            {(hidden
+              ? g.key === 'fixed'
+                ? over
+                  ? 'перерасход'
+                  : left > 0
+                    ? `осталось оплатить ${formatPercent(left, limit)}`
+                    : 'всё оплачено'
+                : hiddenLeft(left, limit, g.ongoing ? 'осталось' : 'сэкономлено')
+              : over
+                ? `перерасход ${v.money(-left)}`
+                : g.key === 'fixed'
+                  ? left > 0
+                    ? `осталось оплатить ${v.money(left)}`
+                    : 'всё оплачено'
+                  : g.ongoing
+                    ? `осталось ${v.money(left)}`
+                    : `сэкономлено ${v.money(left)}`
+            ).replace(/^./, (ch) => (label || !rhythm ? ch : ch.toUpperCase()))}
           </Text>
           {!over && g.ongoing && g.key !== 'fixed' && (g.key !== 'day' || v.days > 1) ? ` · до ${until}` : ''}
           {g.key === 'fixed' ? ` · ${paid} из ${g.items.length} оплачены` : ''}

@@ -22,12 +22,21 @@ const Tab = createBottomTabNavigator<TabParamList>();
 function useUnseenCount(): number {
   const [count, setCount] = useState(0);
   useEffect(() => {
-    const load = () => { countUnseenTransactions().then(setCount).catch((e) => console.error('unseen count failed', e)); };
+    const load = () => {
+      countUnseenTransactions()
+        .then(setCount)
+        .catch((e) => console.error('unseen count failed', e));
+    };
     load();
     const off = onTransactionsChanged(load);
     // SMS processed while the app was in background
-    const sub = AppState.addEventListener('change', (st) => { if (st === 'active') load(); });
-    return () => { off(); sub.remove(); };
+    const sub = AppState.addEventListener('change', (st) => {
+      if (st === 'active') load();
+    });
+    return () => {
+      off();
+      sub.remove();
+    };
   }, []);
   return count;
 }
@@ -36,43 +45,52 @@ export default function MainTabs() {
   const unseen = useUnseenCount();
   return (
     <>
-    {/* the app always opens on the transactions; the menu ⋮ (Категории, Мерчанты, Настройки) sits in the tab headers */}
-    <Tab.Navigator initialRouteName="Transactions" screenOptions={{
-      tabBarActiveTintColor: colors.accent,
-      tabBarInactiveTintColor: colors.muted,
-      // the label right under the icon, with room below it (the default leaves the labels at the very bottom)
-      tabBarStyle: { height: 64, paddingTop: 6, paddingBottom: 10 },
-      tabBarIconStyle: { marginBottom: -2 },
-      tabBarLabelStyle: { fontSize: 12 },
-    }}>
-      <Tab.Screen
-        name="Stats"
-        component={StatsHome}
-        // in the middle of a sort-out the Operations tab asks first
-        listeners={({ navigation }) => ({
-          tabPress: (e) => {
-            if (!hasLeaveGuard()) return;
-            e.preventDefault();
-            guardLeave(() => navigation.navigate('Stats'));
-          },
-        })}
-        options={{
-          title: 'Статистика',
-          tabBarIcon: ({ color }) => <StatsIcon color={color} />,
-          // «Динамика трат»; the eye blurs the budget and plan totals, e.g. to show the stats to someone
-          headerRight: () => <View style={[headerRightStyle, statsHeaderRight]}><TrendsButton /><HideAmountsButton confirmShow={confirmShowAmounts} /><MenuButton /></View>,
+      {/* the app always opens on the transactions; the menu ⋮ (Категории, Мерчанты, Настройки) sits in the tab headers */}
+      <Tab.Navigator
+        initialRouteName="Transactions"
+        screenOptions={{
+          tabBarActiveTintColor: colors.accent,
+          tabBarInactiveTintColor: colors.muted,
+          // the label right under the icon, with room below it (the default leaves the labels at the very bottom)
+          tabBarStyle: { height: 64, paddingTop: 6, paddingBottom: 10 },
+          tabBarIconStyle: { marginBottom: -2 },
+          tabBarLabelStyle: { fontSize: 12 },
         }}
-      />
-      <Tab.Screen
-        name="Transactions"
-        component={OperationsScreen}
-        options={{
-          title: 'Операции',
-          tabBarIcon: ({ color }) => <HistoryIcon color={color} />,
-          tabBarBadge: unseen > 0 ? (unseen > 99 ? '99+' : unseen) : undefined,
-        }}
-      />
-    </Tab.Navigator>
+      >
+        <Tab.Screen
+          name="Stats"
+          component={StatsHome}
+          // in the middle of a sort-out the Operations tab asks first
+          listeners={({ navigation }) => ({
+            tabPress: (e) => {
+              if (!hasLeaveGuard()) return;
+              e.preventDefault();
+              guardLeave(() => navigation.navigate('Stats'));
+            },
+          })}
+          options={{
+            title: 'Статистика',
+            tabBarIcon: ({ color }) => <StatsIcon color={color} />,
+            // «Динамика трат»; the eye blurs the budget and plan totals, e.g. to show the stats to someone
+            headerRight: () => (
+              <View style={[headerRightStyle, statsHeaderRight]}>
+                <TrendsButton />
+                <HideAmountsButton confirmShow={confirmShowAmounts} />
+                <MenuButton />
+              </View>
+            ),
+          }}
+        />
+        <Tab.Screen
+          name="Transactions"
+          component={OperationsScreen}
+          options={{
+            title: 'Операции',
+            tabBarIcon: ({ color }) => <HistoryIcon color={color} />,
+            tabBarBadge: unseen > 0 ? (unseen > 99 ? '99+' : unseen) : undefined,
+          }}
+        />
+      </Tab.Navigator>
     </>
   );
 }

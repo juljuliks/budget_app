@@ -15,8 +15,15 @@ import TrendBars from './TrendBars';
 function note(x: SubTrend, next: string | null | undefined, screenMoney: (minor: number) => string): SubRowNote | null {
   // its change is in its own currency
   const money = x.own ? (minor: number) => formatWithCurrency(minor, x.own!.currency) : screenMoney;
-  if (x.gone) return { text: x.lastDay ? `последний платёж ${shortDay(x.lastDay)} · больше не списывается` : 'больше не списывается' };
-  if (x.change && x.change.to > x.change.from) return { text: `подорожал с ${MONTHS_GEN[Number(x.change.ym.slice(5)) - 1]}: ${money(x.change.from)} → ${money(x.change.to)}`, warn: true };
+  if (x.gone)
+    return {
+      text: x.lastDay ? `последний платёж ${shortDay(x.lastDay)} · больше не списывается` : 'больше не списывается',
+    };
+  if (x.change && x.change.to > x.change.from)
+    return {
+      text: `подорожал с ${MONTHS_GEN[Number(x.change.ym.slice(5)) - 1]}: ${money(x.change.from)} → ${money(x.change.to)}`,
+      warn: true,
+    };
   if (next) return { text: `${x.yearly ? 'раз в год · ' : ''}следующее ${shortDay(next)}` };
   return x.yearly ? { text: 'раз в год' } : null;
 }
@@ -25,8 +32,18 @@ function note(x: SubTrend, next: string | null | undefined, screenMoney: (minor:
  * «Динамика» of a category with «Подписки»: this month, the 12 months (a yearly one shows as its month's spike), each
  * subscription — a month and a year, gone up, the next charge; one no longer charging — grey, last.
  */
-export default function SubsTrend({ t, next, bars, color, money }: {
-  t: Subs; next: Map<number, string | null>; bars: Bar[]; color: string; money: (minor: number) => string;
+export default function SubsTrend({
+  t,
+  next,
+  bars,
+  color,
+  money,
+}: {
+  t: Subs;
+  next: Map<number, string | null>;
+  bars: Bar[];
+  color: string;
+  money: (minor: number) => string;
 }) {
   const [picked, setPicked] = useState<number | null>(null);
   const cur = t.bars[t.bars.length - 1];
@@ -35,14 +52,31 @@ export default function SubsTrend({ t, next, bars, color, money }: {
   return (
     <>
       <View style={s.head}>
-        <Text><Masked style={s.spent}>{money(cur.value)}</Masked><Text style={s.spentWhen}>{` в ${MONTHS_PREP[Number(cur.ym.slice(5)) - 1]}`}</Text></Text>
+        <Text>
+          <Masked style={s.spent}>{money(cur.value)}</Masked>
+          <Text style={s.spentWhen}>{` в ${MONTHS_PREP[Number(cur.ym.slice(5)) - 1]}`}</Text>
+        </Text>
       </View>
-      <Text style={s.line}>{live ? `🔁 ${live} ${plural(live, ['подписка', 'подписки', 'подписок'])}` : 'Подписок пока нет: сделайте подписку из мерчанта на странице категории'}</Text>
-      <View style={s.chart}><TrendBars bars={bars} color={color} height={120} picked={picked} onPick={setPicked} /></View>
-      <Text style={s.point}>{bar ? `${monthYear(bar.ym)}: ${money(bar.value)}` : 'Нажмите на месяц, чтобы увидеть сумму'}</Text>
+      <Text style={s.line}>
+        {live
+          ? `🔁 ${live} ${plural(live, ['подписка', 'подписки', 'подписок'])}`
+          : 'Подписок пока нет: сделайте подписку из мерчанта на странице категории'}
+      </Text>
+      <View style={s.chart}>
+        <TrendBars bars={bars} color={color} height={120} picked={picked} onPick={setPicked} />
+      </View>
+      <Text style={s.point}>
+        {bar ? `${monthYear(bar.ym)}: ${money(bar.value)}` : 'Нажмите на месяц, чтобы увидеть сумму'}
+      </Text>
       <View style={[s.block, s.grid]}>
-        <View style={s.cell}><Text style={s.label}>В среднем в месяц</Text><Masked style={s.value}>{money(t.average)}</Masked></View>
-        <View style={s.cell}><Text style={s.label}>За 12 месяцев</Text><Masked style={s.value}>{money(t.total)}</Masked></View>
+        <View style={s.cell}>
+          <Text style={s.label}>В среднем в месяц</Text>
+          <Masked style={s.value}>{money(t.average)}</Masked>
+        </View>
+        <View style={s.cell}>
+          <Text style={s.label}>За 12 месяцев</Text>
+          <Masked style={s.value}>{money(t.total)}</Masked>
+        </View>
       </View>
       {t.subs.length ? (
         <View style={s.block}>
@@ -57,7 +91,13 @@ export default function SubsTrend({ t, next, bars, color, money }: {
               note={note(x, next.get(x.id), money)}
               amount={x.own ? formatWithCurrency(x.own.amount, x.own.currency) : money(x.amount ?? 0)}
               amountInShown={x.own && x.amount !== null ? ` (${money(x.amount)})` : undefined}
-              amountNote={x.perMonth !== null ? (x.yearly ? `≈ ${money(x.perMonth)} в месяц` : `в месяц · ${money(x.perYear!)} в год`) : undefined}
+              amountNote={
+                x.perMonth !== null
+                  ? x.yearly
+                    ? `≈ ${money(x.perMonth)} в месяц`
+                    : `в месяц · ${money(x.perYear!)} в год`
+                  : undefined
+              }
             />
           ))}
         </View>
@@ -65,4 +105,3 @@ export default function SubsTrend({ t, next, bars, color, money }: {
     </>
   );
 }
-

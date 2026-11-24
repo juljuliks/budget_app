@@ -18,7 +18,12 @@ export function startSmsImport() {
     'Импорт SMS из телефона',
     'Операции из SMS банка, которые уже есть в телефоне. Уже добавленные не повторятся. Понадобится разрешение на чтение SMS — читаются только сообщения банка.',
     [
-      ...PERIODS.map((p) => ({ text: p.text, onPress: () => { run(p.months).catch((e) => fail(e)); } })),
+      ...PERIODS.map((p) => ({
+        text: p.text,
+        onPress: () => {
+          run(p.months).catch((e) => fail(e));
+        },
+      })),
       { text: 'Отмена', style: 'cancel' as const },
     ],
     undefined,
@@ -29,24 +34,41 @@ export function startSmsImport() {
 
 async function run(months: number | null) {
   if (!(await requestInboxAccess())) {
-    sheetAlert('Нет доступа к SMS', 'Без разрешения на чтение SMS импорт невозможен. Его можно дать в настройках Android → Приложения → Budget → Разрешения → SMS.');
+    sheetAlert(
+      'Нет доступа к SMS',
+      'Без разрешения на чтение SMS импорт невозможен. Его можно дать в настройках Android → Приложения → Budget → Разрешения → SMS.',
+    );
     return;
   }
-  const since = months === null ? 0 : (() => { const d = new Date(); d.setMonth(d.getMonth() - months); return d.getTime(); })();
+  const since =
+    months === null
+      ? 0
+      : (() => {
+          const d = new Date();
+          d.setMonth(d.getMonth() - months);
+          return d.getTime();
+        })();
   const messages = await readBankSms(since);
   if (messages.length === 0) {
-    sheetAlert('SMS банка не найдены', 'За этот период в телефоне нет SMS от банков, которые читаются (Настройки → «Банки»).');
+    sheetAlert(
+      'SMS банка не найдены',
+      'За этот период в телефоне нет SMS от банков, которые читаются (Настройки → «Банки»).',
+    );
     return;
   }
   const r = await importInboxSms(messages);
   sheetAlert(
-    r.inserted > 0 ? `Добавлено ${r.inserted} ${plural(r.inserted, ['операция', 'операции', 'операций'])}` : 'Новых операций нет',
+    r.inserted > 0
+      ? `Добавлено ${r.inserted} ${plural(r.inserted, ['операция', 'операции', 'операций'])}`
+      : 'Новых операций нет',
     [
       `Прочитано SMS банка: ${messages.length}.`,
       r.duplicate ? `Уже были в приложении: ${r.duplicate}.` : '',
       r.ignored ? `Не операции (баланс, коды, отклонённые): ${r.ignored}.` : '',
       r.unparsed ? `Не распознаны: ${r.unparsed} — они в «Не распознано» над операциями.` : '',
-    ].filter(Boolean).join('\n'),
+    ]
+      .filter(Boolean)
+      .join('\n'),
   );
 }
 

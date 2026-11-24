@@ -26,7 +26,12 @@ export function impulseTrendView(rows: ImpulseRow[], on: boolean, today: DayKey)
   const months = Array.from({ length: IMPULSE_MONTHS }, (_, i) => {
     const d = new Date(y, m - IMPULSE_MONTHS + i, 1);
     const ym = `${d.getFullYear()}-${p2(d.getMonth() + 1)}`;
-    return { ym, label: MONTHS_NOM[d.getMonth()].slice(0, 3), share: shares.get(ym) ?? null, current: i === IMPULSE_MONTHS - 1 };
+    return {
+      ym,
+      label: MONTHS_NOM[d.getMonth()].slice(0, 3),
+      share: shares.get(ym) ?? null,
+      current: i === IMPULSE_MONTHS - 1,
+    };
   });
   return {
     window,

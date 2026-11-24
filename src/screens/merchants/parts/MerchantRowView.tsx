@@ -22,8 +22,13 @@ export default function MerchantRowView({ m, category, selecting, selected, onPr
     <TouchableOpacity style={styles.row} onPress={onPress} onLongPress={onLongPress} onPressIn={onPressIn}>
       {selecting ? <Checkbox checked={selected} size={20} /> : null}
       <View style={styles.main}>
-        <Text style={styles.name} numberOfLines={1}>{m.name}</Text>
-        <Text style={styles.meta} numberOfLines={2}>{category ? `${category} · ` : ''}{activityText(m.activity)}</Text>
+        <Text style={styles.name} numberOfLines={1}>
+          {m.name}
+        </Text>
+        <Text style={styles.meta} numberOfLines={2}>
+          {category ? `${category} · ` : ''}
+          {activityText(m.activity)}
+        </Text>
       </View>
     </TouchableOpacity>
   );
@@ -31,8 +36,13 @@ export default function MerchantRowView({ m, category, selecting, selected, onPr
 
 const styles = StyleSheet.create({
   row: {
-    flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
   },
   main: { flex: 1, minWidth: 0 },
   name: { fontSize: 16, color: colors.text },

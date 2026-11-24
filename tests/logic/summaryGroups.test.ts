@@ -9,7 +9,13 @@ import { freshDb } from '../helpers';
 
 // October 2025: 31 days; Mon Sep 29 – Sun Oct 5
 const spend = (amount: number, categoryId: number | null, day: string) =>
-  addManualTransaction({ amount_minor: amount, category_id: categoryId, occurred_at: Math.floor(new Date(`${day}T12:00:00`).getTime() / 1000), kind: 'purchase', currency: 'GEL' });
+  addManualTransaction({
+    amount_minor: amount,
+    category_id: categoryId,
+    occurred_at: Math.floor(new Date(`${day}T12:00:00`).getTime() / 1000),
+    kind: 'purchase',
+    currency: 'GEL',
+  });
 const LATER = '2026-01-01';
 
 beforeEach(() => freshDb());
@@ -81,17 +87,22 @@ test('obligatory: a past day before the payment counts nothing of it; an overpay
   expect(food).toBeDefined();
 });
 
-test('outside the plan with the month known: against its share, the period\'s own spending apart', async () => {
+test("outside the plan with the month known: against its share, the period's own spending apart", async () => {
   const { food, bars, tech } = await setup();
   const day = { from: '2025-10-02', to: '2025-10-02' };
   const n = await loadNorms(day, 'GEL');
-  const planned = new Set([food, bars, tech, ...[...n.byCategory].filter(([, p]) => p.kind === 'fixed').map(([id]) => id)]);
+  const planned = new Set([
+    food,
+    bars,
+    tech,
+    ...[...n.byCategory].filter(([, p]) => p.kind === 'fixed').map(([id]) => id),
+  ]);
   const g = summaryGroups(n, day, 500 + 1000 + 100000 + 700, LATER, { planned, spent: 1200, share: 5000 });
   const o = g.find((x) => x.key === 'outside')!;
   expect([o.spent, o.limit, o.periodSpent]).toEqual([1200, 5000, 700]);
 });
 
-test('a category over its month\'s plan leaves its rhythm block, named apart', async () => {
+test("a category over its month's plan leaves its rhythm block, named apart", async () => {
   const { bars } = await setup();
   // bars: 310 ₾ a month (weekly); 400 ₾ spent by the 2nd — over the month's plan
   await spend(36000, bars, '2025-10-02');

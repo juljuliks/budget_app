@@ -2,7 +2,13 @@
 // each day's spending for their headers.
 import { useEffect, useRef, useState } from 'react';
 import {
-  GroupKind, listGroupedPage, listTransactionsPage, PageCursor, TransactionGroup, TransactionRow, TxFilter,
+  GroupKind,
+  listGroupedPage,
+  listTransactionsPage,
+  PageCursor,
+  TransactionGroup,
+  TransactionRow,
+  TxFilter,
 } from '@/db/transactions';
 import { spendingEntries } from '@/db/plans';
 import type { Currency } from '@/db/fx';
@@ -15,7 +21,12 @@ export const PAGE_SIZE = 50;
 /** How the list is split into sections: by day (the feed), or another way (every operation matching the filters at once). */
 export type GroupBy = 'day' | GroupKind;
 export const GROUP_BY: Array<readonly [GroupBy, string]> = [
-  ['day', 'По дням'], ['month', 'По месяцам'], ['merchant', 'По мерчантам'], ['category', 'По категориям'], ['kind', 'По типу'], ['amount', 'По сумме'],
+  ['day', 'По дням'],
+  ['month', 'По месяцам'],
+  ['merchant', 'По мерчантам'],
+  ['category', 'По категориям'],
+  ['kind', 'По типу'],
+  ['amount', 'По сумме'],
 ];
 export type Row = TransactionRow & { group_key?: string };
 export type ListView = { filter: TxFilter; groupBy: GroupBy };
@@ -30,9 +41,10 @@ export async function fetchPage(v: ListView, from: Next, limit: number): Promise
   const offset = typeof from === 'number' ? from : 0;
   const rows = await listGroupedPage(v.filter, v.groupBy, offset, limit);
   // by category a split operation is in each of its parts' groups: there, that part
-  const focused = v.groupBy === 'category'
-    ? rows.map((r) => (r.parts && r.group_key !== 'none' ? { ...r, focus: [Number(r.group_key)] } : r))
-    : withFocus(rows, v.filter);
+  const focused =
+    v.groupBy === 'category'
+      ? rows.map((r) => (r.parts && r.group_key !== 'none' ? { ...r, focus: [Number(r.group_key)] } : r))
+      : withFocus(rows, v.filter);
   return { rows: focused, next: rows.length === limit ? offset + rows.length : null };
 }
 
@@ -63,7 +75,12 @@ export function buildSections(rows: Row[], groups: TransactionGroup[] | null, gr
     const key = dayKey(r.occurred_at);
     if (out.length === 0 || out[out.length - 1].key !== key) {
       const d = new Date(r.occurred_at * 1000);
-      out.push({ key, title: formatDay(r.occurred_at), dayStart: new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() / 1000, data: [] });
+      out.push({
+        key,
+        title: formatDay(r.occurred_at),
+        dayStart: new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() / 1000,
+        data: [],
+      });
     }
     out[out.length - 1].data.push(r);
   }
@@ -75,24 +92,36 @@ export function buildSections(rows: Row[], groups: TransactionGroup[] | null, gr
  * the app's currency (Настройки → Валюта); transactions themselves stay in their own currency. Only the operations the
  * list's filters show: a day's total is what its section holds (all of it, not only the rows loaded). Empty when grouped.
  */
-export function useDaySpent(sections: Section[], grouped: boolean, currency: Currency, filter: TxFilter): Map<string, number> {
+export function useDaySpent(
+  sections: Section[],
+  grouped: boolean,
+  currency: Currency,
+  filter: TxFilter,
+): Map<string, number> {
   const [daySpent, setDaySpent] = useState<Map<string, number>>(new Map());
   // a new filter brings new sections: read with them (the filter itself doesn't re-read)
   const filterRef = useRef(filter);
   filterRef.current = filter;
   useEffect(() => {
-    if (sections.length === 0 || grouped) { setDaySpent(new Map()); return undefined; }
+    if (sections.length === 0 || grouped) {
+      setDaySpent(new Map());
+      return undefined;
+    }
     const from = sections[sections.length - 1].dayStart;
     const last = new Date(sections[0].dayStart * 1000);
     const to = new Date(last.getFullYear(), last.getMonth(), last.getDate() + 1).getTime() / 1000;
     let stale = false;
-    spendingEntries(from, to, currency, filterRef.current).then((rows) => {
-      if (stale) return;
-      const m = new Map<string, number>();
-      for (const r of rows) m.set(dayKey(r.occurred_at), (m.get(dayKey(r.occurred_at)) ?? 0) + r.spent_minor);
-      setDaySpent(m);
-    }).catch((e) => console.error('day totals failed', e));
-    return () => { stale = true; };
+    spendingEntries(from, to, currency, filterRef.current)
+      .then((rows) => {
+        if (stale) return;
+        const m = new Map<string, number>();
+        for (const r of rows) m.set(dayKey(r.occurred_at), (m.get(dayKey(r.occurred_at)) ?? 0) + r.spent_minor);
+        setDaySpent(m);
+      })
+      .catch((e) => console.error('day totals failed', e));
+    return () => {
+      stale = true;
+    };
   }, [sections, grouped, currency]);
   return daySpent;
 }

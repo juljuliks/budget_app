@@ -61,8 +61,29 @@ type Props<V extends TextFormValues & FieldValues> = {
  * something in the form changed.
  */
 export default function TextInputModal<V extends TextFormValues & FieldValues = TextFormValues>({
-  visible, title, onTitlePress, initialValue = '', form: outer, placeholder, submitLabel = 'Сохранить', hint, keyboardType, maxLength = 30,
-  allowEmpty, multiline, onSubmit, onClose, children, inputAccessory, headerRight, remove, label, submitDisabled, above, noInput, alwaysSubmit,
+  visible,
+  title,
+  onTitlePress,
+  initialValue = '',
+  form: outer,
+  placeholder,
+  submitLabel = 'Сохранить',
+  hint,
+  keyboardType,
+  maxLength = 30,
+  allowEmpty,
+  multiline,
+  onSubmit,
+  onClose,
+  children,
+  inputAccessory,
+  headerRight,
+  remove,
+  label,
+  submitDisabled,
+  above,
+  noInput,
+  alwaysSubmit,
 }: Props<V>) {
   // used only without a form of the caller's (a hook can't be skipped)
   const own = useLoadedForm<TextFormValues>(outer ? null : { value: initialValue }, visible);
@@ -73,7 +94,8 @@ export default function TextInputModal<V extends TextFormValues & FieldValues = 
   const submit = submitForm(form, async ({ value }) => {
     try {
       const err = await onSubmit(value.trim());
-      if (err) toastError(err); else if (err === null) onClose();
+      if (err) toastError(err);
+      else if (err === null) onClose();
     } catch (e) {
       console.error('save failed', e);
       toastError('Не удалось сохранить');
@@ -81,51 +103,63 @@ export default function TextInputModal<V extends TextFormValues & FieldValues = 
   });
 
   return (
-    <BottomSheet visible={visible} onClose={onClose} title={title} onTitlePress={onTitlePress} headerRight={headerRight}>
-        {/* a tall form (the plan's amount) scrolls; its buttons stay under it */}
-        <SheetScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.dialog} style={styles.scroll}>
-          {typeof hint === 'string' ? <Text style={styles.hint}>{hint}</Text> : hint ?? null}
-          {above ? <View style={styles.above}>{above}</View> : null}
-          {label && !noInput ? <Text style={[formStyles.label, styles.label]}>{label}</Text> : null}
-          {noInput ? null : <View style={styles.inputRow}>
-          <Controller
-            control={form.control}
-            name="value"
-            rules={{ validate: (v) => allowEmpty || !!v.trim() || 'Введите название' }}
-            render={({ field }) => (
-              <TextInput
-                style={[formStyles.input, styles.input, multiline && styles.multiline]}
-                multiline={multiline}
-                textAlignVertical={multiline ? 'top' : undefined}
-                value={field.value}
-                onChangeText={field.onChange}
-                placeholder={placeholder}
-                placeholderTextColor={colors.muted}
-                keyboardType={keyboardType}
-                maxLength={maxLength}
-                returnKeyType={multiline ? 'default' : 'done'}
-                onSubmitEditing={multiline || !isDirty || submitDisabled ? undefined : submit}
-              />
-            )}
-          />
-          {inputAccessory}
-          </View>}
-          {children ? <View style={styles.extra}>{children}</View> : null}
-        </SheetScrollView>
-        <View style={styles.dialog}>
-          {/* the submit button greyed until something changed: nothing to save otherwise */}
-          <SheetActions
-            submit={{ title: submitLabel, onPress: submit, disabled: isSubmitting || !isDirty || !!submitDisabled }}
-            extra={remove ? [{ title: remove.title, danger: true, onPress: remove.onPress }] : undefined}
-            onCancel={remove ? undefined : onClose}
-          />
-        </View>
+    <BottomSheet
+      visible={visible}
+      onClose={onClose}
+      title={title}
+      onTitlePress={onTitlePress}
+      headerRight={headerRight}
+    >
+      {/* a tall form (the plan's amount) scrolls; its buttons stay under it */}
+      <SheetScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.dialog} style={styles.scroll}>
+        {typeof hint === 'string' ? <Text style={styles.hint}>{hint}</Text> : (hint ?? null)}
+        {above ? <View style={styles.above}>{above}</View> : null}
+        {label && !noInput ? <Text style={[formStyles.label, styles.label]}>{label}</Text> : null}
+        {noInput ? null : (
+          <View style={styles.inputRow}>
+            <Controller
+              control={form.control}
+              name="value"
+              rules={{ validate: (v) => allowEmpty || !!v.trim() || 'Введите название' }}
+              render={({ field }) => (
+                <TextInput
+                  style={[formStyles.input, styles.input, multiline && styles.multiline]}
+                  multiline={multiline}
+                  textAlignVertical={multiline ? 'top' : undefined}
+                  value={field.value}
+                  onChangeText={field.onChange}
+                  placeholder={placeholder}
+                  placeholderTextColor={colors.muted}
+                  keyboardType={keyboardType}
+                  maxLength={maxLength}
+                  returnKeyType={multiline ? 'default' : 'done'}
+                  onSubmitEditing={multiline || !isDirty || submitDisabled ? undefined : submit}
+                />
+              )}
+            />
+            {inputAccessory}
+          </View>
+        )}
+        {children ? <View style={styles.extra}>{children}</View> : null}
+      </SheetScrollView>
+      <View style={styles.dialog}>
+        {/* the submit button greyed until something changed: nothing to save otherwise */}
+        <SheetActions
+          submit={{ title: submitLabel, onPress: submit, disabled: isSubmitting || !isDirty || !!submitDisabled }}
+          extra={remove ? [{ title: remove.title, danger: true, onPress: remove.onPress }] : undefined}
+          onCancel={remove ? undefined : onClose}
+        />
+      </View>
     </BottomSheet>
   );
 }
 
 /** Sets a field of a sheet's form from a control (currency, kind, …), marking the form changed. */
-export function setField<V extends FieldValues, K extends Path<V>>(form: UseFormReturn<V>, name: K, value: PathValue<V, K>) {
+export function setField<V extends FieldValues, K extends Path<V>>(
+  form: UseFormReturn<V>,
+  name: K,
+  value: PathValue<V, K>,
+) {
   form.setValue(name, value, { shouldDirty: true });
 }
 

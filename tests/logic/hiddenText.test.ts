@@ -1,7 +1,7 @@
 // "Скрыть суммы" on the stats' limit lines (screens/stats/model/hiddenText.ts).
 import { hiddenLeft, limitMove } from '../../src/screens/stats/model/hiddenText';
 
-test('what is left as a share of the line\'s limit; over it — just the word', () => {
+test("what is left as a share of the line's limit; over it — just the word", () => {
   expect(hiddenLeft(4000, 10000)).toBe('осталось 40%');
   expect(hiddenLeft(0, 10000)).toBe('осталось 0%');
   expect(hiddenLeft(30, 10000)).toBe('осталось <1%');

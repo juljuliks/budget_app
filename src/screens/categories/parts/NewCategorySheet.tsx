@@ -16,7 +16,9 @@ type Props = {
 export default function NewCategorySheet({ visible, typeId, onClose, onSaved }: Props) {
   const [planKind, setPlanKind] = useState<CategoryPlanKind | null>(null);
 
-  useEffect(() => { if (visible) setPlanKind(null); }, [visible]);
+  useEffect(() => {
+    if (visible) setPlanKind(null);
+  }, [visible]);
 
   const handleSaved = async (id: number, created: boolean) => {
     if (created && planKind) await setNewCategoryKind(id, planKind);
@@ -26,21 +28,9 @@ export default function NewCategorySheet({ visible, typeId, onClose, onSaved }: 
   const extra = (
     <>
       <SectionHeading title={KIND_TITLE} />
-      <RadioGroup
-        options={KIND_OPTIONS}
-        value={(planKind ?? '') as CategoryPlanKind}
-        onChange={setPlanKind}
-      />
+      <RadioGroup options={KIND_OPTIONS} value={(planKind ?? '') as CategoryPlanKind} onChange={setPlanKind} />
     </>
   );
 
-  return (
-    <CategorySheet
-      visible={visible}
-      typeId={typeId}
-      onClose={onClose}
-      onSaved={handleSaved}
-      extra={extra}
-    />
-  );
+  return <CategorySheet visible={visible} typeId={typeId} onClose={onClose} onSaved={handleSaved} extra={extra} />;
 }

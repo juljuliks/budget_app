@@ -65,8 +65,11 @@ export function paletteShades(palette: string): string[] {
 
 export function hexToHsl(hex: string): [number, number, number] {
   const n = parseInt(hex.slice(1), 16);
-  const r = ((n >> 16) & 255) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
-  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const r = ((n >> 16) & 255) / 255,
+    g = ((n >> 8) & 255) / 255,
+    b = (n & 255) / 255;
+  const max = Math.max(r, g, b),
+    min = Math.min(r, g, b);
   const l = (max + min) / 2;
   if (max === min) return [0, 0, l * 100];
   const d = max - min;
@@ -76,11 +79,18 @@ export function hexToHsl(hex: string): [number, number, number] {
 }
 
 export function hslToHex(h: number, sat: number, l: number): string {
-  const s1 = Math.max(0, Math.min(100, sat)) / 100, l1 = Math.max(0, Math.min(100, l)) / 100;
+  const s1 = Math.max(0, Math.min(100, sat)) / 100,
+    l1 = Math.max(0, Math.min(100, l)) / 100;
   const k = (n: number) => (n + h / 30) % 12;
   const a = s1 * Math.min(l1, 1 - l1);
   const f = (n: number) => l1 - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
-  return `#${[f(0), f(8), f(4)].map((x) => Math.round(x * 255).toString(16).padStart(2, '0')).join('')}`;
+  return `#${[f(0), f(8), f(4)]
+    .map((x) =>
+      Math.round(x * 255)
+        .toString(16)
+        .padStart(2, '0'),
+    )
+    .join('')}`;
 }
 
 /** A custom color from a hue (0..360): saturated and mid-light like the presets' base shades. */
@@ -109,7 +119,10 @@ function hueGap(a: number, b: number): number {
  * whole wheel stays reachable even with many categories.
  */
 export function distinctHue(taken: Iterable<string>, current: string | null = null, random = Math.random): number {
-  const hues = [...taken].map(hexToHsl).filter(([, sat]) => sat > 15).map(([h]) => h);
+  const hues = [...taken]
+    .map(hexToHsl)
+    .filter(([, sat]) => sat > 15)
+    .map(([h]) => h);
   const now = current && isCustomPalette(current) ? hexToHsl(current)[0] : null;
   // every 5° with one random shift, so any hue can come up and the distance checks hold exactly
   const shift = Math.floor(random() * 5);
@@ -138,7 +151,10 @@ export function buildCategoryColors(
   for (const c of categories) {
     const n = seen.get(c.type_id) ?? 0;
     seen.set(c.type_id, n + 1);
-    if (c.color) { out.set(c.id, c.color); continue; }
+    if (c.color) {
+      out.set(c.id, c.color);
+      continue;
+    }
     const palette = c.type_id !== null ? paletteOf.get(c.type_id) : undefined;
     const shades = palette ? paletteShades(palette) : untyped;
     out.set(c.id, shades[n % shades.length]);
@@ -164,11 +180,13 @@ export function freeCategoryColors(
   current: string | null,
 ): string[] {
   const palettes = types.map((t, i) => typePalette(t, i));
-  const own = typeId === null ? null : palettes[types.findIndex((t) => t.id === typeId)] ?? null;
+  const own = typeId === null ? null : (palettes[types.findIndex((t) => t.id === typeId)] ?? null);
   const options = [
     ...(own ? paletteShades(own) : []),
     // the untyped colors in their order: once the free palettes' base colors are taken, their other shades
-    ...untypedColors(palettes).filter((c) => !taken.has(c)).slice(0, 8),
+    ...untypedColors(palettes)
+      .filter((c) => !taken.has(c))
+      .slice(0, 8),
   ].filter((c) => !taken.has(c) || c === current);
   return current && !options.includes(current) ? [current, ...options] : options;
 }
@@ -177,19 +195,30 @@ export function freeCategoryColors(
 
 /** h 0..360, s and v 0..100 → '#rrggbb' */
 export function hsvToHex(h: number, s: number, v: number): string {
-  const s1 = Math.max(0, Math.min(100, s)) / 100, v1 = Math.max(0, Math.min(100, v)) / 100;
+  const s1 = Math.max(0, Math.min(100, s)) / 100,
+    v1 = Math.max(0, Math.min(100, v)) / 100;
   const f = (n: number) => {
     const k = (n + h / 60) % 6;
     return v1 - v1 * s1 * Math.max(0, Math.min(k, 4 - k, 1));
   };
-  return `#${[f(5), f(3), f(1)].map((x) => Math.round(x * 255).toString(16).padStart(2, '0')).join('')}`;
+  return `#${[f(5), f(3), f(1)]
+    .map((x) =>
+      Math.round(x * 255)
+        .toString(16)
+        .padStart(2, '0'),
+    )
+    .join('')}`;
 }
 
 /** '#rrggbb' → [h 0..360, s 0..100, v 0..100] */
 export function hexToHsv(hex: string): [number, number, number] {
   const n = parseInt(hex.slice(1), 16);
-  const r = ((n >> 16) & 255) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
-  const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+  const r = ((n >> 16) & 255) / 255,
+    g = ((n >> 8) & 255) / 255,
+    b = (n & 255) / 255;
+  const max = Math.max(r, g, b),
+    min = Math.min(r, g, b),
+    d = max - min;
   const h = d === 0 ? 0 : max === r ? ((g - b) / d + 6) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
   return [h * 60, max === 0 ? 0 : (d / max) * 100, max * 100];
 }

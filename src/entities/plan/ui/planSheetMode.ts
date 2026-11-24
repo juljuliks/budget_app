@@ -26,8 +26,17 @@ export function sheetMode(target: PlanAmountTarget | null, kind: PlanKind, every
  * "Регулярный платёж" for a category with "Подписки" off in the plan: its subscriptions count again; none — the sheet
  * (and those under it) closes for its page, where they are made of its merchants ("Сделать подпиской").
  */
-export async function goSubscriptions(target: PlanAmountTarget, has: boolean, leave: () => void, onSaved: () => void): Promise<null | false> {
-  if (!has) { leave(); openCategory(target.category_id); return false; }
+export async function goSubscriptions(
+  target: PlanAmountTarget,
+  has: boolean,
+  leave: () => void,
+  onSaved: () => void,
+): Promise<null | false> {
+  if (!has) {
+    leave();
+    openCategory(target.category_id);
+    return false;
+  }
   await resumeSubscriptions(target.category_id);
   toast(`План «${target.label}» сохранён`);
   onSaved();

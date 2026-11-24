@@ -23,21 +23,30 @@ export default function CategoryTypesSheet({ visible, onClose }: { visible: bool
   const load = useCallback(() => {
     listCategoryTypes().then(setTypes).catch(toastFailure('load types', LOAD_FAILED));
   }, []);
-  useEffect(() => { if (visible) load(); }, [visible, load]);
+  useEffect(() => {
+    if (visible) load();
+  }, [visible, load]);
 
   async function remove(t: CategoryType) {
     const n = await countCategoriesOfType(t.id);
     sheetAlert(
       `Удалить раздел «${t.name}»?`,
-      n > 0 ? `${n} ${plural(n, ['категория останется', 'категории останутся', 'категорий останутся'])} без раздела.` : undefined,
+      n > 0
+        ? `${n} ${plural(n, ['категория останется', 'категории останутся', 'категорий останутся'])} без раздела.`
+        : undefined,
       [
         { text: 'Отмена', style: 'cancel' },
-        { text: 'Удалить', style: 'destructive', onPress: async () => {
-          await removeCategoryType(t.id);
-          load();
-          toast(`Раздел «${t.name}» удалён`);
-        } },
-      ]);
+        {
+          text: 'Удалить',
+          style: 'destructive',
+          onPress: async () => {
+            await removeCategoryType(t.id);
+            load();
+            toast(`Раздел «${t.name}» удалён`);
+          },
+        },
+      ],
+    );
   }
 
   return (
@@ -64,9 +73,14 @@ export default function CategoryTypesSheet({ visible, onClose }: { visible: bool
               subject={t.name}
               onEdit={() => setEditing({ type: t })}
               deleteDisabled={!!t.is_transfer}
-              onDelete={() => (t.is_transfer
-                ? sheetAlert('Системный раздел', `«${t.name}» нельзя удалить: из него приложение предлагает категории для переводов. Переименовать можно.`)
-                : remove(t))}
+              onDelete={() =>
+                t.is_transfer
+                  ? sheetAlert(
+                      'Системный раздел',
+                      `«${t.name}» нельзя удалить: из него приложение предлагает категории для переводов. Переименовать можно.`,
+                    )
+                  : remove(t)
+              }
             />
           </View>
         )}
@@ -88,8 +102,11 @@ const styles = StyleSheet.create({
   top: { position: 'absolute', top: 14, right: 20 },
   content: { paddingHorizontal: 20, paddingBottom: 16 },
   row: {
-    flexDirection: 'row', alignItems: 'center', paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
   },
   flex: { flex: 1 },
   name: { fontSize: 16, color: colors.text },

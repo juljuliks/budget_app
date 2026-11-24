@@ -16,15 +16,26 @@ export function useKindTrend(categoryId: number, kind: TrendKind | null): KindDa
   const [data, setData] = useState<KindData | null>(null);
   const latest = useLatestRequest();
   const load = useCallback(() => {
-    if (kind !== 'subs' && kind !== 'fund') { setData(null); return; }
+    if (kind !== 'subs' && kind !== 'fund') {
+      setData(null);
+      return;
+    }
     const keep = latest();
-    const read = kind === 'subs'
-      ? paymentsOfCategory(categoryId).then(async (payments): Promise<KindData> => ({
-        kind, payments, next: new Map(await Promise.all(payments.map(async (p) => [p.id, await paymentNext(p.id)] as const))),
-      }))
-      : getFund(categoryId).then(async (fund): Promise<KindData | null> => (fund ? { kind: 'fund', fund, ledger: await fundLedger(fund) } : null));
+    const read =
+      kind === 'subs'
+        ? paymentsOfCategory(categoryId).then(async (payments): Promise<KindData> => ({
+            kind,
+            payments,
+            next: new Map(await Promise.all(payments.map(async (p) => [p.id, await paymentNext(p.id)] as const))),
+          }))
+        : getFund(categoryId).then(async (fund): Promise<KindData | null> =>
+            fund ? { kind: 'fund', fund, ledger: await fundLedger(fund) } : null,
+          );
     read.then(keep(setData)).catch(keep((e: unknown) => console.error('load trend kind failed', e)));
   }, [categoryId, kind, latest]);
-  useEffect(() => { load(); return onTransactionsChanged(load); }, [load]);
+  useEffect(() => {
+    load();
+    return onTransactionsChanged(load);
+  }, [load]);
   return data;
 }

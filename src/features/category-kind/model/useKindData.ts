@@ -39,10 +39,24 @@ export function useKindData(categoryId: number) {
     (async (): Promise<KindData | null> => {
       const c = await getCategory(categoryId);
       if (!c || isSystemCategory(c) || isTransferCategory(c)) return null;
-      const [item, schedule] = await Promise.all([getPlanItemBasics(currentYm(), categoryId), categorySchedule(categoryId)]);
-      return { category: c, label: `${c.emoji || ''} ${c.name}`.trim(), summary: await summaryOf(c, schedule), item, schedule };
-    })().then(keep(setData)).catch(keep((e: unknown) => console.error('load category kind failed', e)));
+      const [item, schedule] = await Promise.all([
+        getPlanItemBasics(currentYm(), categoryId),
+        categorySchedule(categoryId),
+      ]);
+      return {
+        category: c,
+        label: `${c.emoji || ''} ${c.name}`.trim(),
+        summary: await summaryOf(c, schedule),
+        item,
+        schedule,
+      };
+    })()
+      .then(keep(setData))
+      .catch(keep((e: unknown) => console.error('load category kind failed', e)));
   }, [categoryId, latest]);
-  useEffect(() => { load(); return onTransactionsChanged(load); }, [load]);
+  useEffect(() => {
+    load();
+    return onTransactionsChanged(load);
+  }, [load]);
   return data;
 }

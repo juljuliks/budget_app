@@ -1,7 +1,12 @@
 // "Автокопия" (Настройки → Резервная копия): once a week, when the app is opened, a copy into the folder the user
 // picked (the two newest kept) or to Google Drive («На Google Диске», cloud.ts); src/backup/auto.ts.
 import {
-  AUTO_BACKUP_KEEP, AUTO_BACKUP_PREFIX, autoBackup, autoBackupDue, markAutoBackupMade, setAutoBackupFolder,
+  AUTO_BACKUP_KEEP,
+  AUTO_BACKUP_PREFIX,
+  autoBackup,
+  autoBackupDue,
+  markAutoBackupMade,
+  setAutoBackupFolder,
 } from '@/backup';
 import { folderName, hasPassword, pickFolder, releaseFolder, saveToFolder } from '@/native/backup';
 import { formatDay } from '@/shared/lib/format';
@@ -10,7 +15,17 @@ import { choosePassword, makeCopy } from './password';
 import { dateKey, timeKey } from './run';
 import { backupSettingsChanged } from './model/changes';
 import { writeCloudCopy } from './cloud';
-import { AUTO_FAILED, AUTO_FIRST, AUTO_GONE, AUTO_OFF, AUTO_OFF_HINT, AUTO_ON, CLOUD_FAILED, autoStatus, cloudStatus } from './texts';
+import {
+  AUTO_FAILED,
+  AUTO_FIRST,
+  AUTO_GONE,
+  AUTO_OFF,
+  AUTO_OFF_HINT,
+  AUTO_ON,
+  CLOUD_FAILED,
+  autoStatus,
+  cloudStatus,
+} from './texts';
 
 /** The copy written before it goes to the folder, in the app's files dir. */
 const AUTO_COPY = 'auto-copy.db';
@@ -40,7 +55,13 @@ export async function runAutoBackupIfDue(at = now()): Promise<void> {
 
 /** A new file in the folder first, then the older ones beyond AUTO_BACKUP_KEEP go: a whole copy is always there. */
 async function writeCopy(folder: string, at: number) {
-  await saveToFolder(folder, await makeCopy(AUTO_COPY), `${AUTO_BACKUP_PREFIX}${dateKey(at)}-${timeKey(at)}.db`, AUTO_BACKUP_PREFIX, AUTO_BACKUP_KEEP);
+  await saveToFolder(
+    folder,
+    await makeCopy(AUTO_COPY),
+    `${AUTO_BACKUP_PREFIX}${dateKey(at)}-${timeKey(at)}.db`,
+    AUTO_BACKUP_PREFIX,
+    AUTO_BACKUP_KEEP,
+  );
   await markAutoBackupMade(at);
 }
 
@@ -52,7 +73,11 @@ export async function autoBackupStatus(): Promise<{ on: boolean; cloud: string |
   if (!auto.cloud && name === null) return { on: true, cloud: null, text: AUTO_GONE };
   const where = auto.cloud ? cloudStatus(auto.cloud) : autoStatus(name!);
   const last = auto.last === null ? null : formatDay(auto.last).replace(/^(Сегодня|Вчера)$/, (w) => w.toLowerCase());
-  return { on: true, cloud: auto.cloud, text: last === null ? `${where} ${AUTO_FIRST}` : `${where} Последняя — ${last}.` };
+  return {
+    on: true,
+    cloud: auto.cloud,
+    text: last === null ? `${where} ${AUTO_FIRST}` : `${where} Последняя — ${last}.`,
+  };
 }
 
 /**

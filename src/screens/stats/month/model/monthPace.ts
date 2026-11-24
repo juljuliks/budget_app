@@ -10,7 +10,16 @@ import { daysInMonth } from '@/shared/lib/dateRange';
 export type MarkStatus = 'paid' | 'missed' | 'ahead';
 
 /** A payment on the bar: `at` — its place (0…1 of the month's days), its category's emoji, its day and amount. */
-export type BarMark = { key: string; at: number; category_id: number; emoji: string; name: string; day: string; minor: number; status: MarkStatus };
+export type BarMark = {
+  key: string;
+  at: number;
+  category_id: number;
+  emoji: string;
+  name: string;
+  day: string;
+  minor: number;
+  status: MarkStatus;
+};
 
 export type MonthPace = {
   marks: BarMark[];
@@ -29,7 +38,9 @@ const labelOf = (c: CategoryStat) => c.emoji || c.name.slice(0, 1);
  */
 export function monthPace(stats: MonthStats, share: number, marks: PaymentMark[], today: string): MonthPace {
   const plannedAll = stats.planned_minor + share;
-  const cats = new Map(stats.categories.filter((c) => c.category_id !== null && c.limit_minor).map((c) => [c.category_id!, c]));
+  const cats = new Map(
+    stats.categories.filter((c) => c.category_id !== null && c.limit_minor).map((c) => [c.category_id!, c]),
+  );
   const dated = marks.flatMap((m) => {
     const c = cats.get(m.category_id);
     const minor = m.minor ?? c?.limit_minor ?? 0;
@@ -39,8 +50,9 @@ export function monthPace(stats: MonthStats, share: number, marks: PaymentMark[]
   const dim = daysInMonth(stats.ym);
   const flexible = Math.max(0, plannedAll - dated.reduce((a, m) => a + m.minor, 0));
   // the plan by the start of day `d` (before) or its end (with its payments)
-  const by = (d: number, withDay: boolean) => flexible * ((withDay ? d : d - 1) / dim)
-    + dated.reduce((a, m) => a + (dayOf(m.day) < d || (withDay && dayOf(m.day) === d) ? m.minor : 0), 0);
+  const by = (d: number, withDay: boolean) =>
+    flexible * ((withDay ? d : d - 1) / dim) +
+    dated.reduce((a, m) => a + (dayOf(m.day) < d || (withDay && dayOf(m.day) === d) ? m.minor : 0), 0);
   // each category's payments in day order, paid while its spending covers them (isPaid: a rate's difference allowed)
   const covered = new Map<number, number>();
   const out: BarMark[] = dated.map((m, i) => {
@@ -48,8 +60,13 @@ export function monthPace(stats: MonthStats, share: number, marks: PaymentMark[]
     covered.set(m.category_id, cum);
     const paid = m.done ?? isPaid(spentOf(m.c), cum);
     return {
-      key: `${m.category_id}-${m.day}-${i}`, at: (dayOf(m.day) - 0.5) / dim, category_id: m.category_id,
-      emoji: labelOf(m.c), name: m.c.name, day: m.day, minor: m.minor,
+      key: `${m.category_id}-${m.day}-${i}`,
+      at: (dayOf(m.day) - 0.5) / dim,
+      category_id: m.category_id,
+      emoji: labelOf(m.c),
+      name: m.c.name,
+      day: m.day,
+      minor: m.minor,
       status: paid ? 'paid' : m.day < today ? 'missed' : 'ahead',
     };
   });

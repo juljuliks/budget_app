@@ -36,17 +36,29 @@ type RowOf = (c: CategoryStat, unplanned: boolean) => React.ReactElement;
 /** A section's sticky grey band: its title (with its share of the budget, «Жизнь · 35%»), its total at the right. */
 export const header = (title: string, total: React.ReactNode, onLongPress?: () => void, share?: string) => (
   <SectionHeader style={[formStyles.sectionHeader, styles.groupHeader, styles.group]} onLongPress={onLongPress}>
-    <Text style={styles.groupTitle}>{title}{share ? <Text style={styles.groupShare}>{` · ${share}`}</Text> : null}</Text>
+    <Text style={styles.groupTitle}>
+      {title}
+      {share ? <Text style={styles.groupShare}>{` · ${share}`}</Text> : null}
+    </Text>
     {total}
   </SectionHeader>
 );
 
 /** "fact / plan ₾ (%)", as in the period stats; "Скрыть суммы" leaves just the % (of the plan, else of all spending). */
 const factOfPlan = (stats: MonthStats, spent: number, planned: number) => (
-  <MaskedTotal style={styles.groupTotal} hiddenText={planned ? formatPercent(spent, planned) : formatPercent(spent, stats.spent_minor)}>
-    {planned ? <Text style={overStyle(spent, planned)}>{formatShort(spent)}</Text> : formatWithCurrency(spent, stats.currency)}
+  <MaskedTotal
+    style={styles.groupTotal}
+    hiddenText={planned ? formatPercent(spent, planned) : formatPercent(spent, stats.spent_minor)}
+  >
+    {planned ? (
+      <Text style={overStyle(spent, planned)}>{formatShort(spent)}</Text>
+    ) : (
+      formatWithCurrency(spent, stats.currency)
+    )}
     {planned ? <Text style={styles.rowLimit}> / {formatWithCurrency(planned, stats.currency)}</Text> : null}
-    {planned ? <Text style={[styles.rowLimit, overStyle(spent, planned)]}>{` · ${formatPercent(spent, planned)}`}</Text> : null}
+    {planned ? (
+      <Text style={[styles.rowLimit, overStyle(spent, planned)]}>{` · ${formatPercent(spent, planned)}`}</Text>
+    ) : null}
   </MaskedTotal>
 );
 
@@ -57,7 +69,12 @@ const factOfPlan = (stats: MonthStats, spent: number, planned: number) => (
 export function typeSections(stats: MonthStats, groups: StatGroup[], rowOf: RowOf, base?: ShareBase) {
   return groups.map((g) => (
     <React.Fragment key={`${g.type_id}-${g.title}`}>
-      {header(g.title, g.categories.length > 1 ? factOfPlan(stats, g.spent_minor, g.planned_minor) : null, undefined, shareOf(g.planned_minor, base))}
+      {header(
+        g.title,
+        g.categories.length > 1 ? factOfPlan(stats, g.spent_minor, g.planned_minor) : null,
+        undefined,
+        shareOf(g.planned_minor, base),
+      )}
       <View>{g.categories.map((c) => rowOf(c, false))}</View>
     </React.Fragment>
   ));
@@ -65,7 +82,10 @@ export function typeSections(stats: MonthStats, groups: StatGroup[], rowOf: RowO
 
 /** "Вне плана": the categories without a plan and the uncategorized, against the budget's share for them. */
 export function unplannedSection(
-  stats: MonthStats, split: { unplanned: CategoryStat[]; spent: number }, share: number, rowOf: RowOf,
+  stats: MonthStats,
+  split: { unplanned: CategoryStat[]; spent: number },
+  share: number,
+  rowOf: RowOf,
   /** "Скрыть суммы": the line under the header without amounts */
   hidden: boolean,
   /** the budget (else the whole plan): the share's % by the title */
@@ -81,14 +101,22 @@ export function unplannedSection(
             band, worded like a month limit's row. Nothing spent outside the plan yet: no empty bar, just the hint below */}
         {share > 0 ? (
           <View style={styles.sectionBand}>
-            {split.spent > 0 ? (split.spent > share
-              ? <Meter ratio={1} over={share / split.spent} height={6} color={colors.warn} />
-              : <Meter ratio={split.spent / share} height={6} color={chart.meterFill} />) : null}
+            {split.spent > 0 ? (
+              split.spent > share ? (
+                <Meter ratio={1} over={share / split.spent} height={6} color={colors.warn} />
+              ) : (
+                <Meter ratio={split.spent / share} height={6} color={chart.meterFill} />
+              )
+            ) : null}
             <Text style={styles.rowStatus}>
-              {split.spent > share
-                ? <Text style={styles.overLine}>Перерасход{hidden ? '' : ` ${money(split.spent - share)}`}</Text>
-                // "Скрыть суммы": its share of the plan's part outside it
-                : hidden ? hiddenLeft(share - split.spent, share) : `осталось ${money(share - split.spent)}`}
+              {split.spent > share ? (
+                <Text style={styles.overLine}>Перерасход{hidden ? '' : ` ${money(split.spent - share)}`}</Text>
+              ) : // "Скрыть суммы": its share of the plan's part outside it
+              hidden ? (
+                hiddenLeft(share - split.spent, share)
+              ) : (
+                `осталось ${money(share - split.spent)}`
+              )}
             </Text>
           </View>
         ) : null}
@@ -107,18 +135,26 @@ export const spentFunds = (stats: MonthStats) => stats.funds.filter((f) => f.spe
  * lacked. Only the funds without a part in «Сбережения» (a month without a budget or a contribution): the others say it
  * under their part.
  */
-export function fundsSection(stats: MonthStats, rowOf: (f: FundStat) => React.ReactElement, savings: SavingsSection | null) {
+export function fundsSection(
+  stats: MonthStats,
+  rowOf: (f: FundStat) => React.ReactElement,
+  savings: SavingsSection | null,
+) {
   const inSavings = new Set((savings?.parts ?? []).filter((x) => x.key.startsWith('fund-')).map((x) => x.categoryId));
   const funds = spentFunds(stats).filter((f) => !inSavings.has(f.category_id));
   if (!funds.length) return null;
   const spent = funds.reduce((a, f) => a + f.spent_minor, 0);
   return (
     <>
-      {header('Копилки', spent > 0 ? (
-        <MaskedTotal style={styles.groupTotal} hiddenText="">
-          {formatWithCurrency(spent, stats.currency)}<Text style={styles.rowLimit}> из копилок</Text>
-        </MaskedTotal>
-      ) : null)}
+      {header(
+        'Копилки',
+        spent > 0 ? (
+          <MaskedTotal style={styles.groupTotal} hiddenText="">
+            {formatWithCurrency(spent, stats.currency)}
+            <Text style={styles.rowLimit}> из копилок</Text>
+          </MaskedTotal>
+        ) : null,
+      )}
       <View>{funds.map(rowOf)}</View>
     </>
   );

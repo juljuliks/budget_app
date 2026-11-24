@@ -18,11 +18,16 @@ export default function AppVersion({ open }: { open: boolean }) {
 
   return (
     <View style={styles.box}>
-      <Text style={styles.version}>Версия {appVersion()}{checked && !latest ? ` · ${LATEST}` : ''}</Text>
+      <Text style={styles.version}>
+        Версия {appVersion()}
+        {checked && !latest ? ` · ${LATEST}` : ''}
+      </Text>
       {latest && (
         <Button
           title={progress != null ? downloading(progress) : updateTo(latest.version)}
-          onPress={() => { startUpdate(); }}
+          onPress={() => {
+            startUpdate();
+          }}
           disabled={progress != null}
           style={styles.button}
           testID="app-update"
@@ -33,7 +38,12 @@ export default function AppVersion({ open }: { open: boolean }) {
 }
 
 const styles = StyleSheet.create({
-  box: { paddingVertical: 14, paddingHorizontal: 20, borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
+  box: {
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+  },
   version: { fontSize: 13, color: colors.muted, textAlign: 'center' },
   button: { marginTop: 12 },
 });

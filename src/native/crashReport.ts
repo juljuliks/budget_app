@@ -18,7 +18,10 @@ function record(args: unknown[], fatal: boolean) {
   }
 }
 
-type ErrorUtilsT = { getGlobalHandler(): (e: unknown, fatal?: boolean) => void; setGlobalHandler(h: (e: unknown, fatal?: boolean) => void): void };
+type ErrorUtilsT = {
+  getGlobalHandler(): (e: unknown, fatal?: boolean) => void;
+  setGlobalHandler(h: (e: unknown, fatal?: boolean) => void): void;
+};
 
 /** Once, first thing in index.js (the app and the headless SMS task alike). */
 export function installCrashReporting() {

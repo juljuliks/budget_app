@@ -54,8 +54,10 @@ async function find(what: string | RegExp) {
   return waitFor(() => {
     if (typeof what === 'string' && what.startsWith('#')) return screen.getByTestId(what.slice(1));
     // the open sheets (one sliding away is still drawn but not open) and the PIN windows over them (LockHost, last)
-    const sheets = screen.UNSAFE_root.findAll((n: { type: { name?: string }; props: { visible?: unknown } }) =>
-      (n.type?.name === 'BottomSheet' || n.type?.name === 'PinScreen') && n.props.visible === true);
+    const sheets = screen.UNSAFE_root.findAll(
+      (n: { type: { name?: string }; props: { visible?: unknown } }) =>
+        (n.type?.name === 'BottomSheet' || n.type?.name === 'PinScreen') && n.props.visible === true,
+    );
     // a sheet open: only in the topmost one (what is under it can't be tapped; and its content may still be loading)
     for (const scope of sheets.length ? [within(sheets[sheets.length - 1])] : [screen]) {
       const byText = scope.queryAllByText(what);
@@ -88,7 +90,11 @@ export async function scrollTo(testId: string, text: string | RegExp, pages = 10
     if (screen.queryAllByText(text).length) return;
     const list = screen.getByTestId(testId);
     fireEvent.scroll(list, {
-      nativeEvent: { contentOffset: { y: 100000 }, contentSize: { height: 100500, width: 400 }, layoutMeasurement: { height: 800, width: 400 } },
+      nativeEvent: {
+        contentOffset: { y: 100000 },
+        contentSize: { height: 100500, width: 400 },
+        layoutMeasurement: { height: 800, width: 400 },
+      },
     });
     fireEvent(list, 'endReached');
     // the next page from the database
@@ -102,8 +108,11 @@ export function texts(): string[] {
   type Node = { type: unknown; parent: Node | null; children: Array<Node | string> };
   const flat = (n: Node | string): string => (typeof n === 'string' ? n : n.children.map(flat).join(''));
   const isText = (n: Node | null) => !!n && n.type === 'Text';
-  return (screen.UNSAFE_root.findAll((n: Node) => isText(n) && !isText(n.parent?.parent ?? null) && !isText(n.parent)) as Node[])
-    .map((n) => flat(n).replace(/\s/g, ' '));
+  return (
+    screen.UNSAFE_root.findAll(
+      (n: Node) => isText(n) && !isText(n.parent?.parent ?? null) && !isText(n.parent),
+    ) as Node[]
+  ).map((n) => flat(n).replace(/\s/g, ' '));
 }
 
 /** The tab header's menu ⋮ → one of its pages ("Категории", "Мерчанты", "Настройки"). */
@@ -126,12 +135,16 @@ export function back() {
 
 /** Back from the pages over the tabs (the stack's header is native, not drawn here): to the tabs. */
 export function backToTabs() {
-  act(() => { while (navigationRef.canGoBack() && navigationRef.getRootState().routes.length > 1) navigationRef.goBack(); });
+  act(() => {
+    while (navigationRef.canGoBack() && navigationRef.getRootState().routes.length > 1) navigationRef.goBack();
+  });
 }
 
 /** A tap in the hole of the month's donut («из 3 666 ₾ ✏️»): its budget's sheet. */
 export function tapDonutCenter() {
-  fireEvent(screen.getByTestId('month-budget'), 'responderRelease', { nativeEvent: { locationX: 110, locationY: 110 } });
+  fireEvent(screen.getByTestId('month-budget'), 'responderRelease', {
+    nativeEvent: { locationX: 110, locationY: 110 },
+  });
 }
 /** From the month stats: its budget's sheet — a tap in the donut's hole, without a plan «Бюджет месяца ›». */
 export async function openBudget() {
@@ -142,7 +155,10 @@ export async function openBudget() {
 /** From the month stats: a category's amount in the plan (its long press, «План» / «В план»). */
 export async function openPlanOf(category: string | RegExp) {
   // the month's stats only (the operations under them have the same names)
-  const row = await waitFor(() => { const all = within(screen.getByTestId('month-stats')).getAllByText(category); return all[all.length - 1]; });
+  const row = await waitFor(() => {
+    const all = within(screen.getByTestId('month-stats')).getAllByText(category);
+    return all[all.length - 1];
+  });
   fireEvent(row, 'longPress', { nativeEvent: { pageX: 200, pageY: 500 } });
   fireEvent.press(await screen.findByLabelText(/^(План|В план)$/));
 }
@@ -163,10 +179,16 @@ export async function openNextMonth() {
  * the SwitchRow of that label ("Подписки" and "Импульсивные покупки" on a category's page).
  */
 export function toggleSwitch(on: boolean, label?: string) {
-  const sheets = screen.UNSAFE_root.findAll((n: { type: { name?: string }; props: { visible?: unknown } }) =>
-    n.type?.name === 'BottomSheet' && n.props.visible === true);
+  const sheets = screen.UNSAFE_root.findAll(
+    (n: { type: { name?: string }; props: { visible?: unknown } }) =>
+      n.type?.name === 'BottomSheet' && n.props.visible === true,
+  );
   let root = sheets.length ? sheets[sheets.length - 1] : screen.UNSAFE_root;
-  if (label) root = root.find((n: { type: { name?: string }; props: { label?: unknown } }) => n.type?.name === 'SwitchRow' && n.props.label === label);
+  if (label)
+    root = root.find(
+      (n: { type: { name?: string }; props: { label?: unknown } }) =>
+        n.type?.name === 'SwitchRow' && n.props.label === label,
+    );
   const all = root.findAll((n: { props: { onValueChange?: unknown } }) => typeof n.props.onValueChange === 'function');
   fireEvent(all[all.length - 1], 'valueChange', on);
 }
@@ -197,4 +219,3 @@ export async function openYearStories(year: number) {
   act(() => openYearReport(year));
   await screen.findByText(`Итоги ${year}`);
 }
-

@@ -1,16 +1,29 @@
 // An operation split between categories (db/parts.ts): what counts where, and what keeps the parts right.
 import { freshDb } from '../helpers';
 import { getDb } from '../../src/db';
-import { createCategory, deleteCategory, moveTransactionsOutOfCategory, categorySummary } from '../../src/db/categories';
+import {
+  createCategory,
+  deleteCategory,
+  moveTransactionsOutOfCategory,
+  categorySummary,
+} from '../../src/db/categories';
 import { mergeCategories } from '../../src/db/mergeCategories';
 import { setCategoryImpulse, setTransactionImpulse } from '../../src/db/impulse';
 import { csvOperations } from '../../src/backup';
 import { countSplit, getParts, splitTransaction, unsplitTransactions } from '../../src/db/parts';
 import { spendRows, spendingEntries } from '../../src/db/plans/spend';
 import {
-  categoriesWithTransactions, deleteTransactions, getTransaction, listGroupedPage, listTransactionGroups, listTransactionsFiltered,
-  restoreTransactions, transactionGroupIds,
-  setCategoryForTransactions, setTransactionAmount, setTransactionCategory,
+  categoriesWithTransactions,
+  deleteTransactions,
+  getTransaction,
+  listGroupedPage,
+  listTransactionGroups,
+  listTransactionsFiltered,
+  restoreTransactions,
+  transactionGroupIds,
+  setCategoryForTransactions,
+  setTransactionAmount,
+  setTransactionCategory,
 } from '../../src/db/transactions';
 
 const at = (y: number, m: number, d: number) => Math.floor(new Date(y, m - 1, d, 12).getTime() / 1000);
@@ -19,9 +32,13 @@ let seq = 0;
 
 async function purchase(categoryId: number | null, amount: number, occurredAt = at(2026, 10, 12)) {
   const db = await getDb();
-  return (await db.run(
-    `INSERT INTO transactions (bank, kind, amount_minor, currency, merchant_key, raw_merchant, category_id, category_source, occurred_at, raw_sms, sms_hash)
-      VALUES ('tbc', 'purchase', ?, 'GEL', 'CARREFOUR', 'CARREFOUR', ?, 'rule', ?, '', ?)`, [amount, categoryId, occurredAt, `s${seq++}`])).lastInsertRowid;
+  return (
+    await db.run(
+      `INSERT INTO transactions (bank, kind, amount_minor, currency, merchant_key, raw_merchant, category_id, category_source, occurred_at, raw_sms, sms_hash)
+      VALUES ('tbc', 'purchase', ?, 'GEL', 'CARREFOUR', 'CARREFOUR', ?, 'rule', ?, '', ?)`,
+      [amount, categoryId, occurredAt, `s${seq++}`],
+    )
+  ).lastInsertRowid;
 }
 
 /** Spent per category in October, as the stats count it. */
@@ -39,7 +56,7 @@ beforeEach(async () => {
   fun = await createCategory('Развлечения', '🎮');
 });
 
-test('each part counts in its category; the own one gets the rest, the merchant\'s choice is kept off it', async () => {
+test("each part counts in its category; the own one gets the rest, the merchant's choice is kept off it", async () => {
   const id = await purchase(food, 8640);
   await splitTransaction(id, food, [{ category_id: home, amount_minor: 2200 }]);
   expect(await spentBy()).toEqual({ [food]: 6440, [home]: 2200 });
@@ -49,7 +66,7 @@ test('each part counts in its category; the own one gets the rest, the merchant\
   await expect(splitTransaction(id, food, [{ category_id: home, amount_minor: 8640 }])).rejects.toThrow();
 });
 
-test('filtered by a part\'s category: the operation is listed, the day sums only the part; the filter offers it', async () => {
+test("filtered by a part's category: the operation is listed, the day sums only the part; the filter offers it", async () => {
   const id = await purchase(food, 8640);
   await purchase(fun, 1000);
   await splitTransaction(id, food, [{ category_id: home, amount_minor: 2200 }]);
@@ -63,16 +80,22 @@ test('filtered by a part\'s category: the operation is listed, the day sums only
 
 test('the amount corrected: the own category takes the difference; below the parts, they shrink in proportion', async () => {
   const id = await purchase(food, 10000);
-  await splitTransaction(id, food, [{ category_id: home, amount_minor: 3000 }, { category_id: fun, amount_minor: 1000 }]);
+  await splitTransaction(id, food, [
+    { category_id: home, amount_minor: 3000 },
+    { category_id: fun, amount_minor: 1000 },
+  ]);
   await setTransactionAmount(id, 9000, 'GEL');
   expect(await spentBy()).toEqual({ [food]: 5000, [home]: 3000, [fun]: 1000 });
   await setTransactionAmount(id, 3000, 'GEL');
   expect(await spentBy()).toEqual({ [food]: 1667, [home]: 1000, [fun]: 333 });
 });
 
-test('the own category changed to a part\'s: they merge; none — the split is gone', async () => {
+test("the own category changed to a part's: they merge; none — the split is gone", async () => {
   const id = await purchase(food, 8640);
-  await splitTransaction(id, food, [{ category_id: home, amount_minor: 2200 }, { category_id: fun, amount_minor: 1000 }]);
+  await splitTransaction(id, food, [
+    { category_id: home, amount_minor: 2200 },
+    { category_id: fun, amount_minor: 1000 },
+  ]);
   await setTransactionCategory(id, home, 'user');
   expect(await spentBy()).toEqual({ [home]: 7640, [fun]: 1000 });
   await setTransactionCategory(id, null, 'user');
@@ -116,30 +139,43 @@ test('a category deleted or merged: its parts move along, into the own category 
   expect(await getParts(a)).toEqual([]);
 });
 
-test('grouped by category: in each of its parts\' groups, the totals by the parts; filtered by one — only that part', async () => {
+test("grouped by category: in each of its parts' groups, the totals by the parts; filtered by one — only that part", async () => {
   const id = await purchase(food, 8640);
   await purchase(home, 1000);
   await splitTransaction(id, food, [{ category_id: home, amount_minor: 2200 }]);
   const groups = await listTransactionGroups({}, 'category');
-  expect(groups.map((g) => [g.category_name, g.count, g.totals[0].total])).toEqual(expect.arrayContaining([
-    ['Еда', 1, -6440], ['Хозтовары', 2, -3200],
-  ]));
+  expect(groups.map((g) => [g.category_name, g.count, g.totals[0].total])).toEqual(
+    expect.arrayContaining([
+      ['Еда', 1, -6440],
+      ['Хозтовары', 2, -3200],
+    ]),
+  );
   const page = await listGroupedPage({}, 'category', 0);
-  expect(page.filter((r) => r.id === id).map((r) => r.group_key).sort()).toEqual([String(food), String(home)].sort());
+  expect(
+    page
+      .filter((r) => r.id === id)
+      .map((r) => r.group_key)
+      .sort(),
+  ).toEqual([String(food), String(home)].sort());
   expect(await transactionGroupIds({}, 'category', String(home))).toHaveLength(2);
-  expect((await listTransactionGroups({ categories: [home] }, 'category')).map((g) => g.category_name)).toEqual(['Хозтовары']);
+  expect((await listTransactionGroups({ categories: [home] }, 'category')).map((g) => g.category_name)).toEqual([
+    'Хозтовары',
+  ]);
 });
 
 test('CSV: a split operation a row per part, its own category first', async () => {
   const id = await purchase(food, 8640);
   await splitTransaction(id, food, [{ category_id: home, amount_minor: 2200 }]);
-  expect((await csvOperations()).map((o) => [o.category, o.amount_minor])).toEqual([['Еда', 6440], ['Хозтовары', 2200]]);
+  expect((await csvOperations()).map((o) => [o.category, o.amount_minor])).toEqual([
+    ['Еда', 6440],
+    ['Хозтовары', 2200],
+  ]);
 });
 
-test('«Обдуманная» / «Импульсивная» asked when the own category or a part\'s has «Импульсивные покупки» on', async () => {
+test("«Обдуманная» / «Импульсивная» asked when the own category or a part's has «Импульсивные покупки» on", async () => {
   const id = Number(await purchase(food, 3000));
   await splitTransaction(id, food, [{ category_id: home, amount_minor: 1000 }]);
-  expect((await getTransaction(id))).toMatchObject({ impulse: null, impulse_asked: 0 });
+  expect(await getTransaction(id)).toMatchObject({ impulse: null, impulse_asked: 0 });
   await setCategoryImpulse(home, true);
   expect((await getTransaction(id))?.impulse_asked).toBe(1);
   await setTransactionImpulse(id, true);

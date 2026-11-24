@@ -21,20 +21,35 @@ const BAR_HEIGHT = 40;
  * where most often, what pushed to them; with fewer than MIN_ANSWERS answers, only how many are needed. Under the share —
  * «Покупки по дням», a calendar of all its purchases.
  */
-export default function ImpulseTrend({ v, days, today, categoryId, money }: {
-  v: NonNullable<ImpulseTrendView>; days: Map<string, DayPurchase[]>; today: string; categoryId: number; money: (minor: number) => string;
+export default function ImpulseTrend({
+  v,
+  days,
+  today,
+  categoryId,
+  money,
+}: {
+  v: NonNullable<ImpulseTrendView>;
+  days: Map<string, DayPurchase[]>;
+  today: string;
+  categoryId: number;
+  money: (minor: number) => string;
 }) {
-  const mark = v.unanswered > 0 ? (
-    <TextLink
-      label={`Отметить ${v.unanswered} ${plural(v.unanswered, ['покупку', 'покупки', 'покупок'])}`}
-      onPress={() => showOperationsFrom({ category: categoryId, range: v.window, unanswered: true })}
-      containerStyle={styles.mark}
-    />
-  ) : null;
+  const mark =
+    v.unanswered > 0 ? (
+      <TextLink
+        label={`Отметить ${v.unanswered} ${plural(v.unanswered, ['покупку', 'покупки', 'покупок'])}`}
+        onPress={() => showOperationsFrom({ category: categoryId, range: v.window, unanswered: true })}
+        containerStyle={styles.mark}
+      />
+    ) : null;
   const head = (
     <View style={styles.head}>
       <Text style={s.label}>Импульсивные покупки · за 3 месяца</Text>
-      {v.enough ? <Text style={s.label}>отмечено {v.summary.answered} из {v.summary.asked}</Text> : null}
+      {v.enough ? (
+        <Text style={s.label}>
+          отмечено {v.summary.answered} из {v.summary.asked}
+        </Text>
+      ) : null}
     </View>
   );
   const calendar = <ImpulseCalendar days={days} today={today} money={money} />;
@@ -43,7 +58,9 @@ export default function ImpulseTrend({ v, days, today, categoryId, money }: {
       <>
         <View style={s.block}>
           {head}
-          <Text style={s.value}>Для анализа нужно {MIN_ANSWERS} ответов, сейчас {v.summary.answered}</Text>
+          <Text style={s.value}>
+            Для анализа нужно {MIN_ANSWERS} ответов, сейчас {v.summary.answered}
+          </Text>
           {mark}
         </View>
         {calendar}
@@ -64,7 +81,9 @@ export default function ImpulseTrend({ v, days, today, categoryId, money }: {
           <View style={styles.bars}>
             {v.months.map((m) => (
               <View key={m.ym} style={styles.month}>
-                <Text style={[styles.pct, m.current && styles.now]}>{m.share === null ? '—' : `${Math.round(m.share * 100)}%`}</Text>
+                <Text style={[styles.pct, m.current && styles.now]}>
+                  {m.share === null ? '—' : `${Math.round(m.share * 100)}%`}
+                </Text>
                 <View style={[styles.bar, { height: Math.max(2, (m.share ?? 0) * BAR_HEIGHT) }]} />
                 <Text style={[styles.pct, m.current && styles.now]}>{m.label}</Text>
               </View>
@@ -77,8 +96,14 @@ export default function ImpulseTrend({ v, days, today, categoryId, money }: {
           <Text style={s.label}>Где чаще импульсивно</Text>
           {v.merchants.map((m) => (
             <View key={m.key ?? m.name} style={s.merchant}>
-              {m.key ? <MerchantLink merchantKey={m.key} label={m.name} containerStyle={s.merchantName} /> : <Text style={[s.value, s.merchantName]}>{m.name}</Text>}
-              <Text style={[s.value, styles.muted]}>{m.impulsive} из {m.answered}</Text>
+              {m.key ? (
+                <MerchantLink merchantKey={m.key} label={m.name} containerStyle={s.merchantName} />
+              ) : (
+                <Text style={[s.value, s.merchantName]}>{m.name}</Text>
+              )}
+              <Text style={[s.value, styles.muted]}>
+                {m.impulsive} из {m.answered}
+              </Text>
             </View>
           ))}
         </View>
@@ -91,7 +116,9 @@ export default function ImpulseTrend({ v, days, today, categoryId, money }: {
             return (
               <View key={m.mood} style={s.merchant}>
                 <Text style={[s.value, s.merchantName]}>{mood ? `${mood.emoji} ${mood.label}` : m.mood}</Text>
-                <Text style={[s.value, styles.muted]}>{m.count} · <Masked style={[s.value, styles.muted]}>{money(m.sum)}</Masked></Text>
+                <Text style={[s.value, styles.muted]}>
+                  {m.count} · <Masked style={[s.value, styles.muted]}>{money(m.sum)}</Masked>
+                </Text>
               </View>
             );
           })}

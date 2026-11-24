@@ -16,14 +16,26 @@ export default function SplitBar({ amounts, total }: Props) {
   const scale = Math.max(sum, total) || 1;
   return (
     <View style={styles.bar}>
-      {amounts.map((v, i) => (v > 0
-        ? <View key={i} style={{ flex: v / scale, backgroundColor: over ? chart.critical : SPLIT_COLORS[i % SPLIT_COLORS.length] }} />
-        : null))}
+      {amounts.map((v, i) =>
+        v > 0 ? (
+          <View
+            key={i}
+            style={{ flex: v / scale, backgroundColor: over ? chart.critical : SPLIT_COLORS[i % SPLIT_COLORS.length] }}
+          />
+        ) : null,
+      )}
       {sum < total ? <View style={{ flex: (total - sum) / scale }} /> : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  bar: { flexDirection: 'row', height: 8, borderRadius: 4, overflow: 'hidden', gap: 2, backgroundColor: chart.meterTrack },
+  bar: {
+    flexDirection: 'row',
+    height: 8,
+    borderRadius: 4,
+    overflow: 'hidden',
+    gap: 2,
+    backgroundColor: chart.meterTrack,
+  },
 });

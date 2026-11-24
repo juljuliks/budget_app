@@ -10,8 +10,18 @@ import { sheetAlert } from '@/shared/ui/sheetAlert';
  * and by how much (−N% of them); 🔒 has less — all of it, the plan over its budget. `short`, `locked` in the budget's
  * `currency`; `onYes` gets what to take.
  */
-export function askTakeLocked({ short, locked, currency, adding, onYes }: {
-  short: number; locked: number; currency: Currency; adding: boolean; onYes: (take: number) => void;
+export function askTakeLocked({
+  short,
+  locked,
+  currency,
+  adding,
+  onYes,
+}: {
+  short: number;
+  locked: number;
+  currency: Currency;
+  adding: boolean;
+  onYes: (take: number) => void;
 }) {
   const money = (minor: number) => formatWithCurrency(minor, currency);
   const take = Math.min(short, locked);
@@ -21,7 +31,10 @@ export function askTakeLocked({ short, locked, currency, adding, onYes }: {
     take < short
       ? `Свободного не хватает ${money(short)}, в сбережениях — ${money(locked)}. План будет больше бюджета на ${money(short - take)}.`
       : `Свободного не хватает ${money(short)} — их можно взять из сбережений.`,
-    [{ text: adding ? 'Вычесть и добавить' : 'Вычесть и сохранить', onPress: () => onYes(take) }, { text: 'Отмена', style: 'cancel' }],
+    [
+      { text: adding ? 'Вычесть и добавить' : 'Вычесть и сохранить', onPress: () => onYes(take) },
+      { text: 'Отмена', style: 'cancel' },
+    ],
     undefined,
     () => (
       <View style={styles.card}>
@@ -35,7 +48,15 @@ export function askTakeLocked({ short, locked, currency, adding, onYes }: {
 }
 
 const styles = StyleSheet.create({
-  card: { flexDirection: 'row', alignItems: 'baseline', gap: 6, padding: 14, borderRadius: 12, backgroundColor: colors.savingsBg, marginBottom: 12 },
+  card: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 6,
+    padding: 14,
+    borderRadius: 12,
+    backgroundColor: colors.savingsBg,
+    marginBottom: 12,
+  },
   name: { flex: 1, fontSize: 14, color: colors.text },
   was: { fontSize: 13, color: colors.muted, textDecorationLine: 'line-through' },
   now: { fontSize: 14, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },

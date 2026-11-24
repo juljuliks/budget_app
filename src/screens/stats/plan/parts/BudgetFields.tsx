@@ -17,7 +17,17 @@ import { styles } from './styles';
  * "max" — all that is free (off with nothing free), switched by "% | USD | max". Kept in the form as an amount in the
  * budget's currency; can't take what is planned or 🔒.
  */
-export function ShareField({ form, planned, reserved, toShown, screen, title, icon, color, hint }: {
+export function ShareField({
+  form,
+  planned,
+  reserved,
+  toShown,
+  screen,
+  title,
+  icon,
+  color,
+  hint,
+}: {
   form: ReturnType<typeof useLoadedForm<BudgetForm>>;
   /** what is planned (the funds, the month before's carry too), in the screen's currency */
   planned: number;
@@ -36,12 +46,12 @@ export function ShareField({ form, planned, reserved, toShown, screen, title, ic
   const amount = parseAmountOrZero(value ?? '') ?? 0;
   const mine = parseAmountOrZero(own ?? '') ?? 0;
   // what is free for this part, in the budget's currency (the plan: screen → budget by the amount's own rate)
-  const inScreen = cur === screen ? amount : toShown(amount, cur) ?? amount;
+  const inScreen = cur === screen ? amount : (toShown(amount, cur) ?? amount);
   const plannedInBudget = inScreen > 0 ? Math.round((planned * amount) / inScreen) : planned;
   const room = Math.max(0, amount - plannedInBudget - reserved);
   const stopOf = (p: number) => Math.round((amount * p) / 100);
   const stop = amount > 0 ? SHARE_STOPS.find((p) => stopOf(p) === mine) : 0;
-  const maxStop = amount > 0 ? SHARE_STOPS.filter((p) => stopOf(p) <= room).pop() ?? 0 : 50;
+  const maxStop = amount > 0 ? (SHARE_STOPS.filter((p) => stopOf(p) <= room).pop() ?? 0) : 50;
   const set = (minor: number) => form.setValue(name, minor ? toInputValue(minor) : '', { shouldDirty: true });
   // an amount between the stops opens as an amount
   const [mode, setMode] = useState<'pct' | 'amount' | 'max'>(stop === undefined ? 'amount' : 'pct');
@@ -54,7 +64,9 @@ export function ShareField({ form, planned, reserved, toShown, screen, title, ic
     setMode('max');
   }, [amount, mine, room]);
   // "max": all that is free, following it (the budget or the other part changed); off with nothing free (or all of it in)
-  useEffect(() => { if (mode === 'max' && mine !== room) set(room); }, [mode, mine, room]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (mode === 'max' && mine !== room) set(room);
+  }, [mode, mine, room]); // eslint-disable-line react-hooks/exhaustive-deps
   function switchMode(m: 'pct' | 'amount' | 'max') {
     if (m === 'max') set(room);
     // to the slider: the nearest stop that fits
@@ -70,12 +82,28 @@ export function ShareField({ form, planned, reserved, toShown, screen, title, ic
         {icon ? <LockIcon color={color} size={14} /> : null}
         <Text style={[formStyles.label, styles.lockLabel]}>{title}</Text>
         <Segmented
-          options={[['pct', '%'], ['amount', cur], ['max', 'MAX']] as const} value={mode} onChange={switchMode} style={styles.lockMode}
+          options={
+            [
+              ['pct', '%'],
+              ['amount', cur],
+              ['max', 'MAX'],
+            ] as const
+          }
+          value={mode}
+          onChange={switchMode}
+          style={styles.lockMode}
           disabled={(room <= 0 || room === mine) && mode !== 'max' ? ['max'] : []}
         />
       </View>
       {mode === 'pct' ? (
-        <StepSlider values={SHARE_STOPS} value={stop ?? -1} onChange={(p) => set(stopOf(p))} max={maxStop} label={(v) => `${v}%`} color={color} />
+        <StepSlider
+          values={SHARE_STOPS}
+          value={stop ?? -1}
+          onChange={(p) => set(stopOf(p))}
+          max={maxStop}
+          label={(v) => `${v}%`}
+          color={color}
+        />
       ) : (
         <View style={styles.lockRow}>
           <Controller

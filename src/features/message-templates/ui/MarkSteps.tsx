@@ -29,7 +29,10 @@ export default function MarkSteps({ words, role, onRole, marks, onWord, kind, on
               key={r.role}
               onPress={() => onRole(r.role)}
               accessibilityState={{ selected: on }}
-              style={[styles.pill, on ? { backgroundColor: r.bg, borderColor: r.line, borderWidth: 2 } : styles.pillOff]}
+              style={[
+                styles.pill,
+                on ? { backgroundColor: r.bg, borderColor: r.line, borderWidth: 2 } : styles.pillOff,
+              ]}
             >
               <Text style={[styles.pillText, on && { color: r.fg, fontWeight: '600' }]}>{r.label}</Text>
             </TouchableOpacity>
@@ -46,7 +49,12 @@ export default function MarkSteps({ words, role, onRole, marks, onWord, kind, on
               key={`${i}-${w.text}`}
               onPress={() => onWord(i)}
               accessibilityLabel={r ? `${w.text}: ${r.label}` : w.text}
-              style={[styles.word, r ? { backgroundColor: r.bg, borderBottomColor: r.line, borderBottomWidth: 3, borderWidth: 0 } : styles.wordOff]}
+              style={[
+                styles.word,
+                r
+                  ? { backgroundColor: r.bg, borderBottomColor: r.line, borderBottomWidth: 3, borderWidth: 0 }
+                  : styles.wordOff,
+              ]}
             >
               <Text style={[styles.wordText, r && { color: r.fg, fontWeight: '600' }]}>{w.text}</Text>
             </TouchableOpacity>

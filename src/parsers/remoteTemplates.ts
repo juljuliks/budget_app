@@ -32,9 +32,10 @@ function check(raw: unknown): RemoteTemplate | string {
   if (t.source !== 'sms' && t.source !== 'push') return `${key}: source`;
   if (typeof t.bank !== 'string' || !t.bank) return `${key}: bank`;
   if (t.action !== 'operation' && t.action !== 'hide') return `${key}: action`;
-  const kind = t.action === 'operation' ? (KINDS.includes(t.kind as Kind) ? t.kind as Kind : null) : null;
+  const kind = t.action === 'operation' ? (KINDS.includes(t.kind as Kind) ? (t.kind as Kind) : null) : null;
   if (t.action === 'operation' && !kind) return `${key}: kind`;
-  if (typeof t.pattern !== 'string' || !Array.isArray(t.slots) || !t.slots.every((s) => SLOTS.includes(s as string))) return `${key}: pattern / slots`;
+  if (typeof t.pattern !== 'string' || !Array.isArray(t.slots) || !t.slots.every((s) => SLOTS.includes(s as string)))
+    return `${key}: pattern / slots`;
   if (t.action === 'operation' && !t.slots.includes('amount')) return `${key}: no amount`;
   try {
     new RegExp(t.pattern, 'i');

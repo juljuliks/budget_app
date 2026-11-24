@@ -63,7 +63,9 @@ export async function topUpCategoryId(db?: Db): Promise<number | null> {
 /** "📺 Подписки" (the system one): a subscription without a category goes there. */
 export async function subscriptionsCategoryId(db?: Db): Promise<number | null> {
   db ??= await getDb();
-  return (await db.get<{ id: number }>("SELECT id FROM categories WHERE system = 'subs' AND deleted_at IS NULL"))?.id ?? null;
+  return (
+    (await db.get<{ id: number }>("SELECT id FROM categories WHERE system = 'subs' AND deleted_at IS NULL"))?.id ?? null
+  );
 }
 
 /** "Регулярные платежи" on or off: the category's kind in the plan a regular payment, or none any more. */
@@ -75,7 +77,6 @@ export async function setRecurring(id: number, on: boolean, db?: Db): Promise<vo
   if (on) await db.run('DELETE FROM category_schedules WHERE category_id = ?', [id]);
   else await db.run("UPDATE categories SET plan_kind = NULL WHERE id = ? AND plan_kind = 'regular'", [id]);
 }
-
 
 const COLUMNS = `c.id, c.name, c.emoji, c.sort_order, c.type_id, c.deleted_at, c.color, c.system, c.recurring, coalesce(c.system = 'subs', 0) AS by_merchant, c.impulse, c.plan_kind,
     t.name AS type_name, coalesce(t.is_transfer, 0) AS type_is_transfer`;
@@ -99,7 +100,12 @@ export function categoryLabel(c: { emoji?: string | null; name: string; type_nam
 }
 
 /** Category label of a transaction row (its joined category_* columns); null when uncategorized. */
-export function txCategoryLabel(tx: { category_id: number | null; category_name: string | null; category_emoji: string | null; category_type_name: string | null }): string | null {
+export function txCategoryLabel(tx: {
+  category_id: number | null;
+  category_name: string | null;
+  category_emoji: string | null;
+  category_type_name: string | null;
+}): string | null {
   if (tx.category_id === null || tx.category_name === null) return null;
   return categoryLabel({ emoji: tx.category_emoji, name: tx.category_name, type_name: tx.category_type_name });
 }
@@ -122,44 +128,71 @@ export async function categoryLabelOf(id: number): Promise<string> {
 }
 
 /** Same name within the same type among live categories; case-insensitive (Cyrillic too, hence JS). */
-export async function findCategoryByName(name: string, typeId: number | null, exceptId?: number): Promise<Category | undefined> {
+export async function findCategoryByName(
+  name: string,
+  typeId: number | null,
+  exceptId?: number,
+): Promise<Category | undefined> {
   const wanted = name.trim().toLowerCase();
   return (await listCategories()).find(
-    (c) => c.id !== exceptId && c.type_id === typeId && c.name.trim().toLowerCase() === wanted);
+    (c) => c.id !== exceptId && c.type_id === typeId && c.name.trim().toLowerCase() === wanted,
+  );
 }
 
-export async function createCategory(name: string, emoji?: string | null, typeId: number | null = null, color: string | null = null): Promise<number> {
+export async function createCategory(
+  name: string,
+  emoji?: string | null,
+  typeId: number | null = null,
+  color: string | null = null,
+): Promise<number> {
   const db = await getDb();
   // new categories go to the end of the list (before the seeded "Другое" at 99)
   const { lastInsertRowid } = await db.run(
     `INSERT INTO categories (name, emoji, type_id, color, sort_order)
       VALUES (?, ?, ?, ?, (SELECT coalesce(max(sort_order), 0) + 1 FROM categories WHERE sort_order < 99))`,
-    [name.trim(), emoji?.trim() || null, typeId, color]);
+    [name.trim(), emoji?.trim() || null, typeId, color],
+  );
   await db.run('INSERT OR REPLACE INTO category_usage (category_id, usage_count) VALUES (?, 0)', [lastInsertRowid]);
   return lastInsertRowid;
 }
 
-export async function updateCategory(id: number, fields: { name: string; emoji?: string | null; typeId: number | null; color?: string | null }) {
+export async function updateCategory(
+  id: number,
+  fields: { name: string; emoji?: string | null; typeId: number | null; color?: string | null },
+) {
   const db = await getDb();
   // a system category ("Пополнение счёта", "Между своими картами") keeps its name
-  await db.run('UPDATE categories SET name = CASE WHEN system IS NULL THEN ? ELSE name END, emoji = ?, type_id = ?, color = ? WHERE id = ?',
-    [fields.name.trim(), fields.emoji?.trim() || null, fields.typeId, fields.color ?? null, id]);
+  await db.run(
+    'UPDATE categories SET name = CASE WHEN system IS NULL THEN ? ELSE name END, emoji = ?, type_id = ?, color = ? WHERE id = ?',
+    [fields.name.trim(), fields.emoji?.trim() || null, fields.typeId, fields.color ?? null, id],
+  );
 }
 
 /** Transactions of the category from the current month on (those a delete would move); a split one's part in it. */
 export async function currentTransactionsOfCategory(id: number, nowYm = currentYm()) {
   const db = await getDb();
   const from = monthStart(nowYm);
-  return db.all<{ id: number; amount_minor: number; currency: string; kind: string; raw_merchant: string | null; occurred_at: number }>(
+  return db.all<{
+    id: number;
+    amount_minor: number;
+    currency: string;
+    kind: string;
+    raw_merchant: string | null;
+    occurred_at: number;
+  }>(
     `SELECT id, amount_minor, currency, kind, raw_merchant, occurred_at FROM spend_parts
-      WHERE category_id = ? AND occurred_at >= ? ORDER BY occurred_at DESC`, [id, from]);
+      WHERE category_id = ? AND occurred_at >= ? ORDER BY occurred_at DESC`,
+    [id, from],
+  );
 }
 
 export async function countPastTransactionsOfCategory(id: number, nowYm = currentYm()): Promise<number> {
   const db = await getDb();
   const from = monthStart(nowYm);
   return (await db.get<{ n: number }>(
-    'SELECT count(*) AS n FROM spend_parts WHERE category_id = ? AND occurred_at < ?', [id, from]))!.n;
+    'SELECT count(*) AS n FROM spend_parts WHERE category_id = ? AND occurred_at < ?',
+    [id, from],
+  ))!.n;
 }
 
 /**
@@ -175,20 +208,26 @@ export async function deleteCategory(id: number, targetId: number | null, nowYm 
   const from = monthStart(nowYm);
   // a fund: closed first, what it saved goes to this month's savings; its repeating payments too
   await deleteFund(id, nowYm);
-  for (const p of await db.all<{ id: number }>('SELECT id FROM recurring_payments WHERE category_id = ? AND deleted_at IS NULL', [id])) {
+  for (const p of await db.all<{ id: number }>(
+    'SELECT id FROM recurring_payments WHERE category_id = ? AND deleted_at IS NULL',
+    [id],
+  )) {
     await deletePayment(p.id);
   }
   await db.transaction(async (tx) => {
     // the past stays in it: its operations there that follow a merchant are fixed, so the merchant moving on
     // (below, or later) doesn't take them along
     await tx.run(
-      "UPDATE transactions SET category_source = 'user' WHERE category_id = ? AND occurred_at < ? AND category_source = 'rule'", [id, from]);
+      "UPDATE transactions SET category_source = 'user' WHERE category_id = ? AND occurred_at < ? AND category_source = 'rule'",
+      [id, from],
+    );
     // a rule-picked one keeps following its merchant (whose rule moves along below), a hand-picked one stays so;
     // none = no source
     await tx.run(
       `UPDATE transactions SET category_id = ?, category_source = CASE WHEN ? IS NULL THEN NULL ELSE category_source END
         WHERE category_id = ? AND occurred_at >= ?`,
-      [targetId, targetId, id, from]);
+      [targetId, targetId, id, from],
+    );
     // parts of split operations in it go along
     await moveParts(tx, [id], targetId, 't.occurred_at >= ?', [from]);
     if (targetId === null) {
@@ -201,8 +240,9 @@ export async function deleteCategory(id: number, targetId: number | null, nowYm 
     await tx.run('DELETE FROM plan_items WHERE category_id = ? AND ym >= ?', [id, nowYm]);
     await tx.run('DELETE FROM category_usage WHERE category_id = ?', [id]);
 
-    const pastTx = await tx.get('SELECT 1 FROM transactions WHERE category_id = ? LIMIT 1', [id])
-      ?? await tx.get('SELECT 1 FROM transaction_parts WHERE category_id = ? LIMIT 1', [id]);
+    const pastTx =
+      (await tx.get('SELECT 1 FROM transactions WHERE category_id = ? LIMIT 1', [id])) ??
+      (await tx.get('SELECT 1 FROM transaction_parts WHERE category_id = ? LIMIT 1', [id]));
     const pastPlan = await tx.get('SELECT 1 FROM plan_items WHERE category_id = ? LIMIT 1', [id]);
     if (pastTx || pastPlan) {
       await tx.run('UPDATE categories SET deleted_at = ? WHERE id = ?', [Math.floor(Date.now() / 1000), id]);
@@ -221,22 +261,32 @@ export async function moveTransactionsOutOfCategory(txIds: number[], fromId: num
   const db = await getDb();
   const marks = placeholders(txIds.length);
   await db.transaction(async (tx) => {
-    const keys = (await tx.all<{ k: string }>(
-      `SELECT DISTINCT merchant_key AS k FROM transactions
+    const keys = (
+      await tx.all<{ k: string }>(
+        `SELECT DISTINCT merchant_key AS k FROM transactions
         WHERE id IN (${marks}) AND category_id = ? AND merchant_key IS NOT NULL`,
-      [...txIds, fromId])).map((r) => r.k);
+        [...txIds, fromId],
+      )
+    ).map((r) => r.k);
     // a rule-picked one keeps following its merchant (whose rule moves along); none = no source
     await tx.run(
       `UPDATE transactions SET category_id = ?, category_source = CASE WHEN ? IS NULL THEN NULL ELSE category_source END
         WHERE id IN (${marks}) AND category_id = ?`,
-      [toId, toId, ...txIds, fromId]);
+      [toId, toId, ...txIds, fromId],
+    );
     await moveParts(tx, [fromId], toId, `t.id IN (${marks})`, txIds);
     if (keys.length > 0) {
       const keyMarks = placeholders(keys.length);
       if (toId === null) {
-        await tx.run(`DELETE FROM merchant_rules WHERE category_id = ? AND match_type = 'exact' AND pattern IN (${keyMarks})`, [fromId, ...keys]);
+        await tx.run(
+          `DELETE FROM merchant_rules WHERE category_id = ? AND match_type = 'exact' AND pattern IN (${keyMarks})`,
+          [fromId, ...keys],
+        );
       } else {
-        await tx.run(`UPDATE merchant_rules SET category_id = ? WHERE category_id = ? AND match_type = 'exact' AND pattern IN (${keyMarks})`, [toId, fromId, ...keys]);
+        await tx.run(
+          `UPDATE merchant_rules SET category_id = ? WHERE category_id = ? AND match_type = 'exact' AND pattern IN (${keyMarks})`,
+          [toId, fromId, ...keys],
+        );
       }
     }
   });
@@ -248,44 +298,67 @@ export async function incrementCategoryUsage(categoryId: number, by = 1, db?: Db
   await db.run(
     `INSERT INTO category_usage (category_id, usage_count) VALUES (?, ?)
       ON CONFLICT(category_id) DO UPDATE SET usage_count = usage_count + excluded.usage_count`,
-    [categoryId, by]);
+    [categoryId, by],
+  );
 }
 
 /** How many times each category was chosen (category id → count). */
 export async function categoryUsageCounts(): Promise<Map<number, number>> {
   const db = await getDb();
-  const rows = await db.all<{ category_id: number; usage_count: number }>('SELECT category_id, usage_count FROM category_usage');
+  const rows = await db.all<{ category_id: number; usage_count: number }>(
+    'SELECT category_id, usage_count FROM category_usage',
+  );
   return new Map(rows.map((r) => [r.category_id, r.usage_count]));
 }
 
 /** Most used live categories first. */
 export async function topCategories(limit = 3): Promise<Array<Category & { usage_count: number }>> {
   const db = await getDb();
-  return db.all(`SELECT ${COLUMNS}, coalesce(u.usage_count, 0) AS usage_count
+  return db.all(
+    `SELECT ${COLUMNS}, coalesce(u.usage_count, 0) AS usage_count
     ${FROM}
     LEFT JOIN category_usage u ON u.category_id = c.id
     WHERE c.deleted_at IS NULL
     ORDER BY usage_count DESC, c.sort_order ASC, c.name ASC
-    LIMIT ?`, [limit]);
+    LIMIT ?`,
+    [limit],
+  );
 }
 
 export default {
-  listCategories, getCategory, findCategoryByName, createCategory, updateCategory, deleteCategory,
-  currentTransactionsOfCategory, countPastTransactionsOfCategory, moveTransactionsOutOfCategory, incrementCategoryUsage, topCategories,
-  isTransferCategory, categoryLabel, txCategoryLabel,
+  listCategories,
+  getCategory,
+  findCategoryByName,
+  createCategory,
+  updateCategory,
+  deleteCategory,
+  currentTransactionsOfCategory,
+  countPastTransactionsOfCategory,
+  moveTransactionsOutOfCategory,
+  incrementCategoryUsage,
+  topCategories,
+  isTransferCategory,
+  categoryLabel,
+  txCategoryLabel,
 };
 
 /**
  * A category's operations count and what was spent in it, per currency: purchases, payments, transfers, cash
  * withdrawals minus refunds not settled on a purchase and deposits (money back), like the stats; split ones by their part.
  */
-export async function categorySummary(categoryId: number): Promise<{ count: number; totals: Array<{ currency: string; amount_minor: number }> }> {
+export async function categorySummary(
+  categoryId: number,
+): Promise<{ count: number; totals: Array<{ currency: string; amount_minor: number }> }> {
   const db = await getDb();
-  const count = (await db.get<{ n: number }>('SELECT count(*) AS n FROM spend_parts WHERE category_id = ?', [categoryId]))!.n;
+  const count = (await db.get<{ n: number }>('SELECT count(*) AS n FROM spend_parts WHERE category_id = ?', [
+    categoryId,
+  ]))!.n;
   const totals = await db.all<{ currency: string; amount_minor: number }>(
     `SELECT currency, sum(${signedSpendSql()}) AS amount_minor FROM spend_parts
       WHERE category_id = ? AND ${categorySpendingSql()}
       GROUP BY currency HAVING sum(${signedSpendSql()}) != 0
-      ORDER BY amount_minor DESC`, [categoryId]);
+      ORDER BY amount_minor DESC`,
+    [categoryId],
+  );
   return { count, totals };
 }

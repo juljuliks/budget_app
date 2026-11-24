@@ -23,7 +23,9 @@ export default function StepsNav({ at, count, name, onBack, style }: Props) {
         <Text style={styles.stepOf}>{`Шаг ${at + 1} из ${count} · ${name}`}</Text>
       </View>
       <View style={styles.progress}>
-        {Array.from({ length: count }, (_, i) => <View key={i} style={[styles.dash, i <= at && styles.dashOn]} />)}
+        {Array.from({ length: count }, (_, i) => (
+          <View key={i} style={[styles.dash, i <= at && styles.dashOn]} />
+        ))}
       </View>
     </View>
   );

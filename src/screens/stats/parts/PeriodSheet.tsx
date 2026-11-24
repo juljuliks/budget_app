@@ -22,13 +22,25 @@ export default function PeriodSheet({ visible, kind, onPick, onClose }: Props) {
   return (
     <BottomSheet visible={visible} onClose={onClose} title="Период">
       {PERIODS.map(([k, label]) => (
-        <TouchableOpacity key={k} style={styles.menuItem} onPress={() => onPick(k)} accessibilityState={{ selected: k === kind }}>
+        <TouchableOpacity
+          key={k}
+          style={styles.menuItem}
+          onPress={() => onPick(k)}
+          accessibilityState={{ selected: k === kind }}
+        >
           <Text style={[styles.menuText, k === kind && styles.menuSelected]}>{label}</Text>
           {k === kind ? <Text style={styles.menuCheck}>✓</Text> : null}
         </TouchableOpacity>
       ))}
       {/* plan and spending by months: not a period of these stats, a page of its own */}
-      <TouchableOpacity style={styles.menuItem} onPress={() => { onClose(); openHistory(); }} accessibilityRole="button">
+      <TouchableOpacity
+        style={styles.menuItem}
+        onPress={() => {
+          onClose();
+          openHistory();
+        }}
+        accessibilityRole="button"
+      >
         <Text style={styles.menuText}>История по месяцам ›</Text>
       </TouchableOpacity>
     </BottomSheet>
@@ -37,8 +49,12 @@ export default function PeriodSheet({ visible, kind, onPick, onClose }: Props) {
 
 const styles = StyleSheet.create({
   menuItem: {
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16,
-    borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
   },
   menuText: { flex: 1, fontSize: 16, color: colors.text },
   menuSelected: { color: colors.accent, fontWeight: '600' },

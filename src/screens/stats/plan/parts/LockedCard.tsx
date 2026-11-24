@@ -12,13 +12,28 @@ import { RING_LOCKED } from './palette';
  * «🔒 Отложить сразу» in the budget sheet: no field — the % is set in the settings. «15% · 300 $»; taken this month
  * («копилкам не хватило свободного −35 $»); not set — a yellow warning.
  */
-export default function LockedCard({ l, currency, onSettings }: { l: LockedOfForm; currency: Currency; onSettings: () => void }) {
+export default function LockedCard({
+  l,
+  currency,
+  onSettings,
+}: {
+  l: LockedOfForm;
+  currency: Currency;
+  onSettings: () => void;
+}) {
   const money = (v: number) => formatWithCurrency(v, currency);
   if (l.kind === 'none') {
     return (
       <View style={[styles.card, styles.warn]} accessibilityRole="alert">
-        <Text style={styles.warnText}>⚠ Не задано, сколько откладывать сразу: в сбережения уйдёт только то, что останется в конце месяца.</Text>
-        <TextLink label="Задать в Настройках" onPress={onSettings} style={styles.link} containerStyle={styles.linkBox} />
+        <Text style={styles.warnText}>
+          ⚠ Не задано, сколько откладывать сразу: в сбережения уйдёт только то, что останется в конце месяца.
+        </Text>
+        <TextLink
+          label="Задать в Настройках"
+          onPress={onSettings}
+          style={styles.link}
+          containerStyle={styles.linkBox}
+        />
       </View>
     );
   }
@@ -28,13 +43,20 @@ export default function LockedCard({ l, currency, onSettings }: { l: LockedOfFor
       <View style={styles.head}>
         <LockIcon color={RING_LOCKED} size={14} />
         <Text style={styles.title}>ОТЛОЖИТЬ СРАЗУ</Text>
-        <Text style={styles.value}>{l.kind === 'pct' && !taken ? `${l.pct}% · ${money(l.locked)}` : money(l.locked)}</Text>
+        <Text style={styles.value}>
+          {l.kind === 'pct' && !taken ? `${l.pct}% · ${money(l.locked)}` : money(l.locked)}
+        </Text>
       </View>
       {taken ? (
         <>
-          <View style={styles.line}><Text style={styles.muted}>{`${taken.pct}% бюджета`}</Text><Text style={styles.muted}>{money(taken.full)}</Text></View>
           <View style={styles.line}>
-            <Text style={styles.muted}>{taken.funds ? 'копилкам не хватило свободного' : 'плану не хватило свободного'}</Text>
+            <Text style={styles.muted}>{`${taken.pct}% бюджета`}</Text>
+            <Text style={styles.muted}>{money(taken.full)}</Text>
+          </View>
+          <View style={styles.line}>
+            <Text style={styles.muted}>
+              {taken.funds ? 'копилкам не хватило свободного' : 'плану не хватило свободного'}
+            </Text>
             <Text style={styles.muted}>{`−${money(Math.min(taken.taken, taken.full))}`}</Text>
           </View>
           <Text style={styles.note}>Только в этом месяце: процент в Настройках не меняется.</Text>
@@ -43,7 +65,12 @@ export default function LockedCard({ l, currency, onSettings }: { l: LockedOfFor
       ) : (
         <>
           <Text style={styles.note}>Сразу в сбережения: план и траты вне плана их не займут.</Text>
-          <TextLink label="Процент — в Настройках" onPress={onSettings} style={styles.link} containerStyle={styles.linkBox} />
+          <TextLink
+            label="Процент — в Настройках"
+            onPress={onSettings}
+            style={styles.link}
+            containerStyle={styles.linkBox}
+          />
         </>
       )}
     </View>

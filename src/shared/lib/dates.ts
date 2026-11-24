@@ -1,16 +1,68 @@
 // The calendar words, one copy each: the months in the cases the texts need, the weekdays, the rhythms' lengths.
 
 /** «Январь 2026»: a month's title */
-export const MONTHS = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+export const MONTHS = [
+  'Январь',
+  'Февраль',
+  'Март',
+  'Апрель',
+  'Май',
+  'Июнь',
+  'Июль',
+  'Август',
+  'Сентябрь',
+  'Октябрь',
+  'Ноябрь',
+  'Декабрь',
+];
 /** «отчёт за январь» */
 export const MONTHS_NOM = MONTHS.map((m) => m.toLowerCase());
 /** «15 января» */
-export const MONTHS_GEN = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+export const MONTHS_GEN = [
+  'января',
+  'февраля',
+  'марта',
+  'апреля',
+  'мая',
+  'июня',
+  'июля',
+  'августа',
+  'сентября',
+  'октября',
+  'ноября',
+  'декабря',
+];
 /** «в январе» */
 /** «к июню 2027»: by when */
-export const MONTHS_DAT = ['январю', 'февралю', 'марту', 'апрелю', 'маю', 'июню', 'июлю', 'августу', 'сентябрю', 'октябрю', 'ноябрю', 'декабрю'];
+export const MONTHS_DAT = [
+  'январю',
+  'февралю',
+  'марту',
+  'апрелю',
+  'маю',
+  'июню',
+  'июлю',
+  'августу',
+  'сентябрю',
+  'октябрю',
+  'ноябрю',
+  'декабрю',
+];
 
-export const MONTHS_PREP = ['январе', 'феврале', 'марте', 'апреле', 'мае', 'июне', 'июле', 'августе', 'сентябре', 'октябре', 'ноябре', 'декабре'];
+export const MONTHS_PREP = [
+  'январе',
+  'феврале',
+  'марте',
+  'апреле',
+  'мае',
+  'июне',
+  'июле',
+  'августе',
+  'сентябре',
+  'октябре',
+  'ноябре',
+  'декабре',
+];
 /** «15 янв» */
 export const SHORT_MONTHS = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
 /** by `Date.getDay()`: «до пт» */
@@ -38,10 +90,14 @@ export function dayTitle(key: string): string {
 const parts = (day: string) => day.split('-').map(Number);
 
 /** "18 октября". */
-export const longDay = (day: string) => { const [, m, d] = parts(day); return `${d} ${MONTHS_GEN[m - 1]}`; };
+export const longDay = (day: string) => {
+  const [, m, d] = parts(day);
+  return `${d} ${MONTHS_GEN[m - 1]}`;
+};
 
 /** "18 октября"; another year — "18 октября 2027". */
-export const longDayYear = (day: string, now = new Date()) => `${longDay(day)}${parts(day)[0] === now.getFullYear() ? '' : ` ${parts(day)[0]}`}`;
+export const longDayYear = (day: string, now = new Date()) =>
+  `${longDay(day)}${parts(day)[0] === now.getFullYear() ? '' : ` ${parts(day)[0]}`}`;
 
 /** "в октябре" of 'YYYY-MM'. */
 export const inMonth = (ym: string) => `в ${MONTHS_PREP[Number(ym.slice(5)) - 1]}`;

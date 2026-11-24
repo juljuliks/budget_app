@@ -23,7 +23,12 @@ export function notifyFundsLate(): Promise<void> {
         await notifee.displayNotification({
           id: `fund_late_${f.category_id}`,
           ...fundLateNotice(c ? categoryLabel(c) : 'Копилка', f, hide),
-          android: { channelId: REPORTS_CHANNEL_ID, smallIcon: 'ic_notification', importance: AndroidImportance.DEFAULT, pressAction: { id: FUND_ACTION, launchActivity: 'default' } },
+          android: {
+            channelId: REPORTS_CHANNEL_ID,
+            smallIcon: 'ic_notification',
+            importance: AndroidImportance.DEFAULT,
+            pressAction: { id: FUND_ACTION, launchActivity: 'default' },
+          },
           data: { categoryId: String(f.category_id) },
         });
       }

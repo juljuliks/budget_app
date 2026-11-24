@@ -41,7 +41,12 @@ export function wordsOf(body: string): Word[] {
   for (const w of raw) {
     const prev = joined[joined.length - 1];
     // "2" "843.17": one number, if only a space is between them
-    if (prev && /^\d{1,3}(?: \d{3})*$/.test(prev.text) && /^\d{3}(?:[.,]\d{1,2})?$/.test(w.text) && body.slice(prev.end, w.start) === ' ') {
+    if (
+      prev &&
+      /^\d{1,3}(?: \d{3})*$/.test(prev.text) &&
+      /^\d{3}(?:[.,]\d{1,2})?$/.test(w.text) &&
+      body.slice(prev.end, w.start) === ' '
+    ) {
       joined[joined.length - 1] = { text: `${prev.text} ${w.text}`, start: prev.start, end: w.end };
     } else joined.push(w);
   }
@@ -67,7 +72,9 @@ type Span = { start: number; end: number; group: string; slots: Slot[] };
 /** The marked words (index in wordsOf → role) as places of the pattern; next words of one merchant / date: one place. */
 function spans(body: string, words: Word[], marks: Record<number, Role>): Span[] {
   const out: Span[] = [];
-  const byStart = Object.keys(marks).map(Number).sort((a, b) => words[a].start - words[b].start);
+  const byStart = Object.keys(marks)
+    .map(Number)
+    .sort((a, b) => words[a].start - words[b].start);
   for (let k = 0; k < byStart.length; k++) {
     const w = words[byStart[k]];
     const role = marks[byStart[k]];
@@ -76,7 +83,12 @@ function spans(body: string, words: Word[], marks: Record<number, Role>): Span[]
       const cur: Slot = role === 'amount' ? 'currency' : 'balanceCurrency';
       if (inWord) {
         // the currency in the same word: taken from it (marked or not)
-        out.push({ start: w.start, end: w.end, group: inWord[1] ? `(${NUMBER})\\s*(${CURRENCY})` : `(${CURRENCY})\\s*(${NUMBER})`, slots: inWord[1] ? [role, cur] : [cur, role] });
+        out.push({
+          start: w.start,
+          end: w.end,
+          group: inWord[1] ? `(${NUMBER})\\s*(${CURRENCY})` : `(${CURRENCY})\\s*(${NUMBER})`,
+          slots: inWord[1] ? [role, cur] : [cur, role],
+        });
         continue;
       }
       out.push({ start: w.start, end: w.end, group: `(${NUMBER})`, slots: [role] });
@@ -94,8 +106,12 @@ function spans(body: string, words: Word[], marks: Record<number, Role>): Span[]
     }
     // a merchant / a date: words that follow each other in the text make one place
     let j = k;
-    while (j + 1 < byStart.length && marks[byStart[j + 1]] === role
-      && /^[\s,.;:·*-]*$/.test(body.slice(words[byStart[j]].end, words[byStart[j + 1]].start))) j++;
+    while (
+      j + 1 < byStart.length &&
+      marks[byStart[j + 1]] === role &&
+      /^[\s,.;:·*-]*$/.test(body.slice(words[byStart[j]].end, words[byStart[j + 1]].start))
+    )
+      j++;
     out.push({ start: w.start, end: words[byStart[j]].end, group: '([\\s\\S]+?)', slots: [role] });
     k = j;
   }
@@ -122,7 +138,9 @@ export function matchTemplate(spec: TemplateSpec, body: string): Partial<Record<
   const m = new RegExp(spec.pattern, 'i').exec(body);
   if (!m) return null;
   const out: Partial<Record<Slot, string>> = {};
-  spec.slots.forEach((slot, i) => { out[slot] = m[i + 1]; });
+  spec.slots.forEach((slot, i) => {
+    out[slot] = m[i + 1];
+  });
   return out;
 }
 
@@ -149,8 +167,12 @@ export function parseDate(text: string): { iso: string; hasTime: boolean } | nul
   return { iso: `${year}-${p(month)}-${p(day)}T${p(hour)}:${p(minute)}:00`, hasTime: !!t };
 }
 
-const currencyOf = (s: string | undefined) => (s ? CURRENCY_CODES[s] ?? s.toUpperCase() : 'GEL');
-const cleanMerchant = (s: string | undefined) => (s ?? '').replace(/\s+/g, ' ').replace(/[,.;:]+$/, '').trim();
+const currencyOf = (s: string | undefined) => (s ? (CURRENCY_CODES[s] ?? s.toUpperCase()) : 'GEL');
+const cleanMerchant = (s: string | undefined) =>
+  (s ?? '')
+    .replace(/\s+/g, ' ')
+    .replace(/[,.;:]+$/, '')
+    .trim();
 
 /** The operation a message gives by an operation template (null: not like it, or no amount in it). */
 export function readByTemplate(spec: TemplateSpec, kind: Kind, body: string): ParsedTx | null {

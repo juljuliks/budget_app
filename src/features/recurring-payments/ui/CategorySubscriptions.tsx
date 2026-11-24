@@ -11,7 +11,7 @@ import { periodText, shortDay } from '../texts';
 import SubRow from './SubRow';
 import PaymentSheet from './PaymentSheet';
 
-const monthsOf = (p: number) => p > 0 ? p : p < 0 ? (-p * 12) / 52 : null;
+const monthsOf = (p: number) => (p > 0 ? p : p < 0 ? (-p * 12) / 52 : null);
 
 function subAmountNote(amount_minor: number, currency: string, period: number): string | null {
   const months = monthsOf(period);
@@ -34,18 +34,28 @@ export default function CategorySubscriptions({ category }: { category: PaymentC
   return (
     <View>
       {data.subs.length ? <SectionBand title="Активные" /> : null}
-      {data.subs.length ? data.subs.map(({ sub, next }) => (
-        <SubRow
-          key={sub.id}
-          name={sub.name}
-          merchantKey={sub.merchant_key}
-          note={{ prefix: periodText(sub.period), text: next ? `следующее ${shortDay(next)}` : 'Задать дату', warn: !next }}
-          amount={formatWithCurrency(sub.amount_minor, sub.currency)}
-          amountNote={subAmountNote(sub.amount_minor, sub.currency, sub.period) ?? undefined}
-          onPress={() => setOpen(targetOf(sub))}
-          accessibilityLabel={`${w.One}: ${sub.name}`}
-        />
-      )) : <Text style={formStyles.hint}>{data.merchants.length ? `Пока ${w.none}: сделайте подпиской мерчанта ниже.` : `Пока ${w.none}.`}</Text>}
+      {data.subs.length ? (
+        data.subs.map(({ sub, next }) => (
+          <SubRow
+            key={sub.id}
+            name={sub.name}
+            merchantKey={sub.merchant_key}
+            note={{
+              prefix: periodText(sub.period),
+              text: next ? `следующее ${shortDay(next)}` : 'Задать дату',
+              warn: !next,
+            }}
+            amount={formatWithCurrency(sub.amount_minor, sub.currency)}
+            amountNote={subAmountNote(sub.amount_minor, sub.currency, sub.period) ?? undefined}
+            onPress={() => setOpen(targetOf(sub))}
+            accessibilityLabel={`${w.One}: ${sub.name}`}
+          />
+        ))
+      ) : (
+        <Text style={formStyles.hint}>
+          {data.merchants.length ? `Пока ${w.none}: сделайте подпиской мерчанта ниже.` : `Пока ${w.none}.`}
+        </Text>
+      )}
       {data.merchants.length ? <SectionBand title="Мерчанты без подписки" /> : null}
       {data.merchants.map((m) => (
         <SubRow
@@ -54,7 +64,18 @@ export default function CategorySubscriptions({ category }: { category: PaymentC
           merchantKey={m.merchant_key}
           note={{ prefix: `последняя ${shortDay(m.day)}`, text: 'Сделать подпиской', warn: true }}
           amount={formatWithCurrency(m.amount_minor, m.currency)}
-          onPress={() => setOpen({ category, merchant_key: m.merchant_key, name: m.name, amount_minor: m.amount_minor, currency: m.currency, period: 1, due: null, last_day: m.day })}
+          onPress={() =>
+            setOpen({
+              category,
+              merchant_key: m.merchant_key,
+              name: m.name,
+              amount_minor: m.amount_minor,
+              currency: m.currency,
+              period: 1,
+              due: null,
+              last_day: m.day,
+            })
+          }
           accessibilityLabel={`${w.One}: ${m.name}`}
         />
       ))}

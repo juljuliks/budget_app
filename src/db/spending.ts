@@ -12,7 +12,8 @@ export const EXPENSE_KINDS = ['purchase', 'payment', 'withdrawal', 'transfer'] a
 const col = (alias?: string) => (alias ? `${alias}.` : '');
 
 /** A refund that counts by itself: not settled on its purchase. */
-export const unsettledRefundSql = (alias?: string) => `(${col(alias)}kind = 'refund' AND ${col(alias)}refund_settled_at IS NULL)`;
+export const unsettledRefundSql = (alias?: string) =>
+  `(${col(alias)}kind = 'refund' AND ${col(alias)}refund_settled_at IS NULL)`;
 
 /** An operation's amount as spending: refunds and deposits subtract. */
 export const signedSpendSql = (alias?: string) =>

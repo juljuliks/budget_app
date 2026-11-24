@@ -14,9 +14,13 @@ export function freshMonth(now: Date): { ym: string; daysLeft: number } | null {
   const d = now.getDate();
   if (d >= freshFrom(now)) {
     const end = new Date(now.getFullYear(), now.getMonth() + 1, FRESH_TO_DAY);
-    return { ym: ymOfDate(now), daysLeft: Math.round((end.getTime() - new Date(now.getFullYear(), now.getMonth(), d).getTime()) / 86400000) };
+    return {
+      ym: ymOfDate(now),
+      daysLeft: Math.round((end.getTime() - new Date(now.getFullYear(), now.getMonth(), d).getTime()) / 86400000),
+    };
   }
-  if (d <= FRESH_TO_DAY) return { ym: ymOfDate(new Date(now.getFullYear(), now.getMonth() - 1, 1)), daysLeft: FRESH_TO_DAY - d };
+  if (d <= FRESH_TO_DAY)
+    return { ym: ymOfDate(new Date(now.getFullYear(), now.getMonth() - 1, 1)), daysLeft: FRESH_TO_DAY - d };
   return null;
 }
 

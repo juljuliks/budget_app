@@ -17,6 +17,9 @@ export function openYear(year: number) {
     // from a page over the tabs («История по месяцам»): back puts it back
     const pages = navigationRef.isReady() && (navigationRef.getRootState()?.routes.length ?? 1) > 1;
     if (pages) rememberPages();
-    navigateWhenReady({ name: 'Main', params: { screen: 'Stats', params: { year, nonce: Date.now(), from: pages ? 'pages' : undefined } } } as never);
+    navigateWhenReady({
+      name: 'Main',
+      params: { screen: 'Stats', params: { year, nonce: Date.now(), from: pages ? 'pages' : undefined } },
+    } as never);
   }
 }

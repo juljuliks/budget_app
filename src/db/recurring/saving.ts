@@ -35,7 +35,12 @@ export type Saving = {
   until: string | null;
 };
 
-export type SavingLedger = { saving: Saving; months: SavingMonth[]; balance: number; byTx: Map<number, { before: number; after: number }> };
+export type SavingLedger = {
+  saving: Saving;
+  months: SavingMonth[];
+  balance: number;
+  byTx: Map<number, { before: number; after: number }>;
+};
 
 type Row = Omit<Saving, 'currency'> & { currency: string };
 const COLUMNS = `v.id, v.payment_id, v.since_ym, v.start_minor, v.closed_ym, v.released_minor, v.created_at,
@@ -45,50 +50,107 @@ const asSaving = (r: Row): Saving => ({ ...r, currency: asCurrency(r.currency) }
 /** The savings that count in `ym`: started by then, not closed before it (one closed in it gives back what it had). */
 export async function savingsIn(ym: string, db?: Db): Promise<Saving[]> {
   db ??= await getDb();
-  return (await db.all<Row>(
-    `SELECT ${COLUMNS} FROM payment_savings v JOIN recurring_payments s ON s.id = v.payment_id
-      WHERE v.since_ym <= ? AND (v.closed_ym IS NULL OR v.closed_ym >= ?)`, [ym, ym])).map(asSaving);
+  return (
+    await db.all<Row>(
+      `SELECT ${COLUMNS} FROM payment_savings v JOIN recurring_payments s ON s.id = v.payment_id
+      WHERE v.since_ym <= ? AND (v.closed_ym IS NULL OR v.closed_ym >= ?)`,
+      [ym, ym],
+    )
+  ).map(asSaving);
 }
 
 /** Every saving ever (closed ones too): the history counts their months. */
 export async function allSavings(): Promise<Saving[]> {
-  return (await (await getDb()).all<Row>(`SELECT ${COLUMNS} FROM payment_savings v JOIN recurring_payments s ON s.id = v.payment_id`)).map(asSaving);
+  return (
+    await (
+      await getDb()
+    ).all<Row>(`SELECT ${COLUMNS} FROM payment_savings v JOIN recurring_payments s ON s.id = v.payment_id`)
+  ).map(asSaving);
 }
 
 /** The repeating payment's saving now (not turned off), or null. */
 export async function openSaving(subId: number, db?: Db): Promise<Saving | null> {
   db ??= await getDb();
-  const r = await db.get<Row>(`SELECT ${COLUMNS} FROM payment_savings v JOIN recurring_payments s ON s.id = v.payment_id WHERE v.payment_id = ? AND v.closed_ym IS NULL`, [subId]);
+  const r = await db.get<Row>(
+    `SELECT ${COLUMNS} FROM payment_savings v JOIN recurring_payments s ON s.id = v.payment_id WHERE v.payment_id = ? AND v.closed_ym IS NULL`,
+    [subId],
+  );
   return r ? asSaving(r) : null;
 }
 
 /** The saving month by month up to `until` (a closed one: the month before it was closed). */
-export async function savingLedger(v: Saving, until = currentYm(), nowYm = currentYm(), db?: Db): Promise<SavingLedger> {
+export async function savingLedger(
+  v: Saving,
+  until = currentYm(),
+  nowYm = currentYm(),
+  db?: Db,
+): Promise<SavingLedger> {
   db ??= await getDb();
   const last = v.closed_ym && v.closed_ym <= until ? ymBefore(v.closed_ym) : until;
   if (last < v.since_ym) return { saving: v, months: [], balance: v.start_minor, byTx: new Map() };
-  const stored = new Map((await db.all<{ ym: string; minor: number }>(
-    'SELECT ym, minor FROM payment_contributions WHERE saving_id = ? AND ym <= ?', [v.id, last])).map((r) => [r.ym, r.minor]));
-  const planned = new Set((await db.all<{ ym: string }>(
-    'SELECT ym FROM plan_months WHERE ym >= ? AND ym <= ?', [v.since_ym, last])).map((r) => r.ym));
+  const stored = new Map(
+    (
+      await db.all<{ ym: string; minor: number }>(
+        'SELECT ym, minor FROM payment_contributions WHERE saving_id = ? AND ym <= ?',
+        [v.id, last],
+      )
+    ).map((r) => [r.ym, r.minor]),
+  );
+  const planned = new Set(
+    (await db.all<{ ym: string }>('SELECT ym FROM plan_months WHERE ym >= ? AND ym <= ?', [v.since_ym, last])).map(
+      (r) => r.ym,
+    ),
+  );
   const { year, month } = parseYm(last);
   // the category's own payment: any spending of its category
-  const rows = v.category_id === null ? [] : await db.all<{ id: number; category_id: number | null; kind: string; amount_minor: number; currency: string; occurred_at: number; refund_settled_at: number | null }>(
-    `SELECT id, category_id, kind, amount_minor, currency, occurred_at, refund_settled_at FROM spend_parts
+  const rows =
+    v.category_id === null
+      ? []
+      : await db.all<{
+          id: number;
+          category_id: number | null;
+          kind: string;
+          amount_minor: number;
+          currency: string;
+          occurred_at: number;
+          refund_settled_at: number | null;
+        }>(
+          `SELECT id, category_id, kind, amount_minor, currency, occurred_at, refund_settled_at FROM spend_parts
       WHERE (merchant_key = ? OR ? IS NULL) AND category_id = ? AND occurred_at >= ? AND occurred_at < ?
-      ORDER BY occurred_at, id`, [v.merchant_key, v.merchant_key, v.category_id, Math.max(monthStart(v.since_ym), v.created_at), monthRange(year, month)[1]]);
+      ORDER BY occurred_at, id`,
+          [
+            v.merchant_key,
+            v.merchant_key,
+            v.category_id,
+            Math.max(monthStart(v.since_ym), v.created_at),
+            monthRange(year, month)[1],
+          ],
+        );
   const { items } = await convertSpending(rows, v.currency);
   const ops = (await paymentDays([v], db))(v);
   const r = savingMonths({
-    since: v.since_ym, last, nowYm, start: v.start_minor, amount: v.amount_minor, planned: (ym) => planned.has(ym), stored,
-    dueOf: (ym) => (v.due ? savingFor(v.due, v.period, ym, ops, v.created_at ? dayOfUnix(v.created_at) : '', v.until) : null),
+    since: v.since_ym,
+    last,
+    nowYm,
+    start: v.start_minor,
+    amount: v.amount_minor,
+    planned: (ym) => planned.has(ym),
+    stored,
+    dueOf: (ym) =>
+      v.due ? savingFor(v.due, v.period, ym, ops, v.created_at ? dayOfUnix(v.created_at) : '', v.until) : null,
     spends: items.map(({ row, value }) => ({ id: row.id, at: row.occurred_at, value })),
   });
   return { saving: v, ...r };
 }
 
 /** A saving's effect on "Подписки" in a month, in its currency: + the contribution, − what the saved money paid, − what it gave back. */
-export type SavingEffect = { saving: Saving; month: SavingMonth | null; released: number; minor: number; currency: Currency };
+export type SavingEffect = {
+  saving: Saving;
+  month: SavingMonth | null;
+  released: number;
+  minor: number;
+  currency: Currency;
+};
 
 /** The month's savings and what each changes the spending of "Подписки" by. */
 export async function savingEffects(ym: string, nowYm = currentYm(), db?: Db): Promise<SavingEffect[]> {
@@ -96,7 +158,7 @@ export async function savingEffects(ym: string, nowYm = currentYm(), db?: Db): P
   const out: SavingEffect[] = [];
   for (const v of await savingsIn(ym, db)) {
     const month = (await savingLedger(v, ym, nowYm, db)).months.find((m) => m.ym === ym) ?? null;
-    const released = v.closed_ym === ym ? v.released_minor ?? 0 : 0;
+    const released = v.closed_ym === ym ? (v.released_minor ?? 0) : 0;
     const minor = (month ? month.contribution - (month.spent - month.shortage) : 0) - released;
     out.push({ saving: v, month, released, minor, currency: v.currency });
   }
@@ -104,7 +166,10 @@ export async function savingEffects(ym: string, nowYm = currentYm(), db?: Db): P
 }
 
 /** What the month's savings change their categories' spending by, converted by `toShown` (no saving: one look). */
-export async function savingSpend(ym: string, toShown: (minor: number, from: Currency) => number): Promise<Map<number, number>> {
+export async function savingSpend(
+  ym: string,
+  toShown: (minor: number, from: Currency) => number,
+): Promise<Map<number, number>> {
   const out = new Map<number, number>();
   for (const e of await savingEffects(ym, currentYm())) {
     if (e.minor === 0 || e.saving.category_id === null) continue;
@@ -117,15 +182,22 @@ export async function savingSpend(ym: string, toShown: (minor: number, from: Cur
  * An operation of a repeating payment saved up for, paid from what was saved: what the saving had before it and after, and
  * the repeating payment's name; null — not paid from a saving.
  */
-export async function savingOfTransaction(txId: number, merchantKey: string | null, occurredAt: number):
-  Promise<{ before: number; after: number; currency: Currency; name: string } | null> {
+export async function savingOfTransaction(
+  txId: number,
+  merchantKey: string | null,
+  occurredAt: number,
+): Promise<{ before: number; after: number; currency: Currency; name: string } | null> {
   if (!merchantKey) return null;
   const db = await getDb();
   const d = new Date(occurredAt * 1000);
   const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-  const rows = (await db.all<Row>(
-    `SELECT ${COLUMNS} FROM payment_savings v JOIN recurring_payments s ON s.id = v.payment_id
-      WHERE s.merchant_key = ? AND v.since_ym <= ? AND (v.closed_ym IS NULL OR v.closed_ym > ?)`, [merchantKey, ym, ym])).map(asSaving);
+  const rows = (
+    await db.all<Row>(
+      `SELECT ${COLUMNS} FROM payment_savings v JOIN recurring_payments s ON s.id = v.payment_id
+      WHERE s.merchant_key = ? AND v.since_ym <= ? AND (v.closed_ym IS NULL OR v.closed_ym > ?)`,
+      [merchantKey, ym, ym],
+    )
+  ).map(asSaving);
   for (const v of rows) {
     const at = (await savingLedger(v, ym, currentYm(), db)).byTx.get(txId);
     if (at) return { ...at, currency: v.currency, name: v.name };
@@ -141,6 +213,7 @@ export async function storeContributions(ym: string, nowYm = currentYm(), db?: D
     if (!e.month) continue;
     await db.run(
       'INSERT INTO payment_contributions (saving_id, ym, minor) VALUES (?, ?, ?) ON CONFLICT (saving_id, ym) DO UPDATE SET minor = excluded.minor',
-      [e.saving.id, ym, e.month.contribution]);
+      [e.saving.id, ym, e.month.contribution],
+    );
   }
 }

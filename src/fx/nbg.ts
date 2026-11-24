@@ -23,7 +23,10 @@ export function setRatesFetcher(f: Fetcher) {
  * A day's lari per unit of these currencies, as the bank gives them (bad rates left out). None when the bank answers
  * with another day's rates (today's not published yet): they would be kept as this day's for good.
  */
-export async function fetchRates(date: string, codes: readonly string[]): Promise<Array<{ code: string; gelPerUnit: number }>> {
+export async function fetchRates(
+  date: string,
+  codes: readonly string[],
+): Promise<Array<{ code: string; gelPerUnit: number }>> {
   const query = codes.map((c) => `currencies=${c}`).join('&');
   const days = (await withTimeout(fetcher(`${NBG_URL}?${query}&date=${date}`), RATES_TIMEOUT_MS)) as NbgDay;
   const answered = days?.[0]?.date?.slice(0, 10);
@@ -35,6 +38,8 @@ export async function fetchRates(date: string, codes: readonly string[]): Promis
 
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
-  const timeout = new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error('rates timeout')), ms); });
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error('rates timeout')), ms);
+  });
   return Promise.race([p, timeout]).finally(() => clearTimeout(timer));
 }

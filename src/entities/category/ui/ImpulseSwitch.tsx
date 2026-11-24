@@ -21,13 +21,27 @@ export default function ImpulseSwitch({ categoryId }: { categoryId: number }) {
       })
       .catch((e) => console.error('load category failed', e));
   }, [categoryId]);
-  useEffect(() => { load(); return onTransactionsChanged(load); }, [load]);
+  useEffect(() => {
+    load();
+    return onTransactionsChanged(load);
+  }, [load]);
   if (on === null) return null;
   const change = (v: boolean) => {
     setOn(v);
-    switchImpulse(categoryId, v).catch((e) => { setOn(!v); console.error('impulse switch failed', e); });
+    switchImpulse(categoryId, v).catch((e) => {
+      setOn(!v);
+      console.error('impulse switch failed', e);
+    });
   };
-  return <SwitchRow label={IMPULSE_SWITCH} hint={on ? IMPULSE_HINT_ON : IMPULSE_HINT_OFF} on={on} onChange={change} style={styles.row} />;
+  return (
+    <SwitchRow
+      label={IMPULSE_SWITCH}
+      hint={on ? IMPULSE_HINT_ON : IMPULSE_HINT_OFF}
+      on={on}
+      onChange={change}
+      style={styles.row}
+    />
+  );
 }
 
 const styles = StyleSheet.create({

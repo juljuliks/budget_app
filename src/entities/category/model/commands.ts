@@ -11,7 +11,7 @@ export type CategoryFields = { name: string; emoji: string; typeId: number | nul
  * on ("Регулярный платёж") and off.
  */
 export async function saveCategory(id: number | undefined, v: CategoryFields): Promise<number> {
-  const saved = id ?? await createCategory(v.name, v.emoji, v.typeId, v.color);
+  const saved = id ?? (await createCategory(v.name, v.emoji, v.typeId, v.color));
   if (id !== undefined) await updateCategory(id, { name: v.name, emoji: v.emoji, typeId: v.typeId, color: v.color });
   emitTransactionsChanged();
   return saved;
@@ -19,7 +19,7 @@ export async function saveCategory(id: number | undefined, v: CategoryFields): P
 
 /** Creates the section (no `id`) or renames it, with its palette; its id. */
 export async function saveCategoryType(id: number | undefined, name: string, palette: string): Promise<number> {
-  const saved = id ?? await createCategoryType(name);
+  const saved = id ?? (await createCategoryType(name));
   if (id !== undefined) await renameCategoryType(id, name);
   await setCategoryTypePalette(saved, palette);
   emitTransactionsChanged();

@@ -12,22 +12,27 @@ export type TabParamList = {
    * open filtered by a category ('none' = uncategorized), within a range (the stats month); nonce re-applies the same one.
    * from: the tab we came from (not via the tab bar) -> a back button in the header returns there.
    */
-  Transactions: {
-    category?: number | 'none'; range?: DayRange; kinds?: string[];
-    /** typed into the search field (a merchant's name from its card) */
-    query?: string;
-    nonce?: number;
-    /** a category being deleted: its operations of this month to sort out to other categories, then it goes */
-    sortOut?: number;
-    /** only purchases with no answer to "Обдуманная" / "Импульсивная" ("Отметить N покупок ›") */
-    unanswered?: boolean;
-    /** where back returns: a tab, or a page over them (the merchants, the categories) */
-    from?: BackTarget;
-  } | undefined;
+  Transactions:
+    | {
+        category?: number | 'none';
+        range?: DayRange;
+        kinds?: string[];
+        /** typed into the search field (a merchant's name from its card) */
+        query?: string;
+        nonce?: number;
+        /** a category being deleted: its operations of this month to sort out to other categories, then it goes */
+        sortOut?: number;
+        /** only purchases with no answer to "Обдуманная" / "Импульсивная" ("Отметить N покупок ›") */
+        unanswered?: boolean;
+        /** where back returns: a tab, or a page over them (the merchants, the categories) */
+        from?: BackTarget;
+      }
+    | undefined;
 };
 
 /** Where the operations opened from somewhere else return: a tab, a page over them, or `'pages'` — the pages a link left (showOperationsFrom). */
-export type BackTarget = keyof TabParamList | 'Merchants' | 'Categories' | 'Settings' | 'Banks' | 'Unparsed' | 'MessageTemplates' | 'pages';
+export type BackTarget =
+  keyof TabParamList | 'Merchants' | 'Categories' | 'Settings' | 'Banks' | 'Unparsed' | 'MessageTemplates' | 'pages';
 
 /** Screens pushed over the tab bar. */
 export type RootStackParamList = {
@@ -61,7 +66,6 @@ export type RootStackParamList = {
   CategoryTrend: { id: number };
 };
 
-
 export const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
 export function useRootNavigation() {
@@ -75,7 +79,13 @@ export function useRootNavigation() {
 export function useOpenCategoryTransactions() {
   const navigation = useNavigation<BottomTabNavigationProp<TabParamList>>();
   return (categoryId: number | null, range?: DayRange, kinds?: string[]) =>
-    navigation.navigate('Transactions', { category: categoryId ?? 'none', range, kinds, nonce: Date.now(), from: 'Stats' });
+    navigation.navigate('Transactions', {
+      category: categoryId ?? 'none',
+      range,
+      kinds,
+      nonce: Date.now(),
+      from: 'Stats',
+    });
 }
 
 type Route = { [K in keyof RootStackParamList]: { name: K; params: RootStackParamList[K] } }[keyof RootStackParamList];
@@ -86,7 +96,10 @@ let pending: { route: Route; push: boolean } | null = null;
 
 /** `push`: a page over the current one even if one like it is open (an operation from a merchant from an operation). */
 export function navigateWhenReady(route: Route, push = false) {
-  if (!navigationRef.isReady()) { pending = { route, push }; return; }
+  if (!navigationRef.isReady()) {
+    pending = { route, push };
+    return;
+  }
   if (push) navigationRef.dispatch(StackActions.push(route.name, route.params));
   // `as never`: TS can't narrow the name/params union against navigate's overloads
   else navigationRef.navigate(route as never);
@@ -116,10 +129,18 @@ const left: NavigationState[] = [];
  * "Показать все ›" / "N операций ›" of a merchant's or a category's page: the operations tab with its filter; back
  * from there (backToPages) puts the pages back as they were (the operation it was opened from under it too).
  */
-export function showOperationsFrom(filter: { category?: number; query?: string; range?: DayRange; unanswered?: boolean }) {
+export function showOperationsFrom(filter: {
+  category?: number;
+  query?: string;
+  range?: DayRange;
+  unanswered?: boolean;
+}) {
   rememberPages();
   // `as never`: a nested navigate the root types don't describe
-  navigationRef.navigate('Main', { screen: 'Transactions', params: { ...filter, nonce: Date.now(), from: 'pages' } } as never);
+  navigationRef.navigate('Main', {
+    screen: 'Transactions',
+    params: { ...filter, nonce: Date.now(), from: 'pages' },
+  } as never);
 }
 
 /** The pages over the tabs now, to put back on «назад» from a tab a page opened (backToPages). */

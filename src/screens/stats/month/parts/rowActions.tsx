@@ -19,17 +19,44 @@ export const ROW_MENU_HINT = 'Зажмите категорию — операц
  * A category's row's long press: its operations of the month, its amount in the plan ("В план" without one), its
  * «Динамика», its page («Категория»). "Без категории" and a deleted one — the operations only.
  */
-export function categoryActions(c: CategoryStat, open: { spending: () => void; plan: () => void; trend: () => void; category: () => void }): PressAction[] {
-  const spending: PressAction = { key: 'spending', label: ACTION_SPENDING, icon: (color) => <ListIcon color={color} />, onPress: open.spending };
+export function categoryActions(
+  c: CategoryStat,
+  open: { spending: () => void; plan: () => void; trend: () => void; category: () => void },
+): PressAction[] {
+  const spending: PressAction = {
+    key: 'spending',
+    label: ACTION_SPENDING,
+    icon: (color) => <ListIcon color={color} />,
+    onPress: open.spending,
+  };
   if (c.category_id === null || c.deleted) return [spending];
   return [
     spending,
     c.limit_minor === null
       ? { key: 'plan', label: ACTION_TO_PLAN, icon: (color) => <PlusIcon color={color} />, onPress: open.plan }
-      : { key: 'plan', label: ACTION_PLAN, icon: (color) => <PencilIcon color={color} size={22} />, onPress: open.plan },
-    { key: 'category', label: ACTION_CATEGORY, icon: (color) => <GearIcon color={color} size={22} />, onPress: open.category },
+      : {
+          key: 'plan',
+          label: ACTION_PLAN,
+          icon: (color) => <PencilIcon color={color} size={22} />,
+          onPress: open.plan,
+        },
+    {
+      key: 'category',
+      label: ACTION_CATEGORY,
+      icon: (color) => <GearIcon color={color} size={22} />,
+      onPress: open.category,
+    },
     // a transfer: not spending, no «Динамика»; four — a cross: «Операции» left, «План» up, «Категория» right, «Динамика» down
-    ...(c.transfer ? [] : [{ key: 'trend', label: ACTION_TREND, icon: (color: string) => <TrendsIcon color={color} />, onPress: open.trend }]),
+    ...(c.transfer
+      ? []
+      : [
+          {
+            key: 'trend',
+            label: ACTION_TREND,
+            icon: (color: string) => <TrendsIcon color={color} />,
+            onPress: open.trend,
+          },
+        ]),
   ];
 }
 
@@ -37,11 +64,31 @@ export function categoryActions(c: CategoryStat, open: { spending: () => void; p
  * A fund's long press (in «Сбережения» or «Копилки»): its operations of the month, its sheet («План»), its «Динамика»,
  * its category's page («Категория»).
  */
-export function fundActions(id: number, ym: string, openTransactions: OpenTransactions, openSheet: () => void): PressAction[] {
+export function fundActions(
+  id: number,
+  ym: string,
+  openTransactions: OpenTransactions,
+  openSheet: () => void,
+): PressAction[] {
   return [
-    { key: 'spending', label: ACTION_SPENDING, icon: (color) => <ListIcon color={color} />, onPress: () => openTransactions(id, monthDays(ym)) },
+    {
+      key: 'spending',
+      label: ACTION_SPENDING,
+      icon: (color) => <ListIcon color={color} />,
+      onPress: () => openTransactions(id, monthDays(ym)),
+    },
     { key: 'plan', label: ACTION_PLAN, icon: (color) => <PencilIcon color={color} size={22} />, onPress: openSheet },
-    { key: 'category', label: ACTION_CATEGORY, icon: (color) => <GearIcon color={color} size={22} />, onPress: () => openCategory(id) },
-    { key: 'trend', label: ACTION_TREND, icon: (color) => <TrendsIcon color={color} />, onPress: () => openCategoryTrend(id) },
+    {
+      key: 'category',
+      label: ACTION_CATEGORY,
+      icon: (color) => <GearIcon color={color} size={22} />,
+      onPress: () => openCategory(id),
+    },
+    {
+      key: 'trend',
+      label: ACTION_TREND,
+      icon: (color) => <TrendsIcon color={color} />,
+      onPress: () => openCategoryTrend(id),
+    },
   ];
 }

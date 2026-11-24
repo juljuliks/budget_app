@@ -34,7 +34,15 @@ export default function ImpulseBlock({ m, money, onMark, page, month }: Props) {
   const topLabel = top ? MOODS.find((x) => x.id === top.mood)?.label.toLowerCase() : null;
   const left = m.asked - m.answered;
   return (
-    <ReportBlock page={page} title="Импульсивные покупки" right={<Text style={report.blockCaption}>отмечено {m.answered} из {m.asked}</Text>}>
+    <ReportBlock
+      page={page}
+      title="Импульсивные покупки"
+      right={
+        <Text style={report.blockCaption}>
+          отмечено {m.answered} из {m.asked}
+        </Text>
+      }
+    >
       <ImpulseShare s={m} money={money} />
       {top ? (
         <>
@@ -43,17 +51,25 @@ export default function ImpulseBlock({ m, money, onMark, page, month }: Props) {
             {MOODS.map((x) => {
               const n = m.moods.find((y) => y.mood === x.id)?.count ?? 0;
               return (
-                <View key={x.id} style={[styles.mood, x.id === top.mood && styles.moodTop, n === 0 && styles.moodNone]} accessibilityLabel={`${x.label}: ${n}`}>
+                <View
+                  key={x.id}
+                  style={[styles.mood, x.id === top.mood && styles.moodTop, n === 0 && styles.moodNone]}
+                  accessibilityLabel={`${x.label}: ${n}`}
+                >
                   <Text style={styles.emoji}>{x.emoji}</Text>
                   <Text style={[styles.count, x.id === top.mood && styles.countTop]}>{n}</Text>
                 </View>
               );
             })}
           </View>
-          <Text style={report.blockCaption}>Чаще всего — {topLabel}: {top.count} из {withMood} импульсивных покупок с ответом.</Text>
+          <Text style={report.blockCaption}>
+            Чаще всего — {topLabel}: {top.count} из {withMood} импульсивных покупок с ответом.
+          </Text>
         </>
       ) : null}
-      {month && m.rows ? <ImpulseCalendar days={purchasesByDay(m.rows)} today={dayKeyOf(new Date())} money={money} month={month} /> : null}
+      {month && m.rows ? (
+        <ImpulseCalendar days={purchasesByDay(m.rows)} today={dayKeyOf(new Date())} money={money} month={month} />
+      ) : null}
       {m.categories.length ? (
         <>
           <Text style={styles.heading}>По категориям</Text>
@@ -61,7 +77,8 @@ export default function ImpulseBlock({ m, money, onMark, page, month }: Props) {
             <View key={c.id} style={report.catRow}>
               <View style={report.catText}>
                 <Text style={report.catName} numberOfLines={1}>
-                  {categoryLabel(c)}{c.over === null ? <Text style={styles.noPlan}>{' без плана '}</Text> : null}
+                  {categoryLabel(c)}
+                  {c.over === null ? <Text style={styles.noPlan}>{' без плана '}</Text> : null}
                 </Text>
                 <Text style={report.catNote}>{categoryNote(c, money)}</Text>
               </View>
@@ -82,7 +99,15 @@ export default function ImpulseBlock({ m, money, onMark, page, month }: Props) {
 const styles = StyleSheet.create({
   heading: { fontSize: 14, fontWeight: '600', color: colors.text, marginTop: 6 },
   moods: { flexDirection: 'row', gap: 6 },
-  mood: { flex: 1, alignItems: 'center', paddingVertical: 6, borderRadius: 10, backgroundColor: colors.bg, borderWidth: 1, borderColor: 'transparent' },
+  mood: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: colors.bg,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
   moodTop: { borderColor: colors.accent },
   moodNone: { opacity: 0.45 },
   emoji: { fontSize: 20 },

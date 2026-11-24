@@ -48,7 +48,9 @@ test('2.1.6: unread ones in the badge; opening one marks it read', async () => {
   await tap('GLOVO');
   expect(await screen.findByText('Описание')).toBeTruthy();
   await waitFor(async () => {
-    const r = await (await getDb()).get<{ seen: number }>("SELECT seen_at IS NOT NULL AS seen FROM transactions WHERE raw_merchant = 'GLOVO'");
+    const r = await (
+      await getDb()
+    ).get<{ seen: number }>("SELECT seen_at IS NOT NULL AS seen FROM transactions WHERE raw_merchant = 'GLOVO'");
     expect(r?.seen).toBe(1);
   });
   // back from its page to the list
@@ -56,7 +58,7 @@ test('2.1.6: unread ones in the badge; opening one marks it read', async () => {
   await waitFor(() => expect(screen.getByText('1')).toBeTruthy());
 });
 
-test('2.1.4: the day\'s arrow opens its stats', async () => {
+test("2.1.4: the day's arrow opens its stats", async () => {
   await openApp(ops);
   await screen.findByText('Сегодня');
   await tap('Траты за день: Сегодня');
@@ -70,7 +72,7 @@ test('2.1.4: the day\'s arrow opens its stats', async () => {
   expect(screen.queryByLabelText('Назад')).toBeNull();
 });
 
-test('2.1.10: a split operation — its categories in the row; from the stats\' category, only its part there', async () => {
+test("2.1.10: a split operation — its categories in the row; from the stats' category, only its part there", async () => {
   await openApp(async () => {
     await ops();
     const db = await getDb();
@@ -89,7 +91,7 @@ test('2.1.10: a split operation — its categories in the row; from the stats\' 
   expect(within(rowOf('SPAR')).getByText('из 30.00\u00a0₾')).toBeTruthy();
 });
 
-test('2.1.10: grouped by category, a split operation is in each of its parts\' groups with that part', async () => {
+test("2.1.10: grouped by category, a split operation is in each of its parts' groups with that part", async () => {
   await openApp(async () => {
     await ops();
     const db = await getDb();
@@ -112,7 +114,14 @@ test('2.1.10: grouped by category, a split operation is in each of its parts\' g
 test('2.1.11 «＋» hides while scrolling down, back on scrolling up and with a new filter', async () => {
   await openApp(ops);
   await screen.findByText('SPAR');
-  const at = (y: number) => fireEvent.scroll(screen.getByTestId('operations-list'), { nativeEvent: { contentOffset: { y }, contentSize: { height: 3000, width: 400 }, layoutMeasurement: { height: 800, width: 400 } } });
+  const at = (y: number) =>
+    fireEvent.scroll(screen.getByTestId('operations-list'), {
+      nativeEvent: {
+        contentOffset: { y },
+        contentSize: { height: 3000, width: 400 },
+        layoutMeasurement: { height: 800, width: 400 },
+      },
+    });
   expect(screen.getByLabelText('Добавить операцию')).toBeTruthy();
   at(300);
   expect(screen.queryByLabelText('Добавить операцию')).toBeNull();

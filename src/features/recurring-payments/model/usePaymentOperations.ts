@@ -6,7 +6,10 @@ import { getMerchant } from '@/db/merchants';
 import type { PaymentTarget } from './usePaymentForm';
 
 type Totals = Array<{ currency: string; amount_minor: number }>;
-export type PaymentOperations = { summary: { count: number; totals: Totals }; filter: { query?: string; category?: number } };
+export type PaymentOperations = {
+  summary: { count: number; totals: Totals };
+  filter: { query?: string; category?: number };
+};
 
 async function operationsOf(target: PaymentTarget): Promise<PaymentOperations | null> {
   if (target.merchant_key) {
@@ -24,8 +27,14 @@ export function usePaymentOperations(target: PaymentTarget | null): PaymentOpera
     setOps(null);
     if (!target) return undefined;
     let live = true;
-    operationsOf(target).then((r) => { if (live) setOps(r); }).catch((e) => console.error('payment operations failed', e));
-    return () => { live = false; };
+    operationsOf(target)
+      .then((r) => {
+        if (live) setOps(r);
+      })
+      .catch((e) => console.error('payment operations failed', e));
+    return () => {
+      live = false;
+    };
   }, [target]);
   return ops;
 }

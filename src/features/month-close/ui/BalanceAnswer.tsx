@@ -7,19 +7,35 @@ import { styles } from './styles';
 
 type Props = { c: MonthClose; onAnswer: (patch: Partial<CloseAnswers>) => void };
 
-function MoneyField({ minor, label, currency, onCommit }: {
-  minor: number | null; label: string; currency: string; onCommit: (minor: number) => void;
+function MoneyField({
+  minor,
+  label,
+  currency,
+  onCommit,
+}: {
+  minor: number | null;
+  label: string;
+  currency: string;
+  onCommit: (minor: number) => void;
 }) {
   const [text, setText] = useState(toInputValue(minor));
   const textRef = useRef(text);
   const [focus, setFocus] = useState(false);
-  useEffect(() => { textRef.current = toInputValue(minor); setText(textRef.current); }, [minor]);
+  useEffect(() => {
+    textRef.current = toInputValue(minor);
+    setText(textRef.current);
+  }, [minor]);
   return (
     <View style={[styles.field, focus && styles.fieldOn]}>
       <TextInput
-        style={styles.input} value={text} keyboardType="decimal-pad"
+        style={styles.input}
+        value={text}
+        keyboardType="decimal-pad"
         accessibilityLabel={label}
-        onChangeText={(v) => { textRef.current = v; setText(v); }}
+        onChangeText={(v) => {
+          textRef.current = v;
+          setText(v);
+        }}
         onFocus={() => setFocus(true)}
         onBlur={() => {
           setFocus(false);
@@ -46,8 +62,14 @@ export default function BalanceAnswer({ c, onAnswer }: Props) {
   const past = c.ask_minor - c.account_minor;
   const commitOpen = (minor: number) => {
     const followed = b.value === null || (b.open !== null && b.value === b.open + c.account_minor);
-    const value = followed ? minor + c.account_minor : b.value ?? minor;
-    onAnswer({ by_balance: 1, balance_open_minor: minor, balance_minor: value, saved: 'other', saved_minor: value - minor });
+    const value = followed ? minor + c.account_minor : (b.value ?? minor);
+    onAnswer({
+      by_balance: 1,
+      balance_open_minor: minor,
+      balance_minor: value,
+      saved: 'other',
+      saved_minor: value - minor,
+    });
   };
   const commitBalance = (minor: number) => {
     const base = b.prior ?? b.open;
@@ -67,11 +89,13 @@ export default function BalanceAnswer({ c, onAnswer }: Props) {
         <>
           <MoneyField minor={b.value} label="Остаток на счёте" currency={c.currency} onCommit={commitBalance} />
           <Text style={styles.calc}>
-            {`${was} ${money(b.prior ?? b.open ?? 0)}, по бюджету ${signed(c.ask_minor)}${past > 0 ? `, на перерасход −${money(past)}` : ''}`
-              + ` — по расчёту ${money(b.suggested)}.`}
+            {`${was} ${money(b.prior ?? b.open ?? 0)}, по бюджету ${signed(c.ask_minor)}${past > 0 ? `, на перерасход −${money(past)}` : ''}` +
+              ` — по расчёту ${money(b.suggested)}.`}
           </Text>
           {b.delta !== null ? (
-            <Text style={[styles.delta, b.delta < 0 && styles.down]}>{`За ${monthWords(c.ym).nom} ${signed(b.delta)}`}</Text>
+            <Text
+              style={[styles.delta, b.delta < 0 && styles.down]}
+            >{`За ${monthWords(c.ym).nom} ${signed(b.delta)}`}</Text>
           ) : null}
           {b.short !== null && b.short !== 0 ? (
             <Text style={[styles.gapNote, b.short > 0 ? styles.down : styles.headSaved]}>

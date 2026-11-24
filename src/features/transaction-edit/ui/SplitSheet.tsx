@@ -9,9 +9,7 @@ import { toastFailure } from '@/shared/ui/toast';
 import { formatAmount } from '@/shared/lib/format';
 import { LOAD_FAILED } from '@/shared/lib/strings';
 import { colors } from '@/shared/theme/theme';
-import {
-  draftFromIds, draftParts, splitDraftOf, splitState, SplitDraft,
-} from '../model/splitDraft';
+import { draftFromIds, draftParts, splitDraftOf, splitState, SplitDraft } from '../model/splitDraft';
 import type { Tx } from '../model/useTransaction';
 import SplitBar from './SplitBar';
 import SplitRow from './SplitRow';
@@ -38,16 +36,24 @@ export default function SplitSheet({ visible, tx, onClose, seed }: Props) {
   useEffect(() => {
     if (!visible) return;
     const parts = splitParts(tx) ?? [];
-    setDraft(seed && seed.length >= 2 ? draftFromIds(tx.category_id, seed) : splitDraftOf(tx.category_id, parts.slice(1)));
+    setDraft(
+      seed && seed.length >= 2 ? draftFromIds(tx.category_id, seed) : splitDraftOf(tx.category_id, parts.slice(1)),
+    );
     setChoosing(false);
-    listCategories().then((cats) => setLabels(new Map([
-      ...parts.map((p) => [p.category_id, p.label] as const),
-      ...cats.map((c) => [c.id, categoryLabel(c)] as const),
-    ]))).catch(toastFailure('load categories', LOAD_FAILED));
+    listCategories()
+      .then((cats) =>
+        setLabels(
+          new Map([
+            ...parts.map((p) => [p.category_id, p.label] as const),
+            ...cats.map((c) => [c.id, categoryLabel(c)] as const),
+          ]),
+        ),
+      )
+      .catch(toastFailure('load categories', LOAD_FAILED));
   }, [visible, tx, seed]);
 
   const state = splitState(tx.amount_minor, tx.currency, draft);
-  const label = (id: number | null) => (id === null ? 'Выберите категорию' : labels.get(id) ?? '…');
+  const label = (id: number | null) => (id === null ? 'Выберите категорию' : (labels.get(id) ?? '…'));
   const chosen = [draft.own, ...draft.parts.map((p) => p.category_id)].filter((id): id is number => id !== null);
   const save = () => {
     setSaving(true);
@@ -60,10 +66,18 @@ export default function SplitSheet({ visible, tx, onClose, seed }: Props) {
   return (
     <BottomSheet visible={visible} onClose={onClose} title="Разделить по категориям" style={styles.sheet}>
       <SheetScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={styles.sub}>{merchantLabel(tx)} · {formatAmount(tx.amount_minor, tx.currency, tx.kind)}</Text>
+        <Text style={styles.sub}>
+          {merchantLabel(tx)} · {formatAmount(tx.amount_minor, tx.currency, tx.kind)}
+        </Text>
         <SplitBar total={tx.amount_minor} amounts={[Math.max(state.rest, 0), ...state.amounts.map((v) => v ?? 0)]} />
         <Text style={styles.heading}>КАТЕГОРИИ</Text>
-        <SplitRow index={0} label={label(draft.own)} currency={tx.currency} rest={state.rest} onPickCategory={() => setChoosing(true)} />
+        <SplitRow
+          index={0}
+          label={label(draft.own)}
+          currency={tx.currency}
+          rest={state.rest}
+          onPickCategory={() => setChoosing(true)}
+        />
         {draft.parts.map((p, i) => (
           <SplitRow
             key={p.category_id}
@@ -79,10 +93,17 @@ export default function SplitSheet({ visible, tx, onClose, seed }: Props) {
         <TouchableOpacity style={styles.add} onPress={() => setChoosing(true)}>
           <Text style={styles.addText}>+ Ещё категория</Text>
         </TouchableOpacity>
-        {state.error
-          ? <Text style={styles.error}>{state.error}</Text>
-          : <Text style={styles.hint}>Каждая часть считается в своей категории: в плане, статистике и лимитах. Категория мерчанта не меняется.</Text>}
-        <SheetActions submit={{ title: 'Сохранить', onPress: save, disabled: !state.canSave || saving }} onCancel={onClose} />
+        {state.error ? (
+          <Text style={styles.error}>{state.error}</Text>
+        ) : (
+          <Text style={styles.hint}>
+            Каждая часть считается в своей категории: в плане, статистике и лимитах. Категория мерчанта не меняется.
+          </Text>
+        )}
+        <SheetActions
+          submit={{ title: 'Сохранить', onPress: save, disabled: !state.canSave || saving }}
+          onCancel={onClose}
+        />
       </SheetScrollView>
       <CategoryPickerModal
         visible={choosing}
@@ -103,8 +124,14 @@ const styles = StyleSheet.create({
   sub: { fontSize: 15, color: colors.muted, marginBottom: 16 },
   heading: { fontSize: 13, fontWeight: '600', color: colors.muted, marginTop: 20, marginBottom: 2 },
   add: {
-    alignSelf: 'flex-start', marginTop: 14, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 16,
-    borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed',
+    alignSelf: 'flex-start',
+    marginTop: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
   },
   addText: { fontSize: 15, color: colors.accent },
   error: { fontSize: 14, color: colors.danger, marginTop: 16 },

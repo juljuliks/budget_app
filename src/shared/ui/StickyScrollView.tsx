@@ -7,12 +7,24 @@ import { ScrollLockContext } from './scrollLock';
  * the totals right, centred. ScrollView moves a sticky child's style to its own wrapper (the band: background,
  * padding, margins) and gives the child just a fill, so the row is laid out by an inner view.
  */
-export function SectionHeader({ style, children, onLongPress }: { style?: StyleProp<ViewStyle>; children: React.ReactNode; onLongPress?: () => void }) {
+export function SectionHeader({
+  style,
+  children,
+  onLongPress,
+}: {
+  style?: StyleProp<ViewStyle>;
+  children: React.ReactNode;
+  onLongPress?: () => void;
+}) {
   return (
     <View style={style}>
-      {onLongPress
-        ? <TouchableOpacity style={styles.row} onLongPress={onLongPress} activeOpacity={1}>{children}</TouchableOpacity>
-        : <View style={styles.row}>{children}</View>}
+      {onLongPress ? (
+        <TouchableOpacity style={styles.row} onLongPress={onLongPress} activeOpacity={1}>
+          {children}
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.row}>{children}</View>
+      )}
     </View>
   );
 }
@@ -23,7 +35,8 @@ function flatten(children: React.ReactNode, prefix = ''): React.ReactElement[] {
   React.Children.toArray(children).forEach((child) => {
     if (!React.isValidElement(child)) return;
     const key = `${prefix}${child.key ?? ''}`;
-    if (child.type === React.Fragment) out.push(...flatten((child.props as { children?: React.ReactNode }).children, `${key}/`));
+    if (child.type === React.Fragment)
+      out.push(...flatten((child.props as { children?: React.ReactNode }).children, `${key}/`));
     else out.push(React.cloneElement(child, { key }));
   });
   return out;
@@ -38,10 +51,15 @@ export default function StickyScrollView({ children, ...props }: ScrollViewProps
   const sticky = items.flatMap((c, i) => (c.type === SectionHeader ? [i] : []));
   const ref = useRef<ScrollView>(null);
   // a row's long press holds the finger (PressMenu): no scrolling meanwhile, without re-rendering the rows
-  const lock = useCallback((on: boolean) => ref.current?.setNativeProps({ scrollEnabled: !on && props.scrollEnabled !== false }), [props.scrollEnabled]);
+  const lock = useCallback(
+    (on: boolean) => ref.current?.setNativeProps({ scrollEnabled: !on && props.scrollEnabled !== false }),
+    [props.scrollEnabled],
+  );
   return (
     <ScrollLockContext.Provider value={lock}>
-      <ScrollView ref={ref} {...props} stickyHeaderIndices={sticky}>{items}</ScrollView>
+      <ScrollView ref={ref} {...props} stickyHeaderIndices={sticky}>
+        {items}
+      </ScrollView>
     </ScrollLockContext.Provider>
   );
 }

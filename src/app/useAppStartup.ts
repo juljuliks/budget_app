@@ -22,7 +22,8 @@ const handled = new Set<string>();
 
 /** The notification the app was opened or brought back with, acted on once. */
 function openedByNotification() {
-  notifee.getInitialNotification()
+  notifee
+    .getInitialNotification()
     .then((initial) => {
       // a return without a notification: nothing pressed
       if (!initial?.pressAction || !initial.notification) return;
@@ -41,7 +42,11 @@ export function useAppStartup() {
     syncNativeBanks().catch((e) => console.error('banks sync failed', e));
     requestAppPermissions().catch(() => {});
     // refunds that came before their merchant had a category (or before this existed) get one
-    autoCategorizeRefunds().then((n) => { if (n > 0) emitTransactionsChanged(); }).catch((e) => console.error('refund categories failed', e));
+    autoCategorizeRefunds()
+      .then((n) => {
+        if (n > 0) emitTransactionsChanged();
+      })
+      .catch((e) => console.error('refund categories failed', e));
 
     // app was launched (or brought back: a scheduled one, shown by WorkManager, gives no press event then) by tapping a
     // notification / its action button
@@ -51,8 +56,9 @@ export function useAppStartup() {
       if (type === EventType.PRESS || type === EventType.ACTION_PRESS) {
         // the same press isn't acted on again when the app comes back with its intent
         handled.add(`${detail.notification?.id ?? ''}|${detail.pressAction?.id}`);
-        handleNotificationAction({ id: detail.pressAction?.id, notification: detail.notification })
-          .catch((e) => console.error('notification action failed', e));
+        handleNotificationAction({ id: detail.pressAction?.id, notification: detail.notification }).catch((e) =>
+          console.error('notification action failed', e),
+        );
       }
     });
 
@@ -61,7 +67,10 @@ export function useAppStartup() {
     // a fund that stopped making it while the app was closed (a new month, the spending)
     notifyFundsLate();
     // a fund that stopped making it by its date: said once (the plan, the budget, the % of 🔒 changed it)
-    const offReport = onTransactionsChanged(() => { scheduleMonthReports(); notifyFundsLate(); });
+    const offReport = onTransactionsChanged(() => {
+      scheduleMonthReports();
+      notifyFundsLate();
+    });
 
     // the weekly automatic copy, if it is on and due: on start and on coming back (the app is seldom started anew)
     runAutoBackupIfDue();
@@ -78,6 +87,10 @@ export function useAppStartup() {
       offerUpdate();
     });
 
-    return () => { unsubscribe(); appState.remove(); offReport(); };
+    return () => {
+      unsubscribe();
+      appState.remove();
+      offReport();
+    };
   }, []);
 }

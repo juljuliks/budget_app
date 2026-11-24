@@ -45,10 +45,12 @@ export async function listTransactionsPage(cursor: PageCursor | null, limit = 50
   const db = await getDb();
   const { sql, params } = filterWhere(f);
   const rows = cursor
-    ? await db.all<TransactionRow>(`${SELECT_TX}
+    ? await db.all<TransactionRow>(
+        `${SELECT_TX}
         ${sql ? `${sql} AND` : 'WHERE'} (t.occurred_at < ? OR (t.occurred_at = ? AND t.id < ?))
         ${NEWEST_FIRST} LIMIT ?`,
-        [...params, cursor.occurred_at, cursor.occurred_at, cursor.id, limit])
+        [...params, cursor.occurred_at, cursor.occurred_at, cursor.id, limit],
+      )
     : await db.all<TransactionRow>(`${SELECT_TX} ${sql} ${NEWEST_FIRST} LIMIT ?`, [...params, limit]);
   const last = rows[rows.length - 1];
   return {
@@ -60,8 +62,9 @@ export async function listTransactionsPage(cursor: PageCursor | null, limit = 50
 /** One operation, with its SMS and "Обдуманная" / "Импульсивная" (the answer, the mood, and whether its categories ask it). */
 export async function getTransaction(id: number) {
   const db = await getDb();
-  return db.get<TransactionRow & { raw_sms: string; impulse: number | null; mood: string | null; impulse_asked: number }>(
-    `SELECT t.*, ${CATEGORY_COLUMNS}, ${PARTS_COLUMN}, ${IMPULSE_ASKED_COLUMN} ${FROM_TX} WHERE t.id = ?`, [id]);
+  return db.get<
+    TransactionRow & { raw_sms: string; impulse: number | null; mood: string | null; impulse_asked: number }
+  >(`SELECT t.*, ${CATEGORY_COLUMNS}, ${PARTS_COLUMN}, ${IMPULSE_ASKED_COLUMN} ${FROM_TX} WHERE t.id = ?`, [id]);
 }
 
 /**
@@ -75,5 +78,6 @@ export function isUnread(t: Pick<TransactionRow, 'seen_at' | 'category_id'>): bo
 export async function countUnseenTransactions(): Promise<number> {
   const db = await getDb();
   return (await db.get<{ n: number }>(
-    'SELECT count(*) AS n FROM transactions WHERE seen_at IS NULL AND category_id IS NULL'))!.n;
+    'SELECT count(*) AS n FROM transactions WHERE seen_at IS NULL AND category_id IS NULL',
+  ))!.n;
 }

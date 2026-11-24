@@ -13,10 +13,15 @@ export function useRecentOperations(filter: TxFilter | null): TransactionRow[] {
   const key = JSON.stringify(filter);
   const load = useCallback(() => {
     if (!filter) return;
-    listTransactionsFiltered(filter, RECENT_COUNT).then(setRows).catch(toastFailure('load recent operations', LOAD_FAILED));
+    listTransactionsFiltered(filter, RECENT_COUNT)
+      .then(setRows)
+      .catch(toastFailure('load recent operations', LOAD_FAILED));
     // the filter by its value: a page passes a new object each render
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
-  useEffect(() => { load(); return onTransactionsChanged(load); }, [load]);
+  useEffect(() => {
+    load();
+    return onTransactionsChanged(load);
+  }, [load]);
   return rows;
 }

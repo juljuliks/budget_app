@@ -30,14 +30,19 @@ async function readAnchor(bank: string, db?: Db): Promise<BalanceAnchor | null> 
   db ??= await getDb();
   const v = await getSetting(keyOf(bank), db);
   if (v) {
-    try { return JSON.parse(v) as BalanceAnchor; } catch { /* rebuilt below */ }
+    try {
+      return JSON.parse(v) as BalanceAnchor;
+    } catch {
+      /* rebuilt below */
+    }
   }
   // first use: the latest stored SMS with a balance (TBC's: the one parser that reads balances)
   if (bank !== 'tbc') return null;
   const rows = await db.all<{ id: number; occurred_at: number; raw_sms: string }>(
     `SELECT id, occurred_at, raw_sms FROM transactions
       WHERE bank = 'tbc' AND raw_sms LIKE '%alance%'
-      ORDER BY occurred_at DESC, id DESC LIMIT 20`);
+      ORDER BY occurred_at DESC, id DESC LIMIT 20`,
+  );
   for (const r of rows) {
     const b = parseTbcBalance(r.raw_sms);
     if (!b) continue;
@@ -72,7 +77,8 @@ export async function cardBalance(bank = 'tbc'): Promise<CardBalance | null> {
     `SELECT kind, amount_minor, currency, occurred_at FROM transactions
       WHERE bank = ?
         AND (occurred_at > ? OR (occurred_at = ? AND ? IS NOT NULL AND id > ?))`,
-    [bank, anchor.at, anchor.at, anchor.txId, anchor.txId ?? 0]);
+    [bank, anchor.at, anchor.at, anchor.txId, anchor.txId ?? 0],
+  );
   const foreign = after.filter((t) => t.currency !== anchor.currency && SIGN[t.kind]);
   if (foreign.length) ensureRatesLater(foreign.map((t) => dateKey(t.occurred_at)));
   const conv = await makeConverter();
@@ -98,8 +104,14 @@ export async function cardBalance(bank = 'tbc'): Promise<CardBalance | null> {
  */
 export async function placeByBalances(txId: number, db?: Db): Promise<void> {
   db ??= await getDb();
-  const tx = await db.get<{ kind: string; amount_minor: number; currency: string; occurred_at: number; raw_sms: string; bank: string }>(
-    'SELECT kind, amount_minor, currency, occurred_at, raw_sms, bank FROM transactions WHERE id = ?', [txId]);
+  const tx = await db.get<{
+    kind: string;
+    amount_minor: number;
+    currency: string;
+    occurred_at: number;
+    raw_sms: string;
+    bank: string;
+  }>('SELECT kind, amount_minor, currency, occurred_at, raw_sms, bank FROM transactions WHERE id = ?', [txId]);
   // TBC's: the one parser that knows a message without a time
   if (!tx || tx.bank !== 'tbc' || !SIGN[tx.kind]) return;
   const parsed = parseTbc(tx.raw_sms);
@@ -113,14 +125,19 @@ export async function placeByBalances(txId: number, db?: Db): Promise<void> {
   const rows = await db.all<{ id: number; kind: string; amount_minor: number; occurred_at: number; raw_sms: string }>(
     `SELECT id, kind, amount_minor, occurred_at, raw_sms FROM transactions
       WHERE bank = 'tbc' AND currency = ? AND occurred_at >= ? AND occurred_at < ?
-      ORDER BY occurred_at, id`, [tx.currency, dayStart - 7 * 86400, dayEnd]);
+      ORDER BY occurred_at, id`,
+    [tx.currency, dayStart - 7 * 86400, dayEnd],
+  );
   const signed = (r: { kind: string; amount_minor: number }) => (SIGN[r.kind] ?? 0) * r.amount_minor;
   const anchors = rows.flatMap((r, i) => {
     const b = parseTbcBalance(r.raw_sms);
     return b && b.has_time && b.currency === tx.currency ? [{ i, at: r.occurred_at, minor: b.minor }] : [];
   });
   // the ones of that day without a time put after a balance: what may belong before it
-  const dateOnly = (r: { raw_sms: string }) => { const p = parseTbc(r.raw_sms); return !!p && !p.has_time; };
+  const dateOnly = (r: { raw_sms: string }) => {
+    const p = parseTbc(r.raw_sms);
+    return !!p && !p.has_time;
+  };
 
   for (let k = anchors.length - 1; k >= 1; k--) {
     const a = anchors[k];
@@ -130,14 +147,19 @@ export async function placeByBalances(txId: number, db?: Db): Promise<void> {
     const between = rows.slice(prev.i + 1, a.i + 1).reduce((sum, r) => sum + signed(r), 0);
     const gap = a.minor - (prev.minor + between);
     if (gap === 0) continue;
-    const candidates = rows.filter((r) => r.occurred_at > a.at && r.occurred_at < dayEnd && r.id !== txId && dateOnly(r)).slice(0, 10);
+    const candidates = rows
+      .filter((r) => r.occurred_at > a.at && r.occurred_at < dayEnd && r.id !== txId && dateOnly(r))
+      .slice(0, 10);
     const own = signed(tx);
     // this one, with some of the others: the subset that fills the gap exactly
     for (let mask = 0; mask < 1 << candidates.length; mask++) {
       const picked = candidates.filter((_, j) => mask & (1 << j));
       if (own + picked.reduce((sum, r) => sum + signed(r), 0) !== gap) continue;
       const ids = [txId, ...picked.map((r) => r.id)];
-      await db.run(`UPDATE transactions SET occurred_at = ? WHERE id IN (${placeholders(ids.length)})`, [a.at - 1, ...ids]);
+      await db.run(`UPDATE transactions SET occurred_at = ? WHERE id IN (${placeholders(ids.length)})`, [
+        a.at - 1,
+        ...ids,
+      ]);
       return;
     }
   }
@@ -152,7 +174,9 @@ export async function placeNextDayDated(db: Db, nowMs = Date.now()): Promise<voi
   const now = new Date(nowMs);
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() / 1000;
   const rows = await db.all<{ id: number; occurred_at: number; raw_sms: string }>(
-    "SELECT id, occurred_at, raw_sms FROM transactions WHERE bank = 'tbc' AND occurred_at >= ?", [todayStart]);
+    "SELECT id, occurred_at, raw_sms FROM transactions WHERE bank = 'tbc' AND occurred_at >= ?",
+    [todayStart],
+  );
   for (const r of rows) {
     const p = parseTbc(r.raw_sms);
     const at = new Date(r.occurred_at * 1000);

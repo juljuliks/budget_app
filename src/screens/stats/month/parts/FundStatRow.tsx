@@ -8,7 +8,10 @@ import PressMenu, { PressAction } from '@/shared/ui/PressMenu';
 import { styles } from './styles';
 
 type Props = {
-  f: FundStat; ym: string; currency: string; hidden: boolean;
+  f: FundStat;
+  ym: string;
+  currency: string;
+  hidden: boolean;
   /** a tap's or a long press's menu: «Операции», «План», «Динамика» */
   actions: PressAction[];
 };
@@ -27,7 +30,9 @@ export function FundSpent({ f, ym, currency, hidden }: { f: FundStat; ym: string
       <Text style={styles.rowStatus}>{hidden ? 'потрачено из копилки' : `потрачено ${money(spent)} из копилки`}</Text>
       {shortage > 0 ? (
         <Text style={styles.rowStatus}>
-          <Text style={styles.overLine}>{`Не хватило${hidden ? '' : ` ${money(shortage)}`} — взяты из бюджета ${month}`}</Text>
+          <Text
+            style={styles.overLine}
+          >{`Не хватило${hidden ? '' : ` ${money(shortage)}`} — взяты из бюджета ${month}`}</Text>
         </Text>
       ) : null}
     </>
@@ -55,14 +60,19 @@ export default function FundStatRow({ f, ym, currency, hidden, actions }: Props)
     <PressMenu style={styles.row} actions={actions} accessibilityHint="Операции, план, динамика">
       <View style={styles.rowTop}>
         <View style={[styles.dot, { backgroundColor: f.color }]} />
-        <Text style={styles.rowName} numberOfLines={1}>{`${f.emoji || ''} ${f.name}`.trim()}</Text>
+        <Text style={styles.rowName} numberOfLines={1}>
+          {`${f.emoji || ''} ${f.name}`.trim()}
+        </Text>
         <MaskedTotal style={styles.rowAmount} hiddenText="">
-          {money(spent)}<Text style={styles.rowLimit}> из копилки</Text>
+          {money(spent)}
+          <Text style={styles.rowLimit}> из копилки</Text>
         </MaskedTotal>
       </View>
       {shortage > 0 ? (
         <Text style={styles.rowStatus}>
-          <Text style={styles.overLine}>{`Не хватило${hidden ? '' : ` ${money(shortage)}`} — взяты из бюджета ${month}`}</Text>
+          <Text
+            style={styles.overLine}
+          >{`Не хватило${hidden ? '' : ` ${money(shortage)}`} — взяты из бюджета ${month}`}</Text>
         </Text>
       ) : null}
     </PressMenu>

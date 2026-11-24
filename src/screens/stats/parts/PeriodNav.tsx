@@ -31,7 +31,9 @@ export default function PeriodNav({ label, onPick, onPrev, onNext, nextDisabled,
   const next = unit === 'месяц' ? 'Следующий месяц' : unit === 'год' ? 'Следующий год' : 'Следующий период';
   return (
     <View style={styles.row}>
-      <TouchableOpacity onPress={onPrev} hitSlop={12} disabled={prevDisabled} accessibilityLabel={prev}><Text style={[styles.arrow, prevDisabled && styles.arrowDisabled]}>‹</Text></TouchableOpacity>
+      <TouchableOpacity onPress={onPrev} hitSlop={12} disabled={prevDisabled} accessibilityLabel={prev}>
+        <Text style={[styles.arrow, prevDisabled && styles.arrowDisabled]}>‹</Text>
+      </TouchableOpacity>
       <Text style={styles.label}>{label}</Text>
       <TouchableOpacity onPress={onNext} hitSlop={12} disabled={nextDisabled} accessibilityLabel={next}>
         <Text style={[styles.arrow, nextDisabled && styles.arrowDisabled]}>›</Text>
@@ -41,7 +43,13 @@ export default function PeriodNav({ label, onPick, onPrev, onNext, nextDisabled,
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, marginBottom: 8 },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    marginBottom: 8,
+  },
   rangeButton: { flex: 1, alignItems: 'center', paddingVertical: 6 },
   arrow: { fontSize: 28, color: colors.accent, paddingHorizontal: 8 },
   arrowDisabled: { color: colors.border },

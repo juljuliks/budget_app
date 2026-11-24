@@ -41,8 +41,11 @@ export default function StepSavings({ c, onAnswer, onSplit }: Props) {
     if (c.balance.on) return;
     const value = c.balance.prior === null ? null : c.balance.prior + c.account_minor;
     onAnswer({
-      by_balance: 1, balance_open_minor: null, balance_minor: value,
-      saved: value === null ? null : 'other', saved_minor: value === null ? null : c.account_minor,
+      by_balance: 1,
+      balance_open_minor: null,
+      balance_minor: value,
+      saved: value === null ? null : 'other',
+      saved_minor: value === null ? null : c.account_minor,
     });
   };
   return (
@@ -61,12 +64,24 @@ export default function StepSavings({ c, onAnswer, onSplit }: Props) {
           <Line label="Осталось от бюджета" value={money(left)} tone={left < 0 ? styles.headOver : styles.headSaved} />
         </>
       ) : null}
-      <Segmented options={[['month', 'За месяц'], ['balance', 'Остаток']]} value={c.balance.on ? 'balance' : 'month'} onChange={pick} />
-      {c.balance.on ? <BalanceAnswer c={c} onAnswer={onAnswer} /> : (
+      <Segmented
+        options={[
+          ['month', 'За месяц'],
+          ['balance', 'Остаток'],
+        ]}
+        value={c.balance.on ? 'balance' : 'month'}
+        onChange={pick}
+      />
+      {c.balance.on ? (
+        <BalanceAnswer c={c} onAnswer={onAnswer} />
+      ) : (
         <>
           <Text style={styles.question}>Сколько удалось отложить?</Text>
           <AmountAnswer
-            asked={c.ask_minor} currency={c.currency} answered={c.put_minor} label="Отложено"
+            asked={c.ask_minor}
+            currency={c.currency}
+            answered={c.put_minor}
+            label="Отложено"
             onAnswer={(minor, kind) => onAnswer({ saved: kind, saved_minor: kind === 'other' ? minor : null })}
             onReset={() => onAnswer({ saved: null, saved_minor: null })}
           />

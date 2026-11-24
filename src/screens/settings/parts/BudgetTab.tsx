@@ -19,17 +19,25 @@ export default function BudgetTab({ open }: { open: boolean }) {
   const toggleAlerts = (on: boolean) => {
     setAlerts(on);
     // not saved: the switch goes back
-    setLimitAlertsEnabled(on).catch((e) => { setAlerts(!on); toastFailure('save limit alerts setting', SAVE_FAILED)(e); });
+    setLimitAlertsEnabled(on).catch((e) => {
+      setAlerts(!on);
+      toastFailure('save limit alerts setting', SAVE_FAILED)(e);
+    });
   };
   return (
     <>
       <View style={styles.block}>
         <Text style={styles.label}>Валюта</Text>
         <Text style={styles.hint}>
-          Статистика, план, история и суммы за день пересчитываются в неё по курсу Нацбанка Грузии. Операции
-          остаются в своей валюте.
+          Статистика, план, история и суммы за день пересчитываются в неё по курсу Нацбанка Грузии. Операции остаются в
+          своей валюте.
         </Text>
-        <CurrencyPicker value={currency} onChange={(c) => { setDisplayCurrency(c).catch(toastFailure('save currency', SAVE_FAILED)); }} />
+        <CurrencyPicker
+          value={currency}
+          onChange={(c) => {
+            setDisplayCurrency(c).catch(toastFailure('save currency', SAVE_FAILED));
+          }}
+        />
       </View>
       <LockedPctSetting />
       <View style={styles.switchRow}>

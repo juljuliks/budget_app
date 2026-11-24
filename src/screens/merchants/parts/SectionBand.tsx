@@ -6,7 +6,15 @@ import { colors } from '@/shared/theme/theme';
 import type { Section } from '../model/useMerchants';
 
 /** A grey band, like the days on the operations: "🛒 Еда · 5 мерчантов"; the stale one folds and unfolds. */
-export default function SectionBand({ section, staleOpen, onToggleStale }: { section: Section; staleOpen: boolean; onToggleStale: () => void }) {
+export default function SectionBand({
+  section,
+  staleOpen,
+  onToggleStale,
+}: {
+  section: Section;
+  staleOpen: boolean;
+  onToggleStale: () => void;
+}) {
   const title = `${section.title} · ${section.count} ${plural(section.count, ['мерчант', 'мерчанта', 'мерчантов'])}`;
   if (!section.stale) return <Text style={formStyles.sectionHeader}>{title}</Text>;
   return (

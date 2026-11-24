@@ -1,7 +1,10 @@
 import { getDb } from './index';
 
 export type CategoryType = {
-  id: number; name: string; is_transfer: number; sort_order: number;
+  id: number;
+  name: string;
+  is_transfer: number;
+  sort_order: number;
   /** palette key (src/domain/colors.ts); null = by position */
   palette: string | null;
 };
@@ -22,7 +25,8 @@ export async function createCategoryType(name: string): Promise<number> {
   const { lastInsertRowid } = await db.run(
     `INSERT INTO category_types (name, sort_order)
       VALUES (?, (SELECT coalesce(max(sort_order), 0) + 1 FROM category_types WHERE sort_order < 100))`,
-    [name.trim()]);
+    [name.trim()],
+  );
   return lastInsertRowid;
 }
 
@@ -50,7 +54,9 @@ export async function deleteCategoryType(id: number) {
 
 export async function countCategoriesOfType(id: number): Promise<number> {
   const db = await getDb();
-  return (await db.get<{ n: number }>('SELECT count(*) AS n FROM categories WHERE type_id = ? AND deleted_at IS NULL', [id]))!.n;
+  return (await db.get<{ n: number }>('SELECT count(*) AS n FROM categories WHERE type_id = ? AND deleted_at IS NULL', [
+    id,
+  ]))!.n;
 }
 
 export async function getTransferTypeId(): Promise<number | null> {
@@ -59,6 +65,11 @@ export async function getTransferTypeId(): Promise<number | null> {
 }
 
 export default {
-  listCategoryTypes, findCategoryTypeByName, createCategoryType, renameCategoryType, deleteCategoryType, countCategoriesOfType,
+  listCategoryTypes,
+  findCategoryTypeByName,
+  createCategoryType,
+  renameCategoryType,
+  deleteCategoryType,
+  countCategoriesOfType,
   getTransferTypeId,
 };

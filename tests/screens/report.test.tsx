@@ -11,19 +11,42 @@ async function openHistory() {
   await screen.findByText('Сентябрь 2026');
 }
 // the last: the stats under the history page have the same month titles and sections
-const after = (label: string, n: number) => { const t = texts(); const i = t.lastIndexOf(label); return t.slice(i + 1, i + 1 + n); };
+const after = (label: string, n: number) => {
+  const t = texts();
+  const i = t.lastIndexOf(label);
+  return t.slice(i + 1, i + 1 + n);
+};
 /** the same in the report sheet, over the History (the month's line has "В сбережения" too) */
-const inReport = (label: string, n: number) => { const t = texts(); const i = t.lastIndexOf(label); return t.slice(i + 1, i + 1 + n); };
+const inReport = (label: string, n: number) => {
+  const t = texts();
+  const i = t.lastIndexOf(label);
+  return t.slice(i + 1, i + 1 + n);
+};
 
 describe('7.2 the history', () => {
   beforeEach(openHistory);
 
-  test('every month from the first: plan (with the share outside it), spent, what\'s left or the overspend; with a budget, saved', async () => {
+  test("every month from the first: plan (with the share outside it), spent, what's left or the overspend; with a budget, saved", async () => {
     // 2 160 ₾ planned + 300 ₾ for spending outside the plan
     expect(after('Октябрь 2026', 6)).toEqual(['План', '2 460 ₾', 'Потрачено', '2 010 ₾', 'Осталось', '450 ₾']);
-    expect(after('Сентябрь 2026', 6)).toEqual(['План', '1 700 ₾', 'Потрачено', '1 850 ₾', 'Перерасход плана', '⚠ 150 ₾']);
+    expect(after('Сентябрь 2026', 6)).toEqual([
+      'План',
+      '1 700 ₾',
+      'Потрачено',
+      '1 850 ₾',
+      'Перерасход плана',
+      '⚠ 150 ₾',
+    ]);
     // its "Итоги" not done: "?" and the way to them
-    expect(after('Перерасход плана', 7)).toEqual(['⚠ 150 ₾', 'Бюджет', '3 000 ₾', 'Свободно', '1 300 ₾', 'В сбережения', '1 150 ₾ ?']);
+    expect(after('Перерасход плана', 7)).toEqual([
+      '⚠ 150 ₾',
+      'Бюджет',
+      '3 000 ₾',
+      'Свободно',
+      '1 300 ₾',
+      'В сбережения',
+      '1 150 ₾ ?',
+    ]);
     expect(after('Итоги не подведены: удалось ли отложить, взносы в копилки', 1)).toEqual(['Подвести итоги ›']);
     expect(after('Август 2026', 4)).toEqual(['План', '—', 'Потрачено', '400 ₾']);
   });
@@ -33,15 +56,41 @@ describe('7.2 the history', () => {
     expect(after('Октябрь 2026', 12).slice(-2)).toEqual(['В сбережения', 'пока 960 ₾']);
     await tap('Сентябрь 2026');
     await screen.findByText('Всего в сбережения');
-    const sep = () => { const t = texts(); const i = t.lastIndexOf('Сбережения'); return t.slice(i, i + 10); };
-    expect(sep()).toEqual(['Сбережения', 'План', 'Отложено', '💰 Сэкономлено', 'не потрачено к концу месяца', '1 300 ₾', '1 150 ₾', 'Всего в сбережения', '', '1 150 ₾']);
+    const sep = () => {
+      const t = texts();
+      const i = t.lastIndexOf('Сбережения');
+      return t.slice(i, i + 10);
+    };
+    expect(sep()).toEqual([
+      'Сбережения',
+      'План',
+      'Отложено',
+      '💰 Сэкономлено',
+      'не потрачено к концу месяца',
+      '1 300 ₾',
+      '1 150 ₾',
+      'Всего в сбережения',
+      '',
+      '1 150 ₾',
+    ]);
     await tap('Сентябрь 2026');
     await tap('Октябрь 2026');
     await screen.findByText('Пока в сбережения');
     const oct = texts().slice(texts().lastIndexOf('Сбережения'));
-    expect(oct.slice(0, 8)).toEqual(['Сбережения', 'План', 'Сейчас', '🔒 Отложено сразу', 'в начале месяца', '300 ₾', '300 ₾', '💰 Сэкономлено']);
+    expect(oct.slice(0, 8)).toEqual([
+      'Сбережения',
+      'План',
+      'Сейчас',
+      '🔒 Отложено сразу',
+      'в начале месяца',
+      '300 ₾',
+      '300 ₾',
+      '💰 Сэкономлено',
+    ]);
     expect(oct).toContain('Пока в сбережения');
-    expect(oct.some((t) => /^Месяц идёт: из «Сэкономлено» вычтены платежи, которые ещё не оплачены \(30 ₾\)/.test(t))).toBe(true);
+    expect(
+      oct.some((t) => /^Месяц идёт: из «Сэкономлено» вычтены платежи, которые ещё не оплачены \(30 ₾\)/.test(t)),
+    ).toBe(true);
   });
 
   test('the report only for a month that is over and had a plan', async () => {
@@ -116,25 +165,35 @@ describe('7.1 the report — stories', () => {
     // the only "＋ В план" in the report: Такси's
     await tap('Добавить в план: Такси');
     await tap('Сохранить');
-    await waitFor(async () => expect(await (await getDb()).get(
-      "SELECT 1 AS y FROM plan_items p JOIN categories c ON c.id = p.category_id WHERE c.name = 'Такси'")).toEqual({ y: 1 }));
+    await waitFor(async () =>
+      expect(
+        await (
+          await getDb()
+        ).get("SELECT 1 AS y FROM plan_items p JOIN categories c ON c.id = p.category_id WHERE c.name = 'Такси'"),
+      ).toEqual({ y: 1 }),
+    );
   });
 
   test('"Как посчитано" under the year', async () => {
     await toStory('Что можно улучшить');
     await tap('≈ −3 000 ₾ в год');
     expect(await screen.findByText('Как посчитано')).toBeTruthy();
-    expect(screen.getByText(/^Перерасход лимитов 50 ₾ \+ вне плана сверх доли 200 ₾ = 250 ₾ за месяц; × 12 = −3 000 ₾\./)).toBeTruthy();
+    expect(
+      screen.getByText(/^Перерасход лимитов 50 ₾ \+ вне плана сверх доли 200 ₾ = 250 ₾ за месяц; × 12 = −3 000 ₾\./),
+    ).toBeTruthy();
   });
 
-  test('«Подвести итоги ›» — the month\'s «Итоги»', async () => {
+  test("«Подвести итоги ›» — the month's «Итоги»", async () => {
     await tap('Подвести итоги ›');
     expect(await screen.findByText(/^Итоги · Сентябрь 2026/)).toBeTruthy();
   });
 });
 
-test('7.1.4a «Без категории: N операций» — «Разметить»: the month\'s operations without a category', async () => {
-  await openApp(async () => { await planned(); await buy('KIOSK', 15, on(10, 12, 1)); });
+test("7.1.4a «Без категории: N операций» — «Разметить»: the month's operations without a category", async () => {
+  await openApp(async () => {
+    await planned();
+    await buy('KIOSK', 15, on(10, 12, 1));
+  });
   await tap('Статистика');
   await openHistoryPage();
   await screen.findByText('Сентябрь 2026');
@@ -156,11 +215,19 @@ describe('7.3 «Итоги 2026» — stories', () => {
 
   test('7.3.1 in numbers: put aside so far, its share of the budget against the goal, the pace; came in, spent, in the plan', async () => {
     expect(screen.getByText('1 из 4')).toBeTruthy();
-    expect(texts()).toEqual(expect.arrayContaining(['Отложено за 3 месяца', '2 140 ₾', '36% бюджета · цель 10% ✓',
-      '≈ 4 280 ₾ за год в таком темпе', 'В плане', '2 из 3 мес']));
+    expect(texts()).toEqual(
+      expect.arrayContaining([
+        'Отложено за 3 месяца',
+        '2 140 ₾',
+        '36% бюджета · цель 10% ✓',
+        '≈ 4 280 ₾ за год в таком темпе',
+        'В плане',
+        '2 из 3 мес',
+      ]),
+    );
   });
 
-  test('7.3.2 by months and month by month: the future grey and not pressed; a month — its report over the year\'s', async () => {
+  test("7.3.2 by months and month by month: the future grey and not pressed; a month — its report over the year's", async () => {
     await tap('Дальше ›');
     expect(await screen.findByText('2 из 3 месяцев — в плане')).toBeTruthy();
     expect(screen.getByLabelText('ноя: —').props.accessibilityState).toMatchObject({ disabled: true });
@@ -180,8 +247,12 @@ describe('7.3 «Итоги 2026» — stories', () => {
   test('7.3.3 where it went, the last one; no «Запомнилось»; «Готово» closes', async () => {
     await toStory('Траты по категориям');
     // over the full months, as the stats' «В среднем … в месяц»
-    expect(screen.getByText(/^Потрачено 4 260 ₾ · в среднем [\d ]+ ₾ в месяц \(\d+ полн(ый|ых) месяц(а|ев)?\)$/)).toBeTruthy();
-    expect(screen.getAllByText(/^[\d ]+ ₾ в месяц · (перерасход в \d+ из \d+ месяц(а|ев)|без плана)$/).length).toBeGreaterThan(0);
+    expect(
+      screen.getByText(/^Потрачено 4 260 ₾ · в среднем [\d ]+ ₾ в месяц \(\d+ полн(ый|ых) месяц(а|ев)?\)$/),
+    ).toBeTruthy();
+    expect(
+      screen.getAllByText(/^[\d ]+ ₾ в месяц · (перерасход в \d+ из \d+ месяц(а|ев)|без плана)$/).length,
+    ).toBeGreaterThan(0);
     expect(screen.getByText('4 из 4')).toBeTruthy();
     expect(screen.queryByText('Запомнилось')).toBeNull();
     await tap('Готово');
@@ -190,7 +261,7 @@ describe('7.3 «Итоги 2026» — stories', () => {
 });
 
 describe('7.2.6–7.3.7 the reports as pages', () => {
-  test('7.2.6 «История» by years: the year\'s 12 months — «впереди», «нет операций»; ‹ — no year before; the year\'s card', async () => {
+  test("7.2.6 «История» by years: the year's 12 months — «впереди», «нет операций»; ‹ — no year before; the year's card", async () => {
     await openHistory();
     expect(screen.getByText('2026')).toBeTruthy();
     expect(screen.getAllByText('впереди').length).toBe(2);
@@ -208,8 +279,11 @@ describe('7.2.6–7.3.7 the reports as pages', () => {
     expect(screen.queryByRole('tab', { name: '₾ GEL' })).toBeNull();
   });
 
-  test('7.2.7 a budget in dollars: «$ USD | ₾ GEL», opened in the budget\'s', async () => {
-    await openApp(async () => { await planned(); await (await getDb()).run("UPDATE plan_months SET budget_currency = 'USD' WHERE ym = '2026-09'"); });
+  test("7.2.7 a budget in dollars: «$ USD | ₾ GEL», opened in the budget's", async () => {
+    await openApp(async () => {
+      await planned();
+      await (await getDb()).run("UPDATE plan_months SET budget_currency = 'USD' WHERE ym = '2026-09'");
+    });
     await tap('Статистика');
     await openHistoryPage();
     await tap('Отчёт за месяц ›');
@@ -225,16 +299,18 @@ describe('7.2.6–7.3.7 the reports as pages', () => {
     expect(texts().filter((t) => /\d.*\$$/.test(t))).toEqual([]);
   });
 
-  test('7.3.7 «Итоги 2026 — статистика за год» past its stories: the year\'s stats — by months, the spending by categories', async () => {
+  test("7.3.7 «Итоги 2026 — статистика за год» past its stories: the year's stats — by months, the spending by categories", async () => {
     await openHistory();
     await tap('Итоги 2026 — статистика за год');
     expect(await screen.findByTestId('year-stats')).toBeTruthy();
     expect(texts()).toEqual(expect.arrayContaining(['По месяцам', 'Траты по категориям', 'Отложено за 3 месяца']));
     expect(screen.queryByText('Ваш 2026 в цифрах')).toBeNull();
-    expect(screen.getAllByText(/^[\d ]+ ₾ в месяц · (перерасход в \d+ из \d+ месяц(а|ев)|без плана)$/).length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(/^[\d ]+ ₾ в месяц · (перерасход в \d+ из \d+ месяц(а|ев)|без плана)$/).length,
+    ).toBeGreaterThan(0);
   });
 
-  test('7.3.7 back from the year\'s stats: «История по месяцам» again', async () => {
+  test("7.3.7 back from the year's stats: «История по месяцам» again", async () => {
     await openHistory();
     await tap('Итоги 2026 — статистика за год');
     await screen.findByTestId('year-stats');
@@ -246,7 +322,9 @@ describe('7.2.6–7.3.7 the reports as pages', () => {
 
 describe('7.1.1a a fresh report: the banner over the stats and its stories', () => {
   const spies: jest.SpyInstance[] = [];
-  afterEach(() => { spies.splice(0).forEach((x) => x.mockRestore()); });
+  afterEach(() => {
+    spies.splice(0).forEach((x) => x.mockRestore());
+  });
 
   test('the 24th to the 7th: «Отчёт за сентябрь · Отложено … · ещё 4 дня ›» — its stories; «Отчёт за месяц ›» too', async () => {
     const w = require('../../src/stats/reportWindow');

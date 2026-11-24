@@ -9,8 +9,13 @@ import { setPlanAmount } from '../../src/db/plans';
 import { getDb } from '../../src/db';
 
 const q = async <T,>(sql: string, p: unknown[] = []) => (await getDb()).all<T>(sql, p as never);
-const cat = async (name: string) => (await q<{ id: number; deleted_at: number | null; emoji: string | null; type_id: number | null }>(
-  'SELECT id, deleted_at, emoji, type_id FROM categories WHERE name = ?', [name]))[0];
+const cat = async (name: string) =>
+  (
+    await q<{ id: number; deleted_at: number | null; emoji: string | null; type_id: number | null }>(
+      'SELECT id, deleted_at, emoji, type_id FROM categories WHERE name = ?',
+      [name],
+    )
+  )[0];
 
 async function openCategories(seed = ops) {
   await openApp(seed);
@@ -125,7 +130,9 @@ describe('4.1–4.2 the list; creating and changing a category', () => {
     await tap('Новые горы');
     expect(await screen.findByText('Копилка')).toBeTruthy();
     // plan_kind saved to DB: Копилка selected (no «Настроить» — it shows only on a kind change)
-    const row = await (await getDb()).get<{ plan_kind: string }>('SELECT plan_kind FROM categories WHERE name = ?', ['Новые горы']);
+    const row = await (
+      await getDb()
+    ).get<{ plan_kind: string }>('SELECT plan_kind FROM categories WHERE name = ?', ['Новые горы']);
     expect(row?.plan_kind).toBe('fund');
   });
 });
@@ -170,7 +177,11 @@ describe('4.3 the sections', () => {
   test('"Переводы" can\'t be deleted', async () => {
     await tap('Удалить: Переводы');
     expect(await screen.findByText('Системный раздел')).toBeTruthy();
-    expect(screen.getByText('«Переводы» нельзя удалить: из него приложение предлагает категории для переводов. Переименовать можно.')).toBeTruthy();
+    expect(
+      screen.getByText(
+        '«Переводы» нельзя удалить: из него приложение предлагает категории для переводов. Переименовать можно.',
+      ),
+    ).toBeTruthy();
   });
 });
 
@@ -199,8 +210,17 @@ describe('4.4 merging', () => {
     expect(await screen.findByText('Категории объединены в «Покупки & Одежда»')).toBeTruthy();
     const merged = await cat('Покупки & Одежда');
     expect(await cat('Одежда')).toBeUndefined();
-    expect((await q<{ n: number }>("SELECT count(*) AS n FROM transactions WHERE merchant_key IN ('ZARA', 'HM', 'APPLE', 'WOLT') AND category_id = ?", [merged.id]))[0].n).toBe(6);
-    expect((await q<{ c: number }>("SELECT category_id AS c FROM merchant_rules WHERE pattern = 'ZARA'"))[0].c).toBe(merged.id);
+    expect(
+      (
+        await q<{ n: number }>(
+          "SELECT count(*) AS n FROM transactions WHERE merchant_key IN ('ZARA', 'HM', 'APPLE', 'WOLT') AND category_id = ?",
+          [merged.id],
+        )
+      )[0].n,
+    ).toBe(6);
+    expect((await q<{ c: number }>("SELECT category_id AS c FROM merchant_rules WHERE pattern = 'ZARA'"))[0].c).toBe(
+      merged.id,
+    );
   });
 
   test('a name taken in that section: refused', async () => {
@@ -216,11 +236,15 @@ describe('4.4 merging', () => {
 describe('4.5 deleting', () => {
   beforeEach(() => openCategories(base));
 
-  test('no operations this month: what stays, then it\'s gone', async () => {
+  test("no operations this month: what stays, then it's gone", async () => {
     await tap('📦 Пустая');
     await tap('Удалить категорию');
     expect(await screen.findByText('Удалить категорию «📦 Пустая»?')).toBeTruthy();
-    expect(screen.getByText(/^В этом месяце операций в ней нет\. 1 операция на 40\.00 ₾ прошлых месяцев останется в «📦 Пустая» — история и отчёты не изменятся\. Мерчант OLDSHOP останется без категории\.$/)).toBeTruthy();
+    expect(
+      screen.getByText(
+        /^В этом месяце операций в ней нет\. 1 операция на 40\.00 ₾ прошлых месяцев останется в «📦 Пустая» — история и отчёты не изменятся\. Мерчант OLDSHOP останется без категории\.$/,
+      ),
+    ).toBeTruthy();
     await tap('Удалить');
     expect(await screen.findByText('Категория «📦 Пустая» удалена')).toBeTruthy();
     expect((await cat('Пустая')).deleted_at).not.toBeNull();
@@ -230,7 +254,11 @@ describe('4.5 deleting', () => {
   test('one operation this month: no sorting out', async () => {
     await tap('🛒 Продукты');
     await tap('Удалить категорию');
-    expect(await screen.findByText(/^В этом месяце в «🛒 Продукты» 1 операция на 25\.00 ₾\. Перед удалением её нужно перенести в другую категорию\.$/)).toBeTruthy();
+    expect(
+      await screen.findByText(
+        /^В этом месяце в «🛒 Продукты» 1 операция на 25\.00 ₾\. Перед удалением её нужно перенести в другую категорию\.$/,
+      ),
+    ).toBeTruthy();
     expect(screen.getByText('Перенести в другую категорию')).toBeTruthy();
     expect(screen.queryByText('Разложить по разным категориям')).toBeNull();
   });
@@ -249,7 +277,10 @@ describe('4.5 deleting', () => {
     expect(screen.getByText(/• План «🛍️ Покупки» на этот месяц удалится\.$/)).toBeTruthy();
     await tap('Удалить');
     expect(await screen.findByText('Категория «🛍️ Покупки» удалена')).toBeTruthy();
-    expect((await q<{ n: number }>("SELECT count(*) AS n FROM merchant_rules WHERE pattern IN ('ZARA', 'HM', 'APPLE')"))[0].n).toBe(0);
+    expect(
+      (await q<{ n: number }>("SELECT count(*) AS n FROM merchant_rules WHERE pattern IN ('ZARA', 'HM', 'APPLE')"))[0]
+        .n,
+    ).toBe(0);
   });
 
   describe('sorting out', () => {
@@ -300,18 +331,27 @@ test('4.4.2: merging categories planned differently: how to plan the merged one'
   await tap('Разовый платёж');
   await tap('Объединить');
   expect(await screen.findByText('Категории объединены в «Покупки & Одежда»')).toBeTruthy();
-  expect(await q("SELECT p.limit_minor AS a, p.kind FROM plan_items p JOIN categories c ON c.id = p.category_id WHERE c.name = 'Покупки & Одежда' AND p.ym = '2026-10'"))
-    .toEqual([{ a: 70000, kind: 'fixed' }]);
+  expect(
+    await q(
+      "SELECT p.limit_minor AS a, p.kind FROM plan_items p JOIN categories c ON c.id = p.category_id WHERE c.name = 'Покупки & Одежда' AND p.ym = '2026-10'",
+    ),
+  ).toEqual([{ a: 70000, kind: 'fixed' }]);
 });
 
-test('4.4.3: merchants of different categories — merged in their lists; all of a merchant\'s merged: it asks no more', async () => {
+test("4.4.3: merchants of different categories — merged in their lists; all of a merchant's merged: it asks no more", async () => {
   await openCategories(async () => {
     await base();
     const db = await getDb();
-    const id = async (name: string) => (await db.get<{ id: number }>('SELECT id FROM categories WHERE name = ?', [name]))!.id;
+    const id = async (name: string) =>
+      (await db.get<{ id: number }>('SELECT id FROM categories WHERE name = ?', [name]))!.id;
     // DELIVERY: "Покупки" or "Одежда"; MARKETX: "Одежда" or "Техника"
     await db.run("INSERT INTO mixed_merchants (merchant_key, created_at) VALUES ('DELIVERY', 0), ('MARKETX', 0)");
-    for (const [k, c] of [['DELIVERY', 'Покупки'], ['DELIVERY', 'Одежда'], ['MARKETX', 'Одежда'], ['MARKETX', 'Техника']]) {
+    for (const [k, c] of [
+      ['DELIVERY', 'Покупки'],
+      ['DELIVERY', 'Одежда'],
+      ['MARKETX', 'Одежда'],
+      ['MARKETX', 'Техника'],
+    ]) {
       await db.run('INSERT INTO merchant_categories (merchant_key, category_id) VALUES (?, ?)', [k, await id(c)]);
     }
   });
@@ -323,19 +363,39 @@ test('4.4.3: merchants of different categories — merged in their lists; all of
   const merged = (await cat('Покупки & Одежда')).id;
   const display = notifee.displayNotification as jest.Mock;
   display.mockClear();
-  const sms = (merchant: string) => act(() => SmsBackgroundTask({ sender: 'TBC', body: `12.00GEL\n(*1234)\n${merchant}\n15/10/2026 11:30`, timestamp: Date.now() }));
+  const sms = (merchant: string) =>
+    act(() =>
+      SmsBackgroundTask({
+        sender: 'TBC',
+        body: `12.00GEL\n(*1234)\n${merchant}\n15/10/2026 11:30`,
+        timestamp: Date.now(),
+      }),
+    );
 
   // DELIVERY: nothing to pick from — straight into the merged one, no question
   await sms('DELIVERY');
-  expect((await q<{ c: number }>("SELECT category_id AS c FROM transactions WHERE merchant_key = 'DELIVERY'"))[0].c).toBe(merged);
+  expect(
+    (await q<{ c: number }>("SELECT category_id AS c FROM transactions WHERE merchant_key = 'DELIVERY'"))[0].c,
+  ).toBe(merged);
   // no "Покупка — 12.00 ₾" with the categories to pick (its limit's warning may come)
   const asks = () => display.mock.calls.filter(([x]) => String(x.id).startsWith('tx_')).map(([x]) => x);
   expect(asks()).toEqual([]);
   // MARKETX: still two — the operation gets the primary one, and the notification still asks, both on the buttons
   await sms('MARKETX');
-  const primary = (await q<{ c: number }>("SELECT category_id AS c FROM merchant_categories WHERE merchant_key = 'MARKETX' ORDER BY position, category_id LIMIT 1"))[0].c;
-  expect((await q<{ c: number | null }>("SELECT category_id AS c FROM transactions WHERE merchant_key = 'MARKETX'"))[0].c).toBe(primary);
+  const primary = (
+    await q<{ c: number }>(
+      "SELECT category_id AS c FROM merchant_categories WHERE merchant_key = 'MARKETX' ORDER BY position, category_id LIMIT 1",
+    )
+  )[0].c;
+  expect(
+    (await q<{ c: number | null }>("SELECT category_id AS c FROM transactions WHERE merchant_key = 'MARKETX'"))[0].c,
+  ).toBe(primary);
   await waitFor(() => expect(asks()).toHaveLength(1));
   const [n] = asks();
-  expect(n.android.actions.map((a: { title: string }) => a.title).slice(0, 2).sort()).toEqual(['💻 Техника', '🛍️ Покупки & Одежда'].sort());
+  expect(
+    n.android.actions
+      .map((a: { title: string }) => a.title)
+      .slice(0, 2)
+      .sort(),
+  ).toEqual(['💻 Техника', '🛍️ Покупки & Одежда'].sort());
 });

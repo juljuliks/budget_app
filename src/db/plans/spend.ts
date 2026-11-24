@@ -13,16 +13,24 @@ import { sqlList } from '../sql';
  * one, as "Возвраты без категории" (REFUND_KEY) apart from the uncategorized spending.
  */
 export type SpendRow = {
-  id: number; category_id: number | null; kind: string; amount_minor: number; currency: string; occurred_at: number; refund_settled_at: number | null;
+  id: number;
+  category_id: number | null;
+  kind: string;
+  amount_minor: number;
+  currency: string;
+  occurred_at: number;
+  refund_settled_at: number | null;
   /** where it was spent (the dynamics' merchants) */
-  merchant_key?: string | null; raw_merchant?: string | null;
+  merchant_key?: string | null;
+  raw_merchant?: string | null;
 };
 
 /** The key refunds without a category are summed under (instead of null, "Без категории"). */
 export const REFUND_KEY = 'refund' as const;
 
 /** The category key a row is summed under. */
-export const categoryKey = (r: SpendRow): number | null | typeof REFUND_KEY => (r.kind === 'refund' && r.category_id === null ? REFUND_KEY : r.category_id);
+export const categoryKey = (r: SpendRow): number | null | typeof REFUND_KEY =>
+  r.kind === 'refund' && r.category_id === null ? REFUND_KEY : r.category_id;
 
 /** A transaction's contribution to spending (see EXPENSE_KINDS), in its own currency. */
 function spendOf(r: SpendRow): number {
@@ -50,21 +58,28 @@ export async function spendRows(from: number, to: number, only?: TxFilter): Prom
   const w = spendWhere(only);
   return db.all<SpendRow>(
     `SELECT id, category_id, kind, amount_minor, currency, occurred_at, refund_settled_at, merchant_key, raw_merchant FROM spend_parts t WHERE ${w.sql}`,
-    [from, to, ...w.params]);
+    [from, to, ...w.params],
+  );
 }
 
 /**
  * The spending of [from, to) by day, converted to `currency` (summed in SQL by day and currency, each sum on its day's
  * rate): the totals over many months (history, averages) without reading every row.
  */
-export async function spendByDay(from: number, to: number, currency: Currency, extraDates: string[] = []):
-  Promise<{ days: Array<{ day: string; value: number }>; conv: Converter }> {
+export async function spendByDay(
+  from: number,
+  to: number,
+  currency: Currency,
+  extraDates: string[] = [],
+): Promise<{ days: Array<{ day: string; value: number }>; conv: Converter }> {
   const db = await getDb();
   const w = spendWhere();
   const sums = await db.all<{ day: string; currency: string; amount: number }>(
     `SELECT strftime('%Y-%m-%d', occurred_at, 'unixepoch', 'localtime') AS day, currency, sum(${signedSpendSql()}) AS amount
       FROM spend_parts t WHERE ${w.sql} AND NOT (kind = 'refund' AND refund_settled_at IS NOT NULL)
-      GROUP BY day, currency`, [from, to, ...w.params]);
+      GROUP BY day, currency`,
+    [from, to, ...w.params],
+  );
   await ensureRatesLater([...sums.filter((r) => r.currency !== currency).map((r) => r.day), ...extraDates]);
   const conv = await makeConverter();
   const days: Array<{ day: string; value: number }> = [];
@@ -108,8 +123,12 @@ export function sumBy<K>(items: Converted['items'], key: (r: SpendRow) => K): Ma
  * Each transaction's contribution to spending in [from, to), converted to `currency`, for per-day totals; `only` the
  * operations these filters show (the operations list's: a day's total is then what its section shows).
  */
-export async function spendingEntries(from: number, to: number, currency: Currency = BUDGET_CURRENCY, only?: TxFilter):
-  Promise<Array<{ occurred_at: number; spent_minor: number }>> {
+export async function spendingEntries(
+  from: number,
+  to: number,
+  currency: Currency = BUDGET_CURRENCY,
+  only?: TxFilter,
+): Promise<Array<{ occurred_at: number; spent_minor: number }>> {
   const { items } = await convertSpending(await spendRows(from, to, only), currency);
   return items.map(({ row, value }) => ({ occurred_at: row.occurred_at, spent_minor: value }));
 }

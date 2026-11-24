@@ -10,7 +10,10 @@ const SLOP = 8;
 export function useFabOnScroll(resetKey?: string) {
   const [shown, setShown] = useState(true);
   const last = useRef(0);
-  useEffect(() => { last.current = 0; setShown(true); }, [resetKey]);
+  useEffect(() => {
+    last.current = 0;
+    setShown(true);
+  }, [resetKey]);
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const y = e.nativeEvent.contentOffset.y;
     const dy = y - last.current;

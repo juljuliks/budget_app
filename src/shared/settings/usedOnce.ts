@@ -35,7 +35,9 @@ export function usedOnce(key: string) {
       listeners.add(setV);
       load().catch((e) => console.error(`load ${key} failed`, e));
       setV(current);
-      return () => { listeners.delete(setV); };
+      return () => {
+        listeners.delete(setV);
+      };
     }, []);
     return v;
   }

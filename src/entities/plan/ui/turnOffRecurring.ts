@@ -12,7 +12,11 @@ export async function askTurnOff(categoryId: number): Promise<boolean> {
     sheetAlert(
       'Выключить регулярные платежи?',
       `На платежи уже отложено: ${list}. Это уйдёт в сбережения месяца — как при удалении копилки.`,
-      [{ text: 'Отмена', style: 'cancel', onPress: () => resolve(false) }, { text: 'Выключить', style: 'destructive', onPress: () => resolve(true) }]);
+      [
+        { text: 'Отмена', style: 'cancel', onPress: () => resolve(false) },
+        { text: 'Выключить', style: 'destructive', onPress: () => resolve(true) },
+      ],
+    );
   });
 }
 

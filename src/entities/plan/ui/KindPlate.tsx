@@ -17,8 +17,15 @@ export default function KindPlate({ kind, onOpen }: { kind: PlanKind; onOpen: ()
 
 const styles = StyleSheet.create({
   plate: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 12,
-    backgroundColor: colors.surface, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    marginBottom: 12,
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   kind: { fontSize: 16, color: colors.text, flexShrink: 1 },
 });

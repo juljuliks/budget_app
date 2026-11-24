@@ -1,5 +1,13 @@
 import React, { useRef, useState } from 'react';
-import { Animated, GestureResponderEvent, PanResponderGestureState, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  Animated,
+  GestureResponderEvent,
+  PanResponderGestureState,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { colors } from '@/shared/theme/theme';
 import { StarIcon, TrashIcon } from '@/shared/ui/icons';
 
@@ -90,7 +98,11 @@ function useRowDrag(index: number, count: number, enabled: boolean, onReorder: (
   };
   const touchY = (e: GestureResponderEvent) => e.nativeEvent.touches[0]?.pageY ?? e.nativeEvent.pageY;
   return {
-    y, dragging, measure: (h: number) => { if (h > 0) rowH.current = h; },
+    y,
+    dragging,
+    measure: (h: number) => {
+      if (h > 0) rowH.current = h;
+    },
     handlers: {
       onTouchStart: (e: GestureResponderEvent) => {
         if (!enabledRef.current) return;
@@ -103,18 +115,37 @@ function useRowDrag(index: number, count: number, enabled: boolean, onReorder: (
         if (!enabledRef.current) return;
         follow(touchY(e) - origin.current);
       },
-      onTouchEnd: () => { if (enabledRef.current) finish(moved.current); },
-      onTouchCancel: () => { y.setValue(0); moved.current = 0; setDragging(false); },
+      onTouchEnd: () => {
+        if (enabledRef.current) finish(moved.current);
+      },
+      onTouchCancel: () => {
+        y.setValue(0);
+        moved.current = 0;
+        setDragging(false);
+      },
       // the screen test releases the responder with a dy; a real finger is handled above
       onResponderRelease: (_: GestureResponderEvent, g?: PanResponderGestureState) => {
-        if (byFinger.current) { byFinger.current = false; return; }
+        if (byFinger.current) {
+          byFinger.current = false;
+          return;
+        }
         finish(g?.dy ?? 0);
       },
     },
   };
 }
 
-function Row({ name, color, primary, ordering, index, count, onLongPress, onReorder, onRemove }: {
+function Row({
+  name,
+  color,
+  primary,
+  ordering,
+  index,
+  count,
+  onLongPress,
+  onReorder,
+  onRemove,
+}: {
   name: string;
   color: string;
   primary: boolean;
@@ -130,12 +161,24 @@ function Row({ name, color, primary, ordering, index, count, onLongPress, onReor
   const face = (
     <>
       <View style={styles.mark}>
-        {primary && !ordering ? <StarIcon color={color} size={16} filled /> : <View style={[styles.dot, { backgroundColor: color }]} />}
+        {primary && !ordering ? (
+          <StarIcon color={color} size={16} filled />
+        ) : (
+          <View style={[styles.dot, { backgroundColor: color }]} />
+        )}
       </View>
-      <Text style={styles.name} numberOfLines={1}>{name}</Text>
+      <Text style={styles.name} numberOfLines={1}>
+        {name}
+      </Text>
       {ordering ? <Grip /> : null}
       {!ordering && count > 1 ? (
-        <TouchableOpacity onPress={onRemove} accessibilityRole="button" accessibilityLabel={`Удалить: ${name}`} hitSlop={6} style={styles.trash}>
+        <TouchableOpacity
+          onPress={onRemove}
+          accessibilityRole="button"
+          accessibilityLabel={`Удалить: ${name}`}
+          hitSlop={6}
+          style={styles.trash}
+        >
           <TrashIcon color={colors.danger} size={18} />
         </TouchableOpacity>
       ) : null}
@@ -143,12 +186,22 @@ function Row({ name, color, primary, ordering, index, count, onLongPress, onReor
   );
   return (
     <Animated.View
-      style={[styles.drag, { transform: [{ translateY: drag.y }], zIndex: drag.dragging ? 2 : 0 }, drag.dragging && styles.lifted]}
+      style={[
+        styles.drag,
+        { transform: [{ translateY: drag.y }], zIndex: drag.dragging ? 2 : 0 },
+        drag.dragging && styles.lifted,
+      ]}
       onLayout={(e) => drag.measure(e.nativeEvent.layout.height)}
     >
       {ordering ? (
         // a plain view, not the animated one: it has to take the finger before the page scrolls
-        <View style={styles.row} accessibilityRole="button" accessibilityLabel={label} {...drag.handlers} {...{ onPress: () => undefined }}>
+        <View
+          style={styles.row}
+          accessibilityRole="button"
+          accessibilityLabel={label}
+          {...drag.handlers}
+          {...{ onPress: () => undefined }}
+        >
           {face}
         </View>
       ) : (
@@ -182,10 +235,19 @@ const styles = StyleSheet.create({
   hint: { fontSize: 13, color: colors.muted, lineHeight: 18, marginBottom: 4 },
   block: { overflow: 'hidden' },
   drag: { backgroundColor: colors.bg },
-  lifted: { shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 3 },
+  lifted: {
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
   row: {
-    flexDirection: 'row', alignItems: 'center', paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
   },
   mark: { width: 16, marginRight: 10, alignItems: 'center' },
   dot: { width: 10, height: 10, borderRadius: 5 },

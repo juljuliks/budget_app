@@ -6,12 +6,18 @@ import { getDb } from '../../src/db';
 import { ingestSms } from '../../src/ingest/ingest';
 import { autoCategory } from '../e2e/seeds';
 
-const sms = (body: string, minutesAgo = 0) => act(async () => { await ingestSms({ sender: 'TBC', body, timestamp: Date.now() - minutesAgo * 60000 }); });
+const sms = (body: string, minutesAgo = 0) =>
+  act(async () => {
+    await ingestSms({ sender: 'TBC', body, timestamp: Date.now() - minutesAgo * 60000 });
+  });
 const row = (text: string) => within(rowOf(text));
-const tx = async (merchant: string | null) => (await getDb()).get<{ kind: string; a: number; c: string; k: string | null; at: number }>(
-  "SELECT kind, amount_minor AS a, currency AS c, merchant_key AS k, occurred_at AS at FROM transactions WHERE coalesce(raw_merchant, '') = ?", [merchant ?? '']);
+const tx = async (merchant: string | null) =>
+  (await getDb()).get<{ kind: string; a: number; c: string; k: string | null; at: number }>(
+    "SELECT kind, amount_minor AS a, currency AS c, merchant_key AS k, occurred_at AS at FROM transactions WHERE coalesce(raw_merchant, '') = ?",
+    [merchant ?? ''],
+  );
 
-test('1.1: every kind, its sign, its name in the list; the amounts\' formats; the merchants\' names', async () => {
+test("1.1: every kind, its sign, its name in the list; the amounts' formats; the merchants' names", async () => {
   await openApp();
   await sms('44.00GEL\nVISA (*1234)\nSPAR TBILISI GE\n15/10/2026 11:00\nBalance: 283.14GEL');
   await sms('Payment\n25.69GEL\nTELMICO\nID:1951043\n15/10/2026');
@@ -69,13 +75,14 @@ test('1.1.8–1.1.9: not operations — declined, a conversion, a code, an ad, z
     'Скидка 20% в SPAR до конца недели! 50.00 GEL',
     '0.00GEL\n(*1234)\nSPAR\n15/10/2026 11:00',
     'Balance: 281.00GEL\n15/10/2026 11:30',
-  ]) await sms(body);
+  ])
+    await sms(body);
   expect(await screen.findByText('281.00 ₾')).toBeTruthy();
   expect(screen.getByText(/^Операций пока нет\./)).toBeTruthy();
   expect((await (await getDb()).get<{ n: number }>('SELECT count(*) AS n FROM transactions'))!.n).toBe(0);
 });
 
-test('1.6: the category a new one gets — its merchant\'s, by a prefix, a refund\'s purchase; a merchant of different categories gets its primary one; none for a transfer', async () => {
+test("1.6: the category a new one gets — its merchant's, by a prefix, a refund's purchase; a merchant of different categories gets its primary one; none for a transfer", async () => {
   await openApp(autoCategory);
   await sms('12.00GEL\n(*1234)\nSPAR\n15/10/2026 11:50');
   await sms('30.00GEL\n(*1234)\nWOLT MARKET\n15/10/2026 11:51');

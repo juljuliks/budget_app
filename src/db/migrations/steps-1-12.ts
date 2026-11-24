@@ -14,12 +14,16 @@ const CARD_NAME_KEY = /^(MC|MASTERCARD|VISA|AMEX|MAESTRO|UNIONPAY)\b/;
 async function fixCardMerchants(db: Db) {
   const rows = await db.all<{ id: number; raw_sms: string }>(
     `SELECT id, raw_sms FROM transactions
-      WHERE raw_sms != '' AND (kind IN ('deposit', 'transfer', 'refund') OR merchant_key LIKE 'MC %' OR merchant_key LIKE 'VISA%')`);
+      WHERE raw_sms != '' AND (kind IN ('deposit', 'transfer', 'refund') OR merchant_key LIKE 'MC %' OR merchant_key LIKE 'VISA%')`,
+  );
   for (const r of rows) {
     const p = parseTbc(r.raw_sms);
     if (!p) continue;
-    await db.run('UPDATE transactions SET raw_merchant = ?, merchant_key = ? WHERE id = ?',
-      [p.raw_merchant || null, p.merchant_key || null, r.id]);
+    await db.run('UPDATE transactions SET raw_merchant = ?, merchant_key = ? WHERE id = ?', [
+      p.raw_merchant || null,
+      p.merchant_key || null,
+      r.id,
+    ]);
   }
   const rules = await db.all<{ id: number; pattern: string }>('SELECT id, pattern FROM merchant_rules');
   for (const rule of rules) {
@@ -27,7 +31,8 @@ async function fixCardMerchants(db: Db) {
   }
   await db.run(
     `UPDATE transactions SET category_id = NULL, category_source = NULL
-      WHERE category_source = 'rule' AND kind NOT IN (${REMEMBERABLE_KINDS.map((k) => `'${k}'`).join(',')})`);
+      WHERE category_source = 'rule' AND kind NOT IN (${REMEMBERABLE_KINDS.map((k) => `'${k}'`).join(',')})`,
+  );
 }
 
 /** Migrations 1–12. */
@@ -151,14 +156,10 @@ export const STEPS_1_12: MigrationStep[][] = [
     "UPDATE transactions SET seen_at = CAST(strftime('%s', 'now') AS INTEGER)",
   ],
   // 6: the amount a month's plan distributes (e.g. salary). NULL = not set, the plan is unbounded.
-  [
-    'ALTER TABLE plan_months ADD COLUMN budget_minor INTEGER CHECK (budget_minor >= 0)',
-  ],
+  ['ALTER TABLE plan_months ADD COLUMN budget_minor INTEGER CHECK (budget_minor >= 0)'],
   // 7: plan item kind. 'limit' = a spending cap (progress bar); 'fixed' = a fixed payment such as rent
   // (paid / not paid). Existing items are limits.
-  [
-    "ALTER TABLE plan_items ADD COLUMN kind TEXT NOT NULL DEFAULT 'limit' CHECK (kind IN ('limit', 'fixed'))",
-  ],
+  ["ALTER TABLE plan_items ADD COLUMN kind TEXT NOT NULL DEFAULT 'limit' CHECK (kind IN ('limit', 'fixed'))"],
   // 8: merchant rules no longer apply to money transfers (their "merchant" is the card type, the same for
   // every transfer). Transfers a rule put into a category go back to uncategorized; manual choices stay.
   [
@@ -177,8 +178,5 @@ export const STEPS_1_12: MigrationStep[][] = [
     'ALTER TABLE transactions ADD COLUMN merchant_detached INTEGER NOT NULL DEFAULT 0',
   ],
   // 12: colors. A type's palette (see src/domain/colors.ts; NULL = by its position), a category's own color (NULL = auto)
-  [
-    'ALTER TABLE category_types ADD COLUMN palette TEXT',
-    'ALTER TABLE categories ADD COLUMN color TEXT',
-  ],
+  ['ALTER TABLE category_types ADD COLUMN palette TEXT', 'ALTER TABLE categories ADD COLUMN color TEXT'],
 ];

@@ -32,6 +32,7 @@ npx jest --selectProjects logic                 # логика: парсер, б
 npx jest --selectProjects screens tests/screens/stats.test.tsx -t "5.1"   # один файл / кейсы раздела
 npx tsc --noEmit -p .                           # типы
 npm run lint                                    # ESLint: размеры файлов и границы слоёв (ARCHITECTURE.md)
+npm run format                                  # Prettier — перед коммитом (CI проверяет format:check)
 npm run emulator                                # release-сборка и установка на эмулятор (JDK 17 сам)
 tests/e2e/run.sh [flow ...]                     # Maestro на эмуляторе — см. скилл maestro
 ```

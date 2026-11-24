@@ -26,10 +26,13 @@ export const OVERSPENT = 'Перерасход плана месяца';
 export const GROUP_ABOUT: Record<SummaryGroupKey, string> = {
   day: 'Категории с лимитом на день: лимит на выбранные дни.',
   week: 'Категории с лимитом на неделю. Если период короче недели, считается вся неделя, как в строках категорий: траты в другие её дни тоже входят.',
-  '2weeks': 'Категории с лимитом на 2 недели. Если период короче, считаются обе недели целиком: траты в другие их дни тоже входят.',
+  '2weeks':
+    'Категории с лимитом на 2 недели. Если период короче, считаются обе недели целиком: траты в другие их дни тоже входят.',
   month: 'Категории, которые вы тратите «крупно, раз в месяц»: план на месяц и траты с 1-го.',
-  fixed: 'Аренда, подписки, кредит: оплачено с 1-го числа против плана месяца. Осталось — сколько ещё предстоит оплатить, это не свободные деньги. Переплата — перерасход.',
-  outside: 'Категории без плана в этом месяце и траты без категории. Доля на них задаётся в бюджете месяца — она как месячный лимит: траты с 1-го против неё.',
+  fixed:
+    'Аренда, подписки, кредит: оплачено с 1-го числа против плана месяца. Осталось — сколько ещё предстоит оплатить, это не свободные деньги. Переплата — перерасход.',
+  outside:
+    'Категории без плана в этом месяце и траты без категории. Доля на них задаётся в бюджете месяца — она как месячный лимит: траты с 1-го против неё.',
 };
 
 export const capitalize = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
@@ -45,10 +48,16 @@ export function deltaText(spent: number, norm: number, money: Money): string {
 /** "(500 ₾ − 120 ₾) / 28 × 7 = 95 ₾": what's left of the month's plan over the days left, per month part */
 export function formulaText(parts: NormPart[], m: Money): string {
   const total = parts.reduce((a, p) => a + p.norm, 0);
-  const terms = parts.map((p) => (p.spentBefore > 0
-    ? `(${m(p.limit)} − ${m(p.spentBefore)}) / ${p.daysLeft} × ${p.days}`
-    : `${m(p.limit)} / ${p.daysLeft} × ${p.days}`)).join(' + ');
-  return parts.length > 1 ? `${terms} = ${parts.map((p) => m(p.norm)).join(' + ')} = ${m(total)}` : `${terms} = ${m(total)}`;
+  const terms = parts
+    .map((p) =>
+      p.spentBefore > 0
+        ? `(${m(p.limit)} − ${m(p.spentBefore)}) / ${p.daysLeft} × ${p.days}`
+        : `${m(p.limit)} / ${p.daysLeft} × ${p.days}`,
+    )
+    .join(' + ');
+  return parts.length > 1
+    ? `${terms} = ${parts.map((p) => m(p.norm)).join(' + ')} = ${m(total)}`
+    : `${terms} = ${m(total)}`;
 }
 
 /** "в сентябре плана нет — его дни считаются как 0" for the parts without a plan */
@@ -70,7 +79,12 @@ export function windowLabelText(ym: string, range: DayRange, rhythm: NormPeriod,
 }
 
 /** The line under the donut: no plan for these days, or a long period's average per month. */
-export function summaryText(pace: boolean, limits: number, average: { average_minor: number; months: number } | null | undefined, money: Money): string | null {
+export function summaryText(
+  pace: boolean,
+  limits: number,
+  average: { average_minor: number; months: number } | null | undefined,
+  money: Money,
+): string | null {
   if (pace) return limits ? null : 'Плана на эти дни нет — показана только структура трат.';
   if (average === undefined) return '';
   if (average === null) return 'Для среднего в месяц нужен хотя бы один полный месяц с данными.';

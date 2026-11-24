@@ -20,17 +20,31 @@ function PlanOverBar({ plan, spent }: { plan: number; spent: number }) {
 export default function ImproveBlock({ v, page }: { v: ReportView; page?: boolean }) {
   const { r, money, minus, perYear } = v;
   return (
-    <ReportBlock page={page} title="Что можно улучшить" right={v.badMonth > 0 ? (
-      <YearInfo style={[styles.blockValue, styles.over]} info={v.yearInfo(v.badParts, '−', 'Столько не получится отложить за год, если так будет каждый месяц.')}>
-        ≈ −{perYear(v.badMonth)} в год
-      </YearInfo>
-    ) : null}>
+    <ReportBlock
+      page={page}
+      title="Что можно улучшить"
+      right={
+        v.badMonth > 0 ? (
+          <YearInfo
+            style={[styles.blockValue, styles.over]}
+            info={v.yearInfo(v.badParts, '−', 'Столько не получится отложить за год, если так будет каждый месяц.')}
+          >
+            ≈ −{perYear(v.badMonth)} в год
+          </YearInfo>
+        ) : null
+      }
+    >
       {r.overLimitsTotal > 0 ? (
         <>
           <Line label="Перерасход лимитов" value={minus(r.overLimitsTotal)} strong valueStyle={styles.bad} />
           {r.overLimits.map((c) => (
             <View key={String(c.id)}>
-              <CategoryLine c={c} note={`план ${money(c.limit)}, факт ${money(c.spent)}`} value={minus(c.spent - c.limit)} valueStyle={styles.bad} />
+              <CategoryLine
+                c={c}
+                note={`план ${money(c.limit)}, факт ${money(c.spent)}`}
+                value={minus(c.spent - c.limit)}
+                valueStyle={styles.bad}
+              />
               <PlanOverBar plan={c.limit} spent={c.spent} />
             </View>
           ))}

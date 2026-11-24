@@ -12,14 +12,24 @@ import type { Every } from './regularTimes';
 import { activeFunds, contributionOf, fundLedger } from './funds';
 import { monthPayments } from './recurringItems';
 import type { RecurringPayment } from '../recurring/reads';
-import { OverBudgetError, ensureMonthPlan, ownMonth, planConverter, planCurrency, plannedTotal, storedBudget } from './budget';
+import {
+  OverBudgetError,
+  ensureMonthPlan,
+  ownMonth,
+  planConverter,
+  planCurrency,
+  plannedTotal,
+  storedBudget,
+} from './budget';
 
 /** The month's plan items; `converted_minor` in `to` (default: the amount to distribute's currency). */
 export async function listPlan(ym: string, to?: Currency): Promise<PlanItem[]> {
   await ensureMonthPlan(ym);
   const db = await getDb();
   const prev = await db.get<{ ym: string }>('SELECT ym FROM plan_months WHERE ym < ? ORDER BY ym DESC LIMIT 1', [ym]);
-  const rows = await db.all<Omit<PlanItem, 'pinned' | 'converted_minor' | 'currency'> & { pinned: number; currency: string }>(
+  const rows = await db.all<
+    Omit<PlanItem, 'pinned' | 'converted_minor' | 'currency'> & { pinned: number; currency: string }
+  >(
     `SELECT p.category_id, c.name, c.emoji, c.system, c.recurring = 1 AS recurring, coalesce(c.system = 'subs', 0) AS by_merchant, c.type_id, ct.name AS type_name, p.limit_minor, p.currency, p.kind, p.norm_period, p.pinned,
         p.until, CASE WHEN p.kind = 'fixed' THEN p.every END AS every, p.weekdays, p.unit_minor,
         (SELECT q.limit_minor FROM plan_items q WHERE q.ym = ? AND q.category_id = p.category_id) AS previous_minor
@@ -28,10 +38,14 @@ export async function listPlan(ym: string, to?: Currency): Promise<PlanItem[]> {
       LEFT JOIN category_types ct ON ct.id = c.type_id
       WHERE p.ym = ?
       ORDER BY ct.id IS NULL, ct.sort_order, ct.name, c.sort_order, c.name`,
-    [prev?.ym ?? '', ym]);
+    [prev?.ym ?? '', ym],
+  );
   const target = to ?? (await planCurrency(ym));
   const conv = await planConverter(ym);
-  const funds = await fundsOf(ym, rows.filter((r) => r.kind === 'fund').map((r) => r.category_id));
+  const funds = await fundsOf(
+    ym,
+    rows.filter((r) => r.kind === 'fund').map((r) => r.category_id),
+  );
   // a category with repeating payments: their names, those saved up for, the contributions
   const subsInfo = new Map<number, NonNullable<PlanItem['subs']>>();
   // a subscriptions item recounted from its charges (a done one at the charge day's rate); a past month keeps what it stored
@@ -42,13 +56,22 @@ export async function listPlan(ym: string, to?: Currency): Promise<PlanItem[]> {
       liveTotal.set(r.category_id, subs.total_minor);
       // stored in this currency already: bring it to the recounted sum, so the next look and the budget agree
       if (asCurrency(r.currency) === target && r.limit_minor !== subs.total_minor) {
-        await db.run('UPDATE plan_items SET limit_minor = ? WHERE ym = ? AND category_id = ?', [subs.total_minor, ym, r.category_id]);
+        await db.run('UPDATE plan_items SET limit_minor = ? WHERE ym = ? AND category_id = ?', [
+          subs.total_minor,
+          ym,
+          r.category_id,
+        ]);
       }
     }
     const savingIds = new Set(subs.saving.map((v) => v.payment_id));
-    const subNames = (keep: (id: number) => boolean) => [...subs.charges.map((c) => c.sub), ...subs.later.map((l) => l.sub)]
-      .filter((s) => keep(s.id)).map((s) => s.name).filter((n, i, all) => all.indexOf(n) === i);
-    const all = [...subs.charges.map((c) => c.sub), ...subs.later.map((l) => l.sub), ...subs.undated].filter((s, i, a) => a.findIndex((x) => x.id === s.id) === i);
+    const subNames = (keep: (id: number) => boolean) =>
+      [...subs.charges.map((c) => c.sub), ...subs.later.map((l) => l.sub)]
+        .filter((s) => keep(s.id))
+        .map((s) => s.name)
+        .filter((n, i, all) => all.indexOf(n) === i);
+    const all = [...subs.charges.map((c) => c.sub), ...subs.later.map((l) => l.sub), ...subs.undated].filter(
+      (s, i, a) => a.findIndex((x) => x.id === s.id) === i,
+    );
     const only = all.length === 1 ? all[0] : null;
     // its charge this month: the first not paid yet (a weekly one has several), else the last paid
     const own = only ? subs.charges.filter((c) => c.sub.id === only.id) : [];
@@ -56,24 +79,40 @@ export async function listPlan(ym: string, to?: Currency): Promise<PlanItem[]> {
     // all its payments in one currency: the month's charges (but those paid from what was saved) and contributions in it
     const one = all.length && all.every((s) => s.currency === all[0].currency) ? all[0].currency : null;
     subsInfo.set(r.category_id, {
-      names: subNames((id) => !savingIds.has(id)), saving_names: subNames((id) => savingIds.has(id)),
+      names: subNames((id) => !savingIds.has(id)),
+      saving_names: subNames((id) => savingIds.has(id)),
       saving_minor: subs.saving.reduce((a, v) => a + (v.converted_minor ?? 0), 0),
       ...savingProgress(subs.saving, all, (minor, from) => conv(minor, from, target) ?? 0),
       empty: all.length === 0,
       charges: { total: subs.charges.length, done: subs.charges.filter((c) => c.done).length },
-      ...(one ? { in_currency: {
-        currency: one,
-        charges_minor: subs.charges.filter((c) => !c.saved).reduce((a, c) => a + c.sub.amount_minor, 0),
-        saving_minor: subs.saving.reduce((a, v) => a + v.contribution_minor, 0),
-      } } : {}),
+      ...(one
+        ? {
+            in_currency: {
+              currency: one,
+              charges_minor: subs.charges.filter((c) => !c.saved).reduce((a, c) => a + c.sub.amount_minor, 0),
+              saving_minor: subs.saving.reduce((a, v) => a + v.contribution_minor, 0),
+            },
+          }
+        : {}),
       // none charged this month: the next charge, in a coming month ("30 ₾ в ноябре")
-      ...(!subs.charges.length && subs.later[0] && subs.later[0].next.slice(0, 7) > ym ? { upcoming: {
-        amount_minor: subs.later[0].sub.amount_minor, currency: subs.later[0].sub.currency, ym: subs.later[0].next.slice(0, 7),
-      } } : {}),
-      ...(only ? { single: {
-        period: only.period, done: !!charge?.done,
-        day: charge?.day ?? subs.later.find((l) => l.sub.id === only.id)?.next ?? null,
-      } } : {}),
+      ...(!subs.charges.length && subs.later[0] && subs.later[0].next.slice(0, 7) > ym
+        ? {
+            upcoming: {
+              amount_minor: subs.later[0].sub.amount_minor,
+              currency: subs.later[0].sub.currency,
+              ym: subs.later[0].next.slice(0, 7),
+            },
+          }
+        : {}),
+      ...(only
+        ? {
+            single: {
+              period: only.period,
+              done: !!charge?.done,
+              day: charge?.day ?? subs.later.find((l) => l.sub.id === only.id)?.next ?? null,
+            },
+          }
+        : {}),
     });
   }
   return rows.map((r) => ({
@@ -91,7 +130,11 @@ export async function listPlan(ym: string, to?: Currency): Promise<PlanItem[]> {
 }
 
 /** The payments saved up for: what they have by the month's end and their amounts, together in the plan's currency. */
-function savingProgress(saving: Array<{ payment_id: number; end_minor: number }>, subs: RecurringPayment[], toTarget: (minor: number, from: Currency) => number) {
+function savingProgress(
+  saving: Array<{ payment_id: number; end_minor: number }>,
+  subs: RecurringPayment[],
+  toTarget: (minor: number, from: Currency) => number,
+) {
   let end = 0;
   let amount = 0;
   for (const v of saving) {
@@ -103,7 +146,10 @@ function savingProgress(saving: Array<{ payment_id: number; end_minor: number }>
   return { saving_end_minor: end, saving_amount_minor: amount };
 }
 
-const ymAfter = (ym: string) => { const { year, month } = parseYm(ym); return ymOf(year, month + 1); };
+const ymAfter = (ym: string) => {
+  const { year, month } = parseYm(ym);
+  return ymOf(year, month + 1);
+};
 
 /** The funds among the month's items: how much by when, and what each has by the month's end. */
 async function fundsOf(ym: string, ids: number[]): Promise<Map<number, NonNullable<PlanItem['fund']>>> {
@@ -111,42 +157,93 @@ async function fundsOf(ym: string, ids: number[]): Promise<Map<number, NonNullab
   if (!ids.length) return out;
   const db = await getDb();
   // what the budget fitted of each (fundFit.ts): none of the past months'
-  const fits = new Map((await db.all<{ id: number; cap: number | null; taken: number; c: string | null }>(
-    `SELECT p.category_id AS id, p.cap_minor AS cap, p.taken_minor AS taken, pm.budget_currency AS c
-      FROM plan_items p LEFT JOIN plan_months pm ON pm.ym = p.ym WHERE p.ym = ? AND p.kind = 'fund' AND p.ym >= ?`, [ym, currentYm()])).map((r) => [r.id, r]));
+  const fits = new Map(
+    (
+      await db.all<{ id: number; cap: number | null; taken: number; c: string | null }>(
+        `SELECT p.category_id AS id, p.cap_minor AS cap, p.taken_minor AS taken, pm.budget_currency AS c
+      FROM plan_items p LEFT JOIN plan_months pm ON pm.ym = p.ym WHERE p.ym = ? AND p.kind = 'fund' AND p.ym >= ?`,
+        [ym, currentYm()],
+      )
+    ).map((r) => [r.id, r]),
+  );
   for (const fund of await activeFunds(ym)) {
     if (!ids.includes(fund.category_id)) continue;
     const m = (await fundLedger(fund, ym)).months.find((x) => x.ym === ym);
     const f = fits.get(fund.category_id);
     const asked = m ? contributionOf(fund, ym, m.start) : 0;
     const next = ymAfter(ym);
-    const fit = f && m && (f.cap !== null || f.taken > 0)
-      ? { asked, taken: f.taken, taken_currency: f.c, next: contributionOf(fund, next, m.end) } : null;
-    out.set(fund.category_id, { target_minor: fund.target_minor, due: fund.due, saved_minor: m?.end ?? fund.start_minor, start_minor: fund.start_minor, fit });
+    const fit =
+      f && m && (f.cap !== null || f.taken > 0)
+        ? { asked, taken: f.taken, taken_currency: f.c, next: contributionOf(fund, next, m.end) }
+        : null;
+    out.set(fund.category_id, {
+      target_minor: fund.target_minor,
+      due: fund.due,
+      saved_minor: m?.end ?? fund.start_minor,
+      start_minor: fund.start_minor,
+      fit,
+    });
   }
   return out;
 }
 
 /** The category's amount, currency and kind in the latest earlier month that planned it with an amount. */
-export async function lastPlanItem(ym: string, categoryId: number): Promise<{ ym: string; limit_minor: number; currency: Currency; kind: PlanKind; norm_period: NormPeriod } | null> {
+export async function lastPlanItem(
+  ym: string,
+  categoryId: number,
+): Promise<{ ym: string; limit_minor: number; currency: Currency; kind: PlanKind; norm_period: NormPeriod } | null> {
   const db = await getDb();
   const row = await db.get<{ ym: string; limit_minor: number; currency: string; kind: PlanKind; norm_period: string }>(
     `SELECT ym, limit_minor, currency, kind, norm_period FROM plan_items WHERE ym < ? AND category_id = ? AND limit_minor > 0
-      ORDER BY ym DESC LIMIT 1`, [ym, categoryId]);
+      ORDER BY ym DESC LIMIT 1`,
+    [ym, categoryId],
+  );
   return row ? { ...row, currency: asCurrency(row.currency), norm_period: asNorm(row.norm_period) } : null;
 }
 
 /** The category's current plan item for this month: the fields needed to open its edit sheet. */
 export async function getPlanItemBasics(ym: string, categoryId: number) {
-  type R = { limit_minor: number; currency: string; kind: string; norm_period: string; pinned: number; until: string | null; recurring: number; by_merchant: number; every: string | null; weekdays: number | null; unit_minor: number | null };
+  type R = {
+    limit_minor: number;
+    currency: string;
+    kind: string;
+    norm_period: string;
+    pinned: number;
+    until: string | null;
+    recurring: number;
+    by_merchant: number;
+    every: string | null;
+    weekdays: number | null;
+    unit_minor: number | null;
+  };
   const db = await getDb();
-  const r = await db.get<R>(`SELECT p.limit_minor, p.currency, p.kind, p.norm_period, p.pinned, p.until, c.recurring, coalesce(c.system = 'subs', 0) AS by_merchant, CASE WHEN p.kind = 'fixed' THEN p.every END AS every, p.weekdays, p.unit_minor FROM plan_items p JOIN categories c ON c.id = p.category_id WHERE p.ym = ? AND p.category_id = ?`, [ym, categoryId]);
+  const r = await db.get<R>(
+    `SELECT p.limit_minor, p.currency, p.kind, p.norm_period, p.pinned, p.until, c.recurring, coalesce(c.system = 'subs', 0) AS by_merchant, CASE WHEN p.kind = 'fixed' THEN p.every END AS every, p.weekdays, p.unit_minor FROM plan_items p JOIN categories c ON c.id = p.category_id WHERE p.ym = ? AND p.category_id = ?`,
+    [ym, categoryId],
+  );
   if (!r) return null;
-  return { limit_minor: r.limit_minor, currency: asCurrency(r.currency), kind: r.kind as PlanKind, norm_period: asNorm(r.norm_period), pinned: r.pinned === 1, until: r.until, recurring: !!r.recurring, by_merchant: !!r.by_merchant, every: r.every as Every | null, weekdays: r.weekdays, unit_minor: r.unit_minor };
+  return {
+    limit_minor: r.limit_minor,
+    currency: asCurrency(r.currency),
+    kind: r.kind as PlanKind,
+    norm_period: asNorm(r.norm_period),
+    pinned: r.pinned === 1,
+    until: r.until,
+    recurring: !!r.recurring,
+    by_merchant: !!r.by_merchant,
+    every: r.every as Every | null,
+    weekdays: r.weekdays,
+    unit_minor: r.unit_minor,
+  };
 }
 
 /** Would `minor` in `currency` for this category still fit the month's amount to distribute? */
-async function fits(ym: string, categoryId: number, minor: number, currency: Currency): Promise<OverBudgetError | null> {
+async function fits(
+  ym: string,
+  categoryId: number,
+  minor: number,
+  currency: Currency,
+): Promise<OverBudgetError | null> {
   const budget = await storedBudget(ym);
   if (budget === null) return null;
   const conv = await planConverter(ym);
@@ -154,7 +251,9 @@ async function fits(ym: string, categoryId: number, minor: number, currency: Cur
   if (own === null) return null; // no rate at all: can't check
   const planned = (await plannedTotal(ym, categoryId, budget.currency)) + own;
   // the unplanned share isn't for the plan
-  return planned > budget.plannable_minor ? new OverBudgetError(budget.plannable_minor, planned, budget.currency) : null;
+  return planned > budget.plannable_minor
+    ? new OverBudgetError(budget.plannable_minor, planned, budget.currency)
+    : null;
 }
 
 /**
@@ -183,8 +282,10 @@ export async function addPlanItem(ym: string, categoryId: number, limitMinor?: n
   if (own === 'limit') kind = 'limit';
   if (own === 'oneoff') kind = 'fixed';
   await db.transaction(async (t) => {
-    await t.run('INSERT OR IGNORE INTO plan_items (ym, category_id, limit_minor, kind, currency, norm_period) VALUES (?, ?, ?, ?, ?, ?)',
-      [ym, categoryId, amount, kind, cur, norm]);
+    await t.run(
+      'INSERT OR IGNORE INTO plan_items (ym, category_id, limit_minor, kind, currency, norm_period) VALUES (?, ?, ?, ?, ?, ?)',
+      [ym, categoryId, amount, kind, cur, norm],
+    );
     await ownMonth(ym, t);
     await kindFromItem(ym, categoryId, t);
   });
@@ -197,27 +298,45 @@ export async function addPlanItem(ym: string, categoryId: number, limitMinor?: n
  * the plan over its budget by the rest (an obligation: a regular payment).
  */
 export async function setPlanAmount(
-  ym: string, categoryId: number, limitMinor: number, kind?: PlanKind, currency?: Currency, normPeriod?: NormPeriod, takeLocked: boolean | 'all' = false,
+  ym: string,
+  categoryId: number,
+  limitMinor: number,
+  kind?: PlanKind,
+  currency?: Currency,
+  normPeriod?: NormPeriod,
+  takeLocked: boolean | 'all' = false,
 ) {
   // also adds the item (from the stats screen), so the month must exist with its carried-over items first
   await ensureMonthPlan(ym);
   limitMinor = Math.max(0, limitMinor);
   const db = await getDb();
-  const existing = await db.get<{ currency: string }>('SELECT currency FROM plan_items WHERE ym = ? AND category_id = ?', [ym, categoryId]);
+  const existing = await db.get<{ currency: string }>(
+    'SELECT currency FROM plan_items WHERE ym = ? AND category_id = ?',
+    [ym, categoryId],
+  );
   const cur = currency ?? (existing ? asCurrency(existing.currency) : await systemCurrency(db));
   const over = await fits(ym, categoryId, limitMinor, cur);
-  const locked = over && takeLocked ? (await storedBudget(ym))?.locked_minor ?? 0 : 0;
-  const short = over ? (takeLocked === 'all' ? Math.min(over.planned_minor - over.budget_minor, locked) : over.planned_minor - over.budget_minor) : 0;
+  const locked = over && takeLocked ? ((await storedBudget(ym))?.locked_minor ?? 0) : 0;
+  const short = over
+    ? takeLocked === 'all'
+      ? Math.min(over.planned_minor - over.budget_minor, locked)
+      : over.planned_minor - over.budget_minor
+    : 0;
   if (over && (!takeLocked || (takeLocked !== 'all' && short > locked))) throw over;
   const before = await itemShape(ym, categoryId, db);
   // the checks above read the rates outside: the writes alone in the transaction
   await db.transaction(async (t) => {
-    if (short > 0) await t.run('UPDATE plan_months SET locked_minor = locked_minor - ?, locked_taken_minor = locked_taken_minor + ? WHERE ym = ?', [short, short, ym]);
+    if (short > 0)
+      await t.run(
+        'UPDATE plan_months SET locked_minor = locked_minor - ?, locked_taken_minor = locked_taken_minor + ? WHERE ym = ?',
+        [short, short, ym],
+      );
     await t.run(
       `INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency, norm_period) VALUES (?, ?, ?, coalesce(?, 'limit'), ?, coalesce(?, 'day'))
         ON CONFLICT(ym, category_id) DO UPDATE SET limit_minor = excluded.limit_minor, kind = coalesce(?, kind), currency = excluded.currency,
           norm_period = coalesce(?, norm_period), every = NULL, weekdays = NULL, unit_minor = NULL`,
-      [ym, categoryId, limitMinor, kind ?? null, cur, normPeriod ?? null, kind ?? null, normPeriod ?? null]);
+      [ym, categoryId, limitMinor, kind ?? null, cur, normPeriod ?? null, kind ?? null, normPeriod ?? null],
+    );
     await ownMonth(ym, t);
     await kindFromItem(ym, categoryId, t);
     await followItem(ym, categoryId, before, t);
@@ -229,7 +348,12 @@ export async function setPlanPinned(ym: string, categoryId: number, pinned: bool
   const db = await getDb();
   await db.transaction(async (t) => {
     const before = await itemShape(ym, categoryId, t);
-    await t.run('UPDATE plan_items SET pinned = ?, until = ? WHERE ym = ? AND category_id = ?', [pinned ? 1 : 0, pinned ? until : null, ym, categoryId]);
+    await t.run('UPDATE plan_items SET pinned = ?, until = ? WHERE ym = ? AND category_id = ?', [
+      pinned ? 1 : 0,
+      pinned ? until : null,
+      ym,
+      categoryId,
+    ]);
     await ownMonth(ym, t);
     await followItem(ym, categoryId, before, t);
   });
@@ -238,7 +362,10 @@ export async function setPlanPinned(ym: string, categoryId: number, pinned: bool
 export async function removePlanItem(ym: string, categoryId: number): Promise<RemovedPlanItem | null> {
   const db = await getDb();
   return db.transaction(async (t) => {
-    const row = await t.get<RemovedPlanItem>('SELECT * FROM plan_items WHERE ym = ? AND category_id = ?', [ym, categoryId]);
+    const row = await t.get<RemovedPlanItem>('SELECT * FROM plan_items WHERE ym = ? AND category_id = ?', [
+      ym,
+      categoryId,
+    ]);
     const before = await itemShape(ym, categoryId, t);
     await t.run('DELETE FROM plan_items WHERE ym = ? AND category_id = ?', [ym, categoryId]);
     await ownMonth(ym, t);
@@ -254,7 +381,10 @@ export type RemovedPlanItem = Record<string, SqlParam>;
 export async function restorePlanItem(row: RemovedPlanItem) {
   const cols = Object.keys(row);
   const db = await getDb();
-  await db.run(`INSERT OR IGNORE INTO plan_items (${cols.join(', ')}) VALUES (${placeholders(cols.length)})`, cols.map((c) => row[c]));
+  await db.run(
+    `INSERT OR IGNORE INTO plan_items (${cols.join(', ')}) VALUES (${placeholders(cols.length)})`,
+    cols.map((c) => row[c]),
+  );
   // back in the months after it too, if it repeats
   await followItem(String(row.ym), Number(row.category_id), null, db);
 }

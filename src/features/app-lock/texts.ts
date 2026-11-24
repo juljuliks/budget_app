@@ -8,7 +8,12 @@ export const LOCK_PIN_HINT = 'Вход по PIN-коду';
 export const LOCK_BIO_HINT = 'Вход по PIN-коду или отпечатку';
 export const BIOMETRIC = 'Отпечаток или лицо';
 export const DELAY = 'Спрашивать после сворачивания';
-export const DELAYS: ReadonlyArray<readonly [string, string]> = [['0', 'Всегда'], ['60', '1 мин'], ['300', '5 мин'], ['900', '15 мин']];
+export const DELAYS: ReadonlyArray<readonly [string, string]> = [
+  ['0', 'Всегда'],
+  ['60', '1 мин'],
+  ['300', '5 мин'],
+  ['900', '15 мин'],
+];
 export const HIDE_NOTIFICATIONS = 'Скрывать суммы в уведомлениях';
 export const HIDE_NOTIFICATIONS_HINT = 'В шторке — тип и мерчант, без суммы';
 export const CHANGE_PIN = 'Сменить PIN-код';
@@ -28,7 +33,8 @@ export const NEXT = 'Дальше';
 export const MIN_PIN = 4;
 export const MAX_PIN = 6;
 export const wrongPin = (left: number) => `Неверный PIN-код. Осталось попыток: ${left}`;
-export const waitPin = (s: number) => `Слишком много попыток. Подождите ${s} ${plural(s, ['секунду', 'секунды', 'секунд'])}`;
+export const waitPin = (s: number) =>
+  `Слишком много попыток. Подождите ${s} ${plural(s, ['секунду', 'секунды', 'секунд'])}`;
 
 export const TURN_OFF = 'Выключить блокировку';
 export const TURN_OFF_HINT = 'Приложение будет открываться без входа';

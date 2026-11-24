@@ -20,7 +20,10 @@ export function rangeToUnix(r: DayRange): { from: number; to: number } {
 }
 
 export function formatRange(r: DayRange): string {
-  const f = (k: DayKey) => { const d = parseDayKey(k); return `${d.getDate()} ${SHORT_MONTHS[d.getMonth()]} ${d.getFullYear()}`; };
+  const f = (k: DayKey) => {
+    const d = parseDayKey(k);
+    return `${d.getDate()} ${SHORT_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+  };
   return r.from === r.to ? f(r.from) : `${f(r.from)} – ${f(r.to)}`;
 }
 
@@ -93,7 +96,10 @@ export function normWindow(rhythm: NormRhythm, viewed: DayRange, clipFrom?: DayK
 
 /** "28 сен – 4 окт", "4 окт" (no year: windows are always near). */
 export function shortRange(r: DayRange): string {
-  const f = (k: DayKey) => { const d = parseDayKey(k); return `${d.getDate()} ${SHORT_MONTHS[d.getMonth()]}`; };
+  const f = (k: DayKey) => {
+    const d = parseDayKey(k);
+    return `${d.getDate()} ${SHORT_MONTHS[d.getMonth()]}`;
+  };
   if (r.from === r.to) return f(r.from);
   // within one month: "1 – 4 окт"
   if (r.from.slice(0, 7) === r.to.slice(0, 7)) return `${parseDayKey(r.from).getDate()} – ${f(r.to)}`;

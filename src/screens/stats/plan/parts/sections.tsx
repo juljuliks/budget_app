@@ -20,7 +20,9 @@ const header = (title: string, total: React.ReactNode) => (
 );
 
 type Items = {
-  ym: string; currency: Currency; hidden: boolean;
+  ym: string;
+  currency: Currency;
+  hidden: boolean;
   toShown: (minor: number, from: Currency) => number | null;
   onOpen: (item: PlanItem) => void;
   /** a category with repeating payments: its payments */
@@ -32,21 +34,41 @@ export function itemSections(p: PlanView, { ym, currency, hidden, toShown, onOpe
   return p.groups.map((g) => (
     <React.Fragment key={g.title}>
       {/* the type's share of the amount to distribute; "Скрыть суммы": the share only */}
-      {header(g.title, (
+      {header(
+        g.title,
         <Text style={styles.groupTotal}>
           {hidden && p.shownBudget ? null : p.money(g.planned)}
-          {p.shownBudget && g.planned ? <Text style={styles.groupShare}>{hidden ? '' : ' · '}{percentOf(g.planned, p.shownBudget)}</Text> : null}
-        </Text>
-      ))}
+          {p.shownBudget && g.planned ? (
+            <Text style={styles.groupShare}>
+              {hidden ? '' : ' · '}
+              {percentOf(g.planned, p.shownBudget)}
+            </Text>
+          ) : null}
+        </Text>,
+      )}
       <View>
-        {g.items.map((item) => (item.recurring ? (
-          <RecurringItemRow key={item.category_id} p={p} item={item} hidden={hidden} onOpen={() => onOpenRecurring(item)} />
-        ) : (
-          <PlanItemRow
-            key={item.category_id} p={p} item={item} ym={ym} currency={currency} hidden={hidden} toShown={toShown}
-            onOpen={() => onOpen(item)}
-          />
-        )))}
+        {g.items.map((item) =>
+          item.recurring ? (
+            <RecurringItemRow
+              key={item.category_id}
+              p={p}
+              item={item}
+              hidden={hidden}
+              onOpen={() => onOpenRecurring(item)}
+            />
+          ) : (
+            <PlanItemRow
+              key={item.category_id}
+              p={p}
+              item={item}
+              ym={ym}
+              currency={currency}
+              hidden={hidden}
+              toShown={toShown}
+              onOpen={() => onOpen(item)}
+            />
+          ),
+        )}
       </View>
     </React.Fragment>
   ));
@@ -56,21 +78,33 @@ export function itemSections(p: PlanView, { ym, currency, hidden, toShown, onOpe
  * «Сбережения» in the plan: «🔒 Отложено сразу» (the settings' % of the budget; a tap — the budget) and the funds
  * (копилки), each with its goal and the month's contribution (a tap — the fund).
  */
-export function fundSection(p: PlanView, hidden: boolean, open: { budget: () => void; fund: (item: PlanItem) => void }) {
+export function fundSection(
+  p: PlanView,
+  hidden: boolean,
+  open: { budget: () => void; fund: (item: PlanItem) => void },
+) {
   const locked = p.systemGroups.find((g) => g.title === 'Сбережения')?.rows.find((r) => r.key === 'locked');
   if (!p.funds.length && !locked) return null;
   const sum = (locked?.value ?? 0) + p.funds.reduce((a, i) => a + (i.converted_minor ?? 0), 0);
   return (
     <React.Fragment key="funds">
-      {header('Сбережения', (
+      {header(
+        'Сбережения',
         <Text style={styles.groupTotal}>
           {hidden && p.shownBudget ? null : p.money(sum)}
-          {p.shownBudget && sum ? <Text style={styles.groupShare}>{hidden ? '' : ' · '}{percentOf(sum, p.shownBudget)}</Text> : null}
-        </Text>
-      ))}
+          {p.shownBudget && sum ? (
+            <Text style={styles.groupShare}>
+              {hidden ? '' : ' · '}
+              {percentOf(sum, p.shownBudget)}
+            </Text>
+          ) : null}
+        </Text>,
+      )}
       <View>
         {locked ? <SystemRowView p={p} r={locked} hidden={hidden} onOpen={open.budget} /> : null}
-        {p.funds.map((item) => <FundItemRow key={item.category_id} p={p} item={item} hidden={hidden} onOpen={() => open.fund(item)} />)}
+        {p.funds.map((item) => (
+          <FundItemRow key={item.category_id} p={p} item={item} hidden={hidden} onOpen={() => open.fund(item)} />
+        ))}
       </View>
     </React.Fragment>
   );

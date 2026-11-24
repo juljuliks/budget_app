@@ -36,18 +36,47 @@ export default function MonthReportPage({ ym }: { ym: string }) {
   if (!r || !cur.shown) return <Loading failed={failed} onRetry={load} />;
   if (!r.hasPlan) return <Text style={[report.hint, styles.content]}>Плана на этот месяц не было — отчёта нет.</Text>;
   const v = reportView(r, r.currency);
-  const toOperations = (params: object) => () => navigateWhenReady({ name: 'Main', params: { screen: 'Transactions', params: {
-    ...params, range: monthDays(ym), nonce: Date.now(), from: 'Stats' } } } as never);
+  const toOperations = (params: object) => () =>
+    navigateWhenReady({
+      name: 'Main',
+      params: {
+        screen: 'Transactions',
+        params: {
+          ...params,
+          range: monthDays(ym),
+          nonce: Date.now(),
+          from: 'Stats',
+        },
+      },
+    } as never);
   return (
     <ScrollView style={styles.page} contentContainerStyle={styles.content} testID="month-report">
-      {cur.budget ? <CurrencyChoice budget={cur.budget} system={cur.system} value={cur.shown} onChange={cur.pick} /> : null}
+      {cur.budget ? (
+        <CurrencyChoice budget={cur.budget} system={cur.system} value={cur.shown} onChange={cur.pick} />
+      ) : null}
       <ReportHero v={v} onCloseMonth={() => openMonthClose(ym)} />
       <LateFunds late={late} onOpen={openCategory} />
       {v.limits ? <ImproveBlock v={v} page /> : null}
-      {v.outside ? <OutsideBlock v={v} currency={r.currency} onPlan={setPlanTarget} onSortOut={toOperations({ category: 'none' })} page /> : null}
+      {v.outside ? (
+        <OutsideBlock
+          v={v}
+          currency={r.currency}
+          onPlan={setPlanTarget}
+          onSortOut={toOperations({ category: 'none' })}
+          page
+        />
+      ) : null}
       {v.good ? <GoodBlock v={v} page /> : null}
-      {r.impulse ? <ImpulseBlock m={r.impulse} money={v.money} onMark={toOperations({ unanswered: true })} page month={ym} /> : null}
-      <PlanAmountModal ym={ym} currency={r.currency} target={planTarget} onClose={() => setPlanTarget(null)} onSaved={() => setPlanTarget(null)} />
+      {r.impulse ? (
+        <ImpulseBlock m={r.impulse} money={v.money} onMark={toOperations({ unanswered: true })} page month={ym} />
+      ) : null}
+      <PlanAmountModal
+        ym={ym}
+        currency={r.currency}
+        target={planTarget}
+        onClose={() => setPlanTarget(null)}
+        onSaved={() => setPlanTarget(null)}
+      />
     </ScrollView>
   );
 }

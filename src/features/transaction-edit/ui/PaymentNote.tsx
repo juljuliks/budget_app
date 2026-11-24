@@ -28,10 +28,18 @@ export default function PaymentNote({ tx }: { tx: Tx }) {
       if (!c?.by_merchant || !tx.merchant_key) return null;
       return (await paymentCard(tx.merchant_key)) ?? 'none';
     };
-    const run = () => load().then((c) => { if (live) setCard(c); }).catch((e) => console.error('payment card failed', e));
+    const run = () =>
+      load()
+        .then((c) => {
+          if (live) setCard(c);
+        })
+        .catch((e) => console.error('payment card failed', e));
     run();
     const off = onTransactionsChanged(run);
-    return () => { live = false; off(); };
+    return () => {
+      live = false;
+      off();
+    };
   }, [tx.id, tx.merchant_key, tx.category_id, tx.amount_minor]);
   if (!card) return null;
   if (card === 'none' || !card.sub.due) {
@@ -46,9 +54,13 @@ export default function PaymentNote({ tx }: { tx: Tx }) {
   const money = (minor: number) => formatWithCurrency(minor, sub.currency);
   // the latest charge is this one and its amount isn't the subscription's
   const changed = card.last?.id === tx.id && tx.currency === sub.currency && tx.amount_minor !== sub.amount_minor;
-  const update = () => savePayment({ ...sub, amount_minor: tx.amount_minor }, sub.id)
-    .then(() => { emitTransactionsChanged(); toast(`${sub.name} — ${money(tx.amount_minor)}`); })
-    .catch(toastFailure('update payment', SAVE_FAILED));
+  const update = () =>
+    savePayment({ ...sub, amount_minor: tx.amount_minor }, sub.id)
+      .then(() => {
+        emitTransactionsChanged();
+        toast(`${sub.name} — ${money(tx.amount_minor)}`);
+      })
+      .catch(toastFailure('update payment', SAVE_FAILED));
   return (
     <>
       <View style={styles.box}>
@@ -57,10 +69,17 @@ export default function PaymentNote({ tx }: { tx: Tx }) {
           <Text style={styles.title}>{`${sub.name} · ${periodText(sub.period)}`}</Text>
           <Text style={styles.amount}>{money(sub.amount_minor)}</Text>
         </View>
-        {card.next ? <View style={styles.fact}><Text style={styles.factLabel}>Следующее списание</Text><Text style={styles.factValue}>{dayTitle(card.next)}</Text></View> : null}
+        {card.next ? (
+          <View style={styles.fact}>
+            <Text style={styles.factLabel}>Следующее списание</Text>
+            <Text style={styles.factValue}>{dayTitle(card.next)}</Text>
+          </View>
+        ) : null}
         <View style={styles.fact}>
           <Text style={styles.factLabel}>В этом году списано</Text>
-          <Text style={styles.factValue}>{`${card.year_count} ${plural(card.year_count, ['раз', 'раза', 'раз'])} · ${money(card.year_minor)}`}</Text>
+          <Text
+            style={styles.factValue}
+          >{`${card.year_count} ${plural(card.year_count, ['раз', 'раза', 'раз'])} · ${money(card.year_minor)}`}</Text>
         </View>
         <TouchableOpacity onPress={() => openPayment({ id: sub.id })} hitSlop={8} accessibilityRole="button">
           <Text style={styles.link}>{`Изменить ${w.acc} ›`}</Text>

@@ -18,6 +18,7 @@ export function activityText(a: MerchantActivity, now = new Date()): string {
   if (a.count === 0) return 'Покупок нет';
   const what = `${a.count} ${plural(a.count, ['покупка', 'покупки', 'покупок'])} на ${a.totals.map((t) => formatMoneyWithCurrency(t.amount_minor, t.currency)).join(' + ')}`;
   if (a.recent) return `За последний месяц: ${what}`;
-  const from = shortDate(a.from, now), to = shortDate(a.to, now);
+  const from = shortDate(a.from, now),
+    to = shortDate(a.to, now);
   return `${what} · ${from === to ? from : `${from} – ${to}`}`;
 }

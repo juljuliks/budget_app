@@ -2,8 +2,18 @@ jest.mock('../../src/shared/navigation/navigation', () => ({ navigateWhenReady: 
 
 import { getDb } from '../../src/db';
 import {
-  addManualTransaction, countUnseenTransactions, deleteTransaction, isUnread, listTransactionsPage, markTransactionSeen,
-  normalizeForSearch, searchTransactions, listTransactionsFiltered, categoriesWithTransactions, merchantsWithTransactions, setTransactionAmount,
+  addManualTransaction,
+  countUnseenTransactions,
+  deleteTransaction,
+  isUnread,
+  listTransactionsPage,
+  markTransactionSeen,
+  normalizeForSearch,
+  searchTransactions,
+  listTransactionsFiltered,
+  categoriesWithTransactions,
+  merchantsWithTransactions,
+  setTransactionAmount,
 } from '../../src/db/transactions';
 import { rangeToUnix } from '../../src/shared/lib/dateRange';
 import { createCategory } from '../../src/db/categories';
@@ -20,7 +30,8 @@ async function insertTx(i: number, occurredAt: number, merchant = `SHOP ${i}`) {
   await db.run(
     `INSERT INTO transactions (bank, kind, amount_minor, currency, raw_merchant, merchant_key, occurred_at, raw_sms, sms_hash)
       VALUES ('tbc', 'purchase', ?, 'GEL', ?, ?, ?, 'sms', ?)`,
-    [100 + i, merchant, merchant, occurredAt, `hash${i}`]);
+    [100 + i, merchant, merchant, occurredAt, `hash${i}`],
+  );
 }
 
 beforeEach(() => freshDb());
@@ -42,7 +53,9 @@ describe('listTransactionsPage', () => {
 
     expect(pages).toBe(3);
     expect(new Set(seen).size).toBe(120);
-    const all = await (await getDb()).all<{ id: number }>('SELECT id FROM transactions ORDER BY occurred_at DESC, id DESC');
+    const all = await (
+      await getDb()
+    ).all<{ id: number }>('SELECT id FROM transactions ORDER BY occurred_at DESC, id DESC');
     expect(seen).toEqual(all.map((r) => r.id));
   });
 
@@ -76,7 +89,10 @@ describe('assignCategory', () => {
     await insertTx(2, 2000, 'SPAR');
     await assignCategory(1, 4, 'only');
     const db = await getDb();
-    expect((await db.all('SELECT category_id FROM transactions ORDER BY id')).map((r) => r.category_id)).toEqual([4, null]);
+    expect((await db.all('SELECT category_id FROM transactions ORDER BY id')).map((r) => r.category_id)).toEqual([
+      4,
+      null,
+    ]);
     expect(await db.get('SELECT * FROM merchant_rules')).toBeUndefined();
   });
 
@@ -85,18 +101,23 @@ describe('assignCategory', () => {
     await insertTx(2, 2000, 'SPAR');
     const listener = jest.fn();
     const off = onTransactionsChanged(listener);
-    await assignCategory(1, 4);           // SPAR gets category 4, transaction 2 follows
+    await assignCategory(1, 4); // SPAR gets category 4, transaction 2 follows
     await assignCategory(1, null);
     off();
     const db = await getDb();
-    expect(await db.get('SELECT category_id, category_source FROM transactions WHERE id = 1')).toEqual({ category_id: null, category_source: 'user' });
+    expect(await db.get('SELECT category_id, category_source FROM transactions WHERE id = 1')).toEqual({
+      category_id: null,
+      category_source: 'user',
+    });
     expect(listener).toHaveBeenCalledTimes(2);
     // SPAR's category changes: transaction 2 follows, the manual "Без категории" doesn't
     await assignCategory(2, 5, 'merchant');
-    expect((await db.all('SELECT category_id FROM transactions ORDER BY id')).map((r) => r.category_id)).toEqual([null, 5]);
+    expect((await db.all('SELECT category_id FROM transactions ORDER BY id')).map((r) => r.category_id)).toEqual([
+      null,
+      5,
+    ]);
   });
 });
-
 
 describe('searchTransactions', () => {
   async function seed() {
@@ -107,17 +128,19 @@ describe('searchTransactions', () => {
       `INSERT INTO transactions (bank, kind, amount_minor, currency, raw_merchant, category_id, occurred_at, raw_sms, sms_hash) VALUES
         ('tbc', 'purchase', 4400, 'GEL', 'AdamDent LLC', NULL, 1000, '44.00GEL\n(*XXXX)\nAdamDent LLC', 'a'),
         ('tbc', 'purchase', 1034, 'GEL', 'SPAR', 1, 2000, '10.34GEL\n(*XXXX)\nSPAR', 'b'),
-        ('manual', 'purchase', 5000, 'GEL', 'струны Ёлка', ?, 3000, '', 'c')`, [guitar]);
+        ('manual', 'purchase', 5000, 'GEL', 'струны Ёлка', ?, 3000, '', 'c')`,
+      [guitar],
+    );
   }
 
   test.each([
-    ['adamdent', ['AdamDent LLC']],          // SMS text, case-insensitive
-    ['10.34', ['SPAR']],                     // amount inside the SMS
-    ['продукты', ['SPAR']],                  // category name, Cyrillic case-insensitive
-    ['ХОББИ', ['струны Ёлка']],              // category type
-    ['елка', ['струны Ёлка']],               // ё = е
-    ['гитара струны', ['струны Ёлка']],      // every word must match, in any field
-    ['gel', ['SPAR', 'AdamDent LLC']],       // manual tx has no SMS text, so no "GEL" in it
+    ['adamdent', ['AdamDent LLC']], // SMS text, case-insensitive
+    ['10.34', ['SPAR']], // amount inside the SMS
+    ['продукты', ['SPAR']], // category name, Cyrillic case-insensitive
+    ['ХОББИ', ['струны Ёлка']], // category type
+    ['елка', ['струны Ёлка']], // ё = е
+    ['гитара струны', ['струны Ёлка']], // every word must match, in any field
+    ['gel', ['SPAR', 'AdamDent LLC']], // manual tx has no SMS text, so no "GEL" in it
     ['nothing', []],
   ])('%j', async (q, expected) => {
     await seed();
@@ -175,7 +198,6 @@ describe('assignCategoryToMany', () => {
 
 describe('read state', () => {
   test('SMS transactions arrive unread, opening marks them read once; manual ones are read', async () => {
-    
     const r = await ingestSms({ sender: 'TBC SMS', body: '5.00GEL\n(*XXXX)\nSPAR\n03/10/26 12:00', timestamp: 1 });
     if (r.status !== 'inserted') throw new Error('not inserted');
     await addManualTransaction({ amount_minor: 100, category_id: null });
@@ -190,7 +212,7 @@ describe('read state', () => {
     const b = await ingestSms({ sender: 'TBC SMS', body: '6.00GEL\n(*XXXX)\nIKEA\n03/10/26 12:00', timestamp: 2 });
     if (a.status !== 'inserted' || b.status !== 'inserted') throw new Error('not inserted');
     expect(await countUnseenTransactions()).toBe(2);
-    await assignCategory(a.txId, 3);           // e.g. chosen from the notification
+    await assignCategory(a.txId, 3); // e.g. chosen from the notification
     expect(await countUnseenTransactions()).toBe(1);
     const rows = (await listTransactionsPage(null)).rows;
     expect(rows.filter(isUnread).map((r) => r.id)).toEqual([b.txId]);
@@ -210,10 +232,18 @@ describe('exact filters', () => {
   const day = (d: number, h = 12) => Math.floor(new Date(2026, 9, d, h).getTime() / 1000);
   async function seedFilter() {
     const db = await getDb();
-    const rows: Array<[number, number | null, number]> = [[1, 1, day(1)], [2, 1, day(3, 23)], [3, 2, day(4, 0)], [4, null, day(5)]];
+    const rows: Array<[number, number | null, number]> = [
+      [1, 1, day(1)],
+      [2, 1, day(3, 23)],
+      [3, 2, day(4, 0)],
+      [4, null, day(5)],
+    ];
     for (const [i, cat, at] of rows) {
-      await db.run(`INSERT INTO transactions (bank, kind, amount_minor, currency, raw_merchant, category_id, occurred_at, raw_sms, sms_hash)
-        VALUES ('tbc', 'purchase', ?, 'GEL', ?, ?, ?, '', ?)`, [i * 100, `M${i}`, cat, at, `f${i}`]);
+      await db.run(
+        `INSERT INTO transactions (bank, kind, amount_minor, currency, raw_merchant, category_id, occurred_at, raw_sms, sms_hash)
+        VALUES ('tbc', 'purchase', ?, 'GEL', ?, ?, ?, '', ?)`,
+        [i * 100, `M${i}`, cat, at, `f${i}`],
+      );
     }
   }
   const merchants = (rows: Array<{ raw_merchant: string | null }>) => rows.map((r) => r.raw_merchant);
@@ -228,14 +258,20 @@ describe('exact filters', () => {
     await seedFilter();
     const range = rangeToUnix({ from: '2026-10-03', to: '2026-10-04' });
     expect(merchants(await listTransactionsFiltered(range))).toEqual(['M3', 'M2']); // 3rd 23:00 and 4th 00:00
-    expect(merchants(await listTransactionsFiltered(rangeToUnix({ from: '2026-10-05', to: '2026-10-05' })))).toEqual(['M4']);
+    expect(merchants(await listTransactionsFiltered(rangeToUnix({ from: '2026-10-05', to: '2026-10-05' })))).toEqual([
+      'M4',
+    ]);
   });
 
   test('categoriesWithTransactions: counts, deleted ones kept, uncategorized last', async () => {
     await seedFilter();
     await getDb().then((db) => db.run('UPDATE categories SET deleted_at = 1 WHERE id = 2'));
     const opts = await categoriesWithTransactions();
-    expect(opts.map((o) => [o.category, o.count, o.deleted])).toEqual([[1, 2, false], [2, 1, true], ['none', 1, false]]);
+    expect(opts.map((o) => [o.category, o.count, o.deleted])).toEqual([
+      [1, 2, false],
+      [2, 1, true],
+      ['none', 1, false],
+    ]);
     expect(opts[2].name).toBe('Без категории');
   });
 });
@@ -256,5 +292,8 @@ describe('merchant filter', () => {
 test('the amount and currency of a transaction can be corrected', async () => {
   await insertTx(1, 1000, 'SPAR');
   await setTransactionAmount(1, 2550, 'USD');
-  expect(await (await getDb()).get('SELECT amount_minor, currency FROM transactions WHERE id = 1')).toEqual({ amount_minor: 2550, currency: 'USD' });
+  expect(await (await getDb()).get('SELECT amount_minor, currency FROM transactions WHERE id = 1')).toEqual({
+    amount_minor: 2550,
+    currency: 'USD',
+  });
 });

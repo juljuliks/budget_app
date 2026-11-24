@@ -10,7 +10,12 @@ export default function SelectToolbar({ count, allSelected, onToggleAll, onCance
   return (
     <View style={styles.toolbar}>
       <Text style={[styles.label, styles.flex]}>Выбрано: {count}</Text>
-      <TouchableOpacity style={styles.toggle} onPress={onToggleAll} accessibilityRole="checkbox" accessibilityState={{ checked: allSelected }}>
+      <TouchableOpacity
+        style={styles.toggle}
+        onPress={onToggleAll}
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked: allSelected }}
+      >
         <Checkbox checked={allSelected} size={20} />
         <Text style={styles.label}>Выбрать все</Text>
       </TouchableOpacity>

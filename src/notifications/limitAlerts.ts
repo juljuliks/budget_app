@@ -24,8 +24,7 @@ export async function setLimitAlertsEnabled(on: boolean) {
 }
 
 const THRESHOLDS = [100, 80] as const;
-type Level = typeof THRESHOLDS[number];
-
+type Level = (typeof THRESHOLDS)[number];
 
 /** The highest threshold reached: 100, 80 or null. */
 function levelOf(spent: number, limit: number): Level | null {
@@ -36,7 +35,7 @@ function levelOf(spent: number, limit: number): Level | null {
 /** A threshold not notified yet under `key`: marks it (and every lower one) as notified. */
 async function newLevel(key: string, level: Level | null): Promise<Level | null> {
   if (level === null) return null;
-  const done = Number(await getSetting(key) ?? 0);
+  const done = Number((await getSetting(key)) ?? 0);
   if (level <= done) return null;
   await setSetting(key, String(level));
   return level;
@@ -62,9 +61,10 @@ export async function limitAlertFor(categoryId: number, now = new Date()): Promi
   const ym = norms.ym;
   const monthSpent = norms.monthToDate.get(categoryId) ?? 0;
   const month = await newLevel(`limit_alert:m:${ym}:${categoryId}`, levelOf(monthSpent, c.monthLimit));
-  const rhythm = c.rhythm === 'month'
-    ? null
-    : await newLevel(`limit_alert:w:${c.window.from}:${categoryId}`, levelOf(c.windowSpent, c.windowNorm));
+  const rhythm =
+    c.rhythm === 'month'
+      ? null
+      : await newLevel(`limit_alert:w:${c.window.from}:${categoryId}`, levelOf(c.windowSpent, c.windowNorm));
   const money = (minor: number) => formatWithCurrency(Math.round(minor), currency);
   const monthName = MONTHS_NOM[Number(ym.slice(5, 7)) - 1];
 
@@ -73,13 +73,13 @@ export async function limitAlertFor(categoryId: number, now = new Date()): Promi
     const daysLeft = daysInMonth(ym) - now.getDate() + 1;
     return month === 100
       ? {
-        title: `${c.name} — план на ${monthName} превышен`,
-        body: `Потрачено ${money(monthSpent)} из ${money(c.monthLimit)}, перерасход ${money(-left)}`,
-      }
+          title: `${c.name} — план на ${monthName} превышен`,
+          body: `Потрачено ${money(monthSpent)} из ${money(c.monthLimit)}, перерасход ${money(-left)}`,
+        }
       : {
-        title: `${c.name} — 80% плана на ${monthName}`,
-        body: `Потрачено ${money(monthSpent)} из ${money(c.monthLimit)}, осталось ${money(left)} на ${daysLeft} ${plural(daysLeft, ['день', 'дня', 'дней'])}`,
-      };
+          title: `${c.name} — 80% плана на ${monthName}`,
+          body: `Потрачено ${money(monthSpent)} из ${money(c.monthLimit)}, осталось ${money(left)} на ${daysLeft} ${plural(daysLeft, ['день', 'дня', 'дней'])}`,
+        };
   }
   if (rhythm !== null && c.rhythm !== 'month') {
     const period = FOR_PERIOD[c.rhythm];
@@ -87,7 +87,10 @@ export async function limitAlertFor(categoryId: number, now = new Date()): Promi
     const spent = `${when} потрачено ${money(c.windowSpent)} из ${money(c.windowNorm)}`;
     return rhythm === 100
       ? { title: `${c.name} — лимит ${period} превышен`, body: spent }
-      : { title: `${c.name} — 80% лимита ${period}`, body: `${spent}, осталось ${money(c.windowNorm - c.windowSpent)}` };
+      : {
+          title: `${c.name} — 80% лимита ${period}`,
+          body: `${spent}, осталось ${money(c.windowNorm - c.windowSpent)}`,
+        };
   }
   return null;
 }

@@ -9,4 +9,5 @@ export const periodSql = (s = '') =>
   `CASE ${s}period_unit WHEN 'once' THEN 0 WHEN 'week' THEN -${s}period_months ELSE ${s}period_months END`;
 
 /** The table's count and unit of a period. */
-export const periodColumns = (p: Period): [number, Unit] => (p === 0 ? [1, 'once'] : p < 0 ? [-p, 'week'] : [p, 'month']);
+export const periodColumns = (p: Period): [number, Unit] =>
+  p === 0 ? [1, 'once'] : p < 0 ? [-p, 'week'] : [p, 'month'];

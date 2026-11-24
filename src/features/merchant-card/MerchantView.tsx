@@ -31,13 +31,17 @@ export default function MerchantView({ merchantId, onClose, onShowOperations, re
   if (!m) return <Loading />;
 
   return (
-    <Page contentStyle={styles.content} scrollEnabled={!ordering} footer={(
-      <SheetActions
-        style={styles.actions}
-        submit={{ title: 'Сохранить', onPress: save, disabled: !dirty || saving }}
-        extra={[{ title: 'Удалить мерчанта', danger: true, onPress: remove }]}
-      />
-    )}>
+    <Page
+      contentStyle={styles.content}
+      scrollEnabled={!ordering}
+      footer={
+        <SheetActions
+          style={styles.actions}
+          submit={{ title: 'Сохранить', onPress: save, disabled: !dirty || saving }}
+          extra={[{ title: 'Удалить мерчанта', danger: true, onPress: remove }]}
+        />
+      }
+    >
       <MerchantHead m={m} onShowTransactions={() => onShowOperations(m.name)} />
       <MerchantCategories
         merchantId={merchantId}

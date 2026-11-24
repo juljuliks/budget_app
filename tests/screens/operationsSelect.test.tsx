@@ -9,11 +9,25 @@ import { dayKey } from '../../src/shared/lib/format';
 
 const db = async () => getDb();
 /** a merchant's operations: [category name, source], newest first */
-const opsOf = async (merchant: string) => (await (await db()).all<{ c: string | null; s: string | null }>(
-  `SELECT c.name AS c, t.category_source AS s FROM transactions t LEFT JOIN categories c ON c.id = t.category_id
-    WHERE t.raw_merchant = ? ORDER BY t.occurred_at DESC`, [merchant])).map((r) => [r.c, r.s]);
-const ruleOf = async (merchant: string) => (await (await db()).get<{ name: string }>(
-  "SELECT c.name FROM merchant_rules r JOIN categories c ON c.id = r.category_id WHERE r.pattern = ?", [merchant]))?.name ?? null;
+const opsOf = async (merchant: string) =>
+  (
+    await (
+      await db()
+    ).all<{ c: string | null; s: string | null }>(
+      `SELECT c.name AS c, t.category_source AS s FROM transactions t LEFT JOIN categories c ON c.id = t.category_id
+    WHERE t.raw_merchant = ? ORDER BY t.occurred_at DESC`,
+      [merchant],
+    )
+  ).map((r) => [r.c, r.s]);
+const ruleOf = async (merchant: string) =>
+  (
+    await (
+      await db()
+    ).get<{ name: string }>(
+      'SELECT c.name FROM merchant_rules r JOIN categories c ON c.id = r.category_id WHERE r.pattern = ?',
+      [merchant],
+    )
+  )?.name ?? null;
 
 const HINT = 'Зажмите операцию — выбрать несколько: категория, удаление, просмотрено';
 
@@ -44,7 +58,7 @@ test('2.5.1–2.5.5: a long press starts selecting; taps toggle; the last one of
   await waitFor(() => expect(screen.queryByText(/^Выбрано: /)).toBeNull());
 });
 
-test('2.5.7: a day\'s checkbox: all of its operations; none on a day of one', async () => {
+test("2.5.7: a day's checkbox: all of its operations; none on a day of one", async () => {
   await screen.findByText('SPAR');
   await longPress('SPAR');
   const today = dayKey(Date.now() / 1000);
@@ -55,7 +69,7 @@ test('2.5.7: a day\'s checkbox: all of its operations; none on a day of one', as
   await waitFor(() => expect(screen.queryByText(/^Выбрано: /)).toBeNull());
 });
 
-test('2.5.6: a group\'s checkbox picks its operations not loaded yet too; none for a group of one', async () => {
+test("2.5.6: a group's checkbox picks its operations not loaded yet too; none for a group of one", async () => {
   await tap('#filter-group');
   await tap('По мерчантам');
   await screen.findByText('MARKET · 60 операций');
@@ -73,7 +87,11 @@ test('2.5.8: "Отметить просмотренными" for the unread ones
   await tap('Перевод · NINO B');
   await tap('GLOVO');
   await tap('Отметить просмотренными (2)');
-  await waitFor(async () => expect((await (await db()).get<{ n: number }>('SELECT count(*) AS n FROM transactions WHERE seen_at IS NULL'))!.n).toBe(0));
+  await waitFor(async () =>
+    expect(
+      (await (await db()).get<{ n: number }>('SELECT count(*) AS n FROM transactions WHERE seen_at IS NULL'))!.n,
+    ).toBe(0),
+  );
 });
 
 test('2.5.9: a category for the selected; merchants without one get it, no question', async () => {
@@ -99,20 +117,34 @@ describe('2.5.10: the merchant has another category: the selected only, or the m
     await longPress('−120.00 ₾');
     await tap('Категория (1)');
     await tap('🛒 Продукты');
-    expect(await screen.findByText('Категория «🛒 Продукты» — только для выбранных операций или и для мерчанта?')).toBeTruthy();
+    expect(
+      await screen.findByText('Категория «🛒 Продукты» — только для выбранных операций или и для мерчанта?'),
+    ).toBeTruthy();
     // the two purchases and the refund of ZARA follow it: 120 + 80 − 5
-    expect(screen.getByText('Для мерчанта «ZARA»: категория изменится у 3 операций на 195.00 ₾, и новые операции будут получать её автоматически. Выбранные вручную категории не изменятся.')).toBeTruthy();
+    expect(
+      screen.getByText(
+        'Для мерчанта «ZARA»: категория изменится у 3 операций на 195.00 ₾, и новые операции будут получать её автоматически. Выбранные вручную категории не изменятся.',
+      ),
+    ).toBeTruthy();
   }
   test('only the selected', async () => {
     await pick();
     await tap('Только для выбранных (1)');
-    await waitFor(async () => expect(await opsOf('ZARA')).toEqual([['Одежда', 'rule'], ['Продукты', 'user'], ['Одежда', 'rule']]));
+    await waitFor(async () =>
+      expect(await opsOf('ZARA')).toEqual([
+        ['Одежда', 'rule'],
+        ['Продукты', 'user'],
+        ['Одежда', 'rule'],
+      ]),
+    );
     expect(await ruleOf('ZARA')).toBe('Одежда');
   });
   test('the merchant too', async () => {
     await pick();
     await tap('И для мерчанта');
-    await waitFor(async () => expect((await opsOf('ZARA')).map((o) => o[0])).toEqual(['Продукты', 'Продукты', 'Продукты']));
+    await waitFor(async () =>
+      expect((await opsOf('ZARA')).map((o) => o[0])).toEqual(['Продукты', 'Продукты', 'Продукты']),
+    );
     expect(await ruleOf('ZARA')).toBe('Продукты');
     expect(await screen.findByText('Категория «🛒 Продукты» назначена: 1 операция и 1 мерчанту')).toBeTruthy();
   });
@@ -180,12 +212,21 @@ test('2.6: «Зажмите операцию — …» until a long press select
 async function mixedGlovo() {
   const db = await getDb();
   await db.run("INSERT INTO mixed_merchants (merchant_key, created_at) VALUES ('GLOVO', 0)");
-  await db.run("INSERT INTO merchant_categories (merchant_key, category_id) SELECT 'GLOVO', id FROM categories WHERE name IN ('Кафе и рестораны', 'Продукты')");
+  await db.run(
+    "INSERT INTO merchant_categories (merchant_key, category_id) SELECT 'GLOVO', id FROM categories WHERE name IN ('Кафе и рестораны', 'Продукты')",
+  );
 }
-const mixedOf = async (m: string) => (await (await getDb()).all<{ name: string }>(
-  'SELECT c.name FROM merchant_categories mc JOIN categories c ON c.id = mc.category_id WHERE mc.merchant_key = ? ORDER BY c.name', [m])).map((r) => r.name);
+const mixedOf = async (m: string) =>
+  (
+    await (
+      await getDb()
+    ).all<{ name: string }>(
+      'SELECT c.name FROM merchant_categories mc JOIN categories c ON c.id = mc.category_id WHERE mc.merchant_key = ? ORDER BY c.name',
+      [m],
+    )
+  ).map((r) => r.name);
 
-test('2.5.12: a merchant of different categories among the selected: no question; the category stays the operations\', not on its list', async () => {
+test("2.5.12: a merchant of different categories among the selected: no question; the category stays the operations', not on its list", async () => {
   await mixedGlovo();
   await longPress('GLOVO');
   await tap('Категория (1)');

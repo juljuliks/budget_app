@@ -8,7 +8,12 @@ import { freshDb } from '../helpers';
 const now = new Date();
 const ym = currentYm(now);
 const spend = (minor: number, categoryId = 1) =>
-  addManualTransaction({ amount_minor: minor, currency: 'GEL', category_id: categoryId, occurred_at: Math.floor(Date.now() / 1000) - 5 });
+  addManualTransaction({
+    amount_minor: minor,
+    currency: 'GEL',
+    category_id: categoryId,
+    occurred_at: Math.floor(Date.now() / 1000) - 5,
+  });
 
 beforeEach(async () => {
   await freshDb();
@@ -19,7 +24,9 @@ test('month plan: 80% once, then over the plan once', async () => {
   await spend(79000);
   expect(await limitAlertFor(1, now)).toBeNull();
   await spend(1000);
-  expect(await limitAlertFor(1, now)).toEqual(expect.objectContaining({ title: expect.stringMatching(/— 80% плана на /) }));
+  expect(await limitAlertFor(1, now)).toEqual(
+    expect.objectContaining({ title: expect.stringMatching(/— 80% плана на /) }),
+  );
   // nothing new
   await spend(1000);
   expect(await limitAlertFor(1, now)).toBeNull();
@@ -44,7 +51,7 @@ test('a day limit: 80% and over, while the month is far from its plan', async ()
   expect(await limitAlertFor(1, now)).toBeNull();
 });
 
-test('reaching 100% at once: one notification, the lower threshold doesn\'t follow', async () => {
+test("reaching 100% at once: one notification, the lower threshold doesn't follow", async () => {
   await setPlanAmount(ym, 1, 100000, 'limit', 'GEL', 'month');
   await spend(120000);
   expect((await limitAlertFor(1, now))?.title).toMatch(/превышен$/);

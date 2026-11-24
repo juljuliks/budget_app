@@ -7,7 +7,10 @@ describe('sha256Hex', () => {
   const inputs = [
     '',
     'abc',
-    'a'.repeat(55), 'a'.repeat(56), 'a'.repeat(64), 'a'.repeat(1000), // padding edge cases
+    'a'.repeat(55),
+    'a'.repeat(56),
+    'a'.repeat(64),
+    'a'.repeat(1000), // padding edge cases
     '44.00GEL\n(*XXXX)\nAdamDent LLC\nBalance: 237.00GEL\n28/09/26 13:49TBC SMS',
     'Продукты ☕️ ₾ 🛒', // multi-byte + astral UTF-8
   ];

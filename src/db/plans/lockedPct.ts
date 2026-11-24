@@ -13,9 +13,12 @@ import { LOCKED_PCT_KEY, relockMonth } from './locked';
  */
 export async function setLockedPct(pct: number, nowYm = currentYm()): Promise<void> {
   const db = await getDb();
-  const months = (await db.all<{ ym: string }>(
-    `SELECT ym FROM plan_months WHERE ym >= ? OR ym NOT IN (SELECT ym FROM month_closes WHERE closed_at IS NOT NULL) ORDER BY ym`,
-    [nowYm])).map((m) => m.ym);
+  const months = (
+    await db.all<{ ym: string }>(
+      `SELECT ym FROM plan_months WHERE ym >= ? OR ym NOT IN (SELECT ym FROM month_closes WHERE closed_at IS NOT NULL) ORDER BY ym`,
+      [nowYm],
+    )
+  ).map((m) => m.ym);
   await db.transaction(async (t) => {
     await setSetting(LOCKED_PCT_KEY, String(pct), t);
     for (const ym of months) {

@@ -16,7 +16,11 @@ export const NOTABLE_MIN = 3000;
 
 type Window = { from: DayKey; to: DayKey };
 
-const addDays = (k: DayKey, n: number): DayKey => { const d = parseDayKey(k); d.setDate(d.getDate() + n); return dayKeyOf(d); };
+const addDays = (k: DayKey, n: number): DayKey => {
+  const d = parseDayKey(k);
+  d.setDate(d.getDate() + n);
+  return dayKeyOf(d);
+};
 /** The Monday of the week of `k`. */
 export const weekStartOf = (k: DayKey): DayKey => addDays(k, -((parseDayKey(k).getDay() + 6) % 7));
 const ymOfDay = (k: DayKey) => k.slice(0, 7);
@@ -49,7 +53,8 @@ export type Trend = {
   /** % of the usual; null — nothing usually */
   pct: number | null;
   /** purchases (operations that added to the spending) this time and usually */
-  count: number; usualCount: number;
+  count: number;
+  usualCount: number;
   /** worth showing (NOTABLE_PCT and NOTABLE_MIN) */
   notable: boolean;
 };
@@ -72,8 +77,12 @@ export function trendOf(spends: TrendSpend[], today: DayKey, since: DayKey | nul
   const pct = usual > 0 ? Math.round((delta / usual) * 100) : null;
   const outside = c > Math.max(...sums) || c < Math.min(...sums);
   return {
-    cur: c, usual, delta, pct,
-    count: countIn(spends, cur), usualCount: Math.round(median(past.map((w) => countIn(spends, w)))),
+    cur: c,
+    usual,
+    delta,
+    pct,
+    count: countIn(spends, cur),
+    usualCount: Math.round(median(past.map((w) => countIn(spends, w)))),
     notable: outside && Math.abs(delta) >= NOTABLE_MIN && (pct === null || Math.abs(pct) >= NOTABLE_PCT),
   };
 }
@@ -84,9 +93,14 @@ export const spentThisMonth = (spends: TrendSpend[], today: DayKey) => sumIn(spe
 /** The last `count` months, oldest first ('YYYY-MM'), the current one so far. */
 export function monthBars(spends: TrendSpend[], today: DayKey, count = 12): Array<{ ym: string; value: number }> {
   const d = parseDayKey(today);
-  const yms = Array.from({ length: count }, (_, i) => ymOfDay(dayKeyOf(new Date(d.getFullYear(), d.getMonth() - (count - 1 - i), 1))));
+  const yms = Array.from({ length: count }, (_, i) =>
+    ymOfDay(dayKeyOf(new Date(d.getFullYear(), d.getMonth() - (count - 1 - i), 1))),
+  );
   const by = new Map(yms.map((ym) => [ym, 0]));
-  for (const s of spends) { const ym = ymOfDay(s.day); if (by.has(ym)) by.set(ym, by.get(ym)! + s.value); }
+  for (const s of spends) {
+    const ym = ymOfDay(s.day);
+    if (by.has(ym)) by.set(ym, by.get(ym)! + s.value);
+  }
   return yms.map((ym) => ({ ym, value: by.get(ym)! }));
 }
 
@@ -117,5 +131,10 @@ export function monthsSummary(bars: Array<{ ym: string; value: number }>, since:
   if (full.length === 0) return null;
   const least = full.reduce((a, b) => (b.value < a.value ? b : a));
   const most = full.reduce((a, b) => (b.value > a.value ? b : a));
-  return { average: full.reduce((a, b) => a + b.value, 0) / full.length, total: bars.reduce((a, b) => a + b.value, 0), least, most };
+  return {
+    average: full.reduce((a, b) => a + b.value, 0) / full.length,
+    total: bars.reduce((a, b) => a + b.value, 0),
+    least,
+    most,
+  };
 }

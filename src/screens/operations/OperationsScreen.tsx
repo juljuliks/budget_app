@@ -43,7 +43,8 @@ import { LOAD_FAILED, SAVE_FAILED } from '@/shared/lib/strings';
 export default function OperationsScreen() {
   // a view, not a filter: kept by "Сбросить все", back to by day when leaving the tab
   const [groupBy, setGroupBy] = useState<GroupBy>('day');
-  const groupByRef = useRef(groupBy); groupByRef.current = groupBy;
+  const groupByRef = useRef(groupBy);
+  groupByRef.current = groupBy;
   const [sheet, setSheet] = useState<FilterSheet | null>(null);
   const lockRef = useRef<DayRange | null>(null);
   const filters = useTransactionFilters(lockRef);
@@ -54,9 +55,15 @@ export default function OperationsScreen() {
     incoming: route.params.sortOut,
     nonce: route.params.nonce,
     current: () => groupByRef.current,
-    start: (id, month) => { filters.setOnly({ categories: [id], range: month }); setGroupBy('merchant'); },
+    start: (id, month) => {
+      filters.setOnly({ categories: [id], range: month });
+      setGroupBy('merchant');
+    },
     restore: setGroupBy,
-    clear: () => { sel.clear(); route.clearParams(); },
+    clear: () => {
+      sel.clear();
+      route.clearParams();
+    },
     goBack: route.goBack,
   });
   const sortOut = so.sortOut;
@@ -66,9 +73,17 @@ export default function OperationsScreen() {
   useIncomingFilters(route.params, filters.setOnly, so.drop);
   const bulk = useBulkCategory({ selected, sortOut, onMovedOut: list.markMovedOut, onDone: sel.clear });
   useTabLifecycle({
-    tabNavigation: route.tabNavigation, from: route.from, sortingOut: sortOut !== null, askLeave: so.askLeave,
-    selecting: sel.selecting && sortOut === null, endSelecting: sel.clear,
-    resetOnLeave: () => { sel.clear(); filters.reset(); setGroupBy('day'); },
+    tabNavigation: route.tabNavigation,
+    from: route.from,
+    sortingOut: sortOut !== null,
+    askLeave: so.askLeave,
+    selecting: sel.selecting && sortOut === null,
+    endSelecting: sel.clear,
+    resetOnLeave: () => {
+      sel.clear();
+      filters.reset();
+      setGroupBy('day');
+    },
   });
 
   useListRefresh({
@@ -81,21 +96,44 @@ export default function OperationsScreen() {
 
   const rows = list.rows;
   const active = filters.activeFilters(sortOut?.month ?? null);
-  const listKey = JSON.stringify([query.trim(), categories, merchants, kinds, banks, range, filters.filter.unanswered, groupBy, list.remount]);
+  const listKey = JSON.stringify([
+    query.trim(),
+    categories,
+    merchants,
+    kinds,
+    banks,
+    range,
+    filters.filter.unanswered,
+    groupBy,
+    list.remount,
+  ]);
   const fab = useFabOnScroll(listKey); // «＋»: hidden while scrolling down, back with a new list
   // "Отметить просмотренными (N)": the unread ones among the selected
-  const unreadSelected = useMemo(() => rows.filter((r) => selected.has(r.id) && isUnread(r)).map((r) => r.id), [rows, selected]);
+  const unreadSelected = useMemo(
+    () => rows.filter((r) => selected.has(r.id) && isUnread(r)).map((r) => r.id),
+    [rows, selected],
+  );
   const selectedRows = rows.filter((r) => selected.has(r.id));
   const currency = useDisplayCurrency();
   const selectUsed = useSelectUsed();
   const daySpent = useDaySpent(list.sections, list.groups !== null, currency, list.viewRef.current.filter);
   // the rows' handlers, the same every render (the rows are memoized): a long press starts selecting (with this row),
   // while selecting a tap toggles, otherwise opens
-  const onPressRow = useStableCallback((tx: TransactionRow) => (selecting ? sel.toggle(tx.id) : openTransaction(tx.id)));
+  const onPressRow = useStableCallback((tx: TransactionRow) =>
+    selecting ? sel.toggle(tx.id) : openTransaction(tx.id),
+  );
   const onLongPressRow = useStableCallback((tx: TransactionRow) => sel.start(tx.id));
 
   if (list.loading) {
-    return <Loading style={styles.center} failed={list.failed} onRetry={() => { list.reload(false).catch((e) => console.error('reload transactions failed', e)); }} />;
+    return (
+      <Loading
+        style={styles.center}
+        failed={list.failed}
+        onRetry={() => {
+          list.reload(false).catch((e) => console.error('reload transactions failed', e));
+        }}
+      />
+    );
   }
 
   return (
@@ -107,20 +145,30 @@ export default function OperationsScreen() {
         <SearchBar value={query} onChange={filters.setQuery} placeholder={SEARCH_PLACEHOLDER} />
         <FiltersBar
           categories={categories.length}
-          kinds={kinds.length} banks={banks.length}
-          dated={range !== null} unanswered={filters.filter.unanswered}
+          kinds={kinds.length}
+          banks={banks.length}
+          dated={range !== null}
+          unanswered={filters.filter.unanswered}
           groupBy={groupBy}
           categoryLocked={!!sortOut}
           applied={active.length}
           onOpen={setSheet}
           onReset={filters.resetExtra}
         >
-          {sortOut ? <SortOutBanner label={sortOut.label} remaining={so.remaining} onCancel={so.askLeave} />
-            // until selecting by a long press is used once
-            : !selectUsed && !selecting && rows.length > 0 ? <Text style={styles.selectHint}>{SELECT_HINT}</Text> : null}
+          {sortOut ? (
+            <SortOutBanner label={sortOut.label} remaining={so.remaining} onCancel={so.askLeave} />
+          ) : // until selecting by a long press is used once
+          !selectUsed && !selecting && rows.length > 0 ? (
+            <Text style={styles.selectHint}>{SELECT_HINT}</Text>
+          ) : null}
         </FiltersBar>
         {selecting ? (
-          <SelectToolbar count={selected.size} allSelected={sel.allSelected} onToggleAll={sel.toggleSelectAll} onCancel={sortOut ? undefined : sel.clear} />
+          <SelectToolbar
+            count={selected.size}
+            allSelected={sel.allSelected}
+            onToggleAll={sel.toggleSelectAll}
+            onCancel={sortOut ? undefined : sel.clear}
+          />
         ) : null}
       </View>
 
@@ -133,11 +181,16 @@ export default function OperationsScreen() {
         daySpent={daySpent}
         currency={currency}
         onToggleGroup={(section) => {
-          (section.group ? sel.toggleGroup(section.key) : sel.toggleGroup(section.key, section.dayStart))
-            .catch(toastFailure(section.group ? 'select group' : 'select day', LOAD_FAILED));
+          (section.group ? sel.toggleGroup(section.key) : sel.toggleGroup(section.key, section.dayStart)).catch(
+            toastFailure(section.group ? 'select group' : 'select day', LOAD_FAILED),
+          );
         }}
         // the stats tab with this day picked
-        onOpenDay={(dayStart) => guardLeave(() => route.tabNavigation.navigate('Stats', { day: dayStart, nonce: Date.now(), from: 'Transactions' }))}
+        onOpenDay={(dayStart) =>
+          guardLeave(() =>
+            route.tabNavigation.navigate('Stats', { day: dayStart, nonce: Date.now(), from: 'Transactions' }),
+          )
+        }
         onPressRow={onPressRow}
         onLongPressRow={selecting ? undefined : onLongPressRow}
         loadMore={list.loadMore}
@@ -145,14 +198,17 @@ export default function OperationsScreen() {
         onRefresh={list.onRefresh}
         loadingMore={list.loadingMore}
         tallFooter={selecting}
-        emptyText={isFilterActive(filters.filter) ? EMPTY_FILTERED : EMPTY} onScroll={fab.onScroll}
+        emptyText={isFilterActive(filters.filter) ? EMPTY_FILTERED : EMPTY}
+        onScroll={fab.onScroll}
       />
 
       {selecting && selected.size > 0 ? (
         <BulkBar
           count={selected.size}
           unread={unreadSelected.length}
-          onRead={() => { markAllSeen(unreadSelected).catch(toastFailure('mark seen', SAVE_FAILED)); }}
+          onRead={() => {
+            markAllSeen(unreadSelected).catch(toastFailure('mark seen', SAVE_FAILED));
+          }}
           onCategory={() => bulk.setOpen(true)}
           onDelete={sortOut ? undefined : () => confirmDeleteTransactions(selectedRows, sel.clear)}
         />
@@ -160,7 +216,14 @@ export default function OperationsScreen() {
       {/* hidden while selecting (the actions bar), scrolling down */}
       {selecting || !fab.shown ? null : <Fab onPress={openAddTransaction} accessibilityLabel="Добавить операцию" />}
 
-      <FilterSheets sheet={sheet} active={active} filters={filters} groupBy={groupBy} onGroupBy={setGroupBy} onClose={() => setSheet(null)} />
+      <FilterSheets
+        sheet={sheet}
+        active={active}
+        filters={filters}
+        groupBy={groupBy}
+        onGroupBy={setGroupBy}
+        onClose={() => setSheet(null)}
+      />
       <CategoryPickerModal
         visible={bulk.open}
         title={`Выбрано операций: ${selected.size}`}

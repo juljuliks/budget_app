@@ -6,7 +6,9 @@ Feature-Sliced Design (FSD-lite): без слоёв processes и widgets — д�
 Часть 1 — правила: их проверяет `npm run lint` (`eslint.config.js`; свои правила — лимит хука, доступность — в
 `eslint-rules/`), ошибка останавливает релиз в CI. Предупреждения — строгий TypeScript (typescript-eslint
 recommended-type-checked) и доступность: их список на начало рефакторинга — `docs/refactor/lint-baseline.txt`, правило
-становится ошибкой, когда его список пуст ([REFACTOR_PLAN.md](REFACTOR_PLAN.md)). Часть 2 — как код перешёл на эти слои
+становится ошибкой, когда его список пуст ([REFACTOR_PLAN.md](REFACTOR_PLAN.md)). Файлы, которые после Prettier
+вышли за размеры, — список `OVERSIZE` в `eslint.config.js` (предупреждения до деления на этапе 5; новые туда не
+добавляются). Формат — Prettier (`npm run format`, ширина 120), CI проверяет. Часть 2 — как код перешёл на эти слои
 (история).
 
 ## 1. Правила

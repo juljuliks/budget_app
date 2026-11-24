@@ -17,7 +17,8 @@ export async function spentIn(ym: string, rows: SpendRow[], currencies: Currency
   for (const cur of new Set(currencies)) {
     const { items, conv } = await convertSpending(rows, cur, [planDate]);
     const by: SpentBy = sumBy(items, categoryKey);
-    for (const [id, minor] of await savingSpend(ym, (m, from) => conv(m, from, cur, planDate) ?? 0)) by.set(id, (by.get(id) ?? 0) + minor);
+    for (const [id, minor] of await savingSpend(ym, (m, from) => conv(m, from, cur, planDate) ?? 0))
+      by.set(id, (by.get(id) ?? 0) + minor);
     out.set(cur, by);
   }
   return out;
@@ -25,8 +26,11 @@ export async function spentIn(ym: string, rows: SpendRow[], currencies: Currency
 
 /** The month's funds as stats: each one's month of its ledger, converted to `shown`; in another currency — its own too. */
 export async function monthFunds(
-  ym: string, shown: Currency, toShown: (minor: number, from: string) => number,
-  cats: Array<{ id: number; name: string; emoji: string | null }>, colorOf: Map<number, string>,
+  ym: string,
+  shown: Currency,
+  toShown: (minor: number, from: string) => number,
+  cats: Array<{ id: number; name: string; emoji: string | null }>,
+  colorOf: Map<number, string>,
 ): Promise<FundStat[]> {
   const out: FundStat[] = [];
   for (const fund of await activeFunds(ym)) {
@@ -35,10 +39,19 @@ export async function monthFunds(
     if (!c || !m) continue;
     const v = (minor: number) => toShown(minor, fund.currency);
     out.push({
-      category_id: c.id, name: c.name, emoji: c.emoji, color: colorOf.get(c.id) ?? NEUTRAL_COLOR, spent_minor: v(m.spent),
-      available_minor: v(m.start + m.contribution), shortage_minor: v(m.shortage), left_minor: v(m.end), contribution_minor: v(m.contribution),
-      target_minor: v(fund.target_minor), due: fund.due,
-      own: fund.currency === shown ? null : { currency: fund.currency, spent_minor: m.spent, shortage_minor: m.shortage },
+      category_id: c.id,
+      name: c.name,
+      emoji: c.emoji,
+      color: colorOf.get(c.id) ?? NEUTRAL_COLOR,
+      spent_minor: v(m.spent),
+      available_minor: v(m.start + m.contribution),
+      shortage_minor: v(m.shortage),
+      left_minor: v(m.end),
+      contribution_minor: v(m.contribution),
+      target_minor: v(fund.target_minor),
+      due: fund.due,
+      own:
+        fund.currency === shown ? null : { currency: fund.currency, spent_minor: m.spent, shortage_minor: m.shortage },
     });
   }
   return out;

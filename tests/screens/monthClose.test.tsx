@@ -12,7 +12,9 @@ import { openMonthClose } from '../../src/shared/navigation/sheets';
 
 const m = (s: string) => s.replace(/ /g, ' ');
 const disabled = (title: string) => !!screen.getByRole('button', { name: title }).props.accessibilityState?.disabled;
-const closedAt = async () => (await (await getDb()).get<{ c: number | null }>("SELECT closed_at AS c FROM month_closes WHERE ym = '2026-09'"))?.c ?? null;
+const closedAt = async () =>
+  (await (await getDb()).get<{ c: number | null }>("SELECT closed_at AS c FROM month_closes WHERE ym = '2026-09'"))
+    ?.c ?? null;
 
 async function open() {
   act(() => openMonthClose('2026-09'));
@@ -20,7 +22,7 @@ async function open() {
 }
 
 describe('6.6 month close', () => {
-  test('6.6.10 a one-off payment not paid: «Платежи» first — «Перенести на октябрь» puts it in October\'s plan with its money', async () => {
+  test("6.6.10 a one-off payment not paid: «Платежи» first — «Перенести на октябрь» puts it in October's plan with its money", async () => {
     await openApp(async () => {
       await planned();
       const repair = await category('Ремонт', '🔧');
@@ -39,8 +41,13 @@ describe('6.6 month close', () => {
     await tap('Отчёт за сентябрь');
     // past its stories (the tests' 15 October): its page
     expect(await screen.findByTestId('month-report')).toBeTruthy();
-    expect(await (await getDb()).get("SELECT p.limit_minor AS l, p.kind FROM plan_items p JOIN categories c ON c.id = p.category_id WHERE p.ym = '2026-10' AND c.name = 'Ремонт'"))
-      .toEqual({ l: 30000, kind: 'fixed' });
+    expect(
+      await (
+        await getDb()
+      ).get(
+        "SELECT p.limit_minor AS l, p.kind FROM plan_items p JOIN categories c ON c.id = p.category_id WHERE p.ym = '2026-10' AND c.name = 'Ремонт'",
+      ),
+    ).toEqual({ l: 30000, kind: 'fixed' });
   });
 
   test('no overspend: what the budget left, "Сколько удалось отложить?", how it is laid out; "Отчёт за сентябрь" closes it', async () => {
@@ -71,7 +78,12 @@ describe('6.6 month close', () => {
       const holiday = await category('Отпуск', '🏖');
       const taxi = await category('Такси', '🚕');
       await setPlanBudget('2026-09', 300000, 'GEL', 0, true, 50000);
-      await setFund('2026-09', holiday, { target_minor: 150000, currency: 'GEL', due: '2027-01-31', start_minor: 0 }, '2026-09');
+      await setFund(
+        '2026-09',
+        holiday,
+        { target_minor: 150000, currency: 'GEL', due: '2027-01-31', start_minor: 0 },
+        '2026-09',
+      );
       await buy('BOLT', 1500, on(20, 12, 1), taxi);
     });
     await open();
@@ -87,7 +99,9 @@ describe('6.6 month close', () => {
     expect(await screen.findByText('Шаг 2 из 2 · Сбережения')).toBeTruthy();
     expect(screen.getByText(m('Да, 800 ₾'))).toBeTruthy();
     await tap('Другая сумма');
-    act(() => { screen.getByLabelText('Отложено').props.onChangeText('400'); });
+    act(() => {
+      screen.getByLabelText('Отложено').props.onChangeText('400');
+    });
     await tap('Готово');
     expect(await screen.findByText(m('✓ Отложено 400 ₾'))).toBeTruthy();
     // the fund first, 🔒 the rest
@@ -96,19 +110,26 @@ describe('6.6 month close', () => {
 
     await tap('Изменить распределение ›');
     expect(await screen.findByText('Распределение · сентябрь')).toBeTruthy();
-    act(() => { screen.getByLabelText('Отложено в «🏖 Отпуск»').props.onChangeText('100'); });
+    act(() => {
+      screen.getByLabelText('Отложено в «🏖 Отпуск»').props.onChangeText('100');
+    });
     await tap('Сохранить');
-    await waitFor(async () => expect(await (await getDb()).get("SELECT saved_minor FROM fund_confirms WHERE ym = '2026-09'")).toEqual({ saved_minor: 10000 }));
+    await waitFor(async () =>
+      expect(await (await getDb()).get("SELECT saved_minor FROM fund_confirms WHERE ym = '2026-09'")).toEqual({
+        saved_minor: 10000,
+      }),
+    );
     expect(await screen.findByText(/^не хватило 200/)).toBeTruthy();
 
     await tap('‹ Назад');
     expect(await screen.findByText('Шаг 1 из 2 · Перерасход')).toBeTruthy();
     await tap('Подвести позже');
     expect(await closedAt()).toBeNull();
-    expect(await (await getDb()).get("SELECT over_cover, saved, saved_minor FROM month_closes WHERE ym = '2026-09'"))
-      .toEqual({ over_cover: 'next', saved: 'other', saved_minor: 40000 });
+    expect(
+      await (await getDb()).get("SELECT over_cover, saved, saved_minor FROM month_closes WHERE ym = '2026-09'"),
+    ).toEqual({ over_cover: 'next', saved: 'other', saved_minor: 40000 });
   });
-  test('October\'s stats: September\'s leftover moved in — a line under the month\'s bar; a tap — "Куда остаток?"', async () => {
+  test("October's stats: September's leftover moved in — a line under the month's bar; a tap — \"Куда остаток?\"", async () => {
     await openApp(async () => {
       await planned();
       await answerClose('2026-09', { rest_choice: 'next' });
@@ -118,7 +139,9 @@ describe('6.6 month close', () => {
     expect(await screen.findByText(m('➕ Остаток сентября +1 150 ₾ · добавлен к бюджету октября ›'))).toBeTruthy();
     await tap(/^➕ Остаток сентября/);
     expect(await screen.findByText('Куда остаток?')).toBeTruthy();
-    expect(screen.getByRole('radio', { name: 'Перенести на октябрь' }).props.accessibilityState).toMatchObject({ checked: true });
+    expect(screen.getByRole('radio', { name: 'Перенести на октябрь' }).props.accessibilityState).toMatchObject({
+      checked: true,
+    });
     await tap('В сбережения');
     await tap('Сохранить');
     // to savings: what was put aside is asked — September's "Итоги" open
@@ -143,7 +166,9 @@ describe('6.6 month close', () => {
     expect(screen.getByText(/^прошлые сбережения −/)).toBeTruthy();
     await tap('Уже покрыт');
     await tap('Сохранить');
-    await act(async () => { await new Promise((r) => setTimeout(r, 300)); });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 300));
+    });
     expect(screen.queryByText(/^⚠️ Перерасход сентября/)).toBeNull();
   });
   test('«История»: "Итоги не подведены" — "Подвести итоги ›" opens them; closed — the leftover as answered, "Изменить итоги ›"', async () => {
@@ -169,7 +194,12 @@ describe('6.6 month close', () => {
     await openApp(async () => {
       await planned();
       const holiday = await category('Отпуск', '🏖');
-      await setFund('2026-09', holiday, { target_minor: 150000, currency: 'GEL', due: '2027-01-31', start_minor: 0 }, '2026-09');
+      await setFund(
+        '2026-09',
+        holiday,
+        { target_minor: 150000, currency: 'GEL', due: '2027-01-31', start_minor: 0 },
+        '2026-09',
+      );
       await answerClose('2026-09', { rest_choice: 'savings', saved: 'other', saved_minor: 50000 });
       // by hand: the fund 200, the rest to savings
       await setSplit('2026-09', [{ category_id: holiday, minor: 20000 }]);
@@ -196,7 +226,9 @@ describe('6.6 month close', () => {
     const Real = Object.getPrototypeOf(Date) as DateConstructor;
     const realNow = Real.now;
     let spy: jest.SpyInstance | null = null;
-    const onDay = (day: number) => { spy = jest.spyOn(Real, 'now').mockImplementation(() => realNow.call(Real) + (day + 31 - 15) * 86400000); };
+    const onDay = (day: number) => {
+      spy = jest.spyOn(Real, 'now').mockImplementation(() => realNow.call(Real) + (day + 31 - 15) * 86400000);
+    };
     afterEach(() => spy?.mockRestore());
 
     test('2 November: "Сентябрь не закрыт" (the oldest) over the stats; ✕ — till tomorrow; "Подвести итоги ›" opens them', async () => {
@@ -226,8 +258,11 @@ describe('6.6 month close', () => {
   test('"Остаток": August\'s balance plus what September would save, edited down', async () => {
     await openApp(async () => {
       await planned();
-      await (await getDb()).run(
-        "INSERT INTO month_closes (ym, by_balance, balance_minor, carry_currency, closed_at) VALUES ('2026-08', 1, 120000, 'GEL', 1)");
+      await (
+        await getDb()
+      ).run(
+        "INSERT INTO month_closes (ym, by_balance, balance_minor, carry_currency, closed_at) VALUES ('2026-08', 1, 120000, 'GEL', 1)",
+      );
     });
     await open();
     await tap('Остаток');
@@ -235,7 +270,10 @@ describe('6.6 month close', () => {
     expect(field.props.value).toBe('2350');
     expect(screen.getByText(m('В августе было 1 200 ₾, по бюджету +1 150 ₾ — по расчёту 2 350 ₾.'))).toBeTruthy();
     expect(screen.getByText(m('За сентябрь +1 150 ₾'))).toBeTruthy();
-    act(() => { field.props.onChangeText('2300'); field.props.onBlur(); });
+    act(() => {
+      field.props.onChangeText('2300');
+      field.props.onBlur();
+    });
     expect(await screen.findByText(m('За сентябрь +1 100 ₾'))).toBeTruthy();
     expect(screen.getByText(m('На 50 ₾ меньше расчёта'))).toBeTruthy();
     expect(screen.getByText(m('+1 100 ₾'))).toBeTruthy();
@@ -249,7 +287,10 @@ describe('6.6 month close', () => {
     await tap('Остаток');
     expect(await screen.findByText('Прошлого остатка нет — его нужно ввести один раз.')).toBeTruthy();
     const was = screen.getByLabelText('В августе было');
-    act(() => { was.props.onChangeText('1200'); was.props.onBlur(); });
+    act(() => {
+      was.props.onChangeText('1200');
+      was.props.onBlur();
+    });
     expect((await screen.findByLabelText('Остаток на счёте')).props.value).toBe('2350');
     expect(screen.queryByText('Прошлого остатка нет — его нужно ввести один раз.')).toBeNull();
   });

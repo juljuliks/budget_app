@@ -29,16 +29,28 @@ export function useRecurringPayments(ym: string | null, currency: Currency, cate
     started();
     (async (): Promise<RecurringPaymentsData> => {
       const [month, merchants, plan, budget, conv] = await Promise.all([
-        monthPayments(ym, currency, undefined, categoryId), merchantsWithoutPayment(categoryId), listPlan(ym, currency),
-        storedBudget(ym), planConverter(ym)]);
+        monthPayments(ym, currency, undefined, categoryId),
+        merchantsWithoutPayment(categoryId),
+        listPlan(ym, currency),
+        storedBudget(ym),
+        planConverter(ym),
+      ]);
       const item = plan.find((i) => i.category_id === categoryId);
       return {
-        ...month, merchants, planned_minor: item ? item.converted_minor : null, by_hand: !!item && item.kind !== 'subs',
+        ...month,
+        merchants,
+        planned_minor: item ? item.converted_minor : null,
+        by_hand: !!item && item.kind !== 'subs',
         budget_minor: budget ? conv(budget.amount_minor, budget.currency, currency) : null,
       };
-    })().then(keep(setData)).catch(keep(fail));
+    })()
+      .then(keep(setData))
+      .catch(keep(fail));
   }, [ym, currency, categoryId, latest, started, fail]);
-  useEffect(() => { setData(null); load(); }, [load]);
+  useEffect(() => {
+    setData(null);
+    load();
+  }, [load]);
   useEffect(() => onTransactionsChanged(load), [load]);
   return { data, failed, load };
 }

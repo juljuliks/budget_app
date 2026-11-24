@@ -1,7 +1,20 @@
 // 6: the plan — its «План» tab (the categories' plans) and changed in the month's stats — the month's budget (what's locked, the share outside
 // the plan, the leftover to savings), the categories in it, adding them («＋»), the next month. Today: 15 October 2026.
 import { act, fireEvent, waitFor } from '@testing-library/react-native';
-import { back, openApp, screen, tap, texts, backToTabs, toggleSwitch, openBudget, openPlanOf, openNextMonth, openMenu, openSettings } from './app';
+import {
+  back,
+  openApp,
+  screen,
+  tap,
+  texts,
+  backToTabs,
+  toggleSwitch,
+  openBudget,
+  openPlanOf,
+  openNextMonth,
+  openMenu,
+  openSettings,
+} from './app';
 import { base, empty, lateFund, planned } from '../e2e/seeds';
 import { getDb } from '../../src/db';
 import { emitTransactionsChanged } from '../../src/domain/events';
@@ -11,20 +24,29 @@ async function openPlan(seed = planned) {
   await tap('Статистика');
   await screen.findByLabelText('Добавить в план');
 }
-const month = async () => (await getDb()).get<{ b: number | null; l: number; lp: number | null; p: number; u: number | null; s: number }>(
-  "SELECT budget_minor AS b, locked_minor AS l, locked_pct AS lp, unplanned_pct AS p, unplanned_minor AS u, to_savings AS s FROM plan_months WHERE ym = '2026-10'");
-const item = async (name: string, ym = '2026-10') => (await getDb()).get<{ a: number; kind: string; norm: string; pinned: number }>(
-  `SELECT p.limit_minor AS a, p.kind, p.norm_period AS norm, p.pinned FROM plan_items p JOIN categories c ON c.id = p.category_id
-    WHERE p.ym = ? AND c.name = ?`, [ym, name]);
+const month = async () =>
+  (await getDb()).get<{ b: number | null; l: number; lp: number | null; p: number; u: number | null; s: number }>(
+    "SELECT budget_minor AS b, locked_minor AS l, locked_pct AS lp, unplanned_pct AS p, unplanned_minor AS u, to_savings AS s FROM plan_months WHERE ym = '2026-10'",
+  );
+const item = async (name: string, ym = '2026-10') =>
+  (await getDb()).get<{ a: number; kind: string; norm: string; pinned: number }>(
+    `SELECT p.limit_minor AS a, p.kind, p.norm_period AS norm, p.pinned FROM plan_items p JOIN categories c ON c.id = p.category_id
+    WHERE p.ym = ? AND c.name = ?`,
+    [ym, name],
+  );
 /** the `n` texts after `label` (its last one: a sheet comes after the stats) */
-const after = (label: string, n = 3) => { const t = texts(); const i = t.lastIndexOf(label); return t.slice(i + 1, i + 1 + n); };
+const after = (label: string, n = 3) => {
+  const t = texts();
+  const i = t.lastIndexOf(label);
+  return t.slice(i + 1, i + 1 + n);
+};
 /** a section's band in the stats: its title with its share of the budget, «Жизнь · 35%» */
 // the seed's categories have no section: savings 540 ₾, the plan 2 160 ₾ and the share outside it 300 ₾ of 3 000 ₾
 const SECTIONS = ['Без раздела · 72% бюджета', 'Вне плана · 10% бюджета', 'Сбережения · 18% бюджета'];
 const sectionTitles = () => texts().filter((t) => / · (\d+|<1)% (бюджета|плана)$/.test(t));
 
-describe('6.1 the month\'s budget', () => {
-  test('none yet: a tap on «Потрачено … / …» — the budget\'s sheet, what is planned; set one', async () => {
+describe("6.1 the month's budget", () => {
+  test("none yet: a tap on «Потрачено … / …» — the budget's sheet, what is planned; set one", async () => {
     await openPlan(base);
     // no budget: the sections\' shares of the whole plan
     expect(sectionTitles().length).toBeGreaterThan(0);
@@ -36,13 +58,13 @@ describe('6.1 the month\'s budget', () => {
     expect(await month()).toMatchObject({ b: 300000, s: 1 });
   });
 
-  test('a section\'s title: its plan\'s share of the budget; no «Изменить план ›», no plan page', async () => {
+  test("a section's title: its plan's share of the budget; no «Изменить план ›», no plan page", async () => {
     await openPlan();
     expect(sectionTitles()).toEqual(SECTIONS);
     expect(screen.queryByText(/Изменить план|Составить план/)).toBeNull();
   });
 
-  test('6.3.5a a one-off payment\'s optional day in its sheet: saved on its item, «Убрать» takes it off', async () => {
+  test("6.3.5a a one-off payment's optional day in its sheet: saved on its item, «Убрать» takes it off", async () => {
     await openPlan();
     await openPlanOf('🏠 Дом и коммуналка');
     expect(await screen.findByText('Дата списания (необязательно)')).toBeTruthy();
@@ -52,7 +74,10 @@ describe('6.1 the month\'s budget', () => {
     await tap('Выбрать');
     await tap('Сохранить');
     const db = await getDb();
-    const due = () => db.get("SELECT p.due FROM plan_items p JOIN categories c ON c.id = p.category_id WHERE p.ym = '2026-10' AND c.name = 'Дом и коммуналка'");
+    const due = () =>
+      db.get(
+        "SELECT p.due FROM plan_items p JOIN categories c ON c.id = p.category_id WHERE p.ym = '2026-10' AND c.name = 'Дом и коммуналка'",
+      );
     await waitFor(async () => expect(await due()).toEqual({ due: '2026-10-01' }));
     // the sheet closed before it is opened again
     await waitFor(() => expect(screen.queryByText('Дата списания (необязательно)')).toBeNull());
@@ -72,7 +97,7 @@ describe('6.1 the month\'s budget', () => {
     expect(await screen.findByText('Сохранить')).toBeTruthy();
   });
 
-  test('the stats\' «Сбережения»: what the overspend took, ⓘ — the same sheet', async () => {
+  test("the stats' «Сбережения»: what the overspend took, ⓘ — the same sheet", async () => {
     await openApp(planned);
     await tap('Статистика');
     expect(await screen.findByText('Перерасход взял 130 ₾ ')).toBeTruthy();
@@ -85,7 +110,11 @@ describe('6.1 the month\'s budget', () => {
     await openBudget();
     fireEvent.changeText(await screen.findByDisplayValue('3000'), '2500');
     await tap('Сохранить');
-    expect(await screen.findByText(/По категориям уже запланировано 2 160 ₾ — вместе с отложенным и долей вне плана это больше бюджета\./)).toBeTruthy();
+    expect(
+      await screen.findByText(
+        /По категориям уже запланировано 2 160 ₾ — вместе с отложенным и долей вне плана это больше бюджета\./,
+      ),
+    ).toBeTruthy();
     expect((await month())!.b).toBe(300000);
   });
 
@@ -99,16 +128,20 @@ describe('6.1 the month\'s budget', () => {
   });
 });
 
-test('6.3.13 the «План» tab: the categories\' plans by section, no spending; a row — its amount\'s sheet', async () => {
+test("6.3.13 the «План» tab: the categories' plans by section, no spending; a row — its amount's sheet", async () => {
   await openPlan();
   await tap('План');
   // the row (the legend has its name too)
   expect(await screen.findByLabelText('Изменить: 🛒 Продукты')).toBeTruthy();
   // the plan's ring over them: «Бюджет» in its hole
   expect(screen.getByText('Бюджет')).toBeTruthy();
-  expect(texts()).toEqual(expect.arrayContaining(['Без раздела', '🏠 Дом и коммуналка', 'разовый платёж', '👕 Одежда']));
+  expect(texts()).toEqual(
+    expect.arrayContaining(['Без раздела', '🏠 Дом и коммуналка', 'разовый платёж', '👕 Одежда']),
+  );
   // «Сбережения»: 🔒 the settings' 10% of the budget; a tap — the budget
-  expect(texts()).toEqual(expect.arrayContaining(['Сбережения', '🔒 Отложено сразу', 'заблокировано в начале месяца', '300 ₾']));
+  expect(texts()).toEqual(
+    expect.arrayContaining(['Сбережения', '🔒 Отложено сразу', 'заблокировано в начале месяца', '300 ₾']),
+  );
   await tap('Изменить: 🔒 Отложено сразу');
   expect(await screen.findByText('Бюджет месяца')).toBeTruthy();
   await tap('Отмена');
@@ -125,7 +158,7 @@ test('6.3.13 the «План» tab: the categories\' plans by section, no spendin
   expect(await screen.findByText('Удалить из плана')).toBeTruthy();
 });
 
-test('6.3.13 the «План» tab: «Сбережения» — the funds with their goal; a tap — the fund\'s card', async () => {
+test("6.3.13 the «План» tab: «Сбережения» — the funds with their goal; a tap — the fund's card", async () => {
   await openPlan(lateFund);
   await tap('План');
   expect(await screen.findByLabelText('Копилка: 👕 Одежда')).toBeTruthy();
@@ -144,11 +177,17 @@ test('6.3.13 the «План» tab of a month without a plan: the hint', async ()
 
 describe('6.2 locked for savings, the share outside the plan, the leftover', () => {
   beforeEach(() => openPlan());
-  const sliders = () => screen.UNSAFE_root.findAll((n: { props: { accessibilityRole?: string; onAccessibilityAction?: unknown } }) =>
-    n.props.accessibilityRole === 'adjustable' && typeof n.props.onAccessibilityAction === 'function');
-  const step = (i: number, actionName: 'increment' | 'decrement') => act(() => { fireEvent(sliders()[i], 'accessibilityAction', { nativeEvent: { actionName } }); });
+  const sliders = () =>
+    screen.UNSAFE_root.findAll(
+      (n: { props: { accessibilityRole?: string; onAccessibilityAction?: unknown } }) =>
+        n.props.accessibilityRole === 'adjustable' && typeof n.props.onAccessibilityAction === 'function',
+    );
+  const step = (i: number, actionName: 'increment' | 'decrement') =>
+    act(() => {
+      fireEvent(sliders()[i], 'accessibilityAction', { nativeEvent: { actionName } });
+    });
 
-  test('6.2.1 🔒 — no field: the settings\' % of the amount typed, «Процент — в Настройках ›»; what is free in the plan', async () => {
+  test("6.2.1 🔒 — no field: the settings' % of the amount typed, «Процент — в Настройках ›»; what is free in the plan", async () => {
     await openBudget();
     expect(await screen.findByText('ОТЛОЖИТЬ СРАЗУ')).toBeTruthy();
     expect(screen.getByText('10% · 300 ₾')).toBeTruthy();
@@ -168,19 +207,35 @@ describe('6.2 locked for savings, the share outside the plan, the leftover', () 
   });
 
   test('6.2.2 taken from 🔒 this month: what is left of it, «плану не хватило свободного», this month only', async () => {
-    await (await getDb()).run("UPDATE plan_months SET locked_minor = 25000, locked_taken_minor = 5000 WHERE ym = '2026-10'");
+    await (
+      await getDb()
+    ).run("UPDATE plan_months SET locked_minor = 25000, locked_taken_minor = 5000 WHERE ym = '2026-10'");
     act(() => emitTransactionsChanged());
     await openBudget();
     expect(await screen.findByText('250 ₾')).toBeTruthy();
-    expect(texts()).toEqual(expect.arrayContaining(['10% бюджета', '300 ₾', 'плану не хватило свободного', '−50 ₾',
-      'Только в этом месяце: процент в Настройках не меняется.', 'Настройки ›']));
+    expect(texts()).toEqual(
+      expect.arrayContaining([
+        '10% бюджета',
+        '300 ₾',
+        'плану не хватило свободного',
+        '−50 ₾',
+        'Только в этом месяце: процент в Настройках не меняется.',
+        'Настройки ›',
+      ]),
+    );
   });
 
-  test('6.2.4 a new % in the settings: this month\'s 🔒 at once', async () => {
+  test("6.2.4 a new % in the settings: this month's 🔒 at once", async () => {
     await openSettings();
-    const slider = await waitFor(() => screen.UNSAFE_root.find((n: { props: { accessibilityRole?: string; accessibilityValue?: { text?: string } } }) =>
-      n.props.accessibilityRole === 'adjustable' && n.props.accessibilityValue?.text === '10%'));
-    act(() => { fireEvent(slider, 'accessibilityAction', { nativeEvent: { actionName: 'increment' } }); });
+    const slider = await waitFor(() =>
+      screen.UNSAFE_root.find(
+        (n: { props: { accessibilityRole?: string; accessibilityValue?: { text?: string } } }) =>
+          n.props.accessibilityRole === 'adjustable' && n.props.accessibilityValue?.text === '10%',
+      ),
+    );
+    act(() => {
+      fireEvent(slider, 'accessibilityAction', { nativeEvent: { actionName: 'increment' } });
+    });
     expect(await screen.findByText('15% бюджета')).toBeTruthy();
     await waitFor(async () => expect(await month()).toMatchObject({ l: 45000, lp: 15 }));
     backToTabs();
@@ -188,7 +243,7 @@ describe('6.2 locked for savings, the share outside the plan, the leftover', () 
     expect(await screen.findByText('15% · 450 ₾')).toBeTruthy();
   });
 
-  test('an amount of one\'s own instead of the %', async () => {
+  test("an amount of one's own instead of the %", async () => {
     await openBudget();
     await screen.findByText('На траты вне плана');
     // the second share's switch: % → the amount
@@ -197,7 +252,9 @@ describe('6.2 locked for savings, the share outside the plan, the leftover', () 
     fireEvent.changeText(screen.getByDisplayValue('300'), '250');
     expect(await screen.findByText('250 ₾ на траты вне плана — план их не займёт.')).toBeTruthy();
     fireEvent.changeText(screen.getByDisplayValue('250'), '900');
-    expect(await screen.findByText('Не помещается: свободно 540 ₾ — остальное занято планом и отложенным.')).toBeTruthy();
+    expect(
+      await screen.findByText('Не помещается: свободно 540 ₾ — остальное занято планом и отложенным.'),
+    ).toBeTruthy();
     fireEvent.changeText(screen.getByDisplayValue('900'), '250');
     await tap('Сохранить');
     expect(await screen.findByText('Бюджет месяца сохранён')).toBeTruthy();
@@ -220,7 +277,11 @@ test('6.2.3 «🔒 Отложить сразу» not set: a warning in the budge
     await db.run("UPDATE plan_months SET locked_minor = 0, locked_pct = NULL WHERE ym = '2026-10'");
   });
   await openBudget();
-  expect(await screen.findByText('⚠ Не задано, сколько откладывать сразу: в сбережения уйдёт только то, что останется в конце месяца.')).toBeTruthy();
+  expect(
+    await screen.findByText(
+      '⚠ Не задано, сколько откладывать сразу: в сбережения уйдёт только то, что останется в конце месяца.',
+    ),
+  ).toBeTruthy();
   expect(screen.queryByText('ОТЛОЖИТЬ СРАЗУ')).toBeNull();
   await tap('Задать в Настройках ›');
   expect(await screen.findByText('не задано')).toBeTruthy();
@@ -258,7 +319,7 @@ describe('6.3 the categories in the plan', () => {
     expect(await item('Продукты')).toMatchObject({ a: 70000, kind: 'limit', norm: 'week' });
   });
 
-  test('the category\'s name in the title opens its sheet over the amount, as on the operation\'s card', async () => {
+  test("the category's name in the title opens its sheet over the amount, as on the operation's card", async () => {
     await openPlanOf('🛒 Продукты');
     await tap('Открыть: 🛒 Продукты');
     expect(await screen.findByDisplayValue('Продукты')).toBeTruthy();
@@ -266,7 +327,7 @@ describe('6.3 the categories in the plan', () => {
     expect(screen.queryByText('Регулярные платежи')).toBeNull();
   });
 
-  test('the sheet: what the item is (its category\'s kind), «Изменить в категории ›» — its page; no kind to pick, nothing repeated by hand', async () => {
+  test("the sheet: what the item is (its category's kind), «Изменить в категории ›» — its page; no kind to pick, nothing repeated by hand", async () => {
     await openPlanOf('👕 Одежда');
     expect(await screen.findByText('Траты с лимитом')).toBeTruthy();
     expect(screen.queryByRole('radio', { name: /Разовый платёж/ })).toBeNull();
@@ -276,7 +337,7 @@ describe('6.3 the categories in the plan', () => {
     expect(screen.getByRole('radio', { name: /Траты с лимитом/, checked: true })).toBeTruthy();
   });
 
-  test('6.3.10 the kind on the category\'s page: a one-off payment saved at once — gone from the coming months; a regular payment — «Настроить»', async () => {
+  test("6.3.10 the kind on the category's page: a one-off payment saved at once — gone from the coming months; a regular payment — «Настроить»", async () => {
     await openPlanOf('👕 Одежда');
     await tap('Изменить в категории ›');
     await screen.findByText('Сумма и «Как тратите» — в плане месяца; дальше переходят в следующие.');
@@ -331,13 +392,22 @@ describe('6.3 the categories in the plan', () => {
     expect(await screen.findByText('Сумма за раз')).toBeTruthy();
     expect(screen.getByText('‹ Назад')).toBeTruthy();
     expect(screen.getAllByText('пн, чт').length).toBeGreaterThan(0);
-    expect(screen.getByText('Как часто, дата списания и окончания — на странице категории. Сумма переходит в следующие месяцы.')).toBeTruthy();
+    expect(
+      screen.getByText(
+        'Как часто, дата списания и окончания — на странице категории. Сумма переходит в следующие месяцы.',
+      ),
+    ).toBeTruthy();
     fireEvent.changeText(screen.getByPlaceholderText('0'), '20');
     expect(await screen.findByText('9 раз в октябре — 180\u00a0₾')).toBeTruthy();
     await tap('Сохранить');
     expect((await screen.findAllByText('План «👕 Одежда» сохранён')).length).toBeGreaterThan(0);
-    expect(await (await getDb()).get("SELECT p.limit_minor AS a, p.kind, p.every, p.weekdays, p.unit_minor AS u FROM plan_items p JOIN categories c ON c.id = p.category_id WHERE p.ym = '2026-10' AND c.name = 'Одежда'"))
-      .toEqual({ a: 18000, kind: 'fixed', every: 'week', weekdays: 9, u: 2000 });
+    expect(
+      await (
+        await getDb()
+      ).get(
+        "SELECT p.limit_minor AS a, p.kind, p.every, p.weekdays, p.unit_minor AS u FROM plan_items p JOIN categories c ON c.id = p.category_id WHERE p.ym = '2026-10' AND c.name = 'Одежда'",
+      ),
+    ).toEqual({ a: 18000, kind: 'fixed', every: 'week', weekdays: 9, u: 2000 });
     // its sheet in the plan: the amount each time, how often — its category's
     await openPlanOf('👕 Одежда');
     expect(await screen.findByText('Сумма за раз')).toBeTruthy();
@@ -345,11 +415,15 @@ describe('6.3 the categories in the plan', () => {
     expect(screen.queryByText('Каждую неделю')).toBeNull();
     // removed: asked — the payment off, gone from this month on; "Отменить" — back
     await tap('Удалить из плана');
-    expect(await screen.findByText('У категории регулярный платёж — он выключится, а категория пропадёт из плана с октября. Операции не изменятся.')).toBeTruthy();
+    expect(
+      await screen.findByText(
+        'У категории регулярный платёж — он выключится, а категория пропадёт из плана с октября. Операции не изменятся.',
+      ),
+    ).toBeTruthy();
     await tap('Убрать из плана');
     expect(await screen.findByText('«👕 Одежда» убрана из плана, регулярный платёж выключен')).toBeTruthy();
     expect(await item('Одежда')).toBeUndefined();
-    expect(await (await getDb()).get("SELECT count(*) AS n FROM category_schedules")).toEqual({ n: 0 });
+    expect(await (await getDb()).get('SELECT count(*) AS n FROM category_schedules')).toEqual({ n: 0 });
     await tap('Отменить');
     expect(await screen.findByText('«👕 Одежда» снова в плане')).toBeTruthy();
     expect(await item('Одежда')).toMatchObject({ a: 18000 });
@@ -366,12 +440,20 @@ describe('6.3 the categories in the plan', () => {
     expect(await screen.findByText('Сумма за раз')).toBeTruthy();
     fireEvent.changeText(screen.getByPlaceholderText('0'), '120');
     await tap('Сохранить');
-    expect(await screen.findByText('Свободного не хватает 440\u00a0₾, в сбережениях — 300\u00a0₾. План будет больше бюджета на 140\u00a0₾.')).toBeTruthy();
+    expect(
+      await screen.findByText(
+        'Свободного не хватает 440\u00a0₾, в сбережениях — 300\u00a0₾. План будет больше бюджета на 140\u00a0₾.',
+      ),
+    ).toBeTruthy();
     await tap('Вычесть и сохранить');
     expect(await screen.findByText('План «👕 Одежда» сохранён, из 🔒 вычтено 300\u00a0₾')).toBeTruthy();
     const db = await getDb();
     expect(await db.get("SELECT locked_minor FROM plan_months WHERE ym = '2026-10'")).toEqual({ locked_minor: 0 });
-    expect(await db.get("SELECT p.limit_minor AS a FROM plan_items p JOIN categories c ON c.id = p.category_id WHERE p.ym = '2026-10' AND c.name = 'Одежда'")).toEqual({ a: 108000 });
+    expect(
+      await db.get(
+        "SELECT p.limit_minor AS a FROM plan_items p JOIN categories c ON c.id = p.category_id WHERE p.ym = '2026-10' AND c.name = 'Одежда'",
+      ),
+    ).toEqual({ a: 108000 });
   });
 
   test('removing one not repeated: at once; "Отменить" brings it back as it was', async () => {
@@ -414,7 +496,12 @@ describe('6.3 the categories in the plan', () => {
 describe('6.3.12 a limit cut while the spending outside the plan is past its share', () => {
   // the share 300 ₾, outside the plan 380 ₾ spent (Такси, Развлечения, a transfer): 80 ₾ past it
   beforeEach(() => openPlan());
-  const cover = async () => (await (await getDb()).get<{ c: number | null }>("SELECT unplanned_cover_minor AS c FROM plan_months WHERE ym = '2026-10'"))?.c;
+  const cover = async () =>
+    (
+      await (
+        await getDb()
+      ).get<{ c: number | null }>("SELECT unplanned_cover_minor AS c FROM plan_months WHERE ym = '2026-10'")
+    )?.c;
   const cut = async (to: string) => {
     await openPlanOf('☕️ Кафе и рестораны');
     fireEvent.changeText(await screen.findByDisplayValue('310'), to);
@@ -424,7 +511,11 @@ describe('6.3.12 a limit cut while the spending outside the plan is past its sha
   test('«Покрыть»: as much as is past the share, this month; «Отменить» — as it was', async () => {
     await cut('200');
     expect(await screen.findByText('Покрыть перерасход вне плана?')).toBeTruthy();
-    expect(screen.getByText('Траты вне плана больше доли на 80 ₾. Из освободившихся 110 ₾ им можно отдать 80 ₾ — иначе всё уйдёт в сбережения.')).toBeTruthy();
+    expect(
+      screen.getByText(
+        'Траты вне плана больше доли на 80 ₾. Из освободившихся 110 ₾ им можно отдать 80 ₾ — иначе всё уйдёт в сбережения.',
+      ),
+    ).toBeTruthy();
     await tap('Покрыть 80 ₾');
     expect(await screen.findByText('Перерасход вне плана покрыт')).toBeTruthy();
     expect(await cover()).toBe(8000);
@@ -435,7 +526,11 @@ describe('6.3.12 a limit cut while the spending outside the plan is past its sha
   });
   test('«В сбережения»: the share as it was', async () => {
     await cut('290');
-    expect(await screen.findByText('Траты вне плана больше доли на 80 ₾. Освободившиеся 20 ₾ можно отдать им — иначе всё уйдёт в сбережения.')).toBeTruthy();
+    expect(
+      await screen.findByText(
+        'Траты вне плана больше доли на 80 ₾. Освободившиеся 20 ₾ можно отдать им — иначе всё уйдёт в сбережения.',
+      ),
+    ).toBeTruthy();
     await tap('В сбережения');
     await waitFor(() => expect(screen.queryByText('Покрыть перерасход вне плана?')).toBeNull());
     expect(await cover()).toBeFalsy();
@@ -464,9 +559,13 @@ describe('6.3.12 a limit cut while the spending outside the plan is past its sha
 describe('6.3.2 adding to the plan, step by step', () => {
   beforeEach(() => openPlan());
 
-  test('step 1: the month before\'s plan, then spent in this month, then the rest; none in the plan or system', async () => {
+  test("step 1: the month before's plan, then spent in this month, then the rest; none in the plan or system", async () => {
     // Кафе out of this month's plan: it was in September's
-    await (await getDb()).run("DELETE FROM plan_items WHERE ym = '2026-10' AND category_id = (SELECT id FROM categories WHERE name = 'Кафе и рестораны')");
+    await (
+      await getDb()
+    ).run(
+      "DELETE FROM plan_items WHERE ym = '2026-10' AND category_id = (SELECT id FROM categories WHERE name = 'Кафе и рестораны')",
+    );
     act(() => emitTransactionsChanged());
     await tap('Добавить в план');
     expect(await screen.findByText('Шаг 1 из 2 · Категория')).toBeTruthy();
@@ -537,15 +636,26 @@ describe('6.3.2a search in «Добавить в план»', () => {
 });
 
 describe('6.1.11 the next month', () => {
-  test('carried over: the budget and its settings; a limit with its amount; the month\'s stats — its plan, nothing spent', async () => {
+  test("carried over: the budget and its settings; a limit with its amount; the month's stats — its plan, nothing spent", async () => {
     await openApp(planned);
     await tap('Статистика');
     await openNextMonth();
     expect(screen.queryByText(/ещё не начался/)).toBeNull();
     expect(await screen.findByText('🛒 Продукты')).toBeTruthy();
     // nothing spent: what is left — all of it; the sections with their shares of November's budget (Дом, one-off, stayed in October)
-    expect(texts()).toEqual(expect.arrayContaining(['Осталось 1 660 ₾ · до 30 ноя', 'Без раздела · 45% бюджета', '620 ₾', '0 из 620 ₾ · лимит ≈ 20.67 ₾ в день']));
-    const nov = await (await getDb()).get<{ b: number; l: number; p: number }>("SELECT budget_minor AS b, locked_minor AS l, unplanned_pct AS p FROM plan_months WHERE ym = '2026-11'");
+    expect(texts()).toEqual(
+      expect.arrayContaining([
+        'Осталось 1 660 ₾ · до 30 ноя',
+        'Без раздела · 45% бюджета',
+        '620 ₾',
+        '0 из 620 ₾ · лимит ≈ 20.67 ₾ в день',
+      ]),
+    );
+    const nov = await (
+      await getDb()
+    ).get<{ b: number; l: number; p: number }>(
+      "SELECT budget_minor AS b, locked_minor AS l, unplanned_pct AS p FROM plan_months WHERE ym = '2026-11'",
+    );
     expect(nov).toMatchObject({ b: 300000, l: 30000, p: 10 });
     expect(await item('Продукты', '2026-11')).toMatchObject({ a: 62000, kind: 'limit' });
   });
@@ -562,12 +672,15 @@ describe('6.1.11 the next month', () => {
   });
 });
 
-test('6.3.10 a limit given to a category planned last month only: last month\'s amount in this one, no plan\'s sheet', async () => {
+test("6.3.10 a limit given to a category planned last month only: last month's amount in this one, no plan's sheet", async () => {
   await openApp(async () => {
     await planned();
     const db = await getDb();
     const { id } = (await db.get<{ id: number }>("SELECT id FROM categories WHERE name = 'Такси'"))!;
-    await db.run("INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency, norm_period) VALUES ('2026-09', ?, 15000, 'limit', 'GEL', 'week')", [id]);
+    await db.run(
+      "INSERT INTO plan_items (ym, category_id, limit_minor, kind, currency, norm_period) VALUES ('2026-09', ?, 15000, 'limit', 'GEL', 'week')",
+      [id],
+    );
   });
   await openMenu('Категории');
   await tap('🚕 Такси');

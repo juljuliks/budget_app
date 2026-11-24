@@ -12,7 +12,8 @@ export const EXPORT_CSV = 'Экспорт CSV';
 export const SAVED = 'Копия сохранена';
 export const CSV_SAVED = 'Таблица операций сохранена';
 export const RESTORE_QUESTION = 'Восстановить из копии?';
-export const RESTORE_INFO = 'Операции, категории, мерчанты и план заменятся данными из файла. Приложение перезапустится.';
+export const RESTORE_INFO =
+  'Операции, категории, мерчанты и план заменятся данными из файла. Приложение перезапустится.';
 export const RESTORE = 'Восстановить';
 export const NOT_SUITABLE = 'Этот файл не подходит';
 export const FAILED = 'Не получилось';
@@ -42,7 +43,8 @@ export const AUTO_OFF_QUESTION = 'Выключить автокопию?';
 export const autoOffInfo = (cloud: boolean) =>
   `Новые копии перестанут сохраняться. Уже сохранённые останутся ${cloud ? 'на Google Диске' : 'в папке'}.`;
 export const TURN_OFF = 'Выключить';
-export const SET_PASSWORD_INFO = 'Не короче 8 символов; лучше несколько слов. Запишите его: без пароля копию не восстановить.';
+export const SET_PASSWORD_INFO =
+  'Не короче 8 символов; лучше несколько слов. Запишите его: без пароля копию не восстановить.';
 export const PASSWORD_FIELD = 'Пароль';
 export const PASSWORD_REPEAT = 'Повторите пароль';
 export const MIN_PASSWORD = 8;

@@ -8,7 +8,11 @@ import BanksTab from './parts/BanksTab';
 import BudgetTab from './parts/BudgetTab';
 
 type Tab = 'budget' | 'banks' | 'app';
-const TABS = [['budget', 'Бюджет'], ['banks', 'Банки'], ['app', 'Приложение']] as const;
+const TABS = [
+  ['budget', 'Бюджет'],
+  ['banks', 'Банки'],
+  ['app', 'Приложение'],
+] as const;
 
 /**
  * Настройки (⋮ in the tab headers): a page (back — the arrow in its header) with tabs, on «Бюджет» when opened, the

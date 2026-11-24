@@ -38,12 +38,14 @@ export function useCategoryForm({ visible, categoryId, initialTypeId, onClose, o
   const [systemKind, setSystemKind] = useState<string | null>(null);
 
   const loadTypes = useCallback(() => {
-    listCategoryTypes().then((t) => {
-      setTypes(t);
-      // the selected type was deleted meanwhile
-      const cur = form.getValues('typeId');
-      if (cur !== null && cur !== undefined && !t.some((x) => x.id === cur)) form.setValue('typeId', null);
-    }).catch(toastFailure('load types', LOAD_FAILED));
+    listCategoryTypes()
+      .then((t) => {
+        setTypes(t);
+        // the selected type was deleted meanwhile
+        const cur = form.getValues('typeId');
+        if (cur !== null && cur !== undefined && !t.some((x) => x.id === cur)) form.setValue('typeId', null);
+      })
+      .catch(toastFailure('load types', LOAD_FAILED));
   }, [form]);
 
   // on open: what is saved, its operations, the sections and the colors in use
@@ -54,10 +56,18 @@ export function useCategoryForm({ visible, categoryId, initialTypeId, onClose, o
     loadTypes();
     takenCategoryColors(categoryId).then(setTaken).catch(toastFailure('load colors', LOAD_FAILED));
     setSystemKind(null);
-    if (isNew) { setSaved({ name: '', emoji: '', typeId: initialTypeId ?? null, color: null }); return; }
-    getCategory(categoryId).then((c) => {
-      if (c) { setSaved({ name: c.name, emoji: c.emoji ?? '', typeId: c.type_id, color: c.color }); setSystemKind(isSystemCategory(c) ? c.system : null); }
-    }).catch(toastFailure('load category', LOAD_FAILED));
+    if (isNew) {
+      setSaved({ name: '', emoji: '', typeId: initialTypeId ?? null, color: null });
+      return;
+    }
+    getCategory(categoryId)
+      .then((c) => {
+        if (c) {
+          setSaved({ name: c.name, emoji: c.emoji ?? '', typeId: c.type_id, color: c.color });
+          setSystemKind(isSystemCategory(c) ? c.system : null);
+        }
+      })
+      .catch(toastFailure('load category', LOAD_FAILED));
     categorySummary(categoryId).then(setSummary).catch(toastFailure('load category summary', LOAD_FAILED));
   }, [visible, categoryId, isNew, initialTypeId, loadTypes]);
 
@@ -79,5 +89,21 @@ export function useCategoryForm({ visible, categoryId, initialTypeId, onClose, o
     }
   });
 
-  return { form, isNew, isDirty, isSubmitting, name, emoji, typeId, color, set, types, loadTypes, taken, systemKind, summary, save };
+  return {
+    form,
+    isNew,
+    isDirty,
+    isSubmitting,
+    name,
+    emoji,
+    typeId,
+    color,
+    set,
+    types,
+    loadTypes,
+    taken,
+    systemKind,
+    summary,
+    save,
+  };
 }

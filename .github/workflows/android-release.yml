@@ -34,7 +34,7 @@ env:
   KEEP_RELEASES: 5
 
 jobs:
-  # the types and the architecture (ARCHITECTURE.md: layers' imports, file sizes; errors stop the release)
+  # the types, the architecture (ARCHITECTURE.md: layers' imports, file sizes; errors stop the release), Prettier's format
   check:
     runs-on: ubuntu-latest
     steps:
@@ -56,8 +56,8 @@ jobs:
         if: steps.node-modules.outputs.cache-hit != 'true'
         run: npm ci
 
-      - name: Types and architecture
-        run: npx tsc --noEmit && npm run lint
+      - name: Types, architecture and format
+        run: npx tsc --noEmit && npm run lint && npm run format:check
 
   # the tests, in four parts side by side (Jest splits them by file); all of them, the checks and the build run at once,
   # the release is published only when every one passes

@@ -18,8 +18,15 @@ export const queryCounter = { count: 0 };
  */
 export function serialized(raw: Raw): Db {
   let queue: Promise<unknown> = Promise.resolve();
-  const counted = <A extends unknown[], R>(f: (...a: A) => R) => (...a: A): R => { queryCounter.count++; return f(...a); };
-  const run = counted(raw.run), get = counted(raw.get) as Raw['get'], all = counted(raw.all) as Raw['all'];
+  const counted =
+    <A extends unknown[], R>(f: (...a: A) => R) =>
+    (...a: A): R => {
+      queryCounter.count++;
+      return f(...a);
+    };
+  const run = counted(raw.run),
+    get = counted(raw.get) as Raw['get'],
+    all = counted(raw.all) as Raw['all'];
   const enqueue = <T>(op: () => Promise<T>): Promise<T> => {
     const next = queue.then(op);
     queue = next.catch(() => undefined);
@@ -30,23 +37,30 @@ export function serialized(raw: Raw): Db {
     run: (sql, params) => enqueue(() => run(sql, params)),
     get: (sql, params) => enqueue(() => get(sql, params)),
     all: (sql, params) => enqueue(() => all(sql, params)),
-    transaction: (fn) => enqueue(async () => {
-      const tx: Db = {
-        run, get, all,
-        transaction: (inner) => inner(tx),
-        close: raw.close,
-      };
-      await run('BEGIN');
-      try {
-        const result = await fn(tx);
-        await run('COMMIT');
-        return result;
-      } catch (e) {
-        // the original error matters, not a failed rollback
-        try { await raw.run('ROLLBACK'); } catch { /* ignore */ }
-        throw e;
-      }
-    }),
+    transaction: (fn) =>
+      enqueue(async () => {
+        const tx: Db = {
+          run,
+          get,
+          all,
+          transaction: (inner) => inner(tx),
+          close: raw.close,
+        };
+        await run('BEGIN');
+        try {
+          const result = await fn(tx);
+          await run('COMMIT');
+          return result;
+        } catch (e) {
+          // the original error matters, not a failed rollback
+          try {
+            await raw.run('ROLLBACK');
+          } catch {
+            /* ignore */
+          }
+          throw e;
+        }
+      }),
     close: () => raw.close(),
   };
   return db;

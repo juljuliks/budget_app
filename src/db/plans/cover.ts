@@ -20,7 +20,10 @@ export async function addUnplannedCover(ym: string, minor: number): Promise<void
   const db = await getDb();
   await db.transaction(async (t) => {
     await ownMonth(ym, t);
-    await t.run('UPDATE plan_months SET unplanned_cover_minor = max(0, unplanned_cover_minor + ?) WHERE ym = ?', [minor, ym]);
+    await t.run('UPDATE plan_months SET unplanned_cover_minor = max(0, unplanned_cover_minor + ?) WHERE ym = ?', [
+      minor,
+      ym,
+    ]);
   });
 }
 
@@ -29,11 +32,19 @@ export async function addUnplannedCover(ym: string, minor: number): Promise<void
  * left of it in its own currency (its spending there by the days' rates, not the plan's). What was covered and the
  * limit before ("Отменить"); null — nothing left of it.
  */
-export async function coverFromLimit(ym: string, categoryId: number, minor: number): Promise<{ covered: number; was: number } | null> {
+export async function coverFromLimit(
+  ym: string,
+  categoryId: number,
+  minor: number,
+): Promise<{ covered: number; was: number } | null> {
   const db = await getDb();
   const [budget, conv, item] = await Promise.all([
-    getPlanBudget(ym), planConverter(ym),
-    db.get<{ limit_minor: number; currency: string }>('SELECT limit_minor, currency FROM plan_items WHERE ym = ? AND category_id = ?', [ym, categoryId]),
+    getPlanBudget(ym),
+    planConverter(ym),
+    db.get<{ limit_minor: number; currency: string }>(
+      'SELECT limit_minor, currency FROM plan_items WHERE ym = ? AND category_id = ?',
+      [ym, categoryId],
+    ),
   ]);
   if (!budget || !item) return null;
   const { year, month } = parseYm(ym);
@@ -42,7 +53,7 @@ export async function coverFromLimit(ym: string, categoryId: number, minor: numb
   const want = conv(minor, budget.currency, item.currency) ?? 0;
   const take = Math.min(item.limit_minor - Math.max(0, spent), want);
   if (take <= 0) return null;
-  const covered = take === want ? minor : conv(take, item.currency, budget.currency) ?? 0;
+  const covered = take === want ? minor : (conv(take, item.currency, budget.currency) ?? 0);
   await setPlanAmount(ym, categoryId, item.limit_minor - take);
   await addUnplannedCover(ym, covered);
   return { covered, was: item.limit_minor };
