@@ -8,7 +8,8 @@ import { toast } from '@/shared/ui/toast';
 import { CANCEL } from '@/shared/lib/strings';
 import { makeCopy, openCopy } from './password';
 import { dateKey as today, run } from './run';
-import { CSV_SAVED, NOT_SUITABLE, PROBLEMS, RESTORE, RESTORE_INFO, RESTORE_QUESTION, SAVED } from './texts';
+import { pickCloudCopy } from './cloud';
+import { CSV_SAVED, FAILED, FROM_CLOUD, FROM_FILE, NOT_SUITABLE, PROBLEMS, RESTORE, RESTORE_FROM, RESTORE_INFO, RESTORE_QUESTION, SAVED } from './texts';
 
 /** The copy written before "save as" offers it, and the picked file being checked: both in the app's files dir. */
 const COPY = 'backup-copy.db';
@@ -21,9 +22,29 @@ export async function saveBackup() {
   if (await saveFile(await makeCopy(COPY), `budget-${today()}.db`, 'application/octet-stream')) toast(SAVED);
 }
 
-/** "Восстановить из копии": a picked copy, decrypted and checked, replaces the database after a question. */
-export async function restoreBackup() {
-  if (!(await pickFile(PICKED))) return;
+/** "Восстановить из копии": from a file or from Google Drive (asked), then as `restoreFrom`. */
+export function restoreBackup(): Promise<void> {
+  return new Promise((resolve) => {
+    sheetAlert(RESTORE_FROM, undefined, [
+      { text: FROM_FILE, onPress: () => { restoreFrom(() => pickFile(PICKED)).then(resolve, resolve); } },
+      { text: FROM_CLOUD, onPress: () => { restoreFrom(() => pickCloudCopy(PICKED)).then(resolve, resolve); } },
+      { text: CANCEL, style: 'cancel', onPress: () => resolve() },
+    ]);
+  });
+}
+
+/** The copy got (picked file, or downloaded from Drive) — decrypted and checked, replaces the database after a question. */
+async function restoreFrom(get: () => Promise<boolean>) {
+  try {
+    await restoreGot(get);
+  } catch (e) {
+    console.error('restore failed', e);
+    sheetAlert(FAILED, String((e as Error)?.message ?? e));
+  }
+}
+
+async function restoreGot(get: () => Promise<boolean>) {
+  if (!(await get())) return;
   // an encrypted copy: decrypted with its password first
   const file = await openCopy(PICKED, PLAIN);
   if (file === null) {

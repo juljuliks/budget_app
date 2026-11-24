@@ -69,16 +69,22 @@ test('CSV: a header, ";" between cells, a decimal comma, spending negative, quot
 });
 
 test('the automatic copy: due when never made or a week after the last; the setting kept, turned off clears it', async () => {
-  const { autoBackup, autoBackupDue, markAutoBackupMade, setAutoBackupFolder } = await import('../../src/backup');
+  const { autoBackup, autoBackupDue, markAutoBackupMade, setAutoBackupCloud, setAutoBackupFolder } = await import('../../src/backup');
   const day = 86400;
   expect(autoBackupDue(null, 1000)).toBe(true);
   expect(autoBackupDue(1000, 1000 + 6 * day)).toBe(false);
   expect(autoBackupDue(1000, 1000 + 7 * day)).toBe(true);
   expect(await autoBackup()).toBeNull();
   await setAutoBackupFolder('content://tree/Download');
-  expect(await autoBackup()).toEqual({ folder: 'content://tree/Download', last: null });
+  expect(await autoBackup()).toEqual({ folder: 'content://tree/Download', cloud: null, last: null });
   await markAutoBackupMade(5000);
-  expect(await autoBackup()).toEqual({ folder: 'content://tree/Download', last: 5000 });
+  expect(await autoBackup()).toEqual({ folder: 'content://tree/Download', cloud: null, last: 5000 });
+  // to Google Drive: the folder no longer, the next opening makes a copy
+  await setAutoBackupCloud('julia@example.com');
+  expect(await autoBackup()).toEqual({ folder: null, cloud: 'julia@example.com', last: null });
+  // back to a folder: Drive no longer
+  await setAutoBackupFolder('content://tree/Documents');
+  expect(await autoBackup()).toEqual({ folder: 'content://tree/Documents', cloud: null, last: null });
   await setAutoBackupFolder(null);
   expect(await autoBackup()).toBeNull();
 });

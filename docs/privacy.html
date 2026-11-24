@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Budget privacy policy</title>
+  <link rel="icon" href="logo.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <header><img src="logo.png" alt=""><div><h1>Privacy policy</h1><div class="muted">Budget for Android · updated 25 November 2026</div></div></header>
+
+  <h2>What the app keeps, and where</h2>
+  <p>Budget keeps your operations, categories, merchants, plans and settings in a database on your phone only. There is
+  no account, no server of ours and no advertising. Nothing is sold or shared.</p>
+
+  <h2>Bank SMS and notifications</h2>
+  <p>With your permission the app reads SMS and app notifications from your bank (TBC Bank) to record card operations.
+  They are read on the phone; messages from other senders are not read or kept. Bank messages the app could not
+  understand are kept on the phone for 30 days so that you can mark them.</p>
+
+  <h2>Google sign-in and Google Drive</h2>
+  <p>Only if you turn on «На Google Диске» (automatic copy to Google Drive), the app asks you to sign in with Google and
+  to allow access to <em>its own hidden app folder</em> on your Drive (scope <code>drive.appdata</code>). It cannot see
+  or change any other file on your Drive. The copy is encrypted on the phone with your password (AES-256-GCM, key derived
+  with PBKDF2) before it is uploaded; neither Google nor we can read it. Your email address is used only to show which
+  account the copies go to. You can turn it off at any time; the app's data on Drive can be deleted in Google Drive →
+  Settings → Manage apps.</p>
+
+  <h2>Crash reports</h2>
+  <p>Release builds send crash and error reports to Firebase Crashlytics (Google): the error's text and stack trace, the
+  app version, the phone model and Android version. Amounts, merchants, bank messages and other contents of your budget
+  are not included.</p>
+
+  <h2>Updates and configuration</h2>
+  <p>The app asks GitHub for the latest release to offer updates, receives a notification about a new version through
+  Firebase Cloud Messaging (a topic subscription, no personal data), and downloads message templates for your bank
+  through Firebase Remote Config. Currency rates are downloaded from the National Bank of Georgia.</p>
+
+  <h2>Deleting your data</h2>
+  <p>Uninstalling the app deletes everything it keeps on the phone. Copies you saved to a folder or to Google Drive stay
+  there until you delete them.</p>
+
+  <h2>Contact</h2>
+  <p><a href="https://github.com/juljuliks/budget_app/issues">github.com/juljuliks/budget_app/issues</a></p>
+
+  <hr>
+  <h2>Кратко по-русски</h2>
+  <ul>
+    <li>Все данные бюджета хранятся только на телефоне; аккаунта и своего сервера нет, рекламы и продажи данных нет.</li>
+    <li>SMS и уведомления читаются только от банка, на телефоне.</li>
+    <li>Вход через Google — только для копии на Google Диске: доступ лишь к скрытой папке приложения; копия шифруется
+      вашим паролем до отправки.</li>
+    <li>Отчёты о сбоях (Crashlytics) — текст и стек ошибки, версия, модель телефона; без сумм, мерчантов и SMS.</li>
+    <li>Удалить приложение — удалить все его данные на телефоне.</li>
+  </ul>
+  <p><a href="index.html">← Budget</a></p>
+</main>
+</body>
+</html>

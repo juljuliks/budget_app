@@ -109,6 +109,8 @@ dependencies {
     implementation("com.google.firebase:firebase-crashlytics")
     // the bank's message templates without a release (config/RemoteConfigModule.kt)
     implementation("com.google.firebase:firebase-config")
+    // «На Google Диске»: the Google account and its token for the app's folder on Drive (backup/DriveModule.kt)
+    implementation("com.google.android.gms:play-services-auth:20.7.0")
     implementation("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
 
     if (hermesEnabled.toBoolean()) {

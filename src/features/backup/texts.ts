@@ -54,3 +54,23 @@ export const AUTO_OFF_HINT = 'Раз в неделю — копия в выбр�
 export const PASSWORD_ON_HINT = 'Копии шифруются: без пароля их не восстановить.';
 export const PASSWORD_OFF_HINT = 'Копии не шифруются.';
 export const CHANGE_PASSWORD = 'Сменить пароль';
+
+// «На Google Диске»: the automatic copy to the app's folder on Google Drive, always encrypted
+export const CLOUD = 'На Google Диске';
+export const CLOUD_INFO =
+  'Раз в неделю, когда вы открываете приложение, копия уходит в скрытую папку приложения на вашем Google Диске — её видит только это приложение. Хранятся четыре последние. Копия всегда зашифрована паролем для копий: без него её не восстановить.';
+export const SIGN_IN = 'Войти через Google';
+export const CHANGE_ACCOUNT = 'Сменить аккаунт';
+export const cloudHint = (account: string) => `Аккаунт ${account}. Копии зашифрованы паролем.`;
+export const CLOUD_OFF_HINT = 'Автокопия — в папку на телефоне. На Google Диск — только зашифрованной.';
+export const cloudStatus = (account: string) => `Раз в неделю на Google Диск (${account}), хранятся четыре последние.`;
+export const CLOUD_ON = 'Автокопия — на Google Диске';
+export const CLOUD_FAILED = 'Автокопия не ушла на Google Диск: нет сети или доступа к аккаунту';
+export const CLOUD_NEEDS_PASSWORD = 'Без пароля — только в папку';
+export const CLOUD_NEEDS_PASSWORD_INFO = 'Копии на Google Диске хранятся только зашифрованными. Чтобы убрать пароль, сначала переключите автокопию в папку на телефоне.';
+export const RESTORE_FROM = 'Откуда восстановить?';
+export const FROM_FILE = 'Из файла';
+export const FROM_CLOUD = 'С Google Диска';
+export const NO_CLOUD_COPIES = 'На Google Диске копий нет';
+export const noCloudCopiesInfo = (account: string) => `В аккаунте ${account} копий этого приложения нет.`;
+export const PICK_CLOUD_COPY = 'Какую копию восстановить?';

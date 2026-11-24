@@ -1,5 +1,5 @@
 // "Автокопия" (Настройки → Резервная копия): once a week, when the app is opened, a copy into the folder the user
-// picked; the two newest kept (src/backup/auto.ts).
+// picked (the two newest kept) or to Google Drive («На Google Диске», cloud.ts); src/backup/auto.ts.
 import {
   AUTO_BACKUP_KEEP, AUTO_BACKUP_PREFIX, autoBackup, autoBackupDue, markAutoBackupMade, setAutoBackupFolder,
 } from '@/backup';
@@ -11,7 +11,8 @@ import { toast, toastError } from '@/shared/ui/toast';
 import { makeCopy } from './password';
 import { dateKey, run, timeKey } from './run';
 import { backupSettingsChanged } from './model/changes';
-import { AUTO, AUTO_FAILED, AUTO_FIRST, AUTO_GONE, AUTO_INFO, AUTO_OFF, AUTO_OFF_HINT, AUTO_ON, PICK_FOLDER, autoStatus } from './texts';
+import { writeCloudCopy } from './cloud';
+import { AUTO, AUTO_FAILED, AUTO_FIRST, AUTO_GONE, AUTO_INFO, AUTO_OFF, AUTO_OFF_HINT, AUTO_ON, CLOUD_FAILED, PICK_FOLDER, autoStatus, cloudStatus } from './texts';
 
 /** The copy written before it goes to the folder, in the app's files dir. */
 const AUTO_COPY = 'auto-copy.db';
@@ -23,14 +24,17 @@ let running = false;
 export async function runAutoBackupIfDue(at = now()): Promise<void> {
   if (running) return;
   running = true;
+  let cloud = false;
   try {
     const auto = await autoBackup();
     if (!auto || !autoBackupDue(auto.last, at)) return;
-    await writeCopy(auto.folder, at);
+    cloud = !!auto.cloud;
+    if (auto.cloud) await writeCloudCopy(at);
+    else await writeCopy(auto.folder!, at);
     backupSettingsChanged();
   } catch (e) {
     console.warn('auto backup failed', e);
-    toastError(AUTO_FAILED);
+    toastError(cloud ? CLOUD_FAILED : AUTO_FAILED);
   } finally {
     running = false;
   }
@@ -43,13 +47,14 @@ async function writeCopy(folder: string, at: number) {
 }
 
 /** The switch's line under "Автокопия": where and when, or what it does when off. */
-export async function autoBackupStatus(): Promise<{ on: boolean; text: string }> {
+export async function autoBackupStatus(): Promise<{ on: boolean; cloud: string | null; text: string }> {
   const auto = await autoBackup();
-  if (!auto) return { on: false, text: AUTO_OFF_HINT };
-  const name = await folderName(auto.folder);
-  if (name === null) return { on: true, text: AUTO_GONE };
+  if (!auto) return { on: false, cloud: null, text: AUTO_OFF_HINT };
+  const name = auto.cloud ? null : await folderName(auto.folder!);
+  if (!auto.cloud && name === null) return { on: true, cloud: null, text: AUTO_GONE };
+  const where = auto.cloud ? cloudStatus(auto.cloud) : autoStatus(name!);
   const last = auto.last === null ? null : formatDay(auto.last).replace(/^(Сегодня|Вчера)$/, (w) => w.toLowerCase());
-  return { on: true, text: last === null ? `${autoStatus(name)} ${AUTO_FIRST}` : `${autoStatus(name)} Последняя — ${last}.` };
+  return { on: true, cloud: auto.cloud, text: last === null ? `${where} ${AUTO_FIRST}` : `${where} Последняя — ${last}.` };
 }
 
 /** The switch turned on: what it does, then the folder (on only once one is picked). */
@@ -62,7 +67,7 @@ export async function pickAutoBackupFolder() {
   const folder = await pickFolder();
   if (!folder) return;
   const before = await autoBackup();
-  if (before && before.folder !== folder) await releaseFolder(before.folder);
+  if (before?.folder && before.folder !== folder) await releaseFolder(before.folder);
   await setAutoBackupFolder(folder);
   backupSettingsChanged();
   await writeCopy(folder, now());
@@ -73,7 +78,7 @@ export async function pickAutoBackupFolder() {
 /** The switch turned off: no more copies, the folder's permission given back (the copies made stay there). */
 export async function turnAutoBackupOff() {
   const auto = await autoBackup();
-  if (auto) await releaseFolder(auto.folder);
+  if (auto?.folder) await releaseFolder(auto.folder);
   await setAutoBackupFolder(null);
   backupSettingsChanged();
   toast(AUTO_OFF);

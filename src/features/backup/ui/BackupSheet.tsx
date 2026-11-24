@@ -5,23 +5,26 @@ import BottomSheet from '@/shared/ui/BottomSheet';
 import { SheetActions } from '@/shared/ui/Button';
 import { colors } from '@/shared/theme/theme';
 import { askAutoBackupOn, autoBackupStatus, pickAutoBackupFolder, turnAutoBackupOff } from '../autoBackup';
+import { askCloudOn, turnCloudOn } from '../cloud';
 import { exportCsv, restoreBackup, saveBackup } from '../backupFlow';
 import { onBackupSettingsChanged } from '../model/changes';
 import { askPasswordOn, choosePassword, removePassword } from '../password';
 import { run } from '../run';
 import {
-  AUTO, BACKUP, BACKUP_INFO, CHANGE_FOLDER, CHANGE_PASSWORD, EXPORT_CSV, PASSWORD, PASSWORD_OFF_HINT, PASSWORD_ON_HINT,
-  RESTORE_BACKUP, SAVE_BACKUP,
+  AUTO, BACKUP, BACKUP_INFO, CHANGE_ACCOUNT, CHANGE_FOLDER, CHANGE_PASSWORD, CLOUD, CLOUD_OFF_HINT, cloudHint, EXPORT_CSV, PASSWORD,
+  PASSWORD_OFF_HINT, PASSWORD_ON_HINT, RESTORE_BACKUP, SAVE_BACKUP,
 } from '../texts';
 import SwitchRow from '@/shared/ui/SwitchRow';
 import { toastFailure } from '@/shared/ui/toast';
 import { LOAD_FAILED } from '@/shared/lib/strings';
 
-type Settings = { auto: { on: boolean; text: string }; password: boolean };
+type Settings = { auto: { on: boolean; cloud: string | null; text: string }; password: boolean };
 
 /**
  * "Резервная копия" (Настройки): the automatic copy and the password as switches — turned on through a sheet saying
- * what they do (the folder, the password twice), off at once; under them save a copy, restore from one, CSV.
+ * what they do (the folder, the password twice), off at once; «На Google Диске» — the automatic copy to Drive instead
+ * of the folder (the account, the password a must), off — back to a folder; under them save a copy, restore from one
+ * (a file or Drive), CSV.
  */
 export default function BackupSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -43,7 +46,14 @@ export default function BackupSheet({ visible, onClose }: { visible: boolean; on
             hint={settings.auto.text}
             on={settings.auto.on}
             onChange={(on) => (on ? askAutoBackupOn() : run('auto backup off', turnAutoBackupOff)())}
-            change={{ title: CHANGE_FOLDER, onPress: run('auto backup folder', pickAutoBackupFolder) }}
+            change={settings.auto.cloud ? undefined : { title: CHANGE_FOLDER, onPress: run('auto backup folder', pickAutoBackupFolder) }}
+          />
+          <SwitchRow
+            label={CLOUD}
+            hint={settings.auto.cloud ? cloudHint(settings.auto.cloud) : CLOUD_OFF_HINT}
+            on={!!settings.auto.cloud}
+            onChange={(on) => (on ? askCloudOn() : askAutoBackupOn())}
+            change={{ title: CHANGE_ACCOUNT, onPress: run('cloud account', turnCloudOn) }}
           />
           <SwitchRow
             label={PASSWORD}

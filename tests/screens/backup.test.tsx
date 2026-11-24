@@ -6,7 +6,7 @@ import path from 'path';
 import { fireEvent } from '@testing-library/react-native';
 import { openApp, screen, tap, texts, openSettings } from './app';
 import { ops } from '../e2e/seeds';
-import { markAutoBackupMade, setAutoBackupFolder } from '../../src/backup';
+import { markAutoBackupMade, setAutoBackupCloud, setAutoBackupFolder } from '../../src/backup';
 import { runAutoBackupIfDue } from '../../src/features/backup';
 
 const mockDir = fs.mkdtempSync(path.join(os.tmpdir(), 'budget-backup-ui-'));
@@ -22,7 +22,7 @@ const mockNative = {
   releaseFolder: jest.fn(async () => true),
   saveToFolder: jest.fn(async () => true),
   hasPassword: jest.fn(async () => false),
-  setPassword: jest.fn(async () => true),
+  setPassword: jest.fn(async (_password: string | null) => true),
   isEncrypted: jest.fn(async () => false),
   encryptFile: jest.fn(async () => true),
   decryptFile: jest.fn(async () => true),
@@ -44,6 +44,25 @@ jest.mock('../../src/native/backup', () => ({
   isEncrypted: (...a: unknown[]) => (mockNative.isEncrypted as (...x: unknown[]) => Promise<boolean>)(...a),
   encryptFile: (...a: unknown[]) => (mockNative.encryptFile as (...x: unknown[]) => Promise<boolean>)(...a),
   decryptFile: (...a: unknown[]) => (mockNative.decryptFile as (...x: unknown[]) => Promise<boolean>)(...a),
+}));
+// «На Google Диске»: the account and the app's folder on Drive (native/drive.ts)
+const mockDrive = {
+  signedIn: jest.fn(async (): Promise<string | null> => null),
+  signIn: jest.fn(async (): Promise<string | null> => 'julia@example.com'),
+  upload: jest.fn(async (_name: string, _title: string, _keep: number) => true),
+  list: jest.fn(async () => [
+    { id: 'new', name: 'budget-auto-2026-10-14-2130.db.enc', createdTime: '2026-10-14T21:30:00', size: 1000 },
+    { id: 'old', name: 'budget-auto-2026-10-07-2130.db.enc', createdTime: '2026-10-07T21:30:00', size: 1000 },
+  ]),
+  download: jest.fn(async (_id: string, _name: string) => true),
+};
+jest.mock('../../src/native/drive', () => ({
+  signedInAccount: () => mockDrive.signedIn(),
+  signInGoogle: () => mockDrive.signIn(),
+  signOutGoogle: async () => true,
+  uploadCopy: (name: string, title: string, keep: number) => mockDrive.upload(name, title, keep),
+  cloudCopies: () => mockDrive.list(),
+  downloadCopy: (id: string, name: string) => mockDrive.download(id, name),
 }));
 const mockCheck = jest.fn<Promise<string | null>, [string]>(async () => null);
 jest.mock('../../src/backup/database', () => ({
@@ -88,6 +107,7 @@ test('9.9.2 "Сохранить копию": a copy of the database offered as b
 test('9.9.3 "Восстановить из копии": asked first, then the file replaces the database', async () => {
   await openBackup();
   await tap('Восстановить из копии');
+  await tap('Из файла');
   expect(await screen.findByText('Восстановить из копии?')).toBeTruthy();
   expect(screen.getByText(/заменятся данными из файла/)).toBeTruthy();
   expect(mockNative.replaceDatabase).not.toHaveBeenCalled();
@@ -101,6 +121,7 @@ test('9.9.4 a file that isn\'t a backup of this app: said why, nothing replaced'
   mockCheck.mockResolvedValueOnce('newer');
   await openBackup();
   await tap('Восстановить из копии');
+  await tap('Из файла');
   expect(await screen.findByText('Этот файл не подходит')).toBeTruthy();
   expect(screen.getByText('Копия сделана более новой версией приложения. Сначала обновите приложение.')).toBeTruthy();
   expect(mockNative.replaceDatabase).not.toHaveBeenCalled();
@@ -196,6 +217,7 @@ test('9.9.10 an encrypted copy restored: its password asked, asked again when wr
   mockNative.decryptFile.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
   await openBackup();
   await tap('Восстановить из копии');
+  await tap('Из файла');
   expect(await screen.findByText('Копия зашифрована: введите пароль, заданный при её сохранении.')).toBeTruthy();
   type('Пароль', 'не тот пароль');
   await tap('Открыть');
@@ -264,4 +286,97 @@ test('9.9.14 "Сменить пароль" asks a new one twice; the switch off 
   expect(await screen.findByText('Пароль для копий убран')).toBeTruthy();
   expect(mockNative.setPassword).toHaveBeenLastCalledWith(null);
   expect(await screen.findByText('Копии не шифруются.')).toBeTruthy();
+});
+
+/** The password the native side keeps: set by «Задать пароль», as the module would. */
+const passwordKept = () => {
+  let kept = false;
+  mockNative.hasPassword.mockImplementation(async () => kept);
+  mockNative.setPassword.mockImplementation(async (password) => { kept = password !== null; return true; });
+};
+afterEach(() => { mockNative.hasPassword.mockImplementation(async () => false); mockNative.setPassword.mockImplementation(async () => true); });
+
+test('9.9.15 «На Google Диске»: the account, then the password (a must), the first copy encrypted to Drive', async () => {
+  passwordKept();
+  await openBackup();
+  expect(await screen.findByText('Автокопия — в папку на телефоне. На Google Диск — только зашифрованной.')).toBeTruthy();
+  await flip('На Google Диске', true);
+  expect(await screen.findByText(/в скрытую папку приложения на вашем Google Диске/)).toBeTruthy();
+  await tap('Войти через Google');
+  // no password yet: asked right away
+  await screen.findByPlaceholderText('Повторите пароль');
+  type('Пароль', 'синий кит 42');
+  type('Повторите пароль', 'синий кит 42');
+  await tap('Задать пароль');
+  expect(await screen.findByText('Автокопия — на Google Диске')).toBeTruthy();
+  expect(mockNative.encryptFile).toHaveBeenCalledWith('cloud-copy.db', 'cloud-copy.db.enc');
+  expect(mockDrive.upload).toHaveBeenCalledWith('cloud-copy.db.enc', expect.stringMatching(/^budget-auto-\d{4}-\d{2}-\d{2}-\d{4}\.db\.enc$/), 4);
+  expect(await screen.findByText('Аккаунт julia@example.com. Копии зашифрованы паролем.')).toBeTruthy();
+  expect(screen.getByText(/^Раз в неделю на Google Диск \(julia@example\.com\), хранятся четыре последние\./)).toBeTruthy();
+});
+
+test('9.9.16 the password not given: Drive stays off, nothing sent', async () => {
+  passwordKept();
+  await openBackup();
+  await flip('На Google Диске', true);
+  await tap('Войти через Google');
+  await screen.findByPlaceholderText('Повторите пароль');
+  await tap('Отмена');
+  await new Promise((r) => setTimeout(r, 50));
+  expect(mockDrive.upload).not.toHaveBeenCalled();
+  expect(screen.getByLabelText('На Google Диске').props.value).toBe(false);
+});
+
+test('9.9.17 the password can\'t be removed while the copies go to Drive', async () => {
+  passwordKept();
+  await openApp(ops);
+  await mockNative.setPassword('синий кит 42');
+  await setAutoBackupCloud('julia@example.com');
+  await openSettings('Приложение');
+  await tap('Резервная копия');
+  await flip('Пароль для копий', false);
+  expect(await screen.findByText('Без пароля — только в папку')).toBeTruthy();
+  expect(mockNative.setPassword).toHaveBeenCalledTimes(1);
+});
+
+test('9.9.18 the weekly copy to Drive on opening the app; a failure said', async () => {
+  mockNative.hasPassword.mockImplementation(async () => true);
+  await openApp(ops);
+  const now = Math.floor(Date.now() / 1000);
+  await setAutoBackupCloud('julia@example.com');
+  await runAutoBackupIfDue(now);
+  expect(mockDrive.upload).toHaveBeenCalledTimes(1);
+  expect(mockNative.saveToFolder).not.toHaveBeenCalled();
+  mockDrive.upload.mockRejectedValueOnce(new Error('offline'));
+  jest.spyOn(console, 'warn').mockImplementation(() => {});
+  await runAutoBackupIfDue(now + 8 * 86400);
+  expect(await screen.findByText(/Автокопия не ушла на Google Диск/)).toBeTruthy();
+});
+
+test('9.9.19 «Восстановить из копии» → «С Google Диска»: a copy picked by its date, downloaded, its password, restored', async () => {
+  mockDrive.signedIn.mockResolvedValueOnce('julia@example.com');
+  mockNative.isEncrypted.mockResolvedValueOnce(true);
+  await openBackup();
+  await tap('Восстановить из копии');
+  await tap('С Google Диска');
+  expect(await screen.findByText('Какую копию восстановить?')).toBeTruthy();
+  await tap(/^7 окт/);
+  await screen.findByPlaceholderText('Пароль');
+  expect(mockDrive.download).toHaveBeenCalledWith('old', 'restore-check.db');
+  type('Пароль', 'синий кит 42');
+  await tap('Открыть');
+  expect(await screen.findByText('Восстановить из копии?')).toBeTruthy();
+  await tap('Восстановить');
+  await new Promise((r) => setTimeout(r, 50));
+  expect(mockNative.replaceDatabase).toHaveBeenCalledWith('restore-plain.db');
+});
+
+test('9.9.20 no copies on Drive: said', async () => {
+  mockDrive.signedIn.mockResolvedValueOnce('julia@example.com');
+  mockDrive.list.mockResolvedValueOnce([]);
+  await openBackup();
+  await tap('Восстановить из копии');
+  await tap('С Google Диска');
+  expect(await screen.findByText('На Google Диске копий нет')).toBeTruthy();
+  expect(screen.getByText('В аккаунте julia@example.com копий этого приложения нет.')).toBeTruthy();
 });

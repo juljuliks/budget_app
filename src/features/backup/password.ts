@@ -1,13 +1,13 @@
 // "Пароль для копий": copies (by hand and automatic) encrypted with it when it is set; an encrypted copy asks for it
 // when restored. The password itself is kept by the native side (BackupCrypto), apart from the database.
-import { exportDatabase } from '@/backup';
+import { autoBackup, exportDatabase } from '@/backup';
 import { decryptFile, deleteFile, encryptFile, filePath, hasPassword, isEncrypted, setPassword } from '@/native/backup';
 import { CANCEL } from '@/shared/lib/strings';
 import { sheetAlert } from '@/shared/ui/sheetAlert';
 import { toast, toastError } from '@/shared/ui/toast';
 import { run } from './run';
 import { backupSettingsChanged } from './model/changes';
-import { PASSWORD, PASSWORD_INFO, PASSWORD_REMOVED, PASSWORD_SET, SET_PASSWORD, WRONG_PASSWORD } from './texts';
+import { CLOUD_NEEDS_PASSWORD, CLOUD_NEEDS_PASSWORD_INFO, PASSWORD, PASSWORD_INFO, PASSWORD_REMOVED, PASSWORD_SET, SET_PASSWORD, WRONG_PASSWORD } from './texts';
 import { askPassword } from './ui/PasswordHost';
 
 /**
@@ -56,8 +56,16 @@ export async function choosePassword() {
   toast(PASSWORD_SET);
 }
 
-/** The switch turned off: new copies aren't encrypted (the ones made are, and still need it). */
+/**
+ * The switch turned off: new copies aren't encrypted (the ones made are, and still need it). Not while the automatic
+ * copy goes to Google Drive: there only encrypted.
+ */
 export async function removePassword() {
+  if ((await autoBackup())?.cloud) {
+    sheetAlert(CLOUD_NEEDS_PASSWORD, CLOUD_NEEDS_PASSWORD_INFO);
+    backupSettingsChanged();
+    return;
+  }
   await setPassword(null);
   backupSettingsChanged();
   toast(PASSWORD_REMOVED);
