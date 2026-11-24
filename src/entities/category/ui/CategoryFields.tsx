@@ -14,6 +14,7 @@ import type { useCategoryForm } from '../model/useCategoryForm';
 import { QUICK_HINT, systemCategoryHint } from '../texts';
 import CategoryNameField from './CategoryNameField';
 import TypeEditModal from './TypeEditModal';
+import { font, space } from '@/shared/theme/tokens';
 
 /** Colors offered at once; any other — "+" (the picker). */
 const COLORS_SHOWN = 6;
@@ -115,7 +116,7 @@ export default function CategoryFields({ f, quick }: Props) {
 }
 
 const styles = StyleSheet.create({
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' },
-  preview: { color: colors.muted, marginTop: 6, fontSize: 13 },
-  hint: { color: colors.muted, marginTop: 14, fontSize: 13, lineHeight: 18 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space[8], alignItems: 'center' },
+  preview: { color: colors.muted, marginTop: space[6], fontSize: font.meta },
+  hint: { color: colors.muted, marginTop: space[14], fontSize: font.meta, lineHeight: 18 },
 });

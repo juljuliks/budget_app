@@ -4,6 +4,7 @@ import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
 import { SheetActions } from '@/shared/ui/Button';
 import { useCategoryForm } from '../model/useCategoryForm';
 import CategoryFields from './CategoryFields';
+import { space } from '@/shared/theme/tokens';
 
 type Props = {
   visible: boolean;
@@ -41,5 +42,5 @@ export default function CategorySheet({ visible, typeId: initialTypeId, quick, o
 
 const styles = StyleSheet.create({
   sheet: { maxHeight: '92%' },
-  content: { paddingHorizontal: 20, paddingBottom: 8 },
+  content: { paddingHorizontal: space[20], paddingBottom: space[8] },
 });

@@ -19,6 +19,7 @@ import TextInputModal, { setField } from '@/shared/ui/TextInputModal';
 import { useLoadedForm } from '@/shared/ui/form';
 import { colors } from '@/shared/theme/theme';
 import { toast } from '@/shared/ui/toast';
+import { font, radius, space, weight } from '@/shared/theme/tokens';
 
 type Props = {
   visible: boolean;
@@ -148,13 +149,13 @@ export default function TypeEditModal({ visible, type, types, onClose, onSaved }
 
 const styles = StyleSheet.create({
   // three in a row
-  presets: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  presets: { flexDirection: 'row', flexWrap: 'wrap', gap: space[6] },
   preset: {
     width: '31.5%',
     height: 38,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 10,
+    borderRadius: radius.md,
     borderWidth: 2,
     borderColor: 'transparent',
     backgroundColor: colors.surface,
@@ -162,6 +163,6 @@ const styles = StyleSheet.create({
   autoTile: { width: '31.5%' },
   selected: { borderColor: colors.accent },
   // a palette tile's size, its border in the accent
-  createTile: { borderColor: colors.accent, borderWidth: 1, backgroundColor: colors.bg, paddingHorizontal: 6 },
-  createText: { fontSize: 14, fontWeight: '600', color: colors.accent },
+  createTile: { borderColor: colors.accent, borderWidth: 1, backgroundColor: colors.bg, paddingHorizontal: space[6] },
+  createText: { fontSize: font.secondary, fontWeight: weight.semibold, color: colors.accent },
 });

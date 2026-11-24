@@ -10,6 +10,7 @@ import { formStyles } from '@/shared/theme/formStyles';
 import { colors } from '@/shared/theme/theme';
 import type { RegularForm } from './RegularFields';
 import { everyText, SCHEDULE_HINT } from './sheetOptions';
+import { font, space } from '@/shared/theme/tokens';
 
 type Props = { ym: string; form: UseFormReturn<RegularForm & { value: string; currency: Currency }> };
 
@@ -41,5 +42,5 @@ export default function RegularPlanFields({ ym, form }: Props) {
 }
 
 const styles = StyleSheet.create({
-  schedule: { fontSize: 15, color: colors.text, marginBottom: 4 },
+  schedule: { fontSize: font.body, color: colors.text, marginBottom: space[4] },
 });

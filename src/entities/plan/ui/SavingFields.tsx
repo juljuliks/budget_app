@@ -7,6 +7,7 @@ import { formStyles } from '@/shared/theme/formStyles';
 import { colors } from '@/shared/theme/theme';
 import { inMonthYear, longDayYear, monthGenYear } from '@/shared/lib/dates';
 import { usePaymentSaving } from '../model/usePaymentSaving';
+import { font, space } from '@/shared/theme/tokens';
 
 type Props = { s: ReturnType<typeof usePaymentSaving>; amount: number | null; currency: Currency; due: string | null };
 
@@ -64,7 +65,7 @@ export default function SavingFields({ s, amount, currency, due }: Props) {
 }
 
 const styles = StyleSheet.create({
-  amountRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 0 },
-  amountInput: { flex: 1, fontSize: 16, color: colors.text, paddingVertical: 10 },
-  muted: { color: colors.muted, fontSize: 14 },
+  amountRow: { flexDirection: 'row', alignItems: 'center', gap: space[8], paddingVertical: 0 },
+  amountInput: { flex: 1, fontSize: font.input, color: colors.text, paddingVertical: space[10] },
+  muted: { color: colors.muted, fontSize: font.secondary },
 });

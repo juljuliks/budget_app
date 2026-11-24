@@ -4,6 +4,7 @@ import type { Currency } from '@/db/fx';
 import { formatWithCurrency } from '@/shared/lib/money';
 import { colors } from '@/shared/theme/theme';
 import { sheetAlert } from '@/shared/ui/sheetAlert';
+import { font, radius, space, weight } from '@/shared/theme/tokens';
 
 /**
  * A plan amount past what is free, the rest in "🔒 Отложить сразу": "Вычесть из сбережений?" — what the savings become
@@ -51,14 +52,14 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    gap: 6,
-    padding: 14,
-    borderRadius: 12,
+    gap: space[6],
+    padding: space[14],
+    borderRadius: radius.lg,
     backgroundColor: colors.savingsBg,
-    marginBottom: 12,
+    marginBottom: space[12],
   },
-  name: { flex: 1, fontSize: 14, color: colors.text },
-  was: { fontSize: 13, color: colors.muted, textDecorationLine: 'line-through' },
-  now: { fontSize: 14, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
-  pct: { fontSize: 14, color: colors.muted },
+  name: { flex: 1, fontSize: font.secondary, color: colors.text },
+  was: { fontSize: font.meta, color: colors.muted, textDecorationLine: 'line-through' },
+  now: { fontSize: font.secondary, fontWeight: weight.semibold, color: colors.text, fontVariant: ['tabular-nums'] },
+  pct: { fontSize: font.secondary, color: colors.muted },
 });

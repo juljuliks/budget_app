@@ -5,6 +5,7 @@ import { onTransactionsChanged } from '@/domain/events';
 import SwitchRow from '@/shared/ui/SwitchRow';
 import { switchImpulse } from '../model/commands';
 import { IMPULSE_HINT_OFF, IMPULSE_HINT_ON, IMPULSE_SWITCH } from '../texts';
+import { space } from '@/shared/theme/tokens';
 
 /**
  * A category's page: "Импульсивные покупки" — its operations ask "Обдуманная" / "Импульсивная"; not for a system or a
@@ -45,5 +46,5 @@ export default function ImpulseSwitch({ categoryId }: { categoryId: number }) {
 }
 
 const styles = StyleSheet.create({
-  row: { paddingHorizontal: 0, marginTop: 16 },
+  row: { paddingHorizontal: 0, marginTop: space[16] },
 });

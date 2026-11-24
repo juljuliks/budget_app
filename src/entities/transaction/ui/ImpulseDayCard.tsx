@@ -6,6 +6,7 @@ import Masked from '@/shared/ui/Masked';
 import { chart, colors } from '@/shared/theme/theme';
 import { dayCardTitle, DayPurchase, Mark } from '../model/impulseCalendarView';
 import { MARK_TEXTS } from '../model/impulseTexts';
+import { font, radius, space, weight } from '@/shared/theme/tokens';
 
 const KIND_COLOR: Record<Mark, string> = {
   impulsive: colors.impulseText,
@@ -58,21 +59,21 @@ export default function ImpulseDayCard({
 
 const styles = StyleSheet.create({
   card: {
-    marginTop: 12,
+    marginTop: space[12],
     backgroundColor: colors.surface,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingTop: 10,
-    paddingBottom: 2,
+    borderRadius: radius.lg,
+    paddingHorizontal: space[14],
+    paddingTop: space[10],
+    paddingBottom: space[2],
   },
-  head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 },
-  title: { fontSize: 13, color: colors.muted },
-  sum: { fontSize: 14, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 48, paddingVertical: 8 },
+  head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: space[8] },
+  title: { fontSize: font.meta, color: colors.muted },
+  sum: { fontSize: font.secondary, fontWeight: weight.semibold, color: colors.text, fontVariant: ['tabular-nums'] },
+  row: { flexDirection: 'row', alignItems: 'center', gap: space[10], minHeight: 48, paddingVertical: space[8] },
   divider: { borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
   main: { flex: 1 },
-  merchant: { fontSize: 16, color: colors.text },
-  kind: { fontSize: 13, marginTop: 2 },
-  amount: { fontSize: 16, color: colors.text, fontVariant: ['tabular-nums'] },
-  chevron: { fontSize: 18, color: colors.faint },
+  merchant: { fontSize: font.input, color: colors.text },
+  kind: { fontSize: font.meta, marginTop: space[2] },
+  amount: { fontSize: font.input, color: colors.text, fontVariant: ['tabular-nums'] },
+  chevron: { fontSize: font.title, color: colors.faint },
 });

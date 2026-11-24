@@ -6,6 +6,7 @@ import { formStyles } from '@/shared/theme/formStyles';
 import { colors } from '@/shared/theme/theme';
 import Checkbox from '@/shared/ui/Checkbox';
 import type { ChooseSection } from '../model/chooseList';
+import { font, space, weight } from '@/shared/theme/tokens';
 
 type Props = {
   sections: ChooseSection[];
@@ -102,15 +103,15 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingLeft: 16,
-    paddingRight: 16,
-    paddingVertical: 10,
+    paddingLeft: space[16],
+    paddingRight: space[16],
+    paddingVertical: space[10],
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
-  check: { marginRight: 10 },
+  check: { marginRight: space[10] },
   dim: { opacity: 0.35 },
-  dot: { width: 10, height: 10, borderRadius: 5, marginRight: 10 },
-  name: { flex: 1, fontSize: 16, color: colors.text },
-  mark: { fontSize: 18, color: colors.accent, fontWeight: '700', marginLeft: 8 },
+  dot: { width: 10, height: 10, borderRadius: 5, marginRight: space[10] },
+  name: { flex: 1, fontSize: font.input, color: colors.text },
+  mark: { fontSize: font.title, color: colors.accent, fontWeight: weight.bold, marginLeft: space[8] },
 });

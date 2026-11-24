@@ -38,6 +38,7 @@ import KindPlate from './KindPlate';
 import { DueForm, OneOffDueField } from './OneOffDueField';
 import { BY_HAND_HINT, COUNTED_HINT, itemKindOf, patterns, PICK_HINT, REGULAR_HINT, RESUME_HINT } from './sheetOptions';
 import { PlanSheetValues, submitPlanSheet } from './submitPlanSheet';
+import { font, space, weight } from '@/shared/theme/tokens';
 
 export type PlanAmountTarget = {
   category_id: number;
@@ -376,7 +377,7 @@ export default function PlanAmountModal({
 }
 
 const styles = StyleSheet.create({
-  category: { fontSize: 18, fontWeight: '600', color: colors.text, marginBottom: 12 },
-  amount: { fontSize: 18, fontWeight: '600', color: colors.text },
-  back: { marginBottom: 12 },
+  category: { fontSize: font.title, fontWeight: weight.semibold, color: colors.text, marginBottom: space[12] },
+  amount: { fontSize: font.title, fontWeight: weight.semibold, color: colors.text },
+  back: { marginBottom: space[12] },
 });

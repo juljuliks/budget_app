@@ -9,6 +9,7 @@ import { useHideAmounts } from '@/shared/settings/hideAmounts';
 import { DayPurchase, firstMonth, Mark, monthTally } from '../model/impulseCalendarView';
 import { BY_DAY, BY_DAY_HINT, MARK_LEGEND, NO_PURCHASES } from '../model/impulseTexts';
 import ImpulseDayCard from './ImpulseDayCard';
+import { font, radius, space, weight } from '@/shared/theme/tokens';
 
 const MAX_MARKS = 3;
 const MARKS: Mark[] = ['impulsive', 'intentional', 'unanswered'];
@@ -129,20 +130,20 @@ export default function ImpulseCalendar({ days, today, money, month: only }: Pro
 }
 
 const styles = StyleSheet.create({
-  block: { paddingVertical: 12, borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
-  label: { fontSize: 13, color: colors.muted },
-  point: { fontSize: 14, color: colors.text, marginTop: 10, minHeight: 20 },
-  calendar: { marginTop: 6 },
-  cell: { height: 46, justifyContent: 'flex-start', paddingTop: 2 },
-  num: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  block: { paddingVertical: space[12], borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
+  label: { fontSize: font.meta, color: colors.muted },
+  point: { fontSize: font.secondary, color: colors.text, marginTop: space[10], minHeight: 20 },
+  calendar: { marginTop: space[6] },
+  cell: { height: 46, justifyContent: 'flex-start', paddingTop: space[2] },
+  num: { width: 32, height: 32, borderRadius: radius.xl, alignItems: 'center', justifyContent: 'center' },
   picked: { backgroundColor: colors.accent },
-  pickedText: { color: colors.onAccent, fontWeight: '700' },
+  pickedText: { color: colors.onAccent, fontWeight: weight.bold },
   dots: { flexDirection: 'row', gap: 3, height: 6, marginTop: 3 },
   dot: { width: 6, height: 6, borderRadius: 3 },
   impulsive: { backgroundColor: colors.impulse },
   intentional: { backgroundColor: chart.meterFill },
   unanswered: { borderWidth: 1.5, borderColor: colors.faint },
-  legend: { flexDirection: 'row', justifyContent: 'center', gap: 14, marginTop: 6 },
+  legend: { flexDirection: 'row', justifyContent: 'center', gap: space[14], marginTop: space[6] },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  legendText: { fontSize: 12, color: colors.muted },
+  legendText: { fontSize: font.caption, color: colors.muted },
 });

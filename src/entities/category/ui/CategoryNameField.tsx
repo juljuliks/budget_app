@@ -4,6 +4,7 @@ import { Controller, UseFormReturn } from 'react-hook-form';
 import { formStyles } from '@/shared/theme/formStyles';
 import { colors } from '@/shared/theme/theme';
 import type { CategoryFields } from '../model/commands';
+import { font, radius, space, weight } from '@/shared/theme/tokens';
 
 type Props = {
   form: UseFormReturn<CategoryFields>;
@@ -66,10 +67,10 @@ export default function CategoryNameField({ form, emoji, locked, onPickEmoji, on
 }
 
 const styles = StyleSheet.create({
-  nameRow: { flexDirection: 'row', gap: 10 },
+  nameRow: { flexDirection: 'row', gap: space[10] },
   name: { flex: 1 },
   emoji: { width: 56, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 0 },
-  emojiText: { fontSize: 24, color: '#000000' },
+  emojiText: { fontSize: font.headline, color: '#000000' },
   emojiPlaceholder: { fontSize: 22, color: colors.muted },
   emojiClear: {
     position: 'absolute',
@@ -77,10 +78,10 @@ const styles = StyleSheet.create({
     right: -6,
     width: 20,
     height: 20,
-    borderRadius: 10,
+    borderRadius: radius.md,
     backgroundColor: colors.muted,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  emojiClearText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
+  emojiClearText: { color: '#FFFFFF', fontSize: 11, fontWeight: weight.bold },
 });

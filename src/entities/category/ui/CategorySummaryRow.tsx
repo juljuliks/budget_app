@@ -5,6 +5,7 @@ import { formatMoneyWithCurrency } from '@/shared/lib/money';
 import TextLink from '@/shared/ui/TextLink';
 import { colors } from '@/shared/theme/theme';
 import type { CategorySummary } from '../model/useCategoryForm';
+import { font } from '@/shared/theme/tokens';
 
 /** Like a merchant's page: how many operations and how much spent — a link to them. */
 export default function CategorySummaryRow({ summary, onShow }: { summary: CategorySummary; onShow: () => void }) {
@@ -22,6 +23,6 @@ export default function CategorySummaryRow({ summary, onShow }: { summary: Categ
 
 const styles = StyleSheet.create({
   box: { alignSelf: 'flex-start' },
-  link: { fontSize: 15 },
-  none: { fontSize: 15, color: colors.muted },
+  link: { fontSize: font.body },
+  none: { fontSize: font.body, color: colors.muted },
 });

@@ -10,6 +10,7 @@ import TextLink from '@/shared/ui/TextLink';
 import { colors } from '@/shared/theme/theme';
 import { rowTitle } from '../model/title';
 import { RECENT_COUNT } from '../model/useRecentOperations';
+import { font, space, weight } from '@/shared/theme/tokens';
 
 type Props = {
   rows: TransactionRow[];
@@ -64,20 +65,20 @@ export default function RecentOperations({ rows, count, of, onShowAll }: Props) 
 
 // as the operations list's rows (TransactionItem)
 const styles = StyleSheet.create({
-  all: { fontSize: 13, fontWeight: '600' },
+  all: { fontSize: font.meta, fontWeight: weight.semibold },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: space[12],
     marginHorizontal: -20,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingHorizontal: space[20],
+    paddingVertical: space[12],
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
   main: { flex: 1, minWidth: 0 },
-  title: { fontSize: 16, color: colors.text },
-  meta: { fontSize: 13, color: colors.muted, marginTop: 2 },
-  amount: { fontSize: 16, color: colors.text, fontVariant: ['tabular-nums'] },
+  title: { fontSize: font.input, color: colors.text },
+  meta: { fontSize: font.meta, color: colors.muted, marginTop: space[2] },
+  amount: { fontSize: font.input, color: colors.text, fontVariant: ['tabular-nums'] },
   income: { color: colors.income },
 });

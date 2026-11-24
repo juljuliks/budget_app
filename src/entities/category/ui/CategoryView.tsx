@@ -6,6 +6,7 @@ import Page from '@/shared/ui/Page';
 import { useCategoryForm } from '../model/useCategoryForm';
 import CategoryFields from './CategoryFields';
 import CategorySummaryRow from './CategorySummaryRow';
+import { space } from '@/shared/theme/tokens';
 
 type Props = {
   categoryId: number;
@@ -74,6 +75,6 @@ export default function CategoryView({
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: 20, paddingTop: 14 },
+  content: { paddingHorizontal: space[20], paddingTop: space[14] },
   actions: { marginTop: 0 },
 });

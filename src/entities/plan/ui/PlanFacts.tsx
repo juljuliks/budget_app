@@ -5,6 +5,7 @@ import { MONTHS_NOM, MONTHS_PREP } from '@/shared/lib/dates';
 import { plural } from '@/shared/lib/format';
 import { formatWithCurrency } from '@/shared/lib/money';
 import { colors } from '@/shared/theme/theme';
+import { font, space, weight } from '@/shared/theme/tokens';
 
 type Money = { minor: number; currency: Currency };
 
@@ -66,8 +67,8 @@ export default function PlanFacts({
 }
 
 const styles = StyleSheet.create({
-  facts: { marginBottom: 12, gap: 6 },
-  fact: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  label: { flex: 1, fontSize: 14, color: colors.muted },
-  value: { fontSize: 14, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
+  facts: { marginBottom: space[12], gap: space[6] },
+  fact: { flexDirection: 'row', alignItems: 'flex-start', gap: space[12] },
+  label: { flex: 1, fontSize: font.secondary, color: colors.muted },
+  value: { fontSize: font.secondary, fontWeight: weight.semibold, color: colors.text, fontVariant: ['tabular-nums'] },
 });

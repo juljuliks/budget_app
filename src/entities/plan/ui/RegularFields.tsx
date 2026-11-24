@@ -9,6 +9,7 @@ import Chip from '@/shared/ui/Chip';
 import { formStyles } from '@/shared/theme/formStyles';
 import CategoryPaymentFields, { CategoryPaymentForm } from './CategoryPaymentFields';
 import { RepeatForm, UntilField } from './UntilField';
+import { space } from '@/shared/theme/tokens';
 
 /** How often: within the month (every day, on weekdays) or every month and rarer (`period` months). */
 export type RegularEvery = 'day' | 'week' | 'month';
@@ -101,6 +102,6 @@ export default function RegularFields({ ym, categoryId, form }: Props) {
 }
 
 const styles = StyleSheet.create({
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  days: { marginTop: 12 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space[8] },
+  days: { marginTop: space[12] },
 });

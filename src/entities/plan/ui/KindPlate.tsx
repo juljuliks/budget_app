@@ -4,6 +4,7 @@ import type { PlanKind } from '@/db/plans';
 import TextLink from '@/shared/ui/TextLink';
 import { colors } from '@/shared/theme/theme';
 import { KIND_NAMES } from './sheetOptions';
+import { font, radius, space } from '@/shared/theme/tokens';
 
 /** The plan's sheet: what the item is (its category's kind) and «Изменить в категории ›» — the kind is set there. */
 export default function KindPlate({ kind, onOpen }: { kind: PlanKind; onOpen: () => void }) {
@@ -20,12 +21,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 10,
-    marginBottom: 12,
+    gap: space[10],
+    marginBottom: space[12],
     backgroundColor: colors.surface,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    borderRadius: radius.lg,
+    paddingHorizontal: space[14],
+    paddingVertical: space[12],
   },
-  kind: { fontSize: 16, color: colors.text, flexShrink: 1 },
+  kind: { fontSize: font.input, color: colors.text, flexShrink: 1 },
 });

@@ -9,6 +9,7 @@ import { useCategoryChoose, type ChooseProps } from '../model/useCategoryChoose'
 import { FIND_CATEGORY, SEVERAL_HINT } from '../texts';
 import CategoryChooseList from './CategoryChooseList';
 import CategorySheet from './CategorySheet';
+import { font, space } from '@/shared/theme/tokens';
 
 type Props = ChooseProps & { title: string };
 
@@ -81,11 +82,11 @@ export default function CategoryPickerModal(props: Props) {
 
 const styles = StyleSheet.create({
   sheet: { maxHeight: '85%' },
-  content: { paddingBottom: 8 },
-  top: { paddingHorizontal: 16, paddingBottom: 8, gap: 8 },
-  create: { marginTop: 8 },
-  hint: { fontSize: 13, color: colors.muted, lineHeight: 18 },
-  picked: { fontSize: 15, color: colors.text },
-  empty: { padding: 32, textAlign: 'center', color: colors.muted },
-  actions: { paddingHorizontal: 16 },
+  content: { paddingBottom: space[8] },
+  top: { paddingHorizontal: space[16], paddingBottom: space[8], gap: space[8] },
+  create: { marginTop: space[8] },
+  hint: { fontSize: font.meta, color: colors.muted, lineHeight: 18 },
+  picked: { fontSize: font.body, color: colors.text },
+  empty: { padding: space[32], textAlign: 'center', color: colors.muted },
+  actions: { paddingHorizontal: space[16] },
 });
