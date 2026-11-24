@@ -77,6 +77,18 @@ object UpdateNotices {
         return true
     }
 
+    /**
+     * The notices done with: «Доступна версия» of a version installed now (or older) — on every start of the app's
+     * process, the first one after an update too; «Обновлено до» too when the app is [opened].
+     */
+    fun clearStale(ctx: Context, opened: Boolean) {
+        val nm = NotificationManagerCompat.from(ctx)
+        val current = parseVersion(BuildConfig.VERSION_NAME)
+        val said = prefs(ctx).getString(OFFERED, null)?.let { parseVersion(it) }
+        if (current != null && said != null && compare(said, current) <= 0) nm.cancel(AVAILABLE_ID)
+        if (opened) nm.cancel(UPDATED_ID)
+    }
+
     /** «Обновлено до [version]»: the app closed by its update, a tap opens it again. */
     fun notifyUpdated(ctx: Context, version: String) {
         NotificationManagerCompat.from(ctx).cancel(AVAILABLE_ID)

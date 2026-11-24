@@ -16,6 +16,7 @@ import com.budgetapp.sms.SmsInboxPackage
 import com.budgetapp.update.AppUpdatePackage
 import com.budgetapp.update.ReleasePushService
 import com.budgetapp.update.UpdateCheckWorker
+import com.budgetapp.update.UpdateNotices
 
 class MainApplication : Application(), ReactApplication {
 
@@ -43,6 +44,8 @@ class MainApplication : Application(), ReactApplication {
         }
         // a newer release with the app closed too: its push (Firebase), and a check once a day if that one is lost
         ReleasePushService.subscribe(this)
+        // «Доступна версия» of the version that is installed now: gone
+        UpdateNotices.clearStale(this, opened = false)
         UpdateCheckWorker.schedule(this)
     }
 }

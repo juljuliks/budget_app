@@ -17,6 +17,8 @@ class MainActivity : ReactActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(null)
         UpdateNotices.takeIntent(intent)
+        // the app opened: «Обновлено до» and an installed version's «Доступна» are done with
+        UpdateNotices.clearStale(this, opened = true)
     }
 
     // singleTask: a notification tapped while the app is alive comes here; kept as the activity's intent so that
