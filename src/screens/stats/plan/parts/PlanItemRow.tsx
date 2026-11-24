@@ -4,11 +4,13 @@ import { categoryLabel } from '@/db/categories';
 import type { Currency } from '@/db/fx';
 import type { PlanItem } from '@/db/plans';
 import { formatWithCurrency } from '@/shared/lib/money';
-import { normText, percentOf, PlanView } from '../model/planView';
+import { normText, percentOf, PlanView, SystemRow } from '../model/planView';
 import { regularNote } from '../model/regularNote';
 import { dayKeyOf } from '@/shared/lib/dateRange';
 import { KindIcon } from './PlanIcon';
-import { styles } from './styles';
+import { LockIcon } from '@/shared/ui/icons';
+import { colors } from '@/shared/theme/theme';
+import { styles, toneStyle } from './styles';
 
 type Props = {
   p: PlanView; item: PlanItem; ym: string; currency: Currency; hidden: boolean;
@@ -69,6 +71,32 @@ export function PlanItemRow({ p, item, ym, currency, hidden, toShown, onOpen }: 
           {item.previous_minor ? `в прошлом месяце ${inShown(item.previous_minor, item.currency)}` : '0'}
         </Text>
       )}
+    </TouchableOpacity>
+  );
+}
+
+/**
+ * A system row of the plan («🔒 Отложено сразу»: the settings' % of the budget): a lock for its icon, its note, the
+ * amount (in the budget's currency when the screen shows another) and its share; a tap opens the budget.
+ */
+export function SystemRowView({ p, r, hidden, onOpen }: { p: PlanView; r: SystemRow; hidden: boolean; onOpen: () => void }) {
+  return (
+    <TouchableOpacity style={styles.row} onPress={onOpen} accessibilityLabel={`Изменить: ${r.name}`}>
+      <View style={styles.pin}><LockIcon color={colors.muted} size={20} /></View>
+      <View style={styles.nameBox}>
+        <Text style={styles.name} numberOfLines={1}>{r.name}</Text>
+        <Text style={styles.percent}>{r.note}</Text>
+      </View>
+      <View style={styles.amountBox}>
+        {hidden ? null : (
+          <View style={styles.amountLine}>
+            {r.inBudget !== undefined && p.budgetMoney
+              ? <Text style={styles.amount}>{p.budgetMoney(r.inBudget).slice(1, -1)}</Text>
+              : <Text style={[styles.amount, toneStyle(r.tone)]}>{p.money(r.value)}</Text>}
+          </View>
+        )}
+        {p.shownBudget ? <Text style={styles.amountOriginal}>{hidden ? '' : ' · '}{percentOf(r.value, p.shownBudget) || '0%'}</Text> : null}
+      </View>
     </TouchableOpacity>
   );
 }

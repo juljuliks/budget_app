@@ -63,14 +63,15 @@ export type ShownMark = BarMark & { count: number; members: BarMark[] };
 
 /**
  * Marks nearer than `gap` (0…1) to the one before: one, with their count and the worst state (not paid, then ahead).
- * Drawn overlapping, each next icon `step` (0…1) further: the next mark is measured from the last icon of the group.
+ * Drawn overlapping, each next icon `step` (0…1) further: the next mark is measured from the last icon of the group
+ * (`step` 0 — from its last payment's place: a group doesn't reach further than its payments).
  */
 export function clusterMarks(marks: BarMark[], gap: number, step = 0): ShownMark[] {
   const rank: Record<MarkStatus, number> = { missed: 2, ahead: 1, paid: 0 };
   const out: ShownMark[] = [];
   for (const m of [...marks].sort((a, b) => a.at - b.at)) {
     const last = out[out.length - 1];
-    if (last && m.at - (last.at + (last.count - 1) * step) < gap) {
+    if (last && m.at - Math.max(last.at + (last.count - 1) * step, last.members[last.members.length - 1].at) < gap) {
       last.count += 1;
       last.members.push(m);
       if (rank[m.status] > rank[last.status]) last.status = m.status;

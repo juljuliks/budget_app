@@ -9,7 +9,7 @@ import { formStyles } from '@/shared/theme/formStyles';
 import { percentOf, PlanView } from '../model/planView';
 import { FundItemRow } from './FundItemRow';
 import { RecurringItemRow } from './RecurringItemRow';
-import { PlanItemRow } from './PlanItemRow';
+import { PlanItemRow, SystemRowView } from './PlanItemRow';
 import { styles } from './styles';
 
 const header = (title: string, total: React.ReactNode) => (
@@ -52,10 +52,14 @@ export function itemSections(p: PlanView, { ym, currency, hidden, toShown, onOpe
   ));
 }
 
-/** «Сбережения» in the plan: the funds (копилки), each with its goal and the month's contribution; a tap opens the fund. */
-export function fundSection(p: PlanView, hidden: boolean, onOpen: (item: PlanItem) => void) {
-  if (!p.funds.length) return null;
-  const sum = p.funds.reduce((a, i) => a + (i.converted_minor ?? 0), 0);
+/**
+ * «Сбережения» in the plan: «🔒 Отложено сразу» (the settings' % of the budget; a tap — the budget) and the funds
+ * (копилки), each with its goal and the month's contribution (a tap — the fund).
+ */
+export function fundSection(p: PlanView, hidden: boolean, open: { budget: () => void; fund: (item: PlanItem) => void }) {
+  const locked = p.systemGroups.find((g) => g.title === 'Сбережения')?.rows.find((r) => r.key === 'locked');
+  if (!p.funds.length && !locked) return null;
+  const sum = (locked?.value ?? 0) + p.funds.reduce((a, i) => a + (i.converted_minor ?? 0), 0);
   return (
     <React.Fragment key="funds">
       {header('Сбережения', (
@@ -65,7 +69,8 @@ export function fundSection(p: PlanView, hidden: boolean, onOpen: (item: PlanIte
         </Text>
       ))}
       <View>
-        {p.funds.map((item) => <FundItemRow key={item.category_id} p={p} item={item} hidden={hidden} onOpen={() => onOpen(item)} />)}
+        {locked ? <SystemRowView p={p} r={locked} hidden={hidden} onOpen={open.budget} /> : null}
+        {p.funds.map((item) => <FundItemRow key={item.category_id} p={p} item={item} hidden={hidden} onOpen={() => open.fund(item)} />)}
       </View>
     </React.Fragment>
   );

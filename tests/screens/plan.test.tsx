@@ -107,6 +107,11 @@ test('6.3.13 the «План» tab: the categories\' plans by section, no spendin
   // the plan's ring over them: «Бюджет» in its hole
   expect(screen.getByText('Бюджет')).toBeTruthy();
   expect(texts()).toEqual(expect.arrayContaining(['Без раздела', '🏠 Дом и коммуналка', 'разовый платёж', '👕 Одежда']));
+  // «Сбережения»: 🔒 the settings' 10% of the budget; a tap — the budget
+  expect(texts()).toEqual(expect.arrayContaining(['Сбережения', '🔒 Отложено сразу', 'заблокировано в начале месяца', '300 ₾']));
+  await tap('Изменить: 🔒 Отложено сразу');
+  expect(await screen.findByText('Бюджет месяца')).toBeTruthy();
+  await tap('Отмена');
   // only the categories' plans: no spending sections («Вне плана · 10% бюджета», «Сбережения · …»), no «Осталось»
   expect(sectionTitles()).toEqual([]);
   expect(screen.queryByText(/^Осталось/)).toBeNull();

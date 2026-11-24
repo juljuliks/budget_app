@@ -25,14 +25,15 @@ type Props = {
 
 /**
  * Over the month's bar, its payments with a day: their category's icon where the plan expects their day on the bar
- * (monthPace), ✓ paid, ✕ the day past and not paid, faded — still ahead. Those too near — one mark: every one's icon,
+ * (monthPace), plain — paid, ✕ the day past and not paid, faded — still ahead. Those too near — one mark: every one's icon,
  * overlapping (more than MAX_ICONS — their count), the worst state. A tap names its payments under the bar.
  */
 export default function BarMarks({ marks, picked, onPick }: Props) {
   const [width, setWidth] = useState(0);
   const onLayout = (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width);
-  // the width known (laid out): those too near — one; the place itself is a share of the bar
-  const shown = clusterMarks(marks, width ? BADGE / width : 0, width ? STEP / width : 0);
+  // the width known (laid out): those on top of each other (nearer than half a badge: the same or the next day) — one;
+  // the others each its own, overlapping a little; the place itself is a share of the bar
+  const shown = clusterMarks(marks, width ? BADGE / 2 / width : 0);
   return (
     <View style={s.row} onLayout={onLayout}>
       {shown.map((m) => {
@@ -53,11 +54,12 @@ export default function BarMarks({ marks, picked, onPick }: Props) {
                 </View>
               ))}
               {m.count > MAX_ICONS ? <View style={s.count}><Text style={s.countText}>{m.count}</Text></View> : null}
-              {m.status === 'ahead' ? null : (
-                <View style={[s.status, m.status === 'paid' ? s.paid : s.missed]}>
-                  <Text style={s.statusText}>{m.status === 'paid' ? '✓' : '✕'}</Text>
+              {/* only what is wrong: ✕ not paid; paid — no sign, ahead — faded */}
+              {m.status === 'missed' ? (
+                <View style={[s.status, s.missed]}>
+                  <Text style={s.statusText}>✕</Text>
                 </View>
-              )}
+              ) : null}
             </View>
             <View style={s.stem} />
           </TouchableOpacity>

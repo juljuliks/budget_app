@@ -21,7 +21,6 @@ export const markStyles = StyleSheet.create({
     position: 'absolute', right: -4, bottom: -3, width: 13, height: 13, borderRadius: 7, borderWidth: 1.5, borderColor: colors.bg,
     alignItems: 'center', justifyContent: 'center',
   },
-  paid: { backgroundColor: colors.income },
   missed: { backgroundColor: colors.warn },
   statusText: { fontSize: 8, lineHeight: 10, fontWeight: '700', color: colors.bg },
   count: {
