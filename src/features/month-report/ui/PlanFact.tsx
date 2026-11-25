@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import type { SavingsPlanFact } from '@/db/reportSavings';
 import { MONTHS_NOM } from '@/shared/lib/dates';
 import Masked from '@/shared/ui/Masked';
@@ -7,6 +7,7 @@ import { colors } from '@/shared/theme/theme';
 import type { ReportView } from '../model/reportView';
 import { styles as report } from './styles';
 import { font, radius, space, weight } from '@/shared/theme/tokens';
+import TextLink from '@/shared/ui/TextLink';
 
 /** `onCloseMonth`: "Подвести итоги ›" — the report closes, the month's "Итоги" open */
 type Props = { v: ReportView; pf: SavingsPlanFact; onCloseMonth: () => void };
@@ -113,9 +114,7 @@ export default function PlanFact({ v, pf, onCloseMonth }: Props) {
       {!pf.closed ? (
         <View style={styles.open}>
           <Text style={styles.openText}>Итоги не подведены: факт появится, когда ответите, что удалось отложить</Text>
-          <TouchableOpacity onPress={onCloseMonth} hitSlop={6} accessibilityRole="button">
-            <Text style={report.link}>Подвести итоги ›</Text>
-          </TouchableOpacity>
+          <TextLink label="Подвести итоги" onPress={onCloseMonth} style={report.link} />
         </View>
       ) : null}
     </View>

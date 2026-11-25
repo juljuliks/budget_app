@@ -12,6 +12,7 @@ import { monthTitle } from '@/shared/lib/dates';
 import MonthDetails from './MonthDetails';
 import { styles } from './styles';
 import { monthSavings } from '../model/savings';
+import TextLink from '@/shared/ui/TextLink';
 
 function Total({
   label,
@@ -93,21 +94,25 @@ export default function MonthRow({ month, expanded, onToggle, currency }: Props)
       {month.close && !month.close.closed ? (
         <View style={styles.openClose}>
           <Text style={styles.openCloseText}>Итоги не подведены: удалось ли отложить, взносы в копилки</Text>
-          <TouchableOpacity onPress={() => openMonthClose(month.ym)} hitSlop={6} accessibilityRole="button">
-            <Text style={styles.reportText}>Подвести итоги ›</Text>
-          </TouchableOpacity>
+          <TextLink label="Подвести итоги" onPress={() => openMonthClose(month.ym)} style={styles.reportText} />
         </View>
       ) : null}
       {/* a month that is over and had a plan (a budget or a category with an amount); its "Итоги" can be changed */}
       {month.ym < currentYm() && (month.budget_minor !== null || month.planned_minor > 0) ? (
         <View style={styles.links}>
-          <TouchableOpacity style={styles.reportLink} onPress={() => openReport(month.ym)} hitSlop={6}>
-            <Text style={styles.reportText}>Отчёт за месяц ›</Text>
-          </TouchableOpacity>
+          <TextLink
+            label="Отчёт за месяц"
+            onPress={() => openReport(month.ym)}
+            style={styles.reportText}
+            containerStyle={styles.reportLink}
+          />
           {month.close?.closed ? (
-            <TouchableOpacity style={styles.reportLink} onPress={() => openMonthClose(month.ym)} hitSlop={6}>
-              <Text style={styles.reportText}>Изменить итоги ›</Text>
-            </TouchableOpacity>
+            <TextLink
+              label="Изменить итоги"
+              onPress={() => openMonthClose(month.ym)}
+              style={styles.reportText}
+              containerStyle={styles.reportLink}
+            />
           ) : null}
         </View>
       ) : null}

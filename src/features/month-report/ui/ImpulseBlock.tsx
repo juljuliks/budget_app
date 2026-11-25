@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { categoryLabel } from '@/db/categories';
 import type { ImpulseCategory, MonthImpulse } from '@/db/reportImpulse';
 import { IMPULSE_TRIGGERS, MOODS } from '@/domain/moods';
@@ -11,6 +11,7 @@ import { colors } from '@/shared/theme/theme';
 import ReportBlock from './ReportBlock';
 import { styles as report } from './styles';
 import { font, radius, space, weight } from '@/shared/theme/tokens';
+import TextLink from '@/shared/ui/TextLink';
 
 /** `month`: the month's report — its purchases on the calendar «Покупки по дням» (the year's — none) */
 type Props = { m: MonthImpulse; money: (minor: number) => string; onMark: () => void; page?: boolean; month?: string };
@@ -88,11 +89,7 @@ export default function ImpulseBlock({ m, money, onMark, page, month }: Props) {
           ))}
         </>
       ) : null}
-      {left > 0 ? (
-        <TouchableOpacity onPress={onMark} hitSlop={6}>
-          <Text style={report.link}>Отметить ещё {purchases(left)} ›</Text>
-        </TouchableOpacity>
-      ) : null}
+      {left > 0 ? <TextLink label={`Отметить ещё ${purchases(left)}`} onPress={onMark} style={report.link} /> : null}
     </ReportBlock>
   );
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Text, View } from 'react-native';
 import type { CloseAnswers, MonthClose } from '@/db/plans';
 import { formatWithCurrency } from '@/shared/lib/money';
 import Segmented from '@/shared/ui/Segmented';
@@ -8,6 +8,7 @@ import AmountAnswer from './AmountAnswer';
 import BalanceAnswer from './BalanceAnswer';
 import SplitRows from './SplitRows';
 import { styles } from './styles';
+import TextLink from '@/shared/ui/TextLink';
 
 type Props = { c: MonthClose; onAnswer: (patch: Partial<CloseAnswers>) => void; onSplit: () => void };
 
@@ -90,9 +91,7 @@ export default function StepSavings({ c, onAnswer, onSplit }: Props) {
       <Text style={styles.question}>{c.split ? 'Разложили' : 'Разложим так'}</Text>
       <SplitRows c={c} onAnswer={onAnswer} />
       {c.split && c.funds.length ? (
-        <TouchableOpacity onPress={onSplit} accessibilityRole="button" hitSlop={8}>
-          <Text style={styles.link}>Изменить распределение ›</Text>
-        </TouchableOpacity>
+        <TextLink label="Изменить распределение" onPress={onSplit} style={styles.link} />
       ) : null}
     </View>
   );

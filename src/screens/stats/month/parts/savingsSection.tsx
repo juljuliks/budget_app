@@ -13,6 +13,7 @@ import { colors } from '@/shared/theme/theme';
 import type { SavingsPart, SavingsSection } from '../model/savingsSection';
 import { header } from './sections';
 import { styles } from './styles';
+import TextLink from '@/shared/ui/TextLink';
 
 type Open = {
   /** ⓘ: what the overspend took ("Сбережения меньше на …") */
@@ -216,9 +217,7 @@ export function savingsSection(s: SavingsSection | null, currency: string, open:
           </TouchableOpacity>
         ) : null}
         {s.closeYm ? (
-          <TouchableOpacity onPress={() => open.close(s.closeYm!)} hitSlop={8} accessibilityRole="button">
-            <Text style={styles.closeLink}>Подвести итоги ›</Text>
-          </TouchableOpacity>
+          <TextLink label="Подвести итоги" onPress={() => open.close(s.closeYm!)} style={styles.closeLink} />
         ) : null}
       </View>
     </>

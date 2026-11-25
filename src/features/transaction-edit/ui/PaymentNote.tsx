@@ -10,6 +10,7 @@ import { formatWithCurrency } from '@/shared/lib/money';
 import { SAVE_FAILED } from '@/shared/lib/strings';
 import { openPayment } from '@/shared/navigation/sheets';
 import Banner from '@/shared/ui/Banner';
+import TextLink from '@/shared/ui/TextLink';
 import { RepeatIcon } from '@/shared/ui/icons';
 import { toast, toastFailure } from '@/shared/ui/toast';
 import { colors } from '@/shared/theme/theme';
@@ -83,9 +84,7 @@ export default function PaymentNote({ tx }: { tx: Tx }) {
             style={styles.factValue}
           >{`${card.year_count} ${plural(card.year_count, ['раз', 'раза', 'раз'])} · ${money(card.year_minor)}`}</Text>
         </View>
-        <TouchableOpacity onPress={() => openPayment({ id: sub.id })} hitSlop={8} accessibilityRole="button">
-          <Text style={styles.link}>{`Изменить ${w.acc} ›`}</Text>
-        </TouchableOpacity>
+        <TextLink label={`Изменить ${w.acc}`} onPress={() => openPayment({ id: sub.id })} style={styles.link} />
       </View>
       {changed ? (
         <Banner

@@ -9,6 +9,7 @@ import { coverWithUndo } from '@/entities/plan';
 import { CoverRoom, lessLines, Overspent, SavingsLess } from '../model/savingsLess';
 import CoverRooms from './CoverRooms';
 import { font, space } from '@/shared/theme/tokens';
+import TextLink from '@/shared/ui/TextLink';
 
 type Props = {
   ym: string;
@@ -62,9 +63,7 @@ function Row({
     <View style={onCover ? undefined : styles.row}>
       <View style={onCover ? styles.rowTop : styles.inner}>{body}</View>
       {onCover ? (
-        <TouchableOpacity style={styles.coverLink} onPress={onCover} accessibilityRole="button">
-          <Text style={styles.link}>Покрыть из плана ›</Text>
-        </TouchableOpacity>
+        <TextLink label="Покрыть из плана" onPress={onCover} style={styles.link} containerStyle={styles.coverLink} />
       ) : null}
     </View>
   );
