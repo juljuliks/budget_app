@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { colors } from '@/shared/theme/theme';
-import { font, radius, space, weight } from '@/shared/theme/tokens';
+import { font, space, weight } from '@/shared/theme/tokens';
 
 /** A category's page of «Динамика трат». */
 export const detailStyles = StyleSheet.create({
@@ -21,14 +21,6 @@ export const detailStyles = StyleSheet.create({
   /** «Месяц | Год | Всё время» over the merchants */
   periods: { marginTop: space[8], marginBottom: space[4] },
   /** «Мало данных»: too few months to tell frequent from rare */
-  few: {
-    fontSize: font.secondary,
-    color: colors.warn,
-    backgroundColor: colors.warnBg,
-    borderRadius: radius.md,
-    padding: space[12],
-    marginTop: space[16],
-    lineHeight: 19,
-  },
+  few: { marginTop: space[16] },
   operations: { paddingVertical: space[14], borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
 });

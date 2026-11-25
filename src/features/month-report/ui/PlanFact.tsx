@@ -6,8 +6,9 @@ import Masked from '@/shared/ui/Masked';
 import { colors } from '@/shared/theme/theme';
 import type { ReportView } from '../model/reportView';
 import { styles as report } from './styles';
-import { font, radius, space, weight } from '@/shared/theme/tokens';
+import { font, space, weight } from '@/shared/theme/tokens';
 import TextLink from '@/shared/ui/TextLink';
+import Banner from '@/shared/ui/Banner';
 
 /** `onCloseMonth`: "Подвести итоги ›" — the report closes, the month's "Итоги" open */
 type Props = { v: ReportView; pf: SavingsPlanFact; onCloseMonth: () => void };
@@ -112,10 +113,9 @@ export default function PlanFact({ v, pf, onCloseMonth }: Props) {
         </View>
       ) : null}
       {!pf.closed ? (
-        <View style={styles.open}>
-          <Text style={styles.openText}>Итоги не подведены: факт появится, когда ответите, что удалось отложить</Text>
+        <Banner text="Итоги не подведены: факт появится, когда ответите, что удалось отложить" style={styles.open}>
           <TextLink label="Подвести итоги" onPress={onCloseMonth} style={report.link} />
-        </View>
+        </Banner>
       ) : null}
     </View>
   );
@@ -133,13 +133,5 @@ const styles = StyleSheet.create({
   strong: { fontWeight: weight.semibold, color: colors.text },
   rule: { height: 1, backgroundColor: colors.border, marginVertical: space[2] },
   apart: { flexDirection: 'row', alignItems: 'center', gap: space[8], marginTop: space[6] },
-  open: {
-    marginTop: space[8],
-    gap: space[4],
-    borderRadius: radius.md,
-    paddingHorizontal: space[12],
-    paddingVertical: space[10],
-    backgroundColor: colors.warnBg,
-  },
-  openText: { fontSize: font.secondary, color: colors.warn },
+  open: { marginTop: space[8] },
 });

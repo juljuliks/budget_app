@@ -23,6 +23,7 @@ import { detailStyles as s } from './parts/detailStyles';
 import { styles } from './parts/styles';
 import TrendBars from './parts/TrendBars';
 import { FEW_DATA, NOT_COMPARED, SPENT_WHEN, TAP_BAR, TOO_EARLY } from './texts';
+import Banner from '@/shared/ui/Banner';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CategoryTrend'>;
 
@@ -73,7 +74,7 @@ export default function CategoryTrendScreen({ route, navigation }: Props) {
       : `${barName(bar)}: ${money(bar.value)}${bar.usual !== undefined ? ` · обычно ${money(bar.usual)}` : ''}`;
   return (
     <ScrollView style={styles.screen} contentContainerStyle={[styles.content, styles.pad]}>
-      {v.kind === 'few' ? <Text style={s.few}>{FEW_DATA}</Text> : null}
+      {v.kind === 'few' ? <Banner text={FEW_DATA} style={s.few} /> : null}
       <View style={s.head}>
         <Text>
           <Masked style={s.spent}>{money(v.spent)}</Masked>

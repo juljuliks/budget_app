@@ -1,6 +1,6 @@
 import { WEEKDAYS } from '@/shared/lib/dates';
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput } from 'react-native';
 import { Category, categoryLabel, listCategories } from '@/db/categories';
 import { CategoryType, listCategoryTypes } from '@/db/categoryTypes';
 import { MergeNameTakenError, mergedName, mergePlanPreview, MergeRhythm } from '@/db/mergeCategories';
@@ -14,7 +14,8 @@ import RadioGroup from '@/shared/ui/RadioGroup';
 import { NO_SECTION, SPENDING_PATTERN, LOAD_FAILED } from '@/shared/lib/strings';
 import { colors } from '@/shared/theme/theme';
 import { toast, toastError, toastFailure } from '@/shared/ui/toast';
-import { font, radius, space, weight } from '@/shared/theme/tokens';
+import { font, space, weight } from '@/shared/theme/tokens';
+import Banner from '@/shared/ui/Banner';
 
 const rhythmKey = (r: MergeRhythm) => `${r.kind}:${r.norm}:${r.every ?? ''}:${r.weekdays ?? ''}`;
 // a regular payment within the month: its days ("Регулярный платёж · пн, чт")
@@ -189,12 +190,15 @@ export default function MergeCategoriesSheet({
           </>
         ) : null}
         {/* the history merges: say so before it's done */}
-        <View style={styles.warn}>
-          <Text style={styles.warnText}>
-            Объединится вся история: операции, мерчанты и планы {others} за все прошлые месяцы перейдут в эту категорию
-            — статистика, отчёты и история прошлых месяцев изменятся. Отменить это нельзя.
-          </Text>
-        </View>
+        <Banner
+          text={
+            <>
+              Объединится вся история: операции, мерчанты и планы {others} за все прошлые месяцы перейдут в эту
+              категорию — статистика, отчёты и история прошлых месяцев изменятся. Отменить это нельзя.
+            </>
+          }
+          style={styles.warn}
+        />
         <SheetActions
           submit={{ title: 'Объединить', onPress: merge, disabled: saving || !name.trim() }}
           onCancel={onClose}
@@ -209,12 +213,5 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: space[20], paddingBottom: space[8] },
   text: { fontSize: font.body, color: colors.text, lineHeight: 21 },
   bold: { fontWeight: weight.semibold },
-  warn: {
-    marginTop: space[16],
-    paddingHorizontal: space[12],
-    paddingVertical: space[10],
-    borderRadius: radius.md,
-    backgroundColor: colors.warnBg,
-  },
-  warnText: { fontSize: font.secondary, color: colors.warn, lineHeight: 20 },
+  warn: { marginTop: space[16] },
 });

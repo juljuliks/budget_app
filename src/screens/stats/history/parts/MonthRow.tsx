@@ -13,6 +13,7 @@ import MonthDetails from './MonthDetails';
 import { styles } from './styles';
 import { monthSavings } from '../model/savings';
 import TextLink from '@/shared/ui/TextLink';
+import Banner from '@/shared/ui/Banner';
 
 function Total({
   label,
@@ -92,10 +93,9 @@ export default function MonthRow({ month, expanded, onToggle, currency }: Props)
       </TouchableOpacity>
       {/* a month over whose "Итоги" aren't done */}
       {month.close && !month.close.closed ? (
-        <View style={styles.openClose}>
-          <Text style={styles.openCloseText}>Итоги не подведены: удалось ли отложить, взносы в копилки</Text>
+        <Banner text="Итоги не подведены: удалось ли отложить, взносы в копилки" style={styles.openClose}>
           <TextLink label="Подвести итоги" onPress={() => openMonthClose(month.ym)} style={styles.reportText} />
-        </View>
+        </Banner>
       ) : null}
       {/* a month that is over and had a plan (a budget or a category with an amount); its "Итоги" can be changed */}
       {month.ym < currentYm() && (month.budget_minor !== null || month.planned_minor > 0) ? (

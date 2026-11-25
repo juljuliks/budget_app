@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { toggleBank } from '@/features/banks';
 import { formatDay, formatTime, plural } from '@/shared/lib/format';
 import { formatMoneyWithCurrency } from '@/shared/lib/money';
@@ -10,6 +10,7 @@ import { toast, toastFailure } from '@/shared/ui/toast';
 import { colors } from '@/shared/theme/theme';
 import { BankInfo, useBanksInfo } from './model/useBanksInfo';
 import { font, radius, space, weight } from '@/shared/theme/tokens';
+import Banner from '@/shared/ui/Banner';
 
 const parseOf = (i: BankInfo) => (i.bank.builtIn ? 'встроенный' : `шаблоны сообщений · ${i.templates}`);
 const balanceOf = (i: BankInfo) =>
@@ -70,12 +71,15 @@ export default function BanksScreen() {
             <Text style={styles.value}>{balanceOf(i)}</Text>
           </View>
           {i.on && i.unparsed > 0 ? (
-            <TouchableOpacity style={styles.unparsed} onPress={() => navigation.navigate('Unparsed')}>
-              <Text style={styles.unparsedText}>
-                {i.unparsed} {plural(i.unparsed, ['сообщение', 'сообщения', 'сообщений'])} в «Не распознано» — отметьте
-                одно, и такие начнут читаться
-              </Text>
-            </TouchableOpacity>
+            <Banner
+              text={
+                <>
+                  {i.unparsed} {plural(i.unparsed, ['сообщение', 'сообщения', 'сообщений'])} в «Не распознано» —
+                  отметьте одно, и такие начнут читаться
+                </>
+              }
+              onPress={() => navigation.navigate('Unparsed')}
+            />
           ) : null}
         </View>
       ))}
@@ -99,11 +103,4 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: space[6] },
   key: { width: '34%', fontSize: font.secondary, color: colors.muted },
   value: { width: '66%', fontSize: font.secondary, color: colors.text },
-  unparsed: {
-    backgroundColor: colors.warnBg,
-    borderRadius: radius.sm,
-    paddingHorizontal: space[10],
-    paddingVertical: space[8],
-  },
-  unparsedText: { fontSize: font.secondary, color: colors.warn },
 });

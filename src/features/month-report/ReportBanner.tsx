@@ -1,27 +1,18 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { MONTHS_NOM } from '@/shared/lib/dates';
 import { plural } from '@/shared/lib/format';
 import { openMonthReport, openYearReport } from '@/shared/navigation/sheets';
-import { ChevronRightIcon } from '@/shared/ui/icons';
-import { colors } from '@/shared/theme/theme';
+import Banner from '@/shared/ui/Banner';
 import { freshMonth, freshYear } from '@/stats/reportWindow';
 import { reportView } from './model/reportView';
 import { useMonthReport } from './model/useMonthReport';
-import { font, radius, space, weight } from '@/shared/theme/tokens';
+import { space } from '@/shared/theme/tokens';
 
 const days = (n: number) => (n === 0 ? 'последний день' : `ещё ${n} ${plural(n, ['день', 'дня', 'дней'])}`);
 
 function Card({ title, note, onPress }: { title: string; note: string; onPress: () => void }) {
-  return (
-    <TouchableOpacity style={styles.card} onPress={onPress} accessibilityRole="button">
-      <View style={styles.text}>
-        <Text style={styles.title}>{title}</Text>
-        <Text style={styles.note}>{note}</Text>
-      </View>
-      <ChevronRightIcon color={colors.accent} />
-    </TouchableOpacity>
-  );
+  return <Banner tone="info" title={title} text={note} onPress={onPress} style={styles.card} />;
 }
 
 /**
@@ -58,19 +49,4 @@ export default function ReportBanner() {
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space[10],
-    marginHorizontal: space[16],
-    marginTop: space[10],
-    paddingHorizontal: space[14],
-    paddingVertical: space[12],
-    borderRadius: radius.lg,
-    backgroundColor: colors.accentBg,
-  },
-  text: { flex: 1 },
-  title: { fontSize: font.input, fontWeight: weight.semibold, color: colors.text },
-  note: { fontSize: font.secondary, color: colors.muted, marginTop: space[2] },
-});
+const styles = StyleSheet.create({ card: { marginHorizontal: space[16], marginTop: space[10] } });
