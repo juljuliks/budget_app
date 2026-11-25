@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { currentYm, getPlanBudget, monthStats, parseYm, planConverter, unplannedOf, unplannedSpent } from '@/db/plans';
 import { getSetting, setSetting } from '@/db/settings';
@@ -9,12 +9,13 @@ import { PlanAmountModal, PlanAmountTarget } from '@/entities/plan';
 import { formatWithCurrency } from '@/shared/lib/money';
 import { useHideAmounts } from '@/shared/settings/hideAmounts';
 import { colors } from '@/shared/theme/theme';
+import Banner from '@/shared/ui/Banner';
 import { toastFailure } from '@/shared/ui/toast';
 import { SAVE_FAILED } from '@/shared/lib/strings';
 import { lessTarget, useMonthSavings } from '../month/model/useMonthSavings';
 import { lessTaken } from '../plan/model/savingsLess';
 import SavingsLessSheet from '../plan/parts/SavingsLessSheet';
-import { font, radius, space, weight } from '@/shared/theme/tokens';
+import { font, space, weight } from '@/shared/theme/tokens';
 
 const DISMISSED_KEY = 'plan_alert_dismissed';
 /** "До отложенного осталось …" once what may be spent (budget − 🔒) is down to this share */
@@ -105,35 +106,33 @@ export default function PlanAlert({ currency }: { currency: Currency }) {
   return (
     <>
       {shown ? (
-        <View style={styles.box} accessibilityRole="alert">
-          <View style={styles.body}>
-            {lockIn ? (
-              <TouchableOpacity
-                onPress={() => setSheet(true)}
-                accessibilityRole="button"
-                accessibilityLabel="Перерасход: подробнее"
-              >
-                <Text style={styles.text}>
-                  {`⚠ ${lockIn.text}`}
-                  <Text style={styles.more}>{' · Подробнее ›'}</Text>
-                </Text>
-              </TouchableOpacity>
-            ) : null}
-            {rest.length ? (
-              <Text style={styles.text}>{`${lockIn ? '' : '⚠ '}${rest.map((i) => i.text).join('\n')}`}</Text>
-            ) : null}
-          </View>
-          <TouchableOpacity
-            onPress={() => {
+        <Banner
+          alert
+          close={{
+            label: 'Скрыть предупреждение',
+            onPress: () => {
               setDismissed(key);
               setSetting(DISMISSED_KEY, key).catch(toastFailure('save alert dismissal', SAVE_FAILED));
-            }}
-            hitSlop={10}
-            accessibilityLabel="Скрыть предупреждение"
-          >
-            <Text style={styles.close}>✕</Text>
-          </TouchableOpacity>
-        </View>
+            },
+          }}
+          style={styles.box}
+        >
+          {lockIn ? (
+            <TouchableOpacity
+              onPress={() => setSheet(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Перерасход: подробнее"
+            >
+              <Text style={styles.text}>
+                {`⚠ ${lockIn.text}`}
+                <Text style={styles.more}>{' · Подробнее ›'}</Text>
+              </Text>
+            </TouchableOpacity>
+          ) : null}
+          {rest.length ? (
+            <Text style={styles.text}>{`${lockIn ? '' : '⚠ '}${rest.map((i) => i.text).join('\n')}`}</Text>
+          ) : null}
+        </Banner>
       ) : null}
       <SavingsLessSheet
         ym={ym}
@@ -156,19 +155,7 @@ export default function PlanAlert({ currency }: { currency: Currency }) {
 }
 
 const styles = StyleSheet.create({
-  box: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: space[10],
-    marginHorizontal: space[16],
-    marginBottom: space[8],
-    paddingHorizontal: space[12],
-    paddingVertical: space[10],
-    borderRadius: radius.md,
-    backgroundColor: colors.warnBg,
-  },
-  body: { flex: 1, gap: space[4] },
+  box: { marginHorizontal: space[16], marginBottom: space[8] },
   text: { fontSize: font.secondary, color: colors.warn },
   more: { fontWeight: weight.semibold },
-  close: { fontSize: font.input, color: colors.warn },
 });

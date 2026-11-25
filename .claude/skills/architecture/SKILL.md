@@ -23,7 +23,8 @@ model: haiku
 3. Запись в базу — команда слайса (`model/commands.ts`: запись + `emitTransactionsChanged`), не вызов из компонента.
 4. Прикинуть размер: файл ≤ 250 строк кода, компонент/функция ≤ 120, хук ≤ 100. Подходит к пределу — делить сейчас.
 5. Кнопка — только `shared/ui/Button` (`variant="primary" | "secondary" | "cancel"`, `danger`, `size="small"`, `icon`),
-   своей не рисовать; своя только круглая ＋ `PlusButton`
+   своей не рисовать; своя только круглая ＋ `PlusButton`. Плашка (предупреждение, предложение) — `shared/ui/Banner`
+   (`tone`, `title`, `text`, `onPress` / `close` / `action`), свою коробку с фоном не рисовать
    (ARCHITECTURE.md §1, после страниц и шитов).
 6. Расчёты — в `.ts` (`model/`) с тестом в `tests/logic/`; тексты — в `texts.ts` и по GLOSSARY.md; вид — из темы:
    цвета `colors` (`colors.onAccent` для текста на акценте), размеры текста, отступы, радиусы — `shared/theme/tokens.ts`

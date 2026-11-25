@@ -4,7 +4,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { getSetting, setSetting } from '@/db/settings';
 import { isPushAccessEnabled, openPushAccessSettings } from '@/native/notificationAccess';
 import { colors } from '@/shared/theme/theme';
-import { font, radius, space, weight } from '@/shared/theme/tokens';
+import Banner from '@/shared/ui/Banner';
+import { font, space, weight } from '@/shared/theme/tokens';
 
 const DISMISSED_KEY = 'push_banner_dismissed';
 
@@ -31,11 +32,12 @@ export default function PushAccessBanner() {
 
   if (!visible) return null;
   return (
-    <View style={styles.box}>
-      <Text style={styles.title}>Читать уведомления приложения TBC</Text>
-      <Text style={styles.text}>
-        Тогда операции появятся, даже если SMS не пришло. Другие уведомления не читаются и не сохраняются.
-      </Text>
+    <Banner
+      tone="info"
+      title="Читать уведомления приложения TBC"
+      text="Тогда операции появятся, даже если SMS не пришло. Другие уведомления не читаются и не сохраняются."
+      style={styles.box}
+    >
       <View style={styles.buttons}>
         <TouchableOpacity
           onPress={() => {
@@ -44,22 +46,21 @@ export default function PushAccessBanner() {
               .catch(() => {});
           }}
           hitSlop={8}
+          accessibilityRole="button"
         >
           <Text style={styles.later}>Не сейчас</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={openPushAccessSettings} hitSlop={8}>
+        <TouchableOpacity onPress={openPushAccessSettings} hitSlop={8} accessibilityRole="button">
           <Text style={styles.enable}>Включить</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </Banner>
   );
 }
 
 const styles = StyleSheet.create({
-  box: { backgroundColor: colors.accentBg, borderRadius: radius.md, padding: space[12], marginBottom: space[8] },
-  title: { fontSize: font.body, fontWeight: weight.semibold, color: colors.text },
-  text: { fontSize: font.meta, color: colors.muted, marginTop: space[4], lineHeight: 18 },
-  buttons: { flexDirection: 'row', justifyContent: 'flex-end', gap: space[20], marginTop: space[8] },
+  box: { marginBottom: space[8] },
+  buttons: { flexDirection: 'row', justifyContent: 'flex-end', gap: space[20], marginTop: space[4] },
   later: { fontSize: font.secondary, color: colors.muted },
   enable: { fontSize: font.secondary, fontWeight: weight.semibold, color: colors.accent },
 });

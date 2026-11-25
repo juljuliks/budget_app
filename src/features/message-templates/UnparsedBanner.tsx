@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { countUnparsed } from '@/db/messages';
 import { onTransactionsChanged } from '@/domain/events';
 import { useRootNavigation } from '@/shared/navigation/navigation';
-import { colors } from '@/shared/theme/theme';
+import Banner from '@/shared/ui/Banner';
 import { UNPARSED } from './texts';
-import { font, radius, space, weight } from '@/shared/theme/tokens';
+import { space } from '@/shared/theme/tokens';
 
 /** Over the operations: "Не распознано: N ›" while bank messages wait for marking; opens their list. */
 export default function UnparsedBanner() {
@@ -22,30 +22,13 @@ export default function UnparsedBanner() {
 
   if (n === 0) return null;
   return (
-    <TouchableOpacity style={styles.box} onPress={() => navigation.navigate('Unparsed')} accessibilityRole="button">
-      <View style={styles.flex}>
-        <Text style={styles.title}>
-          {UNPARSED}: {n}
-        </Text>
-        <Text style={styles.text}>Сообщения банка без операции — отметьте в них сумму</Text>
-      </View>
-      <Text style={styles.chevron}>›</Text>
-    </TouchableOpacity>
+    <Banner
+      title={`${UNPARSED}: ${n}`}
+      text="Сообщения банка без операции — отметьте в них сумму"
+      onPress={() => navigation.navigate('Unparsed')}
+      style={styles.box}
+    />
   );
 }
 
-const styles = StyleSheet.create({
-  box: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space[12],
-    backgroundColor: colors.warnBg,
-    borderRadius: radius.md,
-    padding: space[12],
-    marginBottom: space[8],
-  },
-  flex: { flex: 1 },
-  title: { fontSize: font.body, fontWeight: weight.semibold, color: colors.warnText },
-  text: { fontSize: font.meta, color: colors.warnText, marginTop: space[2] },
-  chevron: { fontSize: font.heading, color: colors.warn },
-});
+const styles = StyleSheet.create({ box: { marginBottom: space[8] } });

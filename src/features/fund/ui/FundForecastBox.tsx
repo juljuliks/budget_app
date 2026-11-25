@@ -1,11 +1,12 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import type { Fund, FundForecast } from '@/db/plans';
+import Banner from '@/shared/ui/Banner';
 import Button from '@/shared/ui/Button';
 import { colors } from '@/shared/theme/theme';
 import { changeFundGoal } from '../model/commands';
 import { forecastText } from '../model/forecastText';
-import { font, radius, space, weight } from '@/shared/theme/tokens';
+import { font, space } from '@/shared/theme/tokens';
 
 /**
  * A fund's card on its category's page: «✓ Успеваете к 31 июля» (green) or «⚠ Не успеваете к 31 июля» (yellow) with
@@ -28,8 +29,7 @@ export default function FundForecastBox({
     start_minor: fund.start_minor,
   };
   return (
-    <View style={[styles.box, t.ok ? styles.ok : styles.late]}>
-      <Text style={[styles.title, t.ok ? styles.okText : styles.lateText]}>{t.title}</Text>
+    <Banner tone={t.ok ? 'ok' : 'warn'} title={t.title} style={styles.box}>
       {t.lines.map((l) => (
         <Text key={l} style={styles.line}>
           {l}
@@ -52,17 +52,12 @@ export default function FundForecastBox({
           ) : null}
         </View>
       ) : null}
-    </View>
+    </Banner>
   );
 }
 
 const styles = StyleSheet.create({
-  box: { marginTop: space[12], borderRadius: radius.lg, paddingHorizontal: space[14], paddingVertical: space[12] },
-  ok: { backgroundColor: colors.savingsBg },
-  late: { backgroundColor: colors.warnBg },
-  title: { fontSize: font.input, fontWeight: weight.bold },
-  okText: { color: colors.income },
-  lateText: { color: colors.warn },
-  line: { fontSize: font.secondary, color: colors.text, marginTop: space[4], lineHeight: 19 },
-  actions: { gap: space[10], marginTop: space[12] },
+  box: { marginTop: space[12] },
+  line: { fontSize: font.secondary, color: colors.text, lineHeight: 19 },
+  actions: { gap: space[10], marginTop: space[8] },
 });

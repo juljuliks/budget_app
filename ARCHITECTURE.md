@@ -79,6 +79,10 @@ src/
 текстом в его цвете (✎, ＋). Кнопки шита — `SheetActions`. Своя кнопка одна — круглая ＋ (`PlusButton`); не кнопки:
 чипы (`Chip`), выбор (`RadioGroup`, `Choice`), ссылка «… ›» (`TextLink`).
 
+Плашка (предупреждение, предложение, заметка над списком или в шите) — только `shared/ui/Banner`: `tone` (`warn` жёлтая,
+`info` голубая, `neutral` серая, `ok` зелёная), `title`, `text`, ссылки и кнопки — детьми; `onPress` — вся плашка
+кнопка с ›, `close` — ✕, `action` — текст-кнопка справа («Отменить»). Свою коробку с фоном и радиусом не рисовать.
+
 Записи в базу — командами слайса (`model/commands.ts`): запись + `emitTransactionsChanged`. Компоненты не зовут
 `emitTransactionsChanged` сами.
 
@@ -141,7 +145,7 @@ src/
 - **shared/ui**: `form`, `BottomSheet`, `Button`, `Checkbox`, `Chip`, `Segmented`, `RadioGroup`, `StepSlider`, `Donut`,
   `Meter`, `HueBar`, `ColorSwatches`, `ColorPickerSheet`, `EmojiPicker` (+ `emoji/`), `RangeCalendar` (сетка месяца — `MonthGrid`),
   `TextInputModal`, `StickyScrollView`, `SectionHeading`, `Fab`, `PlusButton`, `RowActions`, `CurrencyButton`,
-  `CurrencyPicker`, `ModeBanner` (режим списка: разбор категории, выбор операции для платежа), `icons`, `toast`, `sheetAlert`.
+  `CurrencyPicker`, `Banner` (плашка), `ModeBanner` (режим списка: разбор категории, выбор операции для платежа), `icons`, `toast`, `sheetAlert`.
 - **shared/lib**: `format`, `money`, `dateRange`, `dates` (бывший `stats/months`), `strings`, `useLast`, `useLatestRequest`.
 - **shared/theme**: `theme`, `formStyles`. `colors.ts` остаётся в ядре (`src/domain/`): палитру категорий берёт `db/`.
 - **app**: `App.tsx` (+ `MainTabs`, `useAppStartup`), `modals.tsx` → `ModalHost`, `SettingsButton`.

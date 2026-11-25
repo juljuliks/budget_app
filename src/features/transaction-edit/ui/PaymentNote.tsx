@@ -9,6 +9,7 @@ import { periodText, plural } from '@/shared/lib/format';
 import { formatWithCurrency } from '@/shared/lib/money';
 import { SAVE_FAILED } from '@/shared/lib/strings';
 import { openPayment } from '@/shared/navigation/sheets';
+import Banner from '@/shared/ui/Banner';
 import { RepeatIcon } from '@/shared/ui/icons';
 import { toast, toastFailure } from '@/shared/ui/toast';
 import { colors } from '@/shared/theme/theme';
@@ -87,12 +88,16 @@ export default function PaymentNote({ tx }: { tx: Tx }) {
         </TouchableOpacity>
       </View>
       {changed ? (
-        <TouchableOpacity style={styles.warn} onPress={update} accessibilityRole="button">
-          <Text style={styles.warnText}>
-            {`Сумма ${tx.amount_minor > sub.amount_minor ? 'выросла' : 'уменьшилась'}: было ${money(sub.amount_minor)}. `}
-            <Text style={styles.warnBold}>{`Обновить ${w.acc} на ${money(tx.amount_minor)}?`}</Text>
-          </Text>
-        </TouchableOpacity>
+        <Banner
+          text={
+            <>
+              {`Сумма ${tx.amount_minor > sub.amount_minor ? 'выросла' : 'уменьшилась'}: было ${money(sub.amount_minor)}. `}
+              <Text style={styles.warnBold}>{`Обновить ${w.acc} на ${money(tx.amount_minor)}?`}</Text>
+            </>
+          }
+          onPress={update}
+          style={styles.warn}
+        />
       ) : null}
     </>
   );
@@ -113,7 +118,6 @@ const styles = StyleSheet.create({
   factLabel: { fontSize: font.meta, color: colors.muted },
   factValue: { fontSize: font.meta, fontWeight: weight.semibold, color: colors.text, fontVariant: ['tabular-nums'] },
   link: { fontSize: font.secondary, color: colors.accent },
-  warn: { marginTop: space[8], padding: space[12], borderRadius: radius.md, backgroundColor: colors.warnBg },
-  warnText: { fontSize: font.secondary, color: colors.warn },
+  warn: { marginTop: space[8] },
   warnBold: { fontWeight: weight.semibold },
 });

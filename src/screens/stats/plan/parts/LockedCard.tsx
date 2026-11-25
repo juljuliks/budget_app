@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import type { Currency } from '@/db/fx';
 import { formatWithCurrency } from '@/shared/lib/money';
 import { LockIcon } from '@/shared/ui/icons';
+import Banner from '@/shared/ui/Banner';
 import TextLink from '@/shared/ui/TextLink';
 import { colors } from '@/shared/theme/theme';
 import type { LockedOfForm } from '../model/budgetForm';
@@ -25,17 +26,18 @@ export default function LockedCard({
   const money = (v: number) => formatWithCurrency(v, currency);
   if (l.kind === 'none') {
     return (
-      <View style={[styles.card, styles.warn]} accessibilityRole="alert">
-        <Text style={styles.warnText}>
-          ⚠ Не задано, сколько откладывать сразу: в сбережения уйдёт только то, что останется в конце месяца.
-        </Text>
+      <Banner
+        text="⚠ Не задано, сколько откладывать сразу: в сбережения уйдёт только то, что останется в конце месяца."
+        alert
+        style={styles.warn}
+      >
         <TextLink
           label="Задать в Настройках"
           onPress={onSettings}
           style={styles.link}
           containerStyle={styles.linkBox}
         />
-      </View>
+      </Banner>
     );
   }
   const taken = l.kind === 'pct' && l.taken > 0 ? l : null;
@@ -80,8 +82,7 @@ export default function LockedCard({
 
 const styles = StyleSheet.create({
   card: { marginTop: space[12], padding: space[12], borderRadius: radius.lg, backgroundColor: colors.savingsBg },
-  warn: { backgroundColor: colors.warnBg },
-  warnText: { fontSize: font.secondary, color: colors.warn },
+  warn: { marginTop: space[12] },
   head: { flexDirection: 'row', alignItems: 'center', gap: space[6] },
   title: { flex: 1, fontSize: font.meta, fontWeight: weight.bold, color: colors.muted, letterSpacing: 0.3 },
   value: { fontSize: font.body, fontWeight: weight.bold, color: RING_LOCKED, fontVariant: ['tabular-nums'] },
