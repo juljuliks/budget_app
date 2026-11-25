@@ -146,7 +146,7 @@ src/
 - **shared/ui**: `form`, `BottomSheet`, `Button`, `Checkbox`, `Chip`, `Segmented`, `RadioGroup`, `StepSlider`, `Donut`,
   `Meter`, `HueBar`, `ColorSwatches`, `ColorPickerSheet`, `EmojiPicker` (+ `emoji/`), `RangeCalendar` (сетка месяца — `MonthGrid`),
   `TextInputModal`, `StickyScrollView`, `SectionHeading`, `Fab`, `PlusButton`, `RowActions`, `CurrencyButton`,
-  `CurrencyPicker`, `Banner` (плашка), `Empty` (пусто), `ModeBanner` (режим списка: разбор категории, выбор операции для платежа), `icons`, `toast`, `sheetAlert`.
+  `CurrencyPicker`, `Banner` (плашка), `Empty` (пусто), `Toggle` (переключатель; со строкой и подсказкой — `SwitchRow`), `ModeBanner` (режим списка: разбор категории, выбор операции для платежа), `icons`, `toast`, `sheetAlert`.
 - **shared/lib**: `format`, `money`, `dateRange`, `dates` (бывший `stats/months`), `strings`, `useLast`, `useLatestRequest`.
 - **shared/theme**: `theme`, `formStyles`. `colors.ts` остаётся в ядре (`src/domain/`): палитру категорий берёт `db/`.
 - **app**: `App.tsx` (+ `MainTabs`, `useAppStartup`), `modals.tsx` → `ModalHost`, `SettingsButton`.

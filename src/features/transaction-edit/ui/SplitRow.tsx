@@ -5,6 +5,7 @@ import { currencySymbol, formatMoneyWithCurrency } from '@/shared/lib/money';
 import { CloseIcon } from '@/shared/ui/icons';
 import { colors } from '@/shared/theme/theme';
 import { font, radius, space } from '@/shared/theme/tokens';
+import Chip from '@/shared/ui/Chip';
 
 type Props = {
   index: number;
@@ -25,11 +26,7 @@ export default function SplitRow({ index, label, currency, text, rest, onText, o
     <View style={styles.row}>
       <View style={[styles.dot, { backgroundColor: SPLIT_COLORS[index % SPLIT_COLORS.length] }]} />
       <View style={styles.name}>
-        <TouchableOpacity style={styles.chip} onPress={onPickCategory} accessibilityLabel={`Категория: ${label}`}>
-          <Text style={styles.chipText} numberOfLines={1}>
-            {label}
-          </Text>
-        </TouchableOpacity>
+        <Chip label={label} onPress={onPickCategory} accessibilityLabel={`Категория: ${label}`} />
         {own ? <Text style={styles.hint}>остальное</Text> : null}
       </View>
       {own ? (
@@ -72,14 +69,6 @@ const styles = StyleSheet.create({
   },
   dot: { width: 10, height: 10, borderRadius: radius.xs },
   name: { flex: 1, alignItems: 'flex-start', gap: space[4] },
-  chip: {
-    paddingHorizontal: space[12],
-    paddingVertical: space[8],
-    borderRadius: radius.xl,
-    backgroundColor: colors.surface,
-    maxWidth: '100%',
-  },
-  chipText: { fontSize: font.body, color: colors.text },
   hint: { fontSize: font.meta, color: colors.muted, paddingLeft: space[4] },
   rest: { fontSize: font.input, color: colors.text, fontVariant: ['tabular-nums'] },
   danger: { color: colors.danger },

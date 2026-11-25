@@ -1,7 +1,8 @@
 import React from 'react';
-import { StyleProp, StyleSheet, Switch, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
+import { StyleProp, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
 import { colors } from '../theme/theme';
 import { font, space } from '../theme/tokens';
+import Toggle from './Toggle';
 
 type Props = {
   label: string;
@@ -29,14 +30,7 @@ export default function SwitchRow({ label, hint, on, onChange, change, disabled,
           </TouchableOpacity>
         ) : null}
       </View>
-      <Switch
-        value={on}
-        onValueChange={onChange}
-        disabled={disabled}
-        trackColor={{ true: colors.accent, false: colors.border }}
-        thumbColor={colors.white}
-        accessibilityLabel={label}
-      />
+      <Toggle label={label} value={on} onChange={onChange} disabled={disabled} />
     </View>
   );
 }

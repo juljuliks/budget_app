@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors } from '@/shared/theme/theme';
-import Toggle from './Toggle';
+import Toggle from '@/shared/ui/Toggle';
 import { useLockState } from '../model/useLockState';
 import { disableLock, enableLock } from '../model/commands';
 import { LOCK, LOCK_BIO_HINT, LOCK_OFF_HINT, LOCK_PIN_HINT, SET_UP } from '../texts';

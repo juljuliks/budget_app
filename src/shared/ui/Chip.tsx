@@ -117,6 +117,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.surface,
+    maxWidth: '100%',
   },
   // a long name is cut with "…" so several fit on a line
   chipSmall: { paddingHorizontal: space[10], paddingVertical: space[4], borderRadius: radius.lg, maxWidth: '48%' },

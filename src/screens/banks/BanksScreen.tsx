@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { toggleBank } from '@/features/banks';
 import { formatDay, formatTime, plural } from '@/shared/lib/format';
 import { formatMoneyWithCurrency } from '@/shared/lib/money';
@@ -11,6 +11,7 @@ import { colors } from '@/shared/theme/theme';
 import { BankInfo, useBanksInfo } from './model/useBanksInfo';
 import { font, radius, space, weight } from '@/shared/theme/tokens';
 import Banner from '@/shared/ui/Banner';
+import Toggle from '@/shared/ui/Toggle';
 
 const parseOf = (i: BankInfo) => (i.bank.builtIn ? 'встроенный' : `шаблоны сообщений · ${i.templates}`);
 const balanceOf = (i: BankInfo) =>
@@ -52,13 +53,7 @@ export default function BanksScreen() {
               <Text style={styles.badgeText}>{i.bank.short}</Text>
             </View>
             <Text style={styles.name}>{i.bank.name}</Text>
-            <Switch
-              value={i.on}
-              onValueChange={(on) => toggle(i, on)}
-              trackColor={{ true: colors.accent, false: colors.border }}
-              thumbColor={colors.white}
-              accessibilityLabel={`Читать ${i.bank.name}`}
-            />
+            <Toggle label={`Читать ${i.bank.name}`} value={i.on} onChange={(on) => toggle(i, on)} />
           </View>
           <View style={styles.grid}>
             <Text style={styles.key}>SMS от</Text>

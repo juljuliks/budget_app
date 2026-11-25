@@ -3,7 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import BottomSheet from '@/shared/ui/BottomSheet';
 import Segmented from '@/shared/ui/Segmented';
 import { colors } from '@/shared/theme/theme';
-import Toggle from './Toggle';
+import Toggle from '@/shared/ui/Toggle';
 import { useLockState } from '../model/useLockState';
 import { changePin, saveHideNotifications, saveLockDelay, switchBiometric } from '../model/commands';
 import { BIOMETRIC, CHANGE_PIN, DELAY, DELAYS, HIDE_NOTIFICATIONS, HIDE_NOTIFICATIONS_HINT, LOCK } from '../texts';
