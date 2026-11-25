@@ -1,12 +1,5 @@
 import React, { useCallback } from 'react';
-import {
-  ActivityIndicator,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
-  SectionList,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { type NativeScrollEvent, type NativeSyntheticEvent, SectionList, StyleSheet, View } from 'react-native';
 import type { Currency } from '@/db/fx';
 import type { TransactionRow } from '@/db/transactions';
 import { bankById } from '@/domain/banks';
@@ -19,6 +12,7 @@ import type { Row, Section } from '../model/listData';
 import SectionHeader from './SectionHeader';
 import { space } from '@/shared/theme/tokens';
 import Empty from '@/shared/ui/Empty';
+import Loading from '@/shared/ui/Loading';
 
 type Props = {
   /** a new filter remounts the list */
@@ -103,7 +97,7 @@ export default function OperationsList(p: Props) {
       onRefresh={p.onRefresh}
       ListFooterComponent={
         p.loadingMore ? (
-          <ActivityIndicator style={styles.footer} />
+          <Loading inline style={styles.footer} />
         ) : (
           <View style={[styles.footer, p.tallFooter && styles.footerTall]} />
         )
