@@ -10,6 +10,7 @@ import { FIND_CATEGORY, SEVERAL_HINT } from '../texts';
 import CategoryChooseList from './CategoryChooseList';
 import CategorySheet from './CategorySheet';
 import { font, space } from '@/shared/theme/tokens';
+import Empty from '@/shared/ui/Empty';
 
 type Props = ChooseProps & { title: string };
 
@@ -48,7 +49,7 @@ export default function CategoryPickerModal(props: Props) {
           onHold={c.hold}
           onNone={c.pressNone}
         />
-        {empty ? <Text style={styles.empty}>Не найдено.</Text> : null}
+        {empty ? <Empty compact>Не найдено.</Empty> : null}
       </SheetScrollView>
       {c.many ? (
         <SheetActions
@@ -87,6 +88,5 @@ const styles = StyleSheet.create({
   create: { marginTop: space[8] },
   hint: { fontSize: font.meta, color: colors.muted, lineHeight: 18 },
   picked: { fontSize: font.body, color: colors.text },
-  empty: { padding: space[32], textAlign: 'center', color: colors.muted },
   actions: { paddingHorizontal: space[16] },
 });

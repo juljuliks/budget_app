@@ -16,6 +16,7 @@ import SearchBar from '@/shared/ui/SearchBar';
 import StepsNav from '@/shared/ui/StepsNav';
 import { toastFailure } from '@/shared/ui/toast';
 import { font, radius, space } from '@/shared/theme/tokens';
+import Empty from '@/shared/ui/Empty';
 
 type Props = {
   ym: string;
@@ -110,10 +111,8 @@ export default function PlanAddModal({ ym, currency, visible, onClose, onPick }:
             </TouchableOpacity>
           </View>
         ))}
-        {rows?.length === 0 ? <Text style={styles.empty}>Все категории уже в плане.</Text> : null}
-        {rows !== null && rows.length > 0 && q && filtered.length === 0 ? (
-          <Text style={styles.empty}>Не найдено.</Text>
-        ) : null}
+        {rows?.length === 0 ? <Empty compact>Все категории уже в плане.</Empty> : null}
+        {rows !== null && rows.length > 0 && q && filtered.length === 0 ? <Empty compact>Не найдено.</Empty> : null}
       </SheetScrollView>
       <SheetActions submit={null} onCancel={onClose} style={styles.actions} />
     </BottomSheet>
@@ -140,6 +139,5 @@ const styles = StyleSheet.create({
   name: { fontSize: font.input, color: colors.text },
   note: { fontSize: font.meta, color: colors.muted },
   chevron: { fontSize: font.headline, color: colors.muted, marginLeft: space[8] },
-  empty: { color: colors.muted, textAlign: 'center', paddingVertical: space[16] },
   actions: { paddingHorizontal: space[16], marginTop: space[8] },
 });

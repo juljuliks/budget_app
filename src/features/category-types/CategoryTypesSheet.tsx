@@ -14,6 +14,7 @@ import { colors } from '@/shared/theme/theme';
 import { toast, toastFailure } from '@/shared/ui/toast';
 import { LOAD_FAILED } from '@/shared/lib/strings';
 import { font, space } from '@/shared/theme/tokens';
+import Empty from '@/shared/ui/Empty';
 
 /** Category sections ("Переводы", "Хобби", ...) in a sheet: create, edit (name and colors), delete. From the categories. */
 export default function CategoryTypesSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
@@ -85,7 +86,7 @@ export default function CategoryTypesSheet({ visible, onClose }: { visible: bool
             />
           </View>
         )}
-        ListEmptyComponent={<Text style={styles.empty}>Разделов нет. Нажмите «Создать».</Text>}
+        ListEmptyComponent={<Empty>Разделов нет. Нажмите «Создать».</Empty>}
       />
       <TypeEditModal
         visible={editing !== null}
@@ -113,5 +114,4 @@ const styles = StyleSheet.create({
   name: { fontSize: font.input, color: colors.text },
   note: { fontSize: font.caption, color: colors.muted, marginTop: space[2] },
   palette: { flexDirection: 'row', alignItems: 'center', gap: space[8], marginTop: space[6], alignSelf: 'flex-start' },
-  empty: { padding: space[32], textAlign: 'center', color: colors.muted },
 });

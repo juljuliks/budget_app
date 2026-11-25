@@ -13,6 +13,7 @@ import { useTrendsData } from './model/useTrendsData';
 import TrendRow from './parts/TrendRow';
 import { styles } from './parts/styles';
 import { ALL_CATEGORIES, LESS, MODE_HINT, MORE, NO_CHANGES, PICK_TITLE, TOO_EARLY } from './texts';
+import Empty from '@/shared/ui/Empty';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Trends'>;
 
@@ -34,7 +35,7 @@ export default function TrendsScreen(_: Props) {
         <SectionBand title={title} inset={16} />
       </View>
       {rows.length === 0 ? (
-        <Text style={styles.empty}>{NO_CHANGES}</Text>
+        <Empty inline>{NO_CHANGES}</Empty>
       ) : (
         rows.map((r) => <TrendRow key={r.category.id} row={r} currency={currency} />)
       )}

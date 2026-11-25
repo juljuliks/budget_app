@@ -11,6 +11,7 @@ import { useRootNavigation } from '@/shared/navigation/navigation';
 import Loading from '@/shared/ui/Loading';
 import { colors } from '@/shared/theme/theme';
 import { font, radius, space, weight } from '@/shared/theme/tokens';
+import Empty from '@/shared/ui/Empty';
 
 /** "Не распознано": bank messages no operation came from, newest first; a tap opens one for marking. */
 export default function UnparsedScreen() {
@@ -31,7 +32,7 @@ export default function UnparsedScreen() {
       data={list}
       keyExtractor={(m) => String(m.id)}
       ListHeaderComponent={<Text style={styles.hint}>{UNPARSED_HINT}</Text>}
-      ListEmptyComponent={<Text style={styles.empty}>Всё разобрано.</Text>}
+      ListEmptyComponent={<Empty>Всё разобрано.</Empty>}
       renderItem={({ item }) => (
         <TouchableOpacity style={styles.row} onPress={() => navigation.navigate('UnparsedMessage', { id: item.id })}>
           <View style={styles.top}>
@@ -54,7 +55,6 @@ export default function UnparsedScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   hint: { fontSize: font.secondary, lineHeight: 20, color: colors.muted, padding: space[16], paddingBottom: space[12] },
-  empty: { fontSize: font.body, color: colors.muted, textAlign: 'center', padding: space[32] },
   row: {
     paddingHorizontal: space[16],
     paddingVertical: space[14],

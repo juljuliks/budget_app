@@ -21,6 +21,7 @@ import { MergeCategoriesSheet } from '@/features/category-merge';
 import Button from '@/shared/ui/Button';
 import { toastFailure } from '@/shared/ui/toast';
 import { font, layout, radius, space, weight } from '@/shared/theme/tokens';
+import Empty from '@/shared/ui/Empty';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Categories'>;
 
@@ -117,9 +118,7 @@ export default function CategoriesScreen({ navigation }: Props) {
             onCancel={() => setPicked([])}
           />
         }
-        ListEmptyComponent={
-          <Text style={styles.empty}>{cats.length === 0 ? 'Категорий нет. Нажмите «Создать».' : 'Не найдено.'}</Text>
-        }
+        ListEmptyComponent={<Empty>{cats.length === 0 ? 'Категорий нет. Нажмите «Создать».' : 'Не найдено.'}</Empty>}
       />
       <NewCategorySheet visible={creating} onClose={() => setCreating(false)} onSaved={load} />
       {picked.length > 1 ? (
@@ -206,7 +205,6 @@ const styles = StyleSheet.create({
   },
   dot: { width: 10, height: 10, borderRadius: radius.xs, marginRight: space[10] },
   name: { flex: 1, fontSize: font.input, color: colors.text },
-  empty: { padding: space[32], textAlign: 'center', color: colors.muted },
   typesRow: {
     flexDirection: 'row',
     alignItems: 'center',

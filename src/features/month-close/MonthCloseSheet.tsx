@@ -14,6 +14,7 @@ import SplitSheet from './ui/SplitSheet';
 import StepSavings from './ui/StepSavings';
 import { styles } from './ui/styles';
 import { space } from '@/shared/theme/tokens';
+import Empty from '@/shared/ui/Empty';
 
 /** after this sheet has closed: one sheet at a time */
 const NEXT_SHEET_MS = 250;
@@ -69,7 +70,7 @@ export default function MonthCloseSheet({ ym, onClose }: { ym: string | null; on
               ) : null}
               {step === 'over' ? <StepOver c={c} onAnswer={answer} /> : null}
               {step === 'savings' ? <StepSavings c={c} onAnswer={answer} onSplit={() => setSplitOpen(true)} /> : null}
-              {!step ? <Text style={styles.empty}>{`Вопросов о ${words.prep} нет`}</Text> : null}
+              {!step ? <Empty inline>{`Вопросов о ${words.prep} нет`}</Empty> : null}
             </SheetScrollView>
             <View style={styles.actions}>
               {last || !step ? (

@@ -22,6 +22,7 @@ import { sheetAlert } from '@/shared/ui/sheetAlert';
 import { toast, toastFailure } from '@/shared/ui/toast';
 import { colors } from '@/shared/theme/theme';
 import { font, space, weight } from '@/shared/theme/tokens';
+import Empty from '@/shared/ui/Empty';
 
 const titleOf = (t: MessageTemplate) =>
   `${t.action === 'hide' ? 'Не операция' : (KIND_LABELS[t.kind ?? ''] ?? 'Операция')} · ${sourceLabel(t.source, bankById(t.bank)?.name)}`;
@@ -74,9 +75,7 @@ export default function MessageTemplatesScreen() {
         data={list}
         keyExtractor={(t) => String(t.id)}
         ListHeaderComponent={<Text style={styles.hint}>{TEMPLATES_HINT}</Text>}
-        ListEmptyComponent={
-          <Text style={styles.empty}>Шаблонов пока нет: они появляются из «Не распознано» в «Операциях».</Text>
-        }
+        ListEmptyComponent={<Empty>Шаблонов пока нет: они появляются из «Не распознано» в «Операциях».</Empty>}
         renderItem={({ item }) => (
           <View style={styles.row}>
             <View style={styles.flex}>
@@ -111,7 +110,6 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   list: { flex: 1 },
   hint: { fontSize: font.secondary, lineHeight: 20, color: colors.muted, padding: space[16], paddingBottom: space[12] },
-  empty: { fontSize: font.body, color: colors.muted, textAlign: 'center', padding: space[32] },
   row: {
     flexDirection: 'row',
     alignItems: 'flex-start',

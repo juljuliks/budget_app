@@ -12,6 +12,7 @@ import { MIXED, useMerchants } from './model/useMerchants';
 import MerchantRowView from './parts/MerchantRowView';
 import SectionBand from './parts/SectionBand';
 import { font, space } from '@/shared/theme/tokens';
+import Empty from '@/shared/ui/Empty';
 
 /**
  * Merchants by their category: "Без категории" first (what needs a category), then the categories in the
@@ -97,9 +98,7 @@ export default function MerchantsScreen() {
             }}
           />
         )}
-        ListEmptyComponent={
-          <Text style={styles.empty}>{list.filtering ? 'Не найдено.' : 'Мерчанты появятся после первых покупок.'}</Text>
-        }
+        ListEmptyComponent={<Empty>{list.filtering ? 'Не найдено.' : 'Мерчанты появятся после первых покупок.'}</Empty>}
         ListFooterComponent={<View style={styles.footer} />}
       />
 
@@ -141,7 +140,6 @@ const styles = StyleSheet.create({
   selectBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: space[8] },
   selectLabel: { fontSize: font.body, color: colors.text },
   cancelSelect: { fontSize: font.body, color: colors.accent },
-  empty: { padding: space[32], textAlign: 'center', color: colors.muted },
   footer: { height: 88 },
   bottomBar: {
     position: 'absolute',

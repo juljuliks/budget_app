@@ -16,6 +16,7 @@ import { colors } from '../theme/theme';
 // [emoji, group, emoji version, search words in Russian and English] — built by scripts/build_emoji.js
 import EMOJI from './emoji/emoji.json';
 import { font, radius, space, weight } from '../theme/tokens';
+import Empty from './Empty';
 
 type Props = {
   visible: boolean;
@@ -174,7 +175,7 @@ export default function EmojiPicker({ visible, value, onPick, onClose }: Props) 
         initialNumToRender={20}
         windowSize={7}
         contentContainerStyle={styles.content}
-        ListEmptyComponent={<Text style={styles.empty}>Ничего не найдено</Text>}
+        ListEmptyComponent={<Empty>Ничего не найдено</Empty>}
         renderItem={({ item }) =>
           'header' in item ? (
             <Text style={styles.header}>{item.header}</Text>
@@ -237,6 +238,5 @@ const styles = StyleSheet.create({
   cell: { height: ROW_HEIGHT, alignItems: 'center', justifyContent: 'center', borderRadius: radius.md },
   selected: { backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.accent },
   emoji: { fontSize: font.display, color: colors.emoji },
-  empty: { padding: space[24], textAlign: 'center', color: colors.muted },
   actions: { paddingHorizontal: space[16], marginTop: space[8] },
 });

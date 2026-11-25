@@ -1,6 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import Banner from '@/shared/ui/Banner';
+import Empty from '@/shared/ui/Empty';
 import ModeBanner from '@/shared/ui/ModeBanner';
 
 // shared/ui on its own: what each prop shows and does (one look for every copy, stage 4 of REFACTOR_PLAN.md)
@@ -39,5 +40,20 @@ describe('Banner', () => {
     expect(screen.getByText('Удаление «Такси»')).toBeTruthy();
     fireEvent.press(screen.getByTestId('sort-out-cancel'));
     expect(cancel).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('Empty', () => {
+  test('the text, in every variant', () => {
+    render(
+      <>
+        <Empty>Не найдено.</Empty>
+        <Empty compact>Пока пусто</Empty>
+        <Empty inline>Изменений нет</Empty>
+      </>,
+    );
+    expect(screen.getByText('Не найдено.')).toBeTruthy();
+    expect(screen.getByText('Пока пусто')).toBeTruthy();
+    expect(screen.getByText('Изменений нет')).toBeTruthy();
   });
 });

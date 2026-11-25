@@ -58,5 +58,4 @@ export const styles = StyleSheet.create({
   splitValue: { fontSize: font.body, fontWeight: weight.medium, color: colors.text, fontVariant: ['tabular-nums'] },
   splitOf: { fontSize: font.caption, color: colors.muted },
   actions: { paddingHorizontal: space[16] },
-  empty: { fontSize: font.body, color: colors.muted, paddingHorizontal: space[20], paddingVertical: space[12] },
 });

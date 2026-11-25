@@ -7,7 +7,6 @@ export const styles = StyleSheet.create({
   content: { paddingBottom: space[24] },
   pad: { paddingHorizontal: space[16] },
   hint: { fontSize: font.meta, color: colors.muted, marginTop: space[8], lineHeight: 18 },
-  empty: { fontSize: font.body, color: colors.muted, paddingHorizontal: space[16], paddingVertical: space[14] },
 
   row: {
     paddingHorizontal: space[16],

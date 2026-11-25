@@ -9,6 +9,7 @@ import RangeCalendar, { DayRange, formatRange } from '@/shared/ui/RangeCalendar'
 import { colors } from '@/shared/theme/theme';
 import { normalizeForSearch } from '@/db/transactions';
 import { font, radius, space } from '@/shared/theme/tokens';
+import Empty from '@/shared/ui/Empty';
 
 /** "Категория ⌄" / "Мерчант · 2 ⌄" / "Дата ⌄": opens its picker sheet; blue while set. */
 export function FilterButton({
@@ -106,7 +107,7 @@ export function OptionsSheet<K extends string | number>({
         keyExtractor={(o) => String(o.key)}
         keyboardShouldPersistTaps="handled"
         style={styles.list}
-        ListEmptyComponent={<Text style={styles.empty}>{query ? 'Не найдено' : 'Пока пусто'}</Text>}
+        ListEmptyComponent={<Empty compact>{query ? 'Не найдено' : 'Пока пусто'}</Empty>}
         renderItem={({ item }) => {
           const on = selected.includes(item.key);
           return (
@@ -192,7 +193,7 @@ export function AllFiltersSheet({
             }}
           />
         ) : (
-          <Text style={styles.empty}>Фильтров нет</Text>
+          <Empty compact>Фильтров нет</Empty>
         )}
       </View>
       <View style={styles.footer}>
@@ -244,7 +245,6 @@ const styles = StyleSheet.create({
   optionLabel: { flex: 1, fontSize: font.body, color: colors.text },
   muted: { color: colors.muted },
   count: { fontSize: font.meta, color: colors.muted, fontVariant: ['tabular-nums'] },
-  empty: { color: colors.muted, textAlign: 'center', paddingVertical: space[16] },
   calendar: { paddingHorizontal: space[16] },
   chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: space[6] },
   allChips: { paddingHorizontal: space[20], paddingVertical: space[8] },

@@ -5,7 +5,6 @@ import {
   type NativeSyntheticEvent,
   SectionList,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
 import type { Currency } from '@/db/fx';
@@ -19,6 +18,7 @@ import { toastFailure } from '@/shared/ui/toast';
 import type { Row, Section } from '../model/listData';
 import SectionHeader from './SectionHeader';
 import { space } from '@/shared/theme/tokens';
+import Empty from '@/shared/ui/Empty';
 
 type Props = {
   /** a new filter remounts the list */
@@ -108,7 +108,7 @@ export default function OperationsList(p: Props) {
           <View style={[styles.footer, p.tallFooter && styles.footerTall]} />
         )
       }
-      ListEmptyComponent={<Text style={styles.empty}>{p.emptyText}</Text>}
+      ListEmptyComponent={<Empty>{p.emptyText}</Empty>}
     />
   );
 }
@@ -122,5 +122,4 @@ const styles = StyleSheet.create({
   footer: { paddingVertical: space[16], marginBottom: FAB_ROOM },
   // edit mode: room for two buttons in the bottom bar
   footerTall: { marginBottom: BAR_ROOM },
-  empty: { padding: space[32], textAlign: 'center', color: colors.muted },
 });
