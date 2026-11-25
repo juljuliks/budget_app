@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
-  dot: { width: 10, height: 10, borderRadius: radius.xs, marginRight: space[10] },
+  dot: { width: 10, height: 10, borderRadius: radius.pill, marginRight: space[10] },
   name: { flex: 1, fontSize: font.input, color: colors.text },
   typesRow: {
     flexDirection: 'row',

@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
-  dot: { width: 10, height: 10, borderRadius: radius.xs, marginRight: space[10] },
+  dot: { width: 10, height: 10, borderRadius: radius.pill, marginRight: space[10] },
   text: { flex: 1, gap: space[2] },
   name: { fontSize: font.input, color: colors.text },
   note: { fontSize: font.meta, color: colors.muted },

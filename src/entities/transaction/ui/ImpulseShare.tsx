@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
   bar: {
     flexDirection: 'row',
     height: 10,
-    borderRadius: radius.xs,
+    borderRadius: radius.pill,
     overflow: 'hidden',
     gap: space[2],
     marginTop: space[4],

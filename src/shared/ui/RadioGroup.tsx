@@ -49,7 +49,7 @@ const styles = StyleSheet.create({
     marginRight: space[10],
   },
   circleOn: { borderColor: colors.accent },
-  dot: { width: 10, height: 10, borderRadius: radius.xs, backgroundColor: colors.accent },
+  dot: { width: 10, height: 10, borderRadius: radius.pill, backgroundColor: colors.accent },
   texts: { flex: 1 },
   label: { fontSize: font.body, color: colors.text },
   hint: { fontSize: font.caption, color: colors.muted, marginTop: space[1] },

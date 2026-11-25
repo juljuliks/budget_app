@@ -12,6 +12,7 @@ import { BankInfo, useBanksInfo } from './model/useBanksInfo';
 import { font, radius, space, weight } from '@/shared/theme/tokens';
 import Banner from '@/shared/ui/Banner';
 import Toggle from '@/shared/ui/Toggle';
+import BankBadge from '@/shared/ui/BankBadge';
 
 const parseOf = (i: BankInfo) => (i.bank.builtIn ? 'встроенный' : `шаблоны сообщений · ${i.templates}`);
 const balanceOf = (i: BankInfo) =>
@@ -49,9 +50,7 @@ export default function BanksScreen() {
       {info.map((i) => (
         <View key={i.bank.id} style={styles.card}>
           <View style={styles.head}>
-            <View style={[styles.badge, { backgroundColor: i.bank.color }]}>
-              <Text style={styles.badgeText}>{i.bank.short}</Text>
-            </View>
+            <BankBadge short={i.bank.short} color={i.bank.color} large />
             <Text style={styles.name}>{i.bank.name}</Text>
             <Toggle label={`Читать ${i.bank.name}`} value={i.on} onChange={(on) => toggle(i, on)} />
           </View>
@@ -92,8 +91,6 @@ const styles = StyleSheet.create({
   hint: { fontSize: font.secondary, color: colors.muted, lineHeight: 20 },
   card: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, padding: space[14], gap: space[10] },
   head: { flexDirection: 'row', alignItems: 'center', gap: space[10] },
-  badge: { width: 34, height: 34, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
-  badgeText: { fontSize: font.caption, fontWeight: weight.bold, color: colors.onAccent },
   name: { flex: 1, fontSize: font.input, fontWeight: weight.medium, color: colors.text },
   grid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: space[6] },
   key: { width: '34%', fontSize: font.secondary, color: colors.muted },

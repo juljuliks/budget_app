@@ -10,6 +10,7 @@ import { formatMoneyWithCurrency } from '@/shared/lib/money';
 import { sheetAlert } from '@/shared/ui/sheetAlert';
 import { colors } from '@/shared/theme/theme';
 import { font, radius, space, weight } from '@/shared/theme/tokens';
+import BankBadge from '@/shared/ui/BankBadge';
 
 type Card = { bank: BankId; balance: Balance | null };
 
@@ -61,9 +62,7 @@ export default function CardBalance() {
               onPress={() => balance && explain(balance)}
               accessibilityLabel={`${b.name}: ${balance ? `${formatMoneyWithCurrency(balance.minor, balance.currency)}, ${noteOf(balance)}` : 'баланса пока нет'}`}
             >
-              <View style={[styles.badge, { backgroundColor: b.color }]}>
-                <Text style={styles.badgeText}>{b.short}</Text>
-              </View>
+              <BankBadge short={b.short} color={b.color} />
               <Text style={[styles.note, styles.lineNote]} numberOfLines={1}>
                 {balance ? noteOf(balance) : 'после SMS с балансом'}
               </Text>
@@ -122,6 +121,4 @@ const styles = StyleSheet.create({
   line: { flexDirection: 'row', alignItems: 'center', gap: space[10], paddingVertical: space[6] },
   lineNote: { flex: 1, marginTop: 0 },
   lineAmount: { fontSize: font.input, fontWeight: weight.bold, color: colors.text, fontVariant: ['tabular-nums'] },
-  badge: { width: 28, height: 28, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
-  badgeText: { fontSize: font.micro, fontWeight: weight.bold, color: colors.onAccent },
 });

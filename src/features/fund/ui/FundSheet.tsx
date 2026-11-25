@@ -123,12 +123,12 @@ const styles = StyleSheet.create({
   track: {
     flexDirection: 'row',
     height: 10,
-    borderRadius: radius.xs,
+    borderRadius: radius.pill,
     backgroundColor: colors.fundTrack,
     overflow: 'hidden',
     marginTop: space[10],
   },
-  fill: { backgroundColor: colors.fund, borderRadius: radius.xs },
+  fill: { backgroundColor: colors.fund, borderRadius: radius.pill },
   line: { flexDirection: 'row', justifyContent: 'space-between', gap: space[12], marginTop: space[10] },
   lineText: { flex: 1, fontSize: font.secondary, color: colors.muted },
   lineValue: {

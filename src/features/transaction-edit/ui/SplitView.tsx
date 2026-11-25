@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
   editText: { fontSize: font.body, color: colors.accent },
   row: { flexDirection: 'row', alignItems: 'center', gap: space[10], paddingVertical: space[12] },
   divider: { borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
-  dot: { width: 10, height: 10, borderRadius: radius.xs },
+  dot: { width: 10, height: 10, borderRadius: radius.pill },
   name: { flex: 1 },
   share: { fontSize: font.secondary, color: colors.muted, fontVariant: ['tabular-nums'] },
   amount: { minWidth: 84, textAlign: 'right', fontSize: font.input, color: colors.text, fontVariant: ['tabular-nums'] },

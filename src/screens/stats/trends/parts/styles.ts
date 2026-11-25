@@ -15,7 +15,7 @@ export const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   rowTop: { flexDirection: 'row', alignItems: 'center', gap: space[10] },
-  dot: { width: 10, height: 10, borderRadius: radius.xs },
+  dot: { width: 10, height: 10, borderRadius: radius.pill },
   name: { flex: 1, fontSize: font.input, color: colors.text },
   delta: { fontSize: font.input, fontWeight: weight.semibold, color: colors.text, fontVariant: ['tabular-nums'] },
   line: { fontSize: font.secondary, color: colors.muted, marginTop: space[4] },

@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   mark: { width: 16, marginRight: space[10], alignItems: 'center' },
-  dot: { width: 10, height: 10, borderRadius: radius.xs },
+  dot: { width: 10, height: 10, borderRadius: radius.pill },
   name: { flex: 1, fontSize: font.input, color: colors.text },
   grip: { width: 14, gap: space[4], marginLeft: space[10] },
   gripBar: { height: 2, borderRadius: radius.xs, backgroundColor: colors.muted },

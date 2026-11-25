@@ -43,7 +43,7 @@ export const styles = StyleSheet.create({
   groupTotal: { fontSize: font.meta, fontWeight: weight.semibold, color: colors.text, fontVariant: ['tabular-nums'] },
   row: { paddingVertical: space[10], borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
   rowTop: { flexDirection: 'row', alignItems: 'center' },
-  dot: { width: 10, height: 10, borderRadius: radius.xs, marginRight: space[8] },
+  dot: { width: 10, height: 10, borderRadius: radius.pill, marginRight: space[8] },
   name: { flex: 1, fontSize: font.body, color: colors.text },
   pace: { fontWeight: weight.semibold },
   paceOk: { color: colors.income },

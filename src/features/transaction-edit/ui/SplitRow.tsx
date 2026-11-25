@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
-  dot: { width: 10, height: 10, borderRadius: radius.xs },
+  dot: { width: 10, height: 10, borderRadius: radius.pill },
   name: { flex: 1, alignItems: 'flex-start', gap: space[4] },
   hint: { fontSize: font.meta, color: colors.muted, paddingLeft: space[4] },
   rest: { fontSize: font.input, color: colors.text, fontVariant: ['tabular-nums'] },

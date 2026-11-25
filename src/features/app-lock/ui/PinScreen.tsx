@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
   heading: { fontSize: font.heading, fontWeight: weight.semibold, color: colors.text },
   hint: { fontSize: font.secondary, color: colors.muted, textAlign: 'center' },
   dots: { flexDirection: 'row', gap: space[14], height: 24, alignItems: 'center' },
-  dot: { width: 14, height: 14, borderRadius: radius.sm, borderWidth: 2, borderColor: colors.faint },
+  dot: { width: 14, height: 14, borderRadius: radius.pill, borderWidth: 2, borderColor: colors.faint },
   dotOn: { backgroundColor: colors.accent, borderColor: colors.accent },
   error: { fontSize: font.secondary, color: colors.danger, textAlign: 'center', minHeight: 20 },
   link: { fontSize: font.body, fontWeight: weight.semibold, color: colors.accent, padding: space[4] },

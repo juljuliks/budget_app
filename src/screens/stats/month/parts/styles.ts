@@ -81,7 +81,7 @@ export const styles = StyleSheet.create({
   rowSub: { fontSize: font.meta, color: colors.muted, marginTop: space[2], marginLeft: space[20] },
   rowSubLine: { flexDirection: 'row', alignItems: 'center', marginTop: space[2], marginLeft: space[20] },
   rowSubText: { flexShrink: 1, fontSize: font.meta, color: colors.muted },
-  dot: { width: 10, height: 10, borderRadius: radius.xs, marginRight: space[8] },
+  dot: { width: 10, height: 10, borderRadius: radius.pill, marginRight: space[8] },
   rowName: { flexShrink: 1, fontSize: font.body, color: colors.text },
   addToPlan: {
     marginLeft: space[8],
