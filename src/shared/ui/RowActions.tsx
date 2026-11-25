@@ -21,11 +21,23 @@ export default function RowActions({ onEdit, onDelete, subject, deleteDisabled }
   return (
     <View style={styles.row}>
       {onEdit ? (
-        <TouchableOpacity style={styles.action} hitSlop={6} onPress={onEdit} accessibilityLabel={`Изменить${suffix}`}>
+        <TouchableOpacity
+          accessibilityRole="button"
+          style={styles.action}
+          hitSlop={6}
+          onPress={onEdit}
+          accessibilityLabel={`Изменить${suffix}`}
+        >
           <PencilIcon color={colors.muted} size={ROW_ICON_SIZE} />
         </TouchableOpacity>
       ) : null}
-      <TouchableOpacity style={styles.action} hitSlop={6} onPress={onDelete} accessibilityLabel={`Удалить${suffix}`}>
+      <TouchableOpacity
+        accessibilityRole="button"
+        style={styles.action}
+        hitSlop={6}
+        onPress={onDelete}
+        accessibilityLabel={`Удалить${suffix}`}
+      >
         <TrashIcon color={deleteDisabled ? colors.border : colors.danger} size={ROW_ICON_SIZE} />
       </TouchableOpacity>
     </View>

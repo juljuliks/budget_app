@@ -18,7 +18,12 @@ export default function SectionHeading({ title, onSettings, settingsLabel, right
     <View style={styles.row}>
       <Text style={[styles.title, right ? styles.grow : null]}>{title}</Text>
       {onSettings ? (
-        <TouchableOpacity onPress={onSettings} hitSlop={12} accessibilityLabel={settingsLabel ?? `Настройки: ${title}`}>
+        <TouchableOpacity
+          accessibilityRole="button"
+          onPress={onSettings}
+          hitSlop={12}
+          accessibilityLabel={settingsLabel ?? `Настройки: ${title}`}
+        >
           <GearIcon color={colors.muted} size={18} />
         </TouchableOpacity>
       ) : null}

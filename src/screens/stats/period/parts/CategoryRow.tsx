@@ -35,6 +35,7 @@ export function CategoryRow({ v, h, c, noBar = false, withType = v.byLimits }: P
   return (
     // tap: the category's operations in this period (the ⓘ line inside keeps its own tap)
     <TouchableOpacity
+      accessibilityRole="button"
       style={styles.row}
       onPress={() => h.openTransactions(c.category_id)}
       accessibilityHint="Показать операции категории за период"
@@ -96,6 +97,7 @@ export function PlainRow({
 }) {
   return (
     <TouchableOpacity
+      accessibilityRole="button"
       style={styles.row}
       onPress={() => h.openTransactions(c.category_id)}
       accessibilityHint="Показать операции категории за период"

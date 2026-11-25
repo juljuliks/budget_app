@@ -53,7 +53,12 @@ export default function LimitSummary({ v, g, onInfo }: Props) {
           <View style={[styles.stackTick, { left: `${(limit / g.spent) * 100}%` }]} />
         ) : null}
       </View>
-      <TouchableOpacity style={styles.paceRow} onPress={onInfo} accessibilityLabel="Как считается раздел">
+      <TouchableOpacity
+        accessibilityRole="button"
+        style={styles.paceRow}
+        onPress={onInfo}
+        accessibilityLabel="Как считается раздел"
+      >
         <Text style={[styles.share, styles.paceText]}>
           {/* as in the category rows: the limit first, then what's left */}
           {g.change && rhythm && hidden ? (

@@ -96,7 +96,12 @@ export function OptionsSheet<K extends string | number>({
             autoCorrect={false}
           />
           {query ? (
-            <TouchableOpacity onPress={() => setQuery('')} hitSlop={10} accessibilityLabel="Очистить">
+            <TouchableOpacity
+              accessibilityRole="button"
+              onPress={() => setQuery('')}
+              hitSlop={10}
+              accessibilityLabel="Очистить"
+            >
               <Text style={styles.clear}>✕</Text>
             </TouchableOpacity>
           ) : null}
@@ -153,7 +158,7 @@ export function DateSheet({
       <View style={styles.footer}>
         <Button title="Готово" onPress={onClose} />
         {value ? (
-          <TouchableOpacity style={styles.secondary} onPress={() => onChange(null)}>
+          <TouchableOpacity accessibilityRole="button" style={styles.secondary} onPress={() => onChange(null)}>
             <Text style={styles.secondaryText}>Сбросить даты</Text>
           </TouchableOpacity>
         ) : null}

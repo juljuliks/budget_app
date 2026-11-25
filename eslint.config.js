@@ -120,8 +120,8 @@ module.exports = tseslint.config(
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'error',
       // accessibility (REFACTOR_PLAN.md C5): warnings until stage 7
-      'app/touchable-role': 'warn',
-      'app/icon-touchable-label': 'warn',
+      'app/touchable-role': 'error',
+      'app/icon-touchable-label': 'error',
       'app/icon-touchable-hit-slop': 'warn',
     },
   },

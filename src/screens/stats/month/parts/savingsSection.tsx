@@ -139,6 +139,7 @@ function Part({
   ) : (
     // what is saved up for the payments: a tap opens them too (the coming ones)
     <TouchableOpacity
+      accessibilityRole="button"
       style={styles.row}
       onPress={x.key.startsWith('saving-') ? onLongPress : undefined}
       onLongPress={onLongPress}

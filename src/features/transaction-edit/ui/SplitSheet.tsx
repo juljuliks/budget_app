@@ -91,7 +91,7 @@ export default function SplitSheet({ visible, tx, onClose, seed }: Props) {
             onRemove={() => setDraft((d) => ({ ...d, parts: d.parts.filter((_, k) => k !== i) }))}
           />
         ))}
-        <TouchableOpacity style={styles.add} onPress={() => setChoosing(true)}>
+        <TouchableOpacity accessibilityRole="button" style={styles.add} onPress={() => setChoosing(true)}>
           <Text style={styles.addText}>+ Ещё категория</Text>
         </TouchableOpacity>
         {state.error ? (

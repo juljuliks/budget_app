@@ -19,7 +19,7 @@ export function SectionHeader({
   return (
     <View style={style}>
       {onLongPress ? (
-        <TouchableOpacity style={styles.row} onLongPress={onLongPress} activeOpacity={1}>
+        <TouchableOpacity accessibilityRole="button" style={styles.row} onLongPress={onLongPress} activeOpacity={1}>
           {children}
         </TouchableOpacity>
       ) : (

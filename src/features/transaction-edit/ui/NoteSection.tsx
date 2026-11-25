@@ -32,12 +32,17 @@ export default function NoteSection({
     <>
       <SectionHeading title="Описание" />
       {note ? (
-        <TouchableOpacity style={styles.note} onPress={() => setOpen(true)} accessibilityLabel="Изменить описание">
+        <TouchableOpacity
+          accessibilityRole="button"
+          style={styles.note}
+          onPress={() => setOpen(true)}
+          accessibilityLabel="Изменить описание"
+        >
           <Text style={styles.noteText}>{note}</Text>
           <PencilIcon color={colors.muted} size={16} />
         </TouchableOpacity>
       ) : (
-        <TouchableOpacity onPress={() => setOpen(true)} hitSlop={8}>
+        <TouchableOpacity accessibilityRole="button" onPress={() => setOpen(true)} hitSlop={8}>
           <Text style={styles.link}>＋ Добавить описание</Text>
         </TouchableOpacity>
       )}

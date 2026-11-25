@@ -27,7 +27,12 @@ export default function SearchBar({
         autoCorrect={false}
       />
       {value ? (
-        <TouchableOpacity onPress={() => onChange('')} hitSlop={10} accessibilityLabel="Очистить поиск">
+        <TouchableOpacity
+          accessibilityRole="button"
+          onPress={() => onChange('')}
+          hitSlop={10}
+          accessibilityLabel="Очистить поиск"
+        >
           <Text style={styles.clear}>✕</Text>
         </TouchableOpacity>
       ) : null}

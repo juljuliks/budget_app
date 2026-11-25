@@ -42,7 +42,13 @@ export default function MenuButton() {
   return (
     // one element of the header's row: the sheet's modal inside it, not a neighbour (the row's gap would shift ⋮)
     <View>
-      <TouchableOpacity onPress={() => setOpen(true)} hitSlop={10} style={styles.button} accessibilityLabel="Меню">
+      <TouchableOpacity
+        accessibilityRole="button"
+        onPress={() => setOpen(true)}
+        hitSlop={10}
+        style={styles.button}
+        accessibilityLabel="Меню"
+      >
         <MoreIcon color={colors.accent} size={22} />
       </TouchableOpacity>
       <BottomSheet visible={open} onClose={() => setOpen(false)}>

@@ -52,6 +52,7 @@ export function yearSpending({ v, h, r, segments, picked, selected, onSelect, on
       </View>
       {v.summary ? (
         <TouchableOpacity
+          accessibilityRole="button"
           style={styles.summaryRow}
           onPress={() => h.openInfo('summary')}
           accessibilityLabel="Как считаются траты"

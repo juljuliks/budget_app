@@ -62,6 +62,7 @@ export default function RangeCalendar({ value, onChange, single, maxDay, minDay 
             const off = (maxDay !== undefined && day > maxDay) || (minDay !== undefined && day < minDay);
             return (
               <TouchableOpacity
+                accessibilityRole="button"
                 key={day}
                 testID={`day-${day}`}
                 style={[gridStyles.cell, inRange && styles.inRange, isEdge && styles.edge]}

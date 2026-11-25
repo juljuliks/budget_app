@@ -60,6 +60,7 @@ export default function Chip({
     );
   return (
     <TouchableOpacity
+      accessibilityRole="button"
       style={[
         styles.chip,
         small && styles.chipSmall,

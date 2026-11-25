@@ -64,6 +64,7 @@ export default function FundTrend({
       <View style={styles.chart} accessibilityLabel="Отложено и потрачено по месяцам">
         {f.bars.map((b, i) => (
           <TouchableOpacity
+            accessibilityRole="button"
             key={b.ym}
             style={styles.col}
             onPress={() => setPicked(i)}

@@ -57,7 +57,7 @@ export default function MonthRow({ month, expanded, onToggle, currency }: Props)
 
   return (
     <View style={styles.month}>
-      <TouchableOpacity onPress={onToggle}>
+      <TouchableOpacity accessibilityRole="button" onPress={onToggle}>
         <View style={styles.monthTop}>
           <Text style={styles.monthTitle}>{monthTitle(year, m)}</Text>
           {/* the app's chevron, as on «за месяц» and the filters: up while open */}

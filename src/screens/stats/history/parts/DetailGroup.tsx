@@ -33,7 +33,12 @@ export default function DetailGroup({ title, planned, spent, categories, money, 
       {categories.map((c) => {
         const over = !!c.limit_minor && c.spent_minor > c.limit_minor;
         return (
-          <TouchableOpacity key={String(c.category_id)} style={styles.detailRow} onPress={() => onOpen(c)}>
+          <TouchableOpacity
+            accessibilityRole="button"
+            key={String(c.category_id)}
+            style={styles.detailRow}
+            onPress={() => onOpen(c)}
+          >
             <Text style={styles.detailName} numberOfLines={1}>
               {`${c.emoji || ''} ${c.name}`.trim()}
             </Text>

@@ -32,6 +32,7 @@ export function AutoButton({
 }) {
   return (
     <TouchableOpacity
+      accessibilityRole="button"
       style={[styles.auto, selected && styles.autoSelected, style]}
       onPress={onPress}
       accessibilityLabel={accessibilityLabel}
@@ -53,6 +54,7 @@ export default function ColorSwatches({ options, value, onChange, onAuto, onCust
       />
       {options.map((c) => (
         <TouchableOpacity
+          accessibilityRole="button"
           key={c}
           style={[styles.ring, value === c && styles.selected]}
           onPress={() => onChange(c)}

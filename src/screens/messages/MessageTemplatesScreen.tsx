@@ -86,6 +86,7 @@ export default function MessageTemplatesScreen() {
               <Text style={styles.used}>{usedOf(item)}</Text>
             </View>
             <TouchableOpacity
+              accessibilityRole="button"
               onPress={() => remove(item)}
               style={styles.trash}
               accessibilityLabel={`Удалить шаблон: ${titleOf(item)}`}

@@ -54,6 +54,7 @@ export default function CardBalance() {
           const b = bankById(bank)!;
           return (
             <TouchableOpacity
+              accessibilityRole="button"
               key={bank}
               style={styles.line}
               disabled={!balance}
@@ -87,6 +88,7 @@ export default function CardBalance() {
   }
   return (
     <TouchableOpacity
+      accessibilityRole="button"
       style={styles.box}
       onPress={() => explain(balance)}
       accessibilityLabel={`Баланс карты ${formatMoneyWithCurrency(balance.minor, balance.currency)}, ${noteOf(balance)}`}

@@ -75,7 +75,7 @@ export default function OutsideBlock({ v, currency, onPlan, onSortOut, page }: P
         </>
       ) : null}
       {r.uncategorizedCount > 0 ? (
-        <TouchableOpacity style={styles.lineRow} onPress={onSortOut}>
+        <TouchableOpacity accessibilityRole="button" style={styles.lineRow} onPress={onSortOut}>
           <Text style={[styles.lineLabel, styles.lineStrong]}>
             Без категории: {r.uncategorizedCount} {plural(r.uncategorizedCount, ['операция', 'операции', 'операций'])}
           </Text>

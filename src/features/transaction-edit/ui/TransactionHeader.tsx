@@ -25,7 +25,12 @@ type Props = {
 export default function TransactionHeader({ tx, onEditAmount, onEditKind, merchantLinked }: Props) {
   return (
     <>
-      <TouchableOpacity style={styles.amountRow} onPress={onEditAmount} accessibilityLabel="Изменить сумму">
+      <TouchableOpacity
+        accessibilityRole="button"
+        style={styles.amountRow}
+        onPress={onEditAmount}
+        accessibilityLabel="Изменить сумму"
+      >
         <Text style={[styles.amount, isIncome(tx.kind) && styles.income]}>
           {formatAmount(tx.amount_minor, tx.currency, tx.kind)}
         </Text>
@@ -37,7 +42,12 @@ export default function TransactionHeader({ tx, onEditAmount, onEditKind, mercha
       ) : canChangeKind(tx) ? (
         <View style={styles.kindRow}>
           <Text style={[styles.merchant, styles.kindTitle]}>{merchantLabel(tx)}</Text>
-          <TouchableOpacity onPress={onEditKind} hitSlop={8} accessibilityLabel="Сменить тип">
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={onEditKind}
+            hitSlop={8}
+            accessibilityLabel="Сменить тип"
+          >
             <PencilIcon color={colors.accent} size={16} />
           </TouchableOpacity>
         </View>

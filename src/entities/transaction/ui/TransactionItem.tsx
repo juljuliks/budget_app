@@ -40,6 +40,7 @@ function TransactionItem({ tx, onPress, onLongPress, selectable, selected, bankL
   const split = splitRow(tx);
   return (
     <TouchableOpacity
+      accessibilityRole="button"
       style={[styles.row, selected && styles.rowSelected]}
       onPress={() => {
         if (longPressed.current) longPressed.current = false;

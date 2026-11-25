@@ -22,6 +22,7 @@ const ROWS = [
 export default function Keypad({ onDigit, onErase, onBiometric, disabled }: Props) {
   const digit = (d: string) => (
     <TouchableOpacity
+      accessibilityRole="button"
       key={d}
       style={[styles.key, styles.digit]}
       onPress={() => onDigit(d)}
@@ -40,14 +41,25 @@ export default function Keypad({ onDigit, onErase, onBiometric, disabled }: Prop
       ))}
       <View style={styles.row}>
         {onBiometric ? (
-          <TouchableOpacity style={styles.key} onPress={onBiometric} accessibilityLabel="Отпечаток">
+          <TouchableOpacity
+            accessibilityRole="button"
+            style={styles.key}
+            onPress={onBiometric}
+            accessibilityLabel="Отпечаток"
+          >
             <FingerprintIcon color={colors.accent} />
           </TouchableOpacity>
         ) : (
           <View style={styles.key} />
         )}
         {digit('0')}
-        <TouchableOpacity style={styles.key} onPress={onErase} disabled={disabled} accessibilityLabel="Стереть">
+        <TouchableOpacity
+          accessibilityRole="button"
+          style={styles.key}
+          onPress={onErase}
+          disabled={disabled}
+          accessibilityLabel="Стереть"
+        >
           <BackspaceIcon color={colors.text} />
         </TouchableOpacity>
       </View>

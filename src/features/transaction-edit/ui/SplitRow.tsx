@@ -48,7 +48,12 @@ export default function SplitRow({ index, label, currency, text, rest, onText, o
         </View>
       )}
       {onRemove ? (
-        <TouchableOpacity style={styles.remove} onPress={onRemove} accessibilityLabel={`Убрать: ${label}`}>
+        <TouchableOpacity
+          accessibilityRole="button"
+          style={styles.remove}
+          onPress={onRemove}
+          accessibilityLabel={`Убрать: ${label}`}
+        >
           <CloseIcon color={colors.muted} size={18} />
         </TouchableOpacity>
       ) : (

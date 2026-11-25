@@ -53,7 +53,12 @@ export function PlanItemRow({ p, item, ym, currency, hidden, toShown, onOpen }: 
         ? normText(item, ym, currency)
         : '';
   return (
-    <TouchableOpacity style={styles.row} onPress={onOpen} accessibilityLabel={`Изменить: ${categoryLabel(item)}`}>
+    <TouchableOpacity
+      accessibilityRole="button"
+      style={styles.row}
+      onPress={onOpen}
+      accessibilityLabel={`Изменить: ${categoryLabel(item)}`}
+    >
       <KindIcon item={item} />
       <View style={styles.nameBox}>
         {/* the type is the section title, so just emoji + name here */}
@@ -107,7 +112,12 @@ export function SystemRowView({
   onOpen: () => void;
 }) {
   return (
-    <TouchableOpacity style={styles.row} onPress={onOpen} accessibilityLabel={`Изменить: ${r.name}`}>
+    <TouchableOpacity
+      accessibilityRole="button"
+      style={styles.row}
+      onPress={onOpen}
+      accessibilityLabel={`Изменить: ${r.name}`}
+    >
       <View style={styles.pin}>
         <LockIcon color={colors.muted} size={20} />
       </View>

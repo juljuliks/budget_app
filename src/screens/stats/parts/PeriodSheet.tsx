@@ -24,6 +24,7 @@ export default function PeriodSheet({ visible, kind, onPick, onClose }: Props) {
     <BottomSheet visible={visible} onClose={onClose} title="Период">
       {PERIODS.map(([k, label]) => (
         <TouchableOpacity
+          accessibilityRole="button"
           key={k}
           style={styles.menuItem}
           onPress={() => onPick(k)}

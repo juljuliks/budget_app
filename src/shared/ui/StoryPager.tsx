@@ -45,7 +45,13 @@ export default function StoryPager({ visible, title, pages, onClose, start = 0, 
             {title}
           </Text>
           {n > 1 ? <Text style={styles.count}>{`${i + 1} из ${n}`}</Text> : null}
-          <TouchableOpacity onPress={onClose} hitSlop={10} accessibilityLabel="Закрыть" style={styles.close}>
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={onClose}
+            hitSlop={10}
+            accessibilityLabel="Закрыть"
+            style={styles.close}
+          >
             <CloseIcon color={colors.muted} size={22} />
           </TouchableOpacity>
         </View>
@@ -57,6 +63,7 @@ export default function StoryPager({ visible, title, pages, onClose, start = 0, 
             {/* the side edges page as the buttons do */}
             {i > 0 ? (
               <TouchableOpacity
+                accessibilityRole="button"
                 style={[styles.edge, styles.left]}
                 onPress={back}
                 accessibilityLabel="Предыдущий экран"
@@ -64,6 +71,7 @@ export default function StoryPager({ visible, title, pages, onClose, start = 0, 
               />
             ) : null}
             <TouchableOpacity
+              accessibilityRole="button"
               style={[styles.edge, styles.right]}
               onPress={next}
               accessibilityLabel="Следующий экран"

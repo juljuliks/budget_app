@@ -62,7 +62,7 @@ export default function CategoryTypesSheet({ visible, onClose }: { visible: bool
         contentContainerStyle={styles.content}
         renderItem={({ item: t, index }) => (
           <View style={styles.row}>
-            <TouchableOpacity style={styles.flex} onPress={() => setEditing({ type: t })}>
+            <TouchableOpacity accessibilityRole="button" style={styles.flex} onPress={() => setEditing({ type: t })}>
               <Text style={styles.name}>{t.name}</Text>
               {t.is_transfer ? <Text style={styles.note}>Эти категории предлагаются для переводов</Text> : null}
               {/* the type's color family: its categories take these shades */}

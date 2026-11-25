@@ -139,7 +139,12 @@ export default function EmojiPicker({ visible, value, onPick, onClose }: Props) 
             autoCorrect={false}
           />
           {query ? (
-            <TouchableOpacity onPress={() => setQuery('')} hitSlop={10} accessibilityLabel="Очистить поиск">
+            <TouchableOpacity
+              accessibilityRole="button"
+              onPress={() => setQuery('')}
+              hitSlop={10}
+              accessibilityLabel="Очистить поиск"
+            >
               <Text style={styles.clear}>✕</Text>
             </TouchableOpacity>
           ) : null}
@@ -148,6 +153,7 @@ export default function EmojiPicker({ visible, value, onPick, onClose }: Props) 
           <View style={styles.tabs}>
             {GROUPS.map((g) => (
               <TouchableOpacity
+                accessibilityRole="button"
                 key={g.id}
                 style={styles.tab}
                 onPress={() => {
@@ -183,6 +189,7 @@ export default function EmojiPicker({ visible, value, onPick, onClose }: Props) 
             <View style={styles.row}>
               {item.emoji.map((e) => (
                 <TouchableOpacity
+                  accessibilityRole="button"
                   key={e}
                   style={[styles.cell, { width: cell }, e === value && styles.selected]}
                   onPress={() => pick(e)}

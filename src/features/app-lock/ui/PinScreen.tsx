@@ -45,7 +45,13 @@ export default function PinScreen({ visible, ...p }: PinScreenProps & { visible:
       <View style={styles.screen}>
         {p.title ? (
           <View style={styles.header}>
-            <TouchableOpacity onPress={p.onCancel} hitSlop={10} style={styles.close} accessibilityLabel="Отмена">
+            <TouchableOpacity
+              accessibilityRole="button"
+              onPress={p.onCancel}
+              hitSlop={10}
+              style={styles.close}
+              accessibilityLabel="Отмена"
+            >
               <CloseIcon color={colors.text} />
             </TouchableOpacity>
             <Text style={styles.title}>{p.title}</Text>

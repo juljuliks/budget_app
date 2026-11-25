@@ -21,6 +21,7 @@ export default function TrendRow({ row, currency }: { row: Row; currency: Curren
   const why = hidden ? null : whyText(t, money);
   return (
     <TouchableOpacity
+      accessibilityRole="button"
       style={styles.row}
       onPress={() => openCategoryTrend(row.category.id)}
       accessibilityHint="Открыть динамику категории"

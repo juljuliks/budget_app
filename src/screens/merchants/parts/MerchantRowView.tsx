@@ -20,7 +20,13 @@ type Props = {
 /** A merchant: its name, its purchases lately; a checkbox in front while selecting. */
 export default function MerchantRowView({ m, category, selecting, selected, onPress, onLongPress, onPressIn }: Props) {
   return (
-    <TouchableOpacity style={styles.row} onPress={onPress} onLongPress={onLongPress} onPressIn={onPressIn}>
+    <TouchableOpacity
+      accessibilityRole="button"
+      style={styles.row}
+      onPress={onPress}
+      onLongPress={onLongPress}
+      onPressIn={onPressIn}
+    >
       {selecting ? <Checkbox checked={selected} size={20} /> : null}
       <View style={styles.main}>
         <Text style={styles.name} numberOfLines={1}>

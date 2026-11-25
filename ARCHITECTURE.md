@@ -82,7 +82,8 @@ src/
 Плашка (предупреждение, предложение, заметка над списком или в шите) — только `shared/ui/Banner`: `tone` (`warn` жёлтая,
 `info` голубая, `neutral` серая, `ok` зелёная), `title`, `text`, ссылки и кнопки — детьми; `onPress` — вся плашка
 кнопка с ›, `close` — ✕, `action` — текст-кнопка справа («Отменить»). Свою коробку с фоном и радиусом не рисовать. Пусто на месте списка — `shared/ui/Empty` (`compact` — в шите, `inline` — слева
-в блоке страницы).
+в блоке страницы). У любого `TouchableOpacity` / `Pressable` — `accessibilityRole` (`button`, `checkbox`, `link`…), у значка
+без текста — `accessibilityLabel`: ошибки линта `app/touchable-role`, `app/icon-touchable-label`.
 
 Записи в базу — командами слайса (`model/commands.ts`): запись + `emitTransactionsChanged`. Компоненты не зовут
 `emitTransactionsChanged` сами.

@@ -79,6 +79,7 @@ export default function CategoryRow(props: Props) {
             </Text>
             {onAddToPlan ? (
               <TouchableOpacity
+                accessibilityRole="button"
                 style={styles.addToPlan}
                 onPress={onAddToPlan}
                 hitSlop={8}

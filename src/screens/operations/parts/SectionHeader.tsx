@@ -83,7 +83,12 @@ export default function OperationsSectionHeader({
       ) : spent < 0 ? (
         <Text style={[styles.amount, styles.cameBack]}>+{formatWithCurrency(-spent, currency)}</Text>
       ) : null}
-      <TouchableOpacity onPress={onOpenDay} hitSlop={10} accessibilityLabel={`Траты за день: ${section.title}`}>
+      <TouchableOpacity
+        accessibilityRole="button"
+        onPress={onOpenDay}
+        hitSlop={10}
+        accessibilityLabel={`Траты за день: ${section.title}`}
+      >
         <ChevronRightIcon color={colors.accent} />
       </TouchableOpacity>
     </View>

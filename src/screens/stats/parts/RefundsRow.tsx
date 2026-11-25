@@ -17,7 +17,12 @@ export default function RefundsRow({
 }) {
   if (amount <= 0) return null;
   return (
-    <TouchableOpacity style={styles.row} onPress={onPress} accessibilityHint="Показать возвраты без категории">
+    <TouchableOpacity
+      accessibilityRole="button"
+      style={styles.row}
+      onPress={onPress}
+      accessibilityHint="Показать возвраты без категории"
+    >
       <Text style={styles.label}>↩ Возвраты без категории</Text>
       <Text style={styles.amount}>+{formatWithCurrency(amount, currency)}</Text>
     </TouchableOpacity>

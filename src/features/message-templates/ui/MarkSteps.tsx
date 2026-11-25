@@ -27,6 +27,7 @@ export default function MarkSteps({ words, role, onRole, marks, onWord, kind, on
           const on = r.role === role;
           return (
             <TouchableOpacity
+              accessibilityRole="button"
               key={r.role}
               onPress={() => onRole(r.role)}
               accessibilityState={{ selected: on }}
@@ -47,6 +48,7 @@ export default function MarkSteps({ words, role, onRole, marks, onWord, kind, on
           const r = marks[i] ? ROLES.find((x) => x.role === marks[i]) : undefined;
           return (
             <TouchableOpacity
+              accessibilityRole="button"
               key={`${i}-${w.text}`}
               onPress={() => onWord(i)}
               accessibilityLabel={r ? `${w.text}: ${r.label}` : w.text}
@@ -68,6 +70,7 @@ export default function MarkSteps({ words, role, onRole, marks, onWord, kind, on
       <View style={styles.wrap}>
         {KINDS.map(([k, label]) => (
           <TouchableOpacity
+            accessibilityRole="button"
             key={k}
             onPress={() => onKind(k)}
             accessibilityState={{ selected: k === kind }}

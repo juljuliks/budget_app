@@ -21,7 +21,12 @@ export default function MonthReportRow({ ym }: { ym: string }) {
   const saved = (v: number) =>
     formatWithCurrency(Math.round(r.savedIn ? v * r.savedIn.rate : v), r.savedIn?.currency ?? r.currency);
   return (
-    <TouchableOpacity style={styles.row} onPress={() => openReport(ym)} accessibilityHint="Открыть отчёт за месяц">
+    <TouchableOpacity
+      accessibilityRole="button"
+      style={styles.row}
+      onPress={() => openReport(ym)}
+      accessibilityHint="Открыть отчёт за месяц"
+    >
       <Text style={styles.rowText} numberOfLines={2}>
         {r.saved === null ? (
           `Потрачено ${money(r.spent)}`

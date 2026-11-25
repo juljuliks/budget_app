@@ -34,7 +34,11 @@ export default function UnparsedScreen() {
       ListHeaderComponent={<Text style={styles.hint}>{UNPARSED_HINT}</Text>}
       ListEmptyComponent={<Empty>Всё разобрано.</Empty>}
       renderItem={({ item }) => (
-        <TouchableOpacity style={styles.row} onPress={() => navigation.navigate('UnparsedMessage', { id: item.id })}>
+        <TouchableOpacity
+          accessibilityRole="button"
+          style={styles.row}
+          onPress={() => navigation.navigate('UnparsedMessage', { id: item.id })}
+        >
           <View style={styles.top}>
             <Text style={[styles.badge, item.source === 'push' && styles.push]}>
               {sourceLabel(item.source, bankOfSender(item.sender).name).toUpperCase()}

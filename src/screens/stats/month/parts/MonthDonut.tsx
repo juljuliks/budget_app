@@ -168,6 +168,7 @@ function Legend({ items, selected, onPick, onMore }: LegendProps) {
     <View style={styles.donutNames}>
       {shown.map((s) => (
         <TouchableOpacity
+          accessibilityRole="button"
           key={s.key}
           style={[styles.donutName, selected !== null && selected !== s.key && styles.legendDim]}
           onPress={() => onPick(s.key)}

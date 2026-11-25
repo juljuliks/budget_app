@@ -20,6 +20,7 @@ function InfoLabel({ info, style, children }: { info?: string; style: object | o
     );
   return (
     <TouchableOpacity
+      accessibilityRole="button"
       style={[styles.infoLabel]}
       onPress={() => sheetAlert('Как посчитано', info)}
       hitSlop={6}
@@ -106,6 +107,7 @@ export function YearInfo({
   if (!info) return text;
   return (
     <TouchableOpacity
+      accessibilityRole="button"
       style={styles.yearInfo}
       onPress={() => sheetAlert('Как посчитано', info)}
       hitSlop={6}

@@ -177,7 +177,12 @@ export default function BottomSheet({ visible, onClose, title, onTitlePress, hea
   return (
     <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
       <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, { opacity: progress }]}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Закрыть" />
+        <Pressable
+          accessibilityRole="button"
+          style={StyleSheet.absoluteFill}
+          onPress={onClose}
+          accessibilityLabel="Закрыть"
+        />
       </Animated.View>
       {/* the sheet rises above the keyboard */}
       <View style={[styles.wrap, { paddingBottom: keyboard }]} pointerEvents="box-none">

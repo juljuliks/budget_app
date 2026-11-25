@@ -25,6 +25,7 @@ export default function CategoryNameField({ form, emoji, locked, onPickEmoji, on
       <View style={styles.nameRow}>
         <View>
           <TouchableOpacity
+            accessibilityRole="button"
             style={[formStyles.input, styles.emoji]}
             onPress={onPickEmoji}
             accessibilityLabel={emoji ? `Эмодзи ${emoji}, изменить` : 'Выбрать эмодзи'}
@@ -34,6 +35,7 @@ export default function CategoryNameField({ form, emoji, locked, onPickEmoji, on
           {/* without an emoji */}
           {emoji ? (
             <TouchableOpacity
+              accessibilityRole="button"
               style={styles.emojiClear}
               onPress={onClearEmoji}
               hitSlop={8}

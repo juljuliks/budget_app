@@ -115,6 +115,7 @@ export default function TypeEditModal({ visible, type, types, onClose, onSaved }
         ) : null}
         {shownPresets.map((k) => (
           <TouchableOpacity
+            accessibilityRole="button"
             key={k}
             style={[styles.preset, palette === k && styles.selected]}
             onPress={() => setPalette(k)}

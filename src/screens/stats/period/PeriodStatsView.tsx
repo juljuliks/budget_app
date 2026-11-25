@@ -64,6 +64,7 @@ export default function PeriodStatsView({ range, normLabel, emptyText = 'За э
       </View>
       {v.byLimits || (!data.pace && data.days <= PACE_MAX_DAYS) || !v.summary ? null : (
         <TouchableOpacity
+          accessibilityRole="button"
           style={styles.summaryRow}
           onPress={() => setInfo('summary')}
           accessibilityLabel="Как считаются траты"

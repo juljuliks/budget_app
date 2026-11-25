@@ -64,6 +64,7 @@ export function RecurringItemRow({ p, item, hidden, onOpen }: Props) {
     (item.subs?.empty ? w.none : item.kind !== 'subs' ? `вручную · задайте даты ${w.toAll}` : listed || w.noDated);
   return (
     <TouchableOpacity
+      accessibilityRole="button"
       style={[styles.row, up && styles.later]}
       onPress={onOpen}
       accessibilityLabel={categoryLabel(item)}

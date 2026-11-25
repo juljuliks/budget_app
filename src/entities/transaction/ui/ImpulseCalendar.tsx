@@ -78,6 +78,7 @@ export default function ImpulseCalendar({ days, today, money, month: only }: Pro
               const sel = day === picked;
               return (
                 <TouchableOpacity
+                  accessibilityRole="button"
                   key={day}
                   testID={`day-${day}`}
                   style={[gridStyles.cell, styles.cell]}

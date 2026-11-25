@@ -27,7 +27,12 @@ export function FundItemRow({ p, item, hidden, onOpen }: Props) {
   // what the budget fitted of its contribution (from 🔒, less, none)
   const fit = fundFitStatus(item, p.ym, hidden);
   return (
-    <TouchableOpacity style={styles.row} onPress={onOpen} accessibilityLabel={`Копилка: ${categoryLabel(item)}`}>
+    <TouchableOpacity
+      accessibilityRole="button"
+      style={styles.row}
+      onPress={onOpen}
+      accessibilityLabel={`Копилка: ${categoryLabel(item)}`}
+    >
       <View style={styles.pin}>
         <ProgressRing
           ratio={f ? f.saved_minor / f.target_minor : 0}

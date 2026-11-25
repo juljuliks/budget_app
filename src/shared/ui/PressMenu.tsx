@@ -147,6 +147,7 @@ export default function PressMenu({ actions, style, accessibilityHint, testID, c
       onTouchCancel={onTouchEnd}
     >
       <TouchableOpacity
+        accessibilityRole="button"
         style={style}
         activeOpacity={1}
         disabled={!actions.length}
@@ -170,7 +171,7 @@ export default function PressMenu({ actions, style, accessibilityHint, testID, c
         {children}
       </TouchableOpacity>
       <Modal visible={open !== null} transparent animationType="fade" onRequestClose={close} statusBarTranslucent>
-        <Pressable style={styles.backdrop} onPress={close} accessibilityLabel="Закрыть" />
+        <Pressable accessibilityRole="button" style={styles.backdrop} onPress={close} accessibilityLabel="Закрыть" />
         {/* four: a cross close around the finger, on a plate of its shape; two or three: round buttons in an arc */}
         {open?.buttons.length === 4 ? (
           <DPad actions={actions} buttons={open.buttons} hover={hover} top={TOP_INSET} onPress={run} />

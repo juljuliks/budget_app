@@ -25,7 +25,13 @@ export default function SplitView({ parts, total, currency, onEdit }: Props) {
         <Text style={styles.title}>
           Разделена · {parts.length} {plural(parts.length, ['категория', 'категории', 'категорий'])}
         </Text>
-        <TouchableOpacity style={styles.edit} onPress={onEdit} hitSlop={8} accessibilityLabel="Изменить разделение">
+        <TouchableOpacity
+          accessibilityRole="button"
+          style={styles.edit}
+          onPress={onEdit}
+          hitSlop={8}
+          accessibilityLabel="Изменить разделение"
+        >
           <PencilIcon color={colors.accent} size={16} />
           <Text style={styles.editText}>Изменить</Text>
         </TouchableOpacity>

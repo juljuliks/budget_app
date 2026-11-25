@@ -22,7 +22,7 @@ export default function PeriodNav({ label, onPick, onPrev, onNext, nextDisabled,
   if (onPick) {
     return (
       <View style={styles.row}>
-        <TouchableOpacity style={styles.rangeButton} onPress={onPick}>
+        <TouchableOpacity accessibilityRole="button" style={styles.rangeButton} onPress={onPick}>
           <Text style={styles.label}>{label}</Text>
         </TouchableOpacity>
       </View>
@@ -32,11 +32,23 @@ export default function PeriodNav({ label, onPick, onPrev, onNext, nextDisabled,
   const next = unit === 'месяц' ? 'Следующий месяц' : unit === 'год' ? 'Следующий год' : 'Следующий период';
   return (
     <View style={styles.row}>
-      <TouchableOpacity onPress={onPrev} hitSlop={12} disabled={prevDisabled} accessibilityLabel={prev}>
+      <TouchableOpacity
+        accessibilityRole="button"
+        onPress={onPrev}
+        hitSlop={12}
+        disabled={prevDisabled}
+        accessibilityLabel={prev}
+      >
         <Text style={[styles.arrow, prevDisabled && styles.arrowDisabled]}>‹</Text>
       </TouchableOpacity>
       <Text style={styles.label}>{label}</Text>
-      <TouchableOpacity onPress={onNext} hitSlop={12} disabled={nextDisabled} accessibilityLabel={next}>
+      <TouchableOpacity
+        accessibilityRole="button"
+        onPress={onNext}
+        hitSlop={12}
+        disabled={nextDisabled}
+        accessibilityLabel={next}
+      >
         <Text style={[styles.arrow, nextDisabled && styles.arrowDisabled]}>›</Text>
       </TouchableOpacity>
     </View>

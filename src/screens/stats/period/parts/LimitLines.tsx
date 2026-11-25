@@ -28,7 +28,12 @@ function InfoLine({
   textStyle?: object;
 }) {
   return (
-    <TouchableOpacity style={styles.paceRow} onPress={onInfo} accessibilityLabel="Как считается категория">
+    <TouchableOpacity
+      accessibilityRole="button"
+      style={styles.paceRow}
+      onPress={onInfo}
+      accessibilityLabel="Как считается категория"
+    >
       <Text style={textStyle ?? [styles.share, styles.paceText]}>{children}</Text>
       <InfoIcon color={colors.accent} size={INFO_SIZE} />
     </TouchableOpacity>
