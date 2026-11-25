@@ -2,6 +2,7 @@
 import type { Kind } from '@/domain/types';
 import type { MessageSource } from '@/db/messages';
 import type { Role } from '@/parsers/template';
+import { markColors } from '@/shared/theme/theme';
 
 export const UNPARSED = 'Не распознано';
 export const TEMPLATES = 'Шаблоны сообщений';
@@ -13,11 +14,11 @@ export const sourceLabel = (s: MessageSource, bank = 'TBC') => (s === 'push' ? `
 
 /** The roles a word can be marked with, and their colors (told apart by lightness too) */
 export const ROLES: Array<{ role: Role; label: string; bg: string; fg: string; line: string }> = [
-  { role: 'amount', label: 'Сумма', bg: '#DBEAFE', fg: '#1E3A8A', line: '#2563EB' },
-  { role: 'currency', label: 'Валюта', bg: '#FCE7F3', fg: '#831843', line: '#DB2777' },
-  { role: 'merchant', label: 'Мерчант', bg: '#FFEDD5', fg: '#7C2D12', line: '#EA580C' },
-  { role: 'date', label: 'Дата и время', bg: '#EDE9FE', fg: '#4C1D95', line: '#7C3AED' },
-  { role: 'balance', label: 'Баланс', bg: '#D1FAE5', fg: '#064E3B', line: '#059669' },
+  { role: 'amount', label: 'Сумма', ...markColors.amount },
+  { role: 'currency', label: 'Валюта', ...markColors.currency },
+  { role: 'merchant', label: 'Мерчант', ...markColors.merchant },
+  { role: 'date', label: 'Дата и время', ...markColors.date },
+  { role: 'balance', label: 'Баланс', ...markColors.balance },
 ];
 
 /** The types a marked message can be */

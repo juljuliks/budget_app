@@ -1,5 +1,6 @@
 import React from 'react';
 import Svg, { Circle, G, Path } from 'react-native-svg';
+import { colors } from '../theme/theme';
 
 type P = { color: string; size?: number };
 
@@ -211,9 +212,9 @@ export const LockIcon = ({ color, size = 14 }: P) => (
 /** An overspend inside a bar: a filled triangle with a white "!". */
 export const WarnTriangleIcon = ({ color, size = 12 }: P) => (
   <Svg width={size} height={size} viewBox="0 0 24 24">
-    <Path d="M12 2 22.5 21H1.5z" fill={color} stroke="#FFFFFF" strokeWidth={2} strokeLinejoin="round" />
-    <Path d="M12 9v5.5" stroke="#FFFFFF" strokeWidth={2.6} strokeLinecap="round" />
-    <Circle cx={12} cy={17.6} r={1.5} fill="#FFFFFF" />
+    <Path d="M12 2 22.5 21H1.5z" fill={color} stroke={colors.white} strokeWidth={2} strokeLinejoin="round" />
+    <Path d="M12 9v5.5" stroke={colors.white} strokeWidth={2.6} strokeLinecap="round" />
+    <Circle cx={12} cy={17.6} r={1.5} fill={colors.white} />
   </Svg>
 );
 

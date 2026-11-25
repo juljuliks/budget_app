@@ -25,8 +25,9 @@ model: haiku
 5. Кнопка — только `shared/ui/Button` (`variant="primary" | "secondary" | "cancel"`, `danger`, `size="small"`, `icon`),
    своей не рисовать; своя только круглая ＋ `PlusButton`
    (ARCHITECTURE.md §1, после страниц и шитов).
-6. Расчёты — в `.ts` (`model/`) с тестом в `tests/logic/`; тексты — в `texts.ts` и по GLOSSARY.md; цвета — из темы
-   (`colors.onAccent` для текста на акценте); месяцы и дни недели — `shared/lib/dates.ts`, не новая копия.
+6. Расчёты — в `.ts` (`model/`) с тестом в `tests/logic/`; тексты — в `texts.ts` и по GLOSSARY.md; вид — из темы:
+   цвета `colors` (`colors.onAccent` для текста на акценте), размеры текста, отступы, радиусы — `shared/theme/tokens.ts`
+   (`font.body`, `weight.semibold`, `space[12]`, `radius.md`, круг — `radius.pill`), литералы ловит `app/theme-tokens`; месяцы и дни недели — `shared/lib/dates.ts`, не новая копия.
 7. Списки и статистика: строка длинного списка — `React.memo`, обработчики стабильные (`useStableCallback`); новый
    расчёт статистики — одной выборкой, не `periodStats` в цикле: бюджет запросов — `tests/logic/statsQueries.test.ts`.
 

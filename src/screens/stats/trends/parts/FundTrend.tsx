@@ -157,11 +157,16 @@ const styles = StyleSheet.create({
   chart: { flexDirection: 'row', gap: space[6], marginTop: space[16] },
   col: { flex: 1, alignItems: 'stretch' },
   up: { height: UP, justifyContent: 'flex-end', borderBottomWidth: 1, borderColor: colors.faint },
-  saved: { backgroundColor: colors.fundTrack, borderTopLeftRadius: 3, borderTopRightRadius: 3 },
+  saved: { backgroundColor: colors.fundTrack, borderTopLeftRadius: radius.xs, borderTopRightRadius: radius.xs },
   now: { backgroundColor: colors.fund },
   none: { borderTopWidth: 2, borderStyle: 'dashed', borderColor: colors.border },
   down: { height: DOWN },
-  spent: { backgroundColor: colors.impulse, opacity: 0.75, borderBottomLeftRadius: 3, borderBottomRightRadius: 3 },
+  spent: {
+    backgroundColor: colors.impulse,
+    opacity: 0.75,
+    borderBottomLeftRadius: radius.xs,
+    borderBottomRightRadius: radius.xs,
+  },
   month: { fontSize: font.micro, color: colors.muted, textAlign: 'center', marginTop: space[4] },
   monthNow: { color: colors.text },
 });

@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   scroll: { flex: 1 },
   content: { paddingHorizontal: space[16], paddingBottom: space[8] },
-  edge: { marginHorizontal: -16 },
+  edge: { marginHorizontal: -space[16] },
   missing: { fontSize: font.meta, color: colors.warn, paddingTop: space[8] },
   actions: { padding: space[16], gap: space[10] },
 });

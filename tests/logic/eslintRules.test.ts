@@ -62,4 +62,24 @@ describe('eslint-rules', () => {
       ],
     });
   });
+
+  describe('theme-tokens: the look from shared/theme, no literals', () => {
+    tester.run('theme-tokens', app.rules['theme-tokens'], {
+      valid: [
+        'const s = { fontSize: font.body, padding: space[12], borderRadius: radius.md, color: colors.text };',
+        'const s = { marginHorizontal: -16, marginTop: 0, width: 40, flex: 1 };',
+        'const s = { fontWeight: weight.semibold, opacity: 0.5 };',
+        '<Switch thumbColor={colors.white} />',
+        "const label = 'Сумма #1';",
+      ],
+      invalid: [
+        { code: 'const s = { fontSize: 13 };', errors: 1 },
+        { code: 'const s = { paddingHorizontal: 12, gap: 8, borderTopLeftRadius: 4 };', errors: 3 },
+        { code: "const s = { fontWeight: '600' };", errors: 1 },
+        { code: "const s = { color: '#FFFFFF', backgroundColor: 'rgba(0,0,0,0.35)' };", errors: 2 },
+        { code: '<Switch thumbColor="#FFFFFF" />', errors: 1 },
+        { code: "<Stop stopColor={'#000'} />", errors: 1 },
+      ],
+    });
+  });
 });

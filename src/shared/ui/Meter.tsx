@@ -87,5 +87,5 @@ const styles = StyleSheet.create({
   fills: { flexDirection: 'row', height: '100%', borderRadius: radius.pill, overflow: 'hidden' },
   overPart: { position: 'absolute', top: 0, bottom: 0, right: 0, backgroundColor: colors.warn },
   overIcon: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
-  marker: { position: 'absolute', width: 2, marginLeft: -1, borderRadius: 1, backgroundColor: colors.text },
+  marker: { position: 'absolute', width: 2, marginLeft: -1, borderRadius: radius.xs, backgroundColor: colors.text },
 });

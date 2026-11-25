@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
   },
   tab: { paddingVertical: space[8], paddingHorizontal: space[4] },
   // an opaque color: Android draws color emoji with the text color's alpha (the default one is translucent)
-  tabIcon: { fontSize: font.heading, color: '#000000' },
+  tabIcon: { fontSize: font.heading, color: colors.emoji },
   content: { paddingHorizontal: space[16], paddingBottom: space[8] },
   header: {
     height: HEADER_HEIGHT,
@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
   row: { height: ROW_HEIGHT, flexDirection: 'row' },
   cell: { height: ROW_HEIGHT, alignItems: 'center', justifyContent: 'center', borderRadius: radius.md },
   selected: { backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.accent },
-  emoji: { fontSize: font.display, color: '#000000' },
+  emoji: { fontSize: font.display, color: colors.emoji },
   empty: { padding: space[24], textAlign: 'center', color: colors.muted },
   actions: { paddingHorizontal: space[16], marginTop: space[8] },
 });

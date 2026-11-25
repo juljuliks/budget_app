@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { colors } from '@/shared/theme/theme';
 import { StarIcon, TrashIcon } from '@/shared/ui/icons';
-import { font, space } from '@/shared/theme/tokens';
+import { font, radius, space } from '@/shared/theme/tokens';
 
 /** Until a row reports its height: enough for one place up or down. */
 const ROW_H = 44;
@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
   block: { overflow: 'hidden' },
   drag: { backgroundColor: colors.bg },
   lifted: {
-    shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOpacity: 0.12,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
@@ -251,9 +251,9 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   mark: { width: 16, marginRight: space[10], alignItems: 'center' },
-  dot: { width: 10, height: 10, borderRadius: 5 },
+  dot: { width: 10, height: 10, borderRadius: radius.xs },
   name: { flex: 1, fontSize: font.input, color: colors.text },
-  grip: { width: 14, gap: 3, marginLeft: space[10] },
-  gripBar: { height: 2, borderRadius: 1, backgroundColor: colors.muted },
+  grip: { width: 14, gap: space[4], marginLeft: space[10] },
+  gripBar: { height: 2, borderRadius: radius.xs, backgroundColor: colors.muted },
   trash: { padding: space[6] },
 });

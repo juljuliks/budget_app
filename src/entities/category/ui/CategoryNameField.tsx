@@ -70,8 +70,8 @@ const styles = StyleSheet.create({
   nameRow: { flexDirection: 'row', gap: space[10] },
   name: { flex: 1 },
   emoji: { width: 56, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 0 },
-  emojiText: { fontSize: font.headline, color: '#000000' },
-  emojiPlaceholder: { fontSize: 22, color: colors.muted },
+  emojiText: { fontSize: font.headline, color: colors.emoji },
+  emojiPlaceholder: { fontSize: font.heading, color: colors.muted },
   emojiClear: {
     position: 'absolute',
     top: -6,
@@ -83,5 +83,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  emojiClearText: { color: '#FFFFFF', fontSize: 11, fontWeight: weight.bold },
+  emojiClearText: { color: colors.onAccent, fontSize: font.micro, fontWeight: weight.bold },
 });

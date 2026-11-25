@@ -80,6 +80,6 @@ const styles = StyleSheet.create({
   },
   divider: { borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
   text: { flex: 1 },
-  label: { fontSize: 17, color: colors.text },
+  label: { fontSize: font.input, color: colors.text },
   hint: { fontSize: font.secondary, color: colors.muted, marginTop: space[2] },
 });

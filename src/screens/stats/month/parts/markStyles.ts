@@ -1,8 +1,11 @@
 // The payments' marks over the month's bar.
 import { StyleSheet } from 'react-native';
 import { colors } from '@/shared/theme/theme';
-import { font, space, weight } from '@/shared/theme/tokens';
+import { font, radius, space, weight } from '@/shared/theme/tokens';
 
+/** the glyphs inside a 13 pt mark (✓ ✕, a count): the mark's geometry, smaller than any text role */
+const STATUS_GLYPH = 8;
+const COUNT_GLYPH = 9;
 export const markStyles = StyleSheet.create({
   row: { height: 36, marginTop: space[8] },
   mark: { position: 'absolute', bottom: 0, width: 30, alignItems: 'center' },
@@ -11,7 +14,7 @@ export const markStyles = StyleSheet.create({
   badge: {
     width: 28,
     height: 28,
-    borderRadius: 14,
+    borderRadius: radius.pill,
     backgroundColor: colors.surface,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
@@ -30,27 +33,27 @@ export const markStyles = StyleSheet.create({
     bottom: -3,
     width: 13,
     height: 13,
-    borderRadius: 7,
+    borderRadius: radius.sm,
     borderWidth: 1.5,
     borderColor: colors.bg,
     alignItems: 'center',
     justifyContent: 'center',
   },
   missed: { backgroundColor: colors.warn },
-  statusText: { fontSize: 8, lineHeight: 10, fontWeight: weight.bold, color: colors.bg },
+  statusText: { fontSize: STATUS_GLYPH, lineHeight: 10, fontWeight: weight.bold, color: colors.bg },
   count: {
     position: 'absolute',
     right: -5,
     top: -4,
     minWidth: 13,
     height: 13,
-    borderRadius: 7,
+    borderRadius: radius.sm,
     paddingHorizontal: space[2],
     backgroundColor: colors.muted,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  countText: { fontSize: 9, lineHeight: 11, fontWeight: weight.bold, color: colors.bg },
+  countText: { fontSize: COUNT_GLYPH, lineHeight: 11, fontWeight: weight.bold, color: colors.bg },
   // the mark tapped: outlined
   picked: { borderWidth: 1.5, borderColor: colors.accent },
   // its payments under the bar, instead of «Осталось …»; their state's word coloured

@@ -34,7 +34,7 @@ export default function PlusButton({ onPress, accessibilityLabel, size = 38, dis
 }
 
 /** The drawn plus, `size` points across: white, or `color`. */
-function Plus({ size, stroke, color = '#FFFFFF' }: { size: number; stroke: number; color?: string }) {
+function Plus({ size, stroke, color = colors.onAccent }: { size: number; stroke: number; color?: string }) {
   const c = size / 2;
   return (
     <Svg width={size} height={size}>

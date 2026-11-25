@@ -1,13 +1,13 @@
 // The month stats' look, one for all its parts.
 import { StyleSheet } from 'react-native';
 import { chart, colors } from '@/shared/theme/theme';
-import { font, radius, space, weight } from '@/shared/theme/tokens';
+import { font, layout, radius, space, weight } from '@/shared/theme/tokens';
 
 export const styles = StyleSheet.create({
   report: { marginTop: space[4] },
   screen: { flex: 1, backgroundColor: colors.bg },
   // room under the last row for «＋»
-  content: { paddingHorizontal: space[16], paddingBottom: 88 },
+  content: { paddingHorizontal: space[16], paddingBottom: layout.fabClearance },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
   donutWrap: { alignItems: 'center', marginBottom: space[16] },
   // over the ring «Траты» / «План»; the ring at the left, half the block; at its right the cut — «Категории» /
@@ -42,7 +42,7 @@ export const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
   },
   donutRest: { color: colors.muted },
-  donutRestRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: space[8], marginLeft: 13 },
+  donutRestRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: space[8], marginLeft: space[14] },
   donutMore: { fontSize: font.meta },
   donutMoreAt: { marginLeft: 'auto' },
   // «Распределение бюджета»: the budget with its pencil, «Свободно» at the bottom
@@ -56,14 +56,19 @@ export const styles = StyleSheet.create({
     paddingVertical: space[12],
   },
   legendDim: { opacity: 0.4 },
-  legendDot: { width: 8, height: 8, borderRadius: radius.xs, marginRight: 5 },
+  legendDot: { width: 8, height: 8, borderRadius: radius.xs, marginRight: space[6] },
   monthBox: { marginBottom: 0 },
-  longPressHint: { fontSize: font.caption, color: colors.muted, marginTop: space[8], marginBottom: -10 },
+  longPressHint: { fontSize: font.caption, color: colors.muted, marginTop: space[8], marginBottom: -space[10] },
   dangerText: { color: colors.danger },
   hint: { color: colors.muted, fontSize: font.secondary, textAlign: 'center', marginVertical: space[12] },
   group: { marginTop: space[16] },
   // a grey band across the screen, sticking on top as the days on the operations do
-  groupHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: -16 },
+  groupHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginHorizontal: -space[16],
+  },
   groupTitle: { fontSize: font.meta, fontWeight: weight.semibold, color: colors.muted },
   // «· 35%» after a section's title: its share of the budget, bold
   groupShare: { fontWeight: weight.bold },
@@ -73,10 +78,10 @@ export const styles = StyleSheet.create({
   // a category's row: the name over its amounts, what is left at the right on the same two lines
   rowCols: { flexDirection: 'row', alignItems: 'flex-start' },
   rowMain: { flex: 1, minWidth: 0 },
-  rowSub: { fontSize: font.meta, color: colors.muted, marginTop: space[2], marginLeft: 18 },
-  rowSubLine: { flexDirection: 'row', alignItems: 'center', marginTop: space[2], marginLeft: 18 },
+  rowSub: { fontSize: font.meta, color: colors.muted, marginTop: space[2], marginLeft: space[20] },
+  rowSubLine: { flexDirection: 'row', alignItems: 'center', marginTop: space[2], marginLeft: space[20] },
   rowSubText: { flexShrink: 1, fontSize: font.meta, color: colors.muted },
-  dot: { width: 10, height: 10, borderRadius: 5, marginRight: space[8] },
+  dot: { width: 10, height: 10, borderRadius: radius.xs, marginRight: space[8] },
   rowName: { flexShrink: 1, fontSize: font.body, color: colors.text },
   addToPlan: {
     marginLeft: space[8],
@@ -93,8 +98,8 @@ export const styles = StyleSheet.create({
   leftBig: { fontSize: font.body, fontWeight: weight.bold, color: colors.text, fontVariant: ['tabular-nums'] },
   leftCaption: { fontSize: font.caption, color: colors.muted },
   // a payment charged several times a month: a piece per charge
-  payments: { flexDirection: 'row', gap: 3, marginTop: space[6] },
-  paymentPiece: { flex: 1, height: 6, borderRadius: 3, backgroundColor: chart.meterTrack },
+  payments: { flexDirection: 'row', gap: space[4], marginTop: space[6] },
+  paymentPiece: { flex: 1, height: 6, borderRadius: radius.xs, backgroundColor: chart.meterTrack },
   rowAmount: {
     marginLeft: 'auto',
     paddingLeft: space[8],
@@ -108,7 +113,7 @@ export const styles = StyleSheet.create({
   paceLine: { fontWeight: weight.semibold },
   // an overspend, the same on every screen: bold orange, no ⚠
   sectionBand: {
-    marginHorizontal: -16,
+    marginHorizontal: -space[16],
     paddingHorizontal: space[16],
     paddingTop: space[2],
     paddingBottom: space[10],

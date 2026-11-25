@@ -3,7 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors } from '../theme/theme';
 import { DayKey, DayRange, dayKeyOf, parseDayKey } from '../lib/dateRange';
 import { gridMonthOf, gridStyles, MonthHeader, monthWeeks, shiftGridMonth } from './MonthGrid';
-import { font, space, weight } from '../theme/tokens';
+import { font, radius, space, weight } from '../theme/tokens';
 
 export type { DayRange } from '../lib/dateRange';
 export { formatRange, rangeToUnix } from '../lib/dateRange';
@@ -94,8 +94,8 @@ export default function RangeCalendar({ value, onChange, single, maxDay, minDay 
 
 const styles = StyleSheet.create({
   wrap: { paddingVertical: space[4] },
-  inRange: { backgroundColor: '#DBEAFE' },
-  edge: { backgroundColor: colors.accent, borderRadius: 18 },
-  edgeText: { color: '#FFFFFF', fontWeight: weight.semibold },
+  inRange: { backgroundColor: colors.accentSoft },
+  edge: { backgroundColor: colors.accent, borderRadius: radius.pill },
+  edgeText: { color: colors.onAccent, fontWeight: weight.semibold },
   hint: { fontSize: font.caption, color: colors.muted, textAlign: 'center', marginTop: space[4] },
 });

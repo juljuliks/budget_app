@@ -39,7 +39,7 @@ export default function Segmented<T extends string>({ options, value, onChange, 
 
 const styles = StyleSheet.create({
   segmented: { flexDirection: 'row', backgroundColor: colors.surface, borderRadius: radius.sm, padding: space[2] },
-  segment: { flex: 1, paddingVertical: 7, alignItems: 'center', borderRadius: 6 },
+  segment: { flex: 1, paddingVertical: space[8], alignItems: 'center', borderRadius: radius.sm },
   segmentOn: { backgroundColor: colors.bg },
   text: { fontSize: font.secondary, color: colors.muted },
   textOn: { color: colors.text, fontWeight: weight.semibold },

@@ -200,7 +200,7 @@ export default function PressMenu({ actions, style, accessibilityHint, testID, c
 }
 
 const styles = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(22,24,29,0.28)' },
+  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.backdropLight },
   // 80 wide: the label fits under the circle
   button: { position: 'absolute', width: 80, alignItems: 'center', gap: space[4] },
   circle: {
@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 6,
-    shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOpacity: 0.2,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
     fontSize: font.meta,
     fontWeight: weight.semibold,
     color: colors.onAccent,
-    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowColor: colors.textShadow,
     textShadowRadius: 3,
   },
   labelOn: { fontSize: font.secondary, fontWeight: weight.bold },

@@ -17,7 +17,7 @@ export default function Toggle({
       value={value}
       onValueChange={onChange}
       trackColor={{ true: colors.accent, false: colors.border }}
-      thumbColor="#FFFFFF"
+      thumbColor={colors.white}
       accessibilityLabel={label}
     />
   );

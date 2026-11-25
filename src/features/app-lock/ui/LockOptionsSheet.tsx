@@ -66,10 +66,10 @@ export default function LockOptionsSheet({ visible, onClose }: { visible: boolea
 
 const styles = StyleSheet.create({
   body: {
-    gap: 18,
+    gap: space[20],
     paddingHorizontal: space[20],
     paddingTop: space[14],
-    paddingBottom: 28,
+    paddingBottom: space[32],
     borderTopWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },

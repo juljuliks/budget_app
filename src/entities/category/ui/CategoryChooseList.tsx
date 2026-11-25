@@ -6,7 +6,7 @@ import { formStyles } from '@/shared/theme/formStyles';
 import { colors } from '@/shared/theme/theme';
 import Checkbox from '@/shared/ui/Checkbox';
 import type { ChooseSection } from '../model/chooseList';
-import { font, space, weight } from '@/shared/theme/tokens';
+import { font, radius, space, weight } from '@/shared/theme/tokens';
 
 type Props = {
   sections: ChooseSection[];
@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
   },
   check: { marginRight: space[10] },
   dim: { opacity: 0.35 },
-  dot: { width: 10, height: 10, borderRadius: 5, marginRight: space[10] },
+  dot: { width: 10, height: 10, borderRadius: radius.xs, marginRight: space[10] },
   name: { flex: 1, fontSize: font.input, color: colors.text },
   mark: { fontSize: font.title, color: colors.accent, fontWeight: weight.bold, marginLeft: space[8] },
 });

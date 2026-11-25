@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { LayoutChangeEvent, PanResponder, StyleSheet, Text, View } from 'react-native';
 import { colors } from '../theme/theme';
-import { font, weight } from '../theme/tokens';
+import { font, radius, weight } from '../theme/tokens';
 
 const THUMB = 24;
 
@@ -117,9 +117,9 @@ export default function StepSlider({ values, value, onChange, max, label = Strin
 
 const styles = StyleSheet.create({
   track: { height: 36, justifyContent: 'center' },
-  rail: { position: 'absolute', left: 0, right: 0, height: 4, borderRadius: 2, backgroundColor: colors.border },
-  fill: { height: 4, borderRadius: 2 },
-  tick: { position: 'absolute', width: 6, height: 6, borderRadius: 3, backgroundColor: colors.border },
+  rail: { position: 'absolute', left: 0, right: 0, height: 4, borderRadius: radius.xs, backgroundColor: colors.border },
+  fill: { height: 4, borderRadius: radius.xs },
+  tick: { position: 'absolute', width: 6, height: 6, borderRadius: radius.xs, backgroundColor: colors.border },
   thumb: {
     position: 'absolute',
     width: THUMB,

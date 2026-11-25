@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
     color: colors.warn,
     backgroundColor: colors.warnBg,
     paddingHorizontal: space[6],
-    paddingVertical: 1,
+    paddingVertical: space[1],
     borderRadius: radius.xs,
     overflow: 'hidden',
   },

@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: space[12],
-    marginHorizontal: -20,
+    marginHorizontal: -space[20],
     paddingHorizontal: space[20],
     paddingVertical: space[12],
     borderBottomWidth: StyleSheet.hairlineWidth,

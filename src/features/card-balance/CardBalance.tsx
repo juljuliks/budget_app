@@ -117,9 +117,9 @@ const styles = StyleSheet.create({
   unknown: { color: colors.muted },
   note: { fontSize: font.caption, color: colors.muted, marginTop: space[2] },
   amount: { fontSize: font.heading, fontWeight: weight.bold, color: colors.text, fontVariant: ['tabular-nums'] },
-  line: { flexDirection: 'row', alignItems: 'center', gap: space[10], paddingVertical: 5 },
+  line: { flexDirection: 'row', alignItems: 'center', gap: space[10], paddingVertical: space[6] },
   lineNote: { flex: 1, marginTop: 0 },
-  lineAmount: { fontSize: 17, fontWeight: weight.bold, color: colors.text, fontVariant: ['tabular-nums'] },
-  badge: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  lineAmount: { fontSize: font.input, fontWeight: weight.bold, color: colors.text, fontVariant: ['tabular-nums'] },
+  badge: { width: 28, height: 28, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
   badgeText: { fontSize: font.micro, fontWeight: weight.bold, color: colors.onAccent },
 });

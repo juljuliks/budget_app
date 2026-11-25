@@ -7,7 +7,7 @@ import { formatMoneyWithCurrency } from '@/shared/lib/money';
 import { PencilIcon } from '@/shared/ui/icons';
 import { colors } from '@/shared/theme/theme';
 import SplitBar from './SplitBar';
-import { font, space, weight } from '@/shared/theme/tokens';
+import { font, radius, space, weight } from '@/shared/theme/tokens';
 
 type Props = {
   /** every part, the operation's own category first */
@@ -54,9 +54,9 @@ const styles = StyleSheet.create({
   title: { fontSize: font.meta, fontWeight: weight.semibold, color: colors.muted, textTransform: 'uppercase' },
   edit: { flexDirection: 'row', alignItems: 'center', gap: space[6] },
   editText: { fontSize: font.body, color: colors.accent },
-  row: { flexDirection: 'row', alignItems: 'center', gap: space[10], paddingVertical: 11 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: space[10], paddingVertical: space[12] },
   divider: { borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
-  dot: { width: 10, height: 10, borderRadius: 5 },
+  dot: { width: 10, height: 10, borderRadius: radius.xs },
   name: { flex: 1 },
   share: { fontSize: font.secondary, color: colors.muted, fontVariant: ['tabular-nums'] },
   amount: { minWidth: 84, textAlign: 'right', fontSize: font.input, color: colors.text, fontVariant: ['tabular-nums'] },

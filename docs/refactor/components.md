@@ -44,7 +44,8 @@
 | `title` | 18 | заголовки шитов | — |
 | `heading` | 20 | заголовки страниц | 22 → 20 (6 мест) |
 | `headline` | 24 | крупные суммы блоков | — |
-| `display` | 28 | сумма месяца, баланс | 34 → 28 (1 место) |
+| `display` | 28 | сумма месяца, баланс | — |
+| `total` | 34 | сумма в центре кольца | — (оставлена: 34 → 28 заметно) |
 | `hero` | 44 | сторис отчёта | — |
 
 Плюс `weight`: `regular` 400, `medium` 500, `semibold` 600, `bold` 700; `lineHeight` — 18 / 20 / 21 сводятся к одному на
@@ -62,8 +63,8 @@
 ### Радиусы
 
 Сейчас: 10 — 32, 12 — 18, 5 — 14, 4 — 11, 8 — 9, 14 — 6, 2 — 5, 16 — 4, 3 — 4, 6 / 7 — по 3, 20 / 18 — по 2, остальное по 1.
-Шкала: `radius = { xs: 4, sm: 8, md: 10, lg: 12, xl: 16, pill: 999 }`; 2 / 3 / 5 → 4, 6 / 7 → 8, 14 → 12 или 16 по месту,
-18 / 20 / 22 → 16 / pill.
+Шкала: `radius = { xs: 4, sm: 8, md: 10, lg: 12, xl: 16, pill: 999 }`; 2 / 3 / 5 → 4, 6 / 7 → 8; круг (радиус = половина
+размера: значки 28 / 34, клавиши PIN, кружки цвета) → `pill`; карточки 14 → 12; клавиши кода 64 × 64 с радиусом 18 → 16.
 
 ### Цвета
 
@@ -76,6 +77,10 @@
 - коричневые `'#92400E'` (2), `'#eda100'` (2) → `colors.warnText`, `chart.meterStops`;
 - пастели плана и выбора цвета (`stats/plan/parts/palette.ts`, `ColorPickerSheet`, `RangeCalendar`, `DPad`, `PinScreen`,
   `month-report/ui/styles`, `month-close/ui/Choice`) — в `chart` / отдельную палитру `shared/theme`.
+
+Сделано (этап 3): цвета — в `colors` (новые `accentSoft`, `accentStrong`, `textSecondary`, `borderStrong`, `warnText`,
+`dangerBg`, `inverse*`, `emoji`, `shadow`, `textShadow`, `backdrop*`, `glass*`, `white` / `black` для рисования), `chart`
+(`savings`, `ring*`), `markColors` (роли разметки сообщения) — значения те же.
 
 Правило линта B2 (после этапа 3): нет `'#…'` / `rgba(` и чисел у `fontSize`, отступов и радиусов вне `shared/theme`.
 

@@ -15,7 +15,7 @@ import { SheetActions } from '@/shared/ui/Button';
 import SearchBar from '@/shared/ui/SearchBar';
 import StepsNav from '@/shared/ui/StepsNav';
 import { toastFailure } from '@/shared/ui/toast';
-import { font, space } from '@/shared/theme/tokens';
+import { font, radius, space } from '@/shared/theme/tokens';
 
 type Props = {
   ym: string;
@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
-  dot: { width: 10, height: 10, borderRadius: 5, marginRight: space[10] },
+  dot: { width: 10, height: 10, borderRadius: radius.xs, marginRight: space[10] },
   text: { flex: 1, gap: space[2] },
   name: { fontSize: font.input, color: colors.text },
   note: { fontSize: font.meta, color: colors.muted },

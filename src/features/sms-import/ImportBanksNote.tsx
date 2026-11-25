@@ -56,7 +56,7 @@ const styles = StyleSheet.create({
     marginBottom: space[6],
   },
   badges: { flexDirection: 'row', gap: space[4] },
-  badge: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  badge: { width: 28, height: 28, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
   badgeText: { fontSize: font.micro, fontWeight: weight.bold, color: colors.onAccent },
   text: { flex: 1, gap: space[2] },
   label: { fontSize: font.body, color: colors.text },

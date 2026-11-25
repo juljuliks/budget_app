@@ -81,9 +81,9 @@ export function PaletteStrip({ shades, size = 14 }: { shades: string[]; size?: n
 const styles = StyleSheet.create({
   // "Авто", 6 colors and "+" in one line on a phone
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: space[6], alignItems: 'center' },
-  ring: { padding: 3, borderRadius: 20, borderWidth: 2, borderColor: 'transparent' },
+  ring: { padding: space[4], borderRadius: radius.pill, borderWidth: 2, borderColor: 'transparent' },
   selected: { borderColor: colors.accent },
-  swatch: { width: 26, height: 26, borderRadius: 13 },
+  swatch: { width: 26, height: 26, borderRadius: radius.pill },
   // the size of a swatch with its ring
   plus: { margin: space[2] },
   auto: {
@@ -98,5 +98,5 @@ const styles = StyleSheet.create({
   },
   autoSelected: { borderColor: colors.accent, borderStyle: 'solid' },
   autoText: { fontSize: font.secondary, fontWeight: weight.semibold, color: colors.accent },
-  strip: { flexDirection: 'row', gap: 3 },
+  strip: { flexDirection: 'row', gap: space[4] },
 });

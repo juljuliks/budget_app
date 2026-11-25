@@ -54,5 +54,5 @@ const styles = StyleSheet.create({
   rangeButton: { flex: 1, alignItems: 'center', paddingVertical: space[6] },
   arrow: { fontSize: font.display, color: colors.accent, paddingHorizontal: space[8] },
   arrowDisabled: { color: colors.border },
-  label: { fontSize: 17, fontWeight: weight.semibold, color: colors.text },
+  label: { fontSize: font.input, fontWeight: weight.semibold, color: colors.text },
 });

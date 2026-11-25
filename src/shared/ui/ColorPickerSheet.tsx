@@ -6,7 +6,7 @@ import BottomSheet from './BottomSheet';
 import { SheetActions } from './Button';
 import HueBar from './HueBar';
 import { colors } from '../theme/theme';
-import { font, space } from '../theme/tokens';
+import { font, radius, space } from '../theme/tokens';
 
 const SQUARE = 200;
 const MARK = 26;
@@ -58,12 +58,12 @@ export default function ColorPickerSheet({ visible, title = 'Свой цвет',
             <Svg width={width} height={SQUARE} pointerEvents="none">
               <Defs>
                 <LinearGradient id="sat" x1="0" y1="0" x2="1" y2="0">
-                  <Stop offset={0} stopColor="#FFFFFF" stopOpacity={1} />
-                  <Stop offset={1} stopColor="#FFFFFF" stopOpacity={0} />
+                  <Stop offset={0} stopColor={colors.white} stopOpacity={1} />
+                  <Stop offset={1} stopColor={colors.white} stopOpacity={0} />
                 </LinearGradient>
                 <LinearGradient id="val" x1="0" y1="0" x2="0" y2="1">
-                  <Stop offset={0} stopColor="#000000" stopOpacity={0} />
-                  <Stop offset={1} stopColor="#000000" stopOpacity={1} />
+                  <Stop offset={0} stopColor={colors.black} stopOpacity={0} />
+                  <Stop offset={1} stopColor={colors.black} stopOpacity={1} />
                 </LinearGradient>
               </Defs>
               <Rect x={0} y={0} width={width} height={SQUARE} rx={12} fill={hsvToHex(h, 100, 100)} />
@@ -110,10 +110,10 @@ const styles = StyleSheet.create({
     height: MARK,
     borderRadius: MARK / 2,
     borderWidth: 3,
-    borderColor: '#FFFFFF',
+    borderColor: colors.bg,
     elevation: 3,
   },
   previewRow: { flexDirection: 'row', alignItems: 'center', gap: space[12], marginTop: space[8] },
-  preview: { width: 40, height: 40, borderRadius: 20 },
+  preview: { width: 40, height: 40, borderRadius: radius.pill },
   hex: { fontSize: font.body, color: colors.muted },
 });

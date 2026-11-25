@@ -24,8 +24,8 @@ const R = BUTTON_RADIUS;
 const HALF = R + PLATE_PAD;
 // frosted: the page's white, see-through, a fine light edge (no blur: the menu is a window of its own, and Android can't
 // blur what another window draws)
-const PLATE_FILL = 'rgba(255,255,255,0.62)';
-const PLATE_EDGE = 'rgba(255,255,255,0.9)';
+const PLATE_FILL = colors.glassFill;
+const PLATE_EDGE = colors.glassEdge;
 /** the one under the finger grows this much: still clear of its neighbours */
 const GROW = 1.15;
 
@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 6,
-    shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOpacity: 0.2,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
     fontSize: font.meta,
     fontWeight: weight.semibold,
     color: colors.onAccent,
-    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowColor: colors.textShadow,
     textShadowRadius: 3,
   },
   labelOn: { fontSize: font.secondary, fontWeight: weight.bold },

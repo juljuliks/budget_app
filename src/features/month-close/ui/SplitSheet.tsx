@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: space[12],
-    paddingVertical: 9,
+    paddingVertical: space[10],
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },

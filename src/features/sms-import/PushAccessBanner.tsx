@@ -56,7 +56,7 @@ export default function PushAccessBanner() {
 }
 
 const styles = StyleSheet.create({
-  box: { backgroundColor: '#EFF6FF', borderRadius: radius.md, padding: space[12], marginBottom: space[8] },
+  box: { backgroundColor: colors.accentBg, borderRadius: radius.md, padding: space[12], marginBottom: space[8] },
   title: { fontSize: font.body, fontWeight: weight.semibold, color: colors.text },
   text: { fontSize: font.meta, color: colors.muted, marginTop: space[4], lineHeight: 18 },
   buttons: { flexDirection: 'row', justifyContent: 'flex-end', gap: space[20], marginTop: space[8] },

@@ -3,7 +3,7 @@ import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'rea
 import { colors } from '../theme/theme';
 import Button from './Button';
 import { CloseIcon } from './icons';
-import { font, space } from '../theme/tokens';
+import { font, radius, space } from '../theme/tokens';
 
 type Props = {
   visible: boolean;
@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
     paddingBottom: space[16],
   },
   bars: { flexDirection: 'row', gap: space[4] },
-  bar: { flex: 1, height: 3, borderRadius: 2, backgroundColor: colors.border },
+  bar: { flex: 1, height: 3, borderRadius: radius.xs, backgroundColor: colors.border },
   barOn: { backgroundColor: colors.accent },
   head: { flexDirection: 'row', alignItems: 'center', gap: space[8], marginTop: space[6] },
   title: { fontSize: font.body, color: colors.muted, flexShrink: 1 },

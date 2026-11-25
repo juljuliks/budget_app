@@ -78,11 +78,11 @@ export const centerStyles = StyleSheet.create({
   caption: { fontSize: font.meta, color: colors.muted },
   over: { color: colors.warn, fontWeight: weight.semibold },
   ofRow: { flexDirection: 'row', alignItems: 'center', gap: space[4], marginTop: space[2] },
-  hero: { fontSize: 34, fontWeight: weight.bold, color: colors.text },
+  hero: { fontSize: font.total, fontWeight: weight.bold, color: colors.text },
   pickedName: { fontSize: font.body, color: colors.text, textAlign: 'center', maxWidth: 150 },
   // the small ring
   captionSmall: { fontSize: font.caption },
-  ofRowSmall: { flexWrap: 'wrap', justifyContent: 'center', columnGap: 3, rowGap: 0 },
+  ofRowSmall: { flexWrap: 'wrap', justifyContent: 'center', columnGap: space[4], rowGap: 0 },
   pickedNameSmall: { fontSize: font.meta },
   pickedAmount: { fontSize: font.headline, fontWeight: weight.bold, color: colors.text, marginVertical: space[2] },
 });

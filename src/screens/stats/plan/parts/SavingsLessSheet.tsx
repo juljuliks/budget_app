@@ -129,6 +129,9 @@ export default function SavingsLessSheet({ ym, currency, less, visible, money, o
   );
 }
 
+/** «Покрыть из плана ›» under a row's text, past its icon */
+const TEXT_INDENT = 36;
+
 const styles = StyleSheet.create({
   content: { paddingHorizontal: space[20], paddingBottom: space[16] },
   lead: { fontSize: font.secondary, color: colors.muted, marginBottom: space[6] },
@@ -146,7 +149,7 @@ const styles = StyleSheet.create({
   coverLink: {
     paddingTop: space[4],
     paddingBottom: space[12],
-    paddingLeft: 36,
+    paddingLeft: TEXT_INDENT,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },

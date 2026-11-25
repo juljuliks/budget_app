@@ -37,7 +37,7 @@ export function FilterButton({
       accessibilityState={{ selected: active, disabled }}
     >
       <Text style={[styles.buttonText, active && styles.buttonTextOn]}>{count ? `${label} · ${count}` : label}</Text>
-      <ChevronDownIcon color={active ? '#FFFFFF' : colors.accent} size={14} />
+      <ChevronDownIcon color={active ? colors.onAccent : colors.accent} size={14} />
     </TouchableOpacity>
   );
 }
@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: space[4],
     paddingHorizontal: space[10],
-    paddingVertical: 5,
+    paddingVertical: space[6],
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
   buttonOn: { backgroundColor: colors.accent, borderColor: colors.accent },
   buttonDisabled: { opacity: 0.5 },
   buttonText: { fontSize: font.meta, color: colors.text },
-  buttonTextOn: { color: '#FFFFFF' },
+  buttonTextOn: { color: colors.onAccent },
   sheet: { maxHeight: '85%' },
   search: {
     flexDirection: 'row',

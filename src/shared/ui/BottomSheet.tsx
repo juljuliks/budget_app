@@ -219,7 +219,7 @@ export default function BottomSheet({ visible, onClose, title, onTitlePress, hea
 }
 
 const styles = StyleSheet.create({
-  backdrop: { backgroundColor: 'rgba(0,0,0,0.35)' },
+  backdrop: { backgroundColor: colors.backdrop },
   wrap: { flex: 1, justifyContent: 'flex-end' },
   sheet: {
     maxHeight: '90%',
@@ -229,8 +229,8 @@ const styles = StyleSheet.create({
     paddingBottom: space[24],
   },
   // a taller touch zone around the handle, easier to grab
-  handleZone: { paddingTop: space[8], paddingBottom: space[8], marginBottom: -8 },
-  handle: { alignSelf: 'center', width: 36, height: 4, borderRadius: 2, backgroundColor: colors.border },
+  handleZone: { paddingTop: space[8], paddingBottom: space[8], marginBottom: -space[8] },
+  handle: { alignSelf: 'center', width: 36, height: 4, borderRadius: radius.xs, backgroundColor: colors.border },
   titleRow: { flexDirection: 'row', alignItems: 'center', paddingRight: space[12] },
   title: {
     flex: 1,

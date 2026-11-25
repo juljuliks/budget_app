@@ -70,8 +70,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
-  dot: { width: 10, height: 10, borderRadius: 5 },
-  name: { flex: 1, alignItems: 'flex-start', gap: 3 },
+  dot: { width: 10, height: 10, borderRadius: radius.xs },
+  name: { flex: 1, alignItems: 'flex-start', gap: space[4] },
   chip: {
     paddingHorizontal: space[12],
     paddingVertical: space[8],

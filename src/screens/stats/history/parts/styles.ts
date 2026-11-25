@@ -27,7 +27,7 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginHorizontal: -16,
+    marginHorizontal: -space[16],
     paddingHorizontal: space[16],
     paddingVertical: space[8],
     backgroundColor: colors.surface,
@@ -64,7 +64,7 @@ export const styles = StyleSheet.create({
   note: { fontSize: font.caption, color: colors.muted, marginTop: space[6] },
   groupRow: {
     marginTop: space[6],
-    marginHorizontal: -10,
+    marginHorizontal: -space[10],
     paddingHorizontal: space[10],
     paddingVertical: space[6],
     backgroundColor: colors.surface,
@@ -73,7 +73,7 @@ export const styles = StyleSheet.create({
   // "Сбережения" of the opened month: a green band under the categories
   savingsRow: {
     marginTop: space[10],
-    marginHorizontal: -10,
+    marginHorizontal: -space[10],
     paddingHorizontal: space[10],
     paddingVertical: space[6],
     backgroundColor: colors.savingsBg,

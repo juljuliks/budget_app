@@ -111,10 +111,10 @@ export function SheetActions({ submit, extra, onCancel, cancelTitle = 'Отме�
 const styles = StyleSheet.create({
   button: { borderRadius: radius.md, paddingVertical: space[14], alignItems: 'center' },
   // white, not see-through (on a grey card too); the border takes a point of the padding: as tall as a primary one
-  secondary: { backgroundColor: colors.bg, borderWidth: 1, paddingVertical: 13 },
-  cancel: { backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, paddingVertical: 13 },
+  secondary: { backgroundColor: colors.bg, borderWidth: 1, paddingVertical: space[14] },
+  cancel: { backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, paddingVertical: space[14] },
   small: { paddingHorizontal: space[14], paddingVertical: space[10] },
-  smallBordered: { paddingHorizontal: space[14], paddingVertical: 9 },
+  smallBordered: { paddingHorizontal: space[14], paddingVertical: space[10] },
   smallText: { fontSize: font.body },
   withIcon: { flexDirection: 'row', justifyContent: 'center', gap: space[6] },
   disabled: { opacity: 0.5 },

@@ -45,7 +45,7 @@ const styles = StyleSheet.create({
     marginBottom: space[8],
   },
   flex: { flex: 1 },
-  title: { fontSize: font.body, fontWeight: weight.semibold, color: '#92400E' },
-  text: { fontSize: font.meta, color: '#92400E', marginTop: space[2] },
-  chevron: { fontSize: 22, color: colors.warn },
+  title: { fontSize: font.body, fontWeight: weight.semibold, color: colors.warnText },
+  text: { fontSize: font.meta, color: colors.warnText, marginTop: space[2] },
+  chevron: { fontSize: font.heading, color: colors.warn },
 });

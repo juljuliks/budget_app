@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { BackspaceIcon, FingerprintIcon } from '@/shared/ui/icons';
 import { colors } from '@/shared/theme/theme';
-import { font, space } from '@/shared/theme/tokens';
+import { font, radius, space } from '@/shared/theme/tokens';
 
 type Props = {
   onDigit: (d: string) => void;
@@ -55,10 +55,13 @@ export default function Keypad({ onDigit, onErase, onBiometric, disabled }: Prop
   );
 }
 
+/** the keypad's side margins: its keys as wide as the PIN screen's dots row */
+const PAD_SIDE = 40;
+
 const styles = StyleSheet.create({
-  pad: { gap: space[12], paddingHorizontal: 40 },
+  pad: { gap: space[12], paddingHorizontal: PAD_SIDE },
   row: { flexDirection: 'row', gap: space[24] },
-  key: { flex: 1, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center' },
+  key: { flex: 1, height: 64, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
   digit: { backgroundColor: colors.surface },
   text: { fontSize: font.display, color: colors.text },
   off: { opacity: 0.4 },

@@ -5,7 +5,7 @@ import { SAVINGS } from '../styles';
 import { font, radius, space, weight } from '@/shared/theme/tokens';
 
 export const y = StyleSheet.create({
-  title: { fontSize: 22, fontWeight: weight.bold, color: colors.text },
+  title: { fontSize: font.heading, fontWeight: weight.bold, color: colors.text },
   caption: { fontSize: font.secondary, color: colors.muted },
   center: { textAlign: 'center' },
   big: {
@@ -24,7 +24,7 @@ export const y = StyleSheet.create({
   col: { flex: 1, alignItems: 'center' },
   half: { flex: 1, width: '100%', alignItems: 'center' },
   up: { justifyContent: 'flex-end' },
-  bar: { width: '80%', borderRadius: 3, backgroundColor: SAVINGS },
+  bar: { width: '80%', borderRadius: radius.xs, backgroundColor: SAVINGS },
   barDown: { backgroundColor: colors.warn },
   pale: { opacity: 0.5 },
   grey: { opacity: 0.4 },

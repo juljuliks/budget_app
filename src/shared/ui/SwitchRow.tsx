@@ -34,7 +34,7 @@ export default function SwitchRow({ label, hint, on, onChange, change, disabled,
         onValueChange={onChange}
         disabled={disabled}
         trackColor={{ true: colors.accent, false: colors.border }}
-        thumbColor="#FFFFFF"
+        thumbColor={colors.white}
         accessibilityLabel={label}
       />
     </View>

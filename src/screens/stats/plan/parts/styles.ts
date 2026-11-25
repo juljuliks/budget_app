@@ -3,7 +3,7 @@ import { StyleSheet } from 'react-native';
 import { chart, colors } from '@/shared/theme/theme';
 import type { Tone } from '../model/planView';
 import { BAR_HEIGHT, LOCK_BADGE, RING_LOCKED } from './palette';
-import { font, radius, space, weight } from '@/shared/theme/tokens';
+import { font, layout, radius, space, weight } from '@/shared/theme/tokens';
 
 export const styles = StyleSheet.create({
   share: { marginTop: space[4] },
@@ -16,14 +16,14 @@ export const styles = StyleSheet.create({
   // white like the stats: the sections' grey bands stand out
   screen: { flex: 1, backgroundColor: colors.bg },
   // room under the last row for the "+"
-  content: { paddingHorizontal: space[16], paddingBottom: 88 },
+  content: { paddingHorizontal: space[16], paddingBottom: layout.fabClearance },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   budgetBox: { marginBottom: space[8], padding: space[14], borderRadius: radius.lg, backgroundColor: colors.surface },
   budgetHead: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   // the pencil at the top, by the amount (not between it and the original one under it)
   budgetRow: { flexDirection: 'row', alignItems: 'flex-start', gap: space[8], paddingVertical: space[2] },
-  pencil: { marginTop: 5 },
-  budgetValue: { fontSize: 22, fontWeight: weight.bold, color: colors.text, fontVariant: ['tabular-nums'] },
+  pencil: { marginTop: space[6] },
+  budgetValue: { fontSize: font.heading, fontWeight: weight.bold, color: colors.text, fontVariant: ['tabular-nums'] },
   left: { textAlign: 'left' },
   budgetAmounts: { alignItems: 'flex-end' },
   budgetOriginal: { fontSize: font.meta, color: colors.muted, fontVariant: ['tabular-nums'] },
@@ -31,7 +31,7 @@ export const styles = StyleSheet.create({
   bar: {
     flexDirection: 'row',
     height: BAR_HEIGHT,
-    borderRadius: 5,
+    borderRadius: radius.xs,
     overflow: 'hidden',
     gap: space[2],
     backgroundColor: chart.track,
@@ -49,7 +49,7 @@ export const styles = StyleSheet.create({
     borderRadius: LOCK_BADGE / 2,
     backgroundColor: RING_LOCKED,
     borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderColor: colors.bg,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -60,7 +60,14 @@ export const styles = StyleSheet.create({
   legendDot: { width: 8, height: 8, borderRadius: radius.xs },
   legendPair: { flexDirection: 'row', alignItems: 'center' },
   // the second dot covers a third of the first, a ring of the card's colour between them
-  legendOver: { width: 12, height: 12, borderRadius: 6, marginLeft: -5, borderWidth: 2, borderColor: colors.surface },
+  legendOver: {
+    width: 12,
+    height: 12,
+    borderRadius: radius.sm,
+    marginLeft: -5,
+    borderWidth: 2,
+    borderColor: colors.surface,
+  },
   partLabel: { fontSize: font.secondary, color: colors.muted },
   // the amounts right-aligned at the edge; the shares in a column right by the names.
   // center, not baseline: the overspend's ⓘ is a drawing, and baseline drops it under the amount
@@ -103,7 +110,12 @@ export const styles = StyleSheet.create({
   hint: { color: colors.muted, fontSize: font.secondary, textAlign: 'center', marginVertical: space[12] },
   group: { marginTop: space[16] },
   // a grey band across the screen, sticking on top as the days on the operations do
-  groupHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: -16 },
+  groupHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginHorizontal: -space[16],
+  },
   groupTitle: { fontSize: font.meta, fontWeight: weight.semibold, color: colors.muted },
   // as the stats' headers: the amount dark, " · 23%" muted
   groupShare: { color: colors.muted },

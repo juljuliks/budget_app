@@ -5,7 +5,7 @@ import { font, radius, space, weight } from '@/shared/theme/tokens';
 /** A category's page of «Динамика трат». */
 export const detailStyles = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginTop: space[16] },
-  spent: { fontSize: 22, fontWeight: weight.bold, color: colors.text, fontVariant: ['tabular-nums'] },
+  spent: { fontSize: font.heading, fontWeight: weight.bold, color: colors.text, fontVariant: ['tabular-nums'] },
   spentWhen: { fontSize: font.body, fontWeight: weight.regular, color: colors.muted },
   delta: { fontSize: font.input, fontWeight: weight.semibold, color: colors.text },
   line: { fontSize: font.secondary, color: colors.muted, marginTop: space[4] },

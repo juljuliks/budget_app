@@ -5,7 +5,7 @@ import { CloseIcon, LockIcon } from '@/shared/ui/icons';
 import { colors } from '@/shared/theme/theme';
 import Keypad from './Keypad';
 import { MAX_PIN, MIN_PIN, NEXT } from '../texts';
-import { font, space, weight } from '@/shared/theme/tokens';
+import { font, radius, space, weight } from '@/shared/theme/tokens';
 
 export type PinScreenProps = {
   /** a window's name, with ✕ (cancel); none: the lock screen (the lock icon, no way around) */
@@ -96,24 +96,24 @@ const styles = StyleSheet.create({
     paddingVertical: space[10],
   },
   close: { padding: space[8] },
-  title: { fontSize: 17, fontWeight: weight.semibold, color: colors.text },
+  title: { fontSize: font.input, fontWeight: weight.semibold, color: colors.text },
   badge: {
     alignSelf: 'center',
     marginTop: space[48],
     width: 64,
     height: 64,
-    borderRadius: 18,
-    backgroundColor: '#EFF6FF',
+    borderRadius: radius.xl,
+    backgroundColor: colors.accentBg,
     alignItems: 'center',
     justifyContent: 'center',
   },
   body: { flex: 1, alignItems: 'center', paddingTop: space[32], paddingHorizontal: space[24], gap: space[14] },
-  heading: { fontSize: 22, fontWeight: weight.semibold, color: colors.text },
+  heading: { fontSize: font.heading, fontWeight: weight.semibold, color: colors.text },
   hint: { fontSize: font.secondary, color: colors.muted, textAlign: 'center' },
   dots: { flexDirection: 'row', gap: space[14], height: 24, alignItems: 'center' },
-  dot: { width: 14, height: 14, borderRadius: 7, borderWidth: 2, borderColor: '#9CA3AF' },
+  dot: { width: 14, height: 14, borderRadius: radius.sm, borderWidth: 2, borderColor: colors.faint },
   dotOn: { backgroundColor: colors.accent, borderColor: colors.accent },
   error: { fontSize: font.secondary, color: colors.danger, textAlign: 'center', minHeight: 20 },
   link: { fontSize: font.body, fontWeight: weight.semibold, color: colors.accent, padding: space[4] },
-  footer: { paddingHorizontal: space[16], paddingTop: space[12], paddingBottom: 28, minHeight: 76 },
+  footer: { paddingHorizontal: space[16], paddingTop: space[12], paddingBottom: space[32], minHeight: 76 },
 });

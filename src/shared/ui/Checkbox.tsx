@@ -14,5 +14,5 @@ export default function Checkbox({ checked, size = 22 }: { checked: boolean; siz
 const styles = StyleSheet.create({
   box: { borderWidth: 2, borderColor: colors.muted, alignItems: 'center', justifyContent: 'center' },
   on: { backgroundColor: colors.accent, borderColor: colors.accent },
-  tick: { color: '#FFFFFF', fontWeight: weight.bold },
+  tick: { color: colors.onAccent, fontWeight: weight.bold },
 });

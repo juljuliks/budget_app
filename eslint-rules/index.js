@@ -47,8 +47,47 @@ const hookName = (node) => {
   return p?.type === 'VariableDeclarator' && p.id.type === 'Identifier' ? p.id.name : undefined;
 };
 
+/** style keys that take a token (shared/theme/tokens.ts): sizes and weights of text, spacing, radii */
+const SIZE_KEY =
+  /^(fontSize|(padding|margin)(Horizontal|Vertical|Top|Bottom|Left|Right|Start|End)?|gap|rowGap|columnGap|border(Top|Bottom)?(Left|Right|Start|End)?Radius)$/;
+const COLOR = /^(#[0-9a-f]{3,8}|rgba?\(.*\))$/i;
+const keyName = (k) => (k.type === 'Identifier' ? k.name : k.type === 'Literal' ? String(k.value) : '');
+
+const themeTokens = {
+  meta: {
+    type: 'suggestion',
+    docs: {
+      description: 'Text sizes, weights, spacing, radii and colors come from shared/theme (REFACTOR_PLAN.md B2)',
+    },
+    schema: [],
+  },
+  create(context) {
+    const report = (node, what) =>
+      context.report({
+        node,
+        message: `${what}: take it from shared/theme (tokens.ts: font, weight, space, radius; theme.ts: colors).`,
+      });
+    return {
+      Property(node) {
+        const key = keyName(node.key);
+        const v = node.value;
+        if (v.type !== 'Literal') return;
+        if (SIZE_KEY.test(key) && typeof v.value === 'number' && v.value > 0) report(v, `${key}: ${v.value}`);
+        if (key === 'fontWeight' && typeof v.value === 'string') report(v, `fontWeight: '${v.value}'`);
+        if (typeof v.value === 'string' && COLOR.test(v.value)) report(v, `${key}: '${v.value}'`);
+      },
+      JSXAttribute(node) {
+        const v = node.value;
+        const s = v?.type === 'Literal' ? v.value : v?.expression?.type === 'Literal' ? v.expression.value : null;
+        if (typeof s === 'string' && COLOR.test(s)) report(v, `${node.name.name}="${s}"`);
+      },
+    };
+  },
+};
+
 module.exports = {
   rules: {
+    'theme-tokens': themeTokens,
     'touchable-role': touchableRule('A touchable says what it is (accessibilityRole)', (el) =>
       attr(el, 'accessibilityRole') || attr(el, 'role')
         ? null

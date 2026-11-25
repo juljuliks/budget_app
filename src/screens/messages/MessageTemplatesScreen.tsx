@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
   },
   flex: { flex: 1, gap: space[4] },
   title: { fontSize: font.input, fontWeight: weight.semibold, color: colors.text },
-  example: { fontSize: font.secondary, color: '#374151', lineHeight: 20 },
+  example: { fontSize: font.secondary, color: colors.textSecondary, lineHeight: 20 },
   used: { fontSize: font.meta, color: colors.muted },
   trash: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
   footer: { padding: space[16], gap: space[12], borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border },

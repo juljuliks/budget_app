@@ -51,7 +51,7 @@ export default function BudgetTab({ open }: { open: boolean }) {
           value={alerts}
           onValueChange={toggleAlerts}
           trackColor={{ true: colors.accent, false: colors.border }}
-          thumbColor="#FFFFFF"
+          thumbColor={colors.white}
           accessibilityLabel="Уведомлять о лимитах"
         />
       </View>

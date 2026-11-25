@@ -10,7 +10,7 @@ import { useLoadFailed } from '@/shared/lib/useLoadFailed';
 import { useRootNavigation } from '@/shared/navigation/navigation';
 import Loading from '@/shared/ui/Loading';
 import { colors } from '@/shared/theme/theme';
-import { font, space, weight } from '@/shared/theme/tokens';
+import { font, radius, space, weight } from '@/shared/theme/tokens';
 
 /** "Не распознано": bank messages no operation came from, newest first; a tap opens one for marking. */
 export default function UnparsedScreen() {
@@ -67,14 +67,14 @@ const styles = StyleSheet.create({
     fontSize: font.caption,
     fontWeight: weight.semibold,
     letterSpacing: 0.4,
-    color: '#374151',
+    color: colors.textSecondary,
     backgroundColor: colors.surface,
     paddingHorizontal: space[8],
     paddingVertical: space[2],
-    borderRadius: 6,
+    borderRadius: radius.sm,
     overflow: 'hidden',
   },
-  push: { color: '#1D4ED8', backgroundColor: '#DBEAFE' },
+  push: { color: colors.accentStrong, backgroundColor: colors.accentSoft },
   time: { fontSize: font.meta, color: colors.muted },
   body: { fontSize: font.body, lineHeight: 21, color: colors.text },
 });

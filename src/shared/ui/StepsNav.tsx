@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { colors } from '../theme/theme';
 import BackLink from './BackLink';
-import { font, space } from '../theme/tokens';
+import { font, radius, space } from '../theme/tokens';
 
 type Props = {
   /** the step shown, from 0 */
@@ -36,6 +36,6 @@ const styles = StyleSheet.create({
   nav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 24 },
   stepOf: { fontSize: font.meta, color: colors.muted },
   progress: { flexDirection: 'row', gap: space[6], paddingTop: space[8], paddingBottom: space[12] },
-  dash: { flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.border },
+  dash: { flex: 1, height: 4, borderRadius: radius.xs, backgroundColor: colors.border },
   dashOn: { backgroundColor: colors.accent },
 });

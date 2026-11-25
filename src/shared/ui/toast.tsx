@@ -173,19 +173,19 @@ export const SHEET_INSET = StatusBar.currentHeight ?? 24;
 const styles = StyleSheet.create({
   wrap: { position: 'absolute', left: 16, right: 16, alignItems: 'center', zIndex: 1000, elevation: 1000 },
   toast: {
-    backgroundColor: '#1F2937',
+    backgroundColor: colors.inverseBg,
     borderRadius: radius.lg,
     paddingHorizontal: space[16],
     paddingVertical: space[12],
     maxWidth: '100%',
-    shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOpacity: 0.2,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
     elevation: 6,
   },
-  error: { backgroundColor: '#FEF2F2', borderWidth: 2, borderColor: colors.danger },
-  text: { color: '#FFFFFF', fontSize: font.body, textAlign: 'center' },
+  error: { backgroundColor: colors.dangerBg, borderWidth: 2, borderColor: colors.danger },
+  text: { color: colors.onInverse, fontSize: font.body, textAlign: 'center' },
   // the whole width: the text on the left, the button at the right edge
   withAction: {
     flexDirection: 'row',
@@ -193,11 +193,11 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     gap: space[16],
     overflow: 'hidden',
-    paddingBottom: 15,
+    paddingBottom: space[16],
   },
   timeLeft: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 3, overflow: 'hidden' },
-  timeLeftBar: { flex: 1, backgroundColor: '#93C5FD' },
+  timeLeftBar: { flex: 1, backgroundColor: colors.inverseAccent },
   textWithAction: { flex: 1, textAlign: 'left' },
-  action: { color: '#93C5FD', fontSize: font.body, fontWeight: weight.semibold },
+  action: { color: colors.inverseAccent, fontSize: font.body, fontWeight: weight.semibold },
   errorText: { color: colors.danger, fontWeight: weight.semibold },
 });

@@ -8,7 +8,7 @@ import { colors } from '@/shared/theme/theme';
 import { freshMonth, freshYear } from '@/stats/reportWindow';
 import { reportView } from './model/reportView';
 import { useMonthReport } from './model/useMonthReport';
-import { font, space, weight } from '@/shared/theme/tokens';
+import { font, radius, space, weight } from '@/shared/theme/tokens';
 
 const days = (n: number) => (n === 0 ? 'последний день' : `ещё ${n} ${plural(n, ['день', 'дня', 'дней'])}`);
 
@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
     marginTop: space[10],
     paddingHorizontal: space[14],
     paddingVertical: space[12],
-    borderRadius: 14,
+    borderRadius: radius.lg,
     backgroundColor: colors.accentBg,
   },
   text: { flex: 1 },

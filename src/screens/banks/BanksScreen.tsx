@@ -55,7 +55,7 @@ export default function BanksScreen() {
               value={i.on}
               onValueChange={(on) => toggle(i, on)}
               trackColor={{ true: colors.accent, false: colors.border }}
-              thumbColor="#FFFFFF"
+              thumbColor={colors.white}
               accessibilityLabel={`Читать ${i.bank.name}`}
             />
           </View>
@@ -93,9 +93,9 @@ const styles = StyleSheet.create({
   hint: { fontSize: font.secondary, color: colors.muted, lineHeight: 20 },
   card: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, padding: space[14], gap: space[10] },
   head: { flexDirection: 'row', alignItems: 'center', gap: space[10] },
-  badge: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+  badge: { width: 34, height: 34, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
   badgeText: { fontSize: font.caption, fontWeight: weight.bold, color: colors.onAccent },
-  name: { flex: 1, fontSize: 17, fontWeight: weight.medium, color: colors.text },
+  name: { flex: 1, fontSize: font.input, fontWeight: weight.medium, color: colors.text },
   grid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: space[6] },
   key: { width: '34%', fontSize: font.secondary, color: colors.muted },
   value: { width: '66%', fontSize: font.secondary, color: colors.text },

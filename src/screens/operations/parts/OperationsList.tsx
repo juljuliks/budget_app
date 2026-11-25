@@ -113,10 +113,14 @@ export default function OperationsList(p: Props) {
   );
 }
 
+/** room under the list for the floating «＋», and for the bottom bar's two buttons while selecting */
+const FAB_ROOM = 72;
+const BAR_ROOM = 130;
+
 const styles = StyleSheet.create({
   list: { flex: 1, backgroundColor: colors.bg },
-  footer: { paddingVertical: space[16], marginBottom: 72 },
+  footer: { paddingVertical: space[16], marginBottom: FAB_ROOM },
   // edit mode: room for two buttons in the bottom bar
-  footerTall: { marginBottom: 130 },
+  footerTall: { marginBottom: BAR_ROOM },
   empty: { padding: space[32], textAlign: 'center', color: colors.muted },
 });

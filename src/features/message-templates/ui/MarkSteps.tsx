@@ -83,9 +83,9 @@ export default function MarkSteps({ words, role, onRole, marks, onWord, kind, on
 
 const styles = StyleSheet.create({
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: space[8] },
-  pill: { minHeight: 44, paddingHorizontal: space[14], borderRadius: 22, justifyContent: 'center' },
-  pillOff: { backgroundColor: colors.bg, borderWidth: 1.5, borderColor: '#D1D5DB' },
-  pillText: { fontSize: font.body, color: '#374151' },
+  pill: { minHeight: 44, paddingHorizontal: space[14], borderRadius: radius.pill, justifyContent: 'center' },
+  pillOff: { backgroundColor: colors.bg, borderWidth: 1.5, borderColor: colors.borderStrong },
+  pillText: { fontSize: font.body, color: colors.textSecondary },
   kindOn: { backgroundColor: colors.accent, borderWidth: 1.5, borderColor: colors.accent },
   kindOnText: { color: colors.onAccent, fontWeight: weight.semibold },
   text: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: space[12], gap: space[6] },

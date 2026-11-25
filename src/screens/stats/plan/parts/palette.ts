@@ -2,15 +2,15 @@
 import { chart, colors } from '@/shared/theme/theme';
 
 /** "Сбережения" in place of "Свободно" */
-export const RING_SAVINGS = '#5eead4';
+export const RING_SAVINGS = chart.ringSavings;
 /** 🔒 locked for savings: the darker part of the savings */
-export const RING_LOCKED = '#0f766e';
+export const RING_LOCKED = chart.ringLocked;
 /** the funds' contributions ("Копилки") */
 export const RING_FUNDS = colors.fund;
 /** an overspend the month before left to this one */
 export const RING_DEBT = chart.critical;
 /** the share set aside for spending outside the plan */
-export const RING_UNPLANNED = '#eda100';
+export const RING_UNPLANNED = chart.ringUnplanned;
 /** the budget's bar, and the 🔒 over its locked part: twice as tall */
 export const BAR_HEIGHT = 12;
 export const LOCK_BADGE = BAR_HEIGHT * 2;

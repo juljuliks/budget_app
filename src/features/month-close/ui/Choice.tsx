@@ -45,11 +45,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: space[12],
     paddingVertical: space[10],
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: colors.borderStrong,
     gap: space[2],
   },
   // the border takes a point of the padding: the same size as the others
-  on: { borderWidth: 2, borderColor: colors.accent, paddingHorizontal: 11, paddingVertical: 9 },
+  on: { borderWidth: 2, borderColor: colors.accent, paddingHorizontal: space[12], paddingVertical: space[10] },
   title: { fontSize: font.body, fontWeight: weight.medium, color: colors.text },
   note: { fontSize: font.meta, color: colors.muted },
 });

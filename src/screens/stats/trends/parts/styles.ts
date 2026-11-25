@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { colors } from '@/shared/theme/theme';
-import { font, space, weight } from '@/shared/theme/tokens';
+import { font, radius, space, weight } from '@/shared/theme/tokens';
 
 export const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
@@ -16,7 +16,7 @@ export const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   rowTop: { flexDirection: 'row', alignItems: 'center', gap: space[10] },
-  dot: { width: 10, height: 10, borderRadius: 5 },
+  dot: { width: 10, height: 10, borderRadius: radius.xs },
   name: { flex: 1, fontSize: font.input, color: colors.text },
   delta: { fontSize: font.input, fontWeight: weight.semibold, color: colors.text, fontVariant: ['tabular-nums'] },
   line: { fontSize: font.secondary, color: colors.muted, marginTop: space[4] },
@@ -33,13 +33,13 @@ export const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    borderTopLeftRadius: 3,
-    borderTopRightRadius: 3,
+    borderTopLeftRadius: radius.xs,
+    borderTopRightRadius: radius.xs,
     backgroundColor: colors.border,
   },
-  bar: { borderTopLeftRadius: 3, borderTopRightRadius: 3 },
+  bar: { borderTopLeftRadius: radius.xs, borderTopRightRadius: radius.xs },
   barPicked: { borderWidth: 2, borderColor: colors.text },
-  barLabel: { fontSize: 11, color: colors.muted, textAlign: 'center', marginTop: 3 },
+  barLabel: { fontSize: font.micro, color: colors.muted, textAlign: 'center', marginTop: space[4] },
   barLabelNow: { color: colors.text, fontWeight: weight.semibold },
   barLabelLater: { color: colors.faint },
 });

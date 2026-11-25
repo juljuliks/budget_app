@@ -20,7 +20,7 @@ import SearchBar from '@/shared/ui/SearchBar';
 import { MergeCategoriesSheet } from '@/features/category-merge';
 import Button from '@/shared/ui/Button';
 import { toastFailure } from '@/shared/ui/toast';
-import { font, space, weight } from '@/shared/theme/tokens';
+import { font, layout, radius, space, weight } from '@/shared/theme/tokens';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Categories'>;
 
@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
-  dot: { width: 10, height: 10, borderRadius: 5, marginRight: space[10] },
+  dot: { width: 10, height: 10, borderRadius: radius.xs, marginRight: space[10] },
   name: { flex: 1, fontSize: font.input, color: colors.text },
   empty: { padding: space[32], textAlign: 'center', color: colors.muted },
   typesRow: {
@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
   },
   pickLabel: { fontSize: font.body, color: colors.text },
   screen: { flex: 1, backgroundColor: colors.bg },
-  pickingContent: { paddingBottom: 88 },
+  pickingContent: { paddingBottom: layout.fabClearance },
   // fixed over the bottom of the list: its showing doesn't resize the list (that moved the scroll)
   bottomBar: {
     position: 'absolute',

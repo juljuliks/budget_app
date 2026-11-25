@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import type { ImpulseSummary } from '@/stats/impulse';
 import Masked from '@/shared/ui/Masked';
 import { chart, colors } from '@/shared/theme/theme';
-import { font, space } from '@/shared/theme/tokens';
+import { font, radius, space } from '@/shared/theme/tokens';
 
 /**
  * "Импульсивные · 7" against "Обдуманные · 5": a bar of their counts and under each its sum and average purchase (the
@@ -54,7 +54,14 @@ export default function ImpulseShare({
 }
 
 const styles = StyleSheet.create({
-  bar: { flexDirection: 'row', height: 10, borderRadius: 5, overflow: 'hidden', gap: space[2], marginTop: space[4] },
+  bar: {
+    flexDirection: 'row',
+    height: 10,
+    borderRadius: radius.xs,
+    overflow: 'hidden',
+    gap: space[2],
+    marginTop: space[4],
+  },
   part: { height: '100%' },
   sides: { flexDirection: 'row', justifyContent: 'space-between', gap: space[8], marginTop: space[6] },
   right: { alignItems: 'flex-end' },

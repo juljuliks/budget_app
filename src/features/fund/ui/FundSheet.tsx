@@ -13,7 +13,7 @@ import { colors } from '@/shared/theme/theme';
 import type { FundEntry } from '@/db/plans';
 import { confirmDeleteFund } from '../model/commands';
 import { useFund } from '../model/useFund';
-import { font, space, weight } from '@/shared/theme/tokens';
+import { font, radius, space, weight } from '@/shared/theme/tokens';
 
 type Props = {
   /** null = closed */
@@ -123,12 +123,12 @@ const styles = StyleSheet.create({
   track: {
     flexDirection: 'row',
     height: 10,
-    borderRadius: 5,
+    borderRadius: radius.xs,
     backgroundColor: colors.fundTrack,
     overflow: 'hidden',
     marginTop: space[10],
   },
-  fill: { backgroundColor: colors.fund, borderRadius: 5 },
+  fill: { backgroundColor: colors.fund, borderRadius: radius.xs },
   line: { flexDirection: 'row', justifyContent: 'space-between', gap: space[12], marginTop: space[10] },
   lineText: { flex: 1, fontSize: font.secondary, color: colors.muted },
   lineValue: {

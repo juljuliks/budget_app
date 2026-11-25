@@ -1,10 +1,10 @@
 // The month report's look, one for all its parts.
 import { StyleSheet } from 'react-native';
-import { colors } from '@/shared/theme/theme';
+import { chart, colors } from '@/shared/theme/theme';
 import { font, radius, space, weight } from '@/shared/theme/tokens';
 
 /** what was put aside: the savings' teal */
-export const SAVINGS = '#0d9488';
+export const SAVINGS = chart.savings;
 
 export const styles = StyleSheet.create({
   loading: { marginVertical: space[32] },
@@ -27,7 +27,7 @@ export const styles = StyleSheet.create({
   shrinkLabel: { flex: 0, flexShrink: 1 },
   yearInfo: { flexDirection: 'row', alignItems: 'center', gap: space[4] },
   shrink: { flexShrink: 1 },
-  goodBlock: { backgroundColor: '#ECFDF5' },
+  goodBlock: { backgroundColor: colors.savingsBg },
   lineStrong: { fontWeight: weight.semibold },
   indent: { paddingLeft: space[12], color: colors.muted },
   link: { fontSize: font.secondary, color: colors.accent },

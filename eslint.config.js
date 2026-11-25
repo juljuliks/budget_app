@@ -126,6 +126,13 @@ module.exports = tseslint.config(
     },
   },
   ...TYPE_CHECKED,
+  // the look from the theme (REFACTOR_PLAN.md B2): the scales and colors live in shared/theme; the palettes of
+  // categories and banks are data
+  {
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: ['src/shared/theme/**', 'src/domain/colors.ts', 'src/domain/banks.ts'],
+    rules: { 'app/theme-tokens': 'error' },
+  },
   {
     files: OVERSIZE,
     rules: {

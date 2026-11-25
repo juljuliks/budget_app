@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleProp, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
 import { ChevronDownIcon, ChevronRightIcon } from './icons';
 import { colors } from '../theme/theme';
-import { radius, space } from '../theme/tokens';
+import { font, radius, space } from '../theme/tokens';
 
 type Props = {
   /** what is chosen ("☕️ Жизнь: Кафе и рестораны", "⚪️ Без категории") */
@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     backgroundColor: colors.surface,
   },
-  value: { flex: 1, fontSize: 17, color: colors.text },
+  value: { flex: 1, fontSize: font.input, color: colors.text },
   open: {
     width: 52,
     alignItems: 'center',

@@ -23,6 +23,8 @@ export const font = {
   headline: 24,
   /** the month's amount, the balance */
   display: 28,
+  /** the total in the donut's centre */
+  total: 34,
   /** the report's stories */
   hero: 44,
 } as const;
@@ -36,6 +38,8 @@ export const weight = {
 
 /** paddings, margins, gaps: `space[12]` */
 export const space = {
+  /** a hairline's room: a pill's vertical padding, a note right under its line */
+  1: 1,
   2: 2,
   4: 4,
   6: 6,
@@ -48,6 +52,11 @@ export const space = {
   24: 24,
   32: 32,
   48: 48,
+} as const;
+
+/** room the screens keep under their content for the floating «＋» */
+export const layout = {
+  fabClearance: 88,
 } as const;
 
 export const radius = {
