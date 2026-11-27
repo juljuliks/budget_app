@@ -1,9 +1,10 @@
+import { SAVE_FAILED } from '@/shared/lib/strings';
 import { Category, categoryLabel, currentTransactionsOfCategory, deleteCategory, getCategory } from '@/db/categories';
 import { categoryDeletePreview } from '@/db/categoryDeletion';
 import { emitTransactionsChanged } from '@/domain/events';
 import { deleteEmptyText } from './texts';
 import { sheetAlert } from '@/shared/ui/sheetAlert';
-import { toast, toastError } from '@/shared/ui/toast';
+import { toast, toastError, toastFailure } from '@/shared/ui/toast';
 import { openCategoryDelete } from '@/shared/navigation/sheets';
 
 /**
@@ -24,7 +25,7 @@ export async function startCategoryDelete(
   confirmDeleteCategory(c, () => {
     close();
     onDeleted();
-  });
+  }).catch(toastFailure('confirmDeleteCategory', SAVE_FAILED));
 }
 
 /** Deletes the category, its operations of this month moved to `target` (null: left without a category). */
@@ -37,7 +38,7 @@ export async function removeCategory(categoryId: number, target: number | null) 
  * Deleting a category with no operations this month: a confirmation sheet (what stays in the past, which merchants
  * lose it, its plan), then the delete. `onDeleted` runs after (back to the categories).
  */
-export async function confirmDeleteCategory(category: Category, onDeleted: () => void) {
+async function confirmDeleteCategory(category: Category, onDeleted: () => void) {
   const label = categoryLabel(category);
   const t = deleteEmptyText(label, await categoryDeletePreview(category.id));
   sheetAlert(t.title, t.message, [

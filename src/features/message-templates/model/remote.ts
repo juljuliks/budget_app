@@ -6,7 +6,7 @@ import { readKeptByRemote } from '@/ingest/byTemplate';
 import { parseRemoteTemplates } from '@/parsers/remoteTemplates';
 import { remoteString } from '@/native/remoteConfig';
 
-export const REMOTE_PARAM = 'message_templates';
+const REMOTE_PARAM = 'message_templates';
 
 export async function syncRemoteTemplates(): Promise<void> {
   try {

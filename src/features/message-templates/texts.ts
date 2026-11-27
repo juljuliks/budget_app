@@ -5,7 +5,6 @@ import type { Role } from '@/parsers/template';
 import { markColors } from '@/shared/theme/theme';
 
 export const UNPARSED = 'Не распознано';
-export const TEMPLATES = 'Шаблоны сообщений';
 export const UNPARSED_HINT =
   'Сообщения банка, из которых не получилась операция. Отметьте в тексте сумму и валюту — такие будут разбираться сами. Хранятся 30 дней.';
 

@@ -1,5 +1,7 @@
+import { SAVE_FAILED } from '@/shared/lib/strings';
+import { toastFailure } from '@/shared/ui/toast';
 import React, { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import { confirmDeleteTransaction, confirmUnsplit, splitParts } from '@/entities/transaction';
 import { isRememberable } from '@/domain/types';
 import { SheetActions } from '@/shared/ui/Button';
@@ -36,7 +38,7 @@ export default function TransactionView({ txId, onClose }: Props) {
   const split = !!tx && splitParts(tx) !== null;
   const showChips = !!tx && tx.id === txId && !split && !!mixedCats?.length;
   // the chips are the merchant's list: a category picked elsewhere is not highlighted among them
-  const listed = (id: number | null) => (showChips && mixedCats!.some((c) => c.id === id) ? id : null);
+  const listed = (id: number | null) => (showChips && mixedCats.some((c) => c.id === id) ? id : null);
   const currentId = listed(tx?.category_id ?? null);
   const { picked, toggle, select } = useMixedPick(txId, currentId, showChips);
   const chooseRef = useRef(choose);
@@ -50,7 +52,7 @@ export default function TransactionView({ txId, onClose }: Props) {
   useEffect(() => {
     if (lone == null || lone === currentId || lone === savedChip.current) return;
     savedChip.current = lone;
-    chooseRef.current(lone);
+    chooseRef.current(lone).catch(toastFailure('current', SAVE_FAILED));
   }, [lone, currentId]);
   const [amountOpen, setAmountOpen] = useState(false);
   const [splitOpen, setSplitOpen] = useState(false);
@@ -109,7 +111,7 @@ export default function TransactionView({ txId, onClose }: Props) {
           choose(id, () => {
             savedChip.current = id;
             select(listed(id));
-          });
+          }).catch(toastFailure('choose', SAVE_FAILED));
         }}
         onSplit={(ids) => {
           setSplitSeed(ids ?? null);

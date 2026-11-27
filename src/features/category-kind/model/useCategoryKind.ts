@@ -1,4 +1,6 @@
 // «В плане» on a category's page: the kind picked, what the page's bottom button does for it, the setup sheet open.
+import { SAVE_FAILED } from '@/shared/lib/strings';
+import { toastFailure } from '@/shared/ui/toast';
 import { useEffect, useRef, useState } from 'react';
 import type { CategoryPlanKind } from '@/db/plans';
 import { SETUP } from '../texts';
@@ -71,9 +73,11 @@ export function useCategoryKind(categoryId: number, deps: Deps) {
       return;
     }
     if (from === 'regular') {
-      leaveRegular(categoryId, !!data.category.recurring).then((ok) => {
-        if (ok) next();
-      });
+      leaveRegular(categoryId, !!data.category.recurring)
+        .then((ok) => {
+          if (ok) next();
+        })
+        .catch(toastFailure('leaveRegular', SAVE_FAILED));
       return;
     }
     next();
@@ -95,9 +99,11 @@ export function useCategoryKind(categoryId: number, deps: Deps) {
             title: 'Сохранить',
             onPress: (save: (() => void) | null) =>
               leave(saved, picked, () => {
-                saveCategoryKind(categoryId, picked, data.label).then((ok) => {
-                  if (ok) openAmount(save);
-                });
+                saveCategoryKind(categoryId, picked, data.label)
+                  .then((ok) => {
+                    if (ok) openAmount(save);
+                  })
+                  .catch(toastFailure('saveCategoryKind', SAVE_FAILED));
               }),
           };
 

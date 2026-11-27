@@ -1,3 +1,5 @@
+import { SAVE_FAILED } from '@/shared/lib/strings';
+import { toastFailure } from '@/shared/ui/toast';
 import React, { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { CloseAnswers, monthClose } from '@/db/plans';
@@ -119,7 +121,7 @@ export default function CarrySheet({ fromYm, kind, onClose }: Props) {
               title: 'Сохранить',
               disabled: !draft || draft === current,
               onPress: () => {
-                save();
+                save().catch(toastFailure('save', SAVE_FAILED));
               },
             }}
             onCancel={onClose}

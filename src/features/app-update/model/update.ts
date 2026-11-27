@@ -15,10 +15,10 @@ import {
 import { getSetting, setSetting } from '@/db/settings';
 import { CANCEL } from '@/shared/lib/strings';
 import { sheetAlert } from '@/shared/ui/sheetAlert';
-import { toast, toastError } from '@/shared/ui/toast';
+import { toast, toastError, toastFailure } from '@/shared/ui/toast';
 import { ALLOW_TEXT, ALLOW_TITLE, downloading, OPEN_SETTINGS, UPDATE, UPDATE_FAILED, updateAvailable } from '../texts';
 
-export type UpdateState = {
+type UpdateState = {
   /** a release newer than this build */
   latest: Release | null;
   /** GitHub was asked and answered (the build is the latest when `latest` is null) */
@@ -99,7 +99,7 @@ async function offer(): Promise<void> {
     toast(updateAvailable(release.version), {
       label: UPDATE,
       onPress: () => {
-        startUpdate();
+        startUpdate().catch(toastFailure('update', UPDATE_FAILED));
       },
     });
   } catch (e) {

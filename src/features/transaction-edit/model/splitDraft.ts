@@ -2,7 +2,7 @@
 import type { TxPart } from '@/db/parts';
 import { formatMoneyWithCurrency, parseAmountInput, toInputValue } from '@/shared/lib/money';
 
-export type DraftPart = { category_id: number; text: string };
+type DraftPart = { category_id: number; text: string };
 /** `own`: the operation's category (what's left), null until picked; `parts`: the other categories, as typed */
 export type SplitDraft = { own: number | null; parts: DraftPart[] };
 

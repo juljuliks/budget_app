@@ -7,10 +7,11 @@ import { CategoryType, listCategoryTypes } from '@/db/categoryTypes';
 import { MergeNameTakenError, mergedName, mergePlanPreview, MergeRhythm } from '@/db/mergeCategories';
 import { currentYm, planConverter } from '@/db/plans';
 import { mergeInto } from './merge';
+import { mergePlan, rhythmKey } from './mergePlan';
 import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
 import { SheetActions } from '@/shared/ui/Button';
 import { formStyles } from '@/shared/theme/formStyles';
-import { formatWithCurrency } from '@/shared/lib/money';
+
 import RadioGroup from '@/shared/ui/RadioGroup';
 import { NO_SECTION, SPENDING_PATTERN, LOAD_FAILED } from '@/shared/lib/strings';
 import { colors } from '@/shared/theme/theme';
@@ -18,7 +19,6 @@ import { toast, toastError, toastFailure } from '@/shared/ui/toast';
 import { font, space, weight } from '@/shared/theme/tokens';
 import Banner from '@/shared/ui/Banner';
 
-const rhythmKey = (r: MergeRhythm) => `${r.kind}:${r.norm}:${r.every ?? ''}:${r.weekdays ?? ''}`;
 // a regular payment within the month: its days ("Регулярный платёж · пн, чт")
 const regularDaysText = (r: MergeRhythm) =>
   r.every === 'day'
@@ -73,34 +73,9 @@ export default function MergeCategoriesSheet({
       setTypes(t);
       setName(mergedName(picked));
       setTypeKey(picked[0]?.type_id === null || !picked[0] ? 'none' : String(picked[0].type_id));
-      // the sum in the target's plan currency (else the first item's), as the merge stores it
-      const own = items.find((i) => i.category_id === ids[0]) ?? items[0];
-      if (own) {
-        const sum = items.reduce(
-          (a, i) =>
-            a +
-            (i.currency === own.currency
-              ? i.limit_minor
-              : (conv(i.limit_minor, i.currency, own.currency) ?? i.limit_minor)),
-          0,
-        );
-        setPlanSum(formatWithCurrency(Math.round(sum), own.currency));
-      } else setPlanSum(null);
-      const ways: Array<{ rhythm: MergeRhythm; names: string[] }> = [];
-      for (const id of ids) {
-        const i = items.find((x) => x.category_id === id);
-        if (!i) continue;
-        const r: MergeRhythm = {
-          kind: i.kind,
-          norm: i.kind === 'fixed' ? 'month' : i.norm_period,
-          every: i.every,
-          weekdays: i.every === 'week' ? i.weekdays : null,
-        };
-        const c = picked.find((x) => x.id === id);
-        const way = ways.find((w) => rhythmKey(w.rhythm) === rhythmKey(r));
-        if (way) way.names.push(c?.name ?? '');
-        else ways.push({ rhythm: r, names: [c?.name ?? ''] });
-      }
+      const plan = mergePlan(ids, picked, items, conv);
+      setPlanSum(plan.sum);
+      const ways = plan.ways;
       setRhythms(ways);
       setRhythm(ways[0] ? rhythmKey(ways[0].rhythm) : '');
     })().catch(toastFailure('load merge', LOAD_FAILED));
@@ -126,20 +101,9 @@ export default function MergeCategoriesSheet({
       return;
     }
     setSaving(true);
-    try {
-      const chosen = rhythms.length > 1 ? (rhythms.find((w) => rhythmKey(w.rhythm) === rhythm)?.rhythm ?? null) : null;
-      await mergeInto(ids[0], ids.slice(1), name, typeKey === 'none' ? null : Number(typeKey), chosen);
-      toast(`Категории объединены в «${name.trim()}»`);
-      onMerged();
-    } catch (e) {
-      if (e instanceof MergeNameTakenError) toastError(`Категория «${e.name}» в этом разделе уже есть`);
-      else {
-        console.error('merge categories failed', e);
-        toastError('Не удалось объединить');
-      }
-    } finally {
-      setSaving(false);
-    }
+    const chosen = rhythms.length > 1 ? (rhythms.find((w) => rhythmKey(w.rhythm) === rhythm)?.rhythm ?? null) : null;
+    await mergeAndSay(ids, name, typeKey === 'none' ? null : Number(typeKey), chosen, onMerged);
+    setSaving(false);
   }
 
   return (
@@ -208,3 +172,24 @@ const styles = StyleSheet.create({
   bold: { fontWeight: weight.semibold },
   warn: { marginTop: space[16] },
 });
+
+/** Merges them; said in a toast — done, the name taken in the section, or failed. */
+async function mergeAndSay(
+  ids: number[],
+  name: string,
+  typeId: number | null,
+  rhythm: MergeRhythm | null,
+  onMerged: () => void,
+) {
+  try {
+    await mergeInto(ids[0], ids.slice(1), name, typeId, rhythm);
+    toast(`Категории объединены в «${name.trim()}»`);
+    onMerged();
+  } catch (e) {
+    if (e instanceof MergeNameTakenError) toastError(`Категория «${e.name}» в этом разделе уже есть`);
+    else {
+      console.error('merge categories failed', e);
+      toastError('Не удалось объединить');
+    }
+  }
+}

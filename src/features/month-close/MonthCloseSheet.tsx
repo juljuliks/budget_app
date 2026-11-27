@@ -1,3 +1,5 @@
+import { SAVE_FAILED } from '@/shared/lib/strings';
+import { toastFailure } from '@/shared/ui/toast';
 import React, { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import type { CloseStep } from '@/db/plans';
@@ -26,6 +28,10 @@ const NEXT_SHEET_MS = 250;
  */
 export default function MonthCloseSheet({ ym, onClose }: { ym: string | null; onClose: () => void }) {
   const { close: c, failed, load, split, answer, pay, finish } = useMonthClose(ym);
+  // an answer saved as it is given; a failure is said
+  const answerNow = (patch: Parameters<typeof answer>[0]) => {
+    answer(patch).catch(toastFailure('answer', SAVE_FAILED));
+  };
   const [wanted, setWanted] = useState<CloseStep | null>(null);
   const [splitOpen, setSplitOpen] = useState(false);
   useEffect(() => {
@@ -64,12 +70,14 @@ export default function MonthCloseSheet({ ym, onClose }: { ym: string | null; on
                 <StepPayments
                   c={c}
                   onAnswer={(id, v) => {
-                    pay(id, v);
+                    pay(id, v).catch(toastFailure('pay', SAVE_FAILED));
                   }}
                 />
               ) : null}
-              {step === 'over' ? <StepOver c={c} onAnswer={answer} /> : null}
-              {step === 'savings' ? <StepSavings c={c} onAnswer={answer} onSplit={() => setSplitOpen(true)} /> : null}
+              {step === 'over' ? <StepOver c={c} onAnswer={answerNow} /> : null}
+              {step === 'savings' ? (
+                <StepSavings c={c} onAnswer={answerNow} onSplit={() => setSplitOpen(true)} />
+              ) : null}
               {!step ? <Empty inline>{`Вопросов о ${words.prep} нет`}</Empty> : null}
             </SheetScrollView>
             <View style={styles.actions}>
@@ -84,7 +92,7 @@ export default function MonthCloseSheet({ ym, onClose }: { ym: string | null; on
                       title: `Отчёт за ${words.nom}`,
                       disabled: !c.complete,
                       onPress: () => {
-                        report();
+                        report().catch(toastFailure('report', SAVE_FAILED));
                       },
                     }}
                     onCancel={onClose}
@@ -112,7 +120,9 @@ export default function MonthCloseSheet({ ym, onClose }: { ym: string | null; on
         visible={ym !== null && splitOpen}
         onClose={() => setSplitOpen(false)}
         onSave={(parts) => {
-          split(parts).then(() => setSplitOpen(false));
+          split(parts)
+            .then(() => setSplitOpen(false))
+            .catch(toastFailure('split', SAVE_FAILED));
         }}
       />
     </>

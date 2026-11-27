@@ -118,6 +118,10 @@
 - **`entities` — готово:** `PlanAmountModal` поделён (данные — `usePlanSheetData`, части — `PlanSheetParts`), действия
   выбора категории — вне хука; асинхронные обработчики: `submitForm` и `sheetAlert` ловят ошибки сами; предупреждений 0,
   `knip` чист, правила typescript-eslint — ошибки.
+- **`features` — готово:** у каждого промиса `.catch(toastFailure(…))` (фоновое уведомление о лимите — в лог), `Button` и
+  `SheetActions` принимают `async`-обработчик и ловят его ошибку; тихих `catch(() => {})` нет; длинные хуки и шиты
+  поделены (`usePinFlow`, `useSortOut`, `useTransactionFilters`, `useMerchantActions`, `MergeCategoriesSheet`,
+  `PaymentSheet`, `RecurringPaymentsSheet`); `knip` чист, правила typescript-eslint — ошибки.
 
 ## Этап 6. Производительность (5–7 коммитов)
 

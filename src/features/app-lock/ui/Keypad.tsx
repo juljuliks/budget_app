@@ -42,6 +42,7 @@ export default function Keypad({ onDigit, onErase, onBiometric, disabled }: Prop
       ))}
       <View style={styles.row}>
         {onBiometric ? (
+          // eslint-disable-next-line app/icon-touchable-hit-slop -- a key: 64 pt high, a third of the row wide
           <TouchableOpacity
             accessibilityRole="button"
             style={styles.key}
@@ -54,6 +55,7 @@ export default function Keypad({ onDigit, onErase, onBiometric, disabled }: Prop
           <View style={styles.key} />
         )}
         {digit('0')}
+        {/* eslint-disable-next-line app/icon-touchable-hit-slop -- a key: 64 pt high, a third of the row wide */}
         <TouchableOpacity
           accessibilityRole="button"
           style={styles.key}

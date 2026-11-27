@@ -62,7 +62,7 @@ export function usePinFlow(ask: Ask | null, done: () => void): (PinScreenProps &
         setPinLength(s.pinLength);
         if (s.waitS > 0) setWait(s.waitS);
       })
-      .catch(() => {});
+      .catch((e) => console.error('lock state failed', e));
     biometric().catch((e) => console.error('biometric failed', e));
   }, [ask]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -83,45 +83,7 @@ export function usePinFlow(ask: Ask | null, done: () => void): (PinScreenProps &
     setResetKey((k) => k + 1);
   };
 
-  if (ask.kind === 'create') {
-    const cancel = () => {
-      ask.resolve(null);
-      done();
-    };
-    return {
-      visible: true,
-      title: ask.title,
-      resetKey,
-      error,
-      heading: first === null ? ask.heading : CONFIRM_PIN,
-      hint: first === null ? NEW_PIN_HINT : CONFIRM_PIN_HINT,
-      length: first === null ? null : first.length,
-      onCancel: cancel,
-      onSubmit: (pin) => {
-        if (first === null) {
-          setFirst(pin);
-          setError(undefined);
-          return;
-        }
-        if (pin === first) {
-          ask.resolve(pin);
-          done();
-          return;
-        }
-        again(PIN_MISMATCH);
-      },
-      link:
-        first !== null && error
-          ? {
-              title: RESTART_PIN,
-              onPress: () => {
-                setFirst(null);
-                setError(undefined);
-              },
-            }
-          : undefined,
-    };
-  }
+  if (ask.kind === 'create') return createScreen(ask, { first, setFirst, error, setError, resetKey, again, done });
 
   const onSubmit = async (pin: string) => {
     const r = await checkPin(pin);
@@ -131,22 +93,6 @@ export function usePinFlow(ask: Ask | null, done: () => void): (PinScreenProps &
       setWait(r.waitS);
     } else again(wrongPin(r.left));
   };
-  const forgot = () =>
-    sheetAlert(
-      FORGOT,
-      biometricOn() ? FORGOT_INFO_BIO : FORGOT_INFO,
-      biometricOn()
-        ? [
-            {
-              text: BY_FINGERPRINT,
-              onPress: () => {
-                biometric().catch(() => {});
-              },
-            },
-            { text: CLOSE, style: 'cancel' },
-          ]
-        : [{ text: CLOSE, style: 'cancel' }],
-    );
   return {
     visible: true,
     resetKey,
@@ -168,9 +114,82 @@ export function usePinFlow(ask: Ask | null, done: () => void): (PinScreenProps &
         : undefined,
     onBiometric: biometricOn()
       ? () => {
-          biometric().catch(() => {});
+          biometric().catch((e) => console.error('biometric failed', e));
         }
       : undefined,
-    link: ask.kind === 'unlock' ? { title: FORGOT, onPress: forgot } : undefined,
+    link: ask.kind === 'unlock' ? { title: FORGOT, onPress: () => askForgot(biometric) } : undefined,
   };
+}
+
+type CreateState = {
+  first: string | null;
+  setFirst: (pin: string | null) => void;
+  error: string | undefined;
+  setError: (e: string | undefined) => void;
+  resetKey: number;
+  again: (message: string) => void;
+  done: () => void;
+};
+
+/** A new PIN: entered, then again; a mismatch — "Ввести заново". */
+function createScreen(
+  ask: Extract<Ask, { kind: 'create' }>,
+  { first, setFirst, error, setError, resetKey, again, done }: CreateState,
+): PinScreenProps & { visible: boolean } {
+  const cancel = () => {
+    ask.resolve(null);
+    done();
+  };
+  return {
+    visible: true,
+    title: ask.title,
+    resetKey,
+    error,
+    heading: first === null ? ask.heading : CONFIRM_PIN,
+    hint: first === null ? NEW_PIN_HINT : CONFIRM_PIN_HINT,
+    length: first === null ? null : first.length,
+    onCancel: cancel,
+    onSubmit: (pin) => {
+      if (first === null) {
+        setFirst(pin);
+        setError(undefined);
+        return;
+      }
+      if (pin === first) {
+        ask.resolve(pin);
+        done();
+        return;
+      }
+      again(PIN_MISMATCH);
+    },
+    link:
+      first !== null && error
+        ? {
+            title: RESTART_PIN,
+            onPress: () => {
+              setFirst(null);
+              setError(undefined);
+            },
+          }
+        : undefined,
+  };
+}
+
+/** "Забыли PIN?": what to do; with the fingerprint on — unlock by it. */
+function askForgot(biometric: () => Promise<void>) {
+  sheetAlert(
+    FORGOT,
+    biometricOn() ? FORGOT_INFO_BIO : FORGOT_INFO,
+    biometricOn()
+      ? [
+          {
+            text: BY_FINGERPRINT,
+            onPress: () => {
+              biometric().catch((e) => console.error('biometric failed', e));
+            },
+          },
+          { text: CLOSE, style: 'cancel' },
+        ]
+      : [{ text: CLOSE, style: 'cancel' }],
+  );
 }

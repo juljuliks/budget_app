@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Text, TouchableOpacity } from 'react-native';
 import { categoryLabel } from '@/db/categories';
 import type { Currency } from '@/db/fx';
 import type { PlanAmountTarget } from '@/entities/plan';

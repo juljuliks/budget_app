@@ -1,29 +1,27 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { dayTitle } from '@/shared/lib/dates';
-import { formatWithCurrency } from '@/shared/lib/money';
-import { AMOUNT_HINT } from '@/shared/lib/strings';
-import { PAYMENT_PERIODS as periods } from '@/shared/lib/format';
+import { toastFailure } from '@/shared/ui/toast';
+import React from 'react';
+import { StyleSheet, Text, TouchableOpacity } from 'react-native';
+
+import { AMOUNT_HINT, SAVE_FAILED } from '@/shared/lib/strings';
+
 import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
 import { SheetActions } from '@/shared/ui/Button';
-import Chip from '@/shared/ui/Chip';
 import CurrencyButton from '@/shared/ui/CurrencyButton';
 import TextField from '@/shared/ui/TextField';
-import DateField from '@/shared/ui/DateField';
 import { TrashIcon } from '@/shared/ui/icons';
-import TextInputModal from '@/shared/ui/TextInputModal';
 import { formStyles } from '@/shared/theme/formStyles';
 import { colors } from '@/shared/theme/theme';
-import { ONCE, todayKey } from '@/db/recurring';
-import { currentYm } from '@/db/plans';
+import { ONCE } from '@/db/recurring';
+
 import { confirmDeletePayment, submitPayment } from '../model/commands';
 import { CategorySummaryRow, SUBSCRIPTION_WORDS as w } from '@/entities/category';
 import { showOperationsFrom } from '@/shared/navigation/navigation';
 import { PaymentTarget, usePaymentForm } from '../model/usePaymentForm';
 import { usePaymentOperations } from '../model/usePaymentOperations';
+import { PaymentPlanPlate, PaymentWhen } from './PaymentSheetParts';
 import { SavingFields, usePaymentSaving } from '@/entities/plan';
-import { inTime, monthGenYear, periodText } from '../texts';
-import { font, radius, space, weight } from '@/shared/theme/tokens';
+
+import { space } from '@/shared/theme/tokens';
 
 type Props = {
   /** null = closed */
@@ -44,8 +42,6 @@ export default function PaymentSheet({ target, onClose, onSaved, onLeave }: Prop
   const f = usePaymentForm(target);
   const ops = usePaymentOperations(target);
   const saving = usePaymentSaving(target, f.period, f.input?.amount_minor ?? null, f.due);
-  const [otherOpen, setOtherOpen] = useState(false);
-  const custom = !periods.some(([m]) => m === f.period);
   const amountBad = f.amount.trim() !== '' && f.input === null && !!f.name.trim();
   // its end before the next charge: no charge at all
   const endBad = f.period !== ONCE && !!f.until && !!f.due && f.until < f.due;
@@ -66,7 +62,6 @@ export default function PaymentSheet({ target, onClose, onSaved, onLeave }: Prop
     else onClose();
   };
   const icon = target?.category.emoji ?? '🔁';
-  const dueLabel = f.period === ONCE ? 'Дата списания' : 'Следующее списание';
   const title =
     target?.id !== undefined
       ? `${icon} ${target.name}`
@@ -85,7 +80,9 @@ export default function PaymentSheet({ target, onClose, onSaved, onLeave }: Prop
         target?.id !== undefined ? (
           <TouchableOpacity
             onPress={() => {
-              confirmDeletePayment(target.id!, target.name, target.currency, target.category, onClose);
+              confirmDeletePayment(target.id!, target.name, target.currency, target.category, onClose).catch(
+                toastFailure('confirmDeletePayment', SAVE_FAILED),
+              );
             }}
             hitSlop={8}
             accessibilityRole="button"
@@ -130,62 +127,9 @@ export default function PaymentSheet({ target, onClose, onSaved, onLeave }: Prop
           right={<CurrencyButton value={f.currency} onChange={f.setCurrency} />}
           error={amountBad ? AMOUNT_HINT : null}
         />
-        <Text style={formStyles.label}>Как часто</Text>
-        <View style={styles.chips}>
-          {periods.map(([m, label]) => (
-            <Chip key={m} label={label} selected={f.period === m} onPress={() => f.setPeriod(m)} />
-          ))}
-          <Chip
-            label={custom ? periodText(f.period) : 'Другое…'}
-            selected={custom}
-            action={!custom}
-            onPress={() => setOtherOpen(true)}
-          />
-        </View>
-        <DateField
-          label={dueLabel}
-          value={f.due}
-          format={dayTitle}
-          sheetTitle={dueLabel}
-          minDay={todayKey()}
-          suffix={f.due ? (inTime(f.due, todayKey()) ? ` · ${inTime(f.due, todayKey())}` : null) : null}
-          onChange={f.setDue}
-        />
-        <Text style={formStyles.hint}>
-          {f.period === ONCE
-            ? 'Списание одно: после него в план больше не встанет.'
-            : 'После списания дата сдвинется сама: пришла операция мерчанта — следующая через период.'}
-        </Text>
-        {f.period === ONCE ? null : (
-          <DateField
-            label="Дата окончания (необязательно)"
-            value={f.until}
-            format={dayTitle}
-            sheetTitle="Дата окончания"
-            minDay={f.due ?? todayKey()}
-            onChange={f.setUntil}
-            onClear={() => f.setUntil(null)}
-          />
-        )}
-        {endBad ? <Text style={[formStyles.hint, styles.error]}>Дата окончания раньше следующего списания</Text> : null}
+        <PaymentWhen f={f} endBad={endBad} />
         <SavingFields s={saving} amount={f.input?.amount_minor ?? null} currency={f.currency} due={f.due} />
-        {saving.contribution !== null ? (
-          <View style={styles.plate}>
-            <Text
-              style={styles.plateTitle}
-            >{`В план ${monthGenYear(currentYm())} +${formatWithCurrency(saving.contribution, f.currency)}`}</Text>
-            <Text
-              style={styles.plateText}
-            >{`Взнос каждый месяц до ${monthGenYear(f.due!.slice(0, 7))}; списание — из отложенного.`}</Text>
-          </View>
-        ) : f.effect && f.effect.delta_minor !== 0 ? (
-          <View style={styles.plate}>
-            <Text style={styles.plateTitle}>
-              {`В план ${monthGenYear(f.effect.ym)} ${f.effect.delta_minor > 0 ? '+' : '−'}${formatWithCurrency(Math.abs(f.effect.delta_minor), f.effect.currency)}`}
-            </Text>
-            <Text style={styles.plateText}>Каждое списание — в план своего месяца.</Text>
-          </View>
-        ) : null}
+        <PaymentPlanPlate f={f} contribution={saving.contribution} />
         <SheetActions
           submit={{
             title: 'Сохранить',
@@ -196,22 +140,6 @@ export default function PaymentSheet({ target, onClose, onSaved, onLeave }: Prop
           cancelTitle={target?.from_operation ? 'Пропустить' : 'Отмена'}
         />
       </SheetScrollView>
-      <TextInputModal
-        visible={otherOpen}
-        title="Раз в сколько месяцев"
-        initialValue={custom && f.period > 0 ? String(f.period) : ''}
-        keyboardType="number-pad"
-        placeholder="Например, 2"
-        submitLabel="Готово"
-        onClose={() => setOtherOpen(false)}
-        onSubmit={async (v) => {
-          const n = Number(v.trim());
-          if (!Number.isInteger(n) || n < 1 || n > 36) return 'Введите число месяцев, от 1 до 36';
-          f.setPeriod(n);
-          setOtherOpen(false);
-          return null;
-        }}
-      />
     </BottomSheet>
   );
 }
@@ -220,15 +148,4 @@ const styles = StyleSheet.create({
   root: { maxHeight: '94%' },
   content: { paddingHorizontal: space[20], paddingBottom: space[8] },
   lead: { marginTop: 0 },
-  error: { color: colors.danger },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space[8] },
-  plate: {
-    marginTop: space[14],
-    borderRadius: radius.md,
-    padding: space[12],
-    backgroundColor: colors.surface,
-    gap: space[4],
-  },
-  plateTitle: { fontSize: font.input, fontWeight: weight.semibold, color: colors.text },
-  plateText: { fontSize: font.meta, color: colors.muted },
 });

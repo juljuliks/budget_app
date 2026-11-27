@@ -1,6 +1,6 @@
 // The repeating payments' words: the periods, "через 7 дней", the days.
 import { SHORT_MONTHS } from '@/shared/lib/dates';
-export { inMonth, inMonthYear, longDay, longDayYear, monthGen, monthGenYear } from '@/shared/lib/dates';
+export { inMonth, inMonthYear, longDay, monthGen, monthGenYear } from '@/shared/lib/dates';
 export { periodText } from '@/shared/lib/format';
 import { plural } from '@/shared/lib/format';
 

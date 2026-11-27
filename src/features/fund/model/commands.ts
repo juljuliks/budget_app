@@ -82,7 +82,7 @@ export function confirmDeleteFund(
         text: 'Выключить',
         style: 'destructive',
         onPress: () => {
-          remove(categoryId, label, onDone, ym);
+          remove(categoryId, label, onDone, ym).catch(toastFailure('remove', SAVE_FAILED));
         },
       },
     ],

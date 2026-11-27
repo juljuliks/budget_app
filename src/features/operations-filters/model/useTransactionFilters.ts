@@ -1,5 +1,5 @@
 // The operations' filters: what is set, what can be picked (with counts), the chips of the set ones, resets.
-import { MutableRefObject, useCallback, useRef, useState } from 'react';
+import React, { MutableRefObject, useCallback, useRef, useState } from 'react';
 import {
   banksWithTransactions,
   categoriesWithTransactions,
@@ -30,29 +30,11 @@ export function useTransactionFilters(lockedRef: MutableRefObject<DayRange | nul
   const [banks, setBanks] = useState<string[]>([]);
   const [range, setRange] = useState<DayRange | null>(null);
   const [unanswered, setUnanswered] = useState(false);
-  const [categoryOptions, setCategoryOptions] = useState<CategoryWithCount[]>([]);
-  const [merchantOptions, setMerchantOptions] = useState<MerchantWithCount[]>([]);
-  const [kindOptions, setKindOptions] = useState<Array<{ kind: string; count: number }>>([]);
-  const [bankOptions, setBankOptions] = useState<Array<{ bank: string; count: number }>>([]);
+  const { categoryOptions, merchantOptions, kindOptions, bankOptions, loadOptions } = useFilterOptions();
   const filter: Filter = { query, categories, merchants, kinds, banks, range, unanswered };
   // read by the list's reload without making it change (and re-run focus effects) on every keystroke
   const filterRef = useRef(filter);
   filterRef.current = filter;
-
-  const loadOptions = useCallback(() => {
-    categoriesWithTransactions()
-      .then(setCategoryOptions)
-      .catch((e) => console.error('load category filter failed', e));
-    merchantsWithTransactions()
-      .then(setMerchantOptions)
-      .catch((e) => console.error('load merchant filter failed', e));
-    kindsWithTransactions()
-      .then(setKindOptions)
-      .catch((e) => console.error('load kind filter failed', e));
-    banksWithTransactions()
-      .then(setBankOptions)
-      .catch((e) => console.error('load bank filter failed', e));
-  }, []);
 
   /** Only these set, the rest cleared. */
   const setOnly = useCallback((f: Partial<Filter>) => {
@@ -95,41 +77,21 @@ export function useTransactionFilters(lockedRef: MutableRefObject<DayRange | nul
   }
 
   // the filters set, as chips to clear one by one
-  const activeFilters = (lockedMonth: DayRange | null): ActiveFilter[] => {
-    const active: ActiveFilter[] = [];
-    for (const cat of lockedMonth ? [] : categories) {
-      const c = categoryOptions.find((o) => o.category === cat);
-      active.push({
-        key: `c${cat}`,
-        label: c ? `${c.emoji || ''} ${c.name}`.trim() : cat === 'none' ? NO_CATEGORY : 'Категория',
-        clear: () => setCategories((p) => p.filter((x) => x !== cat)),
-      });
-    }
-    for (const k of kinds) {
-      active.push({ key: `k${k}`, label: KIND_LABELS[k] ?? k, clear: () => setKinds((p) => p.filter((x) => x !== k)) });
-    }
-    for (const b of banks) {
-      active.push({
-        key: `b${b}`,
-        label: bankById(b)?.name ?? b,
-        clear: () => setBanks((p) => p.filter((x) => x !== b)),
-      });
-    }
-    for (const mer of merchants) {
-      const m = merchantOptions.find((o) => o.merchant === mer);
-      active.push({
-        key: `m${mer}`,
-        label: m?.name ?? 'Мерчант',
-        clear: () => setMerchants((p) => p.filter((x) => x !== mer)),
-      });
-    }
-    if (range && !(lockedMonth && range.from === lockedMonth.from && range.to === lockedMonth.to)) {
-      active.push({ key: 'date', label: formatRange(range), clear: () => changeRange(null) });
-    }
-    if (query.trim()) active.push({ key: 'text', label: `«${query.trim()}»`, clear: () => setQuery('') });
-    if (unanswered) active.push({ key: 'unanswered', label: UNANSWERED_CHIP, clear: () => setUnanswered(false) });
-    return active;
-  };
+  const activeFilters = (lockedMonth: DayRange | null): ActiveFilter[] =>
+    chipsOf(
+      filter,
+      lockedMonth,
+      { categoryOptions, merchantOptions },
+      {
+        setCategories,
+        setKinds,
+        setBanks,
+        setMerchants,
+        setQuery,
+        setUnanswered,
+        changeRange,
+      },
+    );
 
   return {
     filter,
@@ -154,4 +116,80 @@ export function useTransactionFilters(lockedRef: MutableRefObject<DayRange | nul
     changeRange,
     activeFilters,
   };
+}
+
+/** What can be picked in each filter, with counts: loaded when the filters open. */
+function useFilterOptions() {
+  const [categoryOptions, setCategoryOptions] = useState<CategoryWithCount[]>([]);
+  const [merchantOptions, setMerchantOptions] = useState<MerchantWithCount[]>([]);
+  const [kindOptions, setKindOptions] = useState<Array<{ kind: string; count: number }>>([]);
+  const [bankOptions, setBankOptions] = useState<Array<{ bank: string; count: number }>>([]);
+
+  const loadOptions = useCallback(() => {
+    categoriesWithTransactions()
+      .then(setCategoryOptions)
+      .catch((e) => console.error('load category filter failed', e));
+    merchantsWithTransactions()
+      .then(setMerchantOptions)
+      .catch((e) => console.error('load merchant filter failed', e));
+    kindsWithTransactions()
+      .then(setKindOptions)
+      .catch((e) => console.error('load kind filter failed', e));
+    banksWithTransactions()
+      .then(setBankOptions)
+      .catch((e) => console.error('load bank filter failed', e));
+  }, []);
+  return { categoryOptions, merchantOptions, kindOptions, bankOptions, loadOptions };
+}
+
+type Setters = {
+  setCategories: React.Dispatch<React.SetStateAction<CategoryFilter[]>>;
+  setKinds: React.Dispatch<React.SetStateAction<string[]>>;
+  setBanks: React.Dispatch<React.SetStateAction<string[]>>;
+  setMerchants: React.Dispatch<React.SetStateAction<string[]>>;
+  setQuery: (q: string) => void;
+  setUnanswered: (on: boolean) => void;
+  changeRange: (next: DayRange | null) => void;
+};
+
+/** The set filters as chips, each clearing itself; a sort-out's category and month are not shown. */
+function chipsOf(
+  { query, categories, merchants, kinds, banks, range, unanswered }: Filter,
+  lockedMonth: DayRange | null,
+  { categoryOptions, merchantOptions }: { categoryOptions: CategoryWithCount[]; merchantOptions: MerchantWithCount[] },
+  { setCategories, setKinds, setBanks, setMerchants, setQuery, setUnanswered, changeRange }: Setters,
+): ActiveFilter[] {
+  const active: ActiveFilter[] = [];
+  for (const cat of lockedMonth ? [] : categories) {
+    const c = categoryOptions.find((o) => o.category === cat);
+    active.push({
+      key: `c${cat}`,
+      label: c ? `${c.emoji || ''} ${c.name}`.trim() : cat === 'none' ? NO_CATEGORY : 'Категория',
+      clear: () => setCategories((p) => p.filter((x) => x !== cat)),
+    });
+  }
+  for (const k of kinds) {
+    active.push({ key: `k${k}`, label: KIND_LABELS[k] ?? k, clear: () => setKinds((p) => p.filter((x) => x !== k)) });
+  }
+  for (const b of banks) {
+    active.push({
+      key: `b${b}`,
+      label: bankById(b)?.name ?? b,
+      clear: () => setBanks((p) => p.filter((x) => x !== b)),
+    });
+  }
+  for (const mer of merchants) {
+    const m = merchantOptions.find((o) => o.merchant === mer);
+    active.push({
+      key: `m${mer}`,
+      label: m?.name ?? 'Мерчант',
+      clear: () => setMerchants((p) => p.filter((x) => x !== mer)),
+    });
+  }
+  if (range && !(lockedMonth && range.from === lockedMonth.from && range.to === lockedMonth.to)) {
+    active.push({ key: 'date', label: formatRange(range), clear: () => changeRange(null) });
+  }
+  if (query.trim()) active.push({ key: 'text', label: `«${query.trim()}»`, clear: () => setQuery('') });
+  if (unanswered) active.push({ key: 'unanswered', label: UNANSWERED_CHIP, clear: () => setUnanswered(false) });
+  return active;
 }

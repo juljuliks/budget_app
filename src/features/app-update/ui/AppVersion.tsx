@@ -1,10 +1,11 @@
+import { toastFailure } from '@/shared/ui/toast';
 import React, { useEffect, useSyncExternalStore } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { appVersion } from '@/native/appInfo';
 import Button from '@/shared/ui/Button';
 import { colors } from '@/shared/theme/theme';
 import { checkForUpdate, onUpdateState, startUpdate, updateState, updatesOn } from '../model/update';
-import { LATEST, downloading, updateTo } from '../texts';
+import { LATEST, downloading, UPDATE_FAILED, updateTo } from '../texts';
 import { font, space } from '@/shared/theme/tokens';
 
 /**
@@ -27,7 +28,7 @@ export default function AppVersion({ open }: { open: boolean }) {
         <Button
           title={progress != null ? downloading(progress) : updateTo(latest.version)}
           onPress={() => {
-            startUpdate();
+            startUpdate().catch(toastFailure('update', UPDATE_FAILED));
           }}
           disabled={progress != null}
           style={styles.button}

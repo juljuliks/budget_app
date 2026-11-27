@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { Text } from 'react-native';
 import { RecurringPayment, todayKey } from '@/db/recurring';
 import SectionBand from '@/shared/ui/SectionBand';
 import { formStyles } from '@/shared/theme/formStyles';

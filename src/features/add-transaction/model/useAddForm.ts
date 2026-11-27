@@ -1,4 +1,5 @@
 // The new operation's form: clean on each open; a deposit goes to "Пополнение счёта" unless another is picked.
+
 import { useEffect } from 'react';
 import { useForm, useFormState, useWatch } from 'react-hook-form';
 import { topUpCategoryId } from '@/db/categories';
@@ -73,7 +74,7 @@ export function useAddForm(visible: boolean, onClose: () => void) {
         category_id: categoryId,
         occurred_at: Math.floor(at.getTime() / 1000),
       });
-      showLimitAlert(categoryId);
+      showLimitAlert(categoryId).catch((e) => console.error('limit alert failed', e));
       toast('Операция добавлена');
       onClose();
     } catch (e) {

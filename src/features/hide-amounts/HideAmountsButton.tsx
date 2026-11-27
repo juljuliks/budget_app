@@ -16,12 +16,12 @@ export default function HideAmountsButton({ confirmShow }: { confirmShow: () => 
   const save = (v: boolean) => setHideAmounts(v).catch(toastFailure('save hide amounts', SAVE_FAILED));
   const press = () => {
     if (!hidden) {
-      save(true);
+      save(true).catch(toastFailure('save', SAVE_FAILED));
       return;
     }
     confirmShow()
       .then((ok) => {
-        if (ok) save(false);
+        if (ok) save(false).catch(toastFailure('save', SAVE_FAILED));
       })
       .catch(toastFailure('confirm show amounts', SAVE_FAILED));
   };

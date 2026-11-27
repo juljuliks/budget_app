@@ -75,14 +75,14 @@ export default function CategoryTypesSheet({ visible, onClose }: { visible: bool
               subject={t.name}
               onEdit={() => setEditing({ type: t })}
               deleteDisabled={!!t.is_transfer}
-              onDelete={() =>
-                t.is_transfer
-                  ? sheetAlert(
-                      'Системный раздел',
-                      `«${t.name}» нельзя удалить: из него приложение предлагает категории для переводов. Переименовать можно.`,
-                    )
-                  : remove(t)
-              }
+              onDelete={() => {
+                if (t.is_transfer)
+                  sheetAlert(
+                    'Системный раздел',
+                    `«${t.name}» нельзя удалить: из него приложение предлагает категории для переводов. Переименовать можно.`,
+                  );
+                else remove(t).catch(toastFailure('count categories of type', LOAD_FAILED));
+              }}
             />
           </View>
         )}

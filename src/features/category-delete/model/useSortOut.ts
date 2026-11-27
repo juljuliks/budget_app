@@ -144,32 +144,32 @@ export function useSortOut<V>({ incoming, nonce, current, start, restore, clear,
   useEffect(() => {
     if (!sortOut || !remaining || remaining.n > 0 || doneShown.current) return;
     doneShown.current = true;
-    (async () => {
-      const [summary, p] = await Promise.all([
-        sortOutSummary(sortOut.id, sortOut.ids),
-        categoryDeletePreview(sortOut.id),
-      ]);
-      const t = sortOutDoneText(sortOut.label, summary, p);
-      sheetAlert(t.title, t.message, [
-        { text: 'Не удалять', style: 'cancel', onPress: () => leave() },
-        {
-          text: `Удалить «${sortOut.label}»`,
-          style: 'destructive',
-          onPress: () => {
-            removeCategory(sortOut.id, null)
-              .then(() => {
-                toast(`Категория «${sortOut.label}» удалена`);
-                leave();
-              })
-              .catch((e) => {
-                console.error('delete category failed', e);
-                toastError('Не удалось удалить');
-              });
-          },
-        },
-      ]);
-    })().catch(toastFailure('sort-out summary', LOAD_FAILED));
+    askDelete(sortOut, leave).catch(toastFailure('sort-out summary', LOAD_FAILED));
   }, [sortOut, remaining, leave]);
 
   return { sortOut, ref, remaining, refreshRemaining, drop, abort, leave, askLeave };
+}
+
+/** Nothing of this month left in it: where its operations went, and «Удалить …» (or «Не удалять» — back). */
+async function askDelete<V>(sortOut: SortOut<V>, leave: () => void) {
+  const [summary, p] = await Promise.all([sortOutSummary(sortOut.id, sortOut.ids), categoryDeletePreview(sortOut.id)]);
+  const t = sortOutDoneText(sortOut.label, summary, p);
+  sheetAlert(t.title, t.message, [
+    { text: 'Не удалять', style: 'cancel', onPress: () => leave() },
+    {
+      text: `Удалить «${sortOut.label}»`,
+      style: 'destructive',
+      onPress: () => {
+        removeCategory(sortOut.id, null)
+          .then(() => {
+            toast(`Категория «${sortOut.label}» удалена`);
+            leave();
+          })
+          .catch((e) => {
+            console.error('delete category failed', e);
+            toastError('Не удалось удалить');
+          });
+      },
+    },
+  ]);
 }

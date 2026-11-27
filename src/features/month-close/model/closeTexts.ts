@@ -32,9 +32,3 @@ export function currentStep(steps: CloseStep[], wanted: CloseStep | null): Close
   const from = wanted ? order.indexOf(wanted) : 0;
   return steps.find((s) => order.indexOf(s) >= from) ?? steps[steps.length - 1];
 }
-
-/** "Удалось отложить?" answered, as its buttons: by what went in of what was asked. */
-export function answerOf(asked: number, minor: number | null): 'yes' | 'other' | 'no' | null {
-  if (minor === null) return null;
-  return minor === 0 ? 'no' : minor === asked ? 'yes' : 'other';
-}

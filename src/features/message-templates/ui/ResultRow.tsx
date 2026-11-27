@@ -8,7 +8,7 @@ import { colors } from '@/shared/theme/theme';
 import { font, radius, space } from '@/shared/theme/tokens';
 
 /** When it happened: the date in the text, else when the message came. */
-export const occurredOf = (p: ParsedTx, receivedAt: number) =>
+const occurredOf = (p: ParsedTx, receivedAt: number) =>
   p.occurred_at ? Math.floor(new Date(p.occurred_at).getTime() / 1000) : receivedAt;
 
 /** The operation a message gives, drawn as a row of the operations list: the merchant, "Без категории · day, time", the amount. */

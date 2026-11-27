@@ -58,13 +58,6 @@ const CORE_MESSAGE = 'The core imports no UI: move the helper to src/shared/lib 
  * file is split in stage 5 — then it leaves this list; a file is never added to it.
  */
 const OVERSIZE = [
-  'src/features/app-lock/model/usePinFlow.ts',
-  'src/features/category-delete/model/useSortOut.ts',
-  'src/features/category-merge/MergeCategoriesSheet.tsx',
-  'src/features/merchant-card/model/useMerchantActions.ts',
-  'src/features/operations-filters/model/useTransactionFilters.ts',
-  'src/features/recurring-payments/ui/PaymentSheet.tsx',
-  'src/features/recurring-payments/ui/RecurringPaymentsSheet.tsx',
   'src/screens/operations/OperationsScreen.tsx',
   'src/screens/stats/StatsHome.tsx',
   'src/screens/stats/month/StatsView.tsx',
@@ -87,7 +80,7 @@ const asWarnings = (rules = {}) =>
     ]),
   );
 /** the folders whose typescript-eslint warnings are all fixed: errors from now on (one layer at a time, stage 5) */
-const STRICT = ['src/db/**/*.ts', 'src/entities/**/*.{ts,tsx}'];
+const STRICT = ['src/db/**/*.ts', 'src/entities/**/*.{ts,tsx}', 'src/features/**/*.{ts,tsx}'];
 
 /** strict TypeScript (REFACTOR_PLAN.md A5): typescript-eslint recommended-type-checked */
 const TYPE_CHECKED = tseslint.configs.recommendedTypeChecked.map((c) => ({

@@ -2,6 +2,8 @@ import React from 'react';
 import { StyleProp, StyleSheet, Text, TextStyle, TouchableOpacity, View, ViewStyle } from 'react-native';
 import { colors } from '../theme/theme';
 import { font, radius, space, weight } from '../theme/tokens';
+import { SAVE_FAILED } from '../lib/strings';
+import { toastFailure } from './toast';
 
 /**
  * The app's three buttons — every button is one of them, no hand-made ones:
@@ -13,9 +15,12 @@ import { font, radius, space, weight } from '../theme/tokens';
  */
 export type ButtonVariant = 'primary' | 'secondary' | 'cancel' | 'text';
 
+/** A button's action; an async one's failure is logged and said in a red toast ("Не удалось сохранить"). */
+export type Press = () => void | Promise<void>;
+
 type Props = {
   title: string;
-  onPress: () => void;
+  onPress: Press;
   /** 'primary' when not given */
   variant?: ButtonVariant;
   /** 'small': for a row of answers ("Да, 300 ₾", "Другая сумма", "Нет"), as wide as its text in a row */
@@ -80,7 +85,9 @@ export default function Button({
         style,
       ]}
       disabled={disabled}
-      onPress={onPress}
+      onPress={() => {
+        Promise.resolve(onPress()).catch(toastFailure(`"${title}"`, SAVE_FAILED));
+      }}
       hitSlop={plain ? 8 : undefined}
       testID={testID}
       accessibilityRole="button"
@@ -94,9 +101,9 @@ export default function Button({
 
 type SheetActionsProps = {
   /** the main action, full width; null = only "Отмена" (e.g. nothing changed yet) */
-  submit: { title: string; onPress: () => void; disabled?: boolean; danger?: boolean } | null;
+  submit: { title: string; onPress: Press; disabled?: boolean; danger?: boolean } | null;
   /** more actions under it, `secondary` */
-  extra?: Array<{ title: string; onPress: () => void; danger?: boolean }>;
+  extra?: Array<{ title: string; onPress: Press; danger?: boolean }>;
   onCancel?: () => void;
   cancelTitle?: string;
   style?: StyleProp<ViewStyle>;

@@ -1,4 +1,5 @@
 // Picking the operation's category: for this operation only, or for its merchant too (asked when that changes others).
+import { SAVE_FAILED } from '@/shared/lib/strings';
 import { useEffect, useState } from 'react';
 import { assignCategory, MerchantChoice, merchantChangePreview } from '@/categorize/assign';
 import { categoryLabel, getCategory, isSubscriptions } from '@/db/categories';
@@ -7,7 +8,7 @@ import { openPayment } from '@/shared/navigation/sheets';
 import { showLimitAlert } from '@/notifications/notifeeIntegration';
 import { merchantLabel } from '@/entities/transaction';
 import { sheetAlert } from '@/shared/ui/sheetAlert';
-import { toast, toastError } from '@/shared/ui/toast';
+import { toast, toastError, toastFailure } from '@/shared/ui/toast';
 import { merchantChoiceText } from '../texts';
 import { askSubscriptionPrice } from './subscriptionPrice';
 import type { Tx } from './useTransaction';
@@ -24,7 +25,7 @@ export function useCategoryChoice(txId: number, tx: Tx | null, visible: boolean)
     const previous = tx?.category_id ?? null;
     try {
       await assignCategory(txId, categoryId, choice);
-      showLimitAlert(categoryId);
+      showLimitAlert(categoryId).catch((e) => console.error('limit alert failed', e));
       const c = categoryId === null ? undefined : await getCategory(categoryId);
       if (!c) toast('Категория убрана');
       else if (choice === 'merchant' && tx)
@@ -67,14 +68,14 @@ export function useCategoryChoice(txId: number, tx: Tx | null, visible: boolean)
       {
         text: 'Только для этой операции',
         onPress: () => {
-          assign(categoryId, 'only', onSaved);
+          assign(categoryId, 'only', onSaved).catch(toastFailure('assign', SAVE_FAILED));
         },
       },
       {
         text: 'Для мерчанта',
         style: 'secondary',
         onPress: () => {
-          assign(categoryId, 'merchant', onSaved);
+          assign(categoryId, 'merchant', onSaved).catch(toastFailure('assign', SAVE_FAILED));
         },
       },
     ]);

@@ -31,12 +31,13 @@ export default function PaymentNote({ tx }: { tx: Tx }) {
       if (!c?.by_merchant || !tx.merchant_key) return null;
       return (await paymentCard(tx.merchant_key)) ?? 'none';
     };
-    const run = () =>
+    const run = () => {
       load()
         .then((c) => {
           if (live) setCard(c);
         })
         .catch((e) => console.error('payment card failed', e));
+    };
     run();
     const off = onTransactionsChanged(run);
     return () => {
@@ -57,13 +58,14 @@ export default function PaymentNote({ tx }: { tx: Tx }) {
   const money = (minor: number) => formatWithCurrency(minor, sub.currency);
   // the latest charge is this one and its amount isn't the subscription's
   const changed = card.last?.id === tx.id && tx.currency === sub.currency && tx.amount_minor !== sub.amount_minor;
-  const update = () =>
+  const update = () => {
     savePayment({ ...sub, amount_minor: tx.amount_minor }, sub.id)
       .then(() => {
         emitTransactionsChanged();
         toast(`${sub.name} — ${money(tx.amount_minor)}`);
       })
       .catch(toastFailure('update payment', SAVE_FAILED));
+  };
   return (
     <>
       <View style={styles.box}>

@@ -103,29 +103,29 @@ export function useMerchantActions(
     );
   }
 
-  // its operations stay with their categories, without the merchant (as deleting from the merchants' list)
-  function remove() {
-    if (!m) return;
-    const t = removeText(m.name, m.count);
-    sheetAlert(t.title, t.message, [
-      { text: 'Отмена', style: 'cancel' },
-      {
-        text: 'Удалить мерчанта',
-        style: 'destructive',
-        onPress: () => {
-          removeMerchant(m.id)
-            .then(() => {
-              onClose();
-              toast(`Мерчант «${m.name}» удалён`);
-            })
-            .catch((e) => {
-              console.error('delete merchant failed', e);
-              toastError('Не удалось удалить');
-            });
-        },
-      },
-    ]);
-  }
+  return { saving, save, remove: () => askRemove(m, onClose) };
+}
 
-  return { saving, save, remove };
+// its operations stay with their categories, without the merchant (as deleting from the merchants' list)
+function askRemove(m: MerchantDetails | null, onClose: () => void) {
+  if (!m) return;
+  const t = removeText(m.name, m.count);
+  sheetAlert(t.title, t.message, [
+    { text: 'Отмена', style: 'cancel' },
+    {
+      text: 'Удалить мерчанта',
+      style: 'destructive',
+      onPress: () => {
+        removeMerchant(m.id)
+          .then(() => {
+            onClose();
+            toast(`Мерчант «${m.name}» удалён`);
+          })
+          .catch((e) => {
+            console.error('delete merchant failed', e);
+            toastError('Не удалось удалить');
+          });
+      },
+    },
+  ]);
 }

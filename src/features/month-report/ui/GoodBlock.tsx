@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+
 import type { ReportView } from '../model/reportView';
 import { CategoryLine, Line, YearInfo } from './Lines';
 import ReportBlock from './ReportBlock';

@@ -42,7 +42,7 @@ async function write(input: PaymentInput, id: number | undefined, onDone: () => 
   try {
     const subId = await savePayment(input, id);
     const on = !!saving?.on && !!input.due;
-    if (on && !saving!.had) await startSaving(subId, saving!.start);
+    if (on && !saving.had) await startSaving(subId, saving.start);
     const stopped = !on && saving?.had ? await stopSaving(subId) : null;
     emitTransactionsChanged();
     onDone();
@@ -91,14 +91,14 @@ export function submitPayment(
           text: 'Не откладывать',
           style: 'destructive',
           onPress: () => {
-            check(input, id, onDone, saving);
+            check(input, id, onDone, saving).catch(toastFailure('save payment', SAVE_FAILED));
           },
         },
       ],
     );
     return;
   }
-  check(input, id, onDone, saving);
+  check(input, id, onDone, saving).catch(toastFailure('save payment', SAVE_FAILED));
 }
 
 // this month's plan only: charged first in a later month (0 now) — nothing asked
@@ -188,7 +188,7 @@ export async function confirmDeletePayment(
         text: 'Удалить',
         style: 'destructive',
         onPress: () => {
-          remove(id, name, category, onDone);
+          remove(id, name, category, onDone).catch(toastFailure('remove', SAVE_FAILED));
         },
       },
     ],

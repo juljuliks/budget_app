@@ -9,12 +9,11 @@ export type SheetText = { title: string; message: string };
 
 const ops = (n: number) => `${n} ${plural(n, ['операция', 'операции', 'операций'])}`;
 /** "840 ₾" / "840 ₾ + 20 $" */
-export const money = (b: Bucket) =>
-  b.totals.map((t) => formatMoneyWithCurrency(t.amount_minor, t.currency)).join(' + ');
+const money = (b: Bucket) => b.totals.map((t) => formatMoneyWithCurrency(t.amount_minor, t.currency)).join(' + ');
 /** "12 операций на 840 ₾" */
-export const opsOn = (b: Bucket) => (b.totals.length ? `${ops(b.n)} на ${money(b)}` : ops(b.n));
+const opsOn = (b: Bucket) => (b.totals.length ? `${ops(b.n)} на ${money(b)}` : ops(b.n));
 /** "Zara, H&M и ещё 3" */
-export function names(list: string[]): string {
+function names(list: string[]): string {
   return list.length > 3 ? `${list.slice(0, 2).join(', ')} и ещё ${list.length - 2}` : list.join(', ');
 }
 const merchantsN = (n: number) => `${n} ${plural(n, ['мерчант', 'мерчанта', 'мерчантов'])}`;

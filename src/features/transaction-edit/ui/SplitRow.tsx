@@ -54,6 +54,7 @@ export default function SplitRow({ index, label, currency, text, rest, onText, o
           accessibilityRole="button"
           style={styles.remove}
           onPress={onRemove}
+          hitSlop={6}
           accessibilityLabel={`Убрать: ${label}`}
         >
           <CloseIcon color={colors.muted} size={18} />

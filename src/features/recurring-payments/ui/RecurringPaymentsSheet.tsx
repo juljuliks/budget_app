@@ -12,7 +12,7 @@ import { formStyles } from '@/shared/theme/formStyles';
 import { colors } from '@/shared/theme/theme';
 import { SUBSCRIPTION_WORDS as w } from '@/entities/category';
 import { PaymentCategory, PaymentTarget } from '../model/usePaymentForm';
-import { useRecurringPayments } from '../model/useRecurringPayments';
+import { type RecurringPaymentsData, useRecurringPayments } from '../model/useRecurringPayments';
 import { inMonth, monthGen } from '../texts';
 import MonthPaymentsView from './MonthPaymentsView';
 import PaymentSheet from './PaymentSheet';
@@ -42,6 +42,18 @@ const savingSum = (m: { saving: Array<{ converted_minor: number | null }> }) =>
  * A category's repeating payments in the plan's month, two views: the month's ("Подписки": its charges, those without a
  * day — its merchants without one too: a tap makes one) and the coming ones ("Предстоящие подписки": saved up for, and later). A tap opens a payment.
  */
+/** A merchant's subscription not saved yet: a monthly payment of its last charge's amount, from its day. */
+const merchantTarget = (category: Props['category'], m: RecurringPaymentsData['merchants'][number]): PaymentTarget => ({
+  category,
+  merchant_key: m.merchant_key,
+  name: m.name,
+  amount_minor: m.amount_minor,
+  currency: m.currency,
+  period: 1,
+  due: null,
+  last_day: m.day,
+});
+
 export default function RecurringPaymentsSheet({
   ym,
   category,
@@ -125,16 +137,7 @@ export default function RecurringPaymentsSheet({
                 open={setOpen}
                 targetOf={targetOf}
                 upcoming={upcomingCount ? { savingMinor: saving, count: upcomingCount } : null}
-                merchantTarget={(m) => ({
-                  category,
-                  merchant_key: m.merchant_key,
-                  name: m.name,
-                  amount_minor: m.amount_minor,
-                  currency: m.currency,
-                  period: 1,
-                  due: null,
-                  last_day: m.day,
-                })}
+                merchantTarget={(m) => merchantTarget(category, m)}
                 onUpcoming={() => setView('upcoming')}
               />
             ) : (
