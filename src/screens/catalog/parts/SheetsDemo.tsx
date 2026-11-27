@@ -51,7 +51,7 @@ export default function SheetsDemo() {
         <StepsNav
           at={step}
           count={3}
-          name={`Шаг ${step + 1} из 3`}
+          name={['Сумма', 'Категория', 'Дата'][step]}
           onBack={step ? () => setStep(step - 1) : undefined}
         />
         <Button title="Дальше" size="small" onPress={() => setStep((step + 1) % 3)} />

@@ -125,6 +125,8 @@ export default function TextInputModal<V extends TextFormValues & FieldValues = 
             render={({ field }) => (
               <TextField
                 right={inputAccessory}
+                // with its currency it is an amount: large, as in the sheets
+                large={!!inputAccessory}
                 inputStyle={multiline && styles.multiline}
                 multiline={multiline}
                 textAlignVertical={multiline ? 'top' : undefined}
