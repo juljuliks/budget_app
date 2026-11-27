@@ -1,5 +1,7 @@
 import React from 'react';
+import { Text } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
+import AmountRow from '@/shared/ui/AmountRow';
 import Banner from '@/shared/ui/Banner';
 import Empty from '@/shared/ui/Empty';
 import ModeBanner from '@/shared/ui/ModeBanner';
@@ -88,6 +90,26 @@ describe('TextField', () => {
   });
 });
 
+describe('AmountRow', () => {
+  test('its name, notes and amount; a tap by its label', () => {
+    const open = jest.fn();
+    render(
+      <AmountRow
+        title="📺 Подписки"
+        notes={<Text>каждый месяц</Text>}
+        amount={<Text>70 ₾</Text>}
+        onPress={open}
+        accessibilityLabel="Подписки"
+      />,
+    );
+    expect(screen.getByText('📺 Подписки')).toBeTruthy();
+    expect(screen.getByText('каждый месяц')).toBeTruthy();
+    expect(screen.getByText('70 ₾')).toBeTruthy();
+    fireEvent.press(screen.getByLabelText('Подписки'));
+    expect(open).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('«Компоненты» (debug build only)', () => {
   test('⋮ › Компоненты: every frame of the catalog is drawn', async () => {
     await openApp(base);
@@ -102,6 +124,7 @@ describe('«Компоненты» (debug build only)', () => {
       'DateField',
       'RangeCalendar',
       'Fab',
+      'AmountRow',
       'Banner',
       'Empty',
       'Loading',

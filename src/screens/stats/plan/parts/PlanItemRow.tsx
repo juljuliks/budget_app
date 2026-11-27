@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { categoryLabel } from '@/db/categories';
 import type { Currency } from '@/db/fx';
 import type { PlanItem } from '@/db/plans';
@@ -8,6 +8,7 @@ import { normText, percentOf, PlanView, SystemRow } from '../model/planView';
 import { regularNote } from '../model/regularNote';
 import { dayKeyOf } from '@/shared/lib/dateRange';
 import { KindIcon } from './PlanIcon';
+import AmountRow from '@/shared/ui/AmountRow';
 import { LockIcon } from '@/shared/ui/icons';
 import { colors } from '@/shared/theme/theme';
 import { styles, toneStyle } from './styles';
@@ -53,46 +54,41 @@ export function PlanItemRow({ p, item, ym, currency, hidden, toShown, onOpen }: 
         ? normText(item, ym, currency)
         : '';
   return (
-    <TouchableOpacity
-      accessibilityRole="button"
-      style={styles.row}
+    <AmountRow
       onPress={onOpen}
       accessibilityLabel={`Изменить: ${categoryLabel(item)}`}
-    >
-      <KindIcon item={item} />
-      <View style={styles.nameBox}>
-        {/* the type is the section title, so just emoji + name here */}
-        <Text style={styles.name} numberOfLines={1}>
-          {label}
-        </Text>
-        {note ? <Text style={styles.percent}>{note}</Text> : null}
-      </View>
-      {item.limit_minor ? (
-        <View style={styles.amountBox}>
-          {/* "(200 $)" before an amount shown converted from another currency; "Скрыть суммы": the share only */}
-          {hidden ? null : (
-            <View style={styles.amountLine}>
-              {item.converted_minor !== null && item.currency !== currency ? (
-                <Text style={[styles.amount, styles.amountForeign]}>
-                  ({formatWithCurrency(item.limit_minor, item.currency)})
+      icon={<KindIcon item={item} />}
+      // the type is the section title, so just emoji + name here
+      title={label}
+      notes={note ? <Text style={styles.percent}>{note}</Text> : null}
+      amount={
+        item.limit_minor ? (
+          <View style={styles.amountBox}>
+            {/* "(200 $)" before an amount shown converted from another currency; "Скрыть суммы": the share only */}
+            {hidden ? null : (
+              <View style={styles.amountLine}>
+                {item.converted_minor !== null && item.currency !== currency ? (
+                  <Text style={[styles.amount, styles.amountForeign]}>
+                    ({formatWithCurrency(item.limit_minor, item.currency)})
+                  </Text>
+                ) : null}
+                <Text style={styles.amount}>
+                  {item.converted_minor !== null
+                    ? p.money(item.converted_minor)
+                    : formatWithCurrency(item.limit_minor, item.currency)}
                 </Text>
-              ) : null}
-              <Text style={styles.amount}>
-                {item.converted_minor !== null
-                  ? p.money(item.converted_minor)
-                  : formatWithCurrency(item.limit_minor, item.currency)}
-              </Text>
-            </View>
-          )}
-          <Share p={p} value={item.converted_minor} />
-        </View>
-      ) : hidden ? null : (
-        // carried over without an amount: last month's as a muted hint, in the app's currency
-        <Text style={[styles.amount, styles.amountEmpty]}>
-          {item.previous_minor ? `в прошлом месяце ${inShown(item.previous_minor, item.currency)}` : '0'}
-        </Text>
-      )}
-    </TouchableOpacity>
+              </View>
+            )}
+            <Share p={p} value={item.converted_minor} />
+          </View>
+        ) : hidden ? null : (
+          // carried over without an amount: last month's as a muted hint, in the app's currency
+          <Text style={[styles.amount, styles.amountEmpty]}>
+            {item.previous_minor ? `в прошлом месяце ${inShown(item.previous_minor, item.currency)}` : '0'}
+          </Text>
+        )
+      }
+    />
   );
 }
 
@@ -112,38 +108,31 @@ export function SystemRowView({
   onOpen: () => void;
 }) {
   return (
-    <TouchableOpacity
-      accessibilityRole="button"
-      style={styles.row}
+    <AmountRow
       onPress={onOpen}
       accessibilityLabel={`Изменить: ${r.name}`}
-    >
-      <View style={styles.pin}>
-        <LockIcon color={colors.muted} size={20} />
-      </View>
-      <View style={styles.nameBox}>
-        <Text style={styles.name} numberOfLines={1}>
-          {r.name}
-        </Text>
-        <Text style={styles.percent}>{r.note}</Text>
-      </View>
-      <View style={styles.amountBox}>
-        {hidden ? null : (
-          <View style={styles.amountLine}>
-            {r.inBudget !== undefined && p.budgetMoney ? (
-              <Text style={styles.amount}>{p.budgetMoney(r.inBudget).slice(1, -1)}</Text>
-            ) : (
-              <Text style={[styles.amount, toneStyle(r.tone)]}>{p.money(r.value)}</Text>
-            )}
-          </View>
-        )}
-        {p.shownBudget ? (
-          <Text style={styles.amountOriginal}>
-            {hidden ? '' : ' · '}
-            {percentOf(r.value, p.shownBudget) || '0%'}
-          </Text>
-        ) : null}
-      </View>
-    </TouchableOpacity>
+      icon={<LockIcon color={colors.muted} size={20} />}
+      title={r.name}
+      notes={<Text style={styles.percent}>{r.note}</Text>}
+      amount={
+        <View style={styles.amountBox}>
+          {hidden ? null : (
+            <View style={styles.amountLine}>
+              {r.inBudget !== undefined && p.budgetMoney ? (
+                <Text style={styles.amount}>{p.budgetMoney(r.inBudget).slice(1, -1)}</Text>
+              ) : (
+                <Text style={[styles.amount, toneStyle(r.tone)]}>{p.money(r.value)}</Text>
+              )}
+            </View>
+          )}
+          {p.shownBudget ? (
+            <Text style={styles.amountOriginal}>
+              {hidden ? '' : ' · '}
+              {percentOf(r.value, p.shownBudget) || '0%'}
+            </Text>
+          ) : null}
+        </View>
+      }
+    />
   );
 }

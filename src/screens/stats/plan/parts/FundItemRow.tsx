@@ -1,5 +1,6 @@
 import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import AmountRow from '@/shared/ui/AmountRow';
+import { Text, View } from 'react-native';
 import { categoryLabel } from '@/db/categories';
 import type { PlanItem } from '@/db/plans';
 import { fundProgress, isSaved } from '@/entities/plan';
@@ -27,45 +28,44 @@ export function FundItemRow({ p, item, hidden, onOpen }: Props) {
   // what the budget fitted of its contribution (from 🔒, less, none)
   const fit = fundFitStatus(item, p.ym, hidden);
   return (
-    <TouchableOpacity
-      accessibilityRole="button"
-      style={styles.row}
+    <AmountRow
       onPress={onOpen}
       accessibilityLabel={`Копилка: ${categoryLabel(item)}`}
-    >
-      <View style={styles.pin}>
+      icon={
         <ProgressRing
           ratio={f ? f.saved_minor / f.target_minor : 0}
           color={saved ? colors.income : colors.fund}
           track={colors.fundTrack}
           size={22}
         />
-      </View>
-      <View style={styles.nameBox}>
-        <Text style={styles.name} numberOfLines={1}>
-          {`${item.emoji || ''} ${item.name}`.trim()}
-        </Text>
-        {f ? (
-          <Text style={styles.percent}>
-            {hidden
-              ? saved
-                ? 'накоплено'
-                : `${Math.floor((f.saved_minor / f.target_minor) * 100)}%`
-              : fundProgress(f.saved_minor, f.target_minor, f.due, item.currency)}
-          </Text>
-        ) : null}
-        {fit ? <Text style={[styles.percent, fit.tone === 'warn' && { color: colors.warn }]}>{fit.text}</Text> : null}
-      </View>
-      <View style={styles.amountBox}>
-        {hidden ? null : (
-          <View style={styles.amountLine}>
-            <Text style={styles.amount}>
-              {own ?? (value !== null ? p.money(value) : formatWithCurrency(item.limit_minor, item.currency))}
+      }
+      title={`${item.emoji || ''} ${item.name}`.trim()}
+      notes={
+        <>
+          {f ? (
+            <Text style={styles.percent}>
+              {hidden
+                ? saved
+                  ? 'накоплено'
+                  : `${Math.floor((f.saved_minor / f.target_minor) * 100)}%`
+                : fundProgress(f.saved_minor, f.target_minor, f.due, item.currency)}
             </Text>
-          </View>
-        )}
-        <Share p={p} value={value} before={saved && !item.limit_minor ? 'можно тратить' : undefined} />
-      </View>
-    </TouchableOpacity>
+          ) : null}
+          {fit ? <Text style={[styles.percent, fit.tone === 'warn' && { color: colors.warn }]}>{fit.text}</Text> : null}
+        </>
+      }
+      amount={
+        <View style={styles.amountBox}>
+          {hidden ? null : (
+            <View style={styles.amountLine}>
+              <Text style={styles.amount}>
+                {own ?? (value !== null ? p.money(value) : formatWithCurrency(item.limit_minor, item.currency))}
+              </Text>
+            </View>
+          )}
+          <Share p={p} value={value} before={saved && !item.limit_minor ? 'можно тратить' : undefined} />
+        </View>
+      }
+    />
   );
 }

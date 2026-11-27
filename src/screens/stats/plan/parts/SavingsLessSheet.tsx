@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import AmountRow from '@/shared/ui/AmountRow';
+import { StyleSheet, Text, View } from 'react-native';
 import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
 import { SheetActions } from '@/shared/ui/Button';
 import Masked from '@/shared/ui/Masked';
@@ -34,37 +35,28 @@ function Row({
   onOpen?: () => void;
   onCover?: () => void;
 }) {
-  const body = (
-    <>
-      <Text style={styles.emoji}>{o.emoji ?? ''}</Text>
-      <View style={styles.text}>
-        <Text style={styles.name} numberOfLines={1}>
-          {o.name}
-        </Text>
+  const row = (
+    <AmountRow
+      large
+      // with "Покрыть из плана" under it the line is under the link
+      style={onCover && styles.noLine}
+      onPress={onOpen}
+      accessibilityLabel={onOpen ? `План: ${o.name}` : undefined}
+      icon={<Text style={styles.emoji}>{o.emoji ?? ''}</Text>}
+      title={o.name}
+      notes={
         <Masked
           style={styles.note}
         >{`${o.category_id === null ? 'доля' : 'план'} ${money(o.plan)} · потрачено ${money(o.spent)}`}</Masked>
-      </View>
-      <Masked style={styles.over}>{`−${money(o.over)}`}</Masked>
-    </>
+      }
+      amount={<Masked style={styles.over}>{`−${money(o.over)}`}</Masked>}
+    />
   );
-  if (onOpen)
-    return (
-      <TouchableOpacity
-        style={styles.row}
-        onPress={onOpen}
-        accessibilityRole="button"
-        accessibilityLabel={`План: ${o.name}`}
-      >
-        {body}
-      </TouchableOpacity>
-    );
+  if (!onCover) return row;
   return (
-    <View style={onCover ? undefined : styles.row}>
-      <View style={onCover ? styles.rowTop : styles.inner}>{body}</View>
-      {onCover ? (
-        <TextLink label="Покрыть из плана" onPress={onCover} style={styles.link} containerStyle={styles.coverLink} />
-      ) : null}
+    <View>
+      {row}
+      <TextLink label="Покрыть из плана" onPress={onCover} style={styles.link} containerStyle={styles.coverLink} />
     </View>
   );
 }
@@ -129,22 +121,13 @@ export default function SavingsLessSheet({ ym, currency, less, visible, money, o
 }
 
 /** «Покрыть из плана ›» under a row's text, past its icon */
-const TEXT_INDENT = 36;
+const TEXT_INDENT = 38;
 
 const styles = StyleSheet.create({
   content: { paddingHorizontal: space[20], paddingBottom: space[16] },
   lead: { fontSize: font.secondary, color: colors.muted, marginBottom: space[6] },
   part: { fontSize: font.body, color: colors.text, paddingVertical: space[2] },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space[10],
-    paddingVertical: space[12],
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-  },
-  inner: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space[10] },
-  rowTop: { flexDirection: 'row', alignItems: 'center', gap: space[10], paddingTop: space[12] },
+  noLine: { borderBottomWidth: 0 },
   coverLink: {
     paddingTop: space[4],
     paddingBottom: space[12],
@@ -153,9 +136,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   link: { fontSize: font.secondary, color: colors.accent },
-  emoji: { fontSize: font.heading, width: 26 },
-  text: { flex: 1 },
-  name: { fontSize: font.input, color: colors.text },
+  emoji: { fontSize: font.heading },
   note: { fontSize: font.meta, color: colors.muted, marginTop: space[2] },
   over: { fontSize: font.input, color: colors.danger, fontVariant: ['tabular-nums'] },
   hint: { fontSize: font.meta, color: colors.muted, marginTop: space[10] },

@@ -1,6 +1,7 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { bankById } from '@/domain/banks';
+import AmountRow from '@/shared/ui/AmountRow';
 import Banner from '@/shared/ui/Banner';
 import BankBadge from '@/shared/ui/BankBadge';
 import Empty from '@/shared/ui/Empty';
@@ -9,6 +10,8 @@ import ModeBanner from '@/shared/ui/ModeBanner';
 import SectionBand from '@/shared/ui/SectionBand';
 import SectionHeading from '@/shared/ui/SectionHeading';
 import TextLink from '@/shared/ui/TextLink';
+import { RepeatIcon } from '@/shared/ui/icons';
+import { colors } from '@/shared/theme/theme';
 import { font, space } from '@/shared/theme/tokens';
 import Frame from './Frame';
 
@@ -47,6 +50,24 @@ export default function BoxesDemo() {
         <SectionHeading title="Подписки" onSettings={noop} />
         <SectionBand title="Жизнь" total="2 809.33 ₾" share="27%" inset={space[16]} />
       </Frame>
+      <Frame name="AmountRow" note="строка с суммой: значок · название и подписи · сумма справа; large — в шите">
+        <AmountRow
+          icon={<RepeatIcon color={colors.accent} size={20} />}
+          title="📺 Подписки"
+          notes={<Text style={styles.note}>каждый месяц · следующее 3 дек</Text>}
+          amount={<Text style={styles.amount}>70 ₾ · 1%</Text>}
+          onPress={noop}
+          accessibilityLabel="Подписки"
+        />
+        <AmountRow
+          large
+          title="NETFLIX.COM"
+          notes={<Text style={styles.note}>последняя 15 окт</Text>}
+          amount={<Text style={styles.amountLarge}>70 ₾</Text>}
+          onPress={noop}
+          accessibilityLabel="Подписка: NETFLIX.COM"
+        />
+      </Frame>
       <Frame name="BankBadge" note="знак банка; large — в «Банках»">
         <View style={styles.row}>
           <BankBadge short={tbc.short} color={tbc.color} />
@@ -61,4 +82,7 @@ const styles = StyleSheet.create({
   link: { fontSize: font.secondary },
   loading: { flex: 0 },
   row: { flexDirection: 'row', alignItems: 'center', gap: space[8] },
+  note: { fontSize: font.caption, color: colors.muted, marginTop: space[2] },
+  amount: { fontSize: font.meta, color: colors.text },
+  amountLarge: { fontSize: font.input, color: colors.text },
 });

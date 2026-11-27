@@ -120,27 +120,10 @@ export const styles = StyleSheet.create({
   groupTotal: { fontSize: font.meta, fontWeight: weight.semibold, color: colors.text, fontVariant: ['tabular-nums'] },
   // a row charged in a later month only: faded
   later: { opacity: 0.5 },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: space[10],
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-  },
-  // a row's icon in a column of one width
-  pin: { width: 28, alignItems: 'center', marginRight: space[10] },
-  nameBox: { flex: 1, marginRight: space[8] },
-  name: { fontSize: font.body, color: colors.text },
   percent: { fontSize: font.caption, color: colors.muted, marginTop: space[2], fontVariant: ['tabular-nums'] },
   // as the stats' rows: "1 200 ₾ · 10%" in one line on the name's, the share muted
   amount: { fontSize: font.meta, color: colors.text, fontVariant: ['tabular-nums'] },
-  amountBox: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    alignSelf: 'flex-start',
-    paddingTop: space[2],
-    paddingLeft: space[8],
-  },
+  amountBox: { flexDirection: 'row', alignItems: 'baseline' },
   amountOriginal: { fontSize: font.meta, color: colors.muted, fontVariant: ['tabular-nums'] },
   // another currency's amount before the one shown, as large, muted
   amountLine: { flexDirection: 'row', alignItems: 'baseline', gap: space[4] },

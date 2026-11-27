@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import AmountRow from '@/shared/ui/AmountRow';
+import { StyleSheet, Text } from 'react-native';
 import Masked from '@/shared/ui/Masked';
 import { colors } from '@/shared/theme/theme';
 import type { CoverRoom } from '../model/savingsLess';
@@ -22,22 +23,16 @@ export default function CoverRooms({ rooms, over, money, onPick }: Props) {
     <>
       <Masked style={styles.lead}>{`Траты вне плана больше доли на ${money(over)}. Из какой категории взять?`}</Masked>
       {rooms.map((r) => (
-        <TouchableOpacity
+        <AmountRow
           key={r.category_id}
-          style={styles.row}
+          large
           onPress={() => onPick(r)}
-          accessibilityRole="button"
           accessibilityLabel={`Взять из «${r.name}»`}
-        >
-          <Text style={styles.emoji}>{r.emoji ?? ''}</Text>
-          <View style={styles.text}>
-            <Text style={styles.name} numberOfLines={1}>
-              {r.name}
-            </Text>
-            <Masked style={styles.note}>{`план ${money(r.plan)} · осталось ${money(r.left)}`}</Masked>
-          </View>
-          <Masked style={styles.take}>{`−${money(r.take)}`}</Masked>
-        </TouchableOpacity>
+          icon={<Text style={styles.emoji}>{r.emoji ?? ''}</Text>}
+          title={r.name}
+          notes={<Masked style={styles.note}>{`план ${money(r.plan)} · осталось ${money(r.left)}`}</Masked>}
+          amount={<Masked style={styles.take}>{`−${money(r.take)}`}</Masked>}
+        />
       ))}
       <Text style={styles.hint}>План категории станет меньше, а доля вне плана в этом месяце — больше</Text>
     </>
@@ -46,18 +41,7 @@ export default function CoverRooms({ rooms, over, money, onPick }: Props) {
 
 const styles = StyleSheet.create({
   lead: { fontSize: font.secondary, color: colors.muted, marginBottom: space[6] },
-  // as the overspent rows of the sheet
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space[10],
-    paddingVertical: space[12],
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-  },
-  emoji: { fontSize: font.heading, width: 26 },
-  text: { flex: 1 },
-  name: { fontSize: font.input, color: colors.text },
+  emoji: { fontSize: font.heading },
   note: { fontSize: font.meta, color: colors.muted, marginTop: space[2] },
   take: { fontSize: font.input, color: colors.text, fontVariant: ['tabular-nums'] },
   hint: { fontSize: font.meta, color: colors.muted, marginTop: space[10] },

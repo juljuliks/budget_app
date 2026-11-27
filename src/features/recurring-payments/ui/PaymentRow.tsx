@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
+import AmountRow from '@/shared/ui/AmountRow';
 import ProgressRing from '@/shared/ui/ProgressRing';
 import { colors } from '@/shared/theme/theme';
 import { font, space, weight } from '@/shared/theme/tokens';
@@ -26,49 +27,43 @@ export default function PaymentRow({ name, label, note, tone, amount, amountNote
   const last = note[note.length - 1];
   const head = note.slice(0, -1);
   return (
-    <TouchableOpacity
-      style={styles.row}
+    <AmountRow
+      large
       onPress={onPress}
-      accessibilityRole="button"
       accessibilityLabel={`${label}: ${name}`}
-    >
-      {ring !== undefined ? (
-        <ProgressRing ratio={ring} color={ring >= 1 ? colors.income : colors.fund} track={colors.fundTrack} size={22} />
-      ) : null}
-      <View style={styles.body}>
-        <Text style={styles.name} numberOfLines={1}>
-          {name}
-        </Text>
+      icon={
+        ring !== undefined ? (
+          <ProgressRing
+            ratio={ring}
+            color={ring >= 1 ? colors.income : colors.fund}
+            track={colors.fundTrack}
+            size={22}
+          />
+        ) : undefined
+      }
+      title={name}
+      notes={
         <Text style={styles.note} numberOfLines={2}>
           {head.length ? `${head.join(' · ')} · ` : ''}
           <Text style={tone === 'ok' ? styles.ok : tone === 'warn' ? styles.warn : null}>{last}</Text>
         </Text>
-      </View>
-      {amount !== null ? (
-        <View style={styles.amountBox}>
-          <Text style={[styles.amount, muted && styles.muted]}>{amount}</Text>
-          {amountNote ? <Text style={styles.amountNote}>{amountNote}</Text> : null}
-        </View>
-      ) : null}
-    </TouchableOpacity>
+      }
+      amount={
+        amount !== null ? (
+          <>
+            <Text style={[styles.amount, muted && styles.muted]}>{amount}</Text>
+            {amountNote ? <Text style={styles.amountNote}>{amountNote}</Text> : null}
+          </>
+        ) : null
+      }
+    />
   );
 }
 
 const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space[12],
-    paddingVertical: space[10],
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-  },
-  body: { flex: 1, minWidth: 0 },
-  name: { fontSize: font.input, color: colors.text },
   note: { fontSize: font.meta, color: colors.muted, marginTop: space[2] },
   ok: { color: colors.income },
   warn: { color: colors.warn, fontWeight: weight.medium },
-  amountBox: { alignItems: 'flex-end' },
   amount: { fontSize: font.input, color: colors.text, fontVariant: ['tabular-nums'] },
   muted: { color: colors.muted },
   amountNote: { fontSize: font.caption, color: colors.muted, marginTop: space[2] },

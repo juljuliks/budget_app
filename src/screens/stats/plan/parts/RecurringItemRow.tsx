@@ -1,5 +1,6 @@
 import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import AmountRow from '@/shared/ui/AmountRow';
+import { Text, View } from 'react-native';
 import { categoryLabel } from '@/db/categories';
 import type { PlanItem } from '@/db/plans';
 import { paymentWords } from '@/entities/category';
@@ -63,36 +64,32 @@ export function RecurringItemRow({ p, item, hidden, onOpen }: Props) {
     single ??
     (item.subs?.empty ? w.none : item.kind !== 'subs' ? `вручную · задайте даты ${w.toAll}` : listed || w.noDated);
   return (
-    <TouchableOpacity
-      accessibilityRole="button"
-      style={[styles.row, up && styles.later]}
+    <AmountRow
+      style={up && styles.later}
       onPress={onOpen}
       accessibilityLabel={categoryLabel(item)}
-    >
-      <View style={styles.pin}>
-        <RepeatIcon color={colors.accent} size={20} />
-      </View>
-      <View style={styles.nameBox}>
-        <Text style={styles.name} numberOfLines={1}>
-          {`${item.emoji || ''} ${item.name}`.trim()}
-        </Text>
+      icon={<RepeatIcon color={colors.accent} size={20} />}
+      title={`${item.emoji || ''} ${item.name}`.trim()}
+      notes={
         <Text style={styles.percent} numberOfLines={1}>
           {note}
         </Text>
-      </View>
-      <View style={styles.amountBox}>
-        {hidden ? null : (
-          <View style={styles.amountLine}>
-            {foreign ? <Text style={[styles.amount, styles.amountForeign]}>{`(${foreign})`}</Text> : null}
-            <Text style={styles.amount}>
-              {item.converted_minor !== null
-                ? p.money(item.converted_minor)
-                : formatWithCurrency(item.limit_minor, item.currency)}
-            </Text>
-          </View>
-        )}
-        <Share p={p} value={item.converted_minor} />
-      </View>
-    </TouchableOpacity>
+      }
+      amount={
+        <View style={styles.amountBox}>
+          {hidden ? null : (
+            <View style={styles.amountLine}>
+              {foreign ? <Text style={[styles.amount, styles.amountForeign]}>{`(${foreign})`}</Text> : null}
+              <Text style={styles.amount}>
+                {item.converted_minor !== null
+                  ? p.money(item.converted_minor)
+                  : formatWithCurrency(item.limit_minor, item.currency)}
+              </Text>
+            </View>
+          )}
+          <Share p={p} value={item.converted_minor} />
+        </View>
+      }
+    />
   );
 }
