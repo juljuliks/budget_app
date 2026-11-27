@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, TextInput, View } from 'react-native';
 import type { Currency } from '@/db/fx';
 import { UNTYPED_COLORS } from '@/domain/colors';
 import Checkbox from '@/shared/ui/Checkbox';
@@ -12,7 +12,9 @@ import SelectField from '@/shared/ui/SelectField';
 import StepSlider from '@/shared/ui/StepSlider';
 import SwitchRow from '@/shared/ui/SwitchRow';
 import Toggle from '@/shared/ui/Toggle';
-import { space } from '@/shared/theme/tokens';
+import { formStyles } from '@/shared/theme/formStyles';
+import { colors } from '@/shared/theme/theme';
+import { font, space, weight } from '@/shared/theme/tokens';
 import Frame from './Frame';
 
 const noop = () => {};
@@ -26,6 +28,7 @@ export default function ChoiceDemo() {
   const [color, setColor] = useState<string | null>(UNTYPED_COLORS[0] ?? null);
   const [query, setQuery] = useState('');
   const [currency, setCurrency] = useState<Currency>('GEL');
+  const [amount, setAmount] = useState('');
   return (
     <>
       <Frame name="RadioGroup" note="один из нескольких, с подсказкой под вариантом">
@@ -71,14 +74,31 @@ export default function ChoiceDemo() {
       <Frame name="ColorSwatches" note="цвет категории: палитра, авто, свой">
         <ColorSwatches options={UNTYPED_COLORS} value={color} onChange={setColor} onCustom={noop} />
       </Frame>
-      <Frame name="SearchBar · SelectField · CurrencyButton" note="поиск; поле выбора (открывает шит); валюта">
+      <Frame name="SearchBar · SelectField" note="поиск; поле выбора (открывает шит)">
         <SearchBar value={query} onChange={setQuery} placeholder="Поиск: мерчант, описание, сумма…" />
         <SelectField value="🛒 Продукты" onPress={noop} accessibilityLabel="Категория" />
         <SelectField value="Нельзя выбрать" onPress={noop} accessibilityLabel="Неактивно" disabled />
-        <CurrencyButton value={currency} onChange={setCurrency} />
+      </Frame>
+      <Frame name="CurrencyButton" note="валюта справа от поля суммы, его высоты (строка — alignItems: 'stretch')">
+        <View style={styles.amountRow}>
+          <TextInput
+            style={[formStyles.input, styles.amount]}
+            value={amount}
+            onChangeText={setAmount}
+            placeholder="0.00"
+            placeholderTextColor={colors.muted}
+            keyboardType="decimal-pad"
+          />
+          <CurrencyButton value={currency} onChange={setCurrency} />
+        </View>
       </Frame>
     </>
   );
 }
 
-const styles = StyleSheet.create({ row: { flexDirection: 'row', alignItems: 'center', gap: space[16] } });
+const styles = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'center', gap: space[16] },
+  // as in the amount sheets: the currency button as tall as the field
+  amountRow: { flexDirection: 'row', alignItems: 'stretch', gap: space[8] },
+  amount: { flex: 1, fontSize: font.headline, fontWeight: weight.semibold },
+});

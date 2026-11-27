@@ -64,7 +64,18 @@ describe('«Компоненты» (debug build only)', () => {
   test('⋮ › Компоненты: every frame of the catalog is drawn', async () => {
     await openApp(base);
     await openMenu('Компоненты');
-    for (const name of ['Button', 'Chip', 'RadioGroup', 'SwitchRow', 'Banner', 'Empty', 'Loading', 'Meter', 'Donut'])
+    for (const name of [
+      'Button',
+      'Chip',
+      'RadioGroup',
+      'SwitchRow',
+      'CurrencyButton',
+      'Banner',
+      'Empty',
+      'Loading',
+      'Meter',
+      'Donut',
+    ])
       expect(screen.getByTestId(`catalog-${name}`)).toBeTruthy();
   });
 });
