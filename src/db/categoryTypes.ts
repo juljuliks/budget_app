@@ -63,13 +63,3 @@ export async function getTransferTypeId(): Promise<number | null> {
   const db = await getDb();
   return (await db.get<{ id: number }>('SELECT id FROM category_types WHERE is_transfer = 1 LIMIT 1'))?.id ?? null;
 }
-
-export default {
-  listCategoryTypes,
-  findCategoryTypeByName,
-  createCategoryType,
-  renameCategoryType,
-  deleteCategoryType,
-  countCategoriesOfType,
-  getTransferTypeId,
-};

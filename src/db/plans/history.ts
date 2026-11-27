@@ -45,7 +45,7 @@ export async function averageFullMonths(
 }
 
 /** How many full months a category's usual spending is averaged over (the latest ones). */
-export const CATEGORY_AVERAGE_MONTHS = 3;
+const CATEGORY_AVERAGE_MONTHS = 3;
 
 /**
  * A category's usual spending per month: the average of the latest full months before `ym` (and before the
@@ -118,13 +118,17 @@ export type HistoryMonth = {
 };
 
 /** Every month from the first transaction / plan up to the current month, newest first, in `currency`. */
-export async function planHistory(nowYm = currentYm(), currency: Currency = BUDGET_CURRENCY): Promise<HistoryMonth[]> {
-  const db = await getDb();
-  const first = await db.get<{ ym: string | null }>(
+/** The first month with an operation or a plan: where the history starts. */
+const firstMonth = async () =>
+  (await getDb()).get<{ ym: string | null }>(
     `SELECT min(ym) AS ym FROM (
       SELECT strftime('%Y-%m', min(occurred_at), 'unixepoch', 'localtime') AS ym FROM transactions
       UNION ALL SELECT min(ym) FROM plan_months)`,
   );
+
+export async function planHistory(nowYm = currentYm(), currency: Currency = BUDGET_CURRENCY): Promise<HistoryMonth[]> {
+  const db = await getDb();
+  const first = await firstMonth();
   if (!first?.ym) return [];
 
   const items = await db.all<{ ym: string; limit_minor: number; currency: string }>(
@@ -229,7 +233,8 @@ export async function planHistory(nowYm = currentYm(), currency: Currency = BUDG
   }
 
   const out: HistoryMonth[] = [];
-  let { year, month } = parseYm(nowYm);
+  const { year, month: nowMonth } = parseYm(nowYm);
+  let month = nowMonth;
   for (let ym = nowYm; ym >= first.ym; ym = ymOf(year, --month)) {
     out.push({
       ym,

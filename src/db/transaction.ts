@@ -1,10 +1,11 @@
 import { Db, RunResult, SqlParam } from './types';
 
+/** a driver's statements: rows as the driver gives them; their types are the caller's (Db.get<T>) */
 type Raw = {
-  run(sql: string, params?: SqlParam[]): Promise<RunResult>;
-  get<T = any>(sql: string, params?: SqlParam[]): Promise<T | undefined>;
-  all<T = any>(sql: string, params?: SqlParam[]): Promise<T[]>;
-  close(): void;
+  run: (sql: string, params?: SqlParam[]) => Promise<RunResult>;
+  get: (sql: string, params?: SqlParam[]) => Promise<unknown>;
+  all: (sql: string, params?: SqlParam[]) => Promise<unknown[]>;
+  close: () => void;
 };
 
 /** Statements run on any connection so far: the stats' query budget is tested against it (tests/logic/statsQueries). */
@@ -25,8 +26,8 @@ export function serialized(raw: Raw): Db {
       return f(...a);
     };
   const run = counted(raw.run),
-    get = counted(raw.get) as Raw['get'],
-    all = counted(raw.all) as Raw['all'];
+    get = counted(raw.get) as Db['get'],
+    all = counted(raw.all) as Db['all'];
   const enqueue = <T>(op: () => Promise<T>): Promise<T> => {
     const next = queue.then(op);
     queue = next.catch(() => undefined);

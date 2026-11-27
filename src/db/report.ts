@@ -21,11 +21,11 @@ import { sqlList } from './sql';
 // kept more from being put aside — limits overspent, spending outside the plan past its share — and what that is a year.
 
 /** "Пересмотрите" spending outside the plan: more than this share of all spending, … */
-export const REVIEW_SHARE_OF_SPENDING = 0.25;
+const REVIEW_SHARE_OF_SPENDING = 0.25;
 /** … or its share of the budget exceeded by more than this */
-export const REVIEW_SHARE_EXCEEDED = 0.2;
+const REVIEW_SHARE_EXCEEDED = 0.2;
 /** an overspend under this share of its plan is noise (a rate change, a tip): not in the report */
-export const OVER_TOLERANCE = 0.05;
+const OVER_TOLERANCE = 0.05;
 /** the months the year's estimate averages */
 export const AVERAGE_MONTHS = 3;
 /** a month "has data" when its first operation is on this day or earlier (not a month the app was installed late in) */
@@ -149,7 +149,7 @@ async function savedIn(
  * Whether `ym` had a plan: a budget or a category with an amount. Read as stored (not ensureMonthPlan): looking at a
  * past month must not create its plan.
  */
-export async function hasMonthPlan(ym: string): Promise<boolean> {
+async function hasMonthPlan(ym: string): Promise<boolean> {
   const db = await getDb();
   return !!(await db.get(
     `SELECT 1 FROM plan_months WHERE ym = ? AND budget_minor IS NOT NULL
@@ -172,6 +172,24 @@ async function hasDataIn(ym: string): Promise<boolean> {
   return first != null && new Date(first * 1000).getDate() <= DATA_FROM_DAY;
 }
 
+/** The months the year's estimate averages: this one, the one before and the third back — each with a budget and data. */
+async function estimateMonths(
+  ym: string,
+  currency: Currency,
+  saved: number | null,
+  prev: { ym: string; saved: number | null },
+): Promise<Array<{ ym: string; saved: number }>> {
+  const months: Array<{ ym: string; saved: number }> = [];
+  if (saved !== null) months.push({ ym, saved });
+  if (prev.saved !== null) months.push({ ym: prev.ym, saved: prev.saved });
+  const third = previousYm(prev.ym);
+  if (months.length === 2) {
+    const [t, tData] = await Promise.all([savedIn(third, currency), hasDataIn(third)]);
+    if (t.saved !== null && tData) months.push({ ym: third, saved: t.saved });
+  }
+  return months;
+}
+
 export async function monthReport(ym: string, currency: Currency): Promise<MonthReport> {
   const prevYm = previousYm(ym);
   // before getPlanBudget below, which creates the current month's plan
@@ -185,14 +203,10 @@ export async function monthReport(ym: string, currency: Currency): Promise<Month
     hasDataIn(prevYm),
   ]);
   // the year's estimate: the average of this month and the ones before it that have a budget and data
-  const months: Array<{ ym: string; saved: number }> = [];
-  if (saved !== null && hasData) months.push({ ym, saved });
-  if (previous.saved !== null && previousHasData) months.push({ ym: prevYm, saved: previous.saved });
-  const third = previousYm(prevYm);
-  if (months.length === 2) {
-    const [t, tData] = await Promise.all([savedIn(third, currency), hasDataIn(third)]);
-    if (t.saved !== null && tData) months.push({ ym: third, saved: t.saved });
-  }
+  const months = await estimateMonths(ym, currency, saved !== null && hasData ? saved : null, {
+    ym: prevYm,
+    saved: previous.saved !== null && previousHasData ? previous.saved : null,
+  });
   const cat = (c: (typeof stats.categories)[number]): ReportCategory => ({
     id: c.category_id,
     name: c.name,

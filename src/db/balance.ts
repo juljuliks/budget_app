@@ -80,7 +80,8 @@ export async function cardBalance(bank = 'tbc'): Promise<CardBalance | null> {
     [bank, anchor.at, anchor.at, anchor.txId, anchor.txId ?? 0],
   );
   const foreign = after.filter((t) => t.currency !== anchor.currency && SIGN[t.kind]);
-  if (foreign.length) ensureRatesLater(foreign.map((t) => dateKey(t.occurred_at)));
+  if (foreign.length)
+    ensureRatesLater(foreign.map((t) => dateKey(t.occurred_at))).catch((e) => console.warn('rates not loaded', e));
   const conv = await makeConverter();
   let minor = anchor.minor;
   let pending = 0;

@@ -36,6 +36,14 @@ type Item = {
  * summed (in the target's currency there, else the first one's, at that month's plan rate); `rhythm` — how the merged
  * item is planned — applies to every merged month, else the target's (or the first source's) kind and pattern stay.
  */
+/** No system category among them, and the name not taken by another category of the section. */
+async function checkMergeable(all: number[], name: string, typeId: number | null, targetId: number) {
+  const cats = (await listCategories()).filter((c) => all.includes(c.id));
+  if (cats.some(isSystemCategory)) throw new Error('a system category cannot be merged');
+  const clash = await findCategoryByName(name, typeId, targetId);
+  if (clash && !all.includes(clash.id)) throw new MergeNameTakenError(name.trim());
+}
+
 export async function mergeCategories(
   targetId: number,
   sourceIds: number[],
@@ -46,10 +54,7 @@ export async function mergeCategories(
   const sources = sourceIds.filter((id) => id !== targetId);
   if (sources.length === 0) return;
   const all = [targetId, ...sources];
-  const cats = (await listCategories()).filter((c) => all.includes(c.id));
-  if (cats.some(isSystemCategory)) throw new Error('a system category cannot be merged');
-  const clash = await findCategoryByName(name, typeId, targetId);
-  if (clash && !all.includes(clash.id)) throw new MergeNameTakenError(name.trim());
+  await checkMergeable(all, name, typeId, targetId);
 
   // the merged ones' funds close (what they saved goes to this month's savings); the target's stays
   for (const s of sources) await deleteFund(s);

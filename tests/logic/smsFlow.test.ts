@@ -45,7 +45,8 @@ const SPAR_1 = {
 };
 const SPAR_2 = { ...SPAR_1, body: SPAR_1.body.replace('12.50', '7.00'), timestamp: 1759064400000 };
 
-const tx = async (sql: string, params: any[] = []) => (await getDb()).get(sql, params);
+type Row = Record<string, unknown>;
+const tx = async (sql: string, params: any[] = []) => (await getDb()).get<Row>(sql, params).then((r) => r!);
 
 beforeEach(async () => {
   await freshDb();
@@ -124,7 +125,7 @@ test('picking a suggestion assigns the category, creates a rule and backfills sa
 
   await handleNotificationAction({ id: 'suggest_2', notification: { id: first.id, data: first.data } });
 
-  const rows = await (await getDb()).all('SELECT category_id, category_source FROM transactions ORDER BY id');
+  const rows = await (await getDb()).all<Row>('SELECT category_id, category_source FROM transactions ORDER BY id');
   // the picked one follows the merchant from now on too
   expect(rows).toEqual([
     { category_id: 2, category_source: 'rule' },
@@ -149,7 +150,7 @@ test('backfill does not overwrite a category the user set manually', async () =>
   await handleNotificationAction({ id: 'suggest_5', notification: { id: b.id, data: b.data } });
   await handleNotificationAction({ id: 'suggest_2', notification: { id: a.id, data: a.data } });
 
-  const rows = await (await getDb()).all('SELECT category_id FROM transactions ORDER BY id');
+  const rows = await (await getDb()).all<Row>('SELECT category_id FROM transactions ORDER BY id');
   expect(rows.map((r) => r.category_id)).toEqual([2, 5]);
 });
 
@@ -222,7 +223,7 @@ test('a refund without a category: just news (no buttons), tapping it opens the 
 test('the merchant has a category: another one for this transaction only leaves the merchant alone', async () => {
   await createRule('exact', 'SPAR', 3);
   await SmsBackgroundTask(SPAR_1);
-  const id = (await tx('SELECT id FROM transactions')).id;
+  const id = (await tx('SELECT id FROM transactions')).id as number;
   await assignCategory(id, 2, 'only');
   expect(await tx('SELECT pattern, category_id FROM merchant_rules')).toEqual({ pattern: 'SPAR', category_id: 3 });
   expect(await tx('SELECT category_id, category_source FROM transactions')).toEqual({
@@ -267,7 +268,7 @@ test("preview of making a category the merchant's: count and sum of what changes
   });
   await assignCategory(a, 2, 'merchant');
   expect(await tx('SELECT category_id FROM merchant_rules')).toEqual({ category_id: 2 });
-  const rows = await (await getDb()).all('SELECT id, category_id FROM transactions ORDER BY id');
+  const rows = await (await getDb()).all<Row>('SELECT id, category_id FROM transactions ORDER BY id');
   expect(rows).toEqual([
     { id: a, category_id: 2 },
     { id: b, category_id: 2 },
@@ -296,9 +297,9 @@ test('picking a category for a money transfer creates no merchant rule', async (
   const db = await getDb();
   expect(await db.get('SELECT * FROM merchant_rules')).toBeUndefined();
   // the other transfer to the same person stays uncategorized
-  expect((await db.all('SELECT category_id FROM transactions ORDER BY id')).map((r) => r.category_id === null)).toEqual(
-    [false, true],
-  );
+  expect(
+    (await db.all<Row>('SELECT category_id FROM transactions ORDER BY id')).map((r) => r.category_id === null),
+  ).toEqual([false, true]);
 });
 
 test('money transfer with no transfer categories still offers "new category"', async () => {

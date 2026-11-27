@@ -12,15 +12,15 @@ export function openDatabase(name = 'app.db'): Db {
     const res = await conn.executeAsync(sql, params);
     return { changes: res.rowsAffected, lastInsertRowid: res.insertId ?? 0 };
   };
-  const all = async (sql: string, params: SqlParam[] = []) => {
+  const all = async (sql: string, params: SqlParam[] = []): Promise<unknown[]> => {
     const res = await conn.executeAsync(sql, params);
-    return res.rows?._array ?? [];
+    return (res.rows?._array as unknown[] | undefined) ?? [];
   };
 
   return serialized({
     run,
     all,
-    get: async (sql: string, params?: SqlParam[]) => (await all(sql, params))[0],
+    get: async (sql: string, params?: SqlParam[]): Promise<unknown> => (await all(sql, params))[0],
     close: () => conn.close(),
   });
 }

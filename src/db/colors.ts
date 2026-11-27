@@ -26,5 +26,3 @@ export async function takenCategoryColors(exceptId?: number): Promise<Set<string
       .filter(Boolean),
   );
 }
-
-export default { categoryColors, takenCategoryColors };

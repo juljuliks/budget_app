@@ -3,7 +3,7 @@
 export type Every = 'day' | 'week';
 
 /** Monday — bit 0 … Sunday — bit 6. */
-export const weekdayBit = (d: Date) => 1 << ((d.getDay() + 6) % 7);
+const weekdayBit = (d: Date) => 1 << ((d.getDay() + 6) % 7);
 
 /** Its days in `ym`: every day, or the `weekdays` (bits); none after `until` ('YYYY-MM-DD'). */
 export function timesInMonth(ym: string, every: Every, weekdays: number, until?: string | null): number {

@@ -28,7 +28,7 @@ function chargeRateDay(day: string, done: boolean, opDays: string[], p: Period, 
 }
 
 /** `saved`: paid from what was saved for it (not in the month's sum) */
-export type PaymentCharge = {
+type PaymentCharge = {
   sub: RecurringPayment;
   day: string;
   done: boolean;
@@ -37,7 +37,7 @@ export type PaymentCharge = {
 };
 
 /** A repeating payment saved up for in the month: what it has at the month's start, the contribution, in its currency. */
-export type PaymentSavingMonth = {
+type PaymentSavingMonth = {
   payment_id: number;
   start_minor: number;
   contribution_minor: number;

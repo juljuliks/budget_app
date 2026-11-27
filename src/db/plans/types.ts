@@ -15,7 +15,7 @@ export type PlanKind = 'limit' | 'fixed' | 'fund' | 'subs';
  */
 export type NormPeriod = 'day' | 'week' | '2weeks' | 'month';
 
-export const NORM_PERIODS: NormPeriod[] = ['day', 'week', '2weeks', 'month'];
+const NORM_PERIODS: NormPeriod[] = ['day', 'week', '2weeks', 'month'];
 
 export const asNorm = (v: string | null | undefined): NormPeriod =>
   NORM_PERIODS.includes(v as NormPeriod) ? (v as NormPeriod) : 'day';

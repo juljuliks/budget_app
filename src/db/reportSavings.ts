@@ -3,7 +3,7 @@
 import { Currency } from './fx';
 import { currentYm, monthClose, planConverter, RestChoice } from './plans';
 
-export type PlanFact = { plan: number; fact: number | null };
+type PlanFact = { plan: number; fact: number | null };
 
 export type SavingsPlanFact = {
   /** its "Итоги" are done (and say what was put aside): the facts are there */
@@ -58,9 +58,9 @@ export async function savingsPlanFact(
     fact: closed && f.confirmed_minor !== null ? to(f.confirmed_minor, f.currency) : null,
   }));
   const restIn = rest && (choice === null || choice === 'savings');
-  const plan = (locked?.plan ?? 0) + (restIn ? rest!.plan : 0) + funds.reduce((a, f) => a + f.plan, 0);
+  const plan = (locked?.plan ?? 0) + (restIn ? rest.plan : 0) + funds.reduce((a, f) => a + f.plan, 0);
   const fact = !closed
     ? null
-    : (locked?.fact ?? 0) + (restIn ? (rest!.fact ?? 0) : 0) + funds.reduce((a, f) => a + (f.fact ?? 0), 0);
+    : (locked?.fact ?? 0) + (restIn ? (rest.fact ?? 0) : 0) + funds.reduce((a, f) => a + (f.fact ?? 0), 0);
   return { closed, locked, rest, funds, plan, fact, fundsPlanned: funds.reduce((a, f) => a + f.plan, 0) };
 }

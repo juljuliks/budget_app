@@ -78,7 +78,7 @@ export async function normsData(months: string[], currency: Currency, nowYm = cu
       WHERE p.ym IN (${placeholders(read.length)}) ORDER BY c.id`,
           read,
         );
-  const plans: NormsData['plans'] = new Map(months.map((m) => [m, new Map()]));
+  const plans: NormsData['plans'] = new Map(months.map((m) => [m, new Map<number, NormPlanItem>()]));
   for (const m of read) {
     const own = planRows
       .filter((r) => r.ym === m)

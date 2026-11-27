@@ -6,7 +6,7 @@
 // counted from the set day, so a short month doesn't move the ones after it.
 
 /** How far from its day an operation still is the charge (± days); a weekly one's is less (windowOf). */
-export const WINDOW_DAYS = 7;
+const WINDOW_DAYS = 7;
 
 /** How often: > 0 — every N months, < 0 — every N weeks (−1: every week), 0 — once (on its day only). */
 export type Period = number;
@@ -14,7 +14,7 @@ export const ONCE: Period = 0;
 export const WEEKLY: Period = -1;
 
 /** The window of a period: under half of it (a charge every week: ± 3 days), at most WINDOW_DAYS. */
-export const windowOf = (p: Period) => (p < 0 ? Math.min(WINDOW_DAYS, Math.floor((-p * 7 - 1) / 2)) : WINDOW_DAYS);
+const windowOf = (p: Period) => (p < 0 ? Math.min(WINDOW_DAYS, Math.floor((-p * 7 - 1) / 2)) : WINDOW_DAYS);
 
 const DAY_MS = 86_400_000;
 
@@ -41,7 +41,7 @@ export function addMonths(day: string, months: number): string {
 }
 
 /** Whole days from `a` to `b` (negative when `b` is before). */
-export const daysBetween = (a: string, b: string) => Math.round((toUtc(b) - toUtc(a)) / DAY_MS);
+const daysBetween = (a: string, b: string) => Math.round((toUtc(b) - toUtc(a)) / DAY_MS);
 
 /** `day` moved by `days` (negative — back). */
 export function addDays(day: string, days: number): string {

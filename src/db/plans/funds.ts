@@ -191,11 +191,6 @@ async function refreshNow(ym: string, nowYm: string): Promise<void> {
   for (let m = nowYm; m <= ym; m = nextYm(m)) await fitFunds(m, nowYm);
 }
 
-/** What the fund has now (up to the current month, its spending in it too). */
-export async function fundBalance(fund: Fund): Promise<number> {
-  return (await fundLedger(fund)).balance;
-}
-
 /** An operation in a fund's category: the fund's name and what it had before and after it; null — not a fund's. */
 export async function fundOfTransaction(
   txId: number,

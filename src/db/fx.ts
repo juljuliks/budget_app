@@ -7,7 +7,7 @@ import { emitTransactionsChanged } from '../domain/events';
 // converted with the official rate of the transaction's day (National Bank of Georgia, GEL per unit), cached
 // in fx_rates. Only the dates and currency codes are requested — nothing about the user leaves the phone.
 
-export const CURRENCIES = ['GEL', 'USD', 'EUR'] as const;
+const CURRENCIES = ['GEL', 'USD', 'EUR'] as const;
 export type Currency = (typeof CURRENCIES)[number];
 
 export const CURRENCY_SYMBOLS: Record<Currency, string> = { GEL: '₾', USD: '$', EUR: '€' };
@@ -185,5 +185,3 @@ async function buildConverter(db: Db): Promise<Converter> {
     return Math.round((amount * a) / b);
   };
 }
-
-export default { CURRENCIES, ensureRates, ensureRatesLater, makeConverter, dateKey };

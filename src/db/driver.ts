@@ -11,15 +11,18 @@ export function openDatabase(file: string = process.env.BUDGET_DB_PATH || DEFAUL
   // Same as on device (SQLite default): FK enforcement off. better-sqlite3 turns it on, which made
   // table rebuilds in migrations cascade-delete rows on Node only. Integrity is kept by the app code.
   db.pragma('foreign_keys = OFF');
-  const run = async (sql: string, params: SqlParam[] = []) => {
-    const info = db.prepare(sql).run(...params);
-    return { changes: info.changes, lastInsertRowid: Number(info.lastInsertRowid) };
-  };
+  // better-sqlite3 is synchronous: each statement resolved at once, its errors as rejections
+  const later = <T>(f: () => T) => new Promise<T>((resolve) => resolve(f()));
+  const run = (sql: string, params: SqlParam[] = []) =>
+    later(() => {
+      const info = db.prepare(sql).run(...params);
+      return { changes: info.changes, lastInsertRowid: Number(info.lastInsertRowid) };
+    });
 
   return serialized({
     run,
-    get: async (sql: string, params: SqlParam[] = []) => db.prepare(sql).get(...params) as any,
-    all: async (sql: string, params: SqlParam[] = []) => db.prepare(sql).all(...params) as any[],
+    get: (sql: string, params: SqlParam[] = []) => later(() => db.prepare(sql).get(...params)),
+    all: (sql: string, params: SqlParam[] = []) => later(() => db.prepare(sql).all(...params)),
     close: () => db.close(),
   });
 }

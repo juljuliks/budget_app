@@ -77,7 +77,7 @@ export async function deleteUnparsed(ids: number[], db?: Db) {
 type TemplateRow = Omit<MessageTemplate, 'spec'> & { pattern: string; slots: string };
 const toTemplate = ({ pattern, slots, ...r }: TemplateRow): MessageTemplate => ({
   ...r,
-  spec: { pattern, slots: JSON.parse(slots) },
+  spec: { pattern, slots: JSON.parse(slots) as MessageTemplate['spec']['slots'] },
 });
 
 /**
@@ -139,7 +139,7 @@ const REMOTE_KEY = 'remote_templates';
 /** The remote templates of this source and bank, in their order (after the user's own). */
 export async function listRemoteTemplates(source: MessageSource, bank: string, db?: Db): Promise<RemoteTemplate[]> {
   const raw = await getSetting(REMOTE_KEY, db);
-  const all: RemoteTemplate[] = raw ? JSON.parse(raw) : [];
+  const all = raw ? (JSON.parse(raw) as RemoteTemplate[]) : [];
   return all.filter((t) => t.source === source && t.bank === bank);
 }
 

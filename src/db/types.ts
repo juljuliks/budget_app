@@ -12,8 +12,8 @@ export interface RunResult {
  */
 export interface Db {
   run(sql: string, params?: SqlParam[]): Promise<RunResult>;
-  get<T = any>(sql: string, params?: SqlParam[]): Promise<T | undefined>;
-  all<T = any>(sql: string, params?: SqlParam[]): Promise<T[]>;
+  get<T = unknown>(sql: string, params?: SqlParam[]): Promise<T | undefined>;
+  all<T = unknown>(sql: string, params?: SqlParam[]): Promise<T[]>;
   /**
    * Runs fn inside BEGIN/COMMIT with its own handle `tx`; rolls back if it throws. Every statement on the
    * connection is queued, so nothing from elsewhere runs inside the transaction. Inside fn use only `tx`.

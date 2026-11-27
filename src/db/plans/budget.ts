@@ -89,7 +89,7 @@ export async function ownMonth(ym: string, db: Db): Promise<void> {
  * What the month before sent to `ym` when it was closed ("Итоги месяца"): an overspend owed ("Из бюджета октября") and
  * the leftover moved ("Перенести на октябрь"), in `currency`. null — nothing.
  */
-export async function carryIn(ym: string, currency: Currency): Promise<PlanBudget['carry']> {
+async function carryIn(ym: string, currency: Currency): Promise<PlanBudget['carry']> {
   const db = await getDb();
   const from = ymBefore(ym);
   const r = await db.get<{ debt: number; plus: number; currency: string }>(
@@ -149,7 +149,7 @@ export async function storedBudget(ym: string): Promise<PlanBudget | null> {
 }
 
 /** What the plan can take of `amount` with `pct`% set aside for spending outside it. */
-export function plannableOf(amount: number, pct: number): number {
+function plannableOf(amount: number, pct: number): number {
   return Math.round((amount * (100 - pct)) / 100);
 }
 
@@ -243,7 +243,7 @@ export async function setPlanBudget(
       : lockedMinor !== undefined
         ? Math.max(0, lockedMinor)
         : byPct
-          ? Math.max(0, lockedByPct(budgetMinor, stored!.lp!) - stored!.t - (await fundsTaken(ym, db)))
+          ? Math.max(0, lockedByPct(budgetMinor, stored.lp!) - stored.t - (await fundsTaken(ym, db)))
           : (stored?.l ?? 0);
   if (budgetMinor !== null) {
     const planned = await plannedTotal(ym, undefined, currency);

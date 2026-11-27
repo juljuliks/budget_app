@@ -48,7 +48,7 @@ const COLUMNS = `v.id, v.payment_id, v.since_ym, v.start_minor, v.closed_ym, v.r
 const asSaving = (r: Row): Saving => ({ ...r, currency: asCurrency(r.currency) });
 
 /** The savings that count in `ym`: started by then, not closed before it (one closed in it gives back what it had). */
-export async function savingsIn(ym: string, db?: Db): Promise<Saving[]> {
+async function savingsIn(ym: string, db?: Db): Promise<Saving[]> {
   db ??= await getDb();
   return (
     await db.all<Row>(

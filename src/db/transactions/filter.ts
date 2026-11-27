@@ -116,7 +116,7 @@ export async function listTransactionsFiltered(f: TxFilter, limit = FILTER_LIMIT
 }
 
 /** What an operation is found by, besides its category: the SMS, the note, the merchant / description, normalized. */
-export const searchTextOf = (r: { raw_sms: string | null; note: string | null; raw_merchant: string | null }) =>
+const searchTextOf = (r: { raw_sms: string | null; note: string | null; raw_merchant: string | null }) =>
   normalizeForSearch([r.raw_sms, r.note, r.raw_merchant].filter(Boolean).join(' '));
 
 /**

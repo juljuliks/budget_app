@@ -68,7 +68,7 @@ export function simulateFunds(funds: SimFund[], rooms: MonthRoom[], extend?: num
   return { atDue, now, reached };
 }
 
-export type FundStatus = 'ok' | 'late' | 'full';
+type FundStatus = 'ok' | 'late' | 'full';
 /** A fund's forecast, in its own currency. */
 export type FundForecast = {
   category_id: number;

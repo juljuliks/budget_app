@@ -58,17 +58,6 @@ const CORE_MESSAGE = 'The core imports no UI: move the helper to src/shared/lib 
  * file is split in stage 5 — then it leaves this list; a file is never added to it.
  */
 const OVERSIZE = [
-  'src/db/categories.ts',
-  'src/db/merchants.ts',
-  'src/db/mergeCategories.ts',
-  'src/db/migrations/steps-43-on.ts',
-  'src/db/migrations/steps-59-on.ts',
-  'src/db/plans/close.ts',
-  'src/db/plans/history.ts',
-  'src/db/plans/items.ts',
-  'src/db/plans/stats.ts',
-  'src/db/report.ts',
-  'src/db/yearReport.ts',
   'src/entities/category/model/useCategoryChoose.ts',
   'src/entities/plan/ui/PlanAmountModal.tsx',
   'src/features/app-lock/model/usePinFlow.ts',
@@ -99,6 +88,9 @@ const asWarnings = (rules = {}) =>
       (Array.isArray(v) ? v[0] : v) === 'off' || v === 0 ? v : Array.isArray(v) ? ['warn', ...v.slice(1)] : 'warn',
     ]),
   );
+/** the folders whose typescript-eslint warnings are all fixed: errors from now on (one layer at a time, stage 5) */
+const STRICT = ['src/db/**/*.ts'];
+
 /** strict TypeScript (REFACTOR_PLAN.md A5): typescript-eslint recommended-type-checked */
 const TYPE_CHECKED = tseslint.configs.recommendedTypeChecked.map((c) => ({
   ...c,
@@ -126,6 +118,8 @@ module.exports = tseslint.config(
     },
   },
   ...TYPE_CHECKED,
+  // layers already cleaned up (REFACTOR_PLAN.md stage 5): the type-checked rules are errors there
+  ...tseslint.configs.recommendedTypeChecked.map((c) => ({ ...c, files: STRICT })),
   // the look from the theme (REFACTOR_PLAN.md B2): the scales and colors live in shared/theme; the palettes of
   // categories and banks are data
   {

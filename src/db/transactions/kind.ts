@@ -5,7 +5,7 @@ import { unsplitTransactions } from '../parts';
 import { refundCategory } from '../refunds';
 
 /** The types an incoming operation can be switched between ("Сменить тип"). */
-export const INCOME_KIND_CHOICES = ['deposit', 'refund'] as const;
+const INCOME_KIND_CHOICES = ['deposit', 'refund'] as const;
 export type IncomeKind = (typeof INCOME_KIND_CHOICES)[number];
 
 /**

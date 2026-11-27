@@ -4,7 +4,9 @@ import { STEPS_1_12 } from './steps-1-12';
 import { STEPS_13_ON } from './steps-13-on';
 import { STEPS_33_ON } from './steps-33-on';
 import { STEPS_43_ON } from './steps-43-on';
+import { STEPS_53_ON } from './steps-53-on';
 import { STEPS_59_ON } from './steps-59-on';
+import { STEPS_60_ON } from './steps-60-on';
 import { STEPS_67_ON } from './steps-67-on';
 import type { MigrationStep } from './step';
 
@@ -18,7 +20,9 @@ export const MIGRATIONS: MigrationStep[][] = [
   ...STEPS_13_ON,
   ...STEPS_33_ON,
   ...STEPS_43_ON,
+  ...STEPS_53_ON,
   ...STEPS_59_ON,
+  ...STEPS_60_ON,
   ...STEPS_67_ON,
 ];
 

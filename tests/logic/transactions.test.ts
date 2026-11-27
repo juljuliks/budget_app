@@ -89,10 +89,11 @@ describe('assignCategory', () => {
     await insertTx(2, 2000, 'SPAR');
     await assignCategory(1, 4, 'only');
     const db = await getDb();
-    expect((await db.all('SELECT category_id FROM transactions ORDER BY id')).map((r) => r.category_id)).toEqual([
-      4,
-      null,
-    ]);
+    expect(
+      (await db.all<{ category_id: number | null }>('SELECT category_id FROM transactions ORDER BY id')).map(
+        (r) => r.category_id,
+      ),
+    ).toEqual([4, null]);
     expect(await db.get('SELECT * FROM merchant_rules')).toBeUndefined();
   });
 
@@ -112,10 +113,11 @@ describe('assignCategory', () => {
     expect(listener).toHaveBeenCalledTimes(2);
     // SPAR's category changes: transaction 2 follows, the manual "Без категории" doesn't
     await assignCategory(2, 5, 'merchant');
-    expect((await db.all('SELECT category_id FROM transactions ORDER BY id')).map((r) => r.category_id)).toEqual([
-      null,
-      5,
-    ]);
+    expect(
+      (await db.all<{ category_id: number | null }>('SELECT category_id FROM transactions ORDER BY id')).map(
+        (r) => r.category_id,
+      ),
+    ).toEqual([null, 5]);
   });
 });
 

@@ -2,7 +2,7 @@
 import { getDb } from '../index';
 import { Converter, Currency, dateKey, ensureRatesLater, makeConverter } from '../fx';
 import { filterCondition, TxFilter } from '../transactions';
-import { BUDGET_CURRENCY, monthRange, parseYm } from './months';
+import { BUDGET_CURRENCY } from './months';
 import { EXPENSE_KINDS, signedSpendSql } from '../spending';
 import { sqlList } from '../sql';
 

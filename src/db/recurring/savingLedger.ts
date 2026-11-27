@@ -14,7 +14,7 @@ export type SavingMonth = {
 };
 
 /** An operation of the repeating payment's merchant in "Подписки": its id, moment and value in the repeating payment's currency. */
-export type SavingSpend = { id: number; at: number; value: number };
+type SavingSpend = { id: number; at: number; value: number };
 
 export type SavingInput = {
   /** first and last month, inclusive */
@@ -41,7 +41,7 @@ export type SavingResult = {
   byTx: Map<number, { before: number; after: number }>;
 };
 
-export const nextYm = (ym: string) => {
+const nextYm = (ym: string) => {
   const { year, month } = parseYm(ym);
   return ymOf(year, month + 1);
 };

@@ -5,9 +5,9 @@ import { findCategoryForMerchant } from '../categorize/rules';
 import { sqlList } from './sql';
 
 /** How far back a refund looks for a purchase at its merchant to take the category from. */
-export const REFUND_LOOKBACK_DAYS = 90;
+const REFUND_LOOKBACK_DAYS = 90;
 
-export type Refund = {
+type Refund = {
   id: number;
   amount_minor: number;
   currency: string;
@@ -18,7 +18,7 @@ export type Refund = {
   refund_target_id: number | null;
 };
 
-export async function getRefund(id: number): Promise<Refund | undefined> {
+async function getRefund(id: number): Promise<Refund | undefined> {
   const db = await getDb();
   return db.get<Refund>(
     `SELECT id, amount_minor, currency, raw_merchant, merchant_key, occurred_at, refund_settled_at, refund_target_id

@@ -159,6 +159,8 @@ export const STEPS_13_ON: MigrationStep[][] = [
   // put before it, as new ones are (balance.ts placeByBalances) — the card balance counted them twice
   [
     async (db) => {
+      // required here, not imported: balance.ts imports the db (index.ts), which imports the migrations
+      // eslint-disable-next-line @typescript-eslint/no-require-imports -- the import cycle above
       const { placeByBalances } = require('../balance') as typeof import('../balance');
       const rows = await db.all<{ id: number }>(
         `SELECT id FROM transactions WHERE bank != 'manual' AND kind IN ('deposit', 'transfer', 'withdrawal')
