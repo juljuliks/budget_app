@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { dayTitle } from '@/shared/lib/dates';
 import { formatWithCurrency } from '@/shared/lib/money';
 import { AMOUNT_HINT } from '@/shared/lib/strings';
@@ -8,6 +8,7 @@ import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
 import { SheetActions } from '@/shared/ui/Button';
 import Chip from '@/shared/ui/Chip';
 import CurrencyButton from '@/shared/ui/CurrencyButton';
+import TextField from '@/shared/ui/TextField';
 import DateField from '@/shared/ui/DateField';
 import { TrashIcon } from '@/shared/ui/icons';
 import TextInputModal from '@/shared/ui/TextInputModal';
@@ -111,31 +112,24 @@ export default function PaymentSheet({ target, onClose, onSaved, onLeave }: Prop
             Запомним, когда спишется следующая, — она встанет в план своего месяца.
           </Text>
         ) : null}
-        <Text style={formStyles.label}>Название</Text>
-        <TextInput
-          style={formStyles.input}
+        <TextField
+          label="Название"
           value={f.name}
           onChangeText={f.setName}
           placeholder="Например, Netflix"
-          placeholderTextColor={colors.muted}
           maxLength={40}
           accessibilityLabel="Название"
         />
-        <Text style={formStyles.label}>Сумма</Text>
-        <View style={styles.amountRow}>
-          <TextInput
-            style={[formStyles.input, styles.amount]}
-            value={f.amount}
-            onChangeText={f.setAmount}
-            placeholder="0.00"
-            placeholderTextColor={colors.muted}
-            keyboardType="decimal-pad"
-            maxLength={12}
-            accessibilityLabel="Сумма"
-          />
-          <CurrencyButton value={f.currency} onChange={f.setCurrency} />
-        </View>
-        {amountBad ? <Text style={[formStyles.hint, styles.error]}>{AMOUNT_HINT}</Text> : null}
+        <TextField
+          label="Сумма"
+          amount
+          large
+          value={f.amount}
+          onChangeText={f.setAmount}
+          accessibilityLabel="Сумма"
+          right={<CurrencyButton value={f.currency} onChange={f.setCurrency} />}
+          error={amountBad ? AMOUNT_HINT : null}
+        />
         <Text style={formStyles.label}>Как часто</Text>
         <View style={styles.chips}>
           {periods.map(([m, label]) => (
@@ -226,8 +220,6 @@ const styles = StyleSheet.create({
   root: { maxHeight: '94%' },
   content: { paddingHorizontal: space[20], paddingBottom: space[8] },
   lead: { marginTop: 0 },
-  amountRow: { flexDirection: 'row', alignItems: 'stretch', gap: space[8] },
-  amount: { flex: 1, fontSize: font.title },
   error: { color: colors.danger },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space[8] },
   plate: {

@@ -1,13 +1,12 @@
 import React from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { Text } from 'react-native';
+import TextField from '@/shared/ui/TextField';
 import type { Currency } from '@/db/fx';
 import { currencySymbol, formatWithCurrency } from '@/shared/lib/money';
 import RadioGroup from '@/shared/ui/RadioGroup';
 import { formStyles } from '@/shared/theme/formStyles';
-import { colors } from '@/shared/theme/theme';
 import { inMonthYear, longDayYear, monthGenYear } from '@/shared/lib/dates';
 import { usePaymentSaving } from '../model/usePaymentSaving';
-import { font, space } from '@/shared/theme/tokens';
 
 type Props = { s: ReturnType<typeof usePaymentSaving>; amount: number | null; currency: Currency; due: string | null };
 
@@ -44,28 +43,16 @@ export default function SavingFields({ s, amount, currency, due }: Props) {
       ) : null}
       {s.save && s.had && !s.had.saving ? (
         <>
-          <Text style={formStyles.label}>Уже отложено (необязательно)</Text>
-          <View style={[formStyles.input, styles.amountRow]}>
-            <TextInput
-              style={styles.amountInput}
-              value={s.start}
-              onChangeText={s.setStart}
-              placeholder="0.00"
-              placeholderTextColor={colors.muted}
-              keyboardType="decimal-pad"
-              maxLength={12}
-              accessibilityLabel="Уже отложено"
-            />
-            <Text style={styles.muted}>{currencySymbol(currency)}</Text>
-          </View>
+          <TextField
+            label="Уже отложено (необязательно)"
+            amount
+            value={s.start}
+            onChangeText={s.setStart}
+            accessibilityLabel="Уже отложено"
+            suffix={currencySymbol(currency)}
+          />
         </>
       ) : null}
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  amountRow: { flexDirection: 'row', alignItems: 'center', gap: space[8], paddingVertical: 0 },
-  amountInput: { flex: 1, fontSize: font.input, color: colors.text, paddingVertical: space[10] },
-  muted: { color: colors.muted, fontSize: font.secondary },
-});

@@ -104,6 +104,25 @@ module.exports = {
         ? 'A touchable of only a text is a button drawn by hand: use shared/ui Button, TextLink (a link «… ›») or Chip.'
         : null,
     ),
+    'text-input': {
+      meta: {
+        type: 'suggestion',
+        docs: { description: 'A text field is shared/ui TextField or SearchBar' },
+        schema: [],
+      },
+      create(context) {
+        return {
+          JSXOpeningElement(node) {
+            if (node.name.type === 'JSXIdentifier' && node.name.name === 'TextInput')
+              context.report({
+                node,
+                message:
+                  'A TextInput drawn by hand: use shared/ui TextField (label, hint/error, amount, suffix, right) or SearchBar.',
+              });
+          },
+        };
+      },
+    },
     'icon-touchable-label': touchableRule('A touchable of only an icon has a label', (el, node) =>
       !iconOnly(node.children) || attr(el, 'accessibilityLabel') || attr(el, 'aria-label')
         ? null

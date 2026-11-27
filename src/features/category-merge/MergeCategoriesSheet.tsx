@@ -1,6 +1,7 @@
 import { WEEKDAYS } from '@/shared/lib/dates';
+import TextField from '@/shared/ui/TextField';
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, TextInput } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import { Category, categoryLabel, listCategories } from '@/db/categories';
 import { CategoryType, listCategoryTypes } from '@/db/categoryTypes';
 import { MergeNameTakenError, mergedName, mergePlanPreview, MergeRhythm } from '@/db/mergeCategories';
@@ -149,15 +150,7 @@ export default function MergeCategoriesSheet({
       style={styles.sheet}
     >
       <SheetScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={formStyles.label}>Название</Text>
-        <TextInput
-          style={formStyles.input}
-          value={name}
-          onChangeText={setName}
-          placeholderTextColor={colors.muted}
-          maxLength={60}
-          editable={!saving}
-        />
+        <TextField label="Название" value={name} onChangeText={setName} maxLength={60} editable={!saving} />
         {typeOptions.length > 1 ? (
           <>
             <Text style={formStyles.label}>Раздел</Text>

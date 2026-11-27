@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Controller } from 'react-hook-form';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { categoryLabel, getCategory } from '@/db/categories';
 import { CategoryPickerModal } from '@/entities/category';
 import { parseAmountInput } from '@/shared/lib/money';
@@ -9,15 +9,14 @@ import { AMOUNT_HINT, NO_CATEGORY } from '@/shared/lib/strings';
 import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
 import { SheetActions } from '@/shared/ui/Button';
 import CurrencyButton from '@/shared/ui/CurrencyButton';
+import TextField from '@/shared/ui/TextField';
 import DateField from '@/shared/ui/DateField';
 import SectionHeading from '@/shared/ui/SectionHeading';
 import SelectField from '@/shared/ui/SelectField';
 import Segmented from '@/shared/ui/Segmented';
-import { formStyles } from '@/shared/theme/formStyles';
-import { colors } from '@/shared/theme/theme';
 import { dayLabel } from './model/dayLabel';
 import { KINDS, useAddForm } from './model/useAddForm';
-import { font, space, weight } from '@/shared/theme/tokens';
+import { space } from '@/shared/theme/tokens';
 
 /** Manual entry in a sheet (the "+" on the operations): cash, or anything the bank didn't send an SMS for. */
 export default function AddTransactionSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
@@ -31,43 +30,38 @@ export default function AddTransactionSheet({ visible, onClose }: { visible: boo
           render={({ field }) => <Segmented options={KINDS} value={field.value} onChange={field.onChange} />}
         />
 
-        <Text style={formStyles.label}>Сумма</Text>
         {/* the currency right of the amount, as in the plan */}
-        <View style={styles.amountRow}>
-          <Controller
-            control={form.control}
-            name="amount"
-            rules={{ validate: (v) => (!v.trim() ? 'Введите сумму' : parseAmountInput(v) !== null || AMOUNT_HINT) }}
-            render={({ field }) => (
-              <TextInput
-                style={[formStyles.input, styles.amount]}
-                value={field.value}
-                onChangeText={field.onChange}
-                placeholder="0.00"
-                placeholderTextColor={colors.muted}
-                keyboardType="decimal-pad"
-                maxLength={12}
-              />
-            )}
-          />
-          <Controller
-            control={form.control}
-            name="currency"
-            render={({ field }) => <CurrencyButton value={field.value} onChange={field.onChange} />}
-          />
-        </View>
+        <Controller
+          control={form.control}
+          name="amount"
+          rules={{ validate: (v) => (!v.trim() ? 'Введите сумму' : parseAmountInput(v) !== null || AMOUNT_HINT) }}
+          render={({ field }) => (
+            <TextField
+              label="Сумма"
+              amount
+              large
+              value={field.value}
+              onChangeText={field.onChange}
+              right={
+                <Controller
+                  control={form.control}
+                  name="currency"
+                  render={({ field: cur }) => <CurrencyButton value={cur.value} onChange={cur.onChange} />}
+                />
+              }
+            />
+          )}
+        />
 
-        <Text style={formStyles.label}>Описание (необязательно)</Text>
         <Controller
           control={form.control}
           name="description"
           render={({ field }) => (
-            <TextInput
-              style={formStyles.input}
+            <TextField
+              label="Описание (необязательно)"
               value={field.value}
               onChangeText={field.onChange}
               placeholder="Например, рынок"
-              placeholderTextColor={colors.muted}
               maxLength={60}
             />
           )}
@@ -103,9 +97,6 @@ export default function AddTransactionSheet({ visible, onClose }: { visible: boo
 const styles = StyleSheet.create({
   root: { maxHeight: '92%' },
   content: { paddingHorizontal: space[20], paddingBottom: space[8] },
-  // stretch: the currency button as tall as the amount field
-  amountRow: { flexDirection: 'row', alignItems: 'stretch', gap: space[8] },
-  amount: { flex: 1, fontSize: font.headline, fontWeight: weight.semibold },
 });
 
 /** The new operation's category: a field, a tap opens the shared list. */

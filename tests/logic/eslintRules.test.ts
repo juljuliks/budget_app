@@ -55,6 +55,16 @@ describe('eslint-rules', () => {
     });
   });
 
+  describe('text-input: a text field is TextField or SearchBar', () => {
+    tester.run('text-input', app.rules['text-input'], {
+      valid: [
+        '<TextField label="Сумма" amount value={v} />',
+        '<SearchBar value={q} onChange={f} placeholder="Поиск" />',
+      ],
+      invalid: [{ code: '<TextInput style={formStyles.input} value={v} onChangeText={f} />', errors: 1 }],
+    });
+  });
+
   describe('max-hook-lines: a hook (use*) is up to max lines of code, blank and comments not counted', () => {
     const body = (n: number) => Array.from({ length: n }, (_, i) => `  const a${i} = ${i};`).join('\n');
     const opts = [{ max: 3 }];

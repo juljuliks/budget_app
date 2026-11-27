@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import SearchBar from '@/shared/ui/SearchBar';
 import BottomSheet, { SheetFlatList } from '@/shared/ui/BottomSheet';
 import Button from '@/shared/ui/Button';
 import Checkbox from '@/shared/ui/Checkbox';
 import Chip from '@/shared/ui/Chip';
-import { ChevronDownIcon, SearchIcon } from '@/shared/ui/icons';
+import { ChevronDownIcon } from '@/shared/ui/icons';
 import RangeCalendar, { DayRange, formatRange } from '@/shared/ui/RangeCalendar';
 import { colors } from '@/shared/theme/theme';
 import { normalizeForSearch } from '@/db/transactions';
@@ -79,28 +80,7 @@ export function OptionsSheet<K extends string | number>({
       headerRight={selected.length ? <Button variant="text" title="Снять выбор" onPress={onClear} /> : null}
     >
       {searchPlaceholder ? (
-        <View style={styles.search}>
-          <SearchIcon color={colors.muted} />
-          <TextInput
-            style={styles.searchInput}
-            value={query}
-            onChangeText={setQuery}
-            placeholder={searchPlaceholder}
-            placeholderTextColor={colors.muted}
-            autoCorrect={false}
-          />
-          {query ? (
-            // eslint-disable-next-line app/text-button -- the search field's ✕
-            <TouchableOpacity
-              accessibilityRole="button"
-              onPress={() => setQuery('')}
-              hitSlop={10}
-              accessibilityLabel="Очистить"
-            >
-              <Text style={styles.clear}>✕</Text>
-            </TouchableOpacity>
-          ) : null}
-        </View>
+        <SearchBar value={query} onChange={setQuery} placeholder={searchPlaceholder} style={styles.search} />
       ) : null}
       <SheetFlatList
         data={shown}
@@ -218,18 +198,7 @@ const styles = StyleSheet.create({
   buttonText: { fontSize: font.meta, color: colors.text },
   buttonTextOn: { color: colors.onAccent },
   sheet: { maxHeight: '85%' },
-  search: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space[8],
-    marginHorizontal: space[20],
-    marginBottom: space[8],
-    paddingHorizontal: space[12],
-    borderRadius: radius.md,
-    backgroundColor: colors.surface,
-  },
-  searchInput: { flex: 1, fontSize: font.body, paddingVertical: space[8], color: colors.text },
-  clear: { fontSize: font.input, color: colors.muted },
+  search: { marginHorizontal: space[20], marginBottom: space[8] },
   list: { flexGrow: 0 },
   option: {
     flexDirection: 'row',

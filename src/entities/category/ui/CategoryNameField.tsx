@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import TextField from '@/shared/ui/TextField';
 import { Controller, UseFormReturn } from 'react-hook-form';
 import { formStyles } from '@/shared/theme/formStyles';
 import { colors } from '@/shared/theme/theme';
@@ -52,12 +53,11 @@ export default function CategoryNameField({ form, emoji, locked, onPickEmoji, on
           name="name"
           rules={{ validate: (v) => !!v?.trim() || 'Введите название' }}
           render={({ field }) => (
-            <TextInput
-              style={[formStyles.input, styles.name]}
+            <TextField
+              style={styles.name}
               value={field.value}
               onChangeText={field.onChange}
               placeholder="Например, Спорт"
-              placeholderTextColor={colors.muted}
               maxLength={40}
               editable={!locked}
               returnKeyType="done"

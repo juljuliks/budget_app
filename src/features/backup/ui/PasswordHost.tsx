@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import TextField from '@/shared/ui/TextField';
 import BottomSheet from '@/shared/ui/BottomSheet';
 import { SheetActions } from '@/shared/ui/Button';
 import { toastError } from '@/shared/ui/toast';
-import { formStyles } from '@/shared/theme/formStyles';
 import { colors } from '@/shared/theme/theme';
 import {
   CHANGE_PASSWORD_INFO,
@@ -66,12 +66,10 @@ export function PasswordHost() {
     close(password);
   };
   const field = (value: string, onChange: (v: string) => void, placeholder: string, last: boolean) => (
-    <TextInput
-      style={formStyles.input}
+    <TextField
       value={value}
       onChangeText={onChange}
       placeholder={placeholder}
-      placeholderTextColor={colors.muted}
       secureTextEntry
       autoCapitalize="none"
       autoCorrect={false}

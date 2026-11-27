@@ -25,7 +25,8 @@ model: haiku
 5. Кнопка — только `shared/ui/Button` (`variant="primary" | "secondary" | "cancel" | "text"`, `danger`, `muted`,
    `size="small"`, `icon`; нажимаемое с одним `<Text>` — ошибка `app/text-button`),
    своей не рисовать; своя только круглая ＋ `PlusButton`. Плашка (предупреждение, предложение) — `shared/ui/Banner`
-   (`tone`, `title`, `text`, `onPress` / `close` / `action`), свою коробку с фоном не рисовать. У тапаемого — `accessibilityRole`, у значка — `accessibilityLabel`. Новый компонент или вариант `shared/ui` —
+   (`tone`, `title`, `text`, `onPress` / `close` / `action`), свою коробку с фоном не рисовать. Поле ввода — `shared/ui/TextField` (`label`, `hint` / `error`, `amount`, `large`,
+   `suffix` ₾, `right` — валюта), поиск — `SearchBar`; свой `TextInput` — ошибка `app/text-input`. У тапаемого — `accessibilityRole`, у значка — `accessibilityLabel`. Новый компонент или вариант `shared/ui` —
    кадр в каталоге «Компоненты» (`screens/catalog`, debug)
    (ARCHITECTURE.md §1, после страниц и шитов).
 6. Расчёты — в `.ts` (`model/`) с тестом в `tests/logic/`; тексты — в `texts.ts` и по GLOSSARY.md; вид — из темы:

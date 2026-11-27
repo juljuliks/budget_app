@@ -89,7 +89,9 @@ app/text-button -- <почему>` на месте.
 Плашка (предупреждение, предложение, заметка над списком или в шите) — только `shared/ui/Banner`: `tone` (`warn` жёлтая,
 `info` голубая, `neutral` серая, `ok` зелёная), `title`, `text`, ссылки и кнопки — детьми; `onPress` — вся плашка
 кнопка с ›, `close` — ✕, `action` — текст-кнопка справа («Отменить»). Свою коробку с фоном и радиусом не рисовать. Пусто на месте списка — `shared/ui/Empty` (`compact` — в шите, `inline` — слева
-в блоке страницы). У любого `TouchableOpacity` / `Pressable` — `accessibilityRole` (`button`, `checkbox`, `link`…), у значка
+в блоке страницы). Поле ввода — только `shared/ui/TextField`: `label`, `hint` / `error` под ним, `amount` (сумма:
+клавиатура, «0.00»), `large` (главная сумма шита), `suffix` (₾ внутри), `right` (`CurrencyButton` рядом, той же высоты),
+`compact` (в строке); поиск — `SearchBar`. Свой `TextInput` — ошибка `app/text-input`. У любого `TouchableOpacity` / `Pressable` — `accessibilityRole` (`button`, `checkbox`, `link`…), у значка
 без текста — `accessibilityLabel`: ошибки линта `app/touchable-role`, `app/icon-touchable-label`.
 
 Записи в базу — командами слайса (`model/commands.ts`): запись + `emitTransactionsChanged`. Компоненты не зовут
@@ -154,7 +156,7 @@ app/text-button -- <почему>` на месте.
 - **shared/ui**: `form`, `BottomSheet`, `Button`, `Checkbox`, `Chip`, `Segmented`, `RadioGroup`, `StepSlider`, `Donut`,
   `Meter`, `HueBar`, `ColorSwatches`, `ColorPickerSheet`, `EmojiPicker` (+ `emoji/`), `RangeCalendar` (сетка месяца — `MonthGrid`),
   `TextInputModal`, `StickyScrollView`, `SectionHeading`, `Fab`, `PlusButton`, `RowActions`, `CurrencyButton`,
-  `CurrencyPicker`, `Banner` (плашка), `Empty` (пусто), `Toggle` (переключатель; со строкой и подсказкой — `SwitchRow`), `BankBadge` (знак банка), `ModeBanner` (режим списка: разбор категории, выбор операции для платежа), `icons`, `toast`, `sheetAlert`.
+  `CurrencyPicker`, `TextField` (поле ввода), `SearchBar` (поиск), `DateField` (поле даты), `Banner` (плашка), `Empty` (пусто), `Toggle` (переключатель; со строкой и подсказкой — `SwitchRow`), `BankBadge` (знак банка), `ModeBanner` (режим списка: разбор категории, выбор операции для платежа), `icons`, `toast`, `sheetAlert`.
 - **shared/lib**: `format`, `money`, `dateRange`, `dates` (бывший `stats/months`), `strings`, `useLast`, `useLatestRequest`.
 - **shared/theme**: `theme`, `formStyles`. `colors.ts` остаётся в ядре (`src/domain/`): палитру категорий берёт `db/`.
 - **app**: `App.tsx` (+ `MainTabs`, `useAppStartup`), `modals.tsx` → `ModalHost`, `SettingsButton`.

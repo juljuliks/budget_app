@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import type { Currency } from '@/db/fx';
 import { currentYm, fundContribution, getFund, monthsBetween } from '@/db/plans';
 import { dayKeyOf } from '@/shared/lib/dateRange';
@@ -8,8 +8,8 @@ import { formatWithCurrency, parseAmountOrZero, toInputValue } from '@/shared/li
 import BottomSheet, { SheetScrollView } from '@/shared/ui/BottomSheet';
 import { SheetActions } from '@/shared/ui/Button';
 import CurrencyButton from '@/shared/ui/CurrencyButton';
+import TextField from '@/shared/ui/TextField';
 import DateField from '@/shared/ui/DateField';
-import { formStyles } from '@/shared/theme/formStyles';
 import { colors } from '@/shared/theme/theme';
 import { useDisplayCurrency } from '@/shared/settings/displayCurrency';
 import { saveCategoryFund } from '../model/commands';
@@ -92,20 +92,15 @@ export default function FundSetupSheet({ categoryId, label, onClose, onSaved }: 
     <BottomSheet visible={categoryId !== null} onClose={onClose} title={FUND_SWITCH}>
       <SheetScrollView contentContainerStyle={styles.content}>
         <Text style={styles.category}>{label}</Text>
-        <Text style={formStyles.label}>Сколько накопить</Text>
-        <View style={styles.amountRow}>
-          <TextInput
-            style={[formStyles.input, styles.amount]}
-            value={draft.target}
-            onChangeText={(t) => set({ target: t })}
-            placeholder="0.00"
-            placeholderTextColor={colors.muted}
-            keyboardType="decimal-pad"
-            maxLength={12}
-            accessibilityLabel="Сколько накопить"
-          />
-          <CurrencyButton value={draft.currency} onChange={(c) => set({ currency: c })} />
-        </View>
+        <TextField
+          label="Сколько накопить"
+          amount
+          large
+          value={draft.target}
+          onChangeText={(t) => set({ target: t })}
+          accessibilityLabel="Сколько накопить"
+          right={<CurrencyButton value={draft.currency} onChange={(c) => set({ currency: c })} />}
+        />
         <DateField
           label="К какой дате"
           value={draft.due}
@@ -115,15 +110,11 @@ export default function FundSetupSheet({ categoryId, label, onClose, onSaved }: 
           minDay={dayKeyOf(new Date())}
           onChange={(d) => set({ due: d })}
         />
-        <Text style={formStyles.label}>Уже отложено (необязательно)</Text>
-        <TextInput
-          style={formStyles.input}
+        <TextField
+          label="Уже отложено (необязательно)"
+          amount
           value={draft.start}
           onChangeText={(t) => set({ start: t })}
-          placeholder="0.00"
-          placeholderTextColor={colors.muted}
-          keyboardType="decimal-pad"
-          maxLength={12}
           accessibilityLabel="Уже отложено"
         />
         <View style={styles.plate}>
@@ -146,8 +137,6 @@ export default function FundSetupSheet({ categoryId, label, onClose, onSaved }: 
 const styles = StyleSheet.create({
   content: { paddingHorizontal: space[20], paddingBottom: space[16] },
   category: { fontSize: font.body, color: colors.muted },
-  amountRow: { flexDirection: 'row', gap: space[10], alignItems: 'center' },
-  amount: { flex: 1 },
   plate: { backgroundColor: colors.fundBg, borderRadius: radius.lg, padding: space[12], marginTop: space[14] },
   plateTitle: { fontSize: font.body, fontWeight: weight.semibold, color: colors.fundText },
   muted: { color: colors.muted },

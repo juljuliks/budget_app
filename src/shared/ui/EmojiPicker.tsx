@@ -1,17 +1,8 @@
 import React, { useMemo, useRef, useState } from 'react';
-import {
-  FlatList,
-  Platform,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import SearchBar from './SearchBar';
+import { FlatList, Platform, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import BottomSheet, { SheetFlatList } from './BottomSheet';
 import { SheetActions } from './Button';
-import { SearchIcon } from './icons';
 import { colors } from '../theme/theme';
 // [emoji, group, emoji version, search words in Russian and English] — built by scripts/build_emoji.js
 import EMOJI from './emoji/emoji.json';
@@ -128,27 +119,7 @@ export default function EmojiPicker({ visible, value, onPick, onClose }: Props) 
   return (
     <BottomSheet visible={visible} onClose={close} title="Эмодзи" style={styles.sheet}>
       <View style={styles.top}>
-        <View style={styles.search}>
-          <SearchIcon color={colors.muted} />
-          <TextInput
-            style={styles.searchInput}
-            value={query}
-            onChangeText={setQuery}
-            placeholder="Поиск: кофе, coffee…"
-            placeholderTextColor={colors.muted}
-            autoCorrect={false}
-          />
-          {query ? (
-            <TouchableOpacity
-              accessibilityRole="button"
-              onPress={() => setQuery('')}
-              hitSlop={10}
-              accessibilityLabel="Очистить поиск"
-            >
-              <Text style={styles.clear}>✕</Text>
-            </TouchableOpacity>
-          ) : null}
-        </View>
+        <SearchBar value={query} onChange={setQuery} placeholder="Поиск: кофе, coffee…" />
         {words.length ? null : (
           <View style={styles.tabs}>
             {GROUPS.map((g) => (
@@ -212,16 +183,6 @@ const styles = StyleSheet.create({
   // a fixed height: it doesn't jump while searching
   sheet: { height: '85%', maxHeight: '85%' },
   top: { paddingHorizontal: space[16] },
-  search: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space[8],
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    paddingHorizontal: space[12],
-  },
-  searchInput: { flex: 1, fontSize: font.input, color: colors.text, paddingVertical: space[8] },
-  clear: { fontSize: font.input, color: colors.muted },
   tabs: {
     flexDirection: 'row',
     justifyContent: 'space-between',

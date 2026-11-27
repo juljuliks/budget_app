@@ -136,7 +136,7 @@ module.exports = tseslint.config(
   {
     files: ['src/**/*.{ts,tsx}'],
     ignores: ['src/shared/ui/**'],
-    rules: { 'app/text-button': 'error' },
+    rules: { 'app/text-button': 'error', 'app/text-input': 'error' },
   },
   {
     files: OVERSIZE,

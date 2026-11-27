@@ -6,6 +6,8 @@ import ActionsDemo from './parts/ActionsDemo';
 import BoxesDemo from './parts/BoxesDemo';
 import ChartsDemo from './parts/ChartsDemo';
 import ChoiceDemo from './parts/ChoiceDemo';
+import FieldsDemo from './parts/FieldsDemo';
+import SheetsDemo from './parts/SheetsDemo';
 
 /**
  * «Компоненты» (debug build only, from ⋮): every shared/ui component with its variants — the reference for a review
@@ -16,6 +18,8 @@ export default function CatalogScreen() {
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <ActionsDemo />
       <ChoiceDemo />
+      <FieldsDemo />
+      <SheetsDemo />
       <BoxesDemo />
       <ChartsDemo />
     </ScrollView>

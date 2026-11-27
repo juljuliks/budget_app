@@ -10,9 +10,7 @@ export const styles = StyleSheet.create({
   lockTitle: { flexDirection: 'row', alignItems: 'center', gap: space[6], marginTop: space[12] },
   lockMode: { marginLeft: 'auto', width: 168 },
   lockLabel: { marginBottom: 0, marginTop: 0, flexShrink: 1 },
-  lockRow: { flexDirection: 'row', alignItems: 'center', gap: space[8], marginTop: space[6] },
-  lockOwn: { fontSize: font.secondary, color: colors.muted },
-  lockInput: { flex: 1, paddingVertical: space[6] },
+  lockRow: { marginTop: space[6] },
   // white like the stats: the sections' grey bands stand out
   screen: { flex: 1, backgroundColor: colors.bg },
   // room under the last row for the "+"

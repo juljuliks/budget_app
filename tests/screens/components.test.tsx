@@ -3,6 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import Banner from '@/shared/ui/Banner';
 import Empty from '@/shared/ui/Empty';
 import ModeBanner from '@/shared/ui/ModeBanner';
+import TextField from '@/shared/ui/TextField';
 import { base } from '../e2e/seeds';
 import { openApp, openMenu } from './app';
 
@@ -60,6 +61,33 @@ describe('Empty', () => {
   });
 });
 
+describe('TextField', () => {
+  test('its label, a hint — or an error instead; an amount: the decimal keyboard, "0.00", the symbol inside', () => {
+    const typed = jest.fn();
+    const { rerender } = render(
+      <TextField
+        label="Название"
+        value=""
+        onChangeText={typed}
+        placeholder="Например, Netflix"
+        hint="До 40 символов"
+      />,
+    );
+    expect(screen.getByText('Название')).toBeTruthy();
+    expect(screen.getByText('До 40 символов')).toBeTruthy();
+    fireEvent.changeText(screen.getByPlaceholderText('Например, Netflix'), 'Spotify');
+    expect(typed).toHaveBeenCalledWith('Spotify');
+    rerender(<TextField label="Название" value="" hint="До 40 символов" error="Введите название" />);
+    expect(screen.getByText('Введите название')).toBeTruthy();
+    expect(screen.queryByText('До 40 символов')).toBeNull();
+    rerender(<TextField amount value="" suffix="₾" accessibilityLabel="Сумма" />);
+    const field = screen.getByLabelText('Сумма');
+    expect(field.props.keyboardType).toBe('decimal-pad');
+    expect(field.props.placeholder).toBe('0.00');
+    expect(screen.getByText('₾')).toBeTruthy();
+  });
+});
+
 describe('«Компоненты» (debug build only)', () => {
   test('⋮ › Компоненты: every frame of the catalog is drawn', async () => {
     await openApp(base);
@@ -69,7 +97,11 @@ describe('«Компоненты» (debug build only)', () => {
       'Chip',
       'RadioGroup',
       'SwitchRow',
-      'CurrencyButton',
+      'TextField',
+      'TextField amount',
+      'DateField',
+      'RangeCalendar',
+      'Fab',
       'Banner',
       'Empty',
       'Loading',

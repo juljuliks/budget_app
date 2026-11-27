@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import TextField from '@/shared/ui/TextField';
 import { SPLIT_COLORS } from '@/entities/transaction';
 import { currencySymbol, formatMoneyWithCurrency } from '@/shared/lib/money';
 import { CloseIcon } from '@/shared/ui/icons';
@@ -34,18 +35,19 @@ export default function SplitRow({ index, label, currency, text, rest, onText, o
           {formatMoneyWithCurrency(rest ?? 0, currency)}
         </Text>
       ) : (
-        <View style={styles.input}>
-          <TextInput
-            value={text}
-            onChangeText={onText}
-            keyboardType="decimal-pad"
-            placeholder="0"
-            style={styles.inputText}
-            accessibilityLabel={`Сумма: ${label}`}
-            autoFocus={text === ''}
-          />
-          <Text style={styles.symbol}>{currencySymbol(currency)}</Text>
-        </View>
+        <TextField
+          amount
+          compact
+          maxLength={undefined}
+          value={text}
+          onChangeText={onText}
+          placeholder="0"
+          textAlign="right"
+          inputStyle={styles.inputText}
+          accessibilityLabel={`Сумма: ${label}`}
+          autoFocus={text === ''}
+          suffix={currencySymbol(currency)}
+        />
       )}
       {onRemove ? (
         <TouchableOpacity
@@ -77,23 +79,7 @@ const styles = StyleSheet.create({
   hint: { fontSize: font.meta, color: colors.muted, paddingLeft: space[4] },
   rest: { fontSize: font.input, color: colors.text, fontVariant: ['tabular-nums'] },
   danger: { color: colors.danger },
-  input: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space[4],
-    borderWidth: 1.5,
-    borderColor: colors.accent,
-    borderRadius: radius.sm,
-    paddingHorizontal: space[10],
-  },
-  inputText: {
-    fontSize: font.input,
-    color: colors.text,
-    minWidth: 48,
-    textAlign: 'right',
-    paddingVertical: space[6],
-    fontVariant: ['tabular-nums'],
-  },
-  symbol: { fontSize: font.input, color: colors.text },
+  // a split's amount: as wide as its digits, at the right
+  inputText: { minWidth: 48 },
   remove: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
 });

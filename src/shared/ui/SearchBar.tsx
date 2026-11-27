@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleProp, StyleSheet, Text, TextInput, TouchableOpacity, View, ViewStyle } from 'react-native';
 import { SearchIcon } from './icons';
 import { colors } from '../theme/theme';
 import { font, radius, space } from '../theme/tokens';
@@ -9,13 +9,16 @@ export default function SearchBar({
   value,
   onChange,
   placeholder,
+  style,
 }: {
   value: string;
   onChange: (v: string) => void;
   placeholder: string;
+  /** margins where it stands */
+  style?: StyleProp<ViewStyle>;
 }) {
   return (
-    <View style={styles.search}>
+    <View style={[styles.search, style]}>
       <SearchIcon color={colors.muted} />
       <TextInput
         style={styles.input}

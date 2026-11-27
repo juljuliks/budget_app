@@ -1,14 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Text, TextInput, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { Controller, useWatch } from 'react-hook-form';
 import type { Currency } from '@/db/fx';
 import { formatWithCurrency, parseAmountOrZero, toInputValue } from '@/shared/lib/money';
 import { LockIcon } from '@/shared/ui/icons';
 import Segmented from '@/shared/ui/Segmented';
+import TextField from '@/shared/ui/TextField';
 import StepSlider from '@/shared/ui/StepSlider';
 import { useLoadedForm } from '@/shared/ui/form';
 import { formStyles } from '@/shared/theme/formStyles';
-import { colors } from '@/shared/theme/theme';
 import { BudgetForm, SHARE_STOPS } from '../model/budgetForm';
 import { styles } from './styles';
 
@@ -105,28 +105,25 @@ export function ShareField({
           color={color}
         />
       ) : (
-        <View style={styles.lockRow}>
-          <Controller
-            control={form.control}
-            name={name}
-            render={({ field }) => (
-              <TextInput
-                style={[formStyles.input, styles.lockInput]}
-                value={field.value}
-                // typed by hand: an amount of one's own, not "max" any more
-                onChangeText={(t) => {
-                  field.onChange(t);
-                  if (mode === 'max') setMode('amount');
-                }}
-                placeholder="0"
-                placeholderTextColor={colors.muted}
-                keyboardType="decimal-pad"
-                maxLength={12}
-              />
-            )}
-          />
-          <Text style={styles.lockOwn}>{cur}</Text>
-        </View>
+        <Controller
+          control={form.control}
+          name={name}
+          render={({ field }) => (
+            <TextField
+              style={styles.lockRow}
+              amount
+              compact
+              value={field.value}
+              // typed by hand: an amount of one's own, not "max" any more
+              onChangeText={(t) => {
+                field.onChange(t);
+                if (mode === 'max') setMode('amount');
+              }}
+              placeholder="0"
+              suffix={cur}
+            />
+          )}
+        />
       )}
       <Text style={[formStyles.hint, mine > room && styles.overText]}>
         {mine > room

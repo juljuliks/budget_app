@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import TextField from '@/shared/ui/TextField';
 import type { MonthClose } from '@/db/plans';
 import { dayTitle } from '@/shared/lib/dates';
 import { currencySymbol, formatWithCurrency, parseAmountOrZero, toInputValue } from '@/shared/lib/money';
@@ -8,7 +9,7 @@ import { SheetActions } from '@/shared/ui/Button';
 import { formStyles } from '@/shared/theme/formStyles';
 import { colors } from '@/shared/theme/theme';
 import { monthWords } from '../model/closeTexts';
-import { font, radius, space, weight } from '@/shared/theme/tokens';
+import { font, space, weight } from '@/shared/theme/tokens';
 
 type Parts = Array<{ category_id: number; minor: number }>;
 type Props = { c: MonthClose | null; visible: boolean; onSave: (parts: Parts) => void; onClose: () => void };
@@ -52,17 +53,16 @@ export default function SplitSheet({ c, visible, onSave, onClose }: Props) {
                 </Text>
                 <Text style={styles.note}>{`план ${money(f.planned_minor, f.currency)} · к ${dayTitle(f.due)}`}</Text>
               </View>
-              <View style={styles.field}>
-                <TextInput
-                  style={styles.input}
-                  value={values[f.category_id] ?? ''}
-                  keyboardType="decimal-pad"
-                  maxLength={12}
-                  accessibilityLabel={`Отложено в «${label}»`}
-                  onChangeText={(v) => setValues((x) => ({ ...x, [f.category_id]: v }))}
-                />
-                <Text style={styles.cur}>{currencySymbol(f.currency)}</Text>
-              </View>
+              <TextField
+                style={styles.field}
+                amount
+                compact
+                placeholder=""
+                value={values[f.category_id] ?? ''}
+                accessibilityLabel={`Отложено в «${label}»`}
+                onChangeText={(v) => setValues((x) => ({ ...x, [f.category_id]: v }))}
+                suffix={currencySymbol(f.currency)}
+              />
             </View>
           );
         })}
@@ -108,17 +108,6 @@ const styles = StyleSheet.create({
   body: { flex: 1, minWidth: 0 },
   name: { fontSize: font.input, color: colors.text },
   note: { fontSize: font.meta, color: colors.muted, marginTop: space[2] },
-  field: {
-    width: 120,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space[6],
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    paddingHorizontal: space[10],
-  },
-  input: { flex: 1, fontSize: font.input, color: colors.text, paddingVertical: space[8] },
-  cur: { fontSize: font.secondary, color: colors.muted },
+  field: { width: 120 },
   warn: { color: colors.warn },
 });

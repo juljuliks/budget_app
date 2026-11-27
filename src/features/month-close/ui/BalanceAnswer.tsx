@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Text, TextInput, View } from 'react-native';
+import { Text, View } from 'react-native';
+import TextField from '@/shared/ui/TextField';
 import type { CloseAnswers, MonthClose } from '@/db/plans';
 import { currencySymbol, formatWithCurrency, parseAmountOrZero, toInputValue } from '@/shared/lib/money';
 import { monthBeforePrep, monthWords } from '../model/closeTexts';
@@ -20,31 +21,28 @@ function MoneyField({
 }) {
   const [text, setText] = useState(toInputValue(minor));
   const textRef = useRef(text);
-  const [focus, setFocus] = useState(false);
   useEffect(() => {
     textRef.current = toInputValue(minor);
     setText(textRef.current);
   }, [minor]);
   return (
-    <View style={[styles.field, focus && styles.fieldOn]}>
-      <TextInput
-        style={styles.input}
-        value={text}
-        keyboardType="decimal-pad"
-        accessibilityLabel={label}
-        onChangeText={(v) => {
-          textRef.current = v;
-          setText(v);
-        }}
-        onFocus={() => setFocus(true)}
-        onBlur={() => {
-          setFocus(false);
-          const n = parseAmountOrZero(textRef.current);
-          if (n !== null) onCommit(n);
-        }}
-      />
-      <Text style={styles.cur}>{currencySymbol(currency)}</Text>
-    </View>
+    <TextField
+      amount
+      compact
+      placeholder=""
+      maxLength={undefined}
+      value={text}
+      accessibilityLabel={label}
+      onChangeText={(v) => {
+        textRef.current = v;
+        setText(v);
+      }}
+      onBlur={() => {
+        const n = parseAmountOrZero(textRef.current);
+        if (n !== null) onCommit(n);
+      }}
+      suffix={currencySymbol(currency)}
+    />
   );
 }
 

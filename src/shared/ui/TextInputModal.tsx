@@ -1,5 +1,6 @@
 import React from 'react';
-import { KeyboardTypeOptions, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardTypeOptions, StyleSheet, Text, View } from 'react-native';
+import TextField from './TextField';
 import { Controller, FieldValues, Path, PathValue, useFormState, UseFormReturn } from 'react-hook-form';
 import BottomSheet, { SheetScrollView } from './BottomSheet';
 import { SheetActions } from './Button';
@@ -117,29 +118,26 @@ export default function TextInputModal<V extends TextFormValues & FieldValues = 
         {above ? <View style={styles.above}>{above}</View> : null}
         {label && !noInput ? <Text style={[formStyles.label, styles.label]}>{label}</Text> : null}
         {noInput ? null : (
-          <View style={styles.inputRow}>
-            <Controller
-              control={form.control}
-              name="value"
-              rules={{ validate: (v) => allowEmpty || !!v.trim() || 'Введите название' }}
-              render={({ field }) => (
-                <TextInput
-                  style={[formStyles.input, styles.input, multiline && styles.multiline]}
-                  multiline={multiline}
-                  textAlignVertical={multiline ? 'top' : undefined}
-                  value={field.value}
-                  onChangeText={field.onChange}
-                  placeholder={placeholder}
-                  placeholderTextColor={colors.muted}
-                  keyboardType={keyboardType}
-                  maxLength={maxLength}
-                  returnKeyType={multiline ? 'default' : 'done'}
-                  onSubmitEditing={multiline || !isDirty || submitDisabled ? undefined : submit}
-                />
-              )}
-            />
-            {inputAccessory}
-          </View>
+          <Controller
+            control={form.control}
+            name="value"
+            rules={{ validate: (v) => allowEmpty || !!v.trim() || 'Введите название' }}
+            render={({ field }) => (
+              <TextField
+                right={inputAccessory}
+                inputStyle={multiline && styles.multiline}
+                multiline={multiline}
+                textAlignVertical={multiline ? 'top' : undefined}
+                value={field.value}
+                onChangeText={field.onChange}
+                placeholder={placeholder}
+                keyboardType={keyboardType}
+                maxLength={maxLength}
+                returnKeyType={multiline ? 'default' : 'done'}
+                onSubmitEditing={multiline || !isDirty || submitDisabled ? undefined : submit}
+              />
+            )}
+          />
         )}
         {children ? <View style={styles.extra}>{children}</View> : null}
       </SheetScrollView>
@@ -171,8 +169,5 @@ const styles = StyleSheet.create({
   label: { marginTop: 0 },
   extra: { marginTop: space[12] },
   above: { marginBottom: space[12] },
-  // the field and its accessory (the currency) the same height
-  inputRow: { flexDirection: 'row', alignItems: 'stretch', gap: space[8] },
-  input: { flex: 1 },
   multiline: { minHeight: 96, maxHeight: 200 },
 });
