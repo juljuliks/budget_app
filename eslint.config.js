@@ -134,6 +134,11 @@ module.exports = tseslint.config(
     rules: { 'app/theme-tokens': 'error' },
   },
   {
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: ['src/shared/ui/**'],
+    rules: { 'app/text-button': 'error' },
+  },
+  {
     files: OVERSIZE,
     rules: {
       'max-lines': ['warn', { max: 250, skipBlankLines: true, skipComments: true }],

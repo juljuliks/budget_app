@@ -76,13 +76,7 @@ export function OptionsSheet<K extends string | number>({
       title={title}
       style={styles.sheet}
       // right of the title, as the toolbars' "Отмена": shown once something is picked
-      headerRight={
-        selected.length ? (
-          <TouchableOpacity onPress={onClear} hitSlop={10} accessibilityRole="button">
-            <Text style={styles.headerAction}>Снять выбор</Text>
-          </TouchableOpacity>
-        ) : null
-      }
+      headerRight={selected.length ? <Button variant="text" title="Снять выбор" onPress={onClear} /> : null}
     >
       {searchPlaceholder ? (
         <View style={styles.search}>
@@ -96,6 +90,7 @@ export function OptionsSheet<K extends string | number>({
             autoCorrect={false}
           />
           {query ? (
+            // eslint-disable-next-line app/text-button -- the search field's ✕
             <TouchableOpacity
               accessibilityRole="button"
               onPress={() => setQuery('')}
@@ -158,9 +153,7 @@ export function DateSheet({
       <View style={styles.footer}>
         <Button title="Готово" onPress={onClose} />
         {value ? (
-          <TouchableOpacity accessibilityRole="button" style={styles.secondary} onPress={() => onChange(null)}>
-            <Text style={styles.secondaryText}>Сбросить даты</Text>
-          </TouchableOpacity>
+          <Button variant="text" title="Сбросить даты" onPress={() => onChange(null)} style={styles.secondary} />
         ) : null}
       </View>
     </BottomSheet>
@@ -255,6 +248,4 @@ const styles = StyleSheet.create({
   allChips: { paddingHorizontal: space[20], paddingVertical: space[8] },
   footer: { paddingHorizontal: space[20], paddingTop: space[12] },
   secondary: { alignItems: 'center', paddingTop: space[12] },
-  headerAction: { fontSize: font.body, color: colors.accent },
-  secondaryText: { fontSize: font.body, color: colors.accent },
 });

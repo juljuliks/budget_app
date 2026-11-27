@@ -3,6 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Checkbox from '@/shared/ui/Checkbox';
 import { colors } from '@/shared/theme/theme';
 import { font, space } from '@/shared/theme/tokens';
+import Button from '@/shared/ui/Button';
 
 type Props = { count: number; allSelected: boolean; onToggleAll: () => void; onCancel?: () => void };
 
@@ -20,11 +21,7 @@ export default function SelectToolbar({ count, allSelected, onToggleAll, onCance
         <Checkbox checked={allSelected} size={20} />
         <Text style={styles.label}>Выбрать все</Text>
       </TouchableOpacity>
-      {onCancel ? (
-        <TouchableOpacity onPress={onCancel} hitSlop={8} accessibilityRole="button">
-          <Text style={styles.cancel}>Отмена</Text>
-        </TouchableOpacity>
-      ) : null}
+      {onCancel ? <Button variant="text" title="Отмена" onPress={onCancel} /> : null}
     </View>
   );
 }
@@ -35,5 +32,4 @@ const styles = StyleSheet.create({
   toggle: { flexDirection: 'row', alignItems: 'center', gap: space[8], paddingVertical: space[4] },
   label: { fontSize: font.body, color: colors.text },
   flex: { flex: 1 },
-  cancel: { fontSize: font.body, color: colors.accent },
 });

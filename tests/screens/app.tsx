@@ -116,7 +116,7 @@ export function texts(): string[] {
 }
 
 /** The tab header's menu ⋮ → one of its pages ("Категории", "Мерчанты", "Настройки"). */
-export async function openMenu(row: 'Категории' | 'Мерчанты' | 'Настройки') {
+export async function openMenu(row: 'Категории' | 'Мерчанты' | 'Настройки' | 'Компоненты') {
   await tap('Меню');
   await tap(row);
 }

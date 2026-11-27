@@ -78,6 +78,7 @@ export default function CategoryRow(props: Props) {
               {withType ? categoryLabel(stat) : `${stat.emoji || ''} ${stat.name}`.trim()}
             </Text>
             {onAddToPlan ? (
+              // eslint-disable-next-line app/text-button -- «＋ В план» pill inside the row
               <TouchableOpacity
                 accessibilityRole="button"
                 style={styles.addToPlan}

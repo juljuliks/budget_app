@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { SectionList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SectionList, StyleSheet, Text, View } from 'react-native';
 import { CategoryPickerModal } from '@/entities/category';
 import { openMerchant } from '@/shared/navigation/navigation';
 import { FilterButton, OptionsSheet } from '@/features/operations-filters';
@@ -41,9 +41,7 @@ export default function MerchantsScreen() {
         {selectMode ? (
           <View style={styles.selectBar}>
             <Text style={styles.selectLabel}>Выбрано: {selected.length}</Text>
-            <TouchableOpacity onPress={bulk.done} hitSlop={8} accessibilityRole="button">
-              <Text style={styles.cancelSelect}>Отмена</Text>
-            </TouchableOpacity>
+            <Button variant="text" title="Отмена" onPress={bulk.done} />
           </View>
         ) : null}
       </View>
@@ -139,7 +137,6 @@ const styles = StyleSheet.create({
   filters: { flexDirection: 'row', gap: space[8] },
   selectBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: space[8] },
   selectLabel: { fontSize: font.body, color: colors.text },
-  cancelSelect: { fontSize: font.body, color: colors.accent },
   footer: { height: 88 },
   bottomBar: {
     position: 'absolute',

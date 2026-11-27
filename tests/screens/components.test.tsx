@@ -3,6 +3,8 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import Banner from '@/shared/ui/Banner';
 import Empty from '@/shared/ui/Empty';
 import ModeBanner from '@/shared/ui/ModeBanner';
+import { base } from '../e2e/seeds';
+import { openApp, openMenu } from './app';
 
 // shared/ui on its own: what each prop shows and does (one look for every copy, stage 4 of REFACTOR_PLAN.md)
 describe('Banner', () => {
@@ -55,5 +57,14 @@ describe('Empty', () => {
     expect(screen.getByText('Не найдено.')).toBeTruthy();
     expect(screen.getByText('Пока пусто')).toBeTruthy();
     expect(screen.getByText('Изменений нет')).toBeTruthy();
+  });
+});
+
+describe('«Компоненты» (debug build only)', () => {
+  test('⋮ › Компоненты: every frame of the catalog is drawn', async () => {
+    await openApp(base);
+    await openMenu('Компоненты');
+    for (const name of ['Button', 'Chip', 'RadioGroup', 'SwitchRow', 'Banner', 'Empty', 'Loading', 'Meter', 'Donut'])
+      expect(screen.getByTestId(`catalog-${name}`)).toBeTruthy();
   });
 });

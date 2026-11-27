@@ -118,6 +118,7 @@ export default function PlanAlert({ currency }: { currency: Currency }) {
           style={styles.box}
         >
           {lockIn ? (
+            // eslint-disable-next-line app/text-button -- a warning's sentence with «Подробнее ›» inside
             <TouchableOpacity
               onPress={() => setSheet(true)}
               accessibilityRole="button"

@@ -68,7 +68,9 @@ android {
 
     buildTypes {
         debug {
-            signingConfig signingConfigs.debug
+            // -PdebugWithReleaseKey (scripts/emulator.sh debug): installs over the release with `install -r`, the
+            // app's data kept; the debug key would need an uninstall
+            signingConfig project.hasProperty('debugWithReleaseKey') && signingConfigs.findByName('release') ? signingConfigs.release : signingConfigs.debug
         }
         release {
             // Without the release key: debug signing only when asked for (-PallowDebugSigning), see the check below.

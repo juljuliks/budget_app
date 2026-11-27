@@ -70,11 +70,7 @@ export default function PinScreen({ visible, ...p }: PinScreenProps & { visible:
             ))}
           </View>
           <Text style={styles.error}>{p.error ?? ''}</Text>
-          {p.link ? (
-            <TouchableOpacity onPress={p.link.onPress} hitSlop={8} accessibilityRole="button">
-              <Text style={styles.link}>{p.link.title}</Text>
-            </TouchableOpacity>
-          ) : null}
+          {p.link ? <Button variant="text" title={p.link.title} onPress={p.link.onPress} /> : null}
         </View>
         <Keypad
           onDigit={type}
@@ -120,6 +116,5 @@ const styles = StyleSheet.create({
   dot: { width: 14, height: 14, borderRadius: radius.pill, borderWidth: 2, borderColor: colors.faint },
   dotOn: { backgroundColor: colors.accent, borderColor: colors.accent },
   error: { fontSize: font.secondary, color: colors.danger, textAlign: 'center', minHeight: 20 },
-  link: { fontSize: font.body, fontWeight: weight.semibold, color: colors.accent, padding: space[4] },
   footer: { paddingHorizontal: space[16], paddingTop: space[12], paddingBottom: space[32], minHeight: 76 },
 });

@@ -21,6 +21,7 @@ const ROWS = [
 /** The PIN digits, 3 × 4: the fingerprint, 0 and erase in the last row. */
 export default function Keypad({ onDigit, onErase, onBiometric, disabled }: Props) {
   const digit = (d: string) => (
+    // eslint-disable-next-line app/text-button -- the PIN pad's key
     <TouchableOpacity
       accessibilityRole="button"
       key={d}

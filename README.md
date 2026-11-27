@@ -346,6 +346,7 @@ npm run format           # Prettier: формат кода (в CI — npm run fo
 npm run knip             # мёртвый код: неиспользуемые файлы, экспорты, зависимости (список — docs/refactor/dead-code.txt)
 npm run coverage         # Jest с покрытием: ниже порога (jest.config.js) — ошибка
 npm run emulator         # release-сборка для эмулятора (читает SMS и от «TBC»: консоль не шлёт «TBC SMS») и установка на budget_pixel (создаётся при первом запуске)
+./scripts/emulator.sh debug  # debug-сборка (нужен Metro: npx react-native start), подписана релизным ключом — встаёт поверх release через install -r, данные целы; в ней ⋮ › Компоненты
 npm run release          # следующий budget-app-<версия>.apk на Рабочий стол и отдельная сборка на эмулятор
 npm run apk              # APK на Рабочий стол
 scripts/send_test_sms.sh # тестовое SMS банка на эмулятор
@@ -387,7 +388,7 @@ Project settings → Service accounts → Generate new private key → JSON це
 | `src/domain/` | общие основы: виды операций, банки (`banks`), палитра категорий, сигнал «данные изменились» |
 | `src/db/` | база: миграции, операции, категории, мерчанты, план (траты для динамики — `plans/trendsData.ts`; копилки — `plans/funds.ts`: взносы, траты, нехватка; итоги месяца — `plans/close.ts`, `closeWrites.ts`, раскладка отложенного — `closeSplit.ts`, неоплаченные платежи — `closePayments.ts`; вид категории в плане — `plans/categoryKind.ts`; «Подписки» в плане — `plans/recurringItems.ts`), регулярные платежи (`recurring/`: даты списаний — `schedule.ts`, откладывание — `saving.ts`, `savingLedger.ts`, `savingWrites.ts`), отчёт (план и факт сбережений — `reportSavings.ts`), возвраты, курсы валют |
 | `src/app/` | корень: стек экранов, вкладки, хосты шитов, запуск |
-| `src/screens/` | экраны: «Операции», «Статистика» (месяц, период, год — `stats/period/YearStatsView`, план, история, динамика трат — `stats/trends/`), «Мерчанты», «Категории», «Настройки»; страницы операции, мерчанта, категории, отчёта за месяц (`month-report`) |
+| `src/screens/` | экраны: «Операции», «Статистика» (месяц, период, год — `stats/period/YearStatsView`, план, история, динамика трат — `stats/trends/`), «Мерчанты», «Категории», «Настройки»; страницы операции, мерчанта, категории, отчёта за месяц (`month-report`); «Компоненты» — каталог `shared/ui`, только в debug (`catalog`, ⋮) |
 | `src/features/` | действия: новая операция, правка операции (страница), мерчант (страница, правило), фильтры, удаление, разбор и объединение категорий, импорт SMS, резервная копия, кнопка настроек, отчёт за месяц, разметка нераспознанных сообщений (`message-templates`), блокировка (`app-lock`), банки (`banks`), копилка (`fund`: карточка, «Настроить», удаление), вид категории в плане (`category-kind`: «В плане» на странице категории и при создании), итоги месяца (`month-close`: окно по шагам, «Покрыть иначе?»), подписки (`subscriptions`: шит месяца, шит подписки, добавление по шагам), обновление приложения (`app-update`: версия внизу «Настроек», «Обновить», тост при запуске) |
 | `src/entities/` | категория, операция, мерчант, план: показать, выбрать, сохранить |
 | `src/shared/` | общий кит интерфейса (`ui/`), форматирование денег и дат (`lib/`), тема, навигация и шиты; слои — [ARCHITECTURE.md](ARCHITECTURE.md) |
@@ -402,6 +403,6 @@ Project settings → Service accounts → Generate new private key → JSON це
 - [IMPROVEMENTS.md](IMPROVEMENTS.md) — план улучшений
 - [PLAN.md](PLAN.md) — что делаем сейчас: шаги по порядку, с логикой, файлами и тестами
 - [ARCHITECTURE.md](ARCHITECTURE.md) — слои кода, куда класть файл, правила размеров (их проверяет `npm run lint`)
-- [REFACTOR_PLAN.md](REFACTOR_PLAN.md) — план рефакторинга: критерии, этапы; замеры и списки — [docs/refactor/](docs/refactor/)
+- [REFACTOR_PLAN.md](REFACTOR_PLAN.md) — план рефакторинга: критерии, этапы; замеры и списки — [docs/refactor/](docs/refactor/); скрины каталога компонентов — [docs/components/](docs/components/)
 - [README_ANDROID.md](README_ANDROID.md) — приём SMS на Android и сборка APK
 - [CLAUDE.md](CLAUDE.md) — заметки для Claude: правила работы, команды, тесты

@@ -22,6 +22,7 @@ export default function PeriodNav({ label, onPick, onPrev, onNext, nextDisabled,
   if (onPick) {
     return (
       <View style={styles.row}>
+        {/* eslint-disable-next-line app/text-button -- the period's ‹ › and its title */}
         <TouchableOpacity accessibilityRole="button" style={styles.rangeButton} onPress={onPick}>
           <Text style={styles.label}>{label}</Text>
         </TouchableOpacity>
@@ -32,6 +33,7 @@ export default function PeriodNav({ label, onPick, onPrev, onNext, nextDisabled,
   const next = unit === 'месяц' ? 'Следующий месяц' : unit === 'год' ? 'Следующий год' : 'Следующий период';
   return (
     <View style={styles.row}>
+      {/* eslint-disable-next-line app/text-button -- the period's ‹ › and its title */}
       <TouchableOpacity
         accessibilityRole="button"
         onPress={onPrev}
@@ -42,6 +44,7 @@ export default function PeriodNav({ label, onPick, onPrev, onNext, nextDisabled,
         <Text style={[styles.arrow, prevDisabled && styles.arrowDisabled]}>‹</Text>
       </TouchableOpacity>
       <Text style={styles.label}>{label}</Text>
+      {/* eslint-disable-next-line app/text-button -- the period's ‹ › and its title */}
       <TouchableOpacity
         accessibilityRole="button"
         onPress={onNext}

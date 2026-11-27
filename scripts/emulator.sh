@@ -41,7 +41,7 @@ if [ "$VARIANT" = "release" ]; then
   ./gradlew assembleRelease -q -PemulatorSms
   APK=app/build/outputs/apk/release/app-release.apk
 else
-  ./gradlew assembleDebug -q -PreactNativeArchitectures=arm64-v8a -PemulatorSms
+  ./gradlew assembleDebug -q -PreactNativeArchitectures=arm64-v8a -PemulatorSms -PdebugWithReleaseKey
   APK=app/build/outputs/apk/debug/app-debug.apk
   "${ADB_EMU[@]}" reverse tcp:8081 tcp:8081
 fi

@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { AppState, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { AppState, StyleSheet, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { getSetting, setSetting } from '@/db/settings';
 import { isPushAccessEnabled, openPushAccessSettings } from '@/native/notificationAccess';
-import { colors } from '@/shared/theme/theme';
 import Banner from '@/shared/ui/Banner';
-import { font, space, weight } from '@/shared/theme/tokens';
+import { space } from '@/shared/theme/tokens';
+import Button from '@/shared/ui/Button';
 
 const DISMISSED_KEY = 'push_banner_dismissed';
 
@@ -39,20 +39,18 @@ export default function PushAccessBanner() {
       style={styles.box}
     >
       <View style={styles.buttons}>
-        <TouchableOpacity
+        <Button
+          variant="text"
+          title="Не сейчас"
+          size="small"
+          muted
           onPress={() => {
             setSetting(DISMISSED_KEY, '1')
               .then(check)
               .catch(() => {});
           }}
-          hitSlop={8}
-          accessibilityRole="button"
-        >
-          <Text style={styles.later}>Не сейчас</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={openPushAccessSettings} hitSlop={8} accessibilityRole="button">
-          <Text style={styles.enable}>Включить</Text>
-        </TouchableOpacity>
+        />
+        <Button variant="text" title="Включить" size="small" onPress={openPushAccessSettings} />
       </View>
     </Banner>
   );
@@ -61,6 +59,4 @@ export default function PushAccessBanner() {
 const styles = StyleSheet.create({
   box: { marginBottom: space[8] },
   buttons: { flexDirection: 'row', justifyContent: 'flex-end', gap: space[20], marginTop: space[4] },
-  later: { fontSize: font.secondary, color: colors.muted },
-  enable: { fontSize: font.secondary, fontWeight: weight.semibold, color: colors.accent },
 });

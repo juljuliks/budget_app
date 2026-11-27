@@ -5,6 +5,7 @@ import { CategoriesScreen } from '@/screens/categories';
 import { MerchantsScreen } from '@/screens/merchants';
 import { MessageTemplatesScreen, UnparsedMessageScreen, UnparsedScreen } from '@/screens/messages';
 import { BanksScreen } from '@/screens/banks';
+import { CatalogScreen } from '@/screens/catalog';
 import { SettingsScreen } from '@/screens/settings';
 import { OperationScreen } from '@/screens/operation';
 import { MerchantScreen } from '@/screens/merchant';
@@ -47,6 +48,7 @@ export default function App() {
         <Stack.Screen name="MonthReport" component={MonthReportScreen} options={{ title: 'Отчёт' }} />
         <Stack.Screen name="Trends" component={TrendsScreen} options={{ title: TRENDS_TITLE }} />
         <Stack.Screen name="CategoryTrend" component={CategoryTrendScreen} options={{ title: '' }} />
+        {__DEV__ ? <Stack.Screen name="Catalog" component={CatalogScreen} options={{ title: 'Компоненты' }} /> : null}
       </Stack.Navigator>
       {/* the sheets over the pages (a new operation, sections, deleting a category, a repeating payment, …) */}
       <ModalHost />

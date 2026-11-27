@@ -58,6 +58,8 @@ export type RootStackParamList = {
   Category: { id: number };
   /** plan and spending by months, from the stats */
   History: undefined;
+  /** «Компоненты»: the shared/ui catalog, debug build only (⋮) */
+  Catalog: undefined;
   /** a month's report as a page («Отчёт за месяц ›»; its stories — only while it is fresh) */
   MonthReport: { ym: string };
   /** «Динамика трат»: the categories spent more / less than usual this week or month (the icon by the eye in the stats) */

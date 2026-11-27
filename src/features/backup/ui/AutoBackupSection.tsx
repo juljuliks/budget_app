@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import Button from '@/shared/ui/Button';
 import RadioGroup from '@/shared/ui/RadioGroup';
 import SwitchRow from '@/shared/ui/SwitchRow';
@@ -101,9 +101,7 @@ export default function AutoBackupSection({ auto, password }: { auto: AutoState;
           {links.length ? (
             <View style={styles.links}>
               {links.map((l) => (
-                <TouchableOpacity key={l.title} onPress={l.onPress} hitSlop={8} accessibilityRole="button">
-                  <Text style={styles.link}>{l.title}</Text>
-                </TouchableOpacity>
+                <Button key={l.title} variant="text" title={l.title} size="small" onPress={l.onPress} />
               ))}
             </View>
           ) : null}

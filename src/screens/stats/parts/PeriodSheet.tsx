@@ -35,6 +35,7 @@ export default function PeriodSheet({ visible, kind, onPick, onClose }: Props) {
         </TouchableOpacity>
       ))}
       {/* plan and spending by months: not a period of these stats, a page of its own */}
+      {/* eslint-disable-next-line app/text-button -- a menu item of the period's sheet */}
       <TouchableOpacity
         style={styles.menuItem}
         onPress={() => {

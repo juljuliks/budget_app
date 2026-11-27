@@ -17,6 +17,7 @@ export default function CutTabs({
   return (
     <View style={[styles.cutTabs, style]} accessibilityRole="tablist">
       {CUTS.map(([key, label]) => (
+        // eslint-disable-next-line app/text-button -- the donut's tabs (Категории / Разделы), underlined
         <TouchableOpacity
           key={key}
           style={[styles.cutTab, value === key && styles.cutTabOn]}

@@ -7,7 +7,7 @@ import { navigationRef } from '@/shared/navigation/navigation';
 import { colors } from '@/shared/theme/theme';
 import { font, space } from '@/shared/theme/tokens';
 
-type Route = 'Categories' | 'Merchants' | 'Settings';
+type Route = 'Categories' | 'Merchants' | 'Settings' | 'Catalog';
 type Item = { route: Route; label: string; hint: string; icon: (color: string) => React.ReactNode };
 
 const ITEMS: Item[] = [
@@ -29,6 +29,17 @@ const ITEMS: Item[] = [
     hint: 'бюджет, банки, приложение',
     icon: (c) => <GearIcon color={c} size={24} />,
   },
+  // the shared/ui catalog: for development, not in the release
+  ...(__DEV__
+    ? [
+        {
+          route: 'Catalog' as const,
+          label: 'Компоненты',
+          hint: 'каталог shared/ui (только debug)',
+          icon: (c: string) => <GridIcon color={c} size={24} />,
+        },
+      ]
+    : []),
 ];
 
 /** ⋮ in the tab headers: a sheet of the pages over the tabs — Категории, Мерчанты, Настройки (back — to the tab). */

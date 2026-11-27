@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import { categoryLabel, listCategories } from '@/db/categories';
 import { CategoryPickerModal } from '@/entities/category';
 import { merchantLabel, splitOperation, splitParts } from '@/entities/transaction';
@@ -14,6 +14,7 @@ import type { Tx } from '../model/useTransaction';
 import SplitBar from './SplitBar';
 import SplitRow from './SplitRow';
 import { font, radius, space, weight } from '@/shared/theme/tokens';
+import Button from '@/shared/ui/Button';
 
 type Props = {
   visible: boolean;
@@ -91,9 +92,7 @@ export default function SplitSheet({ visible, tx, onClose, seed }: Props) {
             onRemove={() => setDraft((d) => ({ ...d, parts: d.parts.filter((_, k) => k !== i) }))}
           />
         ))}
-        <TouchableOpacity accessibilityRole="button" style={styles.add} onPress={() => setChoosing(true)}>
-          <Text style={styles.addText}>+ Ещё категория</Text>
-        </TouchableOpacity>
+        <Button variant="text" title="+ Ещё категория" onPress={() => setChoosing(true)} style={styles.add} />
         {state.error ? (
           <Text style={styles.error}>{state.error}</Text>
         ) : (
@@ -140,7 +139,6 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderStyle: 'dashed',
   },
-  addText: { fontSize: font.body, color: colors.accent },
   error: { fontSize: font.secondary, color: colors.danger, marginTop: space[16] },
   hint: { fontSize: font.meta, color: colors.muted, marginTop: space[16], lineHeight: 18 },
 });

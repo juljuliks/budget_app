@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { currencySymbol, formatWithCurrency, parseAmountOrZero } from '@/shared/lib/money';
 import { toastError } from '@/shared/ui/toast';
 import Button from '@/shared/ui/Button';
@@ -33,17 +33,15 @@ export default function AmountAnswer({ asked, currency, answered, onAnswer, onRe
         <Text style={[styles.done, answered === 0 && styles.none]}>
           {answered > 0 ? `✓ Отложено ${money(answered)}` : '✕ Не отложено'}
         </Text>
-        <TouchableOpacity
+        <Button
+          variant="text"
+          title="Изменить"
           onPress={() => {
             setOther(null);
             onReset();
           }}
-          hitSlop={8}
-          accessibilityRole="button"
           accessibilityLabel={`Изменить: ${label}`}
-        >
-          <Text style={styles.link}>Изменить</Text>
-        </TouchableOpacity>
+        />
       </View>
     );
   }
@@ -90,7 +88,6 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space[8], justifyContent: 'space-between' },
   done: { fontSize: font.body, fontWeight: weight.medium, color: colors.income, flexShrink: 1 },
   none: { color: colors.muted },
-  link: { fontSize: font.body, color: colors.accent },
   field: {
     flex: 1,
     flexDirection: 'row',

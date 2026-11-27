@@ -26,6 +26,7 @@ export default function MarkSteps({ words, role, onRole, marks, onWord, kind, on
         {ROLES.map((r) => {
           const on = r.role === role;
           return (
+            // eslint-disable-next-line app/text-button -- marking a message: the pills in the marks' colors
             <TouchableOpacity
               accessibilityRole="button"
               key={r.role}
@@ -47,6 +48,7 @@ export default function MarkSteps({ words, role, onRole, marks, onWord, kind, on
         {words.map((w, i) => {
           const r = marks[i] ? ROLES.find((x) => x.role === marks[i]) : undefined;
           return (
+            // eslint-disable-next-line app/text-button -- marking a message: the pills in the marks' colors
             <TouchableOpacity
               accessibilityRole="button"
               key={`${i}-${w.text}`}
@@ -69,6 +71,7 @@ export default function MarkSteps({ words, role, onRole, marks, onWord, kind, on
       <SectionHeading title={STEP_KIND} />
       <View style={styles.wrap}>
         {KINDS.map(([k, label]) => (
+          // eslint-disable-next-line app/text-button -- marking a message: the pills in the marks' colors
           <TouchableOpacity
             accessibilityRole="button"
             key={k}

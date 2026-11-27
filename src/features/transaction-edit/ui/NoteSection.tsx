@@ -7,6 +7,7 @@ import { PencilIcon } from '@/shared/ui/icons';
 import { toast } from '@/shared/ui/toast';
 import { colors } from '@/shared/theme/theme';
 import { font, radius, space } from '@/shared/theme/tokens';
+import Button from '@/shared/ui/Button';
 
 /** The operation's note ("Описание"; a manual operation's is the one entered with it): shown with a pencil, or
  * "＋ Добавить описание"; edited in a sheet (empty removes it). */
@@ -42,9 +43,7 @@ export default function NoteSection({
           <PencilIcon color={colors.muted} size={16} />
         </TouchableOpacity>
       ) : (
-        <TouchableOpacity accessibilityRole="button" onPress={() => setOpen(true)} hitSlop={8}>
-          <Text style={styles.link}>＋ Добавить описание</Text>
-        </TouchableOpacity>
+        <Button variant="text" title="＋ Добавить описание" size="small" onPress={() => setOpen(true)} />
       )}
       <TextInputModal
         visible={open}
@@ -62,7 +61,6 @@ export default function NoteSection({
 }
 
 const styles = StyleSheet.create({
-  link: { fontSize: font.secondary, color: colors.accent },
   note: {
     flexDirection: 'row',
     alignItems: 'flex-start',

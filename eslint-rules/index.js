@@ -19,6 +19,12 @@ const iconOnly = (children) =>
     return true;
   });
 
+/** only one <Text> inside (whitespace aside): a button drawn by hand — Button, TextLink or Chip draws it */
+const textOnly = (children) => {
+  const els = children.filter((c) => !(c.type === 'JSXText' && !c.value.trim()));
+  return els.length === 1 && els[0].type === 'JSXElement' && nameOf(els[0].openingElement) === 'Text';
+};
+
 const touchableRule = (description, check) => ({
   meta: { type: 'suggestion', docs: { description }, schema: [] },
   create: (context) => ({
@@ -92,6 +98,11 @@ module.exports = {
       attr(el, 'accessibilityRole') || attr(el, 'role')
         ? null
         : 'A touchable needs accessibilityRole ("button", "link", "checkbox", …): a screen reader says what it is.',
+    ),
+    'text-button': touchableRule('A text button is Button, TextLink or Chip (REFACTOR_PLAN.md B3)', (el, node) =>
+      textOnly(node.children)
+        ? 'A touchable of only a text is a button drawn by hand: use shared/ui Button, TextLink (a link «… ›») or Chip.'
+        : null,
     ),
     'icon-touchable-label': touchableRule('A touchable of only an icon has a label', (el, node) =>
       !iconOnly(node.children) || attr(el, 'accessibilityLabel') || attr(el, 'aria-label')

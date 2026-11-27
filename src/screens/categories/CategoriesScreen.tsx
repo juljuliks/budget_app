@@ -165,9 +165,7 @@ function CategoriesHeader({
         // as tall as the "Разделы" row it replaces (measured): a shorter header moved the list up
         <View style={[styles.toolbar, headerHeight ? { height: headerHeight } : null]}>
           <Text style={[styles.pickLabel, styles.flex]}>Выбрано: {picked}</Text>
-          <TouchableOpacity onPress={onCancel} hitSlop={8} accessibilityRole="button">
-            <Text style={styles.toolbarCancel}>Отмена</Text>
-          </TouchableOpacity>
+          <Button variant="text" title="Отмена" muted onPress={onCancel} />
         </View>
       ) : (
         <TouchableOpacity
@@ -246,5 +244,4 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
-  toolbarCancel: { fontSize: font.body, color: colors.muted },
 });

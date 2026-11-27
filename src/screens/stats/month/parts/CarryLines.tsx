@@ -12,6 +12,7 @@ export default function CarryLines({ p, onOpen }: { p: PlanView | null; onOpen: 
   return (
     <>
       {rows.map((r) => (
+        // eslint-disable-next-line app/text-button -- a status line with a link inside it
         <TouchableOpacity key={r.key} onPress={() => onOpen(r.carry!)} hitSlop={6} accessibilityRole="button">
           <Text style={[styles.carryLine, r.tone === 'over' ? styles.overLine : styles.paceOk]}>
             {`${r.name}${p!.hidden ? '' : ` ${r.carry === 'plus' ? '+' : '−'}${p!.money(r.value)}`}`}

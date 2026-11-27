@@ -1,11 +1,12 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { colors } from '@/shared/theme/theme';
 import Toggle from '@/shared/ui/Toggle';
 import { useLockState } from '../model/useLockState';
 import { disableLock, enableLock } from '../model/commands';
 import { LOCK, LOCK_BIO_HINT, LOCK_OFF_HINT, LOCK_PIN_HINT, SET_UP } from '../texts';
 import { font, space } from '@/shared/theme/tokens';
+import Button from '@/shared/ui/Button';
 
 /**
  * "Блокировка" in the settings: its switch (on — a PIN twice right away; off — after the PIN) and, while on,
@@ -20,11 +21,7 @@ export default function LockSettings({ open, onOptions }: { open: boolean; onOpt
       <View style={styles.text}>
         <Text style={styles.label}>{LOCK}</Text>
         <Text style={styles.hint}>{hint}</Text>
-        {s.pin ? (
-          <TouchableOpacity onPress={onOptions} hitSlop={8} accessibilityRole="button">
-            <Text style={styles.link}>{SET_UP}</Text>
-          </TouchableOpacity>
-        ) : null}
+        {s.pin ? <Button variant="text" title={SET_UP} size="small" onPress={onOptions} /> : null}
       </View>
       <Toggle label={LOCK} value={s.pin} onChange={(on) => run(on ? enableLock() : disableLock())} />
     </View>
@@ -45,5 +42,4 @@ const styles = StyleSheet.create({
   text: { flex: 1, gap: space[2] },
   label: { fontSize: font.input, color: colors.text },
   hint: { fontSize: font.meta, color: colors.muted },
-  link: { fontSize: font.secondary, color: colors.accent, marginTop: space[6] },
 });

@@ -99,6 +99,7 @@ export default function RecurringPaymentsSheet({
               </Text>
             </View>
             {view === 'month' && data.by_hand ? (
+              // eslint-disable-next-line app/text-button -- a hint with a link inside its sentence
               <TouchableOpacity onPress={onEditAmount} accessibilityRole="button">
                 <Text style={formStyles.hint}>
                   {`Сумма введена вручную — пока ${w.noneHas} нет даты.`}{' '}

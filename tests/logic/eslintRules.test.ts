@@ -42,6 +42,17 @@ describe('eslint-rules', () => {
       ],
       invalid: [{ code: icon, errors: 1 }],
     });
+    tester.run('text-button', app.rules['text-button'], {
+      valid: [
+        '<TouchableOpacity><Icon /><Text>Мерчанты</Text></TouchableOpacity>',
+        '<TouchableOpacity><View><Text>a</Text><Text>b</Text></View></TouchableOpacity>',
+        '<TouchableOpacity><CloseIcon /></TouchableOpacity>',
+      ],
+      invalid: [
+        { code: '<TouchableOpacity onPress={f}><Text style={s.link}>Отмена</Text></TouchableOpacity>', errors: 1 },
+        { code: '<Pressable>\n  <Text>{label}</Text>\n</Pressable>', errors: 1 },
+      ],
+    });
   });
 
   describe('max-hook-lines: a hook (use*) is up to max lines of code, blank and comments not counted', () => {

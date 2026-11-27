@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import BottomSheet from '@/shared/ui/BottomSheet';
 import Segmented from '@/shared/ui/Segmented';
 import { colors } from '@/shared/theme/theme';
@@ -8,6 +8,7 @@ import { useLockState } from '../model/useLockState';
 import { changePin, saveHideNotifications, saveLockDelay, switchBiometric } from '../model/commands';
 import { BIOMETRIC, CHANGE_PIN, DELAY, DELAYS, HIDE_NOTIFICATIONS, HIDE_NOTIFICATIONS_HINT, LOCK } from '../texts';
 import { font, space, weight } from '@/shared/theme/tokens';
+import Button from '@/shared/ui/Button';
 
 /**
  * "Блокировка" (Настройки → "Настроить", while it is on): the fingerprint (when the phone has one), how soon to ask
@@ -50,14 +51,7 @@ export default function LockOptionsSheet({ visible, onClose }: { visible: boolea
               }}
             />
           </View>
-          <TouchableOpacity
-            onPress={() => run(changePin())}
-            hitSlop={8}
-            accessibilityRole="button"
-            style={styles.linkWrap}
-          >
-            <Text style={styles.link}>{CHANGE_PIN}</Text>
-          </TouchableOpacity>
+          <Button variant="text" title={CHANGE_PIN} onPress={() => run(changePin())} style={styles.linkWrap} />
         </View>
       ) : null}
     </BottomSheet>

@@ -126,6 +126,7 @@ export default function TypeEditModal({ visible, type, types, onClose, onSaved }
           </TouchableOpacity>
         ))}
         {/* "+": a palette of one's own, from a base color picked in the color picker (the shades follow) */}
+        {/* eslint-disable-next-line app/text-button -- a tile among the palettes, as they look */}
         <TouchableOpacity
           style={[styles.preset, styles.createTile]}
           onPress={() => setPickerOpen(true)}

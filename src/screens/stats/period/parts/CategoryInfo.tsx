@@ -103,6 +103,7 @@ export default function CategoryInfo({ v, id, p }: { v: PeriodView; id: number; 
               : '.'}
         </Text>
       ) : null}
+      {/* eslint-disable-next-line app/text-button -- «Как посчитано ›» / «Скрыть расчёт ⌃»: expands, with its state */}
       <TouchableOpacity
         onPress={() => setCalcOpen((o) => !o)}
         accessibilityRole="button"

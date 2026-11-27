@@ -1,11 +1,11 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useBanks } from '@/features/banks';
 import { FilterButton } from '@/features/operations-filters';
-import { colors } from '@/shared/theme/theme';
 import { UNANSWERED_CHIP } from '@/domain/moods';
 import { GROUP_BY, GroupBy } from '../model/listData';
-import { font, space } from '@/shared/theme/tokens';
+import { space } from '@/shared/theme/tokens';
+import Button from '@/shared/ui/Button';
 
 export type FilterSheet = 'category' | 'kind' | 'bank' | 'date' | 'all' | 'group';
 
@@ -89,17 +89,8 @@ export default function FiltersBar({
       {applied > 0 ? (
         // how many filters are set (tap: the list of them, each with ✕) and "Сбросить все"
         <View style={styles.appliedRow}>
-          <TouchableOpacity
-            onPress={() => onOpen('all')}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityHint="Показать фильтры"
-          >
-            <Text style={styles.appliedText}>Применено фильтров: {applied}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={onReset} hitSlop={8} accessibilityRole="button">
-            <Text style={styles.resetText}>Сбросить все</Text>
-          </TouchableOpacity>
+          <Button variant="text" title={`Применено фильтров: ${applied}`} size="small" onPress={() => onOpen('all')} />
+          <Button variant="text" title="Сбросить все" size="small" danger onPress={onReset} />
         </View>
       ) : null}
     </>
@@ -117,6 +108,4 @@ const styles = StyleSheet.create({
     marginTop: space[10],
   },
   appliedRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: space[8] },
-  appliedText: { fontSize: font.secondary, color: colors.accent },
-  resetText: { fontSize: font.secondary, color: colors.danger },
 });

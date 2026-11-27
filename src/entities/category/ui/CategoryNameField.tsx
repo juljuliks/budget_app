@@ -24,6 +24,7 @@ export default function CategoryNameField({ form, emoji, locked, onPickEmoji, on
       <Text style={formStyles.label}>Название</Text>
       <View style={styles.nameRow}>
         <View>
+          {/* eslint-disable-next-line app/text-button -- the emoji field and its ✕: part of the name field */}
           <TouchableOpacity
             accessibilityRole="button"
             style={[formStyles.input, styles.emoji]}
@@ -34,6 +35,7 @@ export default function CategoryNameField({ form, emoji, locked, onPickEmoji, on
           </TouchableOpacity>
           {/* without an emoji */}
           {emoji ? (
+            // eslint-disable-next-line app/text-button -- the emoji field and its ✕: part of the name field
             <TouchableOpacity
               accessibilityRole="button"
               style={styles.emojiClear}
