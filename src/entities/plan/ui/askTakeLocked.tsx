@@ -22,7 +22,7 @@ export function askTakeLocked({
   locked: number;
   currency: Currency;
   adding: boolean;
-  onYes: (take: number) => void;
+  onYes: (take: number) => void | Promise<void>;
 }) {
   const money = (minor: number) => formatWithCurrency(minor, currency);
   const take = Math.min(short, locked);

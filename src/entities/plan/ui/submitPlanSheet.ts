@@ -17,7 +17,7 @@ import { submitCategoryPayment } from './submitCategoryPayment';
 import { dateNeeded, UNTIL_BEFORE } from './sheetOptions';
 import type { PlanAmountTarget } from './PlanAmountModal';
 
-export type PlanSheetValues = {
+type PlanSheetValues = {
   kind: PlanKind;
   currency: Currency;
   norm: NormPeriod;

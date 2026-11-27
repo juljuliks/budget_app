@@ -115,6 +115,9 @@
 - **`db` — готово (27 ноября):** `categories/` и `merchants/` — папки, `plans/{items,stats,close}` и `yearReport`
   поделены, длинные функции — на части; `any` из типов базы убран (`Db.get/all<T = unknown>`); предупреждений 0,
   `knip` в `db` чист; правила typescript-eslint в `src/db` — ошибки (`STRICT` в `eslint.config.js`).
+- **`entities` — готово:** `PlanAmountModal` поделён (данные — `usePlanSheetData`, части — `PlanSheetParts`), действия
+  выбора категории — вне хука; асинхронные обработчики: `submitForm` и `sheetAlert` ловят ошибки сами; предупреждений 0,
+  `knip` чист, правила typescript-eslint — ошибки.
 
 ## Этап 6. Производительность (5–7 коммитов)
 

@@ -10,7 +10,7 @@ type Split = Pick<
 >;
 
 /** The parts in other categories from the row's `parts` column (PARTS_COLUMN), the biggest first. */
-export function parseParts(raw: string | null): PartView[] {
+function parseParts(raw: string | null): PartView[] {
   if (!raw) return [];
   return raw.split('\u001e').map((p) => {
     const [id, amount, emoji, type, name] = p.split('\u001f');

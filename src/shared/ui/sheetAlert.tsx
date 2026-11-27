@@ -4,6 +4,8 @@ import BottomSheet from './BottomSheet';
 import Button, { SheetActions } from './Button';
 import { colors } from '../theme/theme';
 import { font, space, weight } from '../theme/tokens';
+import { SAVE_FAILED } from '../lib/strings';
+import { toastFailure } from './toast';
 
 // Confirmations and messages as bottom sheets, called like Alert.alert. <SheetAlertHost /> (mounted once in App)
 // shows them.
@@ -12,7 +14,13 @@ import { font, space, weight } from '../theme/tokens';
 export type SheetButton = {
   text: string;
   style?: 'cancel' | 'destructive' | 'secondary' | 'default';
-  onPress?: () => void;
+  /** may be async: what it doesn't catch is logged and said in a red toast */
+  onPress?: () => void | Promise<void>;
+};
+
+/** A button's handler, run: an async one's failure is not lost. */
+const press = (b?: SheetButton) => {
+  Promise.resolve(b?.onPress?.()).catch(toastFailure(`"${b?.text}"`, SAVE_FAILED));
 };
 /** under the message, above the buttons (e.g. a note with a link); `close` closes the sheet first */
 export type SheetExtra = (close: () => void) => ReactNode;
@@ -57,7 +65,7 @@ export function SheetAlertHost() {
       visible={visible}
       onClose={() => {
         close();
-        cancel?.onPress?.();
+        press(cancel);
       }}
       title={req?.title}
     >
@@ -83,7 +91,7 @@ export function SheetAlertHost() {
             variant={b.style === 'secondary' ? 'secondary' : 'primary'}
             onPress={() => {
               close();
-              b.onPress?.();
+              press(b);
             }}
           />
         ))}
@@ -93,7 +101,7 @@ export function SheetAlertHost() {
             cancelTitle={cancel.text}
             onCancel={() => {
               close();
-              cancel.onPress?.();
+              press(cancel);
             }}
             style={styles.cancelRow}
           />

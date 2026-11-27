@@ -84,7 +84,7 @@ export default function TypeEditModal({ visible, type, types, onClose, onSaved }
   const SHOWN = 4;
   const first = presets.slice(0, custom ? SHOWN - 1 : SHOWN);
   const shownPresets =
-    !custom && presets.includes(palette as never) && !first.includes(palette as never)
+    !custom && presets.includes(palette) && !first.includes(palette)
       ? [...first.slice(0, SHOWN - 1), palette as (typeof presets)[number]]
       : first;
   const [pickerOpen, setPickerOpen] = useState(false);

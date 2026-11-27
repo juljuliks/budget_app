@@ -95,7 +95,7 @@ export async function saveCategoryPayment(
     own?.id,
   );
   const on = !!saving?.on && !!p.due;
-  if (on && !saving!.had) await startSaving(id, saving!.start);
+  if (on && !saving.had) await startSaving(id, saving.start);
   if (!on && saving?.had) await stopSaving(id);
   emitTransactionsChanged();
 }

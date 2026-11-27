@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { DefaultValues, FieldValues, SubmitHandler, useForm, UseFormReturn } from 'react-hook-form';
-import { toastError } from './toast';
+import { SAVE_FAILED } from '../lib/strings';
+import { toastError, toastFailure } from './toast';
 
 // Forms: every form keeps its values in react-hook-form (not useState), validates through its rules and knows
 // whether anything changed (formState.isDirty) — "Сохранить" shows only then.
@@ -46,6 +47,10 @@ function firstMessage(node: unknown): string | null {
  * The form's submit: `onValid` with its values, or — when a rule fails — the rule's message in a red toast
  * ("Введите сумму"). Errors are never shown in the form itself; a save that fails calls toastError() too.
  */
-export function submitForm<V extends FieldValues>(form: UseFormReturn<V>, onValid: SubmitHandler<V>) {
-  return form.handleSubmit(onValid, (errors) => toastError(firstMessage(errors) ?? 'Проверьте форму'));
+export function submitForm<V extends FieldValues>(form: UseFormReturn<V>, onValid: SubmitHandler<V>): () => void {
+  const submit = form.handleSubmit(onValid, (errors) => toastError(firstMessage(errors) ?? 'Проверьте форму'));
+  // a button's handler: what onValid didn't catch is logged and said
+  return () => {
+    submit().catch(toastFailure('submit', SAVE_FAILED));
+  };
 }

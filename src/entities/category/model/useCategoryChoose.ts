@@ -1,5 +1,5 @@
 // The shared category sheet: one tap picks, a long press picks several, "Готово" reports them.
-import { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Category, listCategories } from '@/db/categories';
 import { categoryColors } from '@/db/colors';
 import { getTransferTypeId } from '@/db/categoryTypes';
@@ -89,7 +89,27 @@ export function useCategoryChoose(p: ChooseProps) {
     none: showNone(query, !!p.allowNone),
     current: p.saveTitle ? draft : p.selectedId,
     hint: !!p.onSeveral && !p.saveTitle && !many,
-    press(id: number) {
+    ...chooseActions(p, { many, picked, min, openedMany, toggle, setDraft, setMany, setPicked, load }),
+  };
+}
+
+type ChooseState = {
+  many: boolean;
+  picked: number[];
+  min: number;
+  openedMany: boolean;
+  toggle: (id: number) => void;
+  setDraft: (id: number | null) => void;
+  setMany: (on: boolean) => void;
+  setPicked: React.Dispatch<React.SetStateAction<number[]>>;
+  load: () => void;
+};
+
+/** What a tap, a long press, "Без категории", "Готово", "Отмена" and a new category do. */
+function chooseActions(p: ChooseProps, s: ChooseState) {
+  const { many, picked, min, openedMany, toggle, setDraft, setMany, setPicked, load } = s;
+  return {
+    press: (id: number) => {
       if (many) {
         toggle(id);
         return;
@@ -101,7 +121,7 @@ export function useCategoryChoose(p: ChooseProps) {
       p.onPick(id);
       p.onClose();
     },
-    hold(id: number) {
+    hold: (id: number) => {
       if (!p.onSeveral || p.saveTitle) return;
       if (!many) {
         setMany(true);
@@ -111,7 +131,7 @@ export function useCategoryChoose(p: ChooseProps) {
       }
       toggle(id);
     },
-    pressNone() {
+    pressNone: () => {
       if (many) return;
       if (p.saveTitle) {
         setDraft(null);
@@ -120,19 +140,19 @@ export function useCategoryChoose(p: ChooseProps) {
       p.onPick(null);
       p.onClose();
     },
-    cancelMany() {
+    cancelMany: () => {
       if (openedMany) p.onClose();
       else {
         setMany(false);
         setPicked([]);
       }
     },
-    done() {
+    done: () => {
       if (picked.length < min) return;
       p.onSeveral?.(picked);
       p.onClose();
     },
-    created(id: number) {
+    created: (id: number) => {
       load();
       if (many) setPicked((prev) => (prev.includes(id) ? prev : [...prev, id]));
       else if (p.saveTitle) setDraft(id);

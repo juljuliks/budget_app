@@ -58,8 +58,6 @@ const CORE_MESSAGE = 'The core imports no UI: move the helper to src/shared/lib 
  * file is split in stage 5 — then it leaves this list; a file is never added to it.
  */
 const OVERSIZE = [
-  'src/entities/category/model/useCategoryChoose.ts',
-  'src/entities/plan/ui/PlanAmountModal.tsx',
   'src/features/app-lock/model/usePinFlow.ts',
   'src/features/category-delete/model/useSortOut.ts',
   'src/features/category-merge/MergeCategoriesSheet.tsx',
@@ -89,7 +87,7 @@ const asWarnings = (rules = {}) =>
     ]),
   );
 /** the folders whose typescript-eslint warnings are all fixed: errors from now on (one layer at a time, stage 5) */
-const STRICT = ['src/db/**/*.ts'];
+const STRICT = ['src/db/**/*.ts', 'src/entities/**/*.{ts,tsx}'];
 
 /** strict TypeScript (REFACTOR_PLAN.md A5): typescript-eslint recommended-type-checked */
 const TYPE_CHECKED = tseslint.configs.recommendedTypeChecked.map((c) => ({

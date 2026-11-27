@@ -1,7 +1,7 @@
 // "Покрыть перерасход": the spending outside the plan past its share, paid by a cut of the plan this month — asked when
 // a limit is cut, or picked in "Сбережения меньше на …"; "Отменить" in the toast puts it back.
 import type { Currency } from '@/db/fx';
-import { currentYm, getPlanBudget, planConverter, unplannedOver } from '@/db/plans';
+import { getPlanBudget, planConverter, unplannedOver } from '@/db/plans';
 import { formatWithCurrency } from '@/shared/lib/money';
 import { SAVE_FAILED, UNDO } from '@/shared/lib/strings';
 import { sheetAlert } from '@/shared/ui/sheetAlert';
@@ -67,9 +67,8 @@ export async function offerCover(ym: string, freed: number, currency: string): P
     [
       {
         text: `Покрыть ${money(take)}`,
-        onPress: () => {
-          coverWithUndo(ym, take, over, budget.currency);
-        },
+        // it says its own failure
+        onPress: () => coverWithUndo(ym, take, over, budget.currency),
       },
       { text: 'В сбережения', style: 'cancel' },
     ],

@@ -4,7 +4,7 @@ import { sheetAlert } from '@/shared/ui/sheetAlert';
 import { stopRecurring } from '../model/commands';
 
 /** "Выключить регулярные платежи?" when they saved something (it goes to this month's savings); true — go on. */
-export async function askTurnOff(categoryId: number): Promise<boolean> {
+async function askTurnOff(categoryId: number): Promise<boolean> {
   const saved = await savedInCategory(categoryId);
   if (!saved.length) return true;
   const list = saved.map((x) => `${x.name} — ${formatWithCurrency(x.minor, x.currency)}`).join(', ');

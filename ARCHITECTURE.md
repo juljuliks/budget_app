@@ -99,6 +99,12 @@ app/text-button -- <почему>` на месте.
 Записи в базу — командами слайса (`model/commands.ts`): запись + `emitTransactionsChanged`. Компоненты не зовут
 `emitTransactionsChanged` сами.
 
+Ошибки — одним образцом: промис кончается `.catch(toastFailure('что', ТЕКСТ))` (записано в лог и сказано красным
+тостом), тихих `catch` нет. Обработчик кнопки — обычная функция: форма — `submitForm` (сама ловит), кнопка шита-вопроса
+(`sheetAlert`) может быть `async` — его ошибку ловит `sheetAlert`; иначе `() => { work().catch(toastFailure(…)) }`.
+В `db` и `entities` правила typescript-eslint (`any`, промисы, лишние `!`) — ошибки (`STRICT` в `eslint.config.js`),
+дальше — слой за слоем.
+
 ### Импорты
 
 - В корне `src` файлов нет: всё в слое или в домене ядра. Ядро не импортирует `react`; `react-native` — только
